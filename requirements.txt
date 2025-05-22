@@ -10,7 +10,7 @@ asyncio-throttle>=1.0.2
 # SOTA 2025 Vector database and embeddings (research-backed stack)
 qdrant-client[fastembed]>=1.14.2  # Hybrid search support with FastEmbed integration
 openai>=1.82.0
-fastembed>=0.7.0
+fastembed==0.6.1  # Pinned to match qdrant-client[fastembed] requirement
 FlagEmbedding>=1.3.4  # BGE-VL multimodal support (2025), 10-20% accuracy improvement
 firecrawl-py>=2.7.0  # Premium extraction features (optional)
 

@@ -38,7 +38,7 @@ dependencies = [
     "click>=8.2.1",
     "rich>=14.0.0",
     "asyncio-throttle>=1.0.2",
-    "fastembed>=0.7.0",
+    "fastembed==0.6.1",
     "FlagEmbedding>=1.3.4",
     "firecrawl-py>=2.7.0",
     "tree-sitter>=0.24.0",
@@ -77,12 +77,14 @@ packages = ["src"]
 managed = true
 package = false
 
+# ===== Simplified Ruff Configuration =====
 [tool.ruff]
 line-length = 88
 target-version = "py313"
-src = ["src", "tests"]
+src = ["src", "tests", "examples"]
 
 [tool.ruff.lint]
+# Basic but comprehensive rule selection
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
@@ -100,6 +102,7 @@ ignore = [
     "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
     "PLR0913",  # Too many arguments
     "PLR2004",  # Magic value used in comparison
+    "E501",     # Line too long (handled by formatter)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -109,10 +112,12 @@ ignore = [
 [tool.ruff.lint.isort]
 force-single-line = true
 
+# ===== Black Configuration =====
 [tool.black]
 line-length = 88
 target-version = ['py313']
 
+# ===== Pytest Configuration =====
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

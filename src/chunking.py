@@ -302,7 +302,7 @@ class EnhancedChunker:
         """Detect language from code patterns"""
         if re.search(r"^import\s+\w+|^from\s+\w+\s+import", content, re.MULTILINE):
             return CodeLanguage.PYTHON.value
-        elif re.search(
+        if re.search(
             r"^const\s+\w+\s*=|^let\s+\w+\s*=|^var\s+\w+\s*=",
             content,
             re.MULTILINE,
@@ -752,18 +752,16 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": (
-                                content[name_node.start_byte : name_node.end_byte]
-                                if name_node
-                                else ""
-                            ),
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "function",
+                        "name": (
+                            content[name_node.start_byte : name_node.end_byte]
+                            if name_node
+                            else ""
+                        ),
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
                 elif node.type == "class_definition":
                     # Extract class name
                     name_node = None
@@ -772,18 +770,16 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": (
-                                content[name_node.start_byte : name_node.end_byte]
-                                if name_node
-                                else ""
-                            ),
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "class",
+                        "name": (
+                            content[name_node.start_byte : name_node.end_byte]
+                            if name_node
+                            else ""
+                        ),
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
 
             # JavaScript/TypeScript node types
             elif language in ["javascript", "typescript"]:
@@ -800,14 +796,12 @@ class EnhancedChunker:
                                 name = content[child.start_byte : child.end_byte]
                                 break
 
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "function",
+                        "name": name,
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
                 elif node.type == "class_declaration":
                     # Extract class name
                     name = ""
@@ -816,14 +810,12 @@ class EnhancedChunker:
                             name = content[child.start_byte : child.end_byte]
                             break
 
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "class",
+                        "name": name,
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
 
             # Recurse into children
             for child in node.children:
