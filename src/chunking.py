@@ -187,7 +187,7 @@ class EnhancedChunker:
 
     def __init__(self, config: ChunkingConfig):
         self.config = config
-        self.parsers: dict[str, Parser] = {}
+        self.parsers: dict[str, Any] = {}
         self.logger = logging.getLogger(__name__)
         self._initialize_parsers()
 
@@ -233,40 +233,67 @@ class EnhancedChunker:
         """Detect programming language from content and URL"""
         # Check file extension in URL
         if url:
-            if url.endswith(".py"):
-                return CodeLanguage.PYTHON.value
-            elif url.endswith((".js", ".mjs")):
-                return CodeLanguage.JAVASCRIPT.value
-            elif url.endswith((".ts", ".tsx")):
-                return CodeLanguage.TYPESCRIPT.value
-            elif url.endswith(".md"):
-                return CodeLanguage.MARKDOWN.value
+            lang = self._detect_language_from_url(url)
+            if lang != CodeLanguage.UNKNOWN.value:
+                return lang
 
         # Check for code fence languages
-        code_fences = self.CODE_FENCE_PATTERN.findall(content)
-        if code_fences:
-            # Get most common language
-            languages = [fence[1].lower() for fence in code_fences if fence[1]]
-            if languages:
-                lang_counts = {}
-                for lang in languages:
-                    lang_counts[lang] = lang_counts.get(lang, 0) + 1
-                detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore
-                if detected_lang in ["python", "py"]:
-                    return CodeLanguage.PYTHON.value
-                elif detected_lang in ["javascript", "js"]:
-                    return CodeLanguage.JAVASCRIPT.value
-                elif detected_lang in ["typescript", "ts"]:
-                    return CodeLanguage.TYPESCRIPT.value
+        lang = self._detect_language_from_code_fences(content)
+        if lang != CodeLanguage.UNKNOWN.value:
+            return lang
 
         # Pattern-based detection
+        return self._detect_language_from_patterns(content)
+
+    def _detect_language_from_url(self, url: str) -> str:
+        """Detect language from URL/file extension"""
+        ext_map = {
+            ".py": CodeLanguage.PYTHON.value,
+            ".js": CodeLanguage.JAVASCRIPT.value,
+            ".mjs": CodeLanguage.JAVASCRIPT.value,
+            ".ts": CodeLanguage.TYPESCRIPT.value,
+            ".tsx": CodeLanguage.TYPESCRIPT.value,
+            ".md": CodeLanguage.MARKDOWN.value,
+        }
+        for ext, lang in ext_map.items():
+            if url.endswith(ext):
+                return lang
+        return CodeLanguage.UNKNOWN.value
+
+    def _detect_language_from_code_fences(self, content: str) -> str:
+        """Detect language from code fence declarations"""
+        code_fences = self.CODE_FENCE_PATTERN.findall(content)
+        if not code_fences:
+            return CodeLanguage.UNKNOWN.value
+
+        # Get most common language
+        languages = [fence[1].lower() for fence in code_fences if fence[1]]
+        if not languages:
+            return CodeLanguage.UNKNOWN.value
+
+        lang_counts = {}
+        for lang in languages:
+            lang_counts[lang] = lang_counts.get(lang, 0) + 1
+        detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore
+
+        lang_map = {
+            "python": CodeLanguage.PYTHON.value,
+            "py": CodeLanguage.PYTHON.value,
+            "javascript": CodeLanguage.JAVASCRIPT.value,
+            "js": CodeLanguage.JAVASCRIPT.value,
+            "typescript": CodeLanguage.TYPESCRIPT.value,
+            "ts": CodeLanguage.TYPESCRIPT.value,
+        }
+        return lang_map.get(detected_lang, CodeLanguage.UNKNOWN.value)
+
+    def _detect_language_from_patterns(self, content: str) -> str:
+        """Detect language from code patterns"""
         if re.search(r"^import\s+\w+|^from\s+\w+\s+import", content, re.MULTILINE):
             return CodeLanguage.PYTHON.value
         elif re.search(
             r"^const\s+\w+\s*=|^let\s+\w+\s*=|^var\s+\w+\s*=", content, re.MULTILINE
         ):
             return CodeLanguage.JAVASCRIPT.value
-
         return CodeLanguage.UNKNOWN.value
 
     def _find_code_blocks(self, content: str) -> list[CodeBlock]:
@@ -324,11 +351,11 @@ class EnhancedChunker:
                 # Add the code block as a chunk (if within size limits)
                 block_size = current_code_block.end_pos - current_code_block.start_pos
                 if block_size <= self.config.max_function_chunk_size:
+                    start = current_code_block.start_pos
+                    end = current_code_block.end_pos
                     chunks.append(
                         Chunk(
-                            content=content[
-                                current_code_block.start_pos : current_code_block.end_pos
-                            ],
+                            content=content[start:end],
                             start_pos=current_code_block.start_pos,
                             end_pos=current_code_block.end_pos,
                             chunk_index=len(chunks),
@@ -339,11 +366,11 @@ class EnhancedChunker:
                     )
                 else:
                     # Code block too large, chunk it preserving boundaries
+                    start = current_code_block.start_pos
+                    end = current_code_block.end_pos
                     chunks.extend(
                         self._chunk_large_code_block(
-                            content[
-                                current_code_block.start_pos : current_code_block.end_pos
-                            ],
+                            content[start:end],
                             current_code_block.start_pos,
                             current_code_block.language,
                         )

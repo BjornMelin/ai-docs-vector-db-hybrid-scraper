@@ -91,7 +91,6 @@ select = [
 
 ignore = [
     "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
-    "ANN101", "ANN102",  # Missing type annotations for self/cls
     "PLR0913",  # Too many arguments
     "PLR2004",  # Magic value used in comparison
 ]

@@ -1,4 +1,4 @@
-# 🚀 SOTA 2025 AI Documentation Vector Database Hybrid Scraper
+# 🚀 AI Documentation Vector Database Hybrid Scraper
 
 [![GitHub Stars](https://img.shields.io/github/stars/BjornMelin/ai-docs-vector-db-hybrid-scraper?style=social)](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,20 +21,20 @@ This implementation combines **research-backed 2025 best practices** for product
 
 ### 🏗️ Modern Architecture Stack
 
-| Component | Technology | Why SOTA 2025 |
-|-----------|------------|---------------|
-| **Bulk Scraping** | [Crawl4AI](https://github.com/unclecode/crawl4ai) | 4-6x faster than alternatives, async concurrent |
-| **On-Demand Scraping** | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server) | Claude Desktop integration, JS handling |
-| **Vector Database** | [Qdrant](https://qdrant.tech/) | Hybrid search, quantization, local persistence |
-| **Dense Embeddings** | OpenAI text-embedding-3-small | Best cost-performance ratio |
-| **Sparse Embeddings** | SPLADE++ | Keyword matching for hybrid search |
-| **Reranking** | BGE-reranker-v2-m3 | Minimal complexity, maximum accuracy gains |
-| **Package Manager** | [uv](https://github.com/astral-sh/uv) | 10-100x faster than pip |
+| Component              | Technology                                                          | Why SOTA 2025                                   |
+| ---------------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
+| **Bulk Scraping**      | [Crawl4AI](https://github.com/unclecode/crawl4ai)                   | 4-6x faster than alternatives, async concurrent |
+| **On-Demand Scraping** | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server) | Claude Desktop integration, JS handling         |
+| **Vector Database**    | [Qdrant](https://qdrant.tech/)                                      | Hybrid search, quantization, local persistence  |
+| **Dense Embeddings**   | OpenAI text-embedding-3-small                                       | Best cost-performance ratio                     |
+| **Sparse Embeddings**  | SPLADE++                                                            | Keyword matching for hybrid search              |
+| **Reranking**          | BGE-reranker-v2-m3                                                  | Minimal complexity, maximum accuracy gains      |
+| **Package Manager**    | [uv](https://github.com/astral-sh/uv)                               | 10-100x faster than pip                         |
 
 ## ✨ Key Features
 
 - **🧠 SOTA 2025 Embedding Pipeline**: Hybrid dense+sparse search with reranking
-- **⚡ Ultra-Fast Scraping**: Crawl4AI processes 100+ documentation pages in minutes  
+- **⚡ Ultra-Fast Scraping**: Crawl4AI processes 100+ documentation pages in minutes
 - **💰 Cost-Optimized**: Zero bulk API costs + 5x cheaper OpenAI embeddings
 - **🔄 Hybrid Workflow**: Bulk population + seamless on-demand additions via MCP
 - **🏠 Local-First**: All data stored persistently in your environment
@@ -137,7 +137,7 @@ flowchart TB
         A[Crawl4AI] --> B[Character-Based Chunking<br/>1600 chars = 400-600 tokens]
         B --> C[SOTA Embedding Pipeline]
     end
-    
+
     subgraph "SOTA Embedding Pipeline"
         C --> D[Dense: text-embedding-3-small<br/>1536d, 5x cheaper]
         C --> E[Sparse: SPLADE++<br/>Keyword matching]
@@ -145,12 +145,12 @@ flowchart TB
         E --> F
         F --> G[BGE-reranker-v2-m3<br/>10-20% accuracy boost]
     end
-    
+
     subgraph "Storage & Retrieval"
         G --> H[Qdrant Vector DB<br/>Quantization + Persistence]
         H --> I[Claude Desktop/Code<br/>via MCP Servers]
     end
-    
+
     subgraph "On-Demand Processing"
         J[Firecrawl MCP] --> K[Real-time Additions]
         K --> H
@@ -163,27 +163,27 @@ Based on extensive 2025 research and testing:
 
 ### Embedding Model Performance
 
-| Model | Accuracy (MTEB) | Cost (per 1M tokens) | Speed | Use Case |
-|-------|----------------|---------------------|--------|----------|
-| **text-embedding-3-small** ⭐ | 62.3 | $0.02 | Fast | **Recommended: Best cost-performance** |
-| text-embedding-3-large | 64.6 | $0.13 | Medium | High accuracy needs |
-| ada-002 (legacy) | 61.0 | $0.10 | Medium | Legacy compatibility |
-| NV-Embed-v2 (local) | **69.1** | Free | Slower | Best accuracy, local inference |
+| Model                         | Accuracy (MTEB) | Cost (per 1M tokens) | Speed  | Use Case                               |
+| ----------------------------- | --------------- | -------------------- | ------ | -------------------------------------- |
+| **text-embedding-3-small** ⭐ | 62.3            | $0.02                | Fast   | **Recommended: Best cost-performance** |
+| text-embedding-3-large        | 64.6            | $0.13                | Medium | High accuracy needs                    |
+| ada-002 (legacy)              | 61.0            | $0.10                | Medium | Legacy compatibility                   |
+| NV-Embed-v2 (local)           | **69.1**        | Free                 | Slower | Best accuracy, local inference         |
 
 ### Search Strategy Performance
 
-| Strategy | Accuracy | Latency | Storage | Complexity |
-|----------|----------|---------|---------|------------|
-| Dense Only | Baseline | Fast | Standard | Simple |
-| Sparse Only | -15% | Fast | 50% more | Simple |
-| **Hybrid + Reranking** ⭐ | **+30%** | +20ms | +20% | **Optimal** |
+| Strategy                  | Accuracy | Latency | Storage  | Complexity  |
+| ------------------------- | -------- | ------- | -------- | ----------- |
+| Dense Only                | Baseline | Fast    | Standard | Simple      |
+| Sparse Only               | -15%     | Fast    | 50% more | Simple      |
+| **Hybrid + Reranking** ⭐ | **+30%** | +20ms   | +20%     | **Optimal** |
 
 ### Real-World Performance
 
-```
+```plaintext
 📊 Documentation Site: Qdrant Docs (127 pages)
 ⚡ Scraping Time: 2.3 minutes (vs 14.2 min with Firecrawl)
-💾 Storage: 45MB (vs 400MB without quantization) 
+💾 Storage: 45MB (vs 400MB without quantization)
 🎯 Search Accuracy: 89.3% (vs 71.2% dense-only)
 💰 Embedding Cost: $0.12 (vs $0.67 with ada-002)
 ```
@@ -280,15 +280,15 @@ python src/performance_monitor.py
 ### Optimized docker-compose.yml
 
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant-sota-2025
     restart: unless-stopped
     ports:
-      - "6333:6333"  # HTTP API
-      - "6334:6334"  # gRPC API (high performance)
+      - "6333:6333" # HTTP API
+      - "6334:6334" # gRPC API (high performance)
     volumes:
       - ~/.qdrant_data:/qdrant/storage:z
     environment:
@@ -349,7 +349,7 @@ manager = VectorDBManager()
 
 # Hybrid search with reranking (SOTA 2025)
 results = manager.search_similar(
-    query="vector database operations", 
+    query="vector database operations",
     strategy="hybrid_rrf",
     enable_reranking=True,
     limit=5
@@ -362,7 +362,7 @@ for result in results:
 
 ### Claude Desktop Integration Examples
 
-```
+```bash
 # In Claude Desktop/Code with MCP servers:
 
 "Search my documentation for vector database optimization techniques"
@@ -377,10 +377,10 @@ for result in results:
 
 ## 📁 Project Structure
 
-```
+```plaintext
 ai-docs-vector-db-hybrid-scraper/
 ├── 📄 README.md                           # This comprehensive guide
-├── 🐳 docker-compose.yml                  # Optimized Qdrant configuration  
+├── 🐳 docker-compose.yml                  # Optimized Qdrant configuration
 ├── ⚙️ setup.sh                           # One-command SOTA 2025 setup
 ├── 📋 requirements.txt                    # Research-backed dependencies
 ├── 🔧 pyproject.toml                     # Modern Python packaging
@@ -421,11 +421,13 @@ ai-docs-vector-db-hybrid-scraper/
 #### Three-Tier Chunking Strategy
 
 1. **Basic Character-Based** (Legacy Mode)
+
    - **Size**: 1600 characters ≈ 400-600 tokens
    - **Overlap**: 320 characters (20%) for context preservation
    - **Use Case**: General text, documentation without code
 
 2. **Enhanced Code-Aware** (Default)
+
    - **Code Block Preservation**: Markdown code fences kept intact
    - **Function Boundaries**: Detects Python/JS/TS function signatures
    - **Smart Boundaries**: Paragraph, heading, list, and code delimiters
@@ -454,6 +456,7 @@ config = ChunkingConfig(
     max_function_chunk_size=3200,  # Allow larger chunks for big functions
     supported_languages=["python", "javascript", "typescript", "markdown"],
 )
+```
 
 ### Vector Quantization Benefits
 
@@ -472,7 +475,7 @@ config = ChunkingConfig(
 
 ### Common Issues & Solutions
 
-**Q: "ModuleNotFoundError: No module named 'FlagEmbedding'"**
+#### Q: "ModuleNotFoundError: No module named 'FlagEmbedding'"
 
 ```bash
 # Install reranking dependencies
@@ -480,7 +483,7 @@ uv add FlagEmbedding>=1.3.0
 pip install torch  # If needed for your platform
 ```
 
-**Q: "Qdrant connection refused"**
+#### Q: "Qdrant connection refused"
 
 ```bash
 # Verify Docker is running
@@ -491,7 +494,7 @@ docker ps
 curl http://localhost:6333/health
 ```
 
-**Q: "Slow embedding generation"**
+#### Q: "Slow embedding generation"
 
 ```bash
 # Enable FastEmbed for 50% speedup
@@ -499,7 +502,7 @@ export USE_FASTEMBED=true
 python src/crawl4ai_bulk_embedder.py
 ```
 
-**Q: "High memory usage"**
+#### Q: "High memory usage"
 
 ```bash
 # Enable quantization and optimize batch size
@@ -543,7 +546,7 @@ monitor.start_monitoring()
 
 # Automatic metrics collection:
 # - Embedding generation speed
-# - Search latency and accuracy  
+# - Search latency and accuracy
 # - Memory usage and optimization
 # - API costs and token consumption
 ```
@@ -556,7 +559,7 @@ monitor.start_monitoring()
 
 # Expected output:
 # ✅ Qdrant: Healthy (6333)
-# ✅ Python Environment: Active  
+# ✅ Python Environment: Active
 # ✅ API Keys: Valid
 # ✅ Dependencies: SOTA 2025 stack
 # ✅ Performance: Optimal configuration
@@ -581,7 +584,7 @@ This implementation synthesizes research and best practices from:
 ### Official Documentation
 
 - [Crawl4AI Documentation](https://docs.crawl4ai.com/) - High-performance web crawling
-- [Firecrawl MCP Server](https://docs.firecrawl.dev/mcp) - Claude Desktop integration  
+- [Firecrawl MCP Server](https://docs.firecrawl.dev/mcp) - Claude Desktop integration
 - [Qdrant Documentation](https://qdrant.tech/documentation/) - Vector database operations
 - [MCP Server Registry](https://github.com/modelcontextprotocol/servers) - Available MCP servers
 
@@ -597,4 +600,4 @@ This implementation synthesizes research and best practices from:
 
 🏆 **Built with 2025 SOTA research for the AI developer community**
 
-> *"The best RAG system is the one that gives you the right answer, fast, at minimal cost."* - SOTA 2025 Principles
+> _"The best RAG system is the one that gives you the right answer, fast, at minimal cost."_ - SOTA 2025 Principles
