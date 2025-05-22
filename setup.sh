@@ -1,5 +1,6 @@
 #!/bin/bash
 # AI Documentation Vector Database Hybrid Scraper Setup Script
+# Optimized for Python 3.13 and uv package manager
 
 set -e
 
@@ -20,12 +21,6 @@ fi
 
 echo -e "${BLUE}📋 Checking system requirements...${NC}"
 
-# Check Python version
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}❌ Python 3 is required but not installed.${NC}"
-    exit 1
-fi
-
 # Check Node.js
 if ! command -v node &> /dev/null; then
     echo -e "${RED}❌ Node.js is required but not installed.${NC}"
@@ -40,23 +35,43 @@ fi
 
 echo -e "${GREEN}✅ System requirements met${NC}"
 
+# Install UV package manager (the fastest Python package manager)
+echo -e "${BLUE}🦀 Installing UV package manager...${NC}"
+if ! command -v uv &> /dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+    echo -e "${GREEN}✅ UV installed successfully${NC}"
+else
+    echo -e "${GREEN}✅ UV already installed${NC}"
+fi
+
+# Install Python 3.13 with UV
+echo -e "${BLUE}🐍 Installing Python 3.13 with UV...${NC}"
+uv python install 3.13
+
+# Pin Python 3.13 for this project
+echo -e "${BLUE}📌 Pinning Python 3.13 for project...${NC}"
+uv python pin 3.13
+
 # Create data directory
 echo -e "${BLUE}📁 Creating data directory...${NC}"
 mkdir -p ~/.qdrant_data
 echo -e "${GREEN}✅ Data directory created at $(realpath ~/.qdrant_data)${NC}"
 
-# Install Python dependencies
-echo -e "${BLUE}🐍 Installing Python dependencies...${NC}"
-pip install -r requirements.txt
+# Initialize UV project
+echo -e "${BLUE}🔧 Initializing UV project...${NC}"
+if [ ! -f "pyproject.toml" ]; then
+    uv init --no-readme --python 3.13
+fi
 
-# Install Crawl4AI setup
+# Install project dependencies with UV
+echo -e "${BLUE}📦 Installing project dependencies with UV...${NC}"
+uv add crawl4ai[all] qdrant-client openai pandas numpy python-dotenv colorlog tqdm playwright httpx pydantic click rich
+uv add --dev pytest pytest-asyncio black ruff
+
+# Setup Crawl4AI
 echo -e "${BLUE}🕷️ Setting up Crawl4AI...${NC}"
-crawl4ai-setup
-
-# Install UV for MCP servers
-echo -e "${BLUE}📦 Installing UV package manager...${NC}"
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.cargo/env
+uv run crawl4ai-setup
 
 # Install Firecrawl MCP server
 echo -e "${BLUE}🔥 Installing Firecrawl MCP server...${NC}"
@@ -81,7 +96,9 @@ echo -e "${YELLOW}🔑 Don't forget to set your API keys:${NC}"
 echo -e "   export OPENAI_API_KEY='your_openai_api_key'"
 echo -e "   export FIRECRAWL_API_KEY='your_firecrawl_api_key'"
 echo ""
-echo -e "${BLUE}🚀 Quick start:${NC}"
+echo -e "${BLUE}🚀 Quick start with UV:${NC}"
 echo -e "   1. Set your API keys (above)"
-echo -e "   2. Run: python src/crawl4ai_bulk_embedder.py"
+echo -e "   2. Run: uv run python src/crawl4ai_bulk_embedder.py"
 echo -e "   3. Configure Claude Desktop with config/claude-mcp-config.json"
+echo ""
+echo -e "${GREEN}✨ Using Python $(uv python find --quiet) with UV package manager${NC}"

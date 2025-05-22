@@ -1,0 +1,84 @@
+[project]
+name = "ai-docs-vector-db-hybrid-scraper"
+version = "0.1.0"
+description = "🚀 Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+authors = [
+    { name = "BjornMelin", email = "your-email@example.com" }
+]
+keywords = [
+    "ai", "vector-database", "documentation", "scraping", "crawl4ai", 
+    "firecrawl", "qdrant", "claude", "mcp", "embeddings", "search"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+
+dependencies = [
+    "crawl4ai[all]>=0.6.0",
+    "qdrant-client>=1.7.0",
+    "openai>=1.0.0",
+    "aiohttp>=3.8.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "python-dotenv>=1.0.0",
+    "colorlog>=6.7.0",
+    "tqdm>=4.65.0",
+    "playwright>=1.40.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "asyncio-throttle>=1.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
+Repository = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
+Issues = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues"
+
+[project.scripts]
+scrape-docs = "src.crawl4ai_bulk_embedder:main"
+manage-db = "src.manage_vector_db:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "YTT", "ANN", "ASYNC", "S", "BLE", "FBT", "B", "A", "COM", "CPY", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "PL", "TRY", "FLY", "NPY", "AIR", "PERF", "FURB", "DOC", "RUF"]
+ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "ANN101", "ANN102"]
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
