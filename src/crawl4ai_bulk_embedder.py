@@ -320,7 +320,7 @@ class ModernDocumentationScraper:
                 self.logger.info(
                     "FastEmbed models will be lazily initialized on first use."
                 )
-                # Models will be lazily initialized on first use for better memory management
+                # Models lazily initialized for better memory management
 
     def _initialize_reranker(self) -> None:
         """Initialize reranker for SOTA 2025 reranking capabilities"""
@@ -449,7 +449,7 @@ class ModernDocumentationScraper:
             return [], None
 
     async def _create_openai_embedding(self, text: str) -> tuple[list[float], None]:
-        """Create OpenAI embedding (research: text-embedding-3-small best cost-performance)"""
+        """Create OpenAI embedding (research: text-embedding-3-small optimal)"""
         response = await self.openai_client.embeddings.create(
             model=self.config.embedding.dense_model.value,
             input=text,
@@ -728,11 +728,13 @@ class ModernDocumentationScraper:
                     elif not crawl_output.success:
                         self.stats.failed_crawls += 1
                         self.logger.warning(
-                            f"Crawl failed for {crawl_output.url}: {crawl_output.error_message}"
+                            f"Crawl failed for {crawl_output.url}: "
+                            f"{crawl_output.error_message}"
                         )
 
                 self.logger.info(
-                    f"Successfully crawled {len(crawled_results)} pages from {site.name}",
+                    f"Successfully crawled {len(crawled_results)} pages "
+                    f"from {site.name}",
                 )
 
             except Exception as e:
@@ -784,12 +786,20 @@ class ModernDocumentationScraper:
                                 "site_name": result_item.site_name,
                                 "depth": result_item.depth,
                                 "scraped_at": result_item.scraped_at,
-                                "embedding_model": self.config.embedding.dense_model.value,
-                                "embedding_provider": self.config.embedding.provider.value,
-                                "search_strategy": self.config.embedding.search_strategy.value,
+                                "embedding_model": (
+                                    self.config.embedding.dense_model.value
+                                ),
+                                "embedding_provider": (
+                                    self.config.embedding.provider.value
+                                ),
+                                "search_strategy": (
+                                    self.config.embedding.search_strategy.value
+                                ),
                                 "scraper_version": "3.0-SOTA-2025",
                                 "links_count": len(result_item.links),
-                                "quantization_enabled": self.config.embedding.enable_quantization,
+                                "quantization_enabled": (
+                                    self.config.embedding.enable_quantization
+                                ),
                             }
 
                             # Create point based on search strategy
@@ -829,8 +839,9 @@ class ModernDocumentationScraper:
                         )
                         self.stats.successful_embeddings += len(points_to_upsert)
                         self.logger.info(
-                            f"Embedded {len(points_to_upsert)} chunks from {result_item.title} "
-                            f"(Strategy: {self.config.embedding.search_strategy.value})",
+                            f"Embedded {len(points_to_upsert)} chunks from "
+                            f"{result_item.title} (Strategy: "
+                            f"{self.config.embedding.search_strategy.value})",
                         )
 
                     self.stats.total_processed += 1
@@ -852,8 +863,8 @@ class ModernDocumentationScraper:
 
         # Process sites with adaptive concurrent control
         # The MemoryAdaptiveDispatcher will manage resource allocation automatically
-        # Max concurrent crawls is handled by the dispatcher, semaphore here controls task creation
-        # Adjusted semaphore to allow more tasks to be created, relying on dispatcher for actual concurrency limit
+        # Max concurrent crawls handled by dispatcher, semaphore controls task creation
+        # Adjusted semaphore allows more tasks, relying on dispatcher for concurrency
         semaphore = asyncio.Semaphore(self.config.max_concurrent_crawls)
 
         async def process_site_with_semaphore(
@@ -881,10 +892,11 @@ class ModernDocumentationScraper:
         for site_batch_result in site_processing_results:
             if isinstance(site_batch_result, Exception):
                 console.print(
-                    f"❌ Unexpected error processing batch: {str(site_batch_result)[:100]}",
+                    f"❌ Unexpected error processing batch: "
+                    f"{str(site_batch_result)[:100]}",
                     style="red",
                 )
-                # Increment failed crawls for each site potentially in a failed batch if identifiable
+                # Increment failed crawls for sites in failed batch if identifiable
                 # or a general counter if batch structure is lost.
                 # For now, assume one failure per exception at this level.
                 self.stats.failed_crawls += 1
@@ -964,7 +976,8 @@ class ModernDocumentationScraper:
         """
         if not self.config.embedding.enable_reranking or self.reranker is None:
             console.print(
-                "⚠️  Reranking not enabled or reranker not initialized. Set enable_reranking=True",
+                "⚠️  Reranking not enabled or reranker not initialized. "
+                "Set enable_reranking=True",
                 style="yellow",
             )
             return []
@@ -1079,7 +1092,7 @@ def create_sota_2025_config() -> ScrapingConfig:
         )
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,
-            dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Research: best cost-performance
+            dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Research: optimal
             search_strategy=VectorSearchStrategy.DENSE_ONLY,
         )
 

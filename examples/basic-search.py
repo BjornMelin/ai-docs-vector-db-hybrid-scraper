@@ -21,9 +21,7 @@ async def basic_search_example():
     # This would typically be done through the management script
     # python src/manage_vector_db.py search "vector database operations"
 
-    print(
-        "✅ Search complete! Check src/manage_vector_db.py for full functionality"
-    )
+    print("✅ Search complete! Check src/manage_vector_db.py for full functionality")
 
 
 if __name__ == "__main__":
