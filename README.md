@@ -12,6 +12,7 @@
 This implementation combines **research-backed 2025 best practices** for production-grade RAG systems:
 
 ### 🔬 Research-Backed Performance Gains
+
 - **⚡ 50% faster** embedding generation (FastEmbed vs PyTorch)
 - **💰 83-99% storage** cost reduction (quantization + Matryoshka embeddings)
 - **🎯 8-15% better** retrieval accuracy (hybrid dense+sparse search)
@@ -19,6 +20,7 @@ This implementation combines **research-backed 2025 best practices** for product
 - **💵 5x lower** API costs (text-embedding-3-small vs ada-002)
 
 ### 🏗️ Modern Architecture Stack
+
 | Component | Technology | Why SOTA 2025 |
 |-----------|------------|---------------|
 | **Bulk Scraping** | [Crawl4AI](https://github.com/unclecode/crawl4ai) | 4-6x faster than alternatives, async concurrent |
@@ -38,11 +40,14 @@ This implementation combines **research-backed 2025 best practices** for product
 - **🏠 Local-First**: All data stored persistently in your environment
 - **🤖 Claude Integration**: Native MCP server support for Claude Desktop/Code
 - **📈 Production-Ready**: Quantization, monitoring, error handling, testing
+- **🔍 Enhanced Code-Aware Chunking**: AST-based chunking preserves function boundaries
+- **🌳 Tree-sitter Integration**: Multi-language code parsing (Python, JS, TS)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Windows 11 with WSL2** or **Linux/macOS** 
+
+- **Windows 11 with WSL2** or **Linux/macOS**
 - **Docker Desktop** with WSL2 integration
 - **Python 3.13+** (for SOTA performance)
 - **uv package manager** (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
@@ -50,6 +55,7 @@ This implementation combines **research-backed 2025 best practices** for product
 - **Firecrawl API key** (optional, for premium MCP features)
 
 ### 1. Clone and Setup
+
 ```bash
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
@@ -60,6 +66,7 @@ chmod +x setup.sh
 ```
 
 ### 2. Configure Environment
+
 ```bash
 # Create .env file with your API keys
 cat > .env << EOF
@@ -69,6 +76,7 @@ EOF
 ```
 
 ### 3. Start Qdrant Database
+
 ```bash
 # Start optimized Qdrant with persistent storage
 ./scripts/start-services.sh
@@ -78,6 +86,7 @@ curl http://localhost:6333/health
 ```
 
 ### 4. Run SOTA 2025 Documentation Scraping
+
 ```bash
 # Activate environment and run with SOTA configuration
 source .venv/bin/activate
@@ -153,6 +162,7 @@ flowchart TB
 Based on extensive 2025 research and testing:
 
 ### Embedding Model Performance
+
 | Model | Accuracy (MTEB) | Cost (per 1M tokens) | Speed | Use Case |
 |-------|----------------|---------------------|--------|----------|
 | **text-embedding-3-small** ⭐ | 62.3 | $0.02 | Fast | **Recommended: Best cost-performance** |
@@ -161,6 +171,7 @@ Based on extensive 2025 research and testing:
 | NV-Embed-v2 (local) | **69.1** | Free | Slower | Best accuracy, local inference |
 
 ### Search Strategy Performance
+
 | Strategy | Accuracy | Latency | Storage | Complexity |
 |----------|----------|---------|---------|------------|
 | Dense Only | Baseline | Fast | Standard | Simple |
@@ -168,6 +179,7 @@ Based on extensive 2025 research and testing:
 | **Hybrid + Reranking** ⭐ | **+30%** | +20ms | +20% | **Optimal** |
 
 ### Real-World Performance
+
 ```
 📊 Documentation Site: Qdrant Docs (127 pages)
 ⚡ Scraping Time: 2.3 minutes (vs 14.2 min with Firecrawl)
@@ -179,6 +191,7 @@ Based on extensive 2025 research and testing:
 ## 🔧 SOTA 2025 Configuration
 
 ### Optimal Embedding Configuration
+
 ```python
 # Edit src/crawl4ai_bulk_embedder.py for custom settings
 SOTA_CONFIG = EmbeddingConfig(
@@ -194,7 +207,9 @@ SOTA_CONFIG = EmbeddingConfig(
 ```
 
 ### Documentation Sites Configuration
+
 Edit `config/documentation-sites.json`:
+
 ```json
 {
   "sites": [
@@ -211,6 +226,7 @@ Edit `config/documentation-sites.json`:
 ```
 
 ### Performance Tuning
+
 ```python
 # Concurrent processing (adjust based on system)
 MAX_CONCURRENT_CRAWLS = 10  # Default: 10
@@ -221,6 +237,7 @@ CHUNK_OVERLAP = 200        # Research optimal: 200 chars
 ## 🛠️ Management Commands
 
 ### Database Operations
+
 ```bash
 # Check SOTA 2025 database statistics
 python src/manage_vector_db.py stats
@@ -233,6 +250,7 @@ python src/performance_test.py --strategy all
 ```
 
 ### Scraping Operations
+
 ```bash
 # Add single documentation site
 python src/crawl_single_site.py "https://docs.example.com/" 50
@@ -245,6 +263,7 @@ python src/crawl4ai_bulk_embedder.py --config sota_2025
 ```
 
 ### System Maintenance
+
 ```bash
 # Check system health
 ./scripts/health-check.sh
@@ -259,6 +278,7 @@ python src/performance_monitor.py
 ## 🐳 Docker Configuration
 
 ### Optimized docker-compose.yml
+
 ```yaml
 version: '3.8'
 services:
@@ -288,6 +308,7 @@ services:
 ```
 
 ### Docker Management
+
 ```bash
 # Start with SOTA 2025 optimizations
 docker-compose up -d
@@ -305,6 +326,7 @@ docker-compose --profile production up -d
 ## 🎯 Usage Examples
 
 ### Bulk Documentation Processing
+
 ```python
 from src.crawl4ai_bulk_embedder import AdvancedDocumentationScraper
 
@@ -319,6 +341,7 @@ await scraper.bulk_scrape_documentation_sites(DOCUMENTATION_SITES)
 ```
 
 ### Advanced Search with Reranking
+
 ```python
 from src.manage_vector_db import VectorDBManager
 
@@ -338,6 +361,7 @@ for result in results:
 ```
 
 ### Claude Desktop Integration Examples
+
 ```
 # In Claude Desktop/Code with MCP servers:
 
@@ -392,17 +416,53 @@ ai-docs-vector-db-hybrid-scraper/
 
 ## 🔬 Research & Implementation Notes
 
-### Character-Based Chunking (Research-Backed)
-- **Optimal Size**: 1600 characters ≈ 400-600 tokens
-- **Overlap**: 200 characters for context preservation  
-- **Rationale**: Better than token-based; handles multilingual content
+### Enhanced Code-Aware Chunking (SOTA 2025)
+
+#### Three-Tier Chunking Strategy
+
+1. **Basic Character-Based** (Legacy Mode)
+   - **Size**: 1600 characters ≈ 400-600 tokens
+   - **Overlap**: 320 characters (20%) for context preservation
+   - **Use Case**: General text, documentation without code
+
+2. **Enhanced Code-Aware** (Default)
+   - **Code Block Preservation**: Markdown code fences kept intact
+   - **Function Boundaries**: Detects Python/JS/TS function signatures
+   - **Smart Boundaries**: Paragraph, heading, list, and code delimiters
+   - **Docstring Handling**: Preserves docstrings with functions
+   - **Use Case**: Technical documentation with embedded code
+
+3. **AST-Based Chunking** (Advanced)
+   - **Tree-sitter Integration**: Parse actual code structure
+   - **Function/Class Extraction**: Keep semantic units together
+   - **Multi-Language**: Python, JavaScript, TypeScript support
+   - **Intelligent Splitting**: Large classes split by methods
+   - **Use Case**: Source code files, API documentation
+
+#### Configuration Options
+
+```python
+from src.chunking import ChunkingConfig, ChunkingStrategy
+
+config = ChunkingConfig(
+    strategy=ChunkingStrategy.ENHANCED,  # or AST_BASED
+    chunk_size=1600,
+    chunk_overlap=320,
+    preserve_function_boundaries=True,
+    preserve_code_blocks=True,
+    enable_ast_chunking=True,
+    max_function_chunk_size=3200,  # Allow larger chunks for big functions
+    supported_languages=["python", "javascript", "typescript", "markdown"],
+)
 
 ### Vector Quantization Benefits
+
 - **Storage Reduction**: 83-99% with minimal accuracy loss
 - **Speed Improvement**: Faster similarity search
 - **Memory Efficiency**: Enables larger datasets in RAM
 
 ### BGE-reranker-v2-m3 Selection
+
 - **Accuracy**: 10-20% improvement over embedding-only search
 - **Complexity**: Minimal compared to alternatives (ColBERT, etc.)
 - **Cost**: Free inference, one-time GPU/CPU cost
@@ -413,6 +473,7 @@ ai-docs-vector-db-hybrid-scraper/
 ### Common Issues & Solutions
 
 **Q: "ModuleNotFoundError: No module named 'FlagEmbedding'"**
+
 ```bash
 # Install reranking dependencies
 uv add FlagEmbedding>=1.3.0
@@ -420,6 +481,7 @@ pip install torch  # If needed for your platform
 ```
 
 **Q: "Qdrant connection refused"**
+
 ```bash
 # Verify Docker is running
 docker ps
@@ -430,6 +492,7 @@ curl http://localhost:6333/health
 ```
 
 **Q: "Slow embedding generation"**
+
 ```bash
 # Enable FastEmbed for 50% speedup
 export USE_FASTEMBED=true
@@ -437,6 +500,7 @@ python src/crawl4ai_bulk_embedder.py
 ```
 
 **Q: "High memory usage"**
+
 ```bash
 # Enable quantization and optimize batch size
 export ENABLE_QUANTIZATION=true
@@ -447,16 +511,19 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for comprehensive solutio
 
 ## 🤝 Contributing
 
-We welcome contributions to make this SOTA 2025 system even better! 
+We welcome contributions to make this SOTA 2025 system even better!
 
 **Quick Start:**
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Follow SOTA 2025 patterns and run tests:
+
    ```bash
    ruff check . --fix && ruff format .
    uv run pytest --cov=src
    ```
+
 4. Commit: `git commit -m 'feat: add amazing feature'`
 5. Push: `git push origin feature/amazing-feature`
 6. Open a Pull Request
@@ -466,6 +533,7 @@ We welcome contributions to make this SOTA 2025 system even better!
 ## 📊 Monitoring & Analytics
 
 ### Built-in Performance Monitoring
+
 ```python
 # Enable comprehensive monitoring
 from src.performance_monitor import PerformanceMonitor
@@ -481,6 +549,7 @@ monitor.start_monitoring()
 ```
 
 ### Health Checks
+
 ```bash
 # Automated system validation
 ./scripts/health-check.sh
@@ -510,12 +579,14 @@ This implementation synthesizes research and best practices from:
 ## 🔗 Related Projects & Resources
 
 ### Official Documentation
+
 - [Crawl4AI Documentation](https://docs.crawl4ai.com/) - High-performance web crawling
 - [Firecrawl MCP Server](https://docs.firecrawl.dev/mcp) - Claude Desktop integration  
 - [Qdrant Documentation](https://qdrant.tech/documentation/) - Vector database operations
 - [MCP Server Registry](https://github.com/modelcontextprotocol/servers) - Available MCP servers
 
 ### Research Papers & Benchmarks
+
 - [MTEB: Massive Text Embedding Benchmark](https://arxiv.org/abs/2210.07316)
 - [BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity](https://arxiv.org/abs/2402.03216)
 - [Matryoshka Representation Learning](https://arxiv.org/abs/2205.13147)

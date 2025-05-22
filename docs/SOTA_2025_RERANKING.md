@@ -7,6 +7,7 @@ This document covers the research-backed optimal reranking solution implemented 
 ## 🔬 Research Summary
 
 ### Models Analyzed
+
 - **BGE-reranker-v2-m3**: ✅ **SELECTED** - Lightweight, local, proven integration
 - **Jina Reranker v2**: 15x faster than BGE-v2-m3, but complex setup
 - **Cohere Rerank 3.5**: Best accuracy, but expensive API ($1/1K queries)
@@ -55,6 +56,7 @@ class EmbeddingConfig(BaseModel):
 ### Usage Examples
 
 #### Basic Configuration (Opt-in)
+
 ```python
 config = ScrapingConfig(
     openai_api_key="your_key",
@@ -68,6 +70,7 @@ config = ScrapingConfig(
 ```
 
 #### Advanced Configuration
+
 ```python
 config = ScrapingConfig(
     openai_api_key="your_key",
@@ -101,7 +104,7 @@ else:
 ### Core Components
 
 1. **EmbeddingConfig**: Added reranking configuration fields
-2. **ModernDocumentationScraper**: 
+2. **ModernDocumentationScraper**:
    - `_initialize_reranker()`: Lazy initialization with error handling
    - `rerank_results()`: Core reranking method with normalization
    - `demo_reranking_search()`: Integration example
@@ -139,6 +142,7 @@ With the complete SOTA 2025 stack:
 ## 🧪 Testing
 
 ### Configuration Tests
+
 ```python
 def test_embedding_config_reranking():
     """Test SOTA 2025 reranking configuration."""
@@ -153,6 +157,7 @@ def test_embedding_config_reranking():
 ```
 
 ### Integration Tests
+
 - ✅ Configuration validation
 - ✅ Lazy loading behavior
 - ✅ Error handling and fallbacks
@@ -163,12 +168,14 @@ def test_embedding_config_reranking():
 ### When to Enable Reranking
 
 **✅ Enable for:**
+
 - Documentation search applications
 - Technical content retrieval
 - High-precision requirements
 - Multi-language content
 
 **❌ Skip for:**
+
 - Simple keyword matching
 - Real-time search (latency sensitive)
 - Resource-constrained environments
@@ -191,11 +198,12 @@ rerank_top_k=20
 
 ### Full Pipeline
 
-```
+```plaintext
 Query → Vector Search (top-20) → Reranking → Final Results (top-10)
 ```
 
 ### Benefits
+
 1. **Best of Both**: Combines fast vector search with accurate reranking
 2. **Scalable**: Vector search handles large document pools efficiently
 3. **Precise**: Reranking ensures best results surface to the top

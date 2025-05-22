@@ -18,6 +18,12 @@ firecrawl-py>=0.0.8  # Premium extraction features (optional)
 pandas>=2.0.0
 numpy>=1.24.0
 
+# SOTA 2025 AST-based chunking (Phase 2)
+tree-sitter>=0.21.0
+tree-sitter-python>=0.21.0
+tree-sitter-javascript>=0.21.0
+tree-sitter-typescript>=0.21.0
+
 # Utilities and logging
 python-dotenv>=1.0.0
 colorlog>=6.7.0

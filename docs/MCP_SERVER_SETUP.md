@@ -3,17 +3,19 @@
 > **Complete guide for configuring Qdrant and Firecrawl MCP servers with Claude Desktop/Code**
 
 ## 📋 Table of Contents
-- [Prerequisites](#prerequisites)
-- [Qdrant MCP Server Setup](#qdrant-mcp-server-setup)  
-- [Firecrawl MCP Server Setup](#firecrawl-mcp-server-setup)
-- [Claude Desktop Configuration](#claude-desktop-configuration)
-- [Testing MCP Integration](#testing-mcp-integration)
-- [Advanced Configuration](#advanced-configuration)
-- [Troubleshooting](#troubleshooting)
+
+- [Prerequisites](#-prerequisites)
+- [Qdrant MCP Server Setup](#-qdrant-mcp-server-setup)
+- [Firecrawl MCP Server Setup](#-firecrawl-mcp-server-setup)
+- [Claude Desktop Configuration](#️-claude-desktop-configuration)
+- [Testing MCP Integration](#-testing-mcp-integration)
+- [Advanced Configuration](#️-advanced-configuration)
+- [Troubleshooting](#-troubleshooting)
 
 ## 🔧 Prerequisites
 
 ### System Requirements
+
 - **Claude Desktop** or **Claude Code** installed
 - **Python 3.11+** with `uv` package manager
 - **Node.js 18+** with `npm` or `pnpm`
@@ -21,6 +23,7 @@
 - **API Keys**: OpenAI, Firecrawl (optional)
 
 ### Environment Setup
+
 ```bash
 # Install modern package managers
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -39,6 +42,7 @@ The Qdrant MCP server enables seamless vector search and database operations dir
 ### 1. Install Qdrant MCP Server
 
 #### Option A: Using uvx (Recommended - 2025)
+
 ```bash
 # Install globally with uvx (fastest, most reliable)
 uvx install mcp-server-qdrant
@@ -48,6 +52,7 @@ uvx mcp-server-qdrant --help
 ```
 
 #### Option B: Using pip/uv
+
 ```bash
 # Install with uv (modern Python package manager)
 uv tool install mcp-server-qdrant
@@ -57,6 +62,7 @@ pip install mcp-server-qdrant
 ```
 
 #### Option C: Development Installation
+
 ```bash
 # Clone and install from source for latest features
 git clone https://github.com/qdrant/mcp-server-qdrant.git
@@ -126,6 +132,7 @@ Firecrawl MCP enables real-time web scraping and content extraction in Claude.
 ### 1. Install Firecrawl MCP Server
 
 #### Option A: Using npx (Recommended)
+
 ```bash
 # Install and test with npx (no local installation needed)
 npx -y firecrawl-mcp --help
@@ -135,6 +142,7 @@ npx -y firecrawl-mcp test
 ```
 
 #### Option B: Global Installation
+
 ```bash
 # Install globally with npm/pnpm
 npm install -g firecrawl-mcp
@@ -148,6 +156,7 @@ firecrawl-mcp --version
 ### 2. Firecrawl API Setup
 
 #### Get API Key
+
 1. Visit [Firecrawl.dev](https://firecrawl.dev)
 2. Sign up for an account
 3. Navigate to API Keys section
@@ -155,6 +164,7 @@ firecrawl-mcp --version
 5. Copy key for configuration
 
 #### Test API Access
+
 ```bash
 # Test API key validity
 export FIRECRAWL_API_KEY="your_firecrawl_api_key_here"
@@ -189,11 +199,11 @@ QDRANT_COLLECTION=documents
 
 ### Configuration File Locations
 
-| Platform | Configuration Path |
-|----------|-------------------|
-| **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` |
-| **macOS** | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| **Linux** | `~/.config/claude-desktop/config.json` |
+| Platform    | Configuration Path                                                |
+| ----------- | ----------------------------------------------------------------- |
+| **Windows** | `%APPDATA%\Claude\claude_desktop_config.json`                     |
+| **macOS**   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| **Linux**   | `~/.config/claude-desktop/config.json`                            |
 
 ### Complete SOTA 2025 Configuration
 
@@ -238,6 +248,7 @@ Create or update your Claude Desktop configuration:
 ### Alternative Configurations
 
 #### Minimal Configuration (Essential only)
+
 ```json
 {
   "mcpServers": {
@@ -251,7 +262,7 @@ Create or update your Claude Desktop configuration:
       }
     },
     "firecrawl": {
-      "command": "npx", 
+      "command": "npx",
       "args": ["-y", "firecrawl-mcp"],
       "env": {
         "FIRECRAWL_API_KEY": "your_firecrawl_api_key_here"
@@ -262,6 +273,7 @@ Create or update your Claude Desktop configuration:
 ```
 
 #### Development Configuration (Local paths)
+
 ```json
 {
   "mcpServers": {
@@ -284,6 +296,7 @@ Create or update your Claude Desktop configuration:
 ### 1. Restart Claude Desktop
 
 After configuration changes:
+
 1. **Close Claude Desktop completely**
 2. **Wait 5 seconds**
 3. **Restart Claude Desktop**
@@ -293,13 +306,13 @@ After configuration changes:
 
 In Claude Desktop, test the servers:
 
-```
+```bash
 # Test Qdrant MCP server
 "Show me the collections in my vector database"
 
 # Expected response: Information about your 'documents' collection
 
-# Test Firecrawl MCP server  
+# Test Firecrawl MCP server
 "Scrape this documentation page: https://docs.qdrant.tech/concepts/collections/"
 
 # Expected response: Markdown content of the scraped page
@@ -307,13 +320,13 @@ In Claude Desktop, test the servers:
 
 ### 3. Test Hybrid Workflow
 
-```
+```bash
 # Test integrated workflow
 "Search my documentation for 'vector similarity' and if you don't find good results, scrape https://docs.qdrant.tech/concepts/search/ and add it to my knowledge base"
 
 # This should:
 # 1. Search existing documents via Qdrant MCP
-# 2. If needed, scrape new content via Firecrawl MCP  
+# 2. If needed, scrape new content via Firecrawl MCP
 # 3. Automatically add to vector database
 # 4. Return comprehensive results
 ```
@@ -339,6 +352,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
 ### Environment-Specific Settings
 
 #### Production Configuration
+
 ```json
 {
   "mcpServers": {
@@ -359,6 +373,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
 ```
 
 #### Multiple Collections Setup
+
 ```json
 {
   "mcpServers": {
@@ -372,7 +387,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
       }
     },
     "qdrant-code": {
-      "command": "uvx", 
+      "command": "uvx",
       "args": ["mcp-server-qdrant"],
       "env": {
         "QDRANT_URL": "http://localhost:6333",
@@ -387,6 +402,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
 ### Custom Embedding Models
 
 #### Using FastEmbed (Local inference)
+
 ```json
 {
   "mcpServers": {
@@ -406,6 +422,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
 ```
 
 #### Using Multiple Embedding Providers
+
 ```json
 {
   "mcpServers": {
@@ -423,7 +440,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
       "command": "uvx",
       "args": ["mcp-server-qdrant"],
       "env": {
-        "QDRANT_URL": "http://localhost:6333", 
+        "QDRANT_URL": "http://localhost:6333",
         "COLLECTION_NAME": "local_docs",
         "EMBEDDING_PROVIDER": "fastembed",
         "EMBEDDING_MODEL": "BAAI/bge-small-en-v1.5"
@@ -438,6 +455,7 @@ time npx -y firecrawl-mcp scrape --url "https://docs.qdrant.tech"
 ### Common Issues and Solutions
 
 #### Issue: "MCP server not found"
+
 ```bash
 # Solution 1: Verify installation
 uvx list | grep qdrant
@@ -452,6 +470,7 @@ which uvx  # Use full path in Claude config
 ```
 
 #### Issue: "Connection refused to Qdrant"
+
 ```bash
 # Check Qdrant status
 docker ps | grep qdrant
@@ -465,6 +484,7 @@ netstat -tulpn | grep 6333
 ```
 
 #### Issue: "Invalid Firecrawl API key"
+
 ```bash
 # Test API key
 curl -H "Authorization: Bearer $FIRECRAWL_API_KEY" \
@@ -475,6 +495,7 @@ echo $FIRECRAWL_API_KEY
 ```
 
 #### Issue: "Embedding model mismatch"
+
 ```bash
 # Check collection info
 curl http://localhost:6333/collections/documents
@@ -485,6 +506,7 @@ python src/crawl4ai_bulk_embedder.py  # Will recreate
 ```
 
 #### Issue: "Slow MCP responses"
+
 ```bash
 # Enable debug mode
 DEBUG=1 uvx mcp-server-qdrant
@@ -519,11 +541,12 @@ For troubleshooting, enable debug mode:
 ### Logs and Monitoring
 
 #### Check MCP Server Logs
+
 ```bash
 # Qdrant MCP logs
 uvx mcp-server-qdrant 2>&1 | tee qdrant-mcp.log
 
-# Firecrawl MCP logs  
+# Firecrawl MCP logs
 npx -y firecrawl-mcp 2>&1 | tee firecrawl-mcp.log
 
 # Claude Desktop logs (Windows)
@@ -534,6 +557,7 @@ tail -f ~/Library/Logs/Claude/claude_desktop.log
 ```
 
 #### Monitor Qdrant Performance
+
 ```bash
 # Real-time stats
 watch -n 1 'curl -s http://localhost:6333/collections/documents | jq'
@@ -603,7 +627,8 @@ chmod +x health-check-mcp.sh
 ## 📚 Usage Examples
 
 ### Basic Search Operations
-```
+
+```bash
 # Search documentation
 "Search my documentation for 'vector quantization'"
 
@@ -615,7 +640,8 @@ chmod +x health-check-mcp.sh
 ```
 
 ### Content Addition Workflows
-```
+
+```bash
 # Scrape and add single page
 "Scrape https://docs.qdrant.tech/concepts/points/ and add it to my knowledge base"
 
@@ -627,7 +653,8 @@ chmod +x health-check-mcp.sh
 ```
 
 ### Advanced Hybrid Operations
-```
+
+```bash
 # Search-then-scrape workflow
 "Search for 'API rate limiting' in my docs, and if you don't find enough information, scrape the relevant pages from the FastAPI documentation"
 
@@ -640,6 +667,6 @@ chmod +x health-check-mcp.sh
 
 ---
 
-🎉 **Your SOTA 2025 MCP server setup is now complete!** 
+🎉 **Your SOTA 2025 MCP server setup is now complete!**
 
 The hybrid Crawl4AI + Firecrawl + Qdrant architecture provides the most cost-effective and powerful documentation processing system available.

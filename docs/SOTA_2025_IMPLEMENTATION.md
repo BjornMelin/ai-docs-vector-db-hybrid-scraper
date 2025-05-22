@@ -46,6 +46,7 @@ class EmbeddingProvider(str, Enum):
 ## Configuration Examples
 
 ### Cost-Optimized (Default)
+
 ```python
 config = ScrapingConfig(
     openai_api_key="your_key",
@@ -59,6 +60,7 @@ config = ScrapingConfig(
 ```
 
 ### Performance-Optimized
+
 ```python
 config = ScrapingConfig(
     openai_api_key="your_key",
@@ -72,6 +74,7 @@ config = ScrapingConfig(
 ```
 
 ### Hybrid Search (SOTA)
+
 ```python
 config = ScrapingConfig(
     openai_api_key="your_key",
@@ -89,31 +92,37 @@ config = ScrapingConfig(
 ## Expected Performance Gains
 
 ### Speed Improvements
+
 - **50% faster** embedding generation (FastEmbed vs PyTorch)
 - **2x faster** vector similarity search (Qdrant optimizations)
 
 ### Cost Reductions
+
 - **5x lower** API costs (text-embedding-3-small vs ada-002)
 - **83-99% reduction** in vector storage costs (quantization)
 
 ### Accuracy Improvements
+
 - **8-15% better** retrieval accuracy (hybrid search)
 - **SOTA model performance** on MTEB benchmarks
 
 ## Installation & Setup
 
 ### Core Dependencies
+
 ```bash
 uv add crawl4ai[all] "qdrant-client[fastembed]" openai fastembed
 ```
 
 ### Optional Premium Features
+
 ```bash
 uv add firecrawl-py
 export FIRECRAWL_API_KEY="your_key"
 ```
 
 ### Environment Variables
+
 ```bash
 export OPENAI_API_KEY="your_openai_key"
 export FIRECRAWL_API_KEY="your_firecrawl_key"  # Optional
@@ -122,6 +131,7 @@ export FIRECRAWL_API_KEY="your_firecrawl_key"  # Optional
 ## Usage
 
 ### Basic Usage (Auto-Configuration)
+
 ```python
 from src.crawl4ai_bulk_embedder import create_sota_2025_config, ModernDocumentationScraper
 
@@ -134,6 +144,7 @@ await scraper.scrape_multiple_sites(ESSENTIAL_SITES)
 ```
 
 ### Manual Configuration
+
 ```python
 embedding_config = EmbeddingConfig(
     provider=EmbeddingProvider.FASTEMBED,
@@ -161,6 +172,7 @@ The implementation automatically configures Qdrant collections based on search s
 - **Quantization**: Binary/int8 quantization for storage optimization
 
 ### Collection Schema
+
 ```python
 # Dense vectors for semantic search
 vectors_config = {
@@ -182,6 +194,7 @@ sparse_vectors_config = {
 ## Validation & Testing
 
 ### Running Tests
+
 ```bash
 # Run updated test suite
 uv run pytest tests/ -v
@@ -191,6 +204,7 @@ uv run pytest tests/test_scraper.py::TestEmbeddingConfig -v
 ```
 
 ### Performance Validation
+
 ```bash
 # Run scraper with SOTA configuration
 uv run python src/crawl4ai_bulk_embedder.py
@@ -199,12 +213,14 @@ uv run python src/crawl4ai_bulk_embedder.py
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Multi-modal embeddings** (text + images)
 2. **Advanced quantization** (4-bit, 2-bit optimization)
 3. **Real-time learning** (adaptive embeddings)
 4. **Cross-language retrieval** (multilingual optimization)
 
 ### Research Integration
+
 - Monitor MTEB leaderboard for new SOTA models
 - Integrate latest Qdrant features (fastembed updates)
 - Evaluate emerging embedding techniques (ColBERT, etc.)
