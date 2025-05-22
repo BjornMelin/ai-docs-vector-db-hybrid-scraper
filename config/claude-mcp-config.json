@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "qdrant": {
+      "command": "uvx",
+      "args": ["mcp-server-qdrant"],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "COLLECTION_NAME": "documents",
+        "EMBEDDING_MODEL": "text-embedding-3-small",
+        "OPENAI_API_KEY": "your_openai_api_key_here"
+      }
+    },
+    "firecrawl": {
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "your_firecrawl_api_key_here"
+      }
+    }
+  }
+}
