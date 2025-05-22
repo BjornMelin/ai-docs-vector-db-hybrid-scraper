@@ -327,8 +327,7 @@ class EnhancedChunker:
                     chunks.append(
                         Chunk(
                             content=content[
-                                current_code_block.start_pos:
-                                current_code_block.end_pos
+                                current_code_block.start_pos : current_code_block.end_pos
                             ],
                             start_pos=current_code_block.start_pos,
                             end_pos=current_code_block.end_pos,
@@ -343,8 +342,7 @@ class EnhancedChunker:
                     chunks.extend(
                         self._chunk_large_code_block(
                             content[
-                                current_code_block.start_pos:
-                                current_code_block.end_pos
+                                current_code_block.start_pos : current_code_block.end_pos
                             ],
                             current_code_block.start_pos,
                             current_code_block.language,

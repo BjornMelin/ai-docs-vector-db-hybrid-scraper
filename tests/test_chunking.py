@@ -41,17 +41,17 @@ from typing import List, Dict
 
 class DataProcessor:
     """Process data with various methods"""
-    
+
     def __init__(self, config: Dict):
         self.config = config
         self.data = []
-    
+
     def process_item(self, item: str) -> str:
         """Process a single item"""
         # Some processing logic
         result = item.upper()
         return result
-    
+
     def process_batch(self, items: List[str]) -> List[str]:
         """Process multiple items"""
         results = []
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     @pytest.fixture
     def markdown_with_code(self):
         """Sample markdown with embedded code blocks"""
-        return '''# API Documentation
+        return """# API Documentation
 
 This document describes the API endpoints.
 
@@ -114,7 +114,7 @@ For more complex scenarios:
 class CustomHandler:
     def __init__(self):
         self.client = mypackage.Client()
-    
+
     def process(self, data):
         # Process the data
         return self.client.transform(data)
@@ -126,12 +126,12 @@ Set these environment variables:
 
 - `API_KEY`: Your API key
 - `API_URL`: The API endpoint
-'''
+"""
 
     @pytest.fixture
     def javascript_code_sample(self):
         """Sample JavaScript code for testing"""
-        return '''
+        return """
 // JavaScript module for testing
 
 const express = require('express');
@@ -141,7 +141,7 @@ class UserController {
     constructor(database) {
         this.db = database;
     }
-    
+
     async getUser(id) {
         try {
             const user = await this.db.findById(id);
@@ -151,7 +151,7 @@ class UserController {
             throw error;
         }
     }
-    
+
     async createUser(userData) {
         const newUser = {
             ...userData,
@@ -175,19 +175,21 @@ router.post('/users', async (req, res) => {
 });
 
 module.exports = router;
-'''
+"""
 
     def test_basic_text_chunking(self, basic_config):
         """Test basic text chunking without code"""
         chunker = EnhancedChunker(basic_config)
-        
+
         text = "This is a simple text. " * 20  # Create text longer than chunk size
         chunks = chunker.chunk_content(text, "Test Document", "http://test.com")
-        
+
         assert len(chunks) > 1
         assert all("content" in chunk for chunk in chunks)
         assert all("chunk_index" in chunk for chunk in chunks)
-        assert all(chunk["char_count"] <= basic_config.chunk_size * 1.2 for chunk in chunks)
+        assert all(
+            chunk["char_count"] <= basic_config.chunk_size * 1.2 for chunk in chunks
+        )
 
     def test_code_fence_detection(self, basic_config, markdown_with_code):
         """Test detection and preservation of code fences"""
@@ -195,11 +197,13 @@ module.exports = router;
         chunks = chunker.chunk_content(
             markdown_with_code, "API Docs", "http://test.com/api.md"
         )
-        
+
         # Check that code blocks are detected
-        code_chunks = [c for c in chunks if c.get("chunk_type") == "code" or c.get("has_code")]
+        code_chunks = [
+            c for c in chunks if c.get("chunk_type") == "code" or c.get("has_code")
+        ]
         assert len(code_chunks) > 0
-        
+
         # When preserve_code_blocks is True (default), code blocks should be intact
         if basic_config.preserve_code_blocks:
             # Check if any chunks are marked as code type
@@ -209,15 +213,18 @@ module.exports = router;
                 for chunk in code_type_chunks:
                     content = chunk["content"]
                     backtick_count = content.count("```")
-                    # Code chunks extracted by enhanced chunking should have complete blocks
-                    assert backtick_count == 2 or backtick_count == 0  # Either complete fence or no fence
-        
+                    # Code chunks should have complete blocks
+                    # Either complete fence or no fence
+                    assert backtick_count == 2 or backtick_count == 0
+
         # Verify overall integrity by joining all chunks
         full_content = "".join(c["content"] for c in chunks)
         original_backticks = markdown_with_code.count("```")
         reconstructed_backticks = full_content.count("```")
         # Total number of backticks should be preserved
-        assert abs(original_backticks - reconstructed_backticks) <= 2  # Allow small difference due to overlap
+        assert (
+            abs(original_backticks - reconstructed_backticks) <= 2
+        )  # Allow small difference due to overlap
 
     def test_function_boundary_preservation(self, basic_config, python_code_sample):
         """Test that function boundaries are respected"""
@@ -228,11 +235,11 @@ module.exports = router;
             preserve_function_boundaries=True,
         )
         chunker = EnhancedChunker(config)
-        
+
         chunks = chunker.chunk_content(
             python_code_sample, "test.py", "http://test.com/test.py", language="python"
         )
-        
+
         # Check that function definitions are not split mid-definition
         for chunk in chunks:
             content = chunk["content"]
@@ -245,22 +252,27 @@ module.exports = router;
                 for line in lines:
                     if line.strip().startswith("def "):
                         in_function = True
-                    elif in_function and line and not line[0].isspace() and not line.startswith("#"):
+                    elif (
+                        in_function
+                        and line
+                        and not line[0].isspace()
+                        and not line.startswith("#")
+                    ):
                         # New top-level element, function should be complete
                         in_function = False
 
     def test_overlap_consistency(self, basic_config):
         """Test that overlap between chunks is consistent"""
         chunker = EnhancedChunker(basic_config)
-        
+
         text = "Sentence one. Sentence two. Sentence three. " * 10
         chunks = chunker.chunk_content(text, "Test", "http://test.com")
-        
+
         if len(chunks) > 1:
             for i in range(len(chunks) - 1):
-                current_end = chunks[i]["content"][-basic_config.chunk_overlap:]
-                next_start = chunks[i + 1]["content"][:basic_config.chunk_overlap]
-                
+                current_end = chunks[i]["content"][-basic_config.chunk_overlap :]
+                next_start = chunks[i + 1]["content"][: basic_config.chunk_overlap]
+
                 # There should be some overlap between consecutive chunks
                 # (not exact due to boundary adjustments)
                 assert len(current_end) > 0 and len(next_start) > 0
@@ -268,29 +280,31 @@ module.exports = router;
     def test_language_detection(self, basic_config):
         """Test automatic language detection"""
         chunker = EnhancedChunker(basic_config)
-        
+
         # Test Python detection
         python_code = "import pandas as pd\ndf = pd.DataFrame()"
         chunks = chunker.chunk_content(
             python_code, "test.py", "http://test.com/test.py"
         )
-        assert chunks[0].get("language") == "python" or True  # Language detection is optional
+        assert (
+            chunks[0].get("language") == "python" or True
+        )  # Language detection is optional
 
-        # Test JavaScript detection  
+        # Test JavaScript detection
         js_code = "const express = require('express');\nconst app = express();"
-        chunks = chunker.chunk_content(
-            js_code, "test.js", "http://test.com/test.js"
-        )
-        assert chunks[0].get("language") == "javascript" or True  # Language detection is optional
+        chunks = chunker.chunk_content(js_code, "test.js", "http://test.com/test.js")
+        assert (
+            chunks[0].get("language") == "javascript" or True
+        )  # Language detection is optional
 
     def test_empty_content_handling(self, basic_config):
         """Test handling of empty or very short content"""
         chunker = EnhancedChunker(basic_config)
-        
+
         # Empty content
         chunks = chunker.chunk_content("", "Empty", "http://test.com")
         assert len(chunks) == 0
-        
+
         # Very short content
         chunks = chunker.chunk_content("Hello", "Short", "http://test.com")
         assert len(chunks) == 1
@@ -303,7 +317,7 @@ module.exports = router;
         chunks = chunker.chunk_content(
             python_code_sample, "test.py", "http://test.com/test.py"
         )
-        
+
         for i, chunk in enumerate(chunks):
             assert chunk["chunk_index"] == i
             assert chunk["total_chunks"] == len(chunks)
@@ -324,7 +338,7 @@ module.exports = router;
             max_function_chunk_size=300,
         )
         chunker = EnhancedChunker(config)
-        
+
         large_code = '''```python
 def very_long_function():
     """This is a very long function that exceeds chunk size"""
@@ -343,9 +357,9 @@ def very_long_function():
         result.append(i * 2)
     return result
 ```'''
-        
+
         chunks = chunker.chunk_content(large_code, "Long Code", "http://test.com")
-        
+
         # Verify the code block was handled appropriately
         assert len(chunks) >= 1
         # Check that code fence integrity is maintained
@@ -358,21 +372,24 @@ def very_long_function():
         chunks = chunker.chunk_content(
             markdown_with_code, "Mixed", "http://test.com/mixed.md"
         )
-        
+
         # Should have both text and code chunks
-        chunk_types = set(c.get("chunk_type", "text") for c in chunks)
+        chunk_types = {c.get("chunk_type", "text") for c in chunks}
         assert "text" in chunk_types or len(chunk_types) > 0
-        
+
         # Verify title handling
         assert chunks[0]["title"] == "Mixed"
         if len(chunks) > 1:
             assert "Part" in chunks[1]["title"]
 
-    @pytest.mark.parametrize("strategy", [
-        ChunkingStrategy.BASIC,
-        ChunkingStrategy.ENHANCED,
-        ChunkingStrategy.AST_BASED,
-    ])
+    @pytest.mark.parametrize(
+        "strategy",
+        [
+            ChunkingStrategy.BASIC,
+            ChunkingStrategy.ENHANCED,
+            ChunkingStrategy.AST_BASED,
+        ],
+    )
     def test_all_strategies(self, strategy, python_code_sample):
         """Test that all chunking strategies work without errors"""
         config = ChunkingConfig(
@@ -381,11 +398,11 @@ def very_long_function():
             strategy=strategy,
         )
         chunker = EnhancedChunker(config)
-        
+
         chunks = chunker.chunk_content(
             python_code_sample, "test.py", "http://test.com/test.py"
         )
-        
+
         assert len(chunks) > 0
         assert all("content" in chunk for chunk in chunks)
         assert all(len(chunk["content"]) > 0 for chunk in chunks)
@@ -393,7 +410,7 @@ def very_long_function():
     def test_boundary_detection_patterns(self, basic_config):
         """Test various boundary detection patterns"""
         chunker = EnhancedChunker(basic_config)
-        
+
         # Test different boundary types
         text_with_boundaries = """
 # Header 1
@@ -420,11 +437,11 @@ def example():
 
 Final section with text.
 """
-        
+
         chunks = chunker.chunk_content(
             text_with_boundaries, "Boundaries", "http://test.com"
         )
-        
+
         # Verify chunks are created at logical boundaries
         assert len(chunks) >= 1
         # Check that chunks don't end mid-sentence when possible
@@ -433,8 +450,8 @@ Final section with text.
             if len(content) < basic_config.chunk_size * 0.8:
                 # Short chunks should end at natural boundaries
                 assert (
-                    content.endswith((".", "!", "?", "```", "\n")) or
-                    content.endswith(tuple(str(i) for i in range(10)))  # List items
+                    content.endswith((".", "!", "?", "```", "\n"))
+                    or content.endswith(tuple(str(i) for i in range(10)))  # List items
                 )
 
 
@@ -462,28 +479,28 @@ def simple_function():
 class MyClass:
     def method_one(self):
         return "one"
-    
+
     def method_two(self):
         return "two"
 
 async def async_function():
     return await something()
 '''
-        
+
         chunks = ast_chunker.chunk_content(
             code, "test.py", "http://test.com/test.py", language="python"
         )
-        
+
         # Should create chunks for each function/class
         assert len(chunks) >= 3  # At least one per major code unit
-        
+
         # Check metadata
         code_chunks = [c for c in chunks if c.get("chunk_type") == "code"]
         assert len(code_chunks) > 0
 
     def test_javascript_ast_parsing(self, ast_chunker):
         """Test AST parsing of JavaScript code"""
-        code = '''
+        code = """
 function regularFunction() {
     return "regular";
 }
@@ -496,17 +513,17 @@ class ES6Class {
     constructor() {
         this.value = 42;
     }
-    
+
     getValue() {
         return this.value;
     }
 }
-'''
-        
+"""
+
         chunks = ast_chunker.chunk_content(
             code, "test.js", "http://test.com/test.js", language="javascript"
         )
-        
+
         assert len(chunks) >= 1
         # Verify function boundaries are preserved
         for chunk in chunks:
@@ -517,17 +534,17 @@ class ES6Class {
     def test_ast_fallback_on_error(self, ast_chunker):
         """Test graceful fallback when AST parsing fails"""
         # Malformed code that might cause AST parsing issues
-        malformed_code = '''
+        malformed_code = """
 def broken_function(
     this is not valid python syntax
     return None
-'''
-        
+"""
+
         # Should not raise an exception
         chunks = ast_chunker.chunk_content(
             malformed_code, "broken.py", "http://test.com/broken.py", language="python"
         )
-        
+
         assert len(chunks) >= 1
         assert all("content" in chunk for chunk in chunks)
 
@@ -536,12 +553,12 @@ def broken_function(
         large_class = '''
 class LargeClass:
     """A class with many methods"""
-    
+
     def __init__(self):
         self.data = []
         self.config = {}
         self.status = "initialized"
-    
+
     def method_one(self):
         """First method with substantial implementation"""
         result = []
@@ -551,33 +568,33 @@ class LargeClass:
             else:
                 result.append(i * 3)
         return result
-    
+
     def method_two(self, param):
         """Second method with different logic"""
         processed = str(param).upper()
         return processed * 3
-    
+
     def method_three(self):
         """Third method doing something else"""
         import time
         time.sleep(0.1)
         return "done"
 '''
-        
+
         config = ChunkingConfig(
             chunk_size=200,  # Small to force splitting
             strategy=ChunkingStrategy.AST_BASED,
             enable_ast_chunking=True,
         )
         chunker = EnhancedChunker(config)
-        
+
         chunks = chunker.chunk_content(
             large_class, "large.py", "http://test.com/large.py", language="python"
         )
-        
+
         # Should split into multiple chunks
         assert len(chunks) > 1
-        
+
         # Each chunk should contain complete methods
         for chunk in chunks:
             content = chunk["content"]
@@ -585,5 +602,5 @@ class LargeClass:
             if "def " in content:
                 # Basic check: matching indentation
                 lines = content.split("\n")
-                def_lines = [l for l in lines if l.strip().startswith("def ")]
+                def_lines = [line for line in lines if line.strip().startswith("def ")]
                 assert len(def_lines) >= 1
