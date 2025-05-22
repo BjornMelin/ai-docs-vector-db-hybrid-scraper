@@ -4,13 +4,13 @@
 echo "🚀 Starting AI Documentation Vector Database Services..."
 
 # Check if Docker is running
-if ! docker info &> /dev/null; then
+if ! docker info &>/dev/null; then
     echo "❌ Docker is not running. Please start Docker Desktop."
     exit 1
 fi
 
 # Check if uv is available
-if ! command -v uv &> /dev/null; then
+if ! command -v uv &>/dev/null; then
     echo "❌ uv is not installed. Please run setup.sh first."
     exit 1
 fi
@@ -21,7 +21,7 @@ docker-compose up -d qdrant-vector-db
 
 # Wait for Qdrant to be ready
 echo "⏳ Waiting for Qdrant to be ready..."
-until curl -s http://localhost:6333/health > /dev/null; do
+until curl -s http://localhost:6333/health >/dev/null; do
     sleep 2
     echo "   Checking Qdrant health..."
 done
@@ -33,7 +33,7 @@ echo "   Python: $(uv run python --version)"
 echo "   uv: $(uv --version)"
 
 # Show collection stats if available
-if curl -s http://localhost:6333/collections/documents > /dev/null 2>&1; then
+if curl -s http://localhost:6333/collections/documents >/dev/null 2>&1; then
     echo "📊 Vector Database Stats:"
     COLLECTION_INFO=$(curl -s http://localhost:6333/collections/documents)
     echo "   Collection: documents"

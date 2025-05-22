@@ -3,28 +3,99 @@ version: '3.8'
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant-vector-db
+    container_name: qdrant-sota-2025
     restart: unless-stopped
     ports:
       - "6333:6333"  # HTTP API
-      - "6334:6334"  # gRPC API
+      - "6334:6334"  # gRPC API (high performance)
     volumes:
-      # Persistent storage mapping to WSL directory
+      # Persistent storage mapping to WSL/local directory
       - ~/.qdrant_data:/qdrant/storage:z
     environment:
+      # SOTA 2025 Performance Optimizations
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__LOG_LEVEL=INFO
+      
+      # Storage optimizations for hybrid search + quantization
       - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
+      - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8
+      - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=16
+      
+      # Memory and performance tuning
+      - QDRANT__STORAGE__WRITE_CONSISTENCY_FACTOR=1
+      - QDRANT__STORAGE__REPLICATION_FACTOR=1
+      
+      # Hybrid search optimizations
+      - QDRANT__STORAGE__SPARSE_VECTORS__ON_DISK=true
+      - QDRANT__STORAGE__QUANTIZATION__SCALAR__TYPE=int8
+      - QDRANT__STORAGE__HNSW__M=16
+      - QDRANT__STORAGE__HNSW__EF_CONSTRUCT=128
+      
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
     networks:
-      - vector-db-network
+      - sota-vector-network
+
+  # Optional: Add monitoring for production deployments
+  qdrant-exporter:
+    image: qdrant/qdrant-exporter:latest
+    container_name: qdrant-exporter
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - qdrant
+    networks:
+      - sota-vector-network
+    profiles:
+      - monitoring
+      - production
 
 networks:
-  vector-db-network:
+  sota-vector-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500
+
+# Production profile for advanced deployment
+x-production-settings: &production
+  deploy:
+    resources:
+      limits:
+        memory: 8G
+        cpus: '4.0'
+      reservations:
+        memory: 4G
+        cpus: '2.0'
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+
+# Development override for resource-constrained environments  
+x-development-settings: &development
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+        cpus: '1.0'
+      reservations:
+        memory: 1G
+        cpus: '0.5'
