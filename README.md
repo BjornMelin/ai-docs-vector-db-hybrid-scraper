@@ -40,6 +40,8 @@ This implementation combines **research-backed 2025 best practices** for product
 - **🏠 Local-First**: All data stored persistently in your environment
 - **🤖 Claude Integration**: Native MCP server support for Claude Desktop/Code
 - **📈 Production-Ready**: Quantization, monitoring, error handling, testing
+- **🔍 Enhanced Code-Aware Chunking**: AST-based chunking preserves function boundaries
+- **🌳 Tree-sitter Integration**: Multi-language code parsing (Python, JS, TS)
 
 ## 🚀 Quick Start
 
@@ -414,11 +416,44 @@ ai-docs-vector-db-hybrid-scraper/
 
 ## 🔬 Research & Implementation Notes
 
-### Character-Based Chunking (Research-Backed)
+### Enhanced Code-Aware Chunking (SOTA 2025)
 
-- **Optimal Size**: 1600 characters ≈ 400-600 tokens
-- **Overlap**: 200 characters for context preservation  
-- **Rationale**: Better than token-based; handles multilingual content
+#### Three-Tier Chunking Strategy
+
+1. **Basic Character-Based** (Legacy Mode)
+   - **Size**: 1600 characters ≈ 400-600 tokens
+   - **Overlap**: 320 characters (20%) for context preservation
+   - **Use Case**: General text, documentation without code
+
+2. **Enhanced Code-Aware** (Default)
+   - **Code Block Preservation**: Markdown code fences kept intact
+   - **Function Boundaries**: Detects Python/JS/TS function signatures
+   - **Smart Boundaries**: Paragraph, heading, list, and code delimiters
+   - **Docstring Handling**: Preserves docstrings with functions
+   - **Use Case**: Technical documentation with embedded code
+
+3. **AST-Based Chunking** (Advanced)
+   - **Tree-sitter Integration**: Parse actual code structure
+   - **Function/Class Extraction**: Keep semantic units together
+   - **Multi-Language**: Python, JavaScript, TypeScript support
+   - **Intelligent Splitting**: Large classes split by methods
+   - **Use Case**: Source code files, API documentation
+
+#### Configuration Options
+
+```python
+from src.chunking import ChunkingConfig, ChunkingStrategy
+
+config = ChunkingConfig(
+    strategy=ChunkingStrategy.ENHANCED,  # or AST_BASED
+    chunk_size=1600,
+    chunk_overlap=320,
+    preserve_function_boundaries=True,
+    preserve_code_blocks=True,
+    enable_ast_chunking=True,
+    max_function_chunk_size=3200,  # Allow larger chunks for big functions
+    supported_languages=["python", "javascript", "typescript", "markdown"],
+)
 
 ### Vector Quantization Benefits
 

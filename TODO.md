@@ -93,12 +93,14 @@
   - [ ] Create rich metadata extraction pipeline
   - [ ] Support for code documentation parsing
 
-- [ ] **Advanced Chunking Strategies** `feat/advanced-chunking`
-  - [ ] Implement semantic chunking with sentence transformers
-  - [ ] Add hierarchical chunking for long documents
-  - [ ] Create content-aware chunk boundaries
-  - [ ] Implement sliding window with smart overlap
-  - [ ] Add chunk quality scoring and filtering
+- [x] **Advanced Chunking Strategies** `feat/advanced-chunking` ✅
+  - [x] Implement enhanced code-aware chunking with boundary detection ✅
+  - [x] Add AST-based chunking with Tree-sitter integration ✅
+  - [x] Create content-aware chunk boundaries for code and documentation ✅
+  - [x] Implement intelligent overlap for context preservation ✅
+  - [x] Add multi-language support (Python, JavaScript, TypeScript) ✅
+  - [ ] Implement semantic chunking with sentence transformers (future)
+  - [ ] Add hierarchical chunking for long documents (future)
 
 ### Performance & Scalability
 
@@ -231,6 +233,9 @@
 - [x] **Vector quantization** (83-99% storage reduction)
 - [x] **Multi-provider embeddings** (OpenAI, FastEmbed)
 - [x] **Memory-adaptive processing** with intelligent concurrency
+- [x] **Enhanced code-aware chunking** (preserves function boundaries)
+- [x] **AST-based parsing** with Tree-sitter (Python, JS, TS)
+- [x] **Configurable chunking strategies** (Basic, Enhanced, AST-based)
 
 ### In Progress
 

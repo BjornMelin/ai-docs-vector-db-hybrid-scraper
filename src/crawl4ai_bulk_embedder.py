@@ -61,6 +61,10 @@ from rich.progress import SpinnerColumn
 from rich.progress import TextColumn
 from rich.table import Table
 
+# Import enhanced chunking module
+from .chunking import ChunkingConfig
+from .chunking import EnhancedChunker
+
 console = Console()
 
 
@@ -161,13 +165,18 @@ class ScrapingConfig(BaseModel):
         default_factory=EmbeddingConfig, description="Embedding configuration"
     )
 
+    # SOTA 2025 Chunking Configuration
+    chunking: ChunkingConfig = Field(
+        default_factory=ChunkingConfig, description="Enhanced chunking configuration"
+    )
+
     # Performance Settings
     max_concurrent_crawls: int = Field(
         default=8,
         description="Maximum concurrent crawls",
     )
 
-    # Research-backed optimal chunk size (was 2000, now 1600 based on findings)
+    # Legacy chunking settings (for backward compatibility, now in ChunkingConfig)
     chunk_size: int = Field(
         default=1600,
         description="Characters per chunk (research: 400-600 tokens optimal)",
@@ -190,6 +199,12 @@ class ScrapingConfig(BaseModel):
     enable_firecrawl_premium: bool = Field(
         default=False, description="Use Firecrawl for premium extraction features"
     )
+
+    def __post_init__(self):
+        """Sync legacy settings with new ChunkingConfig"""
+        # Override ChunkingConfig with legacy values if provided
+        self.chunking.chunk_size = self.chunk_size
+        self.chunking.chunk_overlap = self.chunk_overlap
 
 
 class VectorMetrics(BaseModel):
@@ -301,6 +316,9 @@ class ModernDocumentationScraper:
 
         # Initialize embedding models based on provider
         self._initialize_embedding_models()
+
+        # Initialize enhanced chunker
+        self.chunker = EnhancedChunker(config.chunking)
 
         # Initialize reranker if enabled
         self.reranker = None
@@ -551,73 +569,9 @@ class ModernDocumentationScraper:
             return passages
 
     def chunk_content(self, content: str, title: str, url: str) -> list[dict[str, Any]]:
-        """SOTA 2025 content chunking (research: 1600 chars optimal for retrieval)"""
-        # Research finding: 1600 characters ≈ 400-600 tokens (optimal range)
-        chunk_size_chars = self.config.chunk_size
-        overlap_chars = self.config.chunk_overlap
-
-        # Simple case: content smaller than chunk size
-        if len(content) <= chunk_size_chars:
-            return [
-                {
-                    "content": content,
-                    "title": title,
-                    "url": url,
-                    "chunk_index": 0,
-                    "total_chunks": 1,
-                    "char_count": len(content),
-                    "token_estimate": len(content) // 4,  # Rough token estimation
-                },
-            ]
-
-        # Character-based chunking with semantic boundaries
-        chunks = []
-        start_pos = 0
-
-        while start_pos < len(content):
-            # Calculate chunk end position
-            end_pos = min(start_pos + chunk_size_chars, len(content))
-
-            # Try to break at sentence or paragraph boundaries for better context
-            if end_pos < len(content):
-                # Look for sentence endings within last 200 chars
-                search_start = max(end_pos - 200, start_pos)
-                for boundary_char in [".\\n", "\\n\\n", ". ", "!\\n", "?\\n"]:
-                    boundary_idx = content.rfind(boundary_char, search_start, end_pos)
-                    if boundary_idx > search_start:
-                        end_pos = boundary_idx + len(boundary_char)
-                        break
-
-            chunk_text = content[start_pos:end_pos].strip()
-            if chunk_text:  # Only add non-empty chunks
-                chunk_idx = len(chunks)
-                chunks.append(
-                    {
-                        "content": chunk_text,
-                        "title": (
-                            f"{title} (Part {chunk_idx + 1})"
-                            if chunk_idx > 0
-                            else title
-                        ),
-                        "url": url,
-                        "chunk_index": chunk_idx,
-                        "total_chunks": 0,  # Will be updated
-                        "char_count": len(chunk_text),
-                        "token_estimate": len(chunk_text) // 4,
-                        "start_pos": start_pos,
-                        "end_pos": end_pos,
-                    },
-                )
-
-            # Move start position with overlap
-            start_pos = max(start_pos + chunk_size_chars - overlap_chars, end_pos)
-
-        # Update total_chunks for all chunks
-        total_chunks_count = len(chunks)
-        for chunk_item in chunks:
-            chunk_item["total_chunks"] = total_chunks_count
-
-        return chunks
+        """SOTA 2025 content chunking with enhanced code awareness"""
+        # Use the enhanced chunker
+        return self.chunker.chunk_content(content, title, url)
 
     def create_filter_chain(self, site: DocumentationSite) -> FilterChain:
         """Create smart filter chain based on Crawl4AI best practices"""
