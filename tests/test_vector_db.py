@@ -18,7 +18,7 @@ from src.manage_vector_db import setup_logging
 class TestVectorDBManager:
     """Test the VectorDBManager class."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def db_manager(self, mock_qdrant_client):
         """Create VectorDBManager instance for testing."""
         manager = VectorDBManager("http://localhost:6333")
@@ -324,7 +324,7 @@ class TestSetupLogging:
 class TestCLI:
     """Test the CLI commands."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def runner(self):
         """Create CLI test runner."""
         return CliRunner()

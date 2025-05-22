@@ -20,14 +20,14 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop]:
     loop.close()
 
 
-@pytest.fixture
+@pytest.fixture()
 def temp_dir() -> Generator[Path]:
     """Create a temporary directory for test files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_env_vars() -> Generator[None]:
     """Mock environment variables for testing."""
     os.environ["OPENAI_API_KEY"] = "test_key"
@@ -37,7 +37,7 @@ def mock_env_vars() -> Generator[None]:
     os.environ.pop("QDRANT_URL", None)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_qdrant_client() -> MagicMock:
     """Mock Qdrant client for testing."""
     client = MagicMock()
@@ -51,7 +51,7 @@ def mock_qdrant_client() -> MagicMock:
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_openai_client() -> MagicMock:
     """Mock OpenAI client for testing."""
     client = MagicMock()
@@ -63,7 +63,7 @@ def mock_openai_client() -> MagicMock:
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_crawl4ai() -> MagicMock:
     """Mock Crawl4AI AsyncWebCrawler for testing."""
     crawler = MagicMock()
@@ -81,7 +81,7 @@ def mock_crawl4ai() -> MagicMock:
     return crawler
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_documentation_site() -> dict:
     """Sample documentation site configuration."""
     return {
@@ -96,7 +96,7 @@ def sample_documentation_site() -> dict:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_crawl_result() -> dict:
     """Sample crawl result data."""
     return {
@@ -115,7 +115,7 @@ def sample_crawl_result() -> dict:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_vector_points() -> list[PointStruct]:
     """Sample vector points for testing."""
     return [

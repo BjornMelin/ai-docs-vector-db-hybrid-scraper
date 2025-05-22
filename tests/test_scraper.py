@@ -215,7 +215,7 @@ class TestVectorMetrics:
 class TestModernDocumentationScraper:
     """Test the ModernDocumentationScraper class."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def scraper_config(self):
         """Create SOTA 2025 scraper configuration for testing."""
         return ScrapingConfig(
@@ -223,7 +223,7 @@ class TestModernDocumentationScraper:
             qdrant_url="http://localhost:6333",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def scraper(self, scraper_config):
         """Create SOTA 2025 scraper instance for testing."""
         with (
@@ -432,11 +432,9 @@ def test_load_documentation_sites(
 
     from src.crawl4ai_bulk_embedder import load_documentation_sites
 
-    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(
-        {
-            "sites": [sample_documentation_site],
-        }
-    )
+    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps({
+        "sites": [sample_documentation_site],
+    })
 
     sites = load_documentation_sites()
 
@@ -445,7 +443,7 @@ def test_load_documentation_sites(
     assert sites[0].name == "test-docs"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_main_function():
     """Test the main function execution."""
     from src.crawl4ai_bulk_embedder import main

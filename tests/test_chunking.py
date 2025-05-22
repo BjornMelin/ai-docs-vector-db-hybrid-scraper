@@ -9,7 +9,7 @@ from src.chunking import EnhancedChunker
 class TestEnhancedChunking:
     """Test suite for enhanced chunking functionality"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def basic_config(self):
         """Basic chunking configuration"""
         return ChunkingConfig(
@@ -19,7 +19,7 @@ class TestEnhancedChunking:
             enable_ast_chunking=False,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def ast_config(self):
         """AST-based chunking configuration"""
         return ChunkingConfig(
@@ -29,7 +29,7 @@ class TestEnhancedChunking:
             enable_ast_chunking=True,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def python_code_sample(self):
         """Sample Python code for testing"""
         return '''
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     main()
 '''
 
-    @pytest.fixture
+    @pytest.fixture()
     def markdown_with_code(self):
         """Sample markdown with embedded code blocks"""
         return """# API Documentation
@@ -128,7 +128,7 @@ Set these environment variables:
 - `API_URL`: The API endpoint
 """
 
-    @pytest.fixture
+    @pytest.fixture()
     def javascript_code_sample(self):
         """Sample JavaScript code for testing"""
         return """
@@ -458,7 +458,7 @@ Final section with text.
 class TestASTChunking:
     """Test suite specifically for AST-based chunking"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def ast_chunker(self):
         """Create AST-enabled chunker"""
         config = ChunkingConfig(

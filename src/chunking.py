@@ -51,7 +51,8 @@ class ChunkingConfig(BaseModel):
 
     # Basic parameters (existing)
     chunk_size: int = Field(
-        default=1600, description="Target chunk size in characters (research-optimal)"
+        default=1600,
+        description="Target chunk size in characters (research-optimal)",
     )
     chunk_overlap: int = Field(
         default=320, description="Overlap between chunks (20% of chunk_size)"
@@ -77,7 +78,12 @@ class ChunkingConfig(BaseModel):
 
     # Language detection
     supported_languages: list[str] = Field(
-        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
+        default_factory=lambda: [
+            "python",
+            "javascript",
+            "typescript",
+            "markdown",
+        ],
         description="Languages supported for AST parsing",
     )
     fallback_to_text_chunking: bool = Field(
@@ -141,8 +147,10 @@ class EnhancedChunker:
         ),
         "typescript": re.compile(
             r"^(\s*)(async\s+)?function\s+\w+\s*\([^)]*\)(\s*:\s*[^{]+)?|"
-            r"^(\s*)(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s+)?\([^)]*\)\s*(?::\s*[^=]+)?\s*=>|"
-            r"^(\s*)(public|private|protected)?\s*(async\s+)?\w+\s*\([^)]*\)(\s*:\s*[^{]+)?",
+            r"^(\s*)(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s+)?"
+            r"\([^)]*\)\s*(?::\s*[^=]+)?\s*=>|"
+            r"^(\s*)(public|private|protected)?\s*(async\s+)?\w+\s*\([^)]*\)"
+            r"(\s*:\s*[^{]+)?",
             re.MULTILINE,
         ),
     }
@@ -185,9 +193,9 @@ class EnhancedChunker:
         r"\n===+\n",
     ]
 
-    def __init__(self, config: ChunkingConfig):
+    def __init__(self, config: ChunkingConfig) -> None:
         self.config = config
-        self.parsers: dict[str, Parser] = {}
+        self.parsers: dict[str, Any] = {}
         self.logger = logging.getLogger(__name__)
         self._initialize_parsers()
 
@@ -207,7 +215,11 @@ class EnhancedChunker:
             pass
 
     def chunk_content(
-        self, content: str, title: str = "", url: str = "", language: str | None = None
+        self,
+        content: str,
+        title: str = "",
+        url: str = "",
+        language: str | None = None,
     ) -> list[dict[str, Any]]:
         """Main entry point for chunking content with SOTA 2025 strategies"""
         # Detect language if not provided
@@ -233,40 +245,69 @@ class EnhancedChunker:
         """Detect programming language from content and URL"""
         # Check file extension in URL
         if url:
-            if url.endswith(".py"):
-                return CodeLanguage.PYTHON.value
-            elif url.endswith((".js", ".mjs")):
-                return CodeLanguage.JAVASCRIPT.value
-            elif url.endswith((".ts", ".tsx")):
-                return CodeLanguage.TYPESCRIPT.value
-            elif url.endswith(".md"):
-                return CodeLanguage.MARKDOWN.value
+            lang = self._detect_language_from_url(url)
+            if lang != CodeLanguage.UNKNOWN.value:
+                return lang
 
         # Check for code fence languages
-        code_fences = self.CODE_FENCE_PATTERN.findall(content)
-        if code_fences:
-            # Get most common language
-            languages = [fence[1].lower() for fence in code_fences if fence[1]]
-            if languages:
-                lang_counts = {}
-                for lang in languages:
-                    lang_counts[lang] = lang_counts.get(lang, 0) + 1
-                detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore
-                if detected_lang in ["python", "py"]:
-                    return CodeLanguage.PYTHON.value
-                elif detected_lang in ["javascript", "js"]:
-                    return CodeLanguage.JAVASCRIPT.value
-                elif detected_lang in ["typescript", "ts"]:
-                    return CodeLanguage.TYPESCRIPT.value
+        lang = self._detect_language_from_code_fences(content)
+        if lang != CodeLanguage.UNKNOWN.value:
+            return lang
 
         # Pattern-based detection
+        return self._detect_language_from_patterns(content)
+
+    def _detect_language_from_url(self, url: str) -> str:
+        """Detect language from URL/file extension"""
+        ext_map = {
+            ".py": CodeLanguage.PYTHON.value,
+            ".js": CodeLanguage.JAVASCRIPT.value,
+            ".mjs": CodeLanguage.JAVASCRIPT.value,
+            ".ts": CodeLanguage.TYPESCRIPT.value,
+            ".tsx": CodeLanguage.TYPESCRIPT.value,
+            ".md": CodeLanguage.MARKDOWN.value,
+        }
+        for ext, lang in ext_map.items():
+            if url.endswith(ext):
+                return lang
+        return CodeLanguage.UNKNOWN.value
+
+    def _detect_language_from_code_fences(self, content: str) -> str:
+        """Detect language from code fence declarations"""
+        code_fences = self.CODE_FENCE_PATTERN.findall(content)
+        if not code_fences:
+            return CodeLanguage.UNKNOWN.value
+
+        # Get most common language
+        languages = [fence[1].lower() for fence in code_fences if fence[1]]
+        if not languages:
+            return CodeLanguage.UNKNOWN.value
+
+        lang_counts = {}
+        for lang in languages:
+            lang_counts[lang] = lang_counts.get(lang, 0) + 1
+        detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore
+
+        lang_map = {
+            "python": CodeLanguage.PYTHON.value,
+            "py": CodeLanguage.PYTHON.value,
+            "javascript": CodeLanguage.JAVASCRIPT.value,
+            "js": CodeLanguage.JAVASCRIPT.value,
+            "typescript": CodeLanguage.TYPESCRIPT.value,
+            "ts": CodeLanguage.TYPESCRIPT.value,
+        }
+        return lang_map.get(detected_lang, CodeLanguage.UNKNOWN.value)
+
+    def _detect_language_from_patterns(self, content: str) -> str:
+        """Detect language from code patterns"""
         if re.search(r"^import\s+\w+|^from\s+\w+\s+import", content, re.MULTILINE):
             return CodeLanguage.PYTHON.value
-        elif re.search(
-            r"^const\s+\w+\s*=|^let\s+\w+\s*=|^var\s+\w+\s*=", content, re.MULTILINE
+        if re.search(
+            r"^const\s+\w+\s*=|^let\s+\w+\s*=|^var\s+\w+\s*=",
+            content,
+            re.MULTILINE,
         ):
             return CodeLanguage.JAVASCRIPT.value
-
         return CodeLanguage.UNKNOWN.value
 
     def _find_code_blocks(self, content: str) -> list[CodeBlock]:
@@ -317,18 +358,20 @@ class EnhancedChunker:
                     if pre_content:
                         chunks.extend(
                             self._chunk_text_content(
-                                pre_content, chunk_start, current_code_block.start_pos
+                                pre_content,
+                                chunk_start,
+                                current_code_block.start_pos,
                             )
                         )
 
                 # Add the code block as a chunk (if within size limits)
                 block_size = current_code_block.end_pos - current_code_block.start_pos
                 if block_size <= self.config.max_function_chunk_size:
+                    start = current_code_block.start_pos
+                    end = current_code_block.end_pos
                     chunks.append(
                         Chunk(
-                            content=content[
-                                current_code_block.start_pos : current_code_block.end_pos
-                            ],
+                            content=content[start:end],
                             start_pos=current_code_block.start_pos,
                             end_pos=current_code_block.end_pos,
                             chunk_index=len(chunks),
@@ -339,11 +382,11 @@ class EnhancedChunker:
                     )
                 else:
                     # Code block too large, chunk it preserving boundaries
+                    start = current_code_block.start_pos
+                    end = current_code_block.end_pos
                     chunks.extend(
                         self._chunk_large_code_block(
-                            content[
-                                current_code_block.start_pos : current_code_block.end_pos
-                            ],
+                            content[start:end],
                             current_code_block.start_pos,
                             current_code_block.language,
                         )
@@ -658,7 +701,10 @@ class EnhancedChunker:
                 else:
                     # Split large code units intelligently
                     sub_chunks = self._split_large_code_unit(
-                        unit_content, unit["start_pos"], unit["type"], language
+                        unit_content,
+                        unit["start_pos"],
+                        unit["type"],
+                        language,
                     )
                     chunks.extend(sub_chunks)
 
@@ -687,15 +733,18 @@ class EnhancedChunker:
             return self._enhanced_chunking(content, language)
 
     def _extract_code_units(
-        self, node: Node, content: str, language: str
+        self, node: Any, content: str, language: str
     ) -> list[dict[str, Any]]:
         """Extract function and class definitions from AST"""
         code_units = []
 
-        def traverse(node: Node) -> None:
+        def traverse(node: Any) -> None:
             # Python-specific node types
             if language == "python":
-                if node.type in ["function_definition", "async_function_definition"]:
+                if node.type in [
+                    "function_definition",
+                    "async_function_definition",
+                ]:
                     # Extract function name
                     name_node = None
                     for child in node.children:
@@ -703,16 +752,16 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": content[name_node.start_byte : name_node.end_byte]
+                    code_units.append({
+                        "type": "function",
+                        "name": (
+                            content[name_node.start_byte : name_node.end_byte]
                             if name_node
-                            else "",
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                            else ""
+                        ),
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
                 elif node.type == "class_definition":
                     # Extract class name
                     name_node = None
@@ -721,16 +770,16 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": content[name_node.start_byte : name_node.end_byte]
+                    code_units.append({
+                        "type": "class",
+                        "name": (
+                            content[name_node.start_byte : name_node.end_byte]
                             if name_node
-                            else "",
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                            else ""
+                        ),
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
 
             # JavaScript/TypeScript node types
             elif language in ["javascript", "typescript"]:
@@ -747,14 +796,12 @@ class EnhancedChunker:
                                 name = content[child.start_byte : child.end_byte]
                                 break
 
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "function",
+                        "name": name,
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
                 elif node.type == "class_declaration":
                     # Extract class name
                     name = ""
@@ -763,14 +810,12 @@ class EnhancedChunker:
                             name = content[child.start_byte : child.end_byte]
                             break
 
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
+                    code_units.append({
+                        "type": "class",
+                        "name": name,
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                    })
 
             # Recurse into children
             for child in node.children:
@@ -800,7 +845,9 @@ class EnhancedChunker:
                 # Look for sentence endings
                 for boundary in [".\n", "\n\n", ". ", "!\n", "?\n"]:
                     boundary_idx = content.rfind(
-                        boundary, pos + self.config.chunk_size - 200, chunk_end
+                        boundary,
+                        pos + self.config.chunk_size - 200,
+                        chunk_end,
                     )
                     if boundary_idx > pos:
                         chunk_end = boundary_idx + len(boundary)
@@ -820,7 +867,8 @@ class EnhancedChunker:
 
             # Move with overlap
             pos = max(
-                pos + self.config.chunk_size - self.config.chunk_overlap, chunk_end
+                pos + self.config.chunk_size - self.config.chunk_overlap,
+                chunk_end,
             )
 
         # Update metadata
@@ -840,7 +888,7 @@ class EnhancedChunker:
         for i, chunk in enumerate(chunks):
             chunk_dict = {
                 "content": chunk.content,
-                "title": f"{title} (Part {i + 1})" if i > 0 and title else title,
+                "title": (f"{title} (Part {i + 1})" if i > 0 and title else title),
                 "url": url,
                 "chunk_index": i,
                 "total_chunks": chunk.total_chunks,
