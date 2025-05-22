@@ -91,6 +91,7 @@ def select_embedding_dimension(query_complexity: str) -> int:
 ### Qdrant Configuration Tuning
 
 #### High-Performance docker-compose.yml
+
 ```yaml
 services:
   qdrant:
@@ -120,6 +121,7 @@ services:
 ```
 
 #### Collection Optimization
+
 ```python
 # Create optimized collection
 collection_config = {
@@ -155,6 +157,7 @@ collection_config = {
 ### Search Performance Optimization
 
 #### Adaptive Search Parameters
+
 ```python
 def optimize_search_params(query_type: str, collection_size: int) -> dict:
     """Dynamically optimize search parameters based on context"""
@@ -197,6 +200,7 @@ def optimize_search_params(query_type: str, collection_size: int) -> dict:
 ```
 
 #### Batch Search Optimization
+
 ```python
 async def optimized_batch_search(queries: list[str], 
                                 client: AsyncQdrantClient) -> list[dict]:
@@ -237,6 +241,7 @@ async def optimized_batch_search(queries: list[str],
 ### Crawl4AI Optimization
 
 #### High-Performance Browser Configuration
+
 ```python
 OPTIMIZED_BROWSER_CONFIG = BrowserConfig(
     # Browser Performance
@@ -273,6 +278,7 @@ OPTIMIZED_BROWSER_CONFIG = BrowserConfig(
 ```
 
 #### Adaptive Crawling Strategy
+
 ```python
 async def optimized_crawling_strategy(urls: list[str]) -> list[CrawlResult]:
     """Adaptive crawling with intelligent concurrency"""
@@ -372,6 +378,7 @@ async def optimized_crawling_strategy(urls: list[str]) -> list[CrawlResult]:
 ### Content Processing Optimization
 
 #### Intelligent Chunking Strategy
+
 ```python
 class AdaptiveChunker:
     """SOTA 2025 adaptive chunking with content awareness"""

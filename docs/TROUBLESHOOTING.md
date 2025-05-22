@@ -23,6 +23,7 @@ python src/performance_test.py --quick
 
 **Symptoms**: Command not found errors when running setup
 **Solution**:
+
 ```bash
 # Install uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -41,6 +42,7 @@ uvx --version
 
 **Symptoms**: Import errors when running reranking features
 **Solution**:
+
 ```bash
 # Install with uv (recommended)
 uv add FlagEmbedding>=1.3.0
@@ -59,6 +61,7 @@ python -c "from FlagEmbedding import FlagReranker; print('✅ FlagEmbedding inst
 
 **Symptoms**: Errors during pip/uv install of crawl4ai
 **Solution**:
+
 ```bash
 # Use latest installation method
 uv add "crawl4ai[all]>=0.6.0"
@@ -78,12 +81,14 @@ python -c "import crawl4ai; print('✅ Crawl4AI installed')"
 
 ### Issue: "Connection refused" to Qdrant
 
-**Symptoms**: 
+**Symptoms**:
+
 - `curl http://localhost:6333/health` fails
 - MCP servers can't connect to Qdrant
 - Scraper fails with connection errors
 
 **Diagnosis**:
+
 ```bash
 # Check if Docker is running
 docker ps
@@ -97,6 +102,7 @@ lsof -i :6333
 ```
 
 **Solutions**:
+
 ```bash
 # Solution 1: Start/restart Qdrant
 docker-compose down
@@ -121,11 +127,13 @@ sudo iptables -A INPUT -p tcp --dport 6333 -j ACCEPT
 
 ### Issue: "Qdrant container keeps restarting"
 
-**Symptoms**: 
+**Symptoms**:
+
 - Container shows "Restarting" status
 - Logs show memory or permission errors
 
 **Diagnosis**:
+
 ```bash
 # Check container logs
 docker logs qdrant-sota-2025
@@ -138,6 +146,7 @@ df -h ~/.qdrant_data
 ```
 
 **Solutions**:
+
 ```bash
 # Solution 1: Increase memory allocation
 # Edit docker-compose.yml memory limits:
@@ -166,11 +175,13 @@ volumes:
 ### Issue: "Slow Qdrant performance"
 
 **Symptoms**:
+
 - Search queries take >5 seconds
 - High memory usage
 - CPU constantly high
 
 **Solutions**:
+
 ```bash
 # Solution 1: Enable quantization (if not already)
 # Check collection settings:
@@ -194,11 +205,13 @@ docker exec qdrant-sota-2025 qdrant-cli collection info documents
 ### Issue: "MCP server not found" in Claude Desktop
 
 **Symptoms**:
-- Claude Desktop shows "No MCP servers" 
+
+- Claude Desktop shows "No MCP servers"
 - MCP-related commands don't work
 - Server appears disconnected
 
 **Diagnosis**:
+
 ```bash
 # Check if servers are installed
 uvx list | grep qdrant
@@ -210,6 +223,7 @@ npx -y firecrawl-mcp --help
 ```
 
 **Solutions**:
+
 ```bash
 # Solution 1: Reinstall MCP servers
 uvx uninstall mcp-server-qdrant
@@ -244,11 +258,13 @@ cat ~/.config/claude-desktop/config.json | jq .
 ### Issue: "Invalid API key" errors
 
 **Symptoms**:
+
 - OpenAI embedding requests fail
 - Firecrawl scraping fails
 - Authentication errors in logs
 
 **Solutions**:
+
 ```bash
 # Solution 1: Verify API keys
 # Test OpenAI key:
@@ -279,11 +295,13 @@ echo "FIRECRAWL_API_KEY=your_key_here" >> .env
 ### Issue: "MCP timeouts" or slow responses
 
 **Symptoms**:
+
 - Claude operations timeout
 - Long waits for MCP responses
 - Partial results returned
 
 **Solutions**:
+
 ```bash
 # Solution 1: Increase timeouts in MCP config
 "env": {
@@ -311,11 +329,13 @@ echo "FIRECRAWL_API_KEY=your_key_here" >> .env
 ### Issue: "Slow embedding generation"
 
 **Symptoms**:
+
 - Scraping takes hours instead of minutes
 - High CPU usage during embedding
 - Memory exhaustion
 
 **Solutions**:
+
 ```bash
 # Solution 1: Enable FastEmbed (50% speedup)
 # Edit src/crawl4ai_bulk_embedder.py:
@@ -344,11 +364,13 @@ python src/crawl4ai_bulk_embedder.py
 ### Issue: "High memory usage"
 
 **Symptoms**:
+
 - System runs out of RAM
 - OOM (Out of Memory) errors
 - Swap thrashing
 
 **Solutions**:
+
 ```bash
 # Solution 1: Enable memory-efficient settings
 # In docker-compose.yml:
@@ -380,11 +402,13 @@ python src/crawl_single_site.py "https://docs.qdrant.tech/concepts/" 20
 ### Issue: "Slow search performance"
 
 **Symptoms**:
+
 - Vector searches take >5 seconds
 - Timeouts in Claude Desktop
 - High CPU during search
 
 **Solutions**:
+
 ```bash
 # Solution 1: Optimize Qdrant HNSW parameters
 curl -X PUT "http://localhost:6333/collections/documents" \
@@ -427,11 +451,13 @@ results = qdrant_client.search(
 ### Issue: "Poor search accuracy"
 
 **Symptoms**:
+
 - Irrelevant search results
 - Missing expected content
 - Low similarity scores
 
 **Solutions**:
+
 ```bash
 # Solution 1: Enable hybrid search + reranking
 EMBEDDING_CONFIG = EmbeddingConfig(
@@ -463,11 +489,13 @@ metadata = {
 ### Issue: "Embedding dimension mismatch"
 
 **Symptoms**:
+
 - Errors when adding new vectors
-- "Vector dimension doesn't match" 
+- "Vector dimension doesn't match"
 - Collection creation failures
 
 **Solutions**:
+
 ```bash
 # Solution 1: Check current collection config
 curl http://localhost:6333/collections/documents
@@ -503,11 +531,13 @@ python src/manage_vector_db.py migrate \
 ### Issue: "Duplicate content in database"
 
 **Symptoms**:
+
 - Same content appears multiple times
 - Inflated database size
 - Redundant search results
 
 **Solutions**:
+
 ```bash
 # Solution 1: Enable deduplication
 python src/manage_vector_db.py deduplicate \
@@ -540,11 +570,13 @@ def should_process_url(url):
 ### Issue: "Rate limiting errors"
 
 **Symptoms**:
+
 - "Rate limit exceeded" errors
 - 429 HTTP status codes
 - Slow API responses
 
 **Solutions**:
+
 ```bash
 # Solution 1: Implement rate limiting
 # Add to scraper config:
@@ -575,11 +607,13 @@ EMBEDDING_CONFIG = EmbeddingConfig(
 ### Issue: "API key security warnings"
 
 **Symptoms**:
+
 - Keys visible in config files
 - Security scanner alerts
 - Accidental key exposure
 
 **Solutions**:
+
 ```bash
 # Solution 1: Use environment variables only
 # Remove keys from Claude config, use env vars:
@@ -716,6 +750,7 @@ echo "Benchmark complete"
 ## 📞 Getting Help
 
 ### Community Resources
+
 - [GitHub Issues](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues)
 - [Crawl4AI Community](https://github.com/unclecode/crawl4ai/discussions)
 - [Qdrant Discord](https://discord.gg/qdrant)
@@ -726,17 +761,19 @@ echo "Benchmark complete"
 When reporting issues, please include:
 
 1. **System Information**:
+
    ```bash
    # Run and include output:
    ./scripts/diagnose-issues.sh
    ```
 
 2. **Configuration**:
-   - Your `docker-compose.yml` 
+   - Your `docker-compose.yml`
    - Your Claude Desktop MCP config (with API keys redacted)
    - Your `config/documentation-sites.json`
 
 3. **Logs**:
+
    ```bash
    # Include relevant logs:
    docker logs qdrant-sota-2025
@@ -752,6 +789,7 @@ When reporting issues, please include:
 ### Professional Support
 
 For production deployments or complex issues:
+
 - **Qdrant Cloud**: Professional managed service
 - **Firecrawl Enterprise**: Enhanced scraping capabilities
 - **Custom Integration**: Professional services available

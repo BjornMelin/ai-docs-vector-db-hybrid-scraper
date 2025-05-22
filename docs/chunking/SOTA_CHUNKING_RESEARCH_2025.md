@@ -11,7 +11,7 @@ Based on comprehensive research using multiple MCP tools (firecrawl_deep_researc
 Our existing implementation in `src/crawl4ai_bulk_embedder.py:553-620` uses:
 
 - **Character-based chunking**: 1600 characters per chunk (research-optimized)
-- **Semantic boundary detection**: Limited to sentence endings (`.\\n`, `\\n\\n`, `. `, `!\\n`, `?\\n`)
+- **Semantic boundary detection**: Limited to sentence endings (`.\\n`, `\\n\\n`, `.`, `!\\n`, `?\\n`)
 - **Overlap strategy**: 320 characters (20% overlap)
 - **Simple boundary detection**: Basic pattern matching, no AST awareness
 
@@ -29,12 +29,14 @@ Our existing implementation in `src/crawl4ai_bulk_embedder.py:553-620` uses:
 **Key Research Insight**: AST-based chunking using Tree-sitter provides 30-50% better retrieval precision versus naive fixed sizing while preserving code integrity.
 
 #### Tree-sitter Advantages
+
 - **113 language parsers** available (C-based, dependency-free)
 - **Incremental parsing** for performance
 - **Precise boundary detection** for functions, classes, methods
 - **Semantic integrity preservation** ensuring no mid-function splits
 
 #### Implementation Pattern
+
 ```python
 import tree_sitter_python as tspython
 from tree_sitter import Language, Parser
@@ -53,6 +55,7 @@ function_boundaries = extract_function_boundaries(tree.root_node)
 **Research Finding**: Combining character-based limits with structural boundaries achieves optimal balance between context preservation and computational efficiency.
 
 #### Recommended Approach
+
 1. **Primary**: Use AST to detect logical boundaries (functions, classes, docstrings)
 2. **Secondary**: Apply character limits within logical units
 3. **Tertiary**: Use semantic boundary detection for documentation text
@@ -60,12 +63,14 @@ function_boundaries = extract_function_boundaries(tree.root_node)
 ### 3. Code-Aware Chunking Strategies
 
 #### Function Preservation Techniques
+
 - **Complete function extraction**: Keep function definitions, docstrings, and implementation together
 - **Context-aware overlap**: Include function signatures in adjacent chunks
 - **Decorator preservation**: Keep Python decorators with their functions
 - **Import statement handling**: Group imports at file/chunk boundaries
 
 #### Documentation Alignment
+
 - **Docstring-function binding**: Keep docstrings with their corresponding functions
 - **Comment preservation**: Maintain inline comments with relevant code
 - **Example code integrity**: Preserve complete code examples in documentation
@@ -73,6 +78,7 @@ function_boundaries = extract_function_boundaries(tree.root_node)
 ### 4. Performance Optimization Insights
 
 #### Research-Backed Metrics
+
 - **Optimal chunk size**: 1600 characters (400-600 tokens) confirmed optimal
 - **Overlap strategy**: 10-20% overlap maintains context without excessive redundancy
 - **Processing efficiency**: Tree-sitter adds minimal overhead (< 5% processing time)
@@ -87,7 +93,7 @@ function_boundaries = extract_function_boundaries(tree.root_node)
 **Impact**: Significant improvement in code chunking quality
 
 1. **Implement code block detection** using regex patterns
-2. **Add markdown code fence awareness** (```python, ```javascript, etc.)
+2. **Add markdown code fence awareness** (```python,```javascript, etc.)
 3. **Enhance semantic boundaries** for programming constructs
 4. **Preserve function signatures** across chunk boundaries
 
@@ -184,12 +190,14 @@ class IntelligentChunker:
 ### Cost-Benefit Analysis
 
 **Benefits**:
+
 - Dramatically improved code understanding in RAG responses
 - Better function-level code completion and explanation
 - Reduced hallucination in code generation tasks
 - Enhanced developer experience with accurate context
 
 **Costs**:
+
 - Additional dependencies (tree-sitter ecosystem)
 - Modest increase in processing time and memory
 - Implementation complexity for multi-language support

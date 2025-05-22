@@ -7,8 +7,9 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Phase 1: Enhanced Code-Aware Chunking (Immediate Implementation)
 
 #### [ ] 1.1 Implement Enhanced Boundary Detection
+
 - [ ] Add code block detection using regex patterns for common languages
-- [ ] Implement markdown code fence awareness (```python, ```javascript, etc.)
+- [ ] Implement markdown code fence awareness (```python,```javascript, etc.)
 - [ ] Create function signature preservation across chunk boundaries
 - [ ] Add programming construct awareness (classes, functions, methods)
 - [ ] Enhance semantic boundaries for documentation mixed with code
@@ -18,6 +19,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Dependencies**: None (uses existing codebase)
 
 #### [ ] 1.2 Improve Semantic Boundary Detection
+
 - [ ] Expand boundary patterns to include programming-specific delimiters
 - [ ] Add docstring detection and preservation
 - [ ] Implement comment-aware chunking
@@ -30,6 +32,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Phase 2: Tree-sitter AST Integration (Short-term)
 
 #### [ ] 2.1 Core Tree-sitter Infrastructure
+
 - [ ] Add py-tree-sitter dependency to requirements.txt
 - [ ] Install language parsers (Python, JavaScript, TypeScript)
 - [ ] Create AST parser initialization and management
@@ -40,6 +43,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: Foundation for 40-50% chunking improvement
 
 #### [ ] 2.2 AST-Based Chunking Implementation
+
 - [ ] Create function boundary extraction using AST traversal
 - [ ] Implement class definition preservation
 - [ ] Add method and property grouping within classes
@@ -50,6 +54,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: 40-50% improvement in code chunk precision
 
 #### [ ] 2.3 Multi-Language Support
+
 - [ ] Implement Python AST chunking (primary focus)
 - [ ] Add JavaScript/TypeScript support for web documentation
 - [ ] Create language-specific chunking rules
@@ -62,6 +67,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Phase 3: Advanced Semantic Chunking (Medium-term)
 
 #### [ ] 3.1 Adaptive Chunk Sizing
+
 - [ ] Implement dynamic chunk sizing based on code complexity
 - [ ] Create function-size-aware chunking (larger chunks for big functions)
 - [ ] Add configuration for maximum function chunk size (3200 chars)
@@ -72,6 +78,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: Industry-leading adaptive chunking
 
 #### [ ] 3.2 Context-Aware Embedding Enhancement
+
 - [ ] Implement related code segment grouping
 - [ ] Add import statement handling and preservation
 - [ ] Create cross-reference aware chunking
@@ -86,6 +93,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Configuration & Flexibility Enhancements
 
 #### [ ] 4.1 Advanced Configuration Options
+
 - [ ] Create ChunkingConfig class with comprehensive options
 - [ ] Add enable_ast_chunking toggle
 - [ ] Implement preserve_function_boundaries option
@@ -96,6 +104,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: Flexible, production-ready configuration
 
 #### [ ] 4.2 Performance Optimization
+
 - [ ] Implement lazy loading of Tree-sitter parsers
 - [ ] Add chunking performance metrics collection
 - [ ] Create memory usage optimization for large files
@@ -108,6 +117,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Testing & Quality Assurance
 
 #### [ ] 5.1 Comprehensive Test Suite
+
 - [ ] Create test cases for large Python functions (>2000 chars)
 - [ ] Add complex class hierarchy test cases
 - [ ] Implement mixed code and documentation tests
@@ -118,6 +128,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: Production-ready reliability
 
 #### [ ] 5.2 Evaluation Metrics Implementation
+
 - [ ] Implement Function Integrity Score calculation
 - [ ] Create Context Preservation Rate metrics
 - [ ] Add Retrieval Precision measurement
@@ -132,6 +143,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ### [ ] Advanced Features & Research Integration
 
 #### [ ] 6.1 Experimental Chunking Strategies
+
 - [ ] Research and implement agentic chunking approaches
 - [ ] Add LLM-assisted boundary detection
 - [ ] Create domain-specific chunking rules
@@ -142,6 +154,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 **Expected Impact**: Research-level capabilities
 
 #### [ ] 6.2 Integration Enhancements
+
 - [ ] Create integration with code analysis tools
 - [ ] Add support for additional markup formats
 - [ ] Implement version control aware chunking
@@ -154,6 +167,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 ## Dependencies & Prerequisites
 
 ### Required Packages
+
 ```bash
 # Core AST parsing
 py-tree-sitter>=0.21.0
@@ -168,6 +182,7 @@ tree-sitter-java>=0.21.0
 ```
 
 ### Configuration Updates Required
+
 - [ ] Update ScrapingConfig to include ChunkingConfig
 - [ ] Add language detection logic
 - [ ] Implement fallback strategies
@@ -176,6 +191,7 @@ tree-sitter-java>=0.21.0
 ## Success Metrics
 
 ### Quantitative Targets
+
 - [ ] **Retrieval Precision**: +30-50% improvement in relevant code chunk retrieval
 - [ ] **Context Preservation**: +40% reduction in broken function contexts
 - [ ] **Processing Time**: Keep overhead under +10% despite enhanced capabilities
@@ -183,6 +199,7 @@ tree-sitter-java>=0.21.0
 - [ ] **Memory Efficiency**: Keep memory increase under +20%
 
 ### Qualitative Goals
+
 - [ ] Developers can reliably retrieve complete functions via RAG
 - [ ] Code explanations maintain full context and accuracy
 - [ ] Multi-language codebases are handled consistently
@@ -192,26 +209,31 @@ tree-sitter-java>=0.21.0
 ## Implementation Timeline
 
 ### Week 1-2: Foundation (Phase 1)
+
 - Enhanced boundary detection
 - Code-aware chunking improvements
 - Basic testing framework
 
 ### Week 3-4: Core AST Integration (Phase 2.1-2.2)
+
 - Tree-sitter infrastructure
 - Python AST chunking implementation
 - Multi-language parser setup
 
 ### Week 5-6: Language Expansion (Phase 2.3)
+
 - JavaScript/TypeScript support
 - Unified language interface
 - Comprehensive testing
 
 ### Week 7-8: Advanced Features (Phase 3)
+
 - Adaptive chunk sizing
 - Context-aware enhancements
 - Performance optimization
 
 ### Week 9-10: Polish & Production (Phase 4-5)
+
 - Configuration finalization
 - Quality assurance
 - Documentation and deployment
@@ -219,12 +241,14 @@ tree-sitter-java>=0.21.0
 ## Risk Mitigation
 
 ### Technical Risks
+
 - [ ] **Tree-sitter integration complexity**: Implement gradual rollout with fallbacks
 - [ ] **Performance degradation**: Monitor and optimize incrementally
 - [ ] **Memory usage increase**: Implement lazy loading and caching
 - [ ] **Multi-language parser issues**: Test extensively and provide graceful failures
 
 ### Project Risks
+
 - [ ] **Scope creep**: Stick to phased implementation plan
 - [ ] **Timeline pressure**: Prioritize high-impact features first
 - [ ] **Compatibility issues**: Maintain backward compatibility throughout
@@ -233,6 +257,7 @@ tree-sitter-java>=0.21.0
 ## Completion Criteria
 
 Each task is considered complete when:
+
 - [ ] Implementation passes all unit tests
 - [ ] Performance benchmarks meet targets
 - [ ] Documentation is updated
