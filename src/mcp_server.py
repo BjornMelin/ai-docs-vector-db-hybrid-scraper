@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,22 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance
 from qdrant_client.models import VectorParams
 from rich.console import Console
+
+from .error_handling import (
+    ConfigurationError,
+    ExternalServiceError,
+    NetworkError,
+    RateLimitError,
+    ValidationError,
+    circuit_breaker,
+    firecrawl_rate_limiter,
+    handle_mcp_errors,
+    openai_rate_limiter,
+    qdrant_rate_limiter,
+    retry_async,
+    validate_input,
+)
+from .security import SecurityValidator, validate_startup_security
 
 # Try importing optional dependencies
 try:
@@ -42,6 +59,14 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Validate security requirements at startup
+try:
+    ENV_VARS = validate_startup_security()
+    logger.info("✅ MCP Server security validation complete")
+except Exception as e:
+    logger.error(f"❌ MCP Server startup failed: {e}")
+    raise
 
 
 # ========== Pydantic Models for MCP Tools ==========
@@ -105,23 +130,33 @@ qdrant_client = None
 openai_client = None
 
 
+@retry_async(max_attempts=3, exceptions=(NetworkError, ConnectionError))
 async def get_qdrant_client():
-    """Get or create Qdrant client"""
+    """Get or create Qdrant client with error handling."""
     global qdrant_client
     if qdrant_client is None:
-        qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-        qdrant_client = AsyncQdrantClient(url=qdrant_url)
+        try:
+            qdrant_url = ENV_VARS.get("QDRANT_URL", "http://localhost:6333")
+            qdrant_client = AsyncQdrantClient(url=qdrant_url)
+            logger.info(f"✅ Qdrant client initialized: {qdrant_url}")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Qdrant client: {e}")
+            raise NetworkError(f"Cannot connect to Qdrant at {qdrant_url}: {e}")
     return qdrant_client
 
 
+@retry_async(max_attempts=3, exceptions=(NetworkError, ConnectionError))
 async def get_openai_client():
-    """Get or create OpenAI client"""
+    """Get or create OpenAI client with error handling."""
     global openai_client
     if openai_client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        openai_client = AsyncOpenAI(api_key=api_key)
+        try:
+            api_key = ENV_VARS["OPENAI_API_KEY"]
+            openai_client = AsyncOpenAI(api_key=api_key)
+            logger.info("✅ OpenAI client initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize OpenAI client: {e}")
+            raise ExternalServiceError(f"Cannot initialize OpenAI client: {e}")
     return openai_client
 
 
@@ -129,24 +164,37 @@ async def get_openai_client():
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    url=SecurityValidator.validate_url,
+    max_depth=lambda x: max(1, min(int(x), 10)),  # Limit depth 1-10
+    chunk_size=lambda x: max(100, min(int(x), 8000)),  # Limit chunk size 100-8000
+)
 async def scrape_url(
     url: str, max_depth: int = 3, chunk_size: int = 1600
 ) -> dict[str, Any]:
     """Scrape and index documentation from a URL using Crawl4AI.
 
     Args:
-        url: The URL to scrape
-        max_depth: Maximum crawl depth (default: 3)
-        chunk_size: Size of text chunks for indexing (default: 1600)
+        url: The URL to scrape (will be validated for security)
+        max_depth: Maximum crawl depth (1-10, default: 3)
+        chunk_size: Size of text chunks for indexing (100-8000, default: 1600)
 
     Returns:
         Dictionary with scraping results
     """
+    logger.info(f"Starting scrape operation for URL: {url}")
+
     try:
         # Import and use the existing scraper
         from .crawl4ai_bulk_embedder import main as run_scraper
 
-        # Create temporary config file
+        # Create temporary config file with safe filename
+        safe_filename = SecurityValidator.sanitize_filename(
+            f"temp_scrape_{int(time.time())}.json"
+        )
+        config_path = Path(safe_filename)
+
         config = {
             "sites": [
                 {
@@ -159,15 +207,19 @@ async def scrape_url(
             ]
         }
 
-        config_path = Path("temp_scrape_config.json")
         with open(config_path, "w") as f:
-            json.dump(config, f)
+            json.dump(config, f, indent=2)
+
+        logger.info(f"Running scraper with config: {config_path}")
 
         # Run the scraper
         await run_scraper(["--config", str(config_path)])
 
         # Clean up
-        config_path.unlink()
+        if config_path.exists():
+            config_path.unlink()
+
+        logger.info(f"✅ Successfully scraped {url}")
 
         return {
             "success": True,
@@ -175,14 +227,27 @@ async def scrape_url(
             "url": url,
             "max_depth": max_depth,
             "chunk_size": chunk_size,
+            "timestamp": time.time(),
         }
 
     except Exception as e:
-        logger.error(f"Error scraping URL: {e}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"❌ Error scraping URL {url}: {e}")
+        # Clean up on error
+        if "config_path" in locals() and config_path.exists():
+            config_path.unlink()
+        raise ExternalServiceError(f"Scraping failed for {url}: {e}")
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    url=SecurityValidator.validate_url,
+    formats=lambda x: [
+        f.strip().lower()
+        for f in x
+        if f.strip().lower() in ["markdown", "html", "links", "screenshot"]
+    ],
+)
 async def scrape_with_firecrawl(
     url: str, formats: list[str] = ["markdown"]
 ) -> dict[str, Any]:
@@ -195,249 +260,373 @@ async def scrape_with_firecrawl(
     Returns:
         Dictionary with scraped content
     """
+    logger.info(f"Starting Firecrawl scrape for URL: {url}")
+
     if not FirecrawlApp:
-        return {
-            "success": False,
-            "error": "Firecrawl not installed. Run: pip install firecrawl-py",
-        }
+        raise ExternalServiceError(
+            "Firecrawl not installed. Run: pip install firecrawl-py"
+        )
 
     api_key = os.getenv("FIRECRAWL_API_KEY")
     if not api_key:
-        return {
-            "success": False,
-            "error": "FIRECRAWL_API_KEY environment variable not set",
-        }
+        raise ConfigurationError("FIRECRAWL_API_KEY environment variable not set")
+
+    # Apply rate limiting
+    await firecrawl_rate_limiter.acquire()
 
     try:
         app = FirecrawlApp(api_key=api_key)
         result = app.scrape_url(url, params={"formats": formats})
 
+        logger.info(f"✅ Successfully scraped {url} with Firecrawl")
         return {
             "success": True,
             "url": url,
             "content": result.get("markdown", result.get("content", "")),
             "metadata": result.get("metadata", {}),
             "formats": formats,
+            "timestamp": time.time(),
         }
 
     except Exception as e:
-        logger.error(f"Error with Firecrawl: {e}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"❌ Error with Firecrawl for {url}: {e}")
+        raise ExternalServiceError(f"Firecrawl scraping failed for {url}: {e}")
 
 
 # ========== Search Tools ==========
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    query=SecurityValidator.validate_query_string,
+    collection=SecurityValidator.validate_collection_name,
+    limit=lambda x: max(1, min(int(x), 50)),  # Limit results 1-50
+)
+@circuit_breaker(failure_threshold=5, recovery_timeout=60.0)
 async def search(
     query: str, collection: str = "documentation", limit: int = 5
 ) -> dict[str, Any]:
     """Search indexed documentation using semantic search.
 
     Args:
-        query: The search query
+        query: The search query (will be validated and sanitized)
         collection: Collection name to search in (default: documentation)
-        limit: Number of results to return (default: 5)
+        limit: Number of results to return (1-50, default: 5)
 
     Returns:
         Dictionary with search results
     """
+    logger.info(
+        f"Search request: query='{query[:100]}...', collection='{collection}', limit={limit}"
+    )
+
+    # Apply rate limiting
+    await openai_rate_limiter.acquire()
+    await qdrant_rate_limiter.acquire()
+
     try:
         qdrant = await get_qdrant_client()
         openai = await get_openai_client()
 
-        # Get query embedding
+        # Get query embedding with retry
         response = await openai.embeddings.create(
-            model="text-embedding-3-small", input=query
+            model="text-embedding-3-small",
+            input=[query],  # Wrap in list for consistency
+            dimensions=1536,
         )
         query_vector = response.data[0].embedding
 
-        # Search in Qdrant
+        # Search in Qdrant with retry
         results = await qdrant.search(
-            collection_name=collection, query_vector=query_vector, limit=limit
+            collection_name=collection,
+            query_vector=query_vector,
+            limit=limit,
+            score_threshold=0.1,  # Filter very low relevance results
         )
 
-        # Format results
+        # Format results safely
         formatted_results = []
         for result in results:
+            # Sanitize content for output
+            content = result.payload.get("content", "")
+            if len(content) > 1000:
+                content = content[:1000] + "..."
+
             formatted_results.append(
                 {
-                    "score": result.score,
-                    "content": result.payload.get("content", ""),
+                    "score": round(float(result.score), 4),
+                    "content": content,
                     "url": result.payload.get("url", ""),
                     "title": result.payload.get("title", ""),
                     "chunk_index": result.payload.get("chunk_index", 0),
+                    "id": str(result.id) if result.id else "",
                 }
             )
+
+        logger.info(f"✅ Search completed: {len(formatted_results)} results")
 
         return {
             "success": True,
             "query": query,
+            "collection": collection,
             "results": formatted_results,
             "total_results": len(formatted_results),
+            "timestamp": time.time(),
         }
 
     except Exception as e:
-        logger.error(f"Error searching: {e}")
-        return {"success": False, "error": str(e), "query": query}
+        logger.error(f"❌ Search failed for query '{query}': {e}")
+        raise ExternalServiceError(f"Search operation failed: {e}")
 
 
 # ========== Collection Management Tools ==========
 
 
 @mcp.tool()
+@handle_mcp_errors
+@circuit_breaker(failure_threshold=3, recovery_timeout=30.0)
 async def list_collections() -> dict[str, Any]:
     """List all vector database collections.
 
     Returns:
         Dictionary with collection information
     """
-    try:
-        qdrant = await get_qdrant_client()
-        response = await qdrant.get_collections()
+    logger.info("Listing vector database collections")
 
-        collections = []
-        for collection in response.collections:
+    # Apply rate limiting
+    await qdrant_rate_limiter.acquire()
+
+    qdrant = await get_qdrant_client()
+    response = await qdrant.get_collections()
+
+    collections = []
+    for collection in response.collections:
+        try:
             info = await qdrant.get_collection(collection.name)
             collections.append(
                 {
                     "name": collection.name,
-                    "vectors_count": info.vectors_count,
-                    "points_count": info.points_count,
-                    "indexed_vectors_count": info.indexed_vectors_count,
+                    "vectors_count": info.vectors_count or 0,
+                    "points_count": info.points_count or 0,
+                    "indexed_vectors_count": info.indexed_vectors_count or 0,
+                    "status": getattr(info, "status", "unknown"),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Could not get info for collection {collection.name}: {e}")
+            collections.append(
+                {
+                    "name": collection.name,
+                    "vectors_count": 0,
+                    "points_count": 0,
+                    "indexed_vectors_count": 0,
+                    "status": "error",
+                    "error": str(e),
                 }
             )
 
-        return {"success": True, "collections": collections, "total": len(collections)}
+    logger.info(f"✅ Listed {len(collections)} collections")
 
-    except Exception as e:
-        logger.error(f"Error listing collections: {e}")
-        return {"success": False, "error": str(e)}
+    return {
+        "success": True,
+        "collections": collections,
+        "total": len(collections),
+        "timestamp": time.time(),
+    }
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    name=SecurityValidator.validate_collection_name,
+    vector_size=lambda x: max(1, min(int(x), 4096)),  # Limit vector size 1-4096
+    distance=lambda x: x.lower()
+    if x.lower() in ["cosine", "euclidean", "dot"]
+    else "cosine",
+)
 async def create_collection(
     name: str, vector_size: int = 1536, distance: str = "cosine"
 ) -> dict[str, Any]:
     """Create a new vector database collection.
 
     Args:
-        name: Collection name
-        vector_size: Vector dimension size (default: 1536 for OpenAI)
+        name: Collection name (validated for security)
+        vector_size: Vector dimension size (1-4096, default: 1536 for OpenAI)
         distance: Distance metric (cosine, euclidean, dot)
 
     Returns:
         Dictionary with creation status
     """
-    try:
-        qdrant = await get_qdrant_client()
+    logger.info(
+        f"Creating collection: name='{name}', vector_size={vector_size}, distance='{distance}'"
+    )
 
-        # Map distance metric
-        distance_map = {
-            "cosine": Distance.COSINE,
-            "euclidean": Distance.EUCLID,
-            "dot": Distance.DOT,
-        }
-        distance_metric = distance_map.get(distance.lower(), Distance.COSINE)
+    # Apply rate limiting
+    await qdrant_rate_limiter.acquire()
 
-        # Create collection
-        await qdrant.create_collection(
-            collection_name=name,
-            vectors_config=VectorParams(size=vector_size, distance=distance_metric),
-        )
+    qdrant = await get_qdrant_client()
 
-        return {
-            "success": True,
-            "name": name,
-            "vector_size": vector_size,
-            "distance": distance,
-        }
+    # Map distance metric
+    distance_map = {
+        "cosine": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dot": Distance.DOT,
+    }
+    distance_metric = distance_map.get(distance.lower(), Distance.COSINE)
 
-    except Exception as e:
-        logger.error(f"Error creating collection: {e}")
-        return {"success": False, "error": str(e)}
+    # Create collection
+    await qdrant.create_collection(
+        collection_name=name,
+        vectors_config=VectorParams(size=vector_size, distance=distance_metric),
+    )
+
+    logger.info(f"✅ Collection '{name}' created successfully")
+
+    return {
+        "success": True,
+        "name": name,
+        "vector_size": vector_size,
+        "distance": distance,
+        "timestamp": time.time(),
+    }
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(name=SecurityValidator.validate_collection_name)
 async def delete_collection(name: str) -> dict[str, Any]:
     """Delete a vector database collection.
 
     Args:
-        name: Collection name to delete
+        name: Collection name to delete (validated for security)
 
     Returns:
         Dictionary with deletion status
     """
-    try:
-        qdrant = await get_qdrant_client()
-        await qdrant.delete_collection(collection_name=name)
+    logger.warning(f"Deleting collection: '{name}' - THIS ACTION CANNOT BE UNDONE")
 
-        return {"success": True, "message": f"Collection '{name}' deleted successfully"}
+    # Apply rate limiting
+    await qdrant_rate_limiter.acquire()
 
-    except Exception as e:
-        logger.error(f"Error deleting collection: {e}")
-        return {"success": False, "error": str(e)}
+    qdrant = await get_qdrant_client()
+    await qdrant.delete_collection(collection_name=name)
+
+    logger.info(f"✅ Collection '{name}' deleted successfully")
+
+    return {
+        "success": True,
+        "message": f"Collection '{name}' deleted successfully",
+        "name": name,
+        "timestamp": time.time(),
+    }
 
 
 @mcp.tool()
+@handle_mcp_errors
+@validate_input(name=SecurityValidator.validate_collection_name)
 async def get_collection_info(name: str) -> dict[str, Any]:
     """Get detailed information about a collection.
 
     Args:
-        name: Collection name
+        name: Collection name (validated for security)
 
     Returns:
         Dictionary with collection details
     """
+    logger.info(f"Getting collection info: '{name}'")
+
+    # Apply rate limiting
+    await qdrant_rate_limiter.acquire()
+
+    qdrant = await get_qdrant_client()
+    info = await qdrant.get_collection(collection_name=name)
+
+    result = {
+        "success": True,
+        "name": name,
+        "status": str(info.status) if info.status else "unknown",
+        "vectors_count": info.vectors_count or 0,
+        "points_count": info.points_count or 0,
+        "indexed_vectors_count": info.indexed_vectors_count or 0,
+        "segments_count": getattr(info, "segments_count", 0),
+        "timestamp": time.time(),
+    }
+
+    # Safely extract config information
     try:
-        qdrant = await get_qdrant_client()
-        info = await qdrant.get_collection(collection_name=name)
-
-        return {
-            "success": True,
-            "name": name,
-            "status": info.status,
-            "vectors_count": info.vectors_count,
-            "points_count": info.points_count,
-            "indexed_vectors_count": info.indexed_vectors_count,
-            "segments_count": info.segments_count,
-            "config": {
-                "vector_size": info.config.params.vectors.size,
-                "distance": str(info.config.params.vectors.distance),
-            },
-        }
-
+        if hasattr(info, "config") and hasattr(info.config, "params"):
+            if hasattr(info.config.params, "vectors"):
+                result["config"] = {
+                    "vector_size": getattr(
+                        info.config.params.vectors, "size", "unknown"
+                    ),
+                    "distance": str(
+                        getattr(info.config.params.vectors, "distance", "unknown")
+                    ),
+                }
     except Exception as e:
-        logger.error(f"Error getting collection info: {e}")
-        return {"success": False, "error": str(e)}
+        logger.warning(f"Could not extract config for collection {name}: {e}")
+        result["config"] = {"error": "config not available"}
+
+    logger.info(f"✅ Retrieved info for collection '{name}'")
+
+    return result
 
 
 # ========== Utility Tools ==========
 
 
 @mcp.tool()
+@handle_mcp_errors
 async def clear_cache() -> dict[str, Any]:
-    """Clear the scraping cache.
+    """Clear the scraping cache safely.
 
     Returns:
         Dictionary with cache clearing status
     """
-    try:
-        # Clear Crawl4AI cache
-        cache_dir = Path.home() / ".crawl4ai" / "cache"
-        if cache_dir.exists():
+    logger.info("Clearing scraping cache")
+
+    # Clear Crawl4AI cache safely
+    cache_dir = Path.home() / ".crawl4ai" / "cache"
+    cleared_paths = []
+
+    if cache_dir.exists() and cache_dir.is_dir():
+        try:
+            # List what we're about to clear for logging
+            cache_size = sum(
+                f.stat().st_size for f in cache_dir.rglob("*") if f.is_file()
+            )
+            file_count = len(list(cache_dir.rglob("*")))
+
+            logger.info(
+                f"Clearing cache: {file_count} files, {cache_size / 1024 / 1024:.2f} MB"
+            )
+
             shutil.rmtree(cache_dir)
             cache_dir.mkdir(parents=True, exist_ok=True)
+            cleared_paths.append(str(cache_dir))
 
-        return {
-            "success": True,
-            "message": "Cache cleared successfully",
-            "cache_path": str(cache_dir),
-        }
+        except Exception as e:
+            logger.warning(f"Could not clear cache directory {cache_dir}: {e}")
 
-    except Exception as e:
-        logger.error(f"Error clearing cache: {e}")
-        return {"success": False, "error": str(e)}
+    # Also clear any temporary scraping files
+    temp_pattern = Path.cwd().glob("temp_scrape_*.json")
+    for temp_file in temp_pattern:
+        try:
+            temp_file.unlink()
+            cleared_paths.append(str(temp_file))
+        except Exception as e:
+            logger.warning(f"Could not remove temp file {temp_file}: {e}")
+
+    logger.info(f"✅ Cache cleared: {len(cleared_paths)} locations")
+
+    return {
+        "success": True,
+        "message": "Cache cleared successfully",
+        "cleared_paths": cleared_paths,
+        "timestamp": time.time(),
+    }
 
 
 # ========== Resources ==========

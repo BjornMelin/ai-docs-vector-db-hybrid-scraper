@@ -20,6 +20,11 @@ from pydantic import BaseModel
 from pydantic import Field
 from rich.console import Console
 
+from .error_handling import handle_mcp_errors
+from .error_handling import validate_input
+from .security import SecurityValidator
+from .security import validate_startup_security
+
 # Load environment variables
 load_dotenv()
 
@@ -30,6 +35,14 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Validate security requirements at startup
+try:
+    ENV_VARS = validate_startup_security()
+    logger.info("✅ Enhanced MCP Server security validation complete")
+except Exception as e:
+    logger.error(f"❌ Enhanced MCP Server startup failed: {e}")
+    raise
 
 
 # ========== Configuration Models ==========
@@ -121,6 +134,14 @@ async def get_openai_client():
 
 
 @enhanced_mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    name=SecurityValidator.validate_collection_name,
+    description=lambda x: x[:500] if len(x) <= 500 else x[:500],
+    source_urls=lambda urls: [SecurityValidator.validate_url(url) for url in urls]
+    if urls
+    else [],
+)
 async def create_project(
     name: str, description: str = "", source_urls: list[str] = []
 ) -> dict[str, Any]:
@@ -174,6 +195,12 @@ async def list_projects() -> dict[str, Any]:
 
 
 @enhanced_mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    project_name=SecurityValidator.validate_collection_name,
+    urls=lambda urls: [SecurityValidator.validate_url(url) for url in urls],
+    max_depth=lambda x: max(1, min(int(x), 10)),
+)
 async def plan_scraping(
     project_name: str, urls: list[str], auto_discover: bool = True, max_depth: int = 3
 ) -> ScrapingPlan:
@@ -272,6 +299,11 @@ async def execute_scraping_plan(
 
 
 @enhanced_mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    query=SecurityValidator.sanitize_query,
+    project_name=lambda x: SecurityValidator.validate_collection_name(x) if x else None,
+)
 async def smart_search(
     query: str, project_name: str | None = None, strategy: SearchStrategy | None = None
 ) -> dict[str, Any]:
@@ -332,6 +364,15 @@ async def smart_search(
 
 
 @enhanced_mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    project_name=SecurityValidator.validate_collection_name,
+    content=lambda x: x[:50000]
+    if len(x) <= 50000
+    else (_ for _ in ()).throw(ValueError("Content exceeds 50KB limit")),
+    url=SecurityValidator.validate_url,
+    title=lambda x: x[:200] if len(x) <= 200 else x[:200],
+)
 async def index_documentation(
     project_name: str,
     content: str,
