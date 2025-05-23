@@ -122,7 +122,7 @@ class TestSecurityValidator:
             ("a" * 300, "a" * 255),  # Length limit
         ]
 
-        for input_name, expected in test_cases:
+        for input_name, _ in test_cases:
             result = SecurityValidator.sanitize_filename(input_name)
             assert len(result) <= 255
             # Should not contain dangerous characters
@@ -165,7 +165,7 @@ class TestAPIKeyValidator:
             (None, "************"),
         ]
 
-        for key, expected in test_cases:
+        for key, _ in test_cases:
             result = APIKeyValidator.mask_api_key(key)
             assert len(result) >= 12  # Minimum masked length
             if key and len(key) >= 8:

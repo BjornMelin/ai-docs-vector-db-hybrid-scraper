@@ -4,6 +4,7 @@
 import logging
 import os
 import re
+from typing import ClassVar
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -19,10 +20,10 @@ class SecurityValidator:
     """Security validation utilities."""
 
     # Allowed URL schemes
-    ALLOWED_SCHEMES = {"http", "https"}
+    ALLOWED_SCHEMES: ClassVar[set[str]] = {"http", "https"}
 
     # Dangerous patterns to block
-    DANGEROUS_PATTERNS = [
+    DANGEROUS_PATTERNS: ClassVar[list[str]] = [
         r"javascript:",
         r"data:",
         r"file:",
@@ -57,7 +58,7 @@ class SecurityValidator:
         try:
             parsed = urlparse(url.strip())
         except Exception as e:
-            raise SecurityError(f"Invalid URL format: {e}")
+            raise SecurityError(f"Invalid URL format: {e}") from e
 
         # Check scheme
         if parsed.scheme.lower() not in cls.ALLOWED_SCHEMES:
@@ -222,9 +223,10 @@ class APIKeyValidator:
                 raise SecurityError(f"Required environment variable {var} is not set")
 
             # Validate OpenAI API key format
-            if var == "OPENAI_API_KEY":
-                if not APIKeyValidator.validate_openai_key(value):
-                    raise SecurityError(f"Invalid {var} format")
+            if var == "OPENAI_API_KEY" and not APIKeyValidator.validate_openai_key(
+                value
+            ):
+                raise SecurityError(f"Invalid {var} format")
 
             env_vars[var] = value
             logger.info(f"{var}: {APIKeyValidator.mask_api_key(value)}")
@@ -264,4 +266,4 @@ def validate_startup_security() -> dict[str, str]:
         raise
     except Exception as e:
         logger.error(f"❌ Unexpected error during security validation: {e}")
-        raise SecurityError(f"Security validation error: {e}")
+        raise SecurityError(f"Security validation error: {e}") from e

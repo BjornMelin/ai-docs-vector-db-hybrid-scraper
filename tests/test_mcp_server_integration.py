@@ -27,7 +27,7 @@ class TestMCPServerRegistration:
         # Get registered tool names
         registered_tools = set()
         if hasattr(mcp, "_tool_manager") and hasattr(mcp._tool_manager, "_tools"):
-            for tool_name in mcp._tool_manager._tools.keys():
+            for tool_name in mcp._tool_manager._tools:
                 registered_tools.add(tool_name)
 
         assert expected_tools.issubset(registered_tools), (
@@ -53,7 +53,7 @@ class TestMCPServerRegistration:
         if hasattr(enhanced_mcp, "_tool_manager") and hasattr(
             enhanced_mcp._tool_manager, "_tools"
         ):
-            for tool_name in enhanced_mcp._tool_manager._tools.keys():
+            for tool_name in enhanced_mcp._tool_manager._tools:
                 registered_tools.add(tool_name)
 
         assert expected_tools.issubset(registered_tools), (
@@ -76,7 +76,7 @@ class TestMCPServerResources:
         if hasattr(mcp, "_resource_manager") and hasattr(
             mcp._resource_manager, "_resources"
         ):
-            for resource_name in mcp._resource_manager._resources.keys():
+            for resource_name in mcp._resource_manager._resources:
                 registered_resources.add(resource_name)
 
         assert expected_resources.issubset(registered_resources), (
@@ -95,7 +95,7 @@ class TestMCPServerResources:
         if hasattr(enhanced_mcp, "_resource_manager") and hasattr(
             enhanced_mcp._resource_manager, "_resources"
         ):
-            for resource_name in enhanced_mcp._resource_manager._resources.keys():
+            for resource_name in enhanced_mcp._resource_manager._resources:
                 registered_resources.add(resource_name)
 
         assert expected_resources.issubset(registered_resources), (
