@@ -1,8 +1,8 @@
-# SOTA 2025 Embedding Implementation
+# Technical Implementation Guide
 
 ## Overview
 
-This document outlines the implementation of the 2025 state-of-the-art (SOTA) embedding configuration for the AI documentation scraper, based on comprehensive research of current best practices, benchmarks, and performance optimizations.
+This document outlines the advanced embedding implementation for the AI documentation scraper, based on comprehensive research of current best practices, benchmarks, and performance optimizations.
 
 ## Key Research Findings
 
@@ -34,7 +34,7 @@ class EmbeddingProvider(str, Enum):
 ### Model Selection Strategy
 
 - **Default**: `text-embedding-3-small` (cost-effective)
-- **Performance**: `NV-Embed-v2` via FastEmbed (SOTA accuracy)
+- **Performance**: `NV-Embed-v2` via FastEmbed (highest accuracy)
 - **Open Source**: `BGE-small-en-v1.5` via FastEmbed (no API costs)
 
 ### Hybrid Search Pipeline
@@ -73,7 +73,7 @@ config = ScrapingConfig(
 )
 ```
 
-### Hybrid Search (SOTA)
+### Hybrid Search (Advanced)
 
 ```python
 config = ScrapingConfig(
@@ -104,7 +104,7 @@ config = ScrapingConfig(
 ### Accuracy Improvements
 
 - **8-15% better** retrieval accuracy (hybrid search)
-- **SOTA model performance** on MTEB benchmarks
+- **Top-tier model performance** on MTEB benchmarks
 
 ## Installation & Setup
 
@@ -133,10 +133,10 @@ export FIRECRAWL_API_KEY="your_firecrawl_key"  # Optional
 ### Basic Usage (Auto-Configuration)
 
 ```python
-from src.crawl4ai_bulk_embedder import create_sota_2025_config, ModernDocumentationScraper
+from src.crawl4ai_bulk_embedder import create_advanced_config, ModernDocumentationScraper
 
 # Automatically selects optimal configuration based on available resources
-config = create_sota_2025_config()
+config = create_advanced_config()
 scraper = ModernDocumentationScraper(config)
 
 # Process documentation sites
@@ -206,7 +206,7 @@ uv run pytest tests/test_scraper.py::TestEmbeddingConfig -v
 ### Performance Validation
 
 ```bash
-# Run scraper with SOTA configuration
+# Run scraper with advanced configuration
 uv run python src/crawl4ai_bulk_embedder.py
 ```
 
@@ -221,7 +221,7 @@ uv run python src/crawl4ai_bulk_embedder.py
 
 ### Research Integration
 
-- Monitor MTEB leaderboard for new SOTA models
+- Monitor MTEB leaderboard for best-performing models
 - Integrate latest Qdrant features (fastembed updates)
 - Evaluate emerging embedding techniques (ColBERT, etc.)
 

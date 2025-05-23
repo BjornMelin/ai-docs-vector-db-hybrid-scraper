@@ -45,6 +45,8 @@ dependencies = [
     "tree-sitter-python>=0.23.6",
     "tree-sitter-javascript>=0.23.1",
     "tree-sitter-typescript>=0.23.2",
+    "fastmcp>=0.4.11",
+    "uvicorn>=0.34.0",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +67,7 @@ Issues = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues"
 [project.scripts]
 scrape-docs = "src.crawl4ai_bulk_embedder:main"
 manage-db = "src.manage_vector_db:main"
+mcp-server = "src.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]

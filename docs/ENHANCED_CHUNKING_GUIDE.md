@@ -1,4 +1,4 @@
-# SOTA 2025 Enhanced Code-Aware Chunking
+# Enhanced Code-Aware Chunking Guide
 
 ## Overview
 
@@ -74,7 +74,7 @@ BOUNDARY_PATTERNS = [
 
 ### 3. AST-Based Chunking with Tree-sitter
 
-State-of-the-art code parsing for precise boundaries:
+Advanced code parsing for precise boundaries:
 
 ```python
 # Initialize Tree-sitter parser
@@ -309,7 +309,7 @@ We continuously monitor chunking research and integrate proven techniques:
 
 ## Conclusion
 
-Our SOTA 2025 chunking implementation provides a robust foundation for code-aware RAG systems. By preserving semantic boundaries and leveraging AST parsing, we achieve superior retrieval accuracy while maintaining practical performance characteristics.
+Our enhanced chunking implementation provides a robust foundation for code-aware RAG systems. By preserving semantic boundaries and leveraging AST parsing, we achieve superior retrieval accuracy while maintaining practical performance characteristics.
 
 For implementation examples and test cases, see:
 

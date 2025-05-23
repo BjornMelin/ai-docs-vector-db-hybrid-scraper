@@ -1,4 +1,4 @@
-# ⚡ SOTA 2025 Performance Tuning Guide
+# ⚡ Advanced Performance Tuning Guide
 
 > **Advanced optimization techniques for maximum performance and cost efficiency**
 
@@ -6,7 +6,7 @@
 
 Based on 2025 research and benchmarks, optimal performance targets:
 
-| Metric | Target | SOTA 2025 Achievement |
+| Metric | Target | Advanced Achievement |
 |--------|--------|--------------------|
 | **Embedding Speed** | <100ms per chunk | 45ms (FastEmbed) / 78ms (OpenAI) |
 | **Search Latency** | <50ms | 23ms (quantized) / 41ms (full precision) |
@@ -19,7 +19,7 @@ Based on 2025 research and benchmarks, optimal performance targets:
 ### Model Selection Strategy
 
 ```python
-# SOTA 2025 Tiered Approach
+# Advanced Tiered Approach
 EMBEDDING_TIERS = {
     "cost_optimized": {
         "provider": EmbeddingProvider.FASTEMBED,
@@ -97,7 +97,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     environment:
-      # SOTA 2025 Performance Settings
+      # Advanced Performance Settings
       - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=16
       - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=32
       - QDRANT__STORAGE__OPTIMIZERS__VACUUM_MIN_VECTOR_NUMBER=10000
@@ -267,7 +267,7 @@ OPTIMIZED_BROWSER_CONFIG = BrowserConfig(
     # Network Optimization
     proxy=None,                        # No proxy overhead
     proxy_config=None,
-    user_agent="Mozilla/5.0 (compatible; SOTA2025Bot/1.0)",
+    user_agent="Mozilla/5.0 (compatible; AdvancedBot/1.0)",
     headers={
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
@@ -288,7 +288,7 @@ async def optimized_crawling_strategy(urls: list[str]) -> list[CrawlResult]:
     cpu_count = psutil.cpu_count()
     memory_gb = psutil.virtual_memory().total / (1024**3)
     
-    # SOTA 2025 concurrency formula
+    # Advanced concurrency formula
     optimal_concurrency = min(
         len(urls),
         max(2, int(cpu_count * 0.8)),         # CPU-based limit
@@ -381,7 +381,7 @@ async def optimized_crawling_strategy(urls: list[str]) -> list[CrawlResult]:
 
 ```python
 class AdaptiveChunker:
-    """SOTA 2025 adaptive chunking with content awareness"""
+    """Advanced adaptive chunking with content awareness"""
     
     def __init__(self):
         self.chunk_sizes = {
@@ -514,7 +514,7 @@ class AdaptiveChunker:
 
 ```python
 class SOTAPerformanceMonitor:
-    """Comprehensive performance monitoring for SOTA 2025"""
+    """Comprehensive performance monitoring for advanced implementation"""
     
     def __init__(self):
         self.metrics = {
@@ -572,7 +572,7 @@ class SOTAPerformanceMonitor:
     def record_api_cost(self, tokens: int, model: str):
         """Record API usage and costs"""
         
-        # SOTA 2025 pricing (tokens per dollar)
+        # Advanced pricing (tokens per dollar)
         pricing = {
             "text-embedding-3-small": 0.02 / 1000000,  # $0.02 per 1M tokens
             "text-embedding-3-large": 0.13 / 1000000,  # $0.13 per 1M tokens
@@ -667,7 +667,7 @@ def create_performance_dashboard():
     import plotly.express as px
     import plotly.graph_objects as go
     
-    st.title("🚀 SOTA 2025 Performance Dashboard")
+    st.title("🚀 Advanced Performance Dashboard")
     
     # Load performance data
     monitor = SOTAPerformanceMonitor()
@@ -813,4 +813,4 @@ class MemoryAdaptiveProcessor:
 
 ⚡ **Performance optimization is an ongoing process**. Monitor your metrics, experiment with different configurations, and adjust based on your specific use case and constraints.
 
-The SOTA 2025 configuration provides an excellent starting point, but fine-tuning for your specific workload will yield the best results.
+The advanced configuration provides an excellent starting point, but fine-tuning for your specific workload will yield the best results.

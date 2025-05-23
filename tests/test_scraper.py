@@ -1,4 +1,4 @@
-"""Tests for the SOTA 2025 documentation scraper functionality."""
+"""Tests for the advanced 2025 documentation scraper functionality."""
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -18,7 +18,7 @@ from src.crawl4ai_bulk_embedder import VectorSearchStrategy
 
 
 class TestEmbeddingConfig:
-    """Test the SOTA 2025 EmbeddingConfig Pydantic model."""
+    """Test the advanced 2025 EmbeddingConfig Pydantic model."""
 
     def test_embedding_config_defaults(self):
         """Test embedding config with defaults."""
@@ -42,7 +42,7 @@ class TestEmbeddingConfig:
         assert config.search_strategy == VectorSearchStrategy.HYBRID_RRF
 
     def test_embedding_config_reranking(self):
-        """Test SOTA 2025 reranking configuration."""
+        """Test advanced 2025 reranking configuration."""
         config = EmbeddingConfig(
             enable_reranking=True,
             reranker_model="BAAI/bge-reranker-v2-m3",
@@ -56,22 +56,22 @@ class TestEmbeddingConfig:
         """Test reranking defaults."""
         config = EmbeddingConfig()
         assert config.enable_reranking is False  # Opt-in by default
-        assert config.reranker_model == "BAAI/bge-reranker-v2-m3"  # SOTA model
+        assert config.reranker_model == "BAAI/bge-reranker-v2-m3"  # Advanced model
         assert config.rerank_top_k == 20  # Research-backed optimal
 
 
 class TestScrapingConfig:
-    """Test the SOTA 2025 ScrapingConfig Pydantic model."""
+    """Test the advanced 2025 ScrapingConfig Pydantic model."""
 
     def test_config_creation_with_required_fields(self):
-        """Test creating config with required fields (SOTA 2025 defaults)."""
+        """Test creating config with required fields (advanced 2025 defaults)."""
         config = ScrapingConfig(
             openai_api_key="test_key",
             qdrant_url="http://localhost:6333",
         )
         assert config.openai_api_key == "test_key"
         assert config.qdrant_url == "http://localhost:6333"
-        assert config.chunk_size == 1600  # Updated SOTA default
+        assert config.chunk_size == 1600  # Updated advanced default
         assert config.chunk_overlap == 320  # 20% overlap
         assert config.embedding.provider == EmbeddingProvider.OPENAI
         assert config.embedding.dense_model == EmbeddingModel.TEXT_EMBEDDING_3_SMALL
@@ -83,7 +83,7 @@ class TestScrapingConfig:
         assert "openai_api_key" in str(exc_info.value)
 
     def test_config_custom_values(self):
-        """Test config with custom SOTA 2025 values."""
+        """Test config with custom advanced 2025 values."""
         embedding_config = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
             dense_model=EmbeddingModel.BGE_LARGE_EN_V15,
@@ -217,7 +217,7 @@ class TestModernDocumentationScraper:
 
     @pytest.fixture()
     def scraper_config(self):
-        """Create SOTA 2025 scraper configuration for testing."""
+        """Create advanced 2025 scraper configuration for testing."""
         return ScrapingConfig(
             openai_api_key="test_key",
             qdrant_url="http://localhost:6333",
@@ -225,7 +225,7 @@ class TestModernDocumentationScraper:
 
     @pytest.fixture()
     def scraper(self, scraper_config):
-        """Create SOTA 2025 scraper instance for testing."""
+        """Create advanced 2025 scraper instance for testing."""
         with (
             patch(
                 "src.crawl4ai_bulk_embedder.TextEmbedding", None
@@ -236,7 +236,7 @@ class TestModernDocumentationScraper:
             return ModernDocumentationScraper(scraper_config)
 
     def test_scraper_initialization(self, scraper, scraper_config):
-        """Test SOTA 2025 scraper initialization."""
+        """Test advanced 2025 scraper initialization."""
         assert scraper.config == scraper_config
         assert scraper.openai_client is not None  # Should be initialized
         assert scraper.qdrant_client is not None  # Should be initialized
@@ -258,7 +258,7 @@ class TestModernDocumentationScraper:
         mock_qdrant_instance.create_collection.assert_called_once()
 
     def test_chunk_content_basic(self, scraper):
-        """Test SOTA 2025 character-based content chunking."""
+        """Test advanced 2025 character-based content chunking."""
         content = "This is a test content. " * 100  # Long content (~2400 chars)
         chunks = scraper.chunk_content(content, "Test Title", "https://example.com")
 
@@ -283,7 +283,7 @@ class TestModernDocumentationScraper:
         assert chunks[0]["total_chunks"] == 1
 
     def test_chunk_content_metadata(self, scraper):
-        """Test chunk metadata in SOTA 2025 implementation."""
+        """Test chunk metadata in advanced 2025 implementation."""
         content = "Test content " * 200  # Long enough to create multiple chunks
         chunks = scraper.chunk_content(content, "Test Page", "https://example.com/page")
 
@@ -432,9 +432,11 @@ def test_load_documentation_sites(
 
     from src.crawl4ai_bulk_embedder import load_documentation_sites
 
-    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps({
-        "sites": [sample_documentation_site],
-    })
+    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(
+        {
+            "sites": [sample_documentation_site],
+        }
+    )
 
     sites = load_documentation_sites()
 

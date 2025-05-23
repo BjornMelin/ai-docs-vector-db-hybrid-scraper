@@ -26,6 +26,7 @@ This implementation combines **research-backed best practices** for production-g
 | **Bulk Scraping**      | [Crawl4AI](https://github.com/unclecode/crawl4ai)                   | 4-6x faster than alternatives, async concurrent |
 | **On-Demand Scraping** | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server) | Claude Desktop integration, JS handling         |
 | **Vector Database**    | [Qdrant](https://qdrant.tech/)                                      | Hybrid search, quantization, local persistence  |
+| **MCP Server**         | [FastMCP 2.0](https://github.com/jlowin/fastmcp)                    | Unified MCP interface for all functionality     |
 | **Dense Embeddings**   | OpenAI text-embedding-3-small                                       | Best cost-performance ratio                     |
 | **Sparse Embeddings**  | SPLADE++                                                            | Keyword matching for hybrid search              |
 | **Reranking**          | BGE-reranker-v2-m3                                                  | Minimal complexity, maximum accuracy gains      |
@@ -108,26 +109,21 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/cla
 ```json
 {
   "mcpServers": {
-    "qdrant": {
-      "command": "uvx",
-      "args": ["mcp-server-qdrant"],
+    "ai-docs-vector-db": {
+      "command": "uv",
+      "args": ["run", "mcp-server"],
+      "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
       "env": {
+        "OPENAI_API_KEY": "your_openai_api_key_here",
         "QDRANT_URL": "http://localhost:6333",
-        "COLLECTION_NAME": "documents",
-        "EMBEDDING_MODEL": "text-embedding-3-small",
-        "OPENAI_API_KEY": "your_openai_api_key_here"
-      }
-    },
-    "firecrawl": {
-      "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
-      "env": {
         "FIRECRAWL_API_KEY": "your_firecrawl_api_key_here"
       }
     }
   }
 }
 ```
+
+**Note**: The new unified MCP server combines all functionality from the separate Qdrant and Firecrawl servers into one convenient interface.
 
 ## 🏗️ System Architecture
 

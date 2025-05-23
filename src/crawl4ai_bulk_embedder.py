@@ -26,7 +26,7 @@ from crawl4ai.deep_crawling.filters import ContentTypeFilter
 from crawl4ai.deep_crawling.filters import FilterChain
 from crawl4ai.deep_crawling.filters import URLPatternFilter
 
-# SOTA 2025 Embedding Integrations
+# Advanced Embedding Integrations
 try:
     from firecrawl import FirecrawlApp
 except ImportError:
@@ -68,9 +68,9 @@ from .chunking import EnhancedChunker
 console = Console()
 
 
-# SOTA 2025 Embedding Configuration Classes
+# Advanced Embedding Configuration Classes
 class EmbeddingProvider(str, Enum):
-    """Available embedding providers for 2025 SOTA performance"""
+    """Available embedding providers for high-performance operations"""
 
     OPENAI = "openai"
     FASTEMBED = "fastembed"
@@ -78,13 +78,13 @@ class EmbeddingProvider(str, Enum):
 
 
 class EmbeddingModel(str, Enum):
-    """2025 SOTA embedding models based on research findings"""
+    """Advanced embedding models based on research findings"""
 
     # OpenAI Models (API-based)
     TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"  # Best cost-performance
     TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"  # Best OpenAI performance
 
-    # FastEmbed Models (Local inference, research-backed SOTA)
+    # FastEmbed Models (Local inference, research-backed)
     NV_EMBED_V2 = "nvidia/NV-Embed-v2"  # #1 on MTEB leaderboard
     BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"  # Cost-effective open source
     BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"  # Higher accuracy
@@ -98,11 +98,11 @@ class VectorSearchStrategy(str, Enum):
 
     DENSE_ONLY = "dense"  # Traditional semantic search
     SPARSE_ONLY = "sparse"  # Keyword-based search
-    HYBRID_RRF = "hybrid_rrf"  # Dense + Sparse with RRF ranking (SOTA)
+    HYBRID_RRF = "hybrid_rrf"  # Dense + Sparse with RRF ranking (Research-backed)
 
 
 class EmbeddingConfig(BaseModel):
-    """SOTA 2025 embedding configuration"""
+    """Advanced embedding configuration"""
 
     provider: EmbeddingProvider = Field(
         default=EmbeddingProvider.OPENAI, description="Embedding provider selection"
@@ -126,7 +126,7 @@ class EmbeddingConfig(BaseModel):
         description="Matryoshka embedding dimensions for cost optimization",
     )
 
-    # SOTA 2025 Reranking Configuration
+    # Advanced Reranking Configuration
     enable_reranking: bool = Field(
         default=False,
         description="Enable reranking for 10-20% accuracy improvement",
@@ -142,7 +142,7 @@ class EmbeddingConfig(BaseModel):
 
 
 class ScrapingConfig(BaseModel):
-    """2025 SOTA scraping configuration with research-backed defaults"""
+    """Advanced scraping configuration with research-backed defaults"""
 
     # Authentication
     openai_api_key: str = Field(..., description="OpenAI API key")
@@ -160,12 +160,12 @@ class ScrapingConfig(BaseModel):
         description="Qdrant collection name",
     )
 
-    # SOTA 2025 Embedding Configuration
+    # Advanced Embedding Configuration
     embedding: EmbeddingConfig = Field(
         default_factory=EmbeddingConfig, description="Embedding configuration"
     )
 
-    # SOTA 2025 Chunking Configuration
+    # Advanced Chunking Configuration
     chunking: ChunkingConfig = Field(
         default_factory=ChunkingConfig, description="Enhanced chunking configuration"
     )
@@ -191,7 +191,7 @@ class ScrapingConfig(BaseModel):
     )
     max_retries: int = Field(default=3, description="Maximum retry attempts")
 
-    # SOTA Features
+    # Advanced Features
     enable_hybrid_search: bool = Field(
         default=False,
         description="Enable hybrid dense+sparse search (research: 8-15% improvement)",
@@ -271,7 +271,7 @@ class ScrapingStats(BaseModel):
 
 
 class ModernDocumentationScraper:
-    """SOTA 2025 Documentation Scraper with hybrid embedding pipeline
+    """Advanced Documentation Scraper with hybrid embedding pipeline
 
     Features:
     - Multi-provider embedding support (OpenAI, FastEmbed)
@@ -341,7 +341,7 @@ class ModernDocumentationScraper:
                 # Models lazily initialized for better memory management
 
     def _initialize_reranker(self) -> None:
-        """Initialize reranker for SOTA 2025 reranking capabilities"""
+        """Initialize reranker for advanced reranking capabilities"""
         if not self.config.embedding.enable_reranking:
             return
         if FlagReranker is None:
@@ -366,7 +366,7 @@ class ModernDocumentationScraper:
             self.reranker = None
 
     async def setup_collection(self) -> None:
-        """Setup SOTA 2025 Qdrant collection with hybrid search capabilities"""
+        """Setup advanced Qdrant collection with hybrid search capabilities"""
         try:
             collections_response = await self.qdrant_client.get_collections()
             collection_exists = any(
@@ -379,7 +379,7 @@ class ModernDocumentationScraper:
                 vector_size = self._get_vector_size()
                 quantization_enabled = self.config.embedding.enable_quantization
 
-                # SOTA 2025: Hybrid search configuration
+                # Advanced: Hybrid search configuration
                 if (
                     self.config.embedding.search_strategy
                     == VectorSearchStrategy.HYBRID_RRF
@@ -447,7 +447,7 @@ class ModernDocumentationScraper:
     async def create_embedding(
         self, text: str
     ) -> tuple[list[float], dict[str, Any] | None]:
-        """Create SOTA 2025 embeddings with provider auto-selection"""
+        """Create advanced embeddings with provider auto-selection"""
         try:
             # Truncate to avoid API limits
             text_to_embed = text[:8000]
@@ -525,7 +525,7 @@ class ModernDocumentationScraper:
     def rerank_results(
         self, query: str, passages: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """SOTA 2025 reranking for improved documentation search accuracy
+        """Advanced reranking for improved documentation search accuracy
 
         Args:
             query: Search query
@@ -569,7 +569,7 @@ class ModernDocumentationScraper:
             return passages
 
     def chunk_content(self, content: str, title: str, url: str) -> list[dict[str, Any]]:
-        """SOTA 2025 content chunking with enhanced code awareness"""
+        """Advanced content chunking with enhanced code awareness"""
         # Use the enhanced chunker
         return self.chunker.chunk_content(content, title, url)
 
@@ -698,7 +698,7 @@ class ModernDocumentationScraper:
         return crawled_results
 
     async def process_and_embed_results(self, results: list[CrawlResult]) -> None:
-        """Process results with SOTA 2025 embedding pipeline"""
+        """Process results with advanced embedding pipeline"""
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -726,7 +726,7 @@ class ModernDocumentationScraper:
                         )
 
                         if dense_embedding:
-                            # Enhanced payload with SOTA metadata
+                            # Enhanced payload with advanced metadata
                             payload_data = {
                                 "url": chunk_data["url"],
                                 "title": chunk_data["title"],
@@ -749,7 +749,7 @@ class ModernDocumentationScraper:
                                 "search_strategy": (
                                     self.config.embedding.search_strategy.value
                                 ),
-                                "scraper_version": "3.0-SOTA-2025",
+                                "scraper_version": "3.0-Advanced",
                                 "links_count": len(result_item.links),
                                 "quantization_enabled": (
                                     self.config.embedding.enable_quantization
@@ -923,7 +923,7 @@ class ModernDocumentationScraper:
     async def demo_reranking_search(
         self, query: str, limit: int = 10
     ) -> list[dict[str, Any]]:
-        """Demo method showing SOTA 2025 reranking integration
+        """Demo method showing advanced reranking integration
 
         This would typically be integrated into your vector search pipeline.
         For full integration, modify your vector database search method.
@@ -957,7 +957,7 @@ class ModernDocumentationScraper:
         ]
 
         # Step 4: Apply reranking
-        console.print("🎯 Applying SOTA 2025 reranking...")
+        console.print("🎯 Applying advanced reranking...")
         reranked_passages_list = self.rerank_results(query, mock_passages_list)
 
         # Step 5: Return top results after reranking
@@ -968,7 +968,7 @@ class ModernDocumentationScraper:
         return final_reranked_results
 
 
-# SOTA 2025 documentation sites - optimized for hybrid embedding pipeline
+# Advanced documentation sites - optimized for hybrid embedding pipeline
 ESSENTIAL_SITES = [
     DocumentationSite(
         name="Qdrant Documentation",
@@ -1008,8 +1008,8 @@ ESSENTIAL_SITES = [
 ]
 
 
-def create_sota_2025_config() -> ScrapingConfig:
-    """Create SOTA 2025 configuration with research-backed defaults"""
+def create_advanced_config() -> ScrapingConfig:
+    """Create advanced configuration with research-backed defaults"""
     openai_api_key_val = os.getenv("OPENAI_API_KEY")
     if not openai_api_key_val:
         console.print("❌ Missing OPENAI_API_KEY environment variable", style="red")
@@ -1024,7 +1024,9 @@ def create_sota_2025_config() -> ScrapingConfig:
 
     # Auto-detect best configuration
     if TextEmbedding is not None:
-        console.print("🚀 FastEmbed available - using SOTA local models", style="green")
+        console.print(
+            "🚀 FastEmbed available - using advanced local models", style="green"
+        )
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
             dense_model=EmbeddingModel.BGE_SMALL_EN_V15,  # Fast, accurate, open source
@@ -1061,15 +1063,15 @@ def create_sota_2025_config() -> ScrapingConfig:
 
 
 async def main() -> None:
-    """Main execution with SOTA 2025 configuration"""
-    console.print("🚀 SOTA 2025 AI Documentation Scraper", style="bold blue")
+    """Main execution with advanced configuration"""
+    console.print("🚀 Advanced AI Documentation Scraper", style="bold blue")
     console.print("Research-backed optimal embedding configuration", style="blue")
     console.print(
         "Python 3.13 + uv + Crawl4AI + FastEmbed + Qdrant Hybrid Search", style="cyan"
     )
 
     # Create optimal configuration
-    current_config = create_sota_2025_config()
+    current_config = create_advanced_config()
 
     # Display configuration
     console.print("\n📊 Configuration:", style="bold yellow")
@@ -1092,7 +1094,7 @@ async def main() -> None:
     try:
         await scraper_instance.scrape_multiple_sites(ESSENTIAL_SITES)
         console.print(
-            "\n✅ SOTA 2025 documentation scraping completed!",
+            "\n✅ Advanced documentation scraping completed!",
             style="bold green",
         )
         console.print(

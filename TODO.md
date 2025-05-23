@@ -1,20 +1,20 @@
 # AI Documentation Scraper - Task List
 
-> **Last Updated:** 2025-01-22
-> **Status:** SOTA 2025 Implementation Complete
+> **Last Updated:** 2025-05-22
+> **Status:** Advanced Implementation Complete
 > **Priority System:** High | Medium | Low
 
 ## Current Sprint Goals
 
-**Focus:** Enhanced features, optimization, and ecosystem expansion building on completed SOTA 2025 foundation
+**Focus:** Enhanced features, optimization, and ecosystem expansion building on completed advanced foundation
 
 ---
 
-## COMPLETED FEATURES (SOTA 2025)
+## COMPLETED FEATURES
 
-### Core SOTA 2025 Implementation
+### Core Advanced Implementation
 
-- [x] **Complete SOTA 2025 Scraper Implementation** `feat/sota-2025-scraper`
+- [x] **Complete Advanced Scraper Implementation** `feat/advanced-scraper`
   - [x] Full crawl4ai_bulk_embedder.py with hybrid embedding pipeline
   - [x] Research-backed optimal chunking (1600 chars = 400-600 tokens)
   - [x] Multi-provider embedding support (OpenAI, FastEmbed, Hybrid)
@@ -26,7 +26,7 @@
 
 ### Advanced Vector Database Management
 
-- [x] **SOTA Vector Database Operations** `feat/vector-db-sota`
+- [x] **Advanced Vector Database Operations** `feat/vector-db-advanced`
   - [x] Hybrid search with dense+sparse vectors
   - [x] RRF (Reciprocal Rank Fusion) ranking
   - [x] Qdrant collection optimization with quantization
@@ -36,7 +36,7 @@
 
 ### Comprehensive Test Suite
 
-- [x] **SOTA Testing Implementation** `feat/sota-tests`
+- [x] **Advanced Testing Implementation** `feat/advanced-tests`
   - [x] Unit tests for all embedding configurations
   - [x] Integration tests for reranking pipeline
   - [x] Performance benchmarks and validation
@@ -51,11 +51,17 @@
   - [x] Claude Desktop/Code compatibility
   - [x] Real-time documentation addition workflow
   - [x] Hybrid bulk + on-demand architecture
+  - [x] **Unified MCP Server with FastMCP 2.0** ✅
+    - [x] Core MCP server with all scraping and search tools
+    - [x] Enhanced MCP server with project management
+    - [x] Integration with existing Firecrawl and Qdrant servers
+    - [x] Comprehensive test suite for MCP functionality
+    - [x] Documentation and configuration guides
 
 ### Comprehensive Documentation
 
-- [x] **SOTA 2025 Documentation Suite** `docs/sota-complete`
-  - [x] Complete README.md with SOTA 2025 details
+- [x] **Advanced 2025 Documentation Suite** `docs/advanced-complete`
+  - [x] Complete README.md with Advanced 2025 details
   - [x] Comprehensive MCP server setup guide
   - [x] Advanced troubleshooting documentation
   - [x] Performance tuning and optimization guide
@@ -65,7 +71,7 @@
 
 ### Modern Configuration & Infrastructure
 
-- [x] **SOTA Infrastructure** `feat/sota-infrastructure`
+- [x] **Advanced Infrastructure** `feat/advanced-infrastructure`
   - [x] Optimized Docker Compose with performance tuning
   - [x] Pydantic v2 configuration models
   - [x] Environment variable management
@@ -75,9 +81,153 @@
 
 ---
 
+## COMPLETED V1 PLANNING DOCUMENTATION
+
+### Comprehensive Documentation Suite (Completed 2025-05-22)
+
+- [x] **MCP Server Architecture** (`docs/MCP_SERVER_ARCHITECTURE.md`)
+  - 25+ tool specifications with complete implementations
+  - Resource-based architecture design
+  - Streaming and composition support
+  - Context-aware operation patterns
+
+- [x] **V1 Implementation Plan** (`docs/V1_IMPLEMENTATION_PLAN.md`)
+  - 8-week phased implementation timeline
+  - Complete technical architecture
+  - Service layer implementations
+  - Testing and deployment strategies
+
+- [x] **Advanced Search Implementation** (`docs/ADVANCED_SEARCH_IMPLEMENTATION.md`)
+  - Qdrant Query API with prefetch and fusion
+  - Hybrid search with RRF/DBSF
+  - Multi-stage retrieval patterns
+  - Reranking with BGE-reranker-v2-m3
+
+- [x] **Embedding Model Integration** (`docs/EMBEDDING_MODEL_INTEGRATION.md`)
+  - Multi-provider architecture (OpenAI, BGE, FastEmbed)
+  - Smart model selection algorithms
+  - Cost optimization strategies
+  - Performance monitoring and quality assurance
+
+- [x] **Vector Database Best Practices** (`docs/VECTOR_DB_BEST_PRACTICES.md`)
+  - Collection design patterns
+  - Performance optimization techniques
+  - Operational procedures
+  - Troubleshooting guide
+
+- [x] **V1 Documentation Summary** (`docs/V1_DOCUMENTATION_SUMMARY.md`)
+  - Complete overview of all documentation
+  - Key technical decisions
+  - Implementation priorities
+  - Next steps for development
+
 ## HIGH PRIORITY TASKS
 
-### Enhanced SOTA Features
+### Unified MCP Server with API/SDK Approach
+
+- [ ] **API/SDK Integration Refactor** `feat/api-sdk-integration` 📋 [Implementation Guide](docs/API_SDK_INTEGRATION_REFACTOR.md)
+  - [ ] Replace MCP proxying with direct Qdrant Python SDK (`qdrant-client`) 📖 [Qdrant Python SDK](https://qdrant.tech/documentation/frameworks/python/)
+  - [ ] Integrate Firecrawl Python SDK as optional crawling provider 📖 [Firecrawl Python SDK](https://docs.firecrawl.dev/sdks/python)
+  - [ ] Use OpenAI SDK directly for embeddings (no MCP overhead) 📖 [OpenAI Python SDK](https://github.com/openai/openai-python)
+  - [ ] Implement FastEmbed library for local high-performance embeddings 📖 [FastEmbed Docs](https://qdrant.github.io/fastembed/)
+  - [ ] Create provider abstraction layer for crawling (Crawl4AI vs Firecrawl)
+  - [ ] Add configuration for choosing embedding providers (OpenAI, FastEmbed)
+  - [ ] Remove unnecessary MCP client dependencies
+  - [ ] Update error handling for direct API calls 📖 [Best Practices](https://platform.openai.com/docs/guides/production-best-practices)
+
+### Smart Model Selection & Cost Optimization
+
+- [ ] **Intelligent Model Selection** `feat/smart-model-selection`
+  - [ ] Implement auto-selection based on text length and quality requirements
+  - [ ] Add quality tiers: fast (small models), balanced, best (research-backed)
+  - [ ] Create cost tracking for each embedding provider
+  - [ ] Add model performance benchmarks for decision making
+  - [ ] Implement fallback strategies when preferred model unavailable
+  - [ ] Create model recommendation API based on use case
+  - [ ] Add cost estimation before processing
+  - [ ] Implement budget limits and warnings
+
+### Intelligent Caching Layer
+
+- [ ] **Embedding & Crawl Caching** `feat/intelligent-caching`
+  - [ ] Implement Redis/in-memory cache for embeddings with TTL
+  - [ ] Add content-based cache keys using MD5 hashing
+  - [ ] Create crawl result caching with configurable TTL
+  - [ ] Implement cache warming strategies for common queries
+  - [ ] Add cache hit rate monitoring and analytics
+  - [ ] Create cache invalidation strategies
+  - [ ] Implement distributed cache support for scaling
+  - [ ] Add cache size management and eviction policies
+
+### Code Architecture Improvements
+
+- [ ] **Centralized Client Management** `feat/centralized-clients` 📋 [Architecture Guide](docs/CODE_ARCHITECTURE_IMPROVEMENTS.md)
+  - [ ] Create unified ClientManager class for all API clients 📖 [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+  - [ ] Implement singleton pattern for client instances 📖 [Singleton Pattern](https://refactoring.guru/design-patterns/singleton/python/example)
+  - [ ] Add connection pooling for Qdrant client 📖 [AsyncIO Patterns](https://docs.python.org/3/library/asyncio.html)
+  - [ ] Create client health checks and auto-reconnection 📖 [Circuit Breaker](https://martinfowler.com/bliki/CircuitBreaker.html)
+  - [ ] Implement client configuration validation 📖 [Pydantic Validation](https://docs.pydantic.dev/latest/)
+  - [ ] Add client metrics and monitoring
+  - [ ] Create async context managers for resource cleanup
+  - [ ] Implement client retry logic with circuit breakers 📖 [Retry Pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/retry)
+
+- [ ] **Unified Configuration System** `feat/unified-config`
+  - [ ] Create single UnifiedConfig dataclass for all settings
+  - [ ] Consolidate scattered configuration files
+  - [ ] Implement environment variable validation
+  - [ ] Add configuration schema with Pydantic v2 📖 [Pydantic Models](https://docs.pydantic.dev/latest/concepts/models/)
+  - [ ] Create configuration templates for common use cases
+  - [ ] Implement configuration migration tools
+  - [ ] Add configuration hot-reloading support
+  - [ ] Create configuration documentation generator
+
+### Batch Processing Optimization
+
+- [ ] **Efficient Batch Operations** `feat/batch-processing` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
+  - [ ] Implement batch embedding with optimal chunk sizes
+  - [ ] Add OpenAI batch API support for cost reduction 📖 [OpenAI Batch API](https://platform.openai.com/docs/guides/batch)
+  - [ ] Create Qdrant bulk upsert optimization 📖 [Qdrant Performance](https://qdrant.tech/documentation/guides/optimization/)
+  - [ ] Implement parallel processing with rate limiting 📖 [AsyncIO Tasks](https://docs.python.org/3/library/asyncio-task.html)
+  - [ ] Add progress tracking for batch operations
+  - [ ] Create batch retry logic with exponential backoff
+  - [ ] Implement batch validation and error recovery
+  - [ ] Add batch operation scheduling
+
+### Local-Only Mode for Privacy
+
+- [ ] **Privacy-First Configuration** `feat/local-only-mode`
+  - [ ] Implement local-only flag disabling cloud services
+  - [ ] Configure FastEmbed as sole embedding provider
+  - [ ] Add SQLite with vector extension support
+  - [ ] Disable Firecrawl, use only Crawl4AI
+  - [ ] Create local model download and management
+  - [ ] Implement offline operation mode
+  - [ ] Add data encryption for local storage
+  - [ ] Create privacy compliance reporting
+
+### Enhanced Testing & Quality
+
+- [ ] **Comprehensive Async Test Suite** `feat/async-test-suite` 📋 [Testing Guide](docs/TESTING_QUALITY_ENHANCEMENTS.md)
+  - [ ] Add pytest-asyncio configuration and fixtures 📖 [pytest-asyncio](https://pytest-asyncio.readthedocs.io/)
+  - [ ] Create async test patterns for all API operations 📖 [pytest Guide](https://docs.pytest.org/en/stable/)
+  - [ ] Implement mock clients for Qdrant, OpenAI, Firecrawl 📖 [unittest.mock](https://docs.python.org/3/library/unittest.mock.html)
+  - [ ] Add test coverage for batch operations 📖 [pytest-cov](https://pytest-cov.readthedocs.io/)
+  - [ ] Create performance benchmarks in tests 📖 [pytest-benchmark](https://pytest-benchmark.readthedocs.io/)
+  - [ ] Add integration tests with real services (optional flag) 📖 [testcontainers](https://testcontainers-python.readthedocs.io/)
+  - [ ] Implement property-based testing for edge cases
+  - [ ] Add concurrent operation stress tests
+
+- [ ] **Error Handling & Resilience** `feat/error-resilience`
+  - [ ] Implement retry decorator with exponential backoff
+  - [ ] Add circuit breaker pattern for external services
+  - [ ] Create comprehensive error taxonomy
+  - [ ] Implement graceful degradation strategies
+  - [ ] Add error recovery mechanisms
+  - [ ] Create error logging and alerting
+  - [ ] Implement timeout handling for all operations
+  - [ ] Add partial failure recovery for batch operations
+
+### Enhanced Advanced Features
 
 - [ ] **Advanced Reranking Pipeline** `feat/advanced-reranking`
   - [ ] Implement ColBERT-style reranking for comparison
@@ -104,19 +254,53 @@
 
 ### Performance & Scalability
 
-- [ ] **Production-Grade Performance** `feat/production-performance`
-  - [ ] Implement connection pooling for Qdrant
+- [ ] **Production-Grade Performance** `feat/production-performance` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
+  - [ ] Implement connection pooling for Qdrant 📖 [AsyncIO Patterns](https://docs.python.org/3/library/asyncio.html)
   - [ ] Add distributed processing capabilities
-  - [ ] Create batch embedding optimization
-  - [ ] Implement smart caching strategies
-  - [ ] Add performance monitoring dashboard
+  - [ ] Create batch embedding optimization 📖 [OpenAI Batch API](https://platform.openai.com/docs/guides/batch)
+  - [ ] Implement smart caching strategies 📖 [Redis Performance](https://redis.io/docs/manual/optimization/)
+  - [ ] Add performance monitoring dashboard 📖 [Prometheus Python](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
 
 - [ ] **Advanced Vector Operations** `feat/advanced-vectors`
-  - [ ] Implement vector compression algorithms
+  - [ ] Implement vector compression algorithms 📖 [Qdrant Quantization](https://qdrant.tech/documentation/guides/quantization/)
   - [ ] Add support for Matryoshka embedding dimensions
   - [ ] Create embedding model migration tools
   - [ ] Add vector similarity analytics
   - [ ] Implement embedding quality metrics
+
+### Enhanced MCP Server Features
+
+- [ ] **Streaming Support** `feat/mcp-streaming`
+  - [ ] Implement streaming for large search results
+  - [ ] Add chunked response handling
+  - [ ] Create memory-efficient result iteration
+  - [ ] Implement progress callbacks for long operations
+  - [ ] Add streaming support for bulk operations
+  - [ ] Create backpressure handling
+  - [ ] Implement partial result delivery
+  - [ ] Add stream error recovery
+
+- [ ] **Tool Composition** `feat/tool-composition`
+  - [ ] Create smart_index_document composed tool
+  - [ ] Implement pipeline-based tool execution
+  - [ ] Add tool dependency resolution
+  - [ ] Create tool execution orchestration
+  - [ ] Implement tool result caching
+  - [ ] Add tool execution monitoring
+  - [ ] Create tool versioning support
+  - [ ] Implement tool rollback capabilities
+
+### Monitoring & Observability
+
+- [ ] **Comprehensive Metrics** `feat/comprehensive-metrics` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
+  - [ ] Implement Prometheus-compatible metrics 📖 [Prometheus Python](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
+  - [ ] Add embedding operation counters 📖 [Performance Profiling](https://docs.python.org/3/howto/perf_profiling.html)
+  - [ ] Create search latency histograms 📖 [psutil Documentation](https://psutil.readthedocs.io/)
+  - [ ] Implement cache hit rate tracking
+  - [ ] Add cost tracking per operation
+  - [ ] Create performance dashboards
+  - [ ] Implement alerting rules
+  - [ ] Add distributed tracing support
 
 ---
 
@@ -144,6 +328,18 @@
   - [ ] Implement alerting for performance degradation
   - [ ] Create usage analytics and reporting
   - [ ] Add health check automation
+
+### Hybrid Search Optimization
+
+- [ ] **Advanced Hybrid Search** `feat/hybrid-search-optimization` 📋 [Advanced Search Guide](docs/ADVANCED_SEARCH_IMPLEMENTATION.md)
+  - [ ] Implement Qdrant's Query API with prefetch 📖 [Qdrant Query API](https://qdrant.tech/documentation/concepts/query-api/)
+  - [ ] Add RRF and DBSF fusion methods 📖 [Hybrid Search](https://qdrant.tech/documentation/tutorials/hybrid-search/)
+  - [ ] Create adaptive fusion weight tuning
+  - [ ] Implement query-specific model selection
+  - [ ] Add sparse vector generation with SPLADE
+  - [ ] Create hybrid search benchmarking
+  - [ ] Implement search quality metrics
+  - [ ] Add A/B testing for fusion methods
 
 ### Advanced Search & Retrieval
 
@@ -208,11 +404,11 @@
 
 ## PROJECT STATUS
 
-### Completed (SOTA 2025 Foundation)
+### Completed (Advanced 2025 Foundation)
 
 #### Core Implementation
 
-- [x] **Full SOTA 2025 scraper** with hybrid embedding pipeline
+- [x] **Full Advanced 2025 scraper** with hybrid embedding pipeline
 - [x] **Advanced vector database operations** with quantization
 - [x] **Comprehensive MCP integration** for Claude Desktop/Code
 - [x] **Modern Python 3.13 + uv** infrastructure
@@ -222,7 +418,7 @@
 
 - [x] **Complete documentation suite** (README, MCP setup, troubleshooting)
 - [x] **Performance tuning guides** with benchmarks
-- [x] **Docker optimization** with SOTA 2025 configurations
+- [x] **Docker optimization** with Advanced 2025 configurations
 - [x] **Contributing guidelines** and project standards
 - [x] **Comprehensive test suite** with >90% coverage
 
@@ -239,11 +435,29 @@
 
 ### In Progress
 
-- [ ] **Advanced reranking pipeline** (researching ColBERT integration)
-- [ ] **Multi-modal document processing** (planning phase)
-- [ ] **Production performance optimizations** (connection pooling design)
+- [x] **V1 Enhancement Planning** ✅ (Documentation completed 2025-05-22)
+  - [x] Created comprehensive MCP Server Architecture documentation
+  - [x] Designed detailed V1 Implementation Plan (8-week timeline)
+  - [x] Documented Advanced Search Implementation with Qdrant Query API
+  - [x] Planned Embedding Model Integration with multi-provider support
+  - [x] Established Vector Database Best Practices guide
+  - [x] API/SDK Integration Refactor (ready to implement) 📋 [Guide](docs/API_SDK_INTEGRATION_REFACTOR.md)
+  - [x] Code Architecture Improvements (specifications complete) 📋 [Guide](docs/CODE_ARCHITECTURE_IMPROVEMENTS.md)
+  - [x] Performance Optimizations (strategies documented) 📋 [Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
+  - [x] Testing & Quality Enhancements (test plan ready) 📋 [Guide](docs/TESTING_QUALITY_ENHANCEMENTS.md)
 
-### Planned
+### Planned (V1 Release)
+
+- [ ] **Direct API/SDK Integration** (replaces MCP proxying)
+- [ ] **Smart Model Selection** with cost optimization
+- [ ] **Intelligent Caching Layer** for embeddings and crawls
+- [ ] **Batch Processing** for 50% cost reduction
+- [ ] **Local-Only Mode** for privacy-conscious users
+- [ ] **Code Architecture Refactor** (eliminate duplication)
+- [ ] **Comprehensive Testing** with async support
+- [ ] **Enhanced MCP Server Features** (streaming, composition)
+
+### Planned (Post-V1)
 
 - [ ] **Advanced CLI interface** with rich visualizations
 - [ ] **Intelligent search features** with query expansion
@@ -256,7 +470,18 @@
 
 **Target Date:** End of February 2025
 
-**Success Criteria:**
+**V1 Success Criteria:**
+
+- [ ] Direct API/SDK integration working (no MCP overhead)
+- [ ] Smart model selection reducing costs by 30-50%
+- [ ] Caching layer with 80%+ hit rate for common operations
+- [ ] Batch processing implemented with OpenAI batch API
+- [ ] Local-only mode fully functional with FastEmbed
+- [ ] Code duplication eliminated (DRY principle achieved)
+- [ ] Test coverage increased to 90%+ with async tests
+- [ ] MCP server enhanced with streaming and composition
+
+**Post-V1 Success Criteria:**
 
 - [ ] Advanced reranking pipeline with multiple model support
 - [ ] Multi-modal document processing (images, tables, PDFs)
@@ -269,7 +494,7 @@
 
 ## IMPLEMENTATION NOTES
 
-### SOTA 2025 Achievement Summary
+### Advanced 2025 Achievement Summary
 
 Our implementation has achieved **state-of-the-art 2025 performance**:
 
@@ -284,7 +509,7 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 #### Technical Architecture
 
 - **Hybrid Processing**: Crawl4AI (bulk) + Firecrawl MCP (on-demand)
-- **SOTA Embeddings**: OpenAI text-embedding-3-small + BGE reranking
+- **Advanced Embeddings**: OpenAI text-embedding-3-small + BGE reranking
 - **Vector Database**: Qdrant with quantization and hybrid search
 - **Modern Stack**: Python 3.13 + uv + Docker + Claude Desktop MCP
 
@@ -297,7 +522,7 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 
 ### Development Principles (Updated)
 
-- **SOTA First:** Prioritize research-backed optimizations and performance
+- **Performance First:** Prioritize research-backed optimizations and performance
 - **Production Ready:** Build for scalability, reliability, and maintainability
 - **Modern Stack:** Use latest tools and patterns (Python 3.13, uv, async)
 - **Test-Driven:** Comprehensive testing with performance benchmarks
@@ -316,7 +541,7 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 ## TASK WORKFLOW (Updated)
 
 1. **Research Phase:** Use latest tools and research for optimal approaches
-2. **Design Phase:** Consider SOTA performance and production requirements
+2. **Design Phase:** Consider high-performance requirements and production needs
 3. **Implement Phase:** Follow modern Python patterns and async best practices
 4. **Test Phase:** Comprehensive testing including performance benchmarks
 5. **Document Phase:** Update guides and examples with new features
@@ -325,9 +550,33 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 
 ---
 
+### Code Refactoring & Deduplication
+
+- [ ] **Eliminate Code Duplication** `refactor/deduplication`
+  - [ ] Extract common embedding logic to shared module
+  - [ ] Consolidate Qdrant client initialization
+  - [ ] Create shared configuration loading utilities
+  - [ ] Unify error handling patterns across modules
+  - [ ] Extract common chunking utilities
+  - [ ] Create shared validation functions
+  - [ ] Consolidate API response formatting
+  - [ ] Remove duplicate type definitions
+
+- [ ] **Module Organization** `refactor/module-organization`
+  - [ ] Create core package for shared functionality
+  - [ ] Implement providers package for external APIs
+  - [ ] Add utils package for common utilities
+  - [ ] Create models package for Pydantic schemas
+  - [ ] Implement services package for business logic
+  - [ ] Add middleware package for cross-cutting concerns
+  - [ ] Create exceptions package for error handling
+  - [ ] Implement decorators package for common patterns
+
+---
+
 ## SUCCESS METRICS
 
-### Current SOTA 2025 Achievements
+### Current Advanced 2025 Achievements
 
 #### Performance Metrics
 
@@ -364,7 +613,7 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 
 ## ACHIEVEMENT HIGHLIGHTS
 
-### SOTA 2025 Implementation Complete
+### Advanced 2025 Implementation Complete
 
 We've successfully built a **state-of-the-art 2025 documentation scraping system** that combines:
 
@@ -394,4 +643,20 @@ Built for **continuous evolution**:
 
 ---
 
-_This TODO reflects our evolution from basic implementation to SOTA 2025 achievement. Future tasks focus on advanced features, ecosystem expansion, and maintaining performance leadership._
+_This TODO reflects our evolution from basic implementation to Advanced 2025 achievement. Future tasks focus on advanced features, ecosystem expansion, and maintaining performance leadership._
+
+---
+
+## V2 FEATURES
+
+Additional advanced features have been moved to [TODO-V2.md](./TODO-V2.md) for implementation after the initial unified MCP server release. These include:
+
+- Advanced Query Enhancement & HyDE
+- Multi-Collection Search
+- Comprehensive Usage Analytics
+- Export/Import Tools
+- Context-Aware Chunking
+- Incremental Updates
+- And more...
+
+The current TODO focuses on essential features for a solid V1 release with direct API/SDK integration.

@@ -1,6 +1,6 @@
-# 🤝 Contributing to SOTA 2025 AI Documentation Scraper
+# 🤝 Contributing to Advanced AI Documentation Scraper
 
-We welcome contributions to make this project even better! This guide will help you get started with contributing to our state-of-the-art documentation scraping system.
+We welcome contributions to make this project even better! This guide will help you get started with contributing to our research-backed advanced documentation scraping system.
 
 ## 🚀 Quick Start for Contributors
 
@@ -45,7 +45,7 @@ We welcome contributions to make this project even better! This guide will help 
 
 ### Code Standards
 
-We follow **SOTA 2025 best practices** for clean, maintainable code:
+We follow **modern best practices** for clean, maintainable code:
 
 #### Python Code Style
 ```bash
@@ -64,7 +64,7 @@ uv run pytest --cov=src --cov-report=html
 - **Type Hints**: All functions must have complete type annotations
 - **Docstrings**: Follow Google-style docstrings for all public functions
 - **Testing**: Maintain >=90% test coverage
-- **Performance**: Follow SOTA 2025 performance patterns
+- **Performance**: Follow advanced performance patterns
 
 #### Example Code Structure
 ```python
@@ -73,7 +73,7 @@ from pydantic import BaseModel, Field
 
 
 class ExampleConfig(BaseModel):
-    """Example configuration following SOTA 2025 patterns.
+    """Example configuration following modern patterns.
     
     Args:
         param1: Description of parameter
@@ -85,7 +85,7 @@ class ExampleConfig(BaseModel):
 
 
 async def example_function(config: ExampleConfig) -> dict[str, Any]:
-    """Example function following SOTA 2025 conventions.
+    """Example function following modern conventions.
     
     Args:
         config: Configuration object
@@ -183,7 +183,7 @@ from src.crawl4ai_bulk_embedder import EmbeddingConfig, EmbeddingProvider
 
 @pytest.mark.asyncio
 async def test_embedding_config_validation():
-    """Test SOTA 2025 embedding configuration validation."""
+    """Test advanced embedding configuration validation."""
     config = EmbeddingConfig(
         provider=EmbeddingProvider.HYBRID,
         enable_reranking=True,
@@ -200,7 +200,7 @@ async def test_embedding_config_validation():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_full_scraping_pipeline():
-    """Test complete SOTA 2025 scraping and embedding pipeline."""
+    """Test complete advanced scraping and embedding pipeline."""
     # Test implementation
     pass
 ```
@@ -275,7 +275,7 @@ uv run mkdocs build
 ### High-Priority Areas
 
 #### 🔬 Research & Optimization
-- **Embedding Models**: Test and integrate new SOTA models
+- **Embedding Models**: Test and integrate new high-performance models
 - **Vector Quantization**: Explore advanced quantization techniques
 - **Hybrid Search**: Improve sparse-dense fusion algorithms
 - **Reranking**: Experiment with new cross-encoder models
@@ -436,4 +436,4 @@ All contributions are valued and will be appropriately attributed in project doc
 
 **Thank you for helping make this project better! 🎉**
 
-Every contribution, no matter how small, helps advance the state-of-the-art in AI documentation processing.
+Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation processing.

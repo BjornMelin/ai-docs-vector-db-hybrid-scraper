@@ -1,4 +1,4 @@
-"""chunking.py - SOTA 2025 Enhanced Chunking with Code Awareness.
+"""chunking.py - Enhanced Chunking with Code Awareness.
 
 Implements research-backed chunking strategies for optimal RAG performance.
 Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST parsing.
@@ -47,7 +47,7 @@ class CodeLanguage(str, Enum):
 
 
 class ChunkingConfig(BaseModel):
-    """SOTA 2025 chunking configuration"""
+    """Advanced chunking configuration"""
 
     # Basic parameters (existing)
     chunk_size: int = Field(
@@ -752,16 +752,18 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append({
-                        "type": "function",
-                        "name": (
-                            content[name_node.start_byte : name_node.end_byte]
-                            if name_node
-                            else ""
-                        ),
-                        "start_pos": node.start_byte,
-                        "end_pos": node.end_byte,
-                    })
+                    code_units.append(
+                        {
+                            "type": "function",
+                            "name": (
+                                content[name_node.start_byte : name_node.end_byte]
+                                if name_node
+                                else ""
+                            ),
+                            "start_pos": node.start_byte,
+                            "end_pos": node.end_byte,
+                        }
+                    )
                 elif node.type == "class_definition":
                     # Extract class name
                     name_node = None
@@ -770,16 +772,18 @@ class EnhancedChunker:
                             name_node = child
                             break
 
-                    code_units.append({
-                        "type": "class",
-                        "name": (
-                            content[name_node.start_byte : name_node.end_byte]
-                            if name_node
-                            else ""
-                        ),
-                        "start_pos": node.start_byte,
-                        "end_pos": node.end_byte,
-                    })
+                    code_units.append(
+                        {
+                            "type": "class",
+                            "name": (
+                                content[name_node.start_byte : name_node.end_byte]
+                                if name_node
+                                else ""
+                            ),
+                            "start_pos": node.start_byte,
+                            "end_pos": node.end_byte,
+                        }
+                    )
 
             # JavaScript/TypeScript node types
             elif language in ["javascript", "typescript"]:
@@ -796,12 +800,14 @@ class EnhancedChunker:
                                 name = content[child.start_byte : child.end_byte]
                                 break
 
-                    code_units.append({
-                        "type": "function",
-                        "name": name,
-                        "start_pos": node.start_byte,
-                        "end_pos": node.end_byte,
-                    })
+                    code_units.append(
+                        {
+                            "type": "function",
+                            "name": name,
+                            "start_pos": node.start_byte,
+                            "end_pos": node.end_byte,
+                        }
+                    )
                 elif node.type == "class_declaration":
                     # Extract class name
                     name = ""
@@ -810,12 +816,14 @@ class EnhancedChunker:
                             name = content[child.start_byte : child.end_byte]
                             break
 
-                    code_units.append({
-                        "type": "class",
-                        "name": name,
-                        "start_pos": node.start_byte,
-                        "end_pos": node.end_byte,
-                    })
+                    code_units.append(
+                        {
+                            "type": "class",
+                            "name": name,
+                            "start_pos": node.start_byte,
+                            "end_pos": node.end_byte,
+                        }
+                    )
 
             # Recurse into children
             for child in node.children:
