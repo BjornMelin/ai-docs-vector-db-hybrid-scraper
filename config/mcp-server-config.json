@@ -1,0 +1,84 @@
+{
+  "name": "ai-docs-vector-db",
+  "description": "AI Documentation Vector DB MCP Server - Unified scraping and search",
+  "version": "1.0.0",
+  "transport": {
+    "type": "stdio"
+  },
+  "tools": {
+    "scraping": {
+      "scrape_url": {
+        "description": "Scrape and index documentation from a URL",
+        "enabled": true
+      },
+      "scrape_with_firecrawl": {
+        "description": "Use Firecrawl API for high-quality extraction",
+        "enabled": true,
+        "requires_api_key": true
+      }
+    },
+    "search": {
+      "search": {
+        "description": "Semantic search across indexed documentation",
+        "enabled": true
+      }
+    },
+    "collections": {
+      "list_collections": {
+        "description": "List all vector database collections",
+        "enabled": true
+      },
+      "create_collection": {
+        "description": "Create a new collection",
+        "enabled": true
+      },
+      "delete_collection": {
+        "description": "Delete a collection",
+        "enabled": true
+      },
+      "get_collection_info": {
+        "description": "Get collection details",
+        "enabled": true
+      }
+    },
+    "utilities": {
+      "clear_cache": {
+        "description": "Clear scraping cache",
+        "enabled": true
+      }
+    }
+  },
+  "resources": {
+    "config://environment": {
+      "description": "Environment configuration",
+      "enabled": true
+    },
+    "stats://database": {
+      "description": "Database statistics",
+      "enabled": true
+    }
+  },
+  "environment": {
+    "required": [
+      "OPENAI_API_KEY",
+      "QDRANT_URL"
+    ],
+    "optional": [
+      "FIRECRAWL_API_KEY"
+    ],
+    "defaults": {
+      "QDRANT_URL": "http://localhost:6333",
+      "ENVIRONMENT": "development"
+    }
+  },
+  "integrations": {
+    "firecrawl": {
+      "enabled": true,
+      "mcp_server_url": "https://github.com/mendableai/firecrawl-mcp-server"
+    },
+    "qdrant": {
+      "enabled": true,
+      "mcp_server_url": "https://github.com/qdrant/mcp-server-qdrant"
+    }
+  }
+}

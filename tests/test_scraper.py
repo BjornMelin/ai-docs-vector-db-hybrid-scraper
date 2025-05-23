@@ -432,9 +432,11 @@ def test_load_documentation_sites(
 
     from src.crawl4ai_bulk_embedder import load_documentation_sites
 
-    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps({
-        "sites": [sample_documentation_site],
-    })
+    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(
+        {
+            "sites": [sample_documentation_site],
+        }
+    )
 
     sites = load_documentation_sites()
 
