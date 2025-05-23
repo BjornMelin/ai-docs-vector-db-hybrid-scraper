@@ -28,7 +28,11 @@ class QdrantService(BaseService):
         self._client: AsyncQdrantClient | None = None
 
     async def initialize(self) -> None:
-        """Initialize Qdrant client."""
+        """Initialize Qdrant client with connection validation.
+        
+        Raises:
+            QdrantServiceError: If client initialization fails
+        """
         if self._initialized:
             return
 
@@ -39,10 +43,18 @@ class QdrantService(BaseService):
                 timeout=self.config.qdrant_timeout,
                 prefer_grpc=self.config.qdrant_prefer_grpc,
             )
+            
+            # Validate connection by checking health
+            health = await self._client.get_health()
+            if not health:
+                raise QdrantServiceError("Qdrant health check failed")
+                
             self._initialized = True
             logger.info(f"Qdrant client initialized: {self.config.qdrant_url}")
         except Exception as e:
-            raise QdrantServiceError(f"Failed to initialize Qdrant client: {e}")
+            self._client = None
+            self._initialized = False
+            raise QdrantServiceError(f"Failed to initialize Qdrant client: {e}") from e
 
     async def cleanup(self) -> None:
         """Cleanup Qdrant client."""

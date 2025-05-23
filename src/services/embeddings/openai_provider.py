@@ -1,6 +1,9 @@
 """OpenAI embedding provider with batch support."""
 
+import json
 import logging
+import os
+import tempfile
 from typing import ClassVar
 
 from openai import AsyncOpenAI
@@ -176,12 +179,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         try:
             # Create JSONL content for batch
-            import json
-            import tempfile
-
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".jsonl", delete=False
             ) as f:
+                temp_file = f.name
                 for i, (text, custom_id) in enumerate(
                     zip(texts, custom_ids, strict=False)
                 ):
@@ -202,8 +203,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                         request["body"]["dimensions"] = self._dimensions
 
                     f.write(json.dumps(request) + "\n")
-
-                temp_file = f.name
+                
+                # Ensure all data is written to disk before closing
+                f.flush()
+                os.fsync(f.fileno())
 
             # Upload file
             with open(temp_file, "rb") as f:
@@ -223,7 +226,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             raise EmbeddingServiceError(f"Failed to create batch job: {e}")
         finally:
             # Clean up temp file
-            import os
-
-            if "temp_file" in locals():
-                os.unlink(temp_file)
+            if "temp_file" in locals() and temp_file and os.path.exists(temp_file):
+                try:
+                    os.unlink(temp_file)
+                except OSError:
+                    pass  # File already deleted or inaccessible

@@ -21,7 +21,7 @@ class TestOpenAIEmbeddingProvider:
     def openai_provider(self):
         """Create OpenAI provider instance."""
         return OpenAIEmbeddingProvider(
-            api_key="test-key",
+            api_key="sk-test-key",
             model_name="text-embedding-3-small",
             dimensions=1536,
         )
@@ -35,7 +35,7 @@ class TestOpenAIEmbeddingProvider:
             await openai_provider.initialize()
 
             assert openai_provider._initialized
-            mock_client.assert_called_once_with(api_key="test-key")
+            mock_client.assert_called_once_with(api_key="sk-test-key")
 
     @pytest.mark.asyncio
     async def test_generate_embeddings(self, openai_provider):
@@ -105,6 +105,51 @@ class TestOpenAIEmbeddingProvider:
             assert embeddings[1] == [0.1, 0.2, 0.3]
             assert embeddings[2] == [0.2, 0.4, 0.6]
             assert mock_instance.embeddings.create.call_count == 2  # 2 batches
+    
+    @pytest.mark.asyncio
+    async def test_generate_embeddings_batch_api(self, openai_provider):
+        """Test batch API for embeddings."""
+        with patch(
+            "src.services.embeddings.openai_provider.AsyncOpenAI"
+        ) as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+            
+            # Mock file operations
+            mock_file_response = MagicMock(id="file-123")
+            mock_instance.files.create.return_value = mock_file_response
+            
+            # Mock batch response
+            mock_batch_response = MagicMock(id="batch-456")
+            mock_instance.batches.create.return_value = mock_batch_response
+            
+            await openai_provider.initialize()
+            
+            batch_id = await openai_provider.generate_embeddings_batch_api(
+                ["text1", "text2"],
+                custom_ids=["id1", "id2"]
+            )
+            
+            assert batch_id == "batch-456"
+            mock_instance.files.create.assert_called_once()
+            mock_instance.batches.create.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_generate_embeddings_error(self, openai_provider):
+        """Test embedding generation error handling."""
+        with patch(
+            "src.services.embeddings.openai_provider.AsyncOpenAI"
+        ) as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+            
+            # Mock error response
+            mock_instance.embeddings.create.side_effect = Exception("API Error")
+            
+            await openai_provider.initialize()
+            
+            with pytest.raises(EmbeddingServiceError, match="Failed to generate embeddings"):
+                await openai_provider.generate_embeddings(["test"])
 
     def test_cost_per_token(self, openai_provider):
         """Test cost calculation."""
@@ -115,7 +160,7 @@ class TestOpenAIEmbeddingProvider:
         """Test unsupported model error."""
         with pytest.raises(EmbeddingServiceError, match="Unsupported model"):
             OpenAIEmbeddingProvider(
-                api_key="test",
+                api_key="sk-test",
                 model_name="invalid-model",
             )
 
@@ -187,7 +232,7 @@ class TestEmbeddingManager:
     def api_config(self):
         """Create test API config."""
         return APIConfig(
-            openai_api_key="test-key",
+            openai_api_key="sk-test-key",
             enable_local_embeddings=True,
         )
 
