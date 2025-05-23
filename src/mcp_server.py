@@ -25,21 +25,18 @@ from qdrant_client.models import Distance
 from qdrant_client.models import VectorParams
 from rich.console import Console
 
-from .error_handling import (
-    ConfigurationError,
-    ExternalServiceError,
-    NetworkError,
-    RateLimitError,
-    ValidationError,
-    circuit_breaker,
-    firecrawl_rate_limiter,
-    handle_mcp_errors,
-    openai_rate_limiter,
-    qdrant_rate_limiter,
-    retry_async,
-    validate_input,
-)
-from .security import SecurityValidator, validate_startup_security
+from .error_handling import ConfigurationError
+from .error_handling import ExternalServiceError
+from .error_handling import NetworkError
+from .error_handling import circuit_breaker
+from .error_handling import firecrawl_rate_limiter
+from .error_handling import handle_mcp_errors
+from .error_handling import openai_rate_limiter
+from .error_handling import qdrant_rate_limiter
+from .error_handling import retry_async
+from .error_handling import validate_input
+from .security import SecurityValidator
+from .security import validate_startup_security
 
 # Try importing optional dependencies
 try:
@@ -133,31 +130,29 @@ openai_client = None
 @retry_async(max_attempts=3, exceptions=(NetworkError, ConnectionError))
 async def get_qdrant_client():
     """Get or create Qdrant client with error handling."""
-    global qdrant_client
-    if qdrant_client is None:
+    if not hasattr(get_qdrant_client, "_client"):
         try:
             qdrant_url = ENV_VARS.get("QDRANT_URL", "http://localhost:6333")
-            qdrant_client = AsyncQdrantClient(url=qdrant_url)
+            get_qdrant_client._client = AsyncQdrantClient(url=qdrant_url)
             logger.info(f"✅ Qdrant client initialized: {qdrant_url}")
         except Exception as e:
             logger.error(f"❌ Failed to initialize Qdrant client: {e}")
-            raise NetworkError(f"Cannot connect to Qdrant at {qdrant_url}: {e}")
-    return qdrant_client
+            raise NetworkError(f"Cannot connect to Qdrant at {qdrant_url}: {e}") from e
+    return get_qdrant_client._client
 
 
 @retry_async(max_attempts=3, exceptions=(NetworkError, ConnectionError))
 async def get_openai_client():
     """Get or create OpenAI client with error handling."""
-    global openai_client
-    if openai_client is None:
+    if not hasattr(get_openai_client, "_client"):
         try:
             api_key = ENV_VARS["OPENAI_API_KEY"]
-            openai_client = AsyncOpenAI(api_key=api_key)
+            get_openai_client._client = AsyncOpenAI(api_key=api_key)
             logger.info("✅ OpenAI client initialized")
         except Exception as e:
             logger.error(f"❌ Failed to initialize OpenAI client: {e}")
-            raise ExternalServiceError(f"Cannot initialize OpenAI client: {e}")
-    return openai_client
+            raise ExternalServiceError(f"Cannot initialize OpenAI client: {e}") from e
+    return get_openai_client._client
 
 
 # ========== Scraping Tools ==========
@@ -232,10 +227,9 @@ async def scrape_url(
 
     except Exception as e:
         logger.error(f"❌ Error scraping URL {url}: {e}")
-        # Clean up on error
         if "config_path" in locals() and config_path.exists():
             config_path.unlink()
-        raise ExternalServiceError(f"Scraping failed for {url}: {e}")
+        raise ExternalServiceError(f"Scraping failed for {url}: {e}") from e
 
 
 @mcp.tool()
@@ -249,7 +243,7 @@ async def scrape_url(
     ],
 )
 async def scrape_with_firecrawl(
-    url: str, formats: list[str] = ["markdown"]
+    url: str, formats: list[str] | None = None
 ) -> dict[str, Any]:
     """Scrape a URL using Firecrawl API for high-quality extraction.
 
@@ -260,6 +254,8 @@ async def scrape_with_firecrawl(
     Returns:
         Dictionary with scraped content
     """
+    if formats is None:
+        formats = ["markdown"]
     logger.info(f"Starting Firecrawl scrape for URL: {url}")
 
     if not FirecrawlApp:
@@ -290,7 +286,7 @@ async def scrape_with_firecrawl(
 
     except Exception as e:
         logger.error(f"❌ Error with Firecrawl for {url}: {e}")
-        raise ExternalServiceError(f"Firecrawl scraping failed for {url}: {e}")
+        raise ExternalServiceError(f"Firecrawl scraping failed for {url}: {e}") from e
 
 
 # ========== Search Tools ==========
@@ -377,7 +373,7 @@ async def search(
 
     except Exception as e:
         logger.error(f"❌ Search failed for query '{query}': {e}")
-        raise ExternalServiceError(f"Search operation failed: {e}")
+        raise ExternalServiceError(f"Search operation failed: {e}") from e
 
 
 # ========== Collection Management Tools ==========
@@ -555,16 +551,17 @@ async def get_collection_info(name: str) -> dict[str, Any]:
 
     # Safely extract config information
     try:
-        if hasattr(info, "config") and hasattr(info.config, "params"):
-            if hasattr(info.config.params, "vectors"):
-                result["config"] = {
-                    "vector_size": getattr(
-                        info.config.params.vectors, "size", "unknown"
-                    ),
-                    "distance": str(
-                        getattr(info.config.params.vectors, "distance", "unknown")
-                    ),
-                }
+        if (
+            hasattr(info, "config")
+            and hasattr(info.config, "params")
+            and hasattr(info.config.params, "vectors")
+        ):
+            result["config"] = {
+                "vector_size": getattr(info.config.params.vectors, "size", "unknown"),
+                "distance": str(
+                    getattr(info.config.params.vectors, "distance", "unknown")
+                ),
+            }
     except Exception as e:
         logger.warning(f"Could not extract config for collection {name}: {e}")
         result["config"] = {"error": "config not available"}

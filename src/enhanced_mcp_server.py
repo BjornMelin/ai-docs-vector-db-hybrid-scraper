@@ -93,13 +93,13 @@ enhanced_mcp = FastMCP(
     name="Enhanced AI Docs Vector DB",
     instructions="""
     This enhanced MCP server provides unified documentation management with advanced features:
-    
+
     Core Features:
     - Project-based documentation management
     - Intelligent scraping with Crawl4AI and Firecrawl integration
     - Advanced search with hybrid and reranking capabilities
     - Automated documentation indexing and updates
-    
+
     Available Tools:
     - create_project: Create a new documentation project
     - list_projects: List all documentation projects
@@ -109,25 +109,23 @@ enhanced_mcp = FastMCP(
     - index_documentation: Index documentation with optimal chunking
     - update_project: Update project documentation
     - export_project: Export project data
-    
+
     This server integrates with Firecrawl and Qdrant MCP servers for enhanced capabilities.
     """,
 )
 
 # Global state
 projects: dict[str, DocumentationProject] = {}
-openai_client: AsyncOpenAI | None = None
 
 
 async def get_openai_client():
     """Get or create OpenAI client"""
-    global openai_client
-    if openai_client is None:
+    if not hasattr(get_openai_client, "_client"):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
-        openai_client = AsyncOpenAI(api_key=api_key)
-    return openai_client
+        get_openai_client._client = AsyncOpenAI(api_key=api_key)
+    return get_openai_client._client
 
 
 # ========== Project Management Tools ==========
@@ -137,13 +135,13 @@ async def get_openai_client():
 @handle_mcp_errors
 @validate_input(
     name=SecurityValidator.validate_collection_name,
-    description=lambda x: x[:500] if len(x) <= 500 else x[:500],
+    description=lambda x: x[:500],
     source_urls=lambda urls: [SecurityValidator.validate_url(url) for url in urls]
     if urls
     else [],
 )
 async def create_project(
-    name: str, description: str = "", source_urls: list[str] = []
+    name: str, description: str = "", source_urls: list[str] | None = None
 ) -> dict[str, Any]:
     """Create a new documentation project.
 
@@ -157,19 +155,17 @@ async def create_project(
     """
     if name in projects:
         return {"success": False, "error": f"Project '{name}' already exists"}
-
+    if source_urls is None:
+        source_urls = []
     project = DocumentationProject(
         name=name,
         description=description,
         sources=source_urls,
         collections=[f"{name}_docs"],
     )
-
     projects[name] = project
-
     # Create corresponding vector DB collection
     # This would normally call the Qdrant MCP server
-
     return {
         "success": True,
         "project": project.model_dump(),
@@ -329,9 +325,9 @@ async def smart_search(
     try:
         # Determine collections to search
         if project_name and project_name in projects:
-            collections = projects[project_name].collections
+            _collections = projects[project_name].collections
         else:
-            collections = ["documentation"]  # Default collection
+            _collections = ["documentation"]  # Default collection
 
         # Here we would integrate with Qdrant MCP server for search
         # For now, return simulated results
@@ -371,14 +367,14 @@ async def smart_search(
     if len(x) <= 50000
     else (_ for _ in ()).throw(ValueError("Content exceeds 50KB limit")),
     url=SecurityValidator.validate_url,
-    title=lambda x: x[:200] if len(x) <= 200 else x[:200],
+    title=lambda x: x[:200],
 )
 async def index_documentation(
     project_name: str,
     content: str,
     url: str,
     title: str = "",
-    metadata: dict[str, Any] = {},
+    metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Index documentation content with optimal chunking.
 
@@ -394,13 +390,13 @@ async def index_documentation(
     """
     if project_name not in projects:
         return {"success": False, "error": f"Project '{project_name}' not found"}
-
+    if metadata is None:
+        metadata = {}
     try:
         # Here we would:
         # 1. Use our enhanced chunking module
         # 2. Generate embeddings
         # 3. Store in Qdrant via MCP
-
         return {
             "success": True,
             "project": project_name,
@@ -408,18 +404,25 @@ async def index_documentation(
             "chunks_created": 10,  # Simulated
             "message": "Documentation indexed successfully",
         }
-
     except Exception as e:
         logger.error(f"Indexing error: {e}")
         return {"success": False, "error": str(e)}
 
 
 @enhanced_mcp.tool()
+@handle_mcp_errors
+@validate_input(
+    name=SecurityValidator.validate_collection_name,
+    description=lambda x: x[:500],
+    source_urls=lambda urls: [SecurityValidator.validate_url(url) for url in urls]
+    if urls
+    else [],
+)
 async def update_project(
     name: str,
     description: str | None = None,
-    add_sources: list[str] = [],
-    remove_sources: list[str] = [],
+    add_sources: list[str] | None = None,
+    remove_sources: list[str] | None = None,
 ) -> dict[str, Any]:
     """Update project configuration.
 
@@ -434,24 +437,22 @@ async def update_project(
     """
     if name not in projects:
         return {"success": False, "error": f"Project '{name}' not found"}
-
+    if add_sources is None:
+        add_sources = []
+    if remove_sources is None:
+        remove_sources = []
     project = projects[name]
-
     if description is not None:
         project.description = description
-
     # Add new sources
     for source in add_sources:
         if source not in project.sources:
             project.sources.append(source)
-
     # Remove sources
     for source in remove_sources:
         if source in project.sources:
             project.sources.remove(source)
-
     project.updated_at = datetime.now()
-
     return {
         "success": True,
         "project": project.model_dump(),

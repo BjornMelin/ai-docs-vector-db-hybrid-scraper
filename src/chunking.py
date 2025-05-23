@@ -328,7 +328,15 @@ class EnhancedChunker:
     def _enhanced_chunking(
         self, content: str, language: str | None = None
     ) -> list[Chunk]:
-        """Enhanced chunking with code awareness but without AST parsing"""
+        """Enhanced chunking with code awareness but without AST parsing.
+
+        Args:
+            content: The text content to chunk.
+            language: The detected or specified language (optional).
+
+        Returns:
+            List of Chunk objects representing the chunked content.
+        """
         chunks = []
         code_blocks = (
             self._find_code_blocks(content) if self.config.preserve_code_blocks else []
@@ -341,99 +349,121 @@ class EnhancedChunker:
         chunk_start = 0
 
         while current_pos < len(content):
-            # Check if we're at a code block
-            current_code_block = None
-            for block in code_blocks:
-                if block.start_pos <= current_pos < block.end_pos:
-                    current_code_block = block
-                    break
-
+            current_code_block = self._get_current_code_block(code_blocks, current_pos)
             if current_code_block and self.config.preserve_code_blocks:
-                # Handle code block
-                # First, chunk any content before the code block
-                if chunk_start < current_code_block.start_pos:
-                    pre_content = content[
-                        chunk_start : current_code_block.start_pos
-                    ].strip()
-                    if pre_content:
-                        chunks.extend(
-                            self._chunk_text_content(
-                                pre_content,
-                                chunk_start,
-                                current_code_block.start_pos,
-                            )
-                        )
-
-                # Add the code block as a chunk (if within size limits)
-                block_size = current_code_block.end_pos - current_code_block.start_pos
-                if block_size <= self.config.max_function_chunk_size:
-                    start = current_code_block.start_pos
-                    end = current_code_block.end_pos
-                    chunks.append(
-                        Chunk(
-                            content=content[start:end],
-                            start_pos=current_code_block.start_pos,
-                            end_pos=current_code_block.end_pos,
-                            chunk_index=len(chunks),
-                            chunk_type="code",
-                            language=current_code_block.language,
-                            has_code=True,
-                        )
-                    )
-                else:
-                    # Code block too large, chunk it preserving boundaries
-                    start = current_code_block.start_pos
-                    end = current_code_block.end_pos
-                    chunks.extend(
-                        self._chunk_large_code_block(
-                            content[start:end],
-                            current_code_block.start_pos,
-                            current_code_block.language,
-                        )
-                    )
-
+                self._handle_code_block(
+                    content, chunks, chunk_start, current_code_block
+                )
                 current_pos = current_code_block.end_pos
                 chunk_start = current_pos
             else:
-                # Regular text chunking
-                chunk_end = min(chunk_start + self.config.chunk_size, len(content))
-
-                # Try to find a good boundary
-                if chunk_end < len(content):
-                    chunk_end = self._find_enhanced_boundary(
-                        content, chunk_start, chunk_end
-                    )
-
-                # Create chunk
-                chunk_content = content[chunk_start:chunk_end].strip()
-                if chunk_content:
-                    chunks.append(
-                        Chunk(
-                            content=chunk_content,
-                            start_pos=chunk_start,
-                            end_pos=chunk_end,
-                            chunk_index=len(chunks),
-                            chunk_type="text",
-                            has_code=bool(
-                                self.CODE_FENCE_PATTERN.search(chunk_content)
-                            ),
-                        )
-                    )
-
-                # Move to next chunk with overlap
-                if chunk_end < len(content):
-                    current_pos = chunk_end - self.config.chunk_overlap
-                else:
-                    current_pos = len(content)
-                chunk_start = current_pos
-
+                current_pos, chunk_start = self._handle_regular_chunk(
+                    content, chunks, chunk_start, current_pos
+                )
         # Update total chunks count
         for chunk in chunks:
             chunk.total_chunks = len(chunks)
             chunk.char_count = len(chunk.content)
             chunk.token_estimate = chunk.char_count // 4
-
         return chunks
+
+    def _get_current_code_block(self, code_blocks, current_pos):
+        """Return the code block at the current position, if any.
+
+        Args:
+            code_blocks: List of CodeBlock objects.
+            current_pos: Current character position in content.
+
+        Returns:
+            The CodeBlock at current_pos, or None if not in a code block.
+        """
+        for block in code_blocks:
+            if block.start_pos <= current_pos < block.end_pos:
+                return block
+        return None
+
+    def _handle_code_block(self, content, chunks, chunk_start, current_code_block):
+        """Handle chunking when at a code block boundary.
+
+        Args:
+            content: The full text content.
+            chunks: List to append new chunks to.
+            chunk_start: Start position for chunking.
+            current_code_block: The CodeBlock being processed.
+        """
+        # First, chunk any content before the code block
+        if chunk_start < current_code_block.start_pos:
+            pre_content = content[chunk_start : current_code_block.start_pos].strip()
+            if pre_content:
+                chunks.extend(
+                    self._chunk_text_content(
+                        pre_content, chunk_start, current_code_block.start_pos
+                    )
+                )
+        # Add the code block as a chunk (if within size limits)
+        block_size = current_code_block.end_pos - current_code_block.start_pos
+        if block_size <= self.config.max_function_chunk_size:
+            start = current_code_block.start_pos
+            end = current_code_block.end_pos
+            chunks.append(
+                Chunk(
+                    content=content[start:end],
+                    start_pos=current_code_block.start_pos,
+                    end_pos=current_code_block.end_pos,
+                    chunk_index=len(chunks),
+                    chunk_type="code",
+                    language=current_code_block.language,
+                    has_code=True,
+                )
+            )
+        else:
+            # Code block too large, chunk it preserving boundaries
+            start = current_code_block.start_pos
+            end = current_code_block.end_pos
+            chunks.extend(
+                self._chunk_large_code_block(
+                    content[start:end],
+                    current_code_block.start_pos,
+                    current_code_block.language,
+                )
+            )
+
+    def _handle_regular_chunk(self, content, chunks, chunk_start, current_pos):
+        """Handle chunking for regular (non-code-block) text.
+
+        Args:
+            content: The full text content.
+            chunks: List to append new chunks to.
+            chunk_start: Start position for chunking.
+            current_pos: Current character position in content.
+
+        Returns:
+            Tuple of (new current_pos, new chunk_start).
+        """
+        chunk_end = min(chunk_start + self.config.chunk_size, len(content))
+        # Try to find a good boundary
+        if chunk_end < len(content):
+            chunk_end = self._find_enhanced_boundary(content, chunk_start, chunk_end)
+        # Create chunk
+        chunk_content = content[chunk_start:chunk_end].strip()
+        if chunk_content:
+            chunks.append(
+                Chunk(
+                    content=chunk_content,
+                    start_pos=chunk_start,
+                    end_pos=chunk_end,
+                    chunk_index=len(chunks),
+                    chunk_type="text",
+                    has_code=bool(self.CODE_FENCE_PATTERN.search(chunk_content)),
+                )
+            )
+        # Move to next chunk with overlap
+        if chunk_end < len(content):
+            current_pos = chunk_end - self.config.chunk_overlap
+        else:
+            current_pos = len(content)
+        chunk_start = current_pos
+        return current_pos, chunk_start
 
     def _find_enhanced_boundary(self, content: str, start: int, target_end: int) -> int:
         """Find an enhanced boundary considering code structures"""
@@ -735,102 +765,121 @@ class EnhancedChunker:
     def _extract_code_units(
         self, node: Any, content: str, language: str
     ) -> list[dict[str, Any]]:
-        """Extract function and class definitions from AST"""
+        """Extract function and class definitions from AST.
+
+        Args:
+            node: The root AST node.
+            content: The full text content.
+            language: The detected or specified language.
+
+        Returns:
+            List of dicts with code unit metadata (type, name, start_pos, end_pos).
+        """
         code_units = []
 
         def traverse(node: Any) -> None:
             # Python-specific node types
             if language == "python":
-                if node.type in [
-                    "function_definition",
-                    "async_function_definition",
-                ]:
-                    # Extract function name
-                    name_node = None
-                    for child in node.children:
-                        if child.type == "identifier":
-                            name_node = child
-                            break
-
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": (
-                                content[name_node.start_byte : name_node.end_byte]
-                                if name_node
-                                else ""
-                            ),
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
-                elif node.type == "class_definition":
-                    # Extract class name
-                    name_node = None
-                    for child in node.children:
-                        if child.type == "identifier":
-                            name_node = child
-                            break
-
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": (
-                                content[name_node.start_byte : name_node.end_byte]
-                                if name_node
-                                else ""
-                            ),
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
-
-            # JavaScript/TypeScript node types
+                self._traverse_python(node, content, code_units)
             elif language in ["javascript", "typescript"]:
-                if node.type in [
-                    "function_declaration",
-                    "function_expression",
-                    "arrow_function",
-                ]:
-                    # Try to extract function name
-                    name = ""
-                    if node.type == "function_declaration":
-                        for child in node.children:
-                            if child.type == "identifier":
-                                name = content[child.start_byte : child.end_byte]
-                                break
-
-                    code_units.append(
-                        {
-                            "type": "function",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
-                elif node.type == "class_declaration":
-                    # Extract class name
-                    name = ""
-                    for child in node.children:
-                        if child.type == "identifier":
-                            name = content[child.start_byte : child.end_byte]
-                            break
-
-                    code_units.append(
-                        {
-                            "type": "class",
-                            "name": name,
-                            "start_pos": node.start_byte,
-                            "end_pos": node.end_byte,
-                        }
-                    )
-
-            # Recurse into children
+                self._traverse_js_ts(node, content, code_units, language)
             for child in node.children:
                 traverse(child)
 
         traverse(node)
         return code_units
+
+    def _traverse_python(
+        self, node: Any, content: str, code_units: list[dict[str, Any]]
+    ):
+        """Helper for traversing Python AST nodes and extracting code units.
+
+        Args:
+            node: The AST node.
+            content: The full text content.
+            code_units: List to append code unit dicts to.
+        """
+        if node.type in ["function_definition", "async_function_definition"]:
+            name_node = None
+            for child in node.children:
+                if child.type == "identifier":
+                    name_node = child
+                    break
+            code_units.append(
+                {
+                    "type": "function",
+                    "name": (
+                        content[name_node.start_byte : name_node.end_byte]
+                        if name_node
+                        else ""
+                    ),
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            )
+        elif node.type == "class_definition":
+            name_node = None
+            for child in node.children:
+                if child.type == "identifier":
+                    name_node = child
+                    break
+            code_units.append(
+                {
+                    "type": "class",
+                    "name": (
+                        content[name_node.start_byte : name_node.end_byte]
+                        if name_node
+                        else ""
+                    ),
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            )
+
+    def _traverse_js_ts(
+        self, node: Any, content: str, code_units: list[dict[str, Any]], language: str
+    ):
+        """Helper for traversing JavaScript/TypeScript AST nodes and extracting code units.
+
+        Args:
+            node: The AST node.
+            content: The full text content.
+            code_units: List to append code unit dicts to.
+            language: The detected or specified language.
+        """
+        if node.type in [
+            "function_declaration",
+            "function_expression",
+            "arrow_function",
+        ]:
+            name = ""
+            if node.type == "function_declaration":
+                for child in node.children:
+                    if child.type == "identifier":
+                        name = content[child.start_byte : child.end_byte]
+                        break
+            code_units.append(
+                {
+                    "type": "function",
+                    "name": name,
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            )
+        elif node.type == "class_declaration":
+            name = ""
+            for child in node.children:
+                if child.type == "identifier":
+                    name = content[child.start_byte : child.end_byte]
+                    break
+            code_units.append(
+                {
+                    "type": "class",
+                    "name": name,
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            )
 
     def _split_large_code_unit(
         self, content: str, global_start: int, unit_type: str, language: str

@@ -225,41 +225,30 @@ def handle_mcp_errors(func: F) -> F:
     async def wrapper(*args, **kwargs) -> dict[str, Any]:
         try:
             result = await func(*args, **kwargs)
-
-            # If function returns a dict with success key, pass through
             if isinstance(result, dict) and "success" in result:
                 return result
-
-            # Otherwise wrap in success response
             return safe_response(True, result=result)
-
-        except ValidationError as e:
-            logger.warning(f"Validation error in {func.__name__}: {e}")
-            return safe_response(False, error=str(e), error_type="validation")
-
-        except RateLimitError as e:
-            logger.warning(f"Rate limit error in {func.__name__}: {e}")
-            return safe_response(False, error=str(e), error_type="rate_limit")
-
-        except NetworkError as e:
-            logger.warning(f"Network error in {func.__name__}: {e}")
-            return safe_response(False, error=str(e), error_type="network")
-
-        except ExternalServiceError as e:
-            logger.warning(f"External service error in {func.__name__}: {e}")
-            return safe_response(False, error=str(e), error_type="external_service")
-
-        except MCPError as e:
-            logger.error(f"MCP error in {func.__name__}: {e}")
-            return safe_response(False, error=str(e), error_type="mcp")
-
+        except (
+            ValidationError,
+            RateLimitError,
+            NetworkError,
+            ExternalServiceError,
+            MCPError,
+        ) as e:
+            error_type = {
+                ValidationError: "validation",
+                RateLimitError: "rate_limit",
+                NetworkError: "network",
+                ExternalServiceError: "external_service",
+                MCPError: "mcp",
+            }.get(type(e), "general")
+            logger.warning(f"{error_type.capitalize()} error in {func.__name__}: {e}")
+            return safe_response(False, error=str(e), error_type=error_type)
         except Exception as e:
             logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )
-
-    return wrapper
 
 
 def validate_input(**validators) -> Callable[[F], F]:
@@ -290,7 +279,7 @@ def validate_input(**validators) -> Callable[[F], F]:
                         validated_value = validator(value)
                         bound_args.arguments[param_name] = validated_value
                     except Exception as e:
-                        raise ValidationError(f"Invalid {param_name}: {e}")
+                        raise ValidationError(f"Invalid {param_name}: {e}") from e
 
             return await func(*bound_args.args, **bound_args.kwargs)
 
