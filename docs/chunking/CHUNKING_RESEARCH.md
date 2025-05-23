@@ -1,8 +1,8 @@
-# SOTA Chunking Research & Recommendations for 2025
+# Advanced Chunking Research & Recommendations
 
 ## Executive Summary
 
-Based on comprehensive research using multiple MCP tools (firecrawl_deep_research, exa_web_search, tavily_search, linkup_search, and context7), this document provides definitive recommendations for implementing state-of-the-art code and documentation chunking strategies that preserve function boundaries and semantic integrity in RAG systems.
+Based on comprehensive research using multiple MCP tools (firecrawl_deep_research, exa_web_search, tavily_search, linkup_search, and context7), this document provides definitive recommendations for implementing advanced code and documentation chunking strategies that preserve function boundaries and semantic integrity in RAG systems.
 
 ## Current Implementation Analysis
 
@@ -22,7 +22,7 @@ Our existing implementation in `src/crawl4ai_bulk_embedder.py:553-620` uses:
 3. **Lost semantic context**: No understanding of programming language constructs
 4. **Missed optimization opportunities**: Not leveraging AST parsing for intelligent boundaries
 
-## Research Findings: SOTA 2025 Strategies
+## Research Findings: Advanced Strategies
 
 ### 1. AST-Based Chunking with Tree-sitter
 
@@ -101,7 +101,7 @@ function_boundaries = extract_function_boundaries(tree.root_node)
 
 **Priority**: High  
 **Effort**: High  
-**Impact**: SOTA chunking performance
+**Impact**: Best-in-class chunking performance
 
 1. **Integrate py-tree-sitter** for Python code parsing
 2. **Implement AST-based boundary detection** for functions and classes
@@ -240,7 +240,7 @@ class IntelligentChunker:
 
 ## Conclusion
 
-SOTA 2025 chunking strategies demand AST-aware parsing to preserve code semantic integrity. The research conclusively shows that Tree-sitter-based chunking provides significant improvements in retrieval precision while maintaining reasonable computational overhead.
+Advanced chunking strategies demand AST-aware parsing to preserve code semantic integrity. The research conclusively shows that Tree-sitter-based chunking provides significant improvements in retrieval precision while maintaining reasonable computational overhead.
 
 Our recommended implementation prioritizes function boundary preservation while maintaining the proven 1600-character optimal chunk size for general content. This hybrid approach delivers both the semantic coherence needed for code understanding and the token efficiency required for modern LLM context windows.
 

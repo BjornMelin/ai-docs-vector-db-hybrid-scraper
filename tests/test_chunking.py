@@ -1,4 +1,4 @@
-"""test_chunking.py - Comprehensive test suite for SOTA 2025 enhanced chunking."""
+"""test_chunking.py - Comprehensive test suite for advanced 2025 enhanced chunking."""
 
 import pytest
 from src.chunking import ChunkingConfig

@@ -85,7 +85,7 @@ mcp = FastMCP(
     name="AI Docs Vector DB",
     instructions="""
     This MCP server provides comprehensive documentation scraping and vector search capabilities.
-    
+
     Available tools:
     - scrape_url: Scrape and index documentation from any URL
     - search: Search indexed documentation using semantic search
@@ -94,7 +94,7 @@ mcp = FastMCP(
     - delete_collection: Delete a collection
     - get_collection_info: Get detailed information about a collection
     - clear_cache: Clear scraping cache
-    
+
     The server supports both Crawl4AI (bulk scraping) and Firecrawl (on-demand) backends,
     with intelligent chunking strategies and hybrid search capabilities.
     """,

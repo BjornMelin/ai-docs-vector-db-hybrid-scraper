@@ -1,6 +1,6 @@
-# 🔧 SOTA 2025 Troubleshooting Guide
+# 🔧 Troubleshooting Guide
 
-> **Comprehensive solutions for common issues with the SOTA 2025 AI Documentation Scraper**
+> **Comprehensive solutions for common issues with the AI Documentation Scraper**
 
 ## 📋 Quick Diagnosis
 
@@ -136,10 +136,10 @@ sudo iptables -A INPUT -p tcp --dport 6333 -j ACCEPT
 
 ```bash
 # Check container logs
-docker logs qdrant-sota-2025
+docker logs qdrant-advanced
 
 # Check resource usage
-docker stats qdrant-sota-2025
+docker stats qdrant-advanced
 
 # Check disk space
 df -h ~/.qdrant_data
@@ -776,7 +776,7 @@ When reporting issues, please include:
 
    ```bash
    # Include relevant logs:
-   docker logs qdrant-sota-2025
+   docker logs qdrant-advanced
    uvx mcp-server-qdrant 2>&1 | tail -50
    npx -y firecrawl-mcp 2>&1 | tail -50
    ```

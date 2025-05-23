@@ -1,8 +1,8 @@
-# SOTA 2025 Reranking Implementation
+# Reranking Implementation Guide
 
 ## 🎯 Overview
 
-This document covers the research-backed optimal reranking solution implemented in the SOTA 2025 AI Documentation Scraper. Based on comprehensive research using multiple MCP tools, we've implemented **BGE-reranker-v2-m3** for minimal complexity and maximum search accuracy gains.
+This document covers the research-backed optimal reranking solution implemented in the AI Documentation Scraper. Based on comprehensive research using multiple MCP tools, we've implemented **BGE-reranker-v2-m3** for minimal complexity and maximum search accuracy gains.
 
 ## 🔬 Research Summary
 
@@ -38,7 +38,7 @@ This document covers the research-backed optimal reranking solution implemented 
 
 ```python
 class EmbeddingConfig(BaseModel):
-    # SOTA 2025 Reranking Configuration
+    # Advanced Reranking Configuration
     enable_reranking: bool = Field(
         default=False,
         description="Enable reranking for 10-20% accuracy improvement",
@@ -126,7 +126,7 @@ else:
 
 ### Cumulative Improvements
 
-With the complete SOTA 2025 stack:
+With the complete advanced stack:
 
 1. **Hybrid Search**: +8-15% over traditional vector search
 2. **Reranking**: +10-20% additional improvement
@@ -145,7 +145,7 @@ With the complete SOTA 2025 stack:
 
 ```python
 def test_embedding_config_reranking():
-    """Test SOTA 2025 reranking configuration."""
+    """Test advanced reranking configuration."""
     config = EmbeddingConfig(
         enable_reranking=True,
         reranker_model="BAAI/bge-reranker-v2-m3",
@@ -218,7 +218,7 @@ Query → Vector Search (top-20) → Reranking → Final Results (top-10)
 
 ## 🎉 Summary
 
-The SOTA 2025 reranking implementation provides:
+The advanced reranking implementation provides:
 
 - **10-20% accuracy improvement** with minimal complexity
 - **Local deployment** with no API costs

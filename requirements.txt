@@ -1,4 +1,4 @@
-# SOTA 2025 AI Documentation Vector Database Hybrid Scraper Dependencies
+# AI Documentation Vector Database Hybrid Scraper Dependencies
 # Research-backed optimal embedding pipeline with hybrid search capabilities
 # Using uv for ultra-fast package management with Python 3.13+
 
@@ -7,7 +7,7 @@ crawl4ai[all]>=0.6.3
 aiohttp>=3.11.18
 asyncio-throttle>=1.0.2
 
-# SOTA 2025 Vector database and embeddings (research-backed stack)
+# Advanced Vector database and embeddings (research-backed stack)
 qdrant-client[fastembed]>=1.14.2  # Hybrid search support with FastEmbed integration
 openai>=1.82.0
 fastembed==0.6.1  # Pinned to match qdrant-client[fastembed] requirement
@@ -18,7 +18,7 @@ firecrawl-py>=2.7.0  # Premium extraction features (optional)
 pandas>=2.2.3
 numpy>=2.2.6
 
-# SOTA 2025 AST-based chunking (Phase 2)
+# Advanced AST-based chunking (Phase 2)
 tree-sitter>=0.24.0
 tree-sitter-python>=0.23.6
 tree-sitter-javascript>=0.23.1
@@ -46,8 +46,8 @@ pydantic>=2.11.5
 click>=8.2.1
 rich>=14.0.0
 
-# SOTA 2025 Installation Notes:
-# =============================
+# Installation Notes:
+# ===================
 # 
 # 1. Core installation (required):
 #    uv add crawl4ai[all] "qdrant-client[fastembed]" openai fastembed FlagEmbedding

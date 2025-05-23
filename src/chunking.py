@@ -1,4 +1,4 @@
-"""chunking.py - SOTA 2025 Enhanced Chunking with Code Awareness.
+"""chunking.py - Enhanced Chunking with Code Awareness.
 
 Implements research-backed chunking strategies for optimal RAG performance.
 Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST parsing.
@@ -47,7 +47,7 @@ class CodeLanguage(str, Enum):
 
 
 class ChunkingConfig(BaseModel):
-    """SOTA 2025 chunking configuration"""
+    """Advanced chunking configuration"""
 
     # Basic parameters (existing)
     chunk_size: int = Field(

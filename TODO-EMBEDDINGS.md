@@ -1,6 +1,6 @@
-# TODO: SOTA 2025 Embedding & Chunking Enhancements
+# TODO: Advanced Embedding & Chunking Enhancements
 
-Based on comprehensive research findings, this document outlines prioritized tasks for implementing state-of-the-art chunking and embedding improvements to our AI documentation scraper.
+Based on comprehensive research findings, this document outlines prioritized tasks for implementing research-backed advanced chunking and embedding improvements to our AI documentation scraper.
 
 ## 🎉 COMPLETED IMPLEMENTATION STATUS
 
@@ -10,7 +10,7 @@ Based on comprehensive research findings, this document outlines prioritized tas
 - ✅ **Tree-sitter Integration**: AST parsing for Python, JavaScript, and TypeScript
 - ✅ **Configurable Strategies**: Basic, Enhanced, and AST-based chunking modes
 - ✅ **Comprehensive Testing**: Full test suite with 90%+ coverage
-- ✅ **Documentation**: Complete guides in README.md and docs/SOTA_2025_CHUNKING.md
+- ✅ **Documentation**: Complete guides in README.md and docs/ENHANCED_CHUNKING_GUIDE.md
 
 **Implementation Highlights:**
 
@@ -288,4 +288,4 @@ Each task is considered complete when:
 **Expected Overall Impact**: Transform from basic text chunking to industry-leading AST-aware chunking system  
 **Completion Target**: 8-10 weeks for full implementation  
 
-This TODO represents a comprehensive roadmap for achieving state-of-the-art chunking capabilities that preserve code semantic integrity while maintaining the efficiency and reliability of our existing system.
+This TODO represents a comprehensive roadmap for achieving advanced chunking capabilities that preserve code semantic integrity while maintaining the efficiency and reliability of our existing system.

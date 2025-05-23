@@ -3,7 +3,7 @@ version: '3.8'
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant-sota-2025
+    container_name: qdrant-vector-db
     restart: unless-stopped
     ports:
       - "6333:6333"  # HTTP API
@@ -12,7 +12,7 @@ services:
       # Persistent storage mapping to WSL/local directory
       - ~/.qdrant_data:/qdrant/storage:z
     environment:
-      # SOTA 2025 Performance Optimizations
+      # Advanced Performance Optimizations
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__LOG_LEVEL=INFO
@@ -48,7 +48,7 @@ services:
           memory: 2G
           cpus: '1.0'
     networks:
-      - sota-vector-network
+      - advanced-vector-network
 
   # Optional: Add monitoring for production deployments
   qdrant-exporter:
@@ -62,7 +62,7 @@ services:
     depends_on:
       - qdrant
     networks:
-      - sota-vector-network
+      - advanced-vector-network
     profiles:
       - monitoring
       - production

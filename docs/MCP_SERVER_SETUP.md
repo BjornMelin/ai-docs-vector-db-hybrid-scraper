@@ -1,4 +1,4 @@
-# 🤖 MCP Server Setup Guide - SOTA 2025
+# 🤖 MCP Server Setup Guide - Advanced Implementation
 
 > **Complete guide for configuring Qdrant and Firecrawl MCP servers with Claude Desktop/Code**
 
@@ -73,7 +73,7 @@ uv run mcp-server-qdrant --help
 
 ### 2. Start Qdrant Database
 
-Ensure your SOTA 2025 Qdrant instance is running:
+Ensure your advanced Qdrant instance is running:
 
 ```bash
 # Start optimized Qdrant with our docker-compose.yml
@@ -97,7 +97,7 @@ Create `.env` file for MCP server configuration:
 QDRANT_URL=http://localhost:6333
 QDRANT_API_KEY=  # Leave empty for local instance
 
-# Collection configuration (matches our SOTA 2025 setup)
+# Collection configuration (matches our advanced setup)
 COLLECTION_NAME=documents
 EMBEDDING_MODEL=text-embedding-3-small
 VECTOR_SIZE=1536
@@ -106,7 +106,7 @@ VECTOR_SIZE=1536
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_BASE_URL=https://api.openai.com/v1
 
-# Advanced SOTA 2025 settings
+# Advanced performance settings
 ENABLE_HYBRID_SEARCH=true
 QUANTIZATION_TYPE=int8
 DEFAULT_SEARCH_LIMIT=10
@@ -183,7 +183,7 @@ Add to your `.env` file:
 FIRECRAWL_API_KEY=your_firecrawl_api_key_here
 FIRECRAWL_BASE_URL=https://api.firecrawl.dev
 
-# Default scraping options (SOTA 2025 optimized)
+# Default scraping options (performance optimized)
 DEFAULT_FORMAT=markdown
 INCLUDE_TAGS=main,article,section,div[class*="content"]
 EXCLUDE_TAGS=nav,footer,aside,script,style
@@ -205,7 +205,7 @@ QDRANT_COLLECTION=documents
 | **macOS**   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | **Linux**   | `~/.config/claude-desktop/config.json`                            |
 
-### Complete SOTA 2025 Configuration
+### Complete Advanced Configuration
 
 Create or update your Claude Desktop configuration:
 
@@ -563,7 +563,7 @@ tail -f ~/Library/Logs/Claude/claude_desktop.log
 watch -n 1 'curl -s http://localhost:6333/collections/documents | jq'
 
 # Memory usage
-docker stats qdrant-sota-2025
+docker stats qdrant-advanced
 
 # Database size
 du -sh ~/.qdrant_data/
@@ -667,6 +667,6 @@ chmod +x health-check-mcp.sh
 
 ---
 
-🎉 **Your SOTA 2025 MCP server setup is now complete!**
+🎉 **Your advanced MCP server setup is now complete!**
 
 The hybrid Crawl4AI + Firecrawl + Qdrant architecture provides the most cost-effective and powerful documentation processing system available.
