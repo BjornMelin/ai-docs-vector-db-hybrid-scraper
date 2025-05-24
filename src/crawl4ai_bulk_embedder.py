@@ -65,16 +65,13 @@ from rich.table import Table
 from .chunking import ChunkingConfig
 from .chunking import EnhancedChunker
 
+# Import enums from central location
+from .config.enums import EmbeddingProvider
+from .config.enums import SearchStrategy
+
 console = Console()
 
-
-# Advanced Embedding Configuration Classes
-class EmbeddingProvider(str, Enum):
-    """Available embedding providers for high-performance operations"""
-
-    OPENAI = "openai"
-    FASTEMBED = "fastembed"
-    HYBRID = "hybrid"  # Use both dense and sparse embeddings
+# Additional embedding-specific enums not in central config
 
 
 class EmbeddingModel(str, Enum):
@@ -93,14 +90,6 @@ class EmbeddingModel(str, Enum):
     SPLADE_PP_EN_V1 = "prithvida/Splade_PP_en_v1"  # SPLADE++ for keyword matching
 
 
-class VectorSearchStrategy(str, Enum):
-    """Vector search strategies based on 2025 research"""
-
-    DENSE_ONLY = "dense"  # Traditional semantic search
-    SPARSE_ONLY = "sparse"  # Keyword-based search
-    HYBRID_RRF = "hybrid_rrf"  # Dense + Sparse with RRF ranking (Research-backed)
-
-
 class EmbeddingConfig(BaseModel):
     """Advanced embedding configuration"""
 
@@ -114,8 +103,8 @@ class EmbeddingConfig(BaseModel):
     sparse_model: EmbeddingModel | None = Field(
         default=None, description="Sparse embedding model for hybrid search"
     )
-    search_strategy: VectorSearchStrategy = Field(
-        default=VectorSearchStrategy.DENSE_ONLY, description="Vector search strategy"
+    search_strategy: SearchStrategy = Field(
+        default=SearchStrategy.DENSE, description="Vector search strategy"
     )
     enable_quantization: bool = Field(
         default=True,
@@ -380,10 +369,7 @@ class ModernDocumentationScraper:
                 quantization_enabled = self.config.embedding.enable_quantization
 
                 # Advanced: Hybrid search configuration
-                if (
-                    self.config.embedding.search_strategy
-                    == VectorSearchStrategy.HYBRID_RRF
-                ):
+                if self.config.embedding.search_strategy == SearchStrategy.HYBRID:
                     vectors_config = {
                         "dense": VectorParams(
                             size=vector_size,
@@ -759,7 +745,7 @@ class ModernDocumentationScraper:
                             # Create point based on search strategy
                             if (
                                 self.config.embedding.search_strategy
-                                == VectorSearchStrategy.HYBRID_RRF
+                                == SearchStrategy.HYBRID
                                 and sparse_data is not None
                             ):
                                 # Hybrid point with both dense and sparse vectors
@@ -1030,7 +1016,7 @@ def create_advanced_config() -> ScrapingConfig:
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
             dense_model=EmbeddingModel.BGE_SMALL_EN_V15,  # Fast, accurate, open source
-            search_strategy=VectorSearchStrategy.DENSE_ONLY,
+            search_strategy=SearchStrategy.DENSE,
             enable_quantization=True,
         )
 
@@ -1040,7 +1026,7 @@ def create_advanced_config() -> ScrapingConfig:
                 "🎯 Enabling hybrid search (research: 8-15% improvement)",
                 style="yellow",
             )
-            embedding_conf.search_strategy = VectorSearchStrategy.HYBRID_RRF
+            embedding_conf.search_strategy = SearchStrategy.HYBRID
             embedding_conf.sparse_model = EmbeddingModel.SPLADE_PP_EN_V1
     else:
         console.print(
@@ -1049,7 +1035,7 @@ def create_advanced_config() -> ScrapingConfig:
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,
             dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Research: optimal
-            search_strategy=VectorSearchStrategy.DENSE_ONLY,
+            search_strategy=SearchStrategy.DENSE,
         )
 
     return ScrapingConfig(
@@ -1103,7 +1089,7 @@ async def main() -> None:
         )
 
         # Display performance insights
-        if current_config.embedding.search_strategy == VectorSearchStrategy.HYBRID_RRF:
+        if current_config.embedding.search_strategy == SearchStrategy.HYBRID:
             console.print(
                 "🎯 Hybrid search enabled - expect 8-15% better retrieval accuracy",
                 style="yellow",

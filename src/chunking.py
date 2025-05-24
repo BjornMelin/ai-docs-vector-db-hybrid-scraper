@@ -14,6 +14,12 @@ from typing import ClassVar
 from pydantic import BaseModel
 from pydantic import Field
 
+# Handle both module and script imports
+try:
+    from config.enums import ChunkingStrategy
+except ImportError:
+    from .config.enums import ChunkingStrategy
+
 # Tree-sitter imports (will be available after adding to requirements)
 try:
     import tree_sitter_python as tspython
@@ -26,14 +32,6 @@ except ImportError:
     TREE_SITTER_AVAILABLE = False
     Parser = None  # type: ignore
     Node = None  # type: ignore
-
-
-class ChunkingStrategy(str, Enum):
-    """Available chunking strategies"""
-
-    BASIC = "basic"  # Current character-based chunking
-    ENHANCED = "enhanced"  # Enhanced with code awareness
-    AST_BASED = "ast_based"  # Tree-sitter AST-based chunking
 
 
 class CodeLanguage(str, Enum):
@@ -228,7 +226,7 @@ class EnhancedChunker:
 
         # Choose chunking strategy
         if (
-            self.config.strategy == ChunkingStrategy.AST_BASED
+            self.config.strategy == ChunkingStrategy.AST
             and TREE_SITTER_AVAILABLE
             and language in self.parsers
         ):
@@ -966,3 +964,14 @@ class EnhancedChunker:
             formatted.append(chunk_dict)
 
         return formatted
+
+
+# Legacy compatibility function
+def chunk_content(content: str, metadata: dict, config: ChunkingConfig) -> list[dict]:
+    """Legacy wrapper for compatibility with existing code."""
+    chunker = EnhancedChunker(config)
+    return chunker.chunk_content(
+        content=content,
+        title=metadata.get("title", ""),
+        url=metadata.get("url", ""),
+    )

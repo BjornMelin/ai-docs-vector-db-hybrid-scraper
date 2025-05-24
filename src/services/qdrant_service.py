@@ -48,7 +48,7 @@ class QdrantService(BaseService):
             try:
                 await self._client.get_collections()
             except Exception as e:
-                raise QdrantServiceError(f"Qdrant connection check failed: {e}")
+                raise QdrantServiceError(f"Qdrant connection check failed: {e}") from e
 
             self._initialized = True
             logger.info(f"Qdrant client initialized: {self.config.qdrant_url}")
@@ -148,13 +148,13 @@ class QdrantService(BaseService):
             elif "invalid distance" in error_msg:
                 raise QdrantServiceError(
                     f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
-                )
+                ) from e
             elif "unauthorized" in error_msg:
                 raise QdrantServiceError(
                     "Unauthorized access to Qdrant. Please check your API key."
-                )
+                ) from e
             else:
-                raise QdrantServiceError(f"Failed to create collection: {e}")
+                raise QdrantServiceError(f"Failed to create collection: {e}") from e
 
     async def hybrid_search(
         self,
@@ -260,17 +260,17 @@ class QdrantService(BaseService):
             if "collection not found" in error_msg:
                 raise QdrantServiceError(
                     f"Collection '{collection_name}' not found. Please create it first."
-                )
+                ) from e
             elif "wrong vector size" in error_msg:
                 raise QdrantServiceError(
                     f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
-                )
+                ) from e
             elif "timeout" in error_msg:
                 raise QdrantServiceError(
                     "Search request timed out. Try reducing the limit or simplifying the query."
-                )
+                ) from e
             else:
-                raise QdrantServiceError(f"Hybrid search failed: {e}")
+                raise QdrantServiceError(f"Hybrid search failed: {e}") from e
 
     async def upsert_points(
         self,
@@ -336,17 +336,17 @@ class QdrantService(BaseService):
             if "collection not found" in error_msg:
                 raise QdrantServiceError(
                     f"Collection '{collection_name}' not found. Create it before upserting."
-                )
+                ) from e
             elif "wrong vector size" in error_msg:
                 raise QdrantServiceError(
                     "Vector dimension mismatch. Check that vectors match collection configuration."
-                )
+                ) from e
             elif "payload too large" in error_msg:
                 raise QdrantServiceError(
                     f"Payload too large. Try reducing batch size (current: {batch_size})."
-                )
+                ) from e
             else:
-                raise QdrantServiceError(f"Failed to upsert points: {e}")
+                raise QdrantServiceError(f"Failed to upsert points: {e}") from e
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection.
@@ -364,7 +364,7 @@ class QdrantService(BaseService):
             logger.info(f"Deleted collection: {collection_name}")
             return True
         except Exception as e:
-            raise QdrantServiceError(f"Failed to delete collection: {e}")
+            raise QdrantServiceError(f"Failed to delete collection: {e}") from e
 
     async def get_collection_info(self, collection_name: str) -> dict[str, Any]:
         """Get collection information.
@@ -386,7 +386,7 @@ class QdrantService(BaseService):
                 "config": info.config.model_dump() if info.config else {},
             }
         except Exception as e:
-            raise QdrantServiceError(f"Failed to get collection info: {e}")
+            raise QdrantServiceError(f"Failed to get collection info: {e}") from e
 
     async def count_points(self, collection_name: str, exact: bool = True) -> int:
         """Count points in collection.
@@ -407,4 +407,4 @@ class QdrantService(BaseService):
             )
             return result.count
         except Exception as e:
-            raise QdrantServiceError(f"Failed to count points: {e}")
+            raise QdrantServiceError(f"Failed to count points: {e}") from e

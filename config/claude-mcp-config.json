@@ -1,20 +1,14 @@
 {
   "mcpServers": {
-    "qdrant": {
-      "command": "uvx",
-      "args": ["mcp-server-qdrant"],
+    "ai-docs-vector-db-unified": {
+      "command": "uv",
+      "args": ["run", "python", "src/unified_mcp_server.py"],
+      "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
       "env": {
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "FIRECRAWL_API_KEY": "your-firecrawl-api-key",
         "QDRANT_URL": "http://localhost:6333",
-        "COLLECTION_NAME": "documents",
-        "EMBEDDING_MODEL": "text-embedding-3-small",
-        "OPENAI_API_KEY": "your_openai_api_key_here"
-      }
-    },
-    "firecrawl": {
-      "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
-      "env": {
-        "FIRECRAWL_API_KEY": "your_firecrawl_api_key_here"
+        "REDIS_URL": "redis://localhost:6379"
       }
     }
   }

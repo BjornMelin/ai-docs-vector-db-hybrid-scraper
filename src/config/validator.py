@@ -33,10 +33,7 @@ class ConfigValidator:
             return False
 
         # Check against expected pattern if provided
-        if expected_pattern and not re.match(expected_pattern, var_name):
-            return False
-
-        return True
+        return not (expected_pattern and not re.match(expected_pattern, var_name))
 
     @staticmethod
     def validate_url(url: str, schemes: list[str] | None = None) -> tuple[bool, str]:
@@ -105,7 +102,7 @@ class ConfigValidator:
         return True, ""
 
     @staticmethod
-    def validate_env_var_value(
+    def validate_env_var_value(  # noqa: PLR0911
         var_name: str, value: str, expected_type: type
     ) -> tuple[bool, Any, str]:
         """Validate and convert environment variable value to expected type.
@@ -120,7 +117,7 @@ class ConfigValidator:
         """
         try:
             # Handle different types
-            if expected_type == bool:
+            if expected_type is bool:
                 if value.lower() in ["true", "1", "yes", "on"]:
                     return True, True, ""
                 elif value.lower() in ["false", "0", "no", "off"]:
@@ -128,10 +125,10 @@ class ConfigValidator:
                 else:
                     return False, None, f"{var_name}: Invalid boolean value '{value}'"
 
-            elif expected_type == int:
+            elif expected_type is int:
                 return True, int(value), ""
 
-            elif expected_type == float:
+            elif expected_type is float:
                 return True, float(value), ""
 
             elif expected_type in [list, dict]:
@@ -290,7 +287,9 @@ class ConfigValidator:
                     for issue in info["issues"]:
                         report.append(f"     - {issue}")
         else:
-            report.append("  ℹ️  No environment variables found with prefix AI_DOCS__")
+            report.append(
+                "  [info] No environment variables found with prefix AI_DOCS__"
+            )
 
         report.append("")
 

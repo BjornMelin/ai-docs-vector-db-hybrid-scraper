@@ -273,7 +273,7 @@ class AdaptiveRateLimiter(RateLimiter):
                 # Common rate limit headers
                 remaining = headers.get("x-ratelimit-remaining")
                 limit = headers.get("x-ratelimit-limit")
-                reset = headers.get("x-ratelimit-reset")
+                headers.get("x-ratelimit-reset")
 
                 if remaining and limit:
                     try:

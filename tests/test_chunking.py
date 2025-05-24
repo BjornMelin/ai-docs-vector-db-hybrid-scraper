@@ -25,7 +25,7 @@ class TestEnhancedChunking:
         return ChunkingConfig(
             chunk_size=300,
             chunk_overlap=60,
-            strategy=ChunkingStrategy.AST_BASED,
+            strategy=ChunkingStrategy.AST,
             enable_ast_chunking=True,
         )
 
@@ -387,7 +387,7 @@ def very_long_function():
         [
             ChunkingStrategy.BASIC,
             ChunkingStrategy.ENHANCED,
-            ChunkingStrategy.AST_BASED,
+            ChunkingStrategy.AST,
         ],
     )
     def test_all_strategies(self, strategy, python_code_sample):
@@ -464,7 +464,7 @@ class TestASTChunking:
         config = ChunkingConfig(
             chunk_size=500,
             chunk_overlap=100,
-            strategy=ChunkingStrategy.AST_BASED,
+            strategy=ChunkingStrategy.AST,
             enable_ast_chunking=True,
         )
         return EnhancedChunker(config)
@@ -583,7 +583,7 @@ class LargeClass:
 
         config = ChunkingConfig(
             chunk_size=200,  # Small to force splitting
-            strategy=ChunkingStrategy.AST_BASED,
+            strategy=ChunkingStrategy.AST,
             enable_ast_chunking=True,
         )
         chunker = EnhancedChunker(config)

@@ -219,22 +219,23 @@ class TestServiceIntegration:
         crawl_manager = CrawlManager(integration_config)
         await crawl_manager.initialize()
         try:
-            with patch.object(
-                crawl_manager.providers.get("firecrawl", Mock()),
-                "scrape_url",
-                side_effect=Exception("API rate limit exceeded"),
-            ):
-                # Should fallback to crawl4ai
-                with patch.object(
+            with (
+                patch.object(
+                    crawl_manager.providers.get("firecrawl", Mock()),
+                    "scrape_url",
+                    side_effect=Exception("API rate limit exceeded"),
+                ),
+                patch.object(
                     crawl_manager.providers.get("crawl4ai", Mock()),
                     "scrape_url",
                     return_value={"success": True, "content": "Fallback content"},
-                ):
-                    result = await crawl_manager.scrape_url(
-                        "https://example.com", preferred_provider="firecrawl"
-                    )
-                    assert result["success"]
-                    assert result["provider"] == "crawl4ai"
+                ),
+            ):
+                result = await crawl_manager.scrape_url(
+                    "https://example.com", preferred_provider="firecrawl"
+                )
+                assert result["success"]
+                assert result["provider"] == "crawl4ai"
         finally:
             await crawl_manager.cleanup()
 
