@@ -36,13 +36,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Validate security requirements at startup
-try:
-    ENV_VARS = validate_startup_security()
-    logger.info("✅ Enhanced MCP Server security validation complete")
-except Exception as e:
-    logger.error(f"❌ Enhanced MCP Server startup failed: {e}")
-    raise
+# Defer security validation until runtime
+ENV_VARS = None
 
 
 # ========== Configuration Models ==========
@@ -538,6 +533,16 @@ async def setup_mcp_integrations():
 
 def main():
     """Main entry point for the enhanced MCP server"""
+    global ENV_VARS
+
+    # Validate security requirements at startup
+    try:
+        ENV_VARS = validate_startup_security()
+        logger.info("✅ Enhanced MCP Server security validation complete")
+    except Exception as e:
+        logger.error(f"❌ Enhanced MCP Server startup failed: {e}")
+        raise
+
     # Setup integrations
     asyncio.run(setup_mcp_integrations())
 

@@ -1,6 +1,5 @@
 """Pytest configuration and shared fixtures."""
 
-import asyncio
 import os
 import tempfile
 from collections.abc import Generator
@@ -9,15 +8,17 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+from dotenv import load_dotenv
 from qdrant_client.models import PointStruct
 
+# Load test environment variables at module import
+_test_env_path = Path(__file__).parent.parent / ".env.test"
+if _test_env_path.exists():
+    load_dotenv(_test_env_path, override=True)
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop]:
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+
+# Remove the custom event_loop fixture to use pytest-asyncio's default
+# The event loop scope is now configured in pyproject.toml
 
 
 @pytest.fixture()
@@ -30,11 +31,24 @@ def temp_dir() -> Generator[Path]:
 @pytest.fixture()
 def mock_env_vars() -> Generator[None]:
     """Mock environment variables for testing."""
-    os.environ["OPENAI_API_KEY"] = "test_key"
-    os.environ["QDRANT_URL"] = "http://localhost:6333"
+    # Save current values
+    saved_vars = {
+        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
+        "QDRANT_URL": os.environ.get("QDRANT_URL"),
+    }
+
+    # Set test values if not already set
+    os.environ.setdefault("OPENAI_API_KEY", "test_key")
+    os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
+
     yield
-    os.environ.pop("OPENAI_API_KEY", None)
-    os.environ.pop("QDRANT_URL", None)
+
+    # Restore original values
+    for key, value in saved_vars.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
 
 @pytest.fixture()
