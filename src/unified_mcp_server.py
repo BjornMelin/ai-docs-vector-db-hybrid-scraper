@@ -23,6 +23,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+from fastmcp import Context
 from fastmcp import FastMCP
 from pydantic import BaseModel
 from pydantic import Field
@@ -194,7 +195,7 @@ service_manager = UnifiedServiceManager()
 
 # Search and Retrieval Tools
 @mcp.tool()
-async def search_documents(request: SearchRequest) -> list[SearchResult]:
+async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchResult]:
     """
     Search documents with advanced hybrid search and reranking.
 
@@ -203,18 +204,27 @@ async def search_documents(request: SearchRequest) -> list[SearchResult]:
     """
     await service_manager.initialize()
 
+    # Generate request ID for tracking
+    request_id = str(uuid4())
+    await ctx.info(
+        f"Starting search request {request_id} with strategy {request.strategy}"
+    )
+
     try:
         # Check cache first
         cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
         cached = await service_manager.cache_manager.get(cache_key)
         if cached:
+            await ctx.debug(f"Cache hit for request {request_id}")
             return [SearchResult(**r) for r in cached]
 
         # Generate embedding for query
+        await ctx.debug(f"Generating embeddings for query: {request.query[:50]}...")
         query_embeddings = await service_manager.embedding_manager.generate_embeddings(
             [request.query]
         )
         query_vector = query_embeddings[0]
+        await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
         # Perform search based on strategy
         if request.strategy == SearchStrategy.HYBRID:
@@ -262,9 +272,14 @@ async def search_documents(request: SearchRequest) -> list[SearchResult]:
         cache_data = [r.model_dump() for r in search_results]
         await service_manager.cache_manager.set(cache_key, cache_data, ttl=3600)
 
+        await ctx.info(
+            f"Search request {request_id} completed: {len(search_results)} results found"
+        )
+
         return search_results
 
     except Exception as e:
+        await ctx.error(f"Search request {request_id} failed: {e}")
         logger.error(f"Search failed: {e}")
         raise
 
@@ -275,6 +290,7 @@ async def search_similar(
     collection: str = "documentation",
     limit: int = 10,
     threshold: float = 0.7,
+    ctx: Context = None,
 ) -> list[SearchResult]:
     """
     Find similar documents using vector similarity search.
@@ -284,8 +300,14 @@ async def search_similar(
     """
     await service_manager.initialize()
 
+    # Log if context available
+    if ctx:
+        await ctx.info(f"Starting similarity search in collection {collection}")
+
     try:
         # Generate embedding for content
+        if ctx:
+            await ctx.debug(f"Generating embeddings for content: {content[:50]}...")
         embeddings = await service_manager.embedding_manager.generate_embeddings(
             [content]
         )
@@ -313,9 +335,16 @@ async def search_similar(
             )
             search_results.append(result)
 
+        if ctx:
+            await ctx.info(
+                f"Similarity search completed: {len(search_results)} results found"
+            )
+
         return search_results
 
     except Exception as e:
+        if ctx:
+            await ctx.error(f"Similarity search failed: {e}")
         logger.error(f"Similarity search failed: {e}")
         raise
 
@@ -403,7 +432,7 @@ async def list_embedding_providers() -> list[dict[str, Any]]:
 
 # Document Management Tools
 @mcp.tool()
-async def add_document(request: DocumentRequest) -> dict[str, Any]:
+async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]:
     """
     Add a document to the vector database with smart chunking.
 
@@ -412,16 +441,22 @@ async def add_document(request: DocumentRequest) -> dict[str, Any]:
     """
     await service_manager.initialize()
 
+    doc_id = str(uuid4())
+    await ctx.info(f"Processing document {doc_id}: {request.url}")
+
     try:
         # Check cache for existing document
         cache_key = f"doc:{request.url}"
         cached = await service_manager.cache_manager.get(cache_key)
         if cached:
+            await ctx.debug(f"Document {doc_id} found in cache")
             return cached
 
         # Crawl the URL
+        await ctx.debug(f"Crawling URL for document {doc_id}")
         crawl_result = await service_manager.crawl_manager.crawl_single(request.url)
         if not crawl_result or not crawl_result.markdown:
+            await ctx.error(f"Failed to crawl {request.url}")
             raise ValueError(f"Failed to crawl {request.url}")
 
         # Configure chunking
@@ -432,14 +467,19 @@ async def add_document(request: DocumentRequest) -> dict[str, Any]:
         )
 
         # Chunk the document
+        await ctx.debug(
+            f"Chunking document {doc_id} with strategy {request.chunking_strategy}"
+        )
         chunks = chunk_content(
             crawl_result.markdown,
             crawl_result.metadata,
             chunk_config,
         )
+        await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
 
         # Generate embeddings for chunks
         texts = [chunk["content"] for chunk in chunks]
+        await ctx.debug(f"Generating embeddings for {len(texts)} chunks")
         embeddings = await service_manager.embedding_manager.generate_embeddings(texts)
 
         # Prepare points for insertion
@@ -489,9 +529,15 @@ async def add_document(request: DocumentRequest) -> dict[str, Any]:
         # Cache result
         await service_manager.cache_manager.set(cache_key, result, ttl=86400)
 
+        await ctx.info(
+            f"Document {doc_id} processed successfully: "
+            f"{len(chunks)} chunks created in collection {request.collection}"
+        )
+
         return result
 
     except Exception as e:
+        await ctx.error(f"Failed to process document {doc_id}: {e}")
         logger.error(f"Failed to add document: {e}")
         raise
 
@@ -658,35 +704,15 @@ async def list_collections() -> list[dict[str, Any]]:
     """
     await service_manager.initialize()
 
-    # Get collections directly from Qdrant client
-    collections_response = (
-        await service_manager.qdrant_service._client.get_collections()
-    )
-    collections = [col.name for col in collections_response.collections]
-
-    collection_info = []
-    for collection in collections:
-        try:
-            info = await service_manager.qdrant_service.get_collection_info(collection)
-            collection_info.append(
-                {
-                    "name": collection,
-                    "vector_count": info.get("vectors_count", 0),
-                    "indexed_count": info.get("points_count", 0),
-                    "status": info.get("status", "unknown"),
-                    "config": info.get("config", {}),
-                }
-            )
-        except Exception as e:
-            logger.warning(f"Failed to get info for collection {collection}: {e}")
-            collection_info.append(
-                {
-                    "name": collection,
-                    "error": str(e),
-                }
-            )
-
-    return collection_info
+    try:
+        # Get collections with details using service method
+        collection_info = (
+            await service_manager.qdrant_service.list_collections_details()
+        )
+        return collection_info
+    except Exception as e:
+        logger.error(f"Failed to list collections: {e}")
+        raise
 
 
 @mcp.tool()
@@ -726,14 +752,8 @@ async def optimize_collection(name: str) -> dict[str, Any]:
         # Get current collection info
         info = await service_manager.qdrant_service.get_collection_info(name)
 
-        # Optimize indexing using Qdrant client directly
-        await service_manager.qdrant_service._client.update_collection_aliases(
-            change_aliases_operations=[
-                # This triggers optimization
-            ]
-        )
-        # Note: Qdrant automatically optimizes collections, but we can trigger a manual optimization
-        # by updating collection parameters or forcing a segment merge
+        # Trigger collection optimization
+        await service_manager.qdrant_service.trigger_collection_optimization(name)
 
         # Get updated info
         new_info = await service_manager.qdrant_service.get_collection_info(name)
@@ -774,11 +794,8 @@ async def get_analytics(request: AnalyticsRequest) -> dict[str, Any]:
     if request.collection:
         collections = [request.collection]
     else:
-        # Get collections directly from Qdrant client
-        collections_response = (
-            await service_manager.qdrant_service._client.get_collections()
-        )
-        collections = [col.name for col in collections_response.collections]
+        # Get collections using service method
+        collections = await service_manager.qdrant_service.list_collections()
 
     for collection in collections:
         try:
@@ -830,11 +847,8 @@ async def get_system_health() -> dict[str, Any]:
 
     # Check Qdrant
     try:
-        # Get collections directly from Qdrant client
-        collections_response = (
-            await service_manager.qdrant_service._client.get_collections()
-        )
-        collections = [col.name for col in collections_response.collections]
+        # Get collections using service method
+        collections = await service_manager.qdrant_service.list_collections()
         health["services"]["qdrant"] = {
             "status": "healthy",
             "collections": len(collections),

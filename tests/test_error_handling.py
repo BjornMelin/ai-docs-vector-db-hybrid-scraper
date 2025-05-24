@@ -4,17 +4,18 @@
 import asyncio
 
 import pytest
-from src.error_handling import ExternalServiceError
-from src.error_handling import MCPError
-from src.error_handling import NetworkError
-from src.error_handling import RateLimiter
-from src.error_handling import RateLimitError
-from src.error_handling import ValidationError
-from src.error_handling import circuit_breaker
-from src.error_handling import handle_mcp_errors
-from src.error_handling import retry_async
-from src.error_handling import safe_response
-from src.error_handling import validate_input
+from src.services.errors import BaseError
+from src.services.errors import ExternalServiceError
+from src.services.errors import MCPError
+from src.services.errors import NetworkError
+from src.services.errors import RateLimiter
+from src.services.errors import RateLimitError
+from src.services.errors import ValidationError
+from src.services.errors import circuit_breaker
+from src.services.errors import handle_mcp_errors
+from src.services.errors import retry_async
+from src.services.errors import safe_response
+from src.services.errors import validate_input
 
 
 class TestMCPErrors:
@@ -30,13 +31,13 @@ class TestMCPErrors:
     def test_validation_error(self):
         """Test validation error."""
         error = ValidationError("Invalid input")
-        assert isinstance(error, MCPError)
+        assert isinstance(error, BaseError)
         assert str(error) == "Invalid input"
 
     def test_external_service_error(self):
         """Test external service error."""
         error = ExternalServiceError("Service unavailable")
-        assert isinstance(error, MCPError)
+        assert isinstance(error, BaseError)
         assert str(error) == "Service unavailable"
 
 

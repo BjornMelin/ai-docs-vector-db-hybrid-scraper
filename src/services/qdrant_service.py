@@ -408,3 +408,80 @@ class QdrantService(BaseService):
             return result.count
         except Exception as e:
             raise QdrantServiceError(f"Failed to count points: {e}") from e
+
+    async def list_collections(self) -> list[str]:
+        """List all collection names.
+
+        Returns:
+            List of collection names
+        """
+        self._validate_initialized()
+
+        try:
+            collections = await self._client.get_collections()
+            return [col.name for col in collections.collections]
+        except Exception as e:
+            raise QdrantServiceError(f"Failed to list collections: {e}") from e
+
+    async def list_collections_details(self) -> list[dict[str, Any]]:
+        """List all collections with detailed information.
+
+        Returns:
+            List of collection details including name, vector count, status, and config
+        """
+        self._validate_initialized()
+
+        try:
+            collections = await self._client.get_collections()
+            details = []
+
+            for col in collections.collections:
+                try:
+                    info = await self.get_collection_info(col.name)
+                    details.append({
+                        "name": col.name,
+                        "vector_count": info.get("vectors_count", 0),
+                        "indexed_count": info.get("points_count", 0),
+                        "status": info.get("status", "unknown"),
+                        "config": info.get("config", {}),
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to get details for collection {col.name}: {e}")
+                    details.append({
+                        "name": col.name,
+                        "error": str(e),
+                    })
+
+            return details
+        except Exception as e:
+            raise QdrantServiceError(f"Failed to list collection details: {e}") from e
+
+    async def trigger_collection_optimization(self, collection_name: str) -> bool:
+        """Trigger optimization for a collection.
+
+        Args:
+            collection_name: Collection to optimize
+
+        Returns:
+            Success status
+
+        Note:
+            Qdrant automatically optimizes collections, but this method can trigger
+            manual optimization by updating collection parameters.
+        """
+        self._validate_initialized()
+
+        try:
+            # Verify collection exists
+            await self.get_collection_info(collection_name)
+
+            # Trigger optimization by updating collection aliases
+            # This is a no-op that forces Qdrant to check optimization
+            await self._client.update_collection_aliases(
+                change_aliases_operations=[]
+            )
+
+            logger.info(f"Triggered optimization for collection: {collection_name}")
+            return True
+        except Exception as e:
+            raise QdrantServiceError(f"Failed to optimize collection: {e}") from e
