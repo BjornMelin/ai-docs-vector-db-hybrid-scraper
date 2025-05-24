@@ -1,0 +1,51 @@
+{
+  "environment": "production",
+  "debug": false,
+  "log_level": "INFO",
+  "embedding_provider": "fastembed",
+  "crawl_provider": "crawl4ai",
+  "cache": {
+    "enable_caching": true,
+    "enable_local_cache": true,
+    "enable_redis_cache": false,
+    "local_max_size": 2000,
+    "local_max_memory_mb": 200.0
+  },
+  "qdrant": {
+    "url": "http://localhost:6333",
+    "collection_name": "local_documents",
+    "batch_size": 100,
+    "quantization_enabled": true
+  },
+  "fastembed": {
+    "model": "BAAI/bge-base-en-v1.5",
+    "cache_dir": "./models",
+    "max_length": 512,
+    "batch_size": 32
+  },
+  "crawl4ai": {
+    "headless": true,
+    "max_concurrent_crawls": 5,
+    "page_timeout": 30.0,
+    "remove_scripts": true,
+    "remove_styles": true
+  },
+  "chunking": {
+    "strategy": "enhanced",
+    "chunk_size": 1600,
+    "chunk_overlap": 200,
+    "preserve_function_boundaries": true
+  },
+  "performance": {
+    "max_concurrent_requests": 10,
+    "request_timeout": 30.0,
+    "max_memory_usage_mb": 1000.0
+  },
+  "security": {
+    "require_api_keys": false,
+    "enable_rate_limiting": false,
+    "allowed_domains": ["localhost", "127.0.0.1"],
+    "blocked_domains": []
+  },
+  "_comment": "This configuration is optimized for local-only operation without any cloud services"
+}

@@ -1,0 +1,51 @@
+{
+  "environment": "development",
+  "debug": true,
+  "log_level": "DEBUG",
+  "embedding_provider": "fastembed",
+  "crawl_provider": "crawl4ai",
+  "cache": {
+    "enable_caching": true,
+    "enable_local_cache": true,
+    "enable_redis_cache": false,
+    "local_max_size": 500,
+    "local_max_memory_mb": 50.0
+  },
+  "qdrant": {
+    "url": "http://localhost:6333",
+    "collection_name": "dev_documents",
+    "batch_size": 50
+  },
+  "fastembed": {
+    "model": "BAAI/bge-small-en-v1.5",
+    "batch_size": 16
+  },
+  "crawl4ai": {
+    "headless": false,
+    "max_concurrent_crawls": 5,
+    "page_timeout": 60.0
+  },
+  "chunking": {
+    "strategy": "enhanced",
+    "chunk_size": 1600,
+    "chunk_overlap": 200
+  },
+  "performance": {
+    "max_concurrent_requests": 5,
+    "request_timeout": 60.0,
+    "max_memory_usage_mb": 500.0
+  },
+  "security": {
+    "require_api_keys": false,
+    "enable_rate_limiting": false
+  },
+  "documentation_sites": [
+    {
+      "name": "Test Documentation",
+      "url": "https://docs.example.com",
+      "max_pages": 10,
+      "priority": "high",
+      "description": "Test documentation for development"
+    }
+  ]
+}
