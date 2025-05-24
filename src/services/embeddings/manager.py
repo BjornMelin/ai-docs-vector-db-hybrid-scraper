@@ -136,6 +136,25 @@ class EmbeddingManager:
         self.budget_limit = budget_limit
         self.usage_stats = UsageStats()
 
+        # Initialize cache manager if caching is enabled
+        self.cache_manager: Any | None = None
+        if config.enable_caching:
+            from ..cache import CacheManager
+            from ..cache import CacheType
+
+            self.cache_manager = CacheManager(
+                redis_url=config.redis_url,
+                enable_local_cache=config.enable_local_cache,
+                enable_redis_cache=config.enable_redis_cache,
+                local_max_size=config.local_cache_max_size,
+                local_max_memory_mb=config.local_cache_max_memory_mb,
+                redis_ttl_seconds={
+                    CacheType.EMBEDDINGS: config.cache_ttl_embeddings,
+                    CacheType.CRAWL_RESULTS: config.cache_ttl_crawl,
+                    CacheType.QUERY_RESULTS: config.cache_ttl_queries,
+                },
+            )
+
         # Model benchmarks (initialized with research-backed values)
         self._benchmarks: dict[str, ModelBenchmark] = {
             "text-embedding-3-small": ModelBenchmark(
@@ -235,7 +254,7 @@ class EmbeddingManager:
         )
 
     async def cleanup(self) -> None:
-        """Cleanup all providers."""
+        """Cleanup all providers and cache."""
         for name, provider in self.providers.items():
             try:
                 await provider.cleanup()
@@ -245,6 +264,11 @@ class EmbeddingManager:
 
         self.providers.clear()
         self._initialized = False
+
+        # Close cache manager if initialized
+        if self.cache_manager:
+            await self.cache_manager.close()
+            logger.info("Closed cache manager")
 
     def _select_provider_and_model(
         self,
@@ -420,6 +444,39 @@ class EmbeddingManager:
         # Analyze text characteristics
         text_analysis = self.analyze_text_characteristics(texts)
 
+        # Check cache if enabled
+        if self.cache_manager and len(texts) == 1:
+            # For now, only cache single text embeddings (V2 will handle batches)
+            text = texts[0]
+
+            # Try to get from cache using smart selection parameters
+            cached_embedding = await self.cache_manager.get_embedding(
+                text=text,
+                provider=provider_name or self.config.preferred_embedding_provider,
+                model=self.config.openai_model
+                if provider_name == "openai"
+                else self.config.local_embedding_model,
+                dimensions=self.config.openai_dimensions,
+            )
+
+            if cached_embedding is not None:
+                logger.info("Cache hit for embedding")
+                return {
+                    "embeddings": [cached_embedding],
+                    "provider": provider_name
+                    or self.config.preferred_embedding_provider,
+                    "model": self.config.openai_model
+                    if provider_name == "openai"
+                    else self.config.local_embedding_model,
+                    "cost": 0.0,  # No cost for cached result
+                    "latency_ms": (time.time() - start_time) * 1000,
+                    "tokens": 0,
+                    "reasoning": "Retrieved from cache",
+                    "quality_tier": quality_tier.value if quality_tier else "default",
+                    "usage_stats": self.get_usage_report(),
+                    "cache_hit": True,
+                }
+
         # Select provider and model
         provider, selected_model, estimated_cost, reasoning = (
             self._select_provider_and_model(
@@ -448,6 +505,20 @@ class EmbeddingManager:
                 provider, provider_name, selected_model, texts, quality_tier, start_time
             )
 
+            # Cache the embedding if enabled and single text
+            if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
+                try:
+                    await self.cache_manager.set_embedding(
+                        text=texts[0],
+                        provider=metrics["provider_key"],
+                        model=selected_model,
+                        dimensions=len(embeddings[0]),
+                        embedding=embeddings[0],
+                    )
+                    logger.info("Cached embedding for future use")
+                except Exception as e:
+                    logger.warning(f"Failed to cache embedding: {e}")
+
             return {
                 "embeddings": embeddings,
                 "provider": metrics["provider_key"],
@@ -458,6 +529,7 @@ class EmbeddingManager:
                 "reasoning": reasoning,
                 "quality_tier": metrics["tier_name"],
                 "usage_stats": self.get_usage_report(),
+                "cache_hit": False,
             }
 
         except Exception as e:

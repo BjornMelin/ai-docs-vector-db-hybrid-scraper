@@ -29,6 +29,9 @@ python-dotenv>=1.1.0
 colorlog>=6.9.0
 tqdm>=4.67.1
 
+# Caching layer (V1 MVP)
+redis[hiredis]>=5.3.0  # Async Redis with hiredis C parser for performance
+
 # Enhanced performance with latest versions
 playwright>=1.52.0
 httpx>=0.28.1

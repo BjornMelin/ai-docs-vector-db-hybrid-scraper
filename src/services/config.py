@@ -46,6 +46,17 @@ class APIConfig(BaseModel):
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_base_delay: float = Field(default=1.0, gt=0)
 
+    # Cache settings (V1 MVP)
+    enable_caching: bool = Field(default=True)
+    enable_local_cache: bool = Field(default=True)
+    enable_redis_cache: bool = Field(default=True)
+    redis_url: str = Field(default="redis://localhost:6379")
+    cache_ttl_embeddings: int = Field(default=86400, ge=0)  # 24 hours
+    cache_ttl_crawl: int = Field(default=3600, ge=0)  # 1 hour
+    cache_ttl_queries: int = Field(default=7200, ge=0)  # 2 hours
+    local_cache_max_size: int = Field(default=1000, gt=0)
+    local_cache_max_memory_mb: float = Field(default=100.0, gt=0)
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("qdrant_url")
