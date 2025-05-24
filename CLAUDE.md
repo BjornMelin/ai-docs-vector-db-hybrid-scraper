@@ -71,9 +71,7 @@ uv run python src/manage_vector_db.py stats
 uv run python src/manage_vector_db.py search "query" --limit 10
 
 # Start MCP server for Claude integration
-uv run python src/mcp_server.py
-# or enhanced version
-uv run python src/enhanced_mcp_server.py
+uv run python src/unified_mcp_server.py
 ```
 
 ### Testing & Quality
@@ -175,10 +173,10 @@ perf(vector): optimize batch embedding generation
    - Vector quantization for 83-99% storage reduction
    - BGE reranking for 10-20% accuracy improvement
 
-4. **MCP Servers** - Claude Desktop integration
-   - `src/mcp_server.py` - Basic FastMCP server with search functionality
-   - `src/enhanced_mcp_server.py` - Advanced project-based management
-   - Unified interface combining Qdrant + Firecrawl capabilities
+4. **Unified MCP Server** - Claude Desktop integration
+   - `src/unified_mcp_server.py` - Consolidated FastMCP server with all functionality
+   - Combines Qdrant vector search + Firecrawl web scraping capabilities
+   - Supports structured logging, error handling, and advanced search strategies
 
 ### Key Data Flow
 
@@ -224,8 +222,8 @@ Documentation URLs → Crawl4AI → Enhanced Chunking → Embedding Pipeline →
 ## Quick Reference Paths
 
 - **Core Source**: `/src/` (main application code)
-- **MCP Servers**: `/src/mcp_server.py`, `/src/enhanced_mcp_server.py`
-- **Services**: `/src/services/` (future service layer implementation)
+- **MCP Server**: `/src/unified_mcp_server.py` (consolidated MCP implementation)
+- **Services**: `/src/services/` (service layer with cache, crawling, embeddings)
 - **Configuration**: `/config/` (site configs, MCP templates)
 - **Documentation**: `/docs/` (implementation guides and architecture)
 - **Task Management**: `/TODO.md`, `/TODO-V2.md` (comprehensive roadmaps)
@@ -239,7 +237,7 @@ Documentation URLs → Crawl4AI → Enhanced Chunking → Embedding Pipeline →
 uv sync                                           # Install dependencies
 ./scripts/start-services.sh                      # Start all services
 uv run python src/crawl4ai_bulk_embedder.py     # Bulk documentation scraping
-uv run python src/enhanced_mcp_server.py        # Start unified MCP server
+uv run python src/unified_mcp_server.py         # Start unified MCP server
 
 # Quality & Testing
 uv run pytest --cov=src                         # Run tests with coverage
@@ -351,7 +349,7 @@ The system provides unified MCP server configuration combining all functionality
   "mcpServers": {
     "ai-docs-vector-db": {
       "command": "uv",
-      "args": ["run", "python", "src/enhanced_mcp_server.py"],
+      "args": ["run", "python", "src/unified_mcp_server.py"],
       "cwd": "/path/to/project",
       "env": {
         "OPENAI_API_KEY": "sk-...",

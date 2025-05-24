@@ -391,7 +391,7 @@ class TestCacheManager:
         assert result == crawl_data
 
         # Verify L1 was populated
-        manager.local_cache.set.call_count == 2  # Called again to populate L1
+        assert manager.local_cache.set.call_count == 2  # Called again to populate L1
 
     @pytest.mark.asyncio
     async def test_two_tier_caching(self):

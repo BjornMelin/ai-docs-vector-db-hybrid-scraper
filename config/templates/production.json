@@ -1,0 +1,65 @@
+{
+  "environment": "production",
+  "debug": false,
+  "log_level": "INFO",
+  "embedding_provider": "openai",
+  "crawl_provider": "crawl4ai",
+  "cache": {
+    "enable_caching": true,
+    "enable_local_cache": true,
+    "enable_redis_cache": true,
+    "redis_url": "redis://redis:6379",
+    "ttl_embeddings": 86400,
+    "ttl_crawl": 3600,
+    "ttl_queries": 7200,
+    "local_max_size": 1000,
+    "local_max_memory_mb": 100.0,
+    "redis_pool_size": 20
+  },
+  "qdrant": {
+    "url": "http://qdrant:6333",
+    "collection_name": "documents",
+    "batch_size": 100,
+    "max_retries": 5,
+    "hnsw_ef_construct": 200,
+    "hnsw_m": 16,
+    "quantization_enabled": true
+  },
+  "openai": {
+    "model": "text-embedding-3-small",
+    "dimensions": 1536,
+    "batch_size": 100,
+    "max_requests_per_minute": 3000,
+    "cost_per_million_tokens": 0.02,
+    "budget_limit": 100.0
+  },
+  "crawl4ai": {
+    "headless": true,
+    "max_concurrent_crawls": 10,
+    "page_timeout": 30.0,
+    "remove_scripts": true,
+    "remove_styles": true
+  },
+  "chunking": {
+    "strategy": "enhanced",
+    "chunk_size": 1600,
+    "chunk_overlap": 200,
+    "preserve_function_boundaries": true
+  },
+  "performance": {
+    "max_concurrent_requests": 20,
+    "request_timeout": 30.0,
+    "max_retries": 3,
+    "retry_base_delay": 1.0,
+    "retry_max_delay": 60.0,
+    "max_memory_usage_mb": 2000.0,
+    "gc_threshold": 0.8
+  },
+  "security": {
+    "require_api_keys": true,
+    "enable_rate_limiting": true,
+    "rate_limit_requests": 100,
+    "allowed_domains": [],
+    "blocked_domains": []
+  }
+}

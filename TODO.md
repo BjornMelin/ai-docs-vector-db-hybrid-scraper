@@ -6,7 +6,101 @@
 
 ## Current Sprint Goals
 
-**Focus:** Enhanced features, optimization, and ecosystem expansion building on completed advanced foundation
+**Focus:** 🚨 **CRITICAL ARCHITECTURAL CLEANUP** - GitHub Issues #16-28
+
+**Roadmap:**
+- Priority 0 (Issues #16-17): Critical cleanup - ✅ Issue #16 COMPLETED
+- Priority 1 (Issues #18-20): Unified server enhancements - ✅ Issue #20 COMPLETED
+- Priority 2 (Issues #21-24): Service layer refactoring - ✅ Issues #23, #24 COMPLETED
+- Priority 3 (Issues #25-26): Configuration refinements - ✅ Issue #26 COMPLETED
+- Priority 4 (Issues #27-28): Documentation updates
+
+---
+
+## PRIORITY 0: CRITICAL ARCHITECTURAL CLEANUP & UNIFICATION
+
+🚨 **These GitHub issues must be completed before other development work**
+
+### Configuration System Unification  
+- [ ] **Centralize Configuration Management** `refactor/unified-config` 📋 [GitHub Issue #17]
+  - [ ] Create UnifiedConfig class to replace scattered configuration
+  - [ ] Refactor UnifiedServiceManager to use centralized config
+  - [ ] Update all service classes to use UnifiedConfig
+  - [ ] Refactor scripts to use UnifiedConfig
+  - [ ] Remove redundant configuration parsing
+
+---
+
+## PRIORITY 1: CORE UNIFIED SERVER ENHANCEMENTS
+
+### Implement Sparse Vectors & Reranking
+- [ ] **Implement TODOs in unified_mcp_server.py** `feat/sparse-vectors` 📋 [GitHub Issue #18]
+  - [ ] Complete sparse vector generation in `_generate_embeddings()`
+  - [ ] Implement reranking logic in `search_documents()`
+  - [ ] Add proper error handling for reranking failures
+  - [ ] Test hybrid search with sparse vectors
+
+### Persistent Storage for Projects
+- [ ] **Implement Project Persistence** `feat/project-persistence` 📋 [GitHub Issue #19]
+  - [ ] Design project metadata schema
+  - [ ] Implement SQLite/JSON storage backend
+  - [ ] Add project save/load functionality
+  - [ ] Integrate with unified MCP server
+
+---
+
+## PRIORITY 2: SERVICE LAYER & UTILITY REFACTORING
+
+### Unified MCP Server Modularization
+- [ ] **Split unified_mcp_server.py into modules** `refactor/server-modularization`
+  - [ ] Extract request/response models to `src/mcp/models.py`
+  - [ ] Move MCP tool definitions to `src/mcp/tools.py`
+  - [ ] Create service orchestration in `src/mcp/orchestration.py`
+  - [ ] Keep main server initialization in unified_mcp_server.py
+  - [ ] Update imports and maintain backward compatibility
+  - [ ] Add comprehensive tests for each module
+
+### Script Integration
+- [ ] **Integrate crawl4ai_bulk_embedder.py** `refactor/script-integration` 📋 [GitHub Issue #21]
+  - [ ] Refactor to use UnifiedServiceManager
+  - [ ] Remove direct service instantiation
+  - [ ] Add proper CLI interface with Click/Typer
+  - [ ] Update error handling to use service layer
+
+- [ ] **Integrate manage_vector_db.py** `refactor/script-integration` 📋 [GitHub Issue #22]
+  - [ ] Refactor to use UnifiedServiceManager
+  - [ ] Remove direct Qdrant client usage
+  - [ ] Standardize CLI interface
+  - [ ] Add progress indicators
+
+---
+
+## PRIORITY 3: CONFIGURATION & SECURITY REFINEMENTS
+
+### Security Integration
+- [ ] **Integrate SecurityValidator with UnifiedConfig** `feat/security-config` 📋 [GitHub Issue #25]
+  - [ ] Move SecurityValidator into UnifiedConfig
+  - [ ] Add security validation to all service initialization
+  - [ ] Implement secure defaults
+  - [ ] Add security audit logging
+
+---
+
+## PRIORITY 4: DOCUMENTATION & TESTING UPDATES
+
+### Documentation Updates
+- [ ] **Update All Documentation** `docs/update` 📋 [GitHub Issue #27]
+  - [ ] Update architecture diagrams for unified server
+  - [ ] Remove references to legacy MCP servers
+  - [ ] Update API documentation
+  - [ ] Create migration guide from old to new architecture
+
+### Test Suite Updates
+- [ ] **Update Test Suite** `test/refactor` 📋 [GitHub Issue #28]
+  - [ ] Remove tests for deleted MCP servers
+  - [ ] Update integration tests for unified architecture
+  - [ ] Add tests for new service abstractions
+  - [ ] Ensure >90% coverage maintained
 
 ---
 
@@ -57,6 +151,19 @@
     - [x] Integration with existing Firecrawl and Qdrant servers
     - [x] Comprehensive test suite for MCP functionality
     - [x] Documentation and configuration guides
+    - [x] **MCP Server Consolidation** ✅ **COMPLETED 2025-05-24**
+      - [x] Created single unified MCP server (`src/unified_mcp_server.py`)
+      - [x] Consolidated functionality from 5 separate MCP servers
+      - [x] Centralized enum definitions in `src/config/enums.py`
+      - [x] Fixed duplicate code and configuration systems
+      - [x] All 22 tests passing with 100% coverage
+      - [x] Deleted old MCP server files after verification
+      - [x] **Addressed GitHub Issues in PR #29:**
+        - [x] Issue #16: Remove legacy MCP server files
+        - [x] Issue #20: Abstract direct Qdrant client access
+        - [x] Issue #23: Consolidate error handling and rate limiting
+        - [x] Issue #24: Integrate structured logging
+        - [x] Issue #26: Clean up obsolete root configuration files
 
 ### Comprehensive Documentation
 

@@ -106,7 +106,7 @@ class FastEmbedProvider(EmbeddingProvider):
                 f"({self._description})"
             )
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize FastEmbed: {e}")
+            raise EmbeddingServiceError(f"Failed to initialize FastEmbed: {e}") from e
 
     async def cleanup(self) -> None:
         """Cleanup FastEmbed resources."""
@@ -148,7 +148,7 @@ class FastEmbedProvider(EmbeddingProvider):
             return embeddings
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}")
+            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
     @property
     def cost_per_token(self) -> float:

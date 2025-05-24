@@ -508,7 +508,8 @@ class ClientManager:
                 health.consecutive_failures += 1
                 health.state = (
                     ClientState.DEGRADED
-                    if health.consecutive_failures < self.config.max_consecutive_failures
+                    if health.consecutive_failures
+                    < self.config.max_consecutive_failures
                     else ClientState.FAILED
                 )
                 health.last_error = "Health check returned false"
@@ -562,8 +563,11 @@ class ClientManager:
                 await asyncio.sleep(self.config.health_check_interval)
 
                 # Run health checks in parallel for better performance
-                active_clients = [(name, check_func) for name, check_func in health_checks.items()
-                                if name in self._clients]
+                active_clients = [
+                    (name, check_func)
+                    for name, check_func in health_checks.items()
+                    if name in self._clients
+                ]
 
                 if not active_clients:
                     continue
@@ -573,7 +577,7 @@ class ClientManager:
                 for name, check_func in active_clients:
                     task = asyncio.create_task(
                         self._run_single_health_check(name, check_func),
-                        name=f"health_check_{name}"
+                        name=f"health_check_{name}",
                     )
                     tasks.append(task)
 

@@ -158,6 +158,7 @@ flowchart TB
 The system now features a clean service layer architecture that replaces MCP proxying with direct SDK integration:
 
 ### Direct SDK Integration Benefits
+
 - **50-80% faster API calls** without MCP serialization overhead
 - **Better error handling** with specific error types and recovery
 - **Rate limiting** built-in to prevent API limit issues
@@ -167,21 +168,25 @@ The system now features a clean service layer architecture that replaces MCP pro
 ### Service Components
 
 #### 🔌 Base Services
+
 - **BaseService**: Lifecycle management, retry logic, async context managers
 - **APIConfig**: Centralized Pydantic v2 configuration with validation
 - **RateLimiter**: Token bucket algorithm preventing API limit violations
 
 #### 🧠 Embedding Services
+
 - **OpenAIEmbeddingProvider**: Direct OpenAI SDK with batch API support
 - **FastEmbedProvider**: 10+ local models with zero cost
 - **EmbeddingManager**: Smart provider selection based on quality tiers (FAST/BALANCED/BEST)
 
 #### 🕷️ Crawling Services
+
 - **FirecrawlProvider**: Premium crawling with JS rendering
 - **Crawl4AIProvider**: High-performance open-source alternative
 - **CrawlManager**: Automatic fallback between providers
 
 #### 💾 Vector Database
+
 - **QdrantService**: Direct SDK integration with hybrid search
 - Query API with prefetch and fusion strategies
 - Automatic batching and rate limiting
@@ -454,9 +459,15 @@ ai-docs-vector-db-hybrid-scraper/
 │   ├── health-check.sh                   # System diagnostics
 │   └── performance-benchmark.sh          # Automated benchmarking
 ├── 📖 docs/
+│   ├── mcp/                              # MCP server documentation
+│   │   ├── README.md                     # MCP documentation index
+│   │   ├── 01_GUIDE.md                   # Comprehensive MCP guide
+│   │   ├── 02_SETUP.md                   # MCP setup instructions
+│   │   ├── 03_ARCHITECTURE.md            # MCP architecture details
+│   │   ├── 04_ENHANCEMENT_PLAN.md        # Future enhancements
+│   │   └── 05_UNIFIED_IMPLEMENTATION.md  # Unified server approach
 │   ├── TECHNICAL_IMPLEMENTATION.md       # Technical implementation details
 │   ├── RERANKING_GUIDE.md               # Reranking research and configuration
-│   ├── MCP_SERVER_SETUP.md              # Comprehensive MCP setup guide
 │   ├── TROUBLESHOOTING.md                # Common issues and solutions
 │   └── PERFORMANCE_TUNING.md             # Advanced optimization guide
 ├── 🧪 tests/

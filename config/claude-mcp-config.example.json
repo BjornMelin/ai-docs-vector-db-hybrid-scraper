@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ai-docs-vector-db-unified": {
+      "command": "uv",
+      "args": ["run", "python", "src/unified_mcp_server.py"],
+      "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
+      "env": {
+        "OPENAI_API_KEY": "sk-REPLACE-WITH-YOUR-OPENAI-API-KEY",
+        "FIRECRAWL_API_KEY": "fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY-OPTIONAL",
+        "QDRANT_URL": "http://localhost:6333",
+        "REDIS_URL": "redis://localhost:6379"
+      }
+    }
+  }
+}
