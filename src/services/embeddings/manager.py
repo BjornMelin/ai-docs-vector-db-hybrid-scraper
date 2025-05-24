@@ -15,6 +15,57 @@ from .openai_provider import OpenAIEmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
+# Smart Selection Constants
+CHARS_PER_TOKEN = 4  # Approximate character-to-token ratio
+CODE_KEYWORDS = {
+    "def",
+    "class",
+    "import",
+    "return",
+    "if",
+    "else",
+    "for",
+    "while",
+    "try",
+    "except",
+    "function",
+    "const",
+    "let",
+    "var",
+    "public",
+    "private",
+}
+
+# Scoring weights for smart selection
+QUALITY_WEIGHT = 0.4
+SPEED_WEIGHT = 0.3
+COST_WEIGHT = 0.3
+
+# Quality scoring parameters
+QUALITY_SCORE_FAST_THRESHOLD = 60.0
+QUALITY_SCORE_BALANCED_THRESHOLD = 75.0
+QUALITY_SCORE_BEST_THRESHOLD = 85.0
+
+# Speed scoring parameters
+SPEED_FAST_THRESHOLD = 500.0  # tokens/second
+SPEED_BALANCED_THRESHOLD = 200.0
+SPEED_SLOW_THRESHOLD = 100.0
+
+# Cost scoring parameters (per million tokens)
+COST_CHEAP_THRESHOLD = 50.0
+COST_MODERATE_THRESHOLD = 100.0
+COST_EXPENSIVE_THRESHOLD = 200.0
+
+# Budget management
+BUDGET_WARNING_THRESHOLD = 0.8  # 80%
+BUDGET_CRITICAL_THRESHOLD = 0.9  # 90%
+
+# Text analysis parameters
+COMPLEXITY_VOCAB_DIVERSITY_FACTOR = 20.0
+COMPLEXITY_AVG_WORD_LENGTH_FACTOR = 20.0
+SHORT_TEXT_THRESHOLD = 100  # characters
+LONG_TEXT_THRESHOLD = 2000  # characters
+
 
 class QualityTier(Enum):
     """Embedding quality tiers."""
@@ -195,6 +246,137 @@ class EmbeddingManager:
         self.providers.clear()
         self._initialized = False
 
+    def _select_provider_and_model(
+        self,
+        text_analysis: "TextAnalysis",
+        quality_tier: QualityTier | None,
+        provider_name: str | None,
+        max_cost: float | None,
+        speed_priority: bool,
+        auto_select: bool,
+    ) -> tuple[EmbeddingProvider, str, float, str]:
+        """Select provider and model based on parameters.
+
+        Returns:
+            Tuple of (provider, model_name, estimated_cost, reasoning)
+        """
+        if auto_select and not provider_name:
+            # Get smart recommendation
+            recommendation = self.get_smart_provider_recommendation(
+                text_analysis, quality_tier, max_cost, speed_priority
+            )
+
+            provider_name = recommendation["provider"]
+            selected_model = recommendation["model"]
+            estimated_cost = recommendation["estimated_cost"]
+            reasoning = recommendation["reasoning"]
+
+            logger.info(
+                f"Smart selection: {provider_name}/{selected_model} "
+                f"(${estimated_cost:.4f}) - {reasoning}"
+            )
+        else:
+            # Use legacy selection logic
+            reasoning = "Legacy selection"
+            estimated_cost = 0.0
+            selected_model = None
+
+            # If specific provider requested, estimate cost
+            if provider_name and provider_name in self.providers:
+                provider = self.providers[provider_name]
+                estimated_cost = (
+                    text_analysis.estimated_tokens * provider.cost_per_token
+                )
+
+        # Get the actual provider instance
+        provider = self._get_provider_instance(provider_name, quality_tier)
+
+        # Determine final model name
+        if not selected_model:
+            selected_model = provider.model_name
+
+        return provider, selected_model, estimated_cost, reasoning
+
+    def _get_provider_instance(
+        self, provider_name: str | None, quality_tier: QualityTier | None
+    ) -> EmbeddingProvider:
+        """Get provider instance based on name or quality tier."""
+        if provider_name:
+            provider = self.providers.get(provider_name)
+            if not provider:
+                raise EmbeddingServiceError(
+                    f"Provider '{provider_name}' not available. "
+                    f"Available: {list(self.providers.keys())}"
+                )
+        elif quality_tier:
+            preferred = self._tier_providers.get(quality_tier)
+            provider = self.providers.get(preferred)
+            if not provider:
+                provider = next(iter(self.providers.values()))
+                logger.warning(
+                    f"Preferred provider for {quality_tier.value} not available, "
+                    f"using {provider.__class__.__name__}"
+                )
+        else:
+            provider = self.providers.get(self.config.preferred_embedding_provider)
+            if not provider:
+                provider = next(iter(self.providers.values()))
+
+        return provider
+
+    def _validate_budget_constraints(self, estimated_cost: float) -> None:
+        """Check budget constraints and raise error if violated."""
+        budget_check = self.check_budget_constraints(estimated_cost)
+        if not budget_check["within_budget"]:
+            raise EmbeddingServiceError(
+                f"Budget constraint violated: {budget_check['warnings'][0]}"
+            )
+
+        # Log warnings if any
+        for warning in budget_check["warnings"]:
+            logger.warning(f"Budget warning: {warning}")
+
+    def _calculate_metrics_and_update_stats(
+        self,
+        provider: EmbeddingProvider,
+        provider_name: str | None,
+        selected_model: str,
+        texts: list[str],
+        quality_tier: QualityTier | None,
+        start_time: float,
+    ) -> dict[str, Any]:
+        """Calculate metrics and update usage statistics.
+
+        Returns:
+            Dictionary with calculated metrics
+        """
+        end_time = time.time()
+        latency_ms = (end_time - start_time) * 1000
+        actual_tokens = sum(len(text) for text in texts) // CHARS_PER_TOKEN
+        actual_cost = actual_tokens * provider.cost_per_token
+
+        # Update usage statistics
+        tier_name = quality_tier.value if quality_tier else "default"
+        provider_key = provider_name or provider.__class__.__name__.lower().replace(
+            "provider", ""
+        )
+
+        self.update_usage_stats(
+            provider_key,
+            selected_model,
+            actual_tokens,
+            actual_cost,
+            tier_name,
+        )
+
+        return {
+            "latency_ms": latency_ms,
+            "tokens": actual_tokens,
+            "cost": actual_cost,
+            "tier_name": tier_name,
+            "provider_key": provider_key,
+        }
+
     async def generate_embeddings(
         self,
         texts: list[str],
@@ -235,82 +417,23 @@ class EmbeddingManager:
 
         start_time = time.time()
 
-        # Always analyze text for cost estimation
+        # Analyze text characteristics
         text_analysis = self.analyze_text_characteristics(texts)
 
-        # Use smart selection if enabled
-        if auto_select and not provider_name:
-            # Get smart recommendation
-            recommendation = self.get_smart_provider_recommendation(
-                text_analysis, quality_tier, max_cost, speed_priority
+        # Select provider and model
+        provider, selected_model, estimated_cost, reasoning = (
+            self._select_provider_and_model(
+                text_analysis,
+                quality_tier,
+                provider_name,
+                max_cost,
+                speed_priority,
+                auto_select,
             )
+        )
 
-            # Check budget constraints
-            budget_check = self.check_budget_constraints(
-                recommendation["estimated_cost"]
-            )
-            if not budget_check["within_budget"]:
-                raise EmbeddingServiceError(
-                    f"Budget constraint violated: {budget_check['warnings'][0]}"
-                )
-
-            provider_name = recommendation["provider"]
-            selected_model = recommendation["model"]
-            estimated_cost = recommendation["estimated_cost"]
-            reasoning = recommendation["reasoning"]
-
-            # Log warnings if any
-            for warning in budget_check["warnings"]:
-                logger.warning(f"Budget warning: {warning}")
-
-            logger.info(
-                f"Smart selection: {provider_name}/{selected_model} "
-                f"(${estimated_cost:.4f}) - {reasoning}"
-            )
-        else:
-            # Use legacy selection logic but still check budget if provider specified
-            reasoning = "Legacy selection"
-            estimated_cost = 0.0
-            selected_model = None
-
-            # If specific provider requested, estimate cost and check budget
-            if provider_name and provider_name in self.providers:
-                provider = self.providers[provider_name]
-                estimated_cost = (
-                    text_analysis.estimated_tokens * provider.cost_per_token
-                )
-
-                budget_check = self.check_budget_constraints(estimated_cost)
-                if not budget_check["within_budget"]:
-                    raise EmbeddingServiceError(
-                        f"Budget constraint violated: {budget_check['warnings'][0]}"
-                    )
-
-        # Select provider using legacy logic if needed
-        if provider_name:
-            provider = self.providers.get(provider_name)
-            if not provider:
-                raise EmbeddingServiceError(
-                    f"Provider '{provider_name}' not available. "
-                    f"Available: {list(self.providers.keys())}"
-                )
-        elif quality_tier:
-            preferred = self._tier_providers.get(quality_tier)
-            provider = self.providers.get(preferred)
-            if not provider:
-                provider = next(iter(self.providers.values()))
-                logger.warning(
-                    f"Preferred provider for {quality_tier.value} not available, "
-                    f"using {provider.__class__.__name__}"
-                )
-        else:
-            provider = self.providers.get(self.config.preferred_embedding_provider)
-            if not provider:
-                provider = next(iter(self.providers.values()))
-
-        # Determine final model name for usage tracking
-        if not selected_model:
-            selected_model = provider.model_name
+        # Validate budget constraints
+        self._validate_budget_constraints(estimated_cost)
 
         logger.info(f"Using {provider.__class__.__name__} for {len(texts)} texts")
 
@@ -320,33 +443,20 @@ class EmbeddingManager:
                 texts, batch_size=self.config.openai_batch_size
             )
 
-            # Calculate actual metrics
-            end_time = time.time()
-            latency_ms = (end_time - start_time) * 1000
-            actual_tokens = sum(len(text) for text in texts) // 4  # Rough estimate
-            actual_cost = actual_tokens * provider.cost_per_token
-
-            # Update usage statistics
-            tier_name = quality_tier.value if quality_tier else "default"
-            self.update_usage_stats(
-                provider_name
-                or provider.__class__.__name__.lower().replace("provider", ""),
-                selected_model,
-                actual_tokens,
-                actual_cost,
-                tier_name,
+            # Calculate metrics and update statistics
+            metrics = self._calculate_metrics_and_update_stats(
+                provider, provider_name, selected_model, texts, quality_tier, start_time
             )
 
             return {
                 "embeddings": embeddings,
-                "provider": provider_name
-                or provider.__class__.__name__.lower().replace("provider", ""),
+                "provider": metrics["provider_key"],
                 "model": selected_model,
-                "cost": actual_cost,
-                "latency_ms": latency_ms,
-                "tokens": actual_tokens,
+                "cost": metrics["cost"],
+                "latency_ms": metrics["latency_ms"],
+                "tokens": metrics["tokens"],
                 "reasoning": reasoning,
-                "quality_tier": tier_name,
+                "quality_tier": metrics["tier_name"],
                 "usage_stats": self.get_usage_report(),
             }
 
@@ -490,7 +600,7 @@ class EmbeddingManager:
 
         total_length = sum(len(text) for text in texts)
         avg_length = total_length // len(texts)
-        estimated_tokens = int(total_length / 4)  # ~4 chars per token
+        estimated_tokens = int(total_length / CHARS_PER_TOKEN)
 
         # Analyze complexity (vocabulary diversity)
         all_words = set()
@@ -502,18 +612,8 @@ class EmbeddingManager:
             all_words.update(words)
             total_words += len(words)
 
-            # Check for code patterns
-            if any(
-                indicator in text
-                for indicator in [
-                    "def ",
-                    "class ",
-                    "import ",
-                    "function",
-                    "const ",
-                    "var ",
-                ]
-            ):
+            # Check for code patterns using defined keywords
+            if any(keyword in text.lower() for keyword in CODE_KEYWORDS):
                 code_indicators += 1
 
         # Complexity score based on vocabulary diversity (cap at reasonable level)
@@ -528,9 +628,9 @@ class EmbeddingManager:
         is_code = code_indicators / len(texts) > 0.3
         if is_code:
             text_type = "code"
-        elif avg_length > 2000:
+        elif avg_length > LONG_TEXT_THRESHOLD:
             text_type = "long"
-        elif avg_length < 200:
+        elif avg_length < SHORT_TEXT_THRESHOLD:
             text_type = "short"
         else:
             text_type = "docs"
@@ -647,26 +747,30 @@ class EmbeddingManager:
         """
         score = 0.0
 
-        # Base quality score (40% weight)
-        score += benchmark.quality_score * 0.4
+        # Base quality score
+        score += benchmark.quality_score * QUALITY_WEIGHT
 
-        # Speed score (30% weight, or 50% if speed priority)
-        speed_weight = 0.5 if speed_priority else 0.3
-        max_latency = 200  # ms
+        # Speed score (higher weight if speed priority)
+        speed_weight = 0.5 if speed_priority else SPEED_WEIGHT
         speed_score = max(
-            0, (max_latency - benchmark.avg_latency_ms) / max_latency * 100
+            0,
+            (SPEED_BALANCED_THRESHOLD - benchmark.avg_latency_ms)
+            / SPEED_BALANCED_THRESHOLD
+            * 100,
         )
         score += speed_score * speed_weight
 
-        # Cost efficiency score (30% weight, or 10% if speed priority)
-        cost_weight = 0.1 if speed_priority else 0.3
+        # Cost efficiency score (lower weight if speed priority)
+        cost_weight = 0.1 if speed_priority else COST_WEIGHT
         if benchmark.cost_per_million_tokens == 0:  # Local model
             cost_score = 100
         else:
             # Lower cost = higher score
-            max_cost = 200  # $200 per million tokens
             cost_score = max(
-                0, (max_cost - benchmark.cost_per_million_tokens) / max_cost * 100
+                0,
+                (COST_EXPENSIVE_THRESHOLD - benchmark.cost_per_million_tokens)
+                / COST_EXPENSIVE_THRESHOLD
+                * 100,
             )
         score += cost_score * cost_weight
 
@@ -674,20 +778,23 @@ class EmbeddingManager:
         if quality_tier == QualityTier.FAST and benchmark.cost_per_million_tokens == 0:
             score += 25  # Strong bonus for local models in FAST tier
         elif quality_tier == QualityTier.BEST:
-            if benchmark.quality_score > 90:
+            if benchmark.quality_score > QUALITY_SCORE_BEST_THRESHOLD:
                 score += 40  # Very strong bonus for high-quality models in BEST tier
-            elif benchmark.quality_score > 85:
+            elif benchmark.quality_score > QUALITY_SCORE_BALANCED_THRESHOLD:
                 score += 30  # Strong bonus for good quality models
             else:
                 score -= 10  # Penalty for lower quality in BEST tier
         elif quality_tier == QualityTier.BALANCED:
             if benchmark.cost_per_million_tokens == 0:
                 score += 10  # Bonus for local in balanced
-            elif benchmark.cost_per_million_tokens < 50:
+            elif benchmark.cost_per_million_tokens < COST_CHEAP_THRESHOLD:
                 score += 15  # Bonus for cost-effective options
 
         # Text type specific bonuses
-        if text_analysis.text_type == "code" and benchmark.quality_score > 85:
+        if (
+            text_analysis.text_type == "code"
+            and benchmark.quality_score > QUALITY_SCORE_BEST_THRESHOLD
+        ):
             score += 5  # Code needs high quality
         elif text_analysis.text_type == "short" and benchmark.avg_latency_ms < 60:
             score += 5  # Short text benefits from speed
@@ -762,14 +869,18 @@ class EmbeddingManager:
                     f"${self.usage_stats.daily_cost + estimated_cost:.4f} > ${self.budget_limit:.2f}"
                 )
 
-            # Warnings at 80% and 90% usage
+            # Warnings at configured thresholds
             usage_percent = (
                 self.usage_stats.daily_cost + estimated_cost
             ) / self.budget_limit
-            if usage_percent > 0.9:
-                result["warnings"].append("Budget usage > 90%")
-            elif usage_percent > 0.8:
-                result["warnings"].append("Budget usage > 80%")
+            if usage_percent > BUDGET_CRITICAL_THRESHOLD:
+                result["warnings"].append(
+                    f"Budget usage > {int(BUDGET_CRITICAL_THRESHOLD * 100)}%"
+                )
+            elif usage_percent > BUDGET_WARNING_THRESHOLD:
+                result["warnings"].append(
+                    f"Budget usage > {int(BUDGET_WARNING_THRESHOLD * 100)}%"
+                )
 
         return result
 
