@@ -187,8 +187,9 @@ class ClientManager:
         # Skip re-initialization if already initialized
         if hasattr(self, "_initialized") and self._initialized:
             if config and config != self.config:
-                logger.warning(
-                    "ClientManager already initialized with different config"
+                raise ValueError(
+                    "ClientManager already initialized with different config. "
+                    "Use cleanup() and reinitialize or create a new instance."
                 )
             return
 
@@ -474,6 +475,79 @@ class ClientManager:
             logger.warning(f"Redis health check failed: {e}")
             return False
 
+    async def _run_single_health_check(self, name: str, check_func) -> None:
+        """Run a single health check and update client status."""
+        try:
+            # Run health check with timeout
+            is_healthy = await asyncio.wait_for(
+                check_func(),
+                timeout=self.config.health_check_timeout,
+            )
+
+            # Update health status
+            if name not in self._health:
+                self._health[name] = ClientHealth(
+                    state=ClientState.HEALTHY,
+                    last_check=time.time(),
+                )
+
+            health = self._health[name]
+            previous_state = health.state
+            health.last_check = time.time()
+
+            if is_healthy:
+                # Check if client was previously failed and should be recreated
+                if previous_state == ClientState.FAILED:
+                    await self._recreate_client_if_needed(name)
+                    logger.info(f"{name} client recovered and recreated")
+
+                health.state = ClientState.HEALTHY
+                health.consecutive_failures = 0
+                health.last_error = None
+            else:
+                health.consecutive_failures += 1
+                health.state = (
+                    ClientState.DEGRADED
+                    if health.consecutive_failures < self.config.max_consecutive_failures
+                    else ClientState.FAILED
+                )
+                health.last_error = "Health check returned false"
+
+        except TimeoutError:
+            logger.error(f"{name} health check timed out")
+            self._update_health_failure(name, "Health check timeout")
+        except Exception as e:
+            logger.error(f"{name} health check error: {e}")
+            self._update_health_failure(name, str(e))
+
+    async def _recreate_client_if_needed(self, name: str) -> None:
+        """Recreate a client if it was previously failed."""
+        if name not in self._clients:
+            return
+
+        try:
+            # Remove old client
+            old_client = self._clients[name]
+            if hasattr(old_client, "close"):
+                await old_client.close()
+            elif hasattr(old_client, "aclose"):
+                await old_client.aclose()
+
+            # Remove from clients dict to force recreation on next access
+            del self._clients[name]
+
+            # Reset circuit breaker
+            if name in self._circuit_breakers:
+                breaker = self._circuit_breakers[name]
+                breaker._failure_count = 0
+                breaker._state = ClientState.HEALTHY
+                breaker._half_open_attempts = 0
+
+            logger.info(f"Recreated {name} client after recovery")
+
+        except Exception as e:
+            logger.warning(f"Failed to recreate {name} client: {e}")
+
     async def _health_check_loop(self) -> None:
         """Background task to periodically check client health."""
         health_checks = {
@@ -487,47 +561,24 @@ class ClientManager:
             try:
                 await asyncio.sleep(self.config.health_check_interval)
 
-                for name, check_func in health_checks.items():
-                    if name not in self._clients:
-                        continue
+                # Run health checks in parallel for better performance
+                active_clients = [(name, check_func) for name, check_func in health_checks.items()
+                                if name in self._clients]
 
-                    try:
-                        # Run health check with timeout
-                        is_healthy = await asyncio.wait_for(
-                            check_func(),
-                            timeout=self.config.health_check_timeout,
-                        )
+                if not active_clients:
+                    continue
 
-                        # Update health status
-                        if name not in self._health:
-                            self._health[name] = ClientHealth(
-                                state=ClientState.HEALTHY,
-                                last_check=time.time(),
-                            )
+                # Create tasks for parallel execution
+                tasks = []
+                for name, check_func in active_clients:
+                    task = asyncio.create_task(
+                        self._run_single_health_check(name, check_func),
+                        name=f"health_check_{name}"
+                    )
+                    tasks.append(task)
 
-                        health = self._health[name]
-                        health.last_check = time.time()
-
-                        if is_healthy:
-                            health.state = ClientState.HEALTHY
-                            health.consecutive_failures = 0
-                            health.last_error = None
-                        else:
-                            health.consecutive_failures += 1
-                            health.state = (
-                                ClientState.DEGRADED
-                                if health.consecutive_failures
-                                < self.config.max_consecutive_failures
-                                else ClientState.FAILED
-                            )
-                            health.last_error = "Health check returned false"
-
-                    except TimeoutError:
-                        logger.error(f"{name} health check timed out")
-                        self._update_health_failure(name, "Health check timeout")
-                    except Exception as e:
-                        logger.error(f"{name} health check error: {e}")
-                        self._update_health_failure(name, str(e))
+                # Wait for all health checks to complete
+                await asyncio.gather(*tasks, return_exceptions=True)
 
             except asyncio.CancelledError:
                 logger.info("Health check loop cancelled")

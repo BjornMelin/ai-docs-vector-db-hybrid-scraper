@@ -377,6 +377,24 @@ class TestClientManager:
             with pytest.raises(APIError, match="qdrant client circuit breaker is open"):
                 await client_manager.get_qdrant_client()
 
+    def test_config_change_validation(self, client_config):
+        """Test that config changes are properly rejected."""
+        # Reset singleton
+        ClientManager._instance = None
+
+        # Create manager with first config
+        manager1 = ClientManager(client_config)
+        manager1._initialized = True  # Simulate initialization
+
+        # Try to create with different config
+        different_config = ClientManagerConfig(
+            qdrant_url="http://different:6333",
+            redis_url="redis://different:6379",
+        )
+
+        with pytest.raises(ValueError, match="already initialized with different config"):
+            ClientManager(different_config)
+
     @pytest.mark.asyncio
     async def test_concurrent_client_creation(self, client_manager):
         """Test concurrent client creation uses singleton properly."""
@@ -401,3 +419,41 @@ class TestClientManager:
             assert all(c is mock_client for c in clients)
             # Should only create once
             assert call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_client_recreation_on_recovery(self, client_manager):
+        """Test that clients are recreated when they recover from failure."""
+        # Create a mock client that will be "recreated"
+        original_client = AsyncMock()
+        original_client.get_collections = AsyncMock(return_value=[])
+        original_client.close = AsyncMock()
+
+        # Add client to manager
+        client_manager._clients["qdrant"] = original_client
+        client_manager._health["qdrant"] = ClientHealth(
+            state=ClientState.FAILED,
+            last_check=time.time(),
+            consecutive_failures=5,
+        )
+        client_manager._circuit_breakers["qdrant"] = CircuitBreaker(failure_threshold=3)
+        client_manager._circuit_breakers["qdrant"]._state = ClientState.FAILED
+
+        # Mock successful health check
+        async def mock_health_check():
+            return True
+
+        # Run single health check to trigger recreation
+        await client_manager._run_single_health_check("qdrant", mock_health_check)
+
+        # Verify client was removed (forcing recreation on next access)
+        assert "qdrant" not in client_manager._clients
+
+        # Verify health status was updated
+        health = client_manager._health["qdrant"]
+        assert health.state == ClientState.HEALTHY
+        assert health.consecutive_failures == 0
+
+        # Verify circuit breaker was reset
+        breaker = client_manager._circuit_breakers["qdrant"]
+        assert breaker._state == ClientState.HEALTHY
+        assert breaker._failure_count == 0
