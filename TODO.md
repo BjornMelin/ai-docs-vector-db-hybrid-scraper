@@ -51,6 +51,15 @@
 
 ## PRIORITY 2: SERVICE LAYER & UTILITY REFACTORING
 
+### Unified MCP Server Modularization
+- [ ] **Split unified_mcp_server.py into modules** `refactor/server-modularization`
+  - [ ] Extract request/response models to `src/mcp/models.py`
+  - [ ] Move MCP tool definitions to `src/mcp/tools.py`
+  - [ ] Create service orchestration in `src/mcp/orchestration.py`
+  - [ ] Keep main server initialization in unified_mcp_server.py
+  - [ ] Update imports and maintain backward compatibility
+  - [ ] Add comprehensive tests for each module
+
 ### Script Integration
 - [ ] **Integrate crawl4ai_bulk_embedder.py** `refactor/script-integration` 📋 [GitHub Issue #21]
   - [ ] Refactor to use UnifiedServiceManager

@@ -52,8 +52,8 @@ This directory contains pre-configured templates for common use cases. Each temp
 
 2. **Set environment variables for sensitive data:**
    ```bash
-   export AI_DOCS__OPENAI__API_KEY=sk-your-api-key
-   export AI_DOCS__FIRECRAWL__API_KEY=your-firecrawl-key
+   export AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
+   export AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
    ```
 
 3. **Customize as needed:**
@@ -82,8 +82,8 @@ Choose your template based on:
 
 1. **API Keys:** Never store API keys in config files. Use environment variables:
    ```bash
-   AI_DOCS__OPENAI__API_KEY=sk-...
-   AI_DOCS__FIRECRAWL__API_KEY=...
+   AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
+   AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
    ```
 
 2. **Performance Tuning:**
