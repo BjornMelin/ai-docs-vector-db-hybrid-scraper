@@ -38,7 +38,7 @@ def migrate_env_variables():
         "REDIS_URL": "cache.redis_url",
     }
 
-    for old_key, new_path in old_mappings.items():
+    for old_key, _new_path in old_mappings.items():
         if old_key in os.environ:
             env_vars[old_key] = os.environ[old_key]
             print(f"  - Found {old_key}")
@@ -53,7 +53,7 @@ def migrate_env_variables():
     return env_vars
 
 
-def main():
+def main():  # noqa: PLR0912
     """Main migration function."""
     print("AI Documentation Vector DB Configuration Migration\n")
 

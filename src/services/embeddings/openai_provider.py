@@ -1,5 +1,6 @@
 """OpenAI embedding provider with batch support."""
 
+import contextlib
 import json
 import logging
 import os
@@ -84,7 +85,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._initialized = True
             logger.info(f"OpenAI client initialized with model {self.model_name}")
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize OpenAI client: {e}")
+            raise EmbeddingServiceError(
+                f"Failed to initialize OpenAI client: {e}"
+            ) from e
 
     async def cleanup(self) -> None:
         """Cleanup OpenAI client."""
@@ -158,21 +161,23 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             if "rate_limit_exceeded" in error_msg.lower():
                 raise EmbeddingServiceError(
                     f"OpenAI rate limit exceeded. Please try again later or reduce batch size. Error: {e}"
-                )
+                ) from e
             elif "insufficient_quota" in error_msg.lower():
                 raise EmbeddingServiceError(
                     f"OpenAI API quota exceeded. Please check your billing. Error: {e}"
-                )
+                ) from e
             elif "invalid_api_key" in error_msg.lower():
                 raise EmbeddingServiceError(
                     f"Invalid OpenAI API key. Please check your configuration. Error: {e}"
-                )
+                ) from e
             elif "context_length_exceeded" in error_msg.lower():
                 raise EmbeddingServiceError(
                     f"Text too long for model {self.model_name}. Max tokens: {self.max_tokens_per_request}. Error: {e}"
-                )
+                ) from e
             else:
-                raise EmbeddingServiceError(f"Failed to generate embeddings: {e}")
+                raise EmbeddingServiceError(
+                    f"Failed to generate embeddings: {e}"
+                ) from e
 
     @rate_limited("openai", "embeddings")
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
@@ -231,7 +236,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 mode="w", suffix=".jsonl", delete=False
             ) as f:
                 temp_file = f.name
-                for i, (text, custom_id) in enumerate(
+                for _i, (text, custom_id) in enumerate(
                     zip(texts, custom_ids, strict=False)
                 ):
                     request = {
@@ -269,14 +274,12 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             return batch_response.id
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to create batch job: {e}")
+            raise EmbeddingServiceError(f"Failed to create batch job: {e}") from e
         finally:
             # Clean up temp file
             if "temp_file" in locals() and temp_file and os.path.exists(temp_file):
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(temp_file)
-                except OSError:
-                    pass  # File already deleted or inaccessible
 
     @rate_limited("openai", "files")
     async def _upload_file_with_rate_limit(self, file: Any, purpose: str) -> Any:

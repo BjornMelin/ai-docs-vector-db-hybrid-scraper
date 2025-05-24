@@ -4,7 +4,6 @@ This module provides a comprehensive configuration system that consolidates all
 settings across the application into a single, well-structured configuration model.
 """
 
-from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -17,45 +16,11 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
-
-class Environment(str, Enum):
-    """Application environment types."""
-
-    DEVELOPMENT = "development"
-    TESTING = "testing"
-    PRODUCTION = "production"
-
-
-class LogLevel(str, Enum):
-    """Logging level options."""
-
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
-
-
-class EmbeddingProvider(str, Enum):
-    """Available embedding providers."""
-
-    OPENAI = "openai"
-    FASTEMBED = "fastembed"
-
-
-class CrawlProvider(str, Enum):
-    """Available crawling providers."""
-
-    CRAWL4AI = "crawl4ai"
-    FIRECRAWL = "firecrawl"
-
-
-class ChunkingStrategy(str, Enum):
-    """Available chunking strategies."""
-
-    BASIC = "basic"
-    ENHANCED = "enhanced"
-    AST = "ast"
+from .enums import ChunkingStrategy
+from .enums import CrawlProvider
+from .enums import EmbeddingProvider
+from .enums import Environment
+from .enums import LogLevel
 
 
 class CacheConfig(BaseModel):
@@ -578,7 +543,7 @@ _config: UnifiedConfig | None = None
 
 def get_config() -> UnifiedConfig:
     """Get the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     if _config is None:
         _config = UnifiedConfig()
     return _config
@@ -586,11 +551,11 @@ def get_config() -> UnifiedConfig:
 
 def set_config(config: UnifiedConfig) -> None:
     """Set the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     _config = config
 
 
 def reset_config() -> None:
     """Reset the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     _config = None

@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic.json_schema import JsonSchemaValue
+
 from .models import UnifiedConfig
 
 
@@ -94,7 +95,7 @@ class ConfigSchemaGenerator:
         return schema
 
     @staticmethod
-    def generate_typescript_types(schema: dict[str, Any] | None = None) -> str:
+    def generate_typescript_types(schema: dict[str, Any] | None = None) -> str:  # noqa: PLR0915
         """Generate TypeScript type definitions from schema.
 
         Args:
@@ -202,7 +203,7 @@ class ConfigSchemaGenerator:
         return "\n".join(lines)
 
     @staticmethod
-    def generate_markdown_docs(schema: dict[str, Any] | None = None) -> str:
+    def generate_markdown_docs(schema: dict[str, Any] | None = None) -> str:  # noqa: PLR0915
         """Generate Markdown documentation from schema.
 
         Args:

@@ -392,7 +392,9 @@ class TestClientManager:
             redis_url="redis://different:6379",
         )
 
-        with pytest.raises(ValueError, match="already initialized with different config"):
+        with pytest.raises(
+            ValueError, match="already initialized with different config"
+        ):
             ClientManager(different_config)
 
     @pytest.mark.asyncio

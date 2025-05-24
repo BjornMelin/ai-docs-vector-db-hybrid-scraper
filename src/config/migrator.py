@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from typing import ClassVar
 
 from .models import UnifiedConfig
 
@@ -16,7 +17,7 @@ class ConfigMigrator:
     """Handles migration of configurations between versions."""
 
     # Configuration version history
-    VERSIONS = {
+    VERSIONS: ClassVar[dict[str, str]] = {
         "0.1.0": "Initial unified configuration",
         "0.2.0": "Added cache configuration enhancements",
         "0.3.0": "Added security and performance settings",
@@ -170,7 +171,7 @@ class ConfigMigrator:
         return migrated
 
     @staticmethod
-    def create_migration_report(
+    def create_migration_report(  # noqa: PLR0912
         original: dict[str, Any],
         migrated: dict[str, Any],
         from_version: str,
