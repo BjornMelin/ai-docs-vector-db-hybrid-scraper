@@ -86,7 +86,7 @@ crawl4ai_scraper.log
 # Project specific
 config/local_*.json
 temp/
-cache/
+/cache/
 .crawl4ai_cache/
 
 # Node.js (if using any JS tools)

@@ -164,15 +164,17 @@
 
 ### Intelligent Caching Layer
 
-- [ ] **Embedding & Crawl Caching** `feat/intelligent-caching`
-  - [ ] Implement Redis/in-memory cache for embeddings with TTL
-  - [ ] Add content-based cache keys using MD5 hashing
-  - [ ] Create crawl result caching with configurable TTL
-  - [ ] Implement cache warming strategies for common queries
-  - [ ] Add cache hit rate monitoring and analytics
-  - [ ] Create cache invalidation strategies
-  - [ ] Implement distributed cache support for scaling
-  - [ ] Add cache size management and eviction policies
+- [x] **Embedding & Crawl Caching** `feat/intelligent-caching` ✅ 
+  - ✅ **Redis/in-memory cache** with two-tier architecture (L1 local, L2 Redis)
+  - ✅ **Content-based cache keys** using MD5 hashing with provider/model/dimensions
+  - ✅ **TTL support** for embeddings (24h), crawls (1h), and queries (2h)
+  - ✅ **LRU eviction** with memory-based limits for local cache
+  - ✅ **Compression support** for Redis values above 1KB threshold
+  - ✅ **Basic metrics** tracking hits, misses, and hit rates (V1 MVP)
+  - ✅ **Pattern-based invalidation** for cache management
+  - ✅ **Async Redis** with connection pooling and retry strategies
+  - 📊 **Files**: `src/services/cache/`, `src/services/embeddings/manager.py`, `tests/test_cache.py`
+  - 🎯 **V2 Features**: Cache warming, Prometheus metrics, semantic similarity caching moved to TODO-V2.md
 
 ### Code Architecture Improvements
 
