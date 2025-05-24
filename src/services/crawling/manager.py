@@ -73,15 +73,18 @@ class CrawlManager:
         formats: list[str] | None = None,
         preferred_provider: str | None = None,
     ) -> dict[str, Any]:
-        """Scrape URL with fallback support.
+        """Scrape URL with automatic provider fallback.
 
         Args:
             url: URL to scrape
-            formats: Output formats
-            preferred_provider: Preferred provider name
+            formats: Output formats (["markdown"], ["html"], ["text"])
+            preferred_provider: Provider to try first ("firecrawl" or "crawl4ai")
 
         Returns:
-            Scrape result
+            Scraping result with success status, content, metadata, and provider
+
+        Raises:
+            CrawlServiceError: If manager not initialized
         """
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
@@ -140,16 +143,19 @@ class CrawlManager:
         formats: list[str] | None = None,
         preferred_provider: str | None = None,
     ) -> dict[str, Any]:
-        """Crawl site with provider selection.
+        """Crawl entire website from starting URL.
 
         Args:
-            url: Starting URL
-            max_pages: Maximum pages to crawl
-            formats: Output formats
-            preferred_provider: Preferred provider name
+            url: Starting URL for crawl
+            max_pages: Maximum pages to crawl (default: 50)
+            formats: Output formats for each page
+            preferred_provider: Provider to use (prefers Firecrawl for sites)
 
         Returns:
-            Crawl result
+            Crawl results with pages list, total count, and provider used
+
+        Raises:
+            CrawlServiceError: If manager not initialized
         """
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")

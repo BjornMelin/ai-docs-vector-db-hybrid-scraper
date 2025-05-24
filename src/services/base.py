@@ -98,3 +98,13 @@ class BaseService(ABC):
                 f"{self.__class__.__name__} not initialized. "
                 "Call initialize() or use context manager."
             )
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.cleanup()
+        return False

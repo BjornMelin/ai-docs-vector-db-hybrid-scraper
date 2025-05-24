@@ -29,7 +29,7 @@ class QdrantService(BaseService):
 
     async def initialize(self) -> None:
         """Initialize Qdrant client with connection validation.
-        
+
         Raises:
             QdrantServiceError: If client initialization fails
         """
@@ -43,12 +43,13 @@ class QdrantService(BaseService):
                 timeout=self.config.qdrant_timeout,
                 prefer_grpc=self.config.qdrant_prefer_grpc,
             )
-            
-            # Validate connection by checking health
-            health = await self._client.get_health()
-            if not health:
-                raise QdrantServiceError("Qdrant health check failed")
-                
+
+            # Validate connection by listing collections
+            try:
+                await self._client.get_collections()
+            except Exception as e:
+                raise QdrantServiceError(f"Qdrant connection check failed: {e}")
+
             self._initialized = True
             logger.info(f"Qdrant client initialized: {self.config.qdrant_url}")
         except Exception as e:
@@ -72,17 +73,20 @@ class QdrantService(BaseService):
         sparse_vector_name: str | None = None,
         enable_quantization: bool = True,
     ) -> bool:
-        """Create vector collection with quantization.
+        """Create vector collection with optional quantization and sparse vectors.
 
         Args:
             collection_name: Name of the collection
-            vector_size: Size of the dense vectors
+            vector_size: Dimension of dense vectors
             distance: Distance metric (Cosine, Euclidean, Dot)
-            sparse_vector_name: Optional name for sparse vectors
-            enable_quantization: Enable scalar quantization
+            sparse_vector_name: Optional sparse vector field name for hybrid search
+            enable_quantization: Enable INT8 quantization for ~75% storage reduction
 
         Returns:
-            Success status
+            True if collection created or already exists
+
+        Raises:
+            QdrantServiceError: If creation fails
         """
         self._validate_initialized()
 
@@ -133,7 +137,24 @@ class QdrantService(BaseService):
             return True
 
         except ResponseHandlingException as e:
-            raise QdrantServiceError(f"Failed to create collection: {e}")
+            logger.error(
+                f"Failed to create collection {collection_name}: {e}", exc_info=True
+            )
+
+            error_msg = str(e).lower()
+            if "already exists" in error_msg:
+                logger.info(f"Collection {collection_name} already exists, continuing")
+                return True
+            elif "invalid distance" in error_msg:
+                raise QdrantServiceError(
+                    f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                )
+            elif "unauthorized" in error_msg:
+                raise QdrantServiceError(
+                    "Unauthorized access to Qdrant. Please check your API key."
+                )
+            else:
+                raise QdrantServiceError(f"Failed to create collection: {e}")
 
     async def hybrid_search(
         self,
@@ -144,18 +165,23 @@ class QdrantService(BaseService):
         score_threshold: float = 0.0,
         fusion_type: str = "rrf",
     ) -> list[dict[str, Any]]:
-        """Hybrid search using Qdrant Query API.
+        """Perform hybrid search combining dense and sparse vectors.
+
+        Uses Qdrant's Query API with prefetch and fusion for optimal results.
 
         Args:
             collection_name: Collection to search
-            query_vector: Dense query vector
-            sparse_vector: Optional sparse vector (indices -> values)
-            limit: Number of results
+            query_vector: Dense embedding vector
+            sparse_vector: Optional sparse vector (token_id -> weight)
+            limit: Maximum results to return
             score_threshold: Minimum score threshold
-            fusion_type: Fusion method ('rrf' or 'dbsf')
+            fusion_type: Fusion method ("rrf" or "dbsf")
 
         Returns:
-            List of search results
+            List of results with id, score, and payload
+
+        Raises:
+            QdrantServiceError: If search fails
         """
         self._validate_initialized()
 
@@ -225,7 +251,26 @@ class QdrantService(BaseService):
             ]
 
         except Exception as e:
-            raise QdrantServiceError(f"Hybrid search failed: {e}")
+            logger.error(
+                f"Hybrid search failed in collection {collection_name}: {e}",
+                exc_info=True,
+            )
+
+            error_msg = str(e).lower()
+            if "collection not found" in error_msg:
+                raise QdrantServiceError(
+                    f"Collection '{collection_name}' not found. Please create it first."
+                )
+            elif "wrong vector size" in error_msg:
+                raise QdrantServiceError(
+                    f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
+                )
+            elif "timeout" in error_msg:
+                raise QdrantServiceError(
+                    "Search request timed out. Try reducing the limit or simplifying the query."
+                )
+            else:
+                raise QdrantServiceError(f"Hybrid search failed: {e}")
 
     async def upsert_points(
         self,
@@ -233,15 +278,18 @@ class QdrantService(BaseService):
         points: list[dict[str, Any]],
         batch_size: int = 100,
     ) -> bool:
-        """Upsert points with batching.
+        """Upsert points with automatic batching.
 
         Args:
-            collection_name: Collection name
-            points: List of point data with id, vector, payload
-            batch_size: Batch size for upsert
+            collection_name: Target collection
+            points: List of points with id, vector, and optional payload
+            batch_size: Points per batch for memory efficiency
 
         Returns:
-            Success status
+            True if all points upserted successfully
+
+        Raises:
+            QdrantServiceError: If upsert fails
         """
         self._validate_initialized()
 
@@ -279,7 +327,26 @@ class QdrantService(BaseService):
             return True
 
         except Exception as e:
-            raise QdrantServiceError(f"Failed to upsert points: {e}")
+            logger.error(
+                f"Failed to upsert {len(points)} points to {collection_name}: {e}",
+                exc_info=True,
+            )
+
+            error_msg = str(e).lower()
+            if "collection not found" in error_msg:
+                raise QdrantServiceError(
+                    f"Collection '{collection_name}' not found. Create it before upserting."
+                )
+            elif "wrong vector size" in error_msg:
+                raise QdrantServiceError(
+                    "Vector dimension mismatch. Check that vectors match collection configuration."
+                )
+            elif "payload too large" in error_msg:
+                raise QdrantServiceError(
+                    f"Payload too large. Try reducing batch size (current: {batch_size})."
+                )
+            else:
+                raise QdrantServiceError(f"Failed to upsert points: {e}")
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection.

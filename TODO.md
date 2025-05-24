@@ -134,6 +134,9 @@
   - [x] Add configuration for choosing embedding providers (OpenAI, FastEmbed)
   - [x] Remove unnecessary MCP client dependencies
   - [x] Update error handling for direct API calls 📖 [Best Practices](https://platform.openai.com/docs/guides/production-best-practices)
+  - [x] Add comprehensive docstrings using Google format
+  - [x] Implement rate limiting with token bucket algorithm
+  - [x] Update MCP servers to use new service layer
 
 ### Smart Model Selection & Cost Optimization
 

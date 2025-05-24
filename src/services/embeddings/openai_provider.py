@@ -4,11 +4,13 @@ import json
 import logging
 import os
 import tempfile
+from typing import Any
 from typing import ClassVar
 
 from openai import AsyncOpenAI
 
 from ..errors import EmbeddingServiceError
+from ..rate_limiter import rate_limited
 from .base import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -95,14 +97,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     async def generate_embeddings(
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
-        """Generate embeddings with batching.
+        """Generate embeddings with batching and rate limiting.
 
         Args:
-            texts: List of texts to embed
-            batch_size: Batch size (default: 100)
+            texts: Text strings to embed (max ~8191 tokens each)
+            batch_size: Texts per API call (default: 100)
 
         Returns:
-            List of embedding vectors
+            List of embedding vectors in same order as input
+
+        Raises:
+            EmbeddingServiceError: If not initialized or API call fails
         """
         if not self._initialized:
             raise EmbeddingServiceError("Provider not initialized")
@@ -128,8 +133,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 if self.model_name.startswith("text-embedding-3-") and self._dimensions:
                     params["dimensions"] = self._dimensions
 
-                # Generate embeddings
-                response = await self._client.embeddings.create(**params)
+                # Generate embeddings with rate limiting
+                response = await self._generate_embeddings_with_rate_limit(params)
 
                 # Extract embeddings in order
                 batch_embeddings = [embedding.embedding for embedding in response.data]
@@ -143,7 +148,43 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             return embeddings
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}")
+            logger.error(
+                f"Failed to generate embeddings for {len(texts)} texts: {e}",
+                exc_info=True,
+            )
+
+            # Provide specific error messages based on error type
+            error_msg = str(e)
+            if "rate_limit_exceeded" in error_msg.lower():
+                raise EmbeddingServiceError(
+                    f"OpenAI rate limit exceeded. Please try again later or reduce batch size. Error: {e}"
+                )
+            elif "insufficient_quota" in error_msg.lower():
+                raise EmbeddingServiceError(
+                    f"OpenAI API quota exceeded. Please check your billing. Error: {e}"
+                )
+            elif "invalid_api_key" in error_msg.lower():
+                raise EmbeddingServiceError(
+                    f"Invalid OpenAI API key. Please check your configuration. Error: {e}"
+                )
+            elif "context_length_exceeded" in error_msg.lower():
+                raise EmbeddingServiceError(
+                    f"Text too long for model {self.model_name}. Max tokens: {self.max_tokens_per_request}. Error: {e}"
+                )
+            else:
+                raise EmbeddingServiceError(f"Failed to generate embeddings: {e}")
+
+    @rate_limited("openai", "embeddings")
+    async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
+        """Generate embeddings with rate limiting.
+
+        Args:
+            params: Parameters for embeddings.create
+
+        Returns:
+            OpenAI embeddings response
+        """
+        return await self._client.embeddings.create(**params)
 
     @property
     def cost_per_token(self) -> float:
@@ -159,17 +200,24 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     async def generate_embeddings_batch_api(
         self, texts: list[str], custom_ids: list[str] | None = None
     ) -> str:
-        """Generate embeddings using OpenAI Batch API for 50% cost savings.
+        """Submit embeddings for batch processing with 50% cost reduction.
 
-        Note: This is for asynchronous batch processing with 24-hour completion.
-        For immediate results, use generate_embeddings() instead.
+        Batch API processes within 24 hours with significant cost savings.
+        Ideal for large-scale, non-time-critical embedding generation.
 
         Args:
-            texts: List of texts to embed
-            custom_ids: Optional custom IDs for each text
+            texts: Text strings to embed
+            custom_ids: Optional IDs for matching results (auto-generated if None)
 
         Returns:
-            Batch job ID for status checking
+            Batch job ID for status checking and result retrieval
+
+        Raises:
+            EmbeddingServiceError: If not initialized or batch creation fails
+
+        Note:
+            Results available within 24 hours with 50% cost savings.
+            No rate limits for batch processing.
         """
         if not self._initialized:
             raise EmbeddingServiceError("Provider not initialized")
@@ -203,20 +251,18 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                         request["body"]["dimensions"] = self._dimensions
 
                     f.write(json.dumps(request) + "\n")
-                
+
                 # Ensure all data is written to disk before closing
                 f.flush()
                 os.fsync(f.fileno())
 
-            # Upload file
+            # Upload file with rate limiting
             with open(temp_file, "rb") as f:
-                file_response = await self._client.files.create(file=f, purpose="batch")
+                file_response = await self._upload_file_with_rate_limit(f, "batch")
 
-            # Create batch
-            batch_response = await self._client.batches.create(
-                input_file_id=file_response.id,
-                endpoint="/v1/embeddings",
-                completion_window="24h",
+            # Create batch with rate limiting
+            batch_response = await self._create_batch_with_rate_limit(
+                file_response.id, "/v1/embeddings", "24h"
             )
 
             logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")
@@ -231,3 +277,36 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                     os.unlink(temp_file)
                 except OSError:
                     pass  # File already deleted or inaccessible
+
+    @rate_limited("openai", "files")
+    async def _upload_file_with_rate_limit(self, file: Any, purpose: str) -> Any:
+        """Upload file with rate limiting.
+
+        Args:
+            file: File object to upload
+            purpose: Purpose of the file ("batch")
+
+        Returns:
+            File response from OpenAI
+        """
+        return await self._client.files.create(file=file, purpose=purpose)
+
+    @rate_limited("openai", "batches")
+    async def _create_batch_with_rate_limit(
+        self, input_file_id: str, endpoint: str, completion_window: str
+    ) -> Any:
+        """Create batch with rate limiting.
+
+        Args:
+            input_file_id: ID of uploaded file
+            endpoint: API endpoint for batch
+            completion_window: Time window for completion
+
+        Returns:
+            Batch response from OpenAI
+        """
+        return await self._client.batches.create(
+            input_file_id=input_file_id,
+            endpoint=endpoint,
+            completion_window=completion_window,
+        )

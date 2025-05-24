@@ -108,12 +108,15 @@ class EmbeddingManager:
         """Generate embeddings with smart provider selection.
 
         Args:
-            texts: List of texts to embed
-            quality_tier: Optional quality tier for selection
-            provider_name: Optional specific provider name
+            texts: Text strings to embed
+            quality_tier: Quality tier (FAST, BALANCED, BEST) for auto-selection
+            provider_name: Explicit provider ("openai" or "fastembed")
 
         Returns:
-            List of embedding vectors
+            List of embedding vectors in same order as input
+
+        Raises:
+            EmbeddingServiceError: If manager not initialized or provider fails
         """
         if not self._initialized:
             raise EmbeddingServiceError("Manager not initialized")
@@ -213,15 +216,18 @@ class EmbeddingManager:
         quality_required: bool = False,
         budget_limit: float | None = None,
     ) -> str:
-        """Get optimal provider based on requirements.
+        """Select optimal provider based on text size and constraints.
 
         Args:
-            text_length: Total text length
+            text_length: Total character count (estimates ~4 chars per token)
             quality_required: Whether high quality is required
-            budget_limit: Optional budget limit
+            budget_limit: Optional maximum cost in dollars
 
         Returns:
-            Optimal provider name
+            Optimal provider name ("openai" or "fastembed")
+
+        Raises:
+            EmbeddingServiceError: If no provider meets constraints
         """
         if not self._initialized:
             raise EmbeddingServiceError("Manager not initialized")

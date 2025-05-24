@@ -6,6 +6,7 @@ from typing import Any
 from firecrawl import FirecrawlApp
 
 from ..errors import CrawlServiceError
+from ..rate_limiter import rate_limited
 from .base import CrawlProvider
 
 logger = logging.getLogger(__name__)
@@ -61,10 +62,7 @@ class FirecrawlProvider(CrawlProvider):
 
         try:
             # Firecrawl SDK is synchronous, but we're in async context
-            result = self._client.scrape_url(
-                url=url,
-                formats=formats,
-            )
+            result = await self._scrape_url_with_rate_limit(url, formats)
 
             # Process result
             if result.get("success", False):
@@ -85,10 +83,31 @@ class FirecrawlProvider(CrawlProvider):
                 }
 
         except Exception as e:
-            logger.error(f"Failed to scrape {url}: {e}")
+            logger.error(f"Failed to scrape {url}: {e}", exc_info=True)
+
+            error_msg = str(e).lower()
+            if "rate limit" in error_msg:
+                logger.warning(f"Firecrawl rate limit hit for {url}")
+                error_detail = "Rate limit exceeded. Please try again later."
+            elif "invalid api key" in error_msg or "unauthorized" in error_msg:
+                logger.error("Invalid Firecrawl API key")
+                error_detail = (
+                    "Invalid API key. Please check your Firecrawl configuration."
+                )
+            elif "timeout" in error_msg:
+                logger.warning(f"Timeout while scraping {url}")
+                error_detail = (
+                    "Request timed out. The page may be too large or slow to load."
+                )
+            elif "not found" in error_msg or "404" in error_msg:
+                logger.info(f"Page not found: {url}")
+                error_detail = "Page not found (404)."
+            else:
+                error_detail = f"Scraping failed: {e!s}"
+
             return {
                 "success": False,
-                "error": str(e),
+                "error": error_detail,
                 "content": "",
                 "metadata": {},
                 "url": url,
@@ -117,10 +136,8 @@ class FirecrawlProvider(CrawlProvider):
 
         try:
             # Start async crawl
-            crawl_result = self._client.async_crawl_url(
-                url=url,
-                limit=max_pages,
-                scrape_options={"formats": formats},
+            crawl_result = await self._async_crawl_url_with_rate_limit(
+                url, max_pages, formats
             )
 
             # Get crawl ID
@@ -246,3 +263,47 @@ class FirecrawlProvider(CrawlProvider):
                 "urls": [],
                 "total": 0,
             }
+
+    @rate_limited("firecrawl", "scrape")
+    async def _scrape_url_with_rate_limit(
+        self, url: str, formats: list[str]
+    ) -> dict[str, Any]:
+        """Scrape URL with rate limiting.
+
+        Args:
+            url: URL to scrape
+            formats: Output formats
+
+        Returns:
+            Firecrawl response
+        """
+        # Run synchronous method in thread pool to avoid blocking
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._client.scrape_url, url, formats)
+
+    @rate_limited("firecrawl", "crawl")
+    async def _async_crawl_url_with_rate_limit(
+        self, url: str, max_pages: int, formats: list[str]
+    ) -> dict[str, Any]:
+        """Start crawl with rate limiting.
+
+        Args:
+            url: Starting URL
+            max_pages: Maximum pages
+            formats: Output formats
+
+        Returns:
+            Crawl job info
+        """
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            self._client.async_crawl_url,
+            url,
+            max_pages,
+            {"formats": formats},
+        )
