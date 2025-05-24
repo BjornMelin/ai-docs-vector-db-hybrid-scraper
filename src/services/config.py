@@ -1,9 +1,13 @@
-"""Service configuration models using Pydantic v2."""
+"""Service configuration adapter using the unified configuration system.
+
+This module provides backward compatibility for services while using the new
+unified configuration system under the hood.
+"""
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import field_validator
+from src.config import get_config
 
 
 class ServiceConfig(BaseModel):
@@ -13,8 +17,54 @@ class ServiceConfig(BaseModel):
 
 
 class APIConfig(BaseModel):
-    """Direct API configuration with validation."""
+    """Direct API configuration with validation - adapter for unified config."""
 
+    # This class now acts as an adapter to the unified configuration
+    model_config = ConfigDict(extra="forbid")
+
+    @classmethod
+    def from_unified_config(cls) -> "APIConfig":
+        """Create APIConfig from unified configuration."""
+        config = get_config()
+
+        return cls(
+            # Qdrant
+            qdrant_url=config.qdrant.url,
+            qdrant_api_key=config.qdrant.api_key,
+            qdrant_timeout=config.qdrant.timeout,
+            qdrant_prefer_grpc=config.qdrant.prefer_grpc,
+            # OpenAI
+            openai_api_key=config.openai.api_key,
+            openai_model=config.openai.model,
+            openai_dimensions=config.openai.dimensions,
+            openai_batch_size=config.openai.batch_size,
+            # Firecrawl
+            firecrawl_api_key=config.firecrawl.api_key,
+            # Local models
+            enable_local_embeddings=config.embedding_provider == "fastembed",
+            local_embedding_model=config.fastembed.model,
+            # Provider preferences
+            preferred_embedding_provider=config.embedding_provider,
+            preferred_crawl_provider=config.crawl_provider,
+            # Performance
+            max_concurrent_requests=config.performance.max_concurrent_requests,
+            request_timeout=config.performance.request_timeout,
+            # Retry settings
+            max_retries=config.performance.max_retries,
+            retry_base_delay=config.performance.retry_base_delay,
+            # Cache settings
+            enable_caching=config.cache.enable_caching,
+            enable_local_cache=config.cache.enable_local_cache,
+            enable_redis_cache=config.cache.enable_redis_cache,
+            redis_url=config.cache.redis_url,
+            cache_ttl_embeddings=config.cache.ttl_embeddings,
+            cache_ttl_crawl=config.cache.ttl_crawl,
+            cache_ttl_queries=config.cache.ttl_queries,
+            local_cache_max_size=config.cache.local_max_size,
+            local_cache_max_memory_mb=config.cache.local_max_memory_mb,
+        )
+
+    # Keep the same field definitions for backward compatibility
     # Qdrant
     qdrant_url: str = Field(default="http://localhost:6333")
     qdrant_api_key: str | None = Field(default=None)
@@ -56,56 +106,3 @@ class APIConfig(BaseModel):
     cache_ttl_queries: int = Field(default=7200, ge=0)  # 2 hours
     local_cache_max_size: int = Field(default=1000, gt=0)
     local_cache_max_memory_mb: float = Field(default=100.0, gt=0)
-
-    model_config = ConfigDict(extra="forbid")
-
-    @field_validator("qdrant_url")
-    @classmethod
-    def validate_qdrant_url(cls, v: str) -> str:
-        """Validate Qdrant URL format."""
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("Qdrant URL must start with http:// or https://")
-        return v.rstrip("/")
-
-    @field_validator("openai_api_key")
-    @classmethod
-    def validate_openai_key(cls, v: str | None) -> str | None:
-        """Validate OpenAI API key format."""
-        if v and not v.startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
-        return v
-
-    @field_validator("openai_model")
-    @classmethod
-    def validate_openai_model(cls, v: str) -> str:
-        """Validate OpenAI model name."""
-        valid_models = {
-            "text-embedding-3-small",
-            "text-embedding-3-large",
-            "text-embedding-ada-002",
-        }
-        if v not in valid_models:
-            raise ValueError(f"Invalid OpenAI model. Must be one of: {valid_models}")
-        return v
-
-    @field_validator("preferred_embedding_provider")
-    @classmethod
-    def validate_embedding_provider(cls, v: str) -> str:
-        """Validate embedding provider name."""
-        valid_providers = {"openai", "fastembed"}
-        if v not in valid_providers:
-            raise ValueError(
-                f"Invalid embedding provider. Must be one of: {valid_providers}"
-            )
-        return v
-
-    @field_validator("preferred_crawl_provider")
-    @classmethod
-    def validate_crawl_provider(cls, v: str) -> str:
-        """Validate crawl provider name."""
-        valid_providers = {"firecrawl", "crawl4ai"}
-        if v not in valid_providers:
-            raise ValueError(
-                f"Invalid crawl provider. Must be one of: {valid_providers}"
-            )
-        return v
