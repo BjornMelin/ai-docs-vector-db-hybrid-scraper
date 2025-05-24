@@ -49,6 +49,7 @@ Refactor the current MCP-proxying approach to use direct API/SDK integration for
 ## Current Architecture Issues
 
 ### MCP Proxying Problems
+
 - **Performance Overhead**: Double serialization (API → MCP → our server)
 - **Error Translation**: Complex error mapping across MCP boundaries
 - **Dependency Complexity**: Multiple MCP clients for simple API calls
@@ -56,6 +57,7 @@ Refactor the current MCP-proxying approach to use direct API/SDK integration for
 - **Rate Limiting**: MCP server limits vs API limits mismatch
 
 ### Current Dependencies
+
 ```python
 # Current MCP-based approach
 mcp-qdrant-server  # For vector operations
@@ -66,6 +68,7 @@ mcp-openai         # For embeddings
 ## Target Architecture
 
 ### Direct SDK Integration
+
 ```python
 # Direct SDK approach
 qdrant-client      # Official Python SDK
@@ -75,6 +78,7 @@ fastembed          # Local embeddings
 ```
 
 ### Performance Benefits
+
 - **50-80% faster** API calls (no MCP overhead)
 - **Simplified error handling** (direct API responses)
 - **Better rate limiting** (direct API limits)
@@ -85,6 +89,7 @@ fastembed          # Local embeddings
 ### Phase 1: Qdrant Direct Integration
 
 #### Replace MCP Qdrant with Direct SDK
+
 ```python
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -123,6 +128,7 @@ class QdrantService:
 ```
 
 #### Advanced Search with Query API
+
 ```python
 async def hybrid_search(
     self,
@@ -185,6 +191,7 @@ async def hybrid_search(
 ### Phase 2: Embedding Provider Integration
 
 #### OpenAI Direct Integration
+
 ```python
 from openai import AsyncOpenAI
 
@@ -221,6 +228,7 @@ class OpenAIEmbeddingProvider:
 ```
 
 #### FastEmbed Local Integration
+
 ```python
 from fastembed import TextEmbedding
 
@@ -239,6 +247,7 @@ class FastEmbedProvider:
 ```
 
 #### Smart Provider Selection
+
 ```python
 class EmbeddingManager:
     def __init__(self, config: EmbeddingConfig):
@@ -275,6 +284,7 @@ class EmbeddingManager:
 ### Phase 3: Firecrawl Integration
 
 #### Direct Firecrawl SDK
+
 ```python
 from firecrawl import FirecrawlApp
 
@@ -348,6 +358,7 @@ class FirecrawlService:
 ### Phase 4: Provider Abstraction Layer
 
 #### Unified Interface
+
 ```python
 from abc import ABC, abstractmethod
 
@@ -397,6 +408,7 @@ class CrawlManager:
 ## Configuration Updates
 
 ### New Configuration Schema
+
 ```python
 from pydantic import BaseModel, Field
 
@@ -430,6 +442,7 @@ class APIConfig(BaseModel):
 ```
 
 ### Environment Variables
+
 ```bash
 # Qdrant
 QDRANT_URL=http://localhost:6333
@@ -453,6 +466,7 @@ PREFERRED_CRAWL_PROVIDER=crawl4ai
 ## Error Handling Improvements
 
 ### Direct API Error Handling
+
 ```python
 class APIError(Exception):
     """Base API error."""
@@ -489,6 +503,7 @@ async def handle_api_error(func, *args, **kwargs):
 ## Testing Strategy
 
 ### Unit Tests for Direct APIs
+
 ```python
 import pytest
 from unittest.mock import AsyncMock, patch
@@ -524,6 +539,7 @@ async def test_embedding_generation():
 ```
 
 ### Integration Tests
+
 ```python
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -557,21 +573,25 @@ async def test_full_pipeline():
 ## Migration Strategy
 
 ### Phase 1: Parallel Implementation (Week 1)
+
 - Implement direct SDK services alongside MCP
 - Add feature flags for switching between approaches
 - Create comprehensive tests for new implementations
 
 ### Phase 2: MCP Server Updates (Week 2)
+
 - Update MCP server to use direct SDKs internally
 - Maintain MCP interface for Claude Desktop/Code
 - Remove MCP client dependencies
 
 ### Phase 3: Configuration Migration (Week 3)
+
 - Update configuration schema
 - Create migration script for existing configurations
 - Update documentation and examples
 
 ### Phase 4: Cleanup (Week 3)
+
 - Remove unused MCP client code
 - Update dependencies in pyproject.toml
 - Final testing and documentation updates
@@ -579,17 +599,20 @@ async def test_full_pipeline():
 ## Performance Expectations
 
 ### Speed Improvements
+
 - **Qdrant operations**: 50-70% faster (no MCP serialization)
 - **Embedding generation**: 30-50% faster (direct batching)
 - **Crawling operations**: 40-60% faster (direct API calls)
 - **Overall pipeline**: 45-65% faster end-to-end
 
 ### Resource Usage
+
 - **Memory**: 30-40% reduction (no MCP overhead)
 - **CPU**: 20-30% reduction (fewer serialization steps)
 - **Network**: 25-35% reduction (direct API calls)
 
 ### Error Recovery
+
 - **Faster debugging**: Direct error traces
 - **Better retry logic**: Provider-specific strategies
 - **Improved monitoring**: Direct API metrics
@@ -597,6 +620,7 @@ async def test_full_pipeline():
 ## Dependencies Update
 
 ### Remove MCP Clients
+
 ```toml
 # Remove these dependencies
 # mcp-qdrant-server
@@ -612,6 +636,7 @@ fastembed = "^0.3.6"
 ```
 
 ### Installation Script
+
 ```bash
 #!/bin/bash
 # Remove old MCP dependencies
@@ -627,42 +652,49 @@ echo "Updated to direct API/SDK integration"
 ## Official Documentation References
 
 ### Qdrant Client
-- **Python SDK**: https://qdrant.tech/documentation/frameworks/python/
-- **Query API**: https://qdrant.tech/documentation/concepts/query-api/
-- **Quantization**: https://qdrant.tech/documentation/guides/quantization/
-- **Hybrid Search**: https://qdrant.tech/documentation/tutorials/hybrid-search/
+
+- **Python SDK**: <https://qdrant.tech/documentation/frameworks/python/>
+- **Query API**: <https://qdrant.tech/documentation/concepts/query-api/>
+- **Quantization**: <https://qdrant.tech/documentation/guides/quantization/>
+- **Hybrid Search**: <https://qdrant.tech/documentation/tutorials/hybrid-search/>
 
 ### OpenAI API
-- **Python SDK**: https://github.com/openai/openai-python
-- **Embeddings**: https://platform.openai.com/docs/guides/embeddings
-- **Batch API**: https://platform.openai.com/docs/guides/batch
-- **Best Practices**: https://platform.openai.com/docs/guides/production-best-practices
+
+- **Python SDK**: <https://github.com/openai/openai-python>
+- **Embeddings**: <https://platform.openai.com/docs/guides/embeddings>
+- **Batch API**: <https://platform.openai.com/docs/guides/batch>
+- **Best Practices**: <https://platform.openai.com/docs/guides/production-best-practices>
 
 ### Firecrawl
-- **Python SDK**: https://docs.firecrawl.dev/sdks/python
-- **API Reference**: https://docs.firecrawl.dev/api-reference
-- **Scraping Options**: https://docs.firecrawl.dev/features/scrape
+
+- **Python SDK**: <https://docs.firecrawl.dev/sdks/python>
+- **API Reference**: <https://docs.firecrawl.dev/api-reference>
+- **Scraping Options**: <https://docs.firecrawl.dev/features/scrape>
 
 ### FastEmbed
-- **Documentation**: https://qdrant.github.io/fastembed/
-- **Models**: https://qdrant.github.io/fastembed/examples/Supported_Models/
-- **Performance**: https://qdrant.github.io/fastembed/benchmarks/
+
+- **Documentation**: <https://qdrant.github.io/fastembed/>
+- **Models**: <https://qdrant.github.io/fastembed/examples/Supported_Models/>
+- **Performance**: <https://qdrant.github.io/fastembed/benchmarks/>
 
 ## Success Criteria
 
 ### Performance Metrics
+
 - [ ] 50%+ faster API operations
 - [ ] 30%+ memory usage reduction
 - [ ] 90%+ test coverage maintained
 - [ ] Zero functionality regression
 
 ### Code Quality
+
 - [ ] Remove all MCP client dependencies
 - [ ] Eliminate code duplication
 - [ ] Maintain type safety
 - [ ] Comprehensive error handling
 
 ### Documentation
+
 - [ ] Updated configuration guides
 - [ ] Migration documentation
 - [ ] Performance benchmarks
