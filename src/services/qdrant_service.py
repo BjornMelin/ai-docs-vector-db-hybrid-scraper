@@ -438,19 +438,25 @@ class QdrantService(BaseService):
             for col in collections.collections:
                 try:
                     info = await self.get_collection_info(col.name)
-                    details.append({
-                        "name": col.name,
-                        "vector_count": info.get("vectors_count", 0),
-                        "indexed_count": info.get("points_count", 0),
-                        "status": info.get("status", "unknown"),
-                        "config": info.get("config", {}),
-                    })
+                    details.append(
+                        {
+                            "name": col.name,
+                            "vector_count": info.get("vectors_count", 0),
+                            "indexed_count": info.get("points_count", 0),
+                            "status": info.get("status", "unknown"),
+                            "config": info.get("config", {}),
+                        }
+                    )
                 except Exception as e:
-                    logger.warning(f"Failed to get details for collection {col.name}: {e}")
-                    details.append({
-                        "name": col.name,
-                        "error": str(e),
-                    })
+                    logger.warning(
+                        f"Failed to get details for collection {col.name}: {e}"
+                    )
+                    details.append(
+                        {
+                            "name": col.name,
+                            "error": str(e),
+                        }
+                    )
 
             return details
         except Exception as e:
@@ -477,9 +483,7 @@ class QdrantService(BaseService):
 
             # Trigger optimization by updating collection aliases
             # This is a no-op that forces Qdrant to check optimization
-            await self._client.update_collection_aliases(
-                change_aliases_operations=[]
-            )
+            await self._client.update_collection_aliases(change_aliases_operations=[])
 
             logger.info(f"Triggered optimization for collection: {collection_name}")
             return True
