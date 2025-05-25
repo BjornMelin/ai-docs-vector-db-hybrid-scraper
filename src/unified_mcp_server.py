@@ -42,6 +42,7 @@ try:
     from services.crawling.manager import CrawlManager
     from services.embeddings.manager import EmbeddingManager
     from services.qdrant_service import QdrantService
+    from services.project_storage import ProjectStorage
 except ImportError:
     from .chunking import ChunkingConfig
     from .chunking import chunk_content
@@ -55,6 +56,7 @@ except ImportError:
     from .services.crawling.manager import CrawlManager
     from .services.embeddings.manager import EmbeddingManager
     from .services.qdrant_service import QdrantService
+    from .services.project_storage import ProjectStorage
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -150,7 +152,8 @@ class UnifiedServiceManager(BaseService):
         self.crawl_manager: CrawlManager | None = None
         self.qdrant_service: QdrantService | None = None
         self.cache_manager: CacheManager | None = None
-        self.projects: dict[str, dict[str, Any]] = {}
+        self.project_storage: ProjectStorage | None = None
+        self.projects: dict[str, dict[str, Any]] = {}  # Keep for backward compatibility
         self._initialized = False
 
     async def initialize(self):
@@ -181,12 +184,19 @@ class UnifiedServiceManager(BaseService):
                     CacheType.QUERIES: self.config.cache.ttl_queries,
                 }
             )
+            
+            # Initialize project storage
+            self.project_storage = ProjectStorage()
 
             # Initialize each service
             await self.embedding_manager.initialize()
             await self.crawl_manager.initialize()
             await self.qdrant_service.initialize()
             await self.cache_manager.initialize()
+            await self.project_storage.initialize()
+            
+            # Load projects from storage
+            self.projects = await self.project_storage.load_projects()
 
             self._initialized = True
             logger.info("All services initialized successfully")
@@ -205,6 +215,8 @@ class UnifiedServiceManager(BaseService):
             await self.qdrant_service.cleanup()
         if self.cache_manager:
             await self.cache_manager.cleanup()
+        if self.project_storage:
+            await self.project_storage.cleanup()
 
         self._initialized = False
         logger.info("All services cleaned up")
@@ -654,8 +666,9 @@ async def create_project(request: ProjectRequest) -> dict[str, Any]:
         "urls": [],
     }
 
-    # Store project
+    # Store project in both memory and persistent storage
     service_manager.projects[project_id] = project
+    await service_manager.project_storage.save_project(project_id, project)
 
     # Create collection with quality-based config
     vector_size = 1536 if request.quality_tier == "premium" else 384
@@ -678,6 +691,12 @@ async def create_project(request: ProjectRequest) -> dict[str, Any]:
         batch_result = await add_documents_batch(batch_request)
         project["urls"] = request.urls
         project["document_count"] = len(batch_result["successful"])
+        
+        # Update persistent storage
+        await service_manager.project_storage.update_project(project_id, {
+            "urls": project["urls"],
+            "document_count": project["document_count"]
+        })
 
     return project
 
@@ -736,6 +755,75 @@ async def search_project(
     )
 
     return await search_documents(request)
+
+
+@mcp.tool()
+async def update_project(
+    project_id: str,
+    name: str | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """
+    Update project metadata.
+    
+    Updates the name and/or description of an existing project.
+    """
+    await service_manager.initialize()
+    
+    project = service_manager.projects.get(project_id)
+    if not project:
+        raise ValueError(f"Project {project_id} not found")
+    
+    updates = {}
+    if name is not None:
+        project["name"] = name
+        updates["name"] = name
+    if description is not None:
+        project["description"] = description
+        updates["description"] = description
+        
+    if updates:
+        await service_manager.project_storage.update_project(project_id, updates)
+        
+    return project
+
+
+@mcp.tool()
+async def delete_project(project_id: str, delete_collection: bool = True) -> dict[str, str]:
+    """
+    Delete a project and optionally its collection.
+    
+    Args:
+        project_id: Project ID to delete
+        delete_collection: Whether to delete the associated Qdrant collection
+        
+    Returns:
+        Status message
+    """
+    await service_manager.initialize()
+    
+    project = service_manager.projects.get(project_id)
+    if not project:
+        raise ValueError(f"Project {project_id} not found")
+    
+    # Delete collection if requested
+    if delete_collection:
+        try:
+            await service_manager.qdrant_service.delete_collection(project["collection"])
+        except Exception as e:
+            logger.warning(f"Failed to delete collection {project['collection']}: {e}")
+    
+    # Remove from in-memory storage
+    del service_manager.projects[project_id]
+    
+    # Remove from persistent storage
+    await service_manager.project_storage.delete_project(project_id)
+    
+    return {
+        "status": "deleted",
+        "project_id": project_id,
+        "collection_deleted": str(delete_collection)
+    }
 
 
 # Collection Management Tools
