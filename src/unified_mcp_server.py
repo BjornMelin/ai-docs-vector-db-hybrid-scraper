@@ -153,7 +153,6 @@ class UnifiedServiceManager(BaseService):
         self.qdrant_service: QdrantService | None = None
         self.cache_manager: CacheManager | None = None
         self.project_storage: ProjectStorage | None = None
-        self.projects: dict[str, dict[str, Any]] = {}  # Keep for backward compatibility
         self._initialized = False
 
     async def initialize(self):
@@ -162,28 +161,11 @@ class UnifiedServiceManager(BaseService):
             return
 
         try:
-            # Initialize services with proper configuration
-            # For backward compatibility, create APIConfig from UnifiedConfig
-            from services.config import APIConfig
-            api_config = APIConfig.from_unified_config()
-            
-            self.embedding_manager = EmbeddingManager(api_config)
-            self.crawl_manager = CrawlManager(api_config)
-            self.qdrant_service = QdrantService(api_config)
-            
-            # CacheManager uses specific parameters from unified config
-            self.cache_manager = CacheManager(
-                redis_url=self.config.cache.redis_url,
-                enable_local_cache=self.config.cache.enable_local_cache,
-                enable_redis_cache=self.config.cache.enable_redis_cache,
-                local_max_size=self.config.cache.local_max_size,
-                local_max_memory_mb=self.config.cache.local_max_memory_mb,
-                redis_ttl_seconds={
-                    CacheType.EMBEDDINGS: self.config.cache.ttl_embeddings,
-                    CacheType.CRAWL: self.config.cache.ttl_crawl,
-                    CacheType.QUERIES: self.config.cache.ttl_queries,
-                }
-            )
+            # Initialize services directly with unified config
+            self.embedding_manager = EmbeddingManager(self.config)
+            self.crawl_manager = CrawlManager(self.config)
+            self.qdrant_service = QdrantService(self.config)
+            self.cache_manager = CacheManager(self.config)
             
             # Initialize project storage
             self.project_storage = ProjectStorage()

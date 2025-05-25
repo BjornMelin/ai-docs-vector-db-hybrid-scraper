@@ -45,10 +45,10 @@ except ImportError:
     FlagReranker = None
 
 
-from openai import AsyncOpenAI
+# OpenAI client now handled by EmbeddingManager
 from pydantic import BaseModel
 from pydantic import Field
-from qdrant_client import AsyncQdrantClient
+# Qdrant client now handled by QdrantService
 from qdrant_client.models import Distance
 from qdrant_client.models import PointStruct
 from qdrant_client.models import SparseIndexParams
@@ -70,6 +70,12 @@ from .config import get_config
 from .config.models import UnifiedConfig
 from .config.enums import EmbeddingProvider
 from .config.enums import SearchStrategy
+
+# Import service layer
+from .services.embeddings.manager import EmbeddingManager
+from .services.qdrant_service import QdrantService
+from .services.crawling.manager import CrawlManager
+from .services.config import APIConfig
 
 console = Console()
 
@@ -272,16 +278,18 @@ class ModernDocumentationScraper:
     - Firecrawl premium integration
     """
 
-    _fastembed_model: Any = None  # To store lazily initialized FastEmbed model
-    _dense_model: Any = None  # To store lazily initialized dense FastEmbed model
-    _sparse_model: Any = None  # To store lazily initialized sparse FastEmbed model
+    # Embedding models now managed by EmbeddingManager service
 
     def __init__(self, config: ScrapingConfig) -> None:
         self.config = config
-        self.openai_client = AsyncOpenAI(api_key=config.openai_api_key)
-        self.qdrant_client = AsyncQdrantClient(url=config.qdrant_url)
         self.stats = ScrapingStats()
         self.processed_urls: set[str] = set()
+
+        # Initialize service layer
+        api_config = APIConfig.from_unified_config()
+        self.embedding_manager = EmbeddingManager(api_config)
+        self.qdrant_service = QdrantService(api_config)
+        self.crawl_manager = CrawlManager(api_config)
 
         # Enhanced logging setup
         logging.basicConfig(
@@ -305,8 +313,7 @@ class ModernDocumentationScraper:
                     "Firecrawl not available. Install with: pip install firecrawl-py"
                 )
 
-        # Initialize embedding models based on provider
-        self._initialize_embedding_models()
+        # Embedding models initialization now handled by EmbeddingManager
 
         # Initialize enhanced chunker
         self.chunker = EnhancedChunker(config.chunking)
@@ -316,20 +323,21 @@ class ModernDocumentationScraper:
         if config.embedding.enable_reranking:
             self._initialize_reranker()
 
-    def _initialize_embedding_models(self) -> None:
-        """Initialize embedding models based on configuration"""
-        if self.config.embedding.provider in [
-            EmbeddingProvider.FASTEMBED,
-            EmbeddingProvider.HYBRID,
-        ]:
-            if TextEmbedding is None:
-                self.logger.warning("FastEmbed not available. Falling back to OpenAI.")
-                self.config.embedding.provider = EmbeddingProvider.OPENAI
-            else:
-                self.logger.info(
-                    "FastEmbed models will be lazily initialized on first use."
-                )
-                # Models lazily initialized for better memory management
+    async def initialize(self) -> None:
+        """Initialize async services"""
+        await self.embedding_manager.initialize()
+        await self.qdrant_service.initialize()
+        await self.crawl_manager.initialize()
+        self.logger.info("All services initialized successfully")
+
+    async def cleanup(self) -> None:
+        """Cleanup async services"""
+        await self.embedding_manager.cleanup()
+        await self.qdrant_service.cleanup()
+        await self.crawl_manager.cleanup()
+        self.logger.info("All services cleaned up successfully")
+
+    # Embedding model initialization removed - now handled by EmbeddingManager service
 
     def _initialize_reranker(self) -> None:
         """Initialize reranker for advanced reranking capabilities"""
@@ -359,56 +367,25 @@ class ModernDocumentationScraper:
     async def setup_collection(self) -> None:
         """Setup advanced Qdrant collection with hybrid search capabilities"""
         try:
-            collections_response = await self.qdrant_client.get_collections()
-            collection_exists = any(
-                c.name == self.config.collection_name
-                for c in collections_response.collections
-            )
+            collections = await self.qdrant_service.list_collections()
+            collection_exists = self.config.collection_name in collections
 
             if not collection_exists:
                 # Determine vector size based on embedding model
                 vector_size = self._get_vector_size()
-                quantization_enabled = self.config.embedding.enable_quantization
 
-                # Advanced: Hybrid search configuration
-                if self.config.embedding.search_strategy == SearchStrategy.HYBRID:
-                    vectors_config = {
-                        "dense": VectorParams(
-                            size=vector_size,
-                            distance=Distance.COSINE,
-                            on_disk=bool(quantization_enabled),
-                        ),
-                    }
-
-                    sparse_vectors_config = {
-                        "sparse": SparseVectorParams(
-                            index=SparseIndexParams(
-                                on_disk=bool(quantization_enabled),
-                            )
-                        ),
-                    }
-
-                    await self.qdrant_client.create_collection(
-                        collection_name=self.config.collection_name,
-                        vectors_config=vectors_config,  # type: ignore
-                        sparse_vectors_config=sparse_vectors_config,  # type: ignore
-                    )
-                    self.logger.info(
-                        f"Created hybrid collection: {self.config.collection_name}"
-                    )
-                else:
-                    # Traditional dense-only collection
-                    await self.qdrant_client.create_collection(
-                        collection_name=self.config.collection_name,
-                        vectors_config=VectorParams(
-                            size=vector_size,
-                            distance=Distance.COSINE,
-                            on_disk=bool(quantization_enabled),
-                        ),
-                    )
-                    self.logger.info(
-                        f"Created dense collection: {self.config.collection_name}"
-                    )
+                # Create collection using service layer
+                await self.qdrant_service.create_collection(
+                    collection_name=self.config.collection_name,
+                    vector_size=vector_size,
+                    distance="Cosine",
+                    enable_sparse=self.config.embedding.search_strategy == SearchStrategy.HYBRID,
+                    on_disk=self.config.embedding.enable_quantization
+                )
+                self.logger.info(
+                    f"Created collection '{self.config.collection_name}' with "
+                    f"{'hybrid' if self.config.embedding.search_strategy == SearchStrategy.HYBRID else 'dense'} search"
+                )
             else:
                 self.logger.info(f"Collection exists: {self.config.collection_name}")
 
@@ -440,75 +417,24 @@ class ModernDocumentationScraper:
             # Truncate to avoid API limits
             text_to_embed = text[:8000]
 
-            if self.config.embedding.provider == EmbeddingProvider.OPENAI:
-                return await self._create_openai_embedding(text_to_embed)
-            if self.config.embedding.provider == EmbeddingProvider.FASTEMBED:
-                return await self._create_fastembed_embedding(text_to_embed)
-            if self.config.embedding.provider == EmbeddingProvider.HYBRID:
-                return await self._create_hybrid_embedding(text_to_embed)
-            raise ValueError(
-                f"Unknown embedding provider: {self.config.embedding.provider}"
-            )
+            # Use embedding manager to handle all providers
+            embeddings = await self.embedding_manager.create_embeddings([text_to_embed])
+            
+            if not embeddings:
+                return [], None
+                
+            # Check if sparse embeddings were generated (for hybrid search)
+            if hasattr(self.embedding_manager, '_last_sparse_embeddings'):
+                sparse_data = self.embedding_manager._last_sparse_embeddings
+                return embeddings[0], {"sparse": sparse_data[0] if sparse_data else None}
+            
+            return embeddings[0], None
 
         except Exception as e:
             self.logger.error(f"Embedding creation failed: {e}")
             return [], None
 
-    async def _create_openai_embedding(self, text: str) -> tuple[list[float], None]:
-        """Create OpenAI embedding (research: text-embedding-3-small optimal)"""
-        response = await self.openai_client.embeddings.create(
-            model=self.config.embedding.dense_model.value,
-            input=text,
-        )
-        return response.data[0].embedding, None
-
-    async def _create_fastembed_embedding(self, text: str) -> tuple[list[float], None]:
-        """Create FastEmbed embedding (research: 50% faster than PyTorch)"""
-        if TextEmbedding is None:
-            self.logger.error("FastEmbed TextEmbedding model not available.")
-            raise ImportError(
-                "FastEmbed not available. Install with: pip install fastembed"
-            )
-
-        # Initialize model if not exists
-        if self._fastembed_model is None:
-            self._fastembed_model = TextEmbedding(
-                model_name=self.config.embedding.dense_model.value
-            )
-
-        embeddings = list(self._fastembed_model.embed([text]))
-        return embeddings[0].tolist(), None
-
-    async def _create_hybrid_embedding(
-        self, text: str
-    ) -> tuple[list[float], dict[str, Any]]:
-        """Create hybrid dense+sparse embeddings (research: 8-15% improvement)"""
-        if TextEmbedding is None or SparseTextEmbedding is None:
-            self.logger.error("FastEmbed models for hybrid search not available.")
-            raise ImportError("FastEmbed not available for hybrid search")
-
-        # Initialize models if not exists
-        if self._dense_model is None:
-            self._dense_model = TextEmbedding(
-                model_name=self.config.embedding.dense_model.value
-            )
-
-        if self._sparse_model is None:
-            sparse_model_name = (
-                self.config.embedding.sparse_model or EmbeddingModel.SPLADE_PP_EN_V1
-            ).value
-            self._sparse_model = SparseTextEmbedding(model_name=sparse_model_name)
-
-        # Generate both embeddings
-        dense_embeddings_result = list(self._dense_model.embed([text]))
-        sparse_embeddings_result = list(self._sparse_model.embed([text]))
-
-        sparse_data = {
-            "indices": sparse_embeddings_result[0].indices.tolist(),
-            "values": sparse_embeddings_result[0].values.tolist(),
-        }
-
-        return dense_embeddings_result[0].tolist(), sparse_data
+    # Old embedding methods removed - now using service layer through EmbeddingManager
 
     def rerank_results(
         self, query: str, passages: list[dict[str, Any]]
@@ -775,7 +701,7 @@ class ModernDocumentationScraper:
 
                     # Batch upsert for efficiency
                     if points_to_upsert:
-                        await self.qdrant_client.upsert(
+                        await self.qdrant_service.upsert_points(
                             collection_name=self.config.collection_name,
                             points=points_to_upsert,
                         )
@@ -1080,6 +1006,9 @@ async def main() -> None:
     scraper_instance = ModernDocumentationScraper(current_config)
 
     try:
+        # Initialize services
+        await scraper_instance.initialize()
+        
         # Load documentation sites from unified config
         unified_config = get_config()
         sites_to_scrape = unified_config.documentation_sites if unified_config.documentation_sites else ESSENTIAL_SITES
@@ -1117,6 +1046,9 @@ async def main() -> None:
         console.print(f"\n❌ Scraping failed: {e}", style="red")
         scraper_instance.display_comprehensive_stats()
         sys.exit(1)
+    finally:
+        # Cleanup services
+        await scraper_instance.cleanup()
 
 
 if __name__ == "__main__":
