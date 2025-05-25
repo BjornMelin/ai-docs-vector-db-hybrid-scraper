@@ -16,10 +16,10 @@ from rich.console import Console
 from rich.table import Table
 
 # Import unified configuration and service layer
-from config import get_config
-from services.config import APIConfig
-from services.embeddings.manager import EmbeddingManager
-from services.qdrant_service import QdrantService
+from .config import get_config
+from .services.config import APIConfig
+from .services.embeddings.manager import EmbeddingManager
+from .services.qdrant_service import QdrantService
 
 console = Console()
 

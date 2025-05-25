@@ -12,8 +12,8 @@ from src.config import UnifiedConfig
 from src.config import get_config
 from src.config import reset_config
 from src.config import set_config
-from src.config_loader import ConfigLoader
-from src.config_validator import ConfigValidator
+from src.config.loader import ConfigLoader
+from src.config.validator import ConfigValidator
 
 
 class TestUnifiedConfig:
