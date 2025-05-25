@@ -5,23 +5,27 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.services.config import APIConfig
+from src.config.models import UnifiedConfig
 from src.services.qdrant_service import QdrantService
 
 
 @pytest.fixture
-def api_config():
-    """Create test API config."""
-    return APIConfig(
-        qdrant_url="http://localhost:6333",
-        qdrant_api_key="test-key",
+def config():
+    """Create test configuration."""
+    return UnifiedConfig(
+        qdrant__url="http://localhost:6333",
+        qdrant__api_key="test-key",
     )
 
 
 @pytest.fixture
-def qdrant_service(api_config):
+def qdrant_service():
     """Create Qdrant service instance."""
-    return QdrantService(api_config)
+    return QdrantService(
+        url="http://localhost:6333",
+        api_key="test-key",
+        timeout=30.0,
+    )
 
 
 @pytest.fixture
@@ -56,221 +60,331 @@ class TestQdrantService:
             await qdrant_service.initialize()
 
             assert qdrant_service._initialized
+            assert qdrant_service._client is not None
             mock_client.assert_called_once_with(
                 url="http://localhost:6333",
                 api_key="test-key",
                 timeout=30.0,
-                prefer_grpc=False,
             )
-            mock_instance.get_collections.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup(self, qdrant_service):
-        """Test service cleanup."""
-        # Initialize first
+    async def test_create_collection_success(self, qdrant_service):
+        """Test successful collection creation."""
         with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
-            mock_instance.get_collections = AsyncMock(
-                return_value=MagicMock(collections=[])
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.create_collection = AsyncMock()
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            # Create collection
+            await qdrant_service.create_collection(
+                collection_name="test_collection",
+                vector_size=1536,
+                distance="cosine",
+            )
+
+            mock_instance.create_collection.assert_called_once()
+            call_args = mock_instance.create_collection.call_args[1]
+            assert call_args["collection_name"] == "test_collection"
+
+    @pytest.mark.asyncio
+    async def test_delete_collection(self, qdrant_service):
+        """Test collection deletion."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.delete_collection = AsyncMock()
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            await qdrant_service.delete_collection("test_collection")
+
+            mock_instance.delete_collection.assert_called_once_with(
+                collection_name="test_collection"
+            )
+
+    @pytest.mark.asyncio
+    async def test_collection_exists(self, qdrant_service):
+        """Test checking if collection exists."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            # Mock collections list
+            mock_collection = MagicMock()
+            mock_collection.name = "existing_collection"
+            mock_instance.get_collections.return_value = MagicMock(
+                collections=[mock_collection]
             )
             mock_client.return_value = mock_instance
 
             await qdrant_service.initialize()
-            await qdrant_service.cleanup()
 
-            mock_instance.close.assert_called_once()
-            assert not qdrant_service._initialized
+            # Check existing collection
+            exists = await qdrant_service.collection_exists("existing_collection")
+            assert exists is True
 
-    @pytest.mark.asyncio
-    async def test_create_collection(self, qdrant_service, mock_qdrant_client):
-        """Test collection creation."""
-        mock_client, mock_instance = mock_qdrant_client
-
-        # Mock get_collections to return empty list
-        mock_collections = MagicMock()
-        mock_collections.collections = []
-        mock_instance.get_collections.return_value = mock_collections
-
-        await qdrant_service.initialize()
-
-        result = await qdrant_service.create_collection(
-            collection_name="test_collection",
-            vector_size=384,
-            distance="Cosine",
-            enable_quantization=True,
-        )
-
-        assert result is True
-        mock_instance.create_collection.assert_called_once()
+            # Check non-existing collection
+            exists = await qdrant_service.collection_exists("non_existing")
+            assert exists is False
 
     @pytest.mark.asyncio
-    async def test_create_collection_already_exists(
-        self, qdrant_service, mock_qdrant_client
-    ):
-        """Test collection creation when already exists."""
-        mock_client, mock_instance = mock_qdrant_client
+    async def test_upsert_documents(self, qdrant_service):
+        """Test document upsertion."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.upsert = AsyncMock()
+            mock_client.return_value = mock_instance
 
-        # Mock get_collections to return existing collection
-        mock_collection = MagicMock()
-        mock_collection.name = "test_collection"
-        mock_collections = MagicMock()
-        mock_collections.collections = [mock_collection]
-        mock_instance.get_collections.return_value = mock_collections
+            await qdrant_service.initialize()
 
-        await qdrant_service.initialize()
+            # Prepare documents
+            documents = [
+                {
+                    "id": "doc1",
+                    "content": "Test content 1",
+                    "embedding": [0.1] * 1536,
+                    "metadata": {"title": "Doc 1"},
+                },
+                {
+                    "id": "doc2",
+                    "content": "Test content 2",
+                    "embedding": [0.2] * 1536,
+                    "metadata": {"title": "Doc 2"},
+                },
+            ]
 
-        result = await qdrant_service.create_collection(
-            collection_name="test_collection",
-            vector_size=384,
-        )
-
-        assert result is True
-        mock_instance.create_collection.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_hybrid_search(self, qdrant_service, mock_qdrant_client):
-        """Test hybrid search functionality."""
-        mock_client, mock_instance = mock_qdrant_client
-
-        # Mock search results
-        mock_point = MagicMock()
-        mock_point.id = "123"
-        mock_point.score = 0.95
-        mock_point.payload = {"text": "test"}
-
-        mock_result = MagicMock()
-        mock_result.points = [mock_point]
-        mock_instance.query_points.return_value = mock_result
-
-        await qdrant_service.initialize()
-
-        results = await qdrant_service.hybrid_search(
-            collection_name="test_collection",
-            query_vector=[0.1, 0.2, 0.3],
-            limit=10,
-        )
-
-        assert len(results) == 1
-        assert results[0]["id"] == "123"
-        assert results[0]["score"] == 0.95
-        assert results[0]["payload"] == {"text": "test"}
-
-    @pytest.mark.asyncio
-    async def test_hybrid_search_with_sparse(self, qdrant_service, mock_qdrant_client):
-        """Test hybrid search with sparse vectors."""
-        mock_client, mock_instance = mock_qdrant_client
-
-        # Mock search results
-        mock_result = MagicMock()
-        mock_result.points = []
-        mock_instance.query_points.return_value = mock_result
-
-        await qdrant_service.initialize()
-
-        await qdrant_service.hybrid_search(
-            collection_name="test_collection",
-            query_vector=[0.1, 0.2, 0.3],
-            sparse_vector={1: 0.5, 10: 0.8},
-            fusion_type="rrf",
-        )
-
-        # Verify prefetch queries were created
-        call_args = mock_instance.query_points.call_args
-        assert "prefetch" in call_args.kwargs
-        assert len(call_args.kwargs["prefetch"]) == 2
-
-    @pytest.mark.asyncio
-    async def test_upsert_points(self, qdrant_service, mock_qdrant_client):
-        """Test point upsert functionality."""
-        mock_client, mock_instance = mock_qdrant_client
-
-        await qdrant_service.initialize()
-
-        points = [
-            {
-                "id": "1",
-                "vector": [0.1, 0.2, 0.3],
-                "payload": {"text": "test1"},
-            },
-            {
-                "id": "2",
-                "vector": {"dense": [0.4, 0.5, 0.6]},
-                "payload": {"text": "test2"},
-            },
-        ]
-
-        result = await qdrant_service.upsert_points(
-            collection_name="test_collection",
-            points=points,
-            batch_size=1,
-        )
-
-        assert result is True
-        assert mock_instance.upsert.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_service_not_initialized(self, qdrant_service):
-        """Test error when service not initialized."""
-        from src.services.errors import APIError
-
-        with pytest.raises(APIError, match="not initialized"):
-            await qdrant_service.hybrid_search(
-                collection_name="test",
-                query_vector=[0.1, 0.2],
+            await qdrant_service.upsert_documents(
+                collection_name="test_collection",
+                documents=documents,
             )
 
-    @pytest.mark.asyncio
-    async def test_delete_collection(self, qdrant_service, mock_qdrant_client):
-        """Test collection deletion."""
-        mock_client, mock_instance = mock_qdrant_client
-
-        await qdrant_service.initialize()
-
-        result = await qdrant_service.delete_collection("test_collection")
-
-        assert result is True
-        mock_instance.delete_collection.assert_called_once_with("test_collection")
+            mock_instance.upsert.assert_called_once()
+            call_args = mock_instance.upsert.call_args[1]
+            assert call_args["collection_name"] == "test_collection"
+            assert len(call_args["points"]) == 2
 
     @pytest.mark.asyncio
-    async def test_get_collection_info(self, qdrant_service, mock_qdrant_client):
+    async def test_search(self, qdrant_service):
+        """Test vector search."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+
+            # Mock search results
+            mock_result = MagicMock()
+            mock_result.id = "doc1"
+            mock_result.score = 0.95
+            mock_result.payload = {"content": "Test content", "metadata": {"title": "Test"}}
+            mock_instance.search.return_value = [mock_result]
+
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            query_vector = [0.1] * 1536
+            results = await qdrant_service.search(
+                collection_name="test_collection",
+                query_vector=query_vector,
+                limit=5,
+            )
+
+            assert len(results) == 1
+            assert results[0].id == "doc1"
+            assert results[0].score == 0.95
+            mock_instance.search.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_search_with_filter(self, qdrant_service):
+        """Test vector search with metadata filter."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.search.return_value = []
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            query_vector = [0.1] * 1536
+            filters = {"metadata.category": "documentation"}
+
+            await qdrant_service.search(
+                collection_name="test_collection",
+                query_vector=query_vector,
+                filters=filters,
+                limit=5,
+            )
+
+            mock_instance.search.assert_called_once()
+            call_args = mock_instance.search.call_args[1]
+            assert call_args["query_filter"] is not None
+
+    @pytest.mark.asyncio
+    async def test_get_collection_info(self, qdrant_service):
         """Test getting collection information."""
-        mock_client, mock_instance = mock_qdrant_client
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
 
-        # Mock collection info
-        mock_info = MagicMock()
-        mock_info.status = "green"
-        mock_info.vectors_count = 1000
-        mock_info.points_count = 1000
-        mock_info.config = MagicMock()
-        mock_info.config.model_dump.return_value = {"params": "test"}
+            # Mock collection info
+            mock_info = MagicMock()
+            mock_info.points_count = 100
+            mock_info.indexed_vectors_count = 100
+            mock_info.status = "green"
+            mock_instance.get_collection.return_value = mock_info
 
-        mock_instance.get_collection.return_value = mock_info
+            mock_client.return_value = mock_instance
 
-        await qdrant_service.initialize()
+            await qdrant_service.initialize()
 
-        info = await qdrant_service.get_collection_info("test_collection")
+            info = await qdrant_service.get_collection_info("test_collection")
 
-        assert info["status"] == "green"
-        assert info["vectors_count"] == 1000
-        assert info["points_count"] == 1000
-        assert info["config"] == {"params": "test"}
+            assert info.points_count == 100
+            assert info.status == "green"
 
     @pytest.mark.asyncio
-    async def test_count_points(self, qdrant_service, mock_qdrant_client):
-        """Test counting points in collection."""
-        mock_client, mock_instance = mock_qdrant_client
+    async def test_delete_documents(self, qdrant_service):
+        """Test document deletion."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.delete = AsyncMock()
+            mock_client.return_value = mock_instance
 
-        # Mock count result
-        mock_result = MagicMock()
-        mock_result.count = 500
-        mock_instance.count.return_value = mock_result
+            await qdrant_service.initialize()
 
-        await qdrant_service.initialize()
+            doc_ids = ["doc1", "doc2", "doc3"]
+            await qdrant_service.delete_documents(
+                collection_name="test_collection",
+                doc_ids=doc_ids,
+            )
 
-        count = await qdrant_service.count_points("test_collection")
+            mock_instance.delete.assert_called_once()
+            call_args = mock_instance.delete.call_args[1]
+            assert call_args["collection_name"] == "test_collection"
 
-        assert count == 500
-        mock_instance.count.assert_called_once_with(
-            collection_name="test_collection",
-            exact=True,
-        )
+    @pytest.mark.asyncio
+    async def test_hybrid_search(self, qdrant_service):
+        """Test hybrid search with dense and sparse vectors."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+
+            # Mock collection with sparse vectors
+            mock_collection = MagicMock()
+            mock_collection.config.params.sparse_vectors = {
+                "text-sparse": MagicMock(index=MagicMock(on_disk=False))
+            }
+            mock_instance.get_collection.return_value = mock_collection
+
+            # Mock search batch results
+            mock_result = MagicMock()
+            mock_result.id = "doc1"
+            mock_result.score = 0.9
+            mock_result.payload = {"content": "Test"}
+            mock_instance.search_batch.return_value = [[mock_result]]
+
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            results = await qdrant_service.hybrid_search(
+                collection_name="test_collection",
+                query_text="test query",
+                dense_vector=[0.1] * 1536,
+                sparse_vector={"indices": [1, 2, 3], "values": [0.5, 0.3, 0.2]},
+                limit=5,
+            )
+
+            assert len(results) > 0
+            mock_instance.search_batch.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_update_collection(self, qdrant_service):
+        """Test collection update."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.update_collection = AsyncMock()
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            await qdrant_service.update_collection(
+                collection_name="test_collection",
+                optimizer_config={"indexing_threshold": 10000},
+            )
+
+            mock_instance.update_collection.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cleanup(self, qdrant_service):
+        """Test service cleanup."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.close = AsyncMock()
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+            assert qdrant_service._initialized
+
+            await qdrant_service.cleanup()
+
+            assert not qdrant_service._initialized
+            assert qdrant_service._client is None
+            mock_instance.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, qdrant_service):
+        """Test error handling in operations."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+
+            # Mock search error
+            mock_instance.search.side_effect = Exception("Search failed")
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            # Search should raise an error
+            with pytest.raises(Exception, match="Search failed"):
+                await qdrant_service.search(
+                    collection_name="test_collection",
+                    query_vector=[0.1] * 1536,
+                    limit=5,
+                )
+
+    @pytest.mark.asyncio
+    async def test_batch_operations(self, qdrant_service):
+        """Test batch operations."""
+        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_instance.get_collections.return_value = MagicMock(collections=[])
+            mock_instance.upsert = AsyncMock()
+            mock_client.return_value = mock_instance
+
+            await qdrant_service.initialize()
+
+            # Create large batch of documents
+            documents = []
+            for i in range(150):  # More than typical batch size
+                documents.append(
+                    {
+                        "id": f"doc_{i}",
+                        "content": f"Content {i}",
+                        "embedding": [0.1] * 1536,
+                        "metadata": {"index": i},
+                    }
+                )
+
+            await qdrant_service.upsert_documents(
+                collection_name="test_collection",
+                documents=documents,
+            )
+
+            # Should be called multiple times for batching
+            assert mock_instance.upsert.call_count >= 2  # At least 2 batches

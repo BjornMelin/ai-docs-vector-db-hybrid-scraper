@@ -31,10 +31,10 @@ class CrawlManager:
             return
 
         # Initialize Firecrawl if API key available
-        if self.config.crawling.firecrawl_api_key:
+        if self.config.firecrawl.api_key:
             try:
                 provider = FirecrawlProvider(
-                    api_key=self.config.crawling.firecrawl_api_key
+                    api_key=self.config.firecrawl.api_key
                 )
                 await provider.initialize()
                 self.providers["firecrawl"] = provider

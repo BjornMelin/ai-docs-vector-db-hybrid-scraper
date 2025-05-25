@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
-from src.services.config import APIConfig
+from src.config.models import UnifiedConfig
+from src.config.enums import EmbeddingProvider
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import ModelBenchmark
 from src.services.embeddings.manager import QualityTier
@@ -14,16 +15,11 @@ from src.services.errors import EmbeddingServiceError
 
 @pytest.fixture
 def mock_config():
-    """Mock API configuration."""
-    config = Mock(spec=APIConfig)
-    config.openai_api_key = "test-key"
-    config.openai_model = "text-embedding-3-small"
-    config.openai_dimensions = 1536
-    config.openai_batch_size = 100
-    config.enable_local_embeddings = True
-    config.local_embedding_model = "BAAI/bge-small-en-v1.5"
-    config.preferred_embedding_provider = "openai"
-    return config
+    """Mock unified configuration."""
+    return UnifiedConfig(
+        openai__api_key="test-key",
+        embedding_provider=EmbeddingProvider.OPENAI,
+    )
 
 
 @pytest.fixture
