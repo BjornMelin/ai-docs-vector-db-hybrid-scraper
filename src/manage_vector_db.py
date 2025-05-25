@@ -5,7 +5,6 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations
 Provides comprehensive database management, search, and maintenance utilities
 """
 
-import asyncio
 import logging
 from typing import Any
 
@@ -19,6 +18,7 @@ from rich.table import Table
 from .config import get_config
 from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
+from .utils import async_to_sync_click
 
 console = Console()
 
@@ -69,15 +69,18 @@ class VectorDBManager:
         self,
         qdrant_service: QdrantService | None = None,
         embedding_manager: EmbeddingManager | None = None,
+        qdrant_url: str | None = None,
     ) -> None:
         """Initialize with service layer components.
 
         Args:
             qdrant_service: QdrantService instance for database operations
             embedding_manager: EmbeddingManager for generating embeddings
+            qdrant_url: Optional Qdrant URL override
         """
         self.qdrant_service = qdrant_service
         self.embedding_manager = embedding_manager
+        self.qdrant_url = qdrant_url
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -88,6 +91,10 @@ class VectorDBManager:
         # If services not provided, create them from unified config
         if not self.qdrant_service or not self.embedding_manager:
             config = get_config()
+
+            # Override Qdrant URL if provided
+            if self.qdrant_url:
+                config.qdrant.url = self.qdrant_url
 
             if not self.qdrant_service:
                 self.qdrant_service = QdrantService(config)
@@ -316,7 +323,7 @@ def cli(ctx, url, log_level):
 @click.pass_context
 async def list(ctx):
     """List all collections"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         collections = await manager.list_collections()
         if collections:
@@ -335,7 +342,7 @@ async def list(ctx):
 @click.pass_context
 async def create(ctx, collection_name, vector_size):
     """Create a new collection"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.create_collection(collection_name, vector_size)
     finally:
@@ -347,7 +354,7 @@ async def create(ctx, collection_name, vector_size):
 @click.pass_context
 async def delete(ctx, collection_name):
     """Delete a collection"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.delete_collection(collection_name)
     finally:
@@ -358,7 +365,7 @@ async def delete(ctx, collection_name):
 @click.pass_context
 async def stats(ctx):
     """Show database statistics"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         stats = await manager.get_database_stats()
         if stats:
@@ -391,7 +398,7 @@ async def stats(ctx):
 @click.pass_context
 async def info(ctx, collection_name):
     """Show collection information"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         info = await manager.get_collection_info(collection_name)
         if info:
@@ -409,7 +416,7 @@ async def info(ctx, collection_name):
 @click.pass_context
 async def clear(ctx, collection_name):
     """Clear all vectors from a collection"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.clear_collection(collection_name)
     finally:
@@ -423,7 +430,7 @@ async def clear(ctx, collection_name):
 @click.pass_context
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents"""
-    manager = VectorDBManager()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         # Initialize manager to ensure embedding_manager is available
         await manager.initialize()
@@ -457,30 +464,7 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point"""
-
-    # Avoid double-wrapping if already processed
-    if hasattr(cli, "_commands_wrapped"):
-        cli()
-        return
-
-    # Create sync version of cli
-    for command in cli.commands.values():
-        if asyncio.iscoroutinefunction(command.callback):
-            original_callback = command.callback
-
-            def make_sync_callback(func):
-                def sync_callback(*args, **kwargs):
-                    return asyncio.run(func(*args, **kwargs))
-
-                # Copy function metadata
-                sync_callback.__name__ = func.__name__
-                sync_callback.__doc__ = func.__doc__
-                return sync_callback
-
-            command.callback = make_sync_callback(original_callback)
-
-    # Mark as wrapped
-    cli._commands_wrapped = True
+    async_to_sync_click(cli)
     cli()
 
 

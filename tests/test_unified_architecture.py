@@ -8,7 +8,6 @@ from src.config import get_config
 from src.config.enums import EmbeddingProvider
 from src.config.enums import SearchStrategy
 from src.services.cache.manager import CacheManager
-from src.services.config import APIConfig
 from src.services.crawling.manager import CrawlManager
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.project_storage import ProjectStorage
@@ -86,7 +85,6 @@ class TestProjectStorage:
     @pytest.mark.asyncio
     async def test_project_storage_init(self):
         """Test ProjectStorage initialization."""
-        config = get_config()
         # Use a temporary directory for testing
         import tempfile
 
@@ -145,5 +143,7 @@ class TestSecurityIntegration:
         assert valid_url == "https://example.com"
 
         # Invalid URL should raise
-        with pytest.raises(Exception):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
             validator.validate_url("javascript:alert('xss')")

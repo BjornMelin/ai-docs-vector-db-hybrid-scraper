@@ -596,7 +596,7 @@ class EmbeddingManager:
             scores = self._reranker.compute_score(pairs, normalize=True)
 
             # Handle single result case where compute_score returns a float
-            if isinstance(scores, (int, float)):
+            if isinstance(scores, int | float):
                 scores = [scores]
 
             # Combine results with scores and sort

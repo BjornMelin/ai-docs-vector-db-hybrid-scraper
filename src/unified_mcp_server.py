@@ -35,10 +35,8 @@ try:
     from config import get_config
     from config.enums import ChunkingStrategy
     from config.enums import SearchStrategy
-    from config.models import UnifiedConfig
     from services.base import BaseService
     from services.cache.manager import CacheManager
-    from services.cache.manager import CacheType
     from services.crawling.manager import CrawlManager
     from services.embeddings.manager import EmbeddingManager
     from services.project_storage import ProjectStorage
