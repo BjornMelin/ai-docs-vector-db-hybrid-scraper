@@ -5,7 +5,13 @@ from typing import Any
 from typing import ClassVar
 
 import numpy as np
-from fastembed import TextEmbedding
+
+try:
+    from fastembed import TextEmbedding
+    from fastembed import SparseTextEmbedding
+except ImportError:
+    TextEmbedding = None
+    SparseTextEmbedding = None
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
@@ -84,6 +90,7 @@ class FastEmbedProvider(EmbeddingProvider):
 
         super().__init__(model_name)
         self._model: TextEmbedding | None = None
+        self._sparse_model: SparseTextEmbedding | None = None
         self._initialized = False
 
         # Set model configuration
@@ -91,6 +98,9 @@ class FastEmbedProvider(EmbeddingProvider):
         self.dimensions = config["dimensions"]
         self._max_tokens = config["max_tokens"]
         self._description = config["description"]
+        
+        # Default sparse model for hybrid search
+        self._sparse_model_name = "prithvida/Splade_PP_en_v1"
 
     async def initialize(self) -> None:
         """Initialize FastEmbed model."""
@@ -149,6 +159,44 @@ class FastEmbedProvider(EmbeddingProvider):
 
         except Exception as e:
             raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
+    
+    async def generate_sparse_embeddings(
+        self, texts: list[str]
+    ) -> list[dict[str, Any]]:
+        """Generate sparse embeddings for hybrid search.
+        
+        Args:
+            texts: List of texts to embed
+            
+        Returns:
+            List of sparse embeddings with indices and values
+        """
+        if not self._initialized:
+            raise EmbeddingServiceError("Provider not initialized")
+            
+        if SparseTextEmbedding is None:
+            raise EmbeddingServiceError("Sparse embedding support not available")
+            
+        try:
+            # Initialize sparse model if needed
+            if self._sparse_model is None:
+                self._sparse_model = SparseTextEmbedding(self._sparse_model_name)
+                logger.info(f"Initialized sparse model: {self._sparse_model_name}")
+            
+            # Generate sparse embeddings
+            sparse_embeddings = []
+            for result in self._sparse_model.embed(texts):
+                sparse_data = {
+                    "indices": result.indices.tolist(),
+                    "values": result.values.tolist(),
+                }
+                sparse_embeddings.append(sparse_data)
+            
+            return sparse_embeddings
+        except Exception as e:
+            raise EmbeddingServiceError(
+                f"Sparse embedding generation failed: {e}"
+            ) from e
 
     @property
     def cost_per_token(self) -> float:

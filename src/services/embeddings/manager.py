@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+try:
+    from FlagEmbedding import FlagReranker
+except ImportError:
+    FlagReranker = None
+
 from ..config import APIConfig
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
@@ -205,6 +210,16 @@ class EmbeddingManager:
             QualityTier.BALANCED: "fastembed",  # Dynamic based on config
             QualityTier.BEST: "openai",
         }
+        
+        # Initialize reranker if available
+        self._reranker = None
+        self._reranker_model = "BAAI/bge-reranker-v2-m3"
+        if FlagReranker is not None:
+            try:
+                self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
+                logger.info(f"Initialized reranker: {self._reranker_model}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize reranker: {e}")
 
     async def initialize(self) -> None:
         """Initialize available providers."""
@@ -409,6 +424,7 @@ class EmbeddingManager:
         max_cost: float | None = None,
         speed_priority: bool = False,
         auto_select: bool = True,
+        generate_sparse: bool = False,
     ) -> dict[str, Any]:
         """Generate embeddings with smart provider selection.
 
@@ -419,6 +435,7 @@ class EmbeddingManager:
             max_cost: Optional maximum cost constraint
             speed_priority: Whether to prioritize speed over quality
             auto_select: Use smart selection (True) or legacy logic (False)
+            generate_sparse: Whether to generate sparse embeddings for hybrid search
 
         Returns:
             Dictionary containing embeddings and metadata
@@ -499,6 +516,16 @@ class EmbeddingManager:
             embeddings = await provider.generate_embeddings(
                 texts, batch_size=self.config.openai_batch_size
             )
+            
+            # Generate sparse embeddings if requested and available
+            sparse_embeddings = None
+            if generate_sparse and hasattr(provider, 'generate_sparse_embeddings'):
+                try:
+                    sparse_embeddings = await provider.generate_sparse_embeddings(texts)
+                    logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
+                except Exception as e:
+                    logger.warning(f"Failed to generate sparse embeddings: {e}")
+                    # Continue with dense embeddings only
 
             # Calculate metrics and update statistics
             metrics = self._calculate_metrics_and_update_stats(
@@ -519,7 +546,7 @@ class EmbeddingManager:
                 except Exception as e:
                     logger.warning(f"Failed to cache embedding: {e}")
 
-            return {
+            result = {
                 "embeddings": embeddings,
                 "provider": metrics["provider_key"],
                 "model": selected_model,
@@ -531,10 +558,60 @@ class EmbeddingManager:
                 "usage_stats": self.get_usage_report(),
                 "cache_hit": False,
             }
+            
+            if sparse_embeddings is not None:
+                result["sparse_embeddings"] = sparse_embeddings
+                
+            return result
 
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             raise
+    
+    async def rerank_results(
+        self, query: str, results: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Rerank search results using BGE reranker.
+        
+        Args:
+            query: Search query
+            results: List of search results with 'content' field
+            
+        Returns:
+            Reranked results sorted by relevance
+        """
+        if not self._reranker:
+            logger.warning("Reranker not available, returning original results")
+            return results
+            
+        if not results or len(results) <= 1:
+            return results
+            
+        try:
+            # Prepare query-result pairs
+            pairs = [[query, result.get("content", "")] for result in results]
+            
+            # Get reranking scores
+            scores = self._reranker.compute_score(pairs, normalize=True)
+            
+            # Handle single result case where compute_score returns a float
+            if isinstance(scores, (int, float)):
+                scores = [scores]
+            
+            # Combine results with scores and sort
+            scored_results = list(zip(results, scores, strict=False))
+            scored_results.sort(key=lambda x: x[1], reverse=True)
+            
+            # Extract sorted results
+            reranked = [result for result, _ in scored_results]
+            
+            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
+            return reranked
+            
+        except Exception as e:
+            logger.error(f"Reranking failed: {e}")
+            # Return original results on failure
+            return results
 
     def estimate_cost(
         self,

@@ -241,31 +241,38 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
         # Generate embedding for query
         await ctx.debug(f"Generating embeddings for query: {request.query[:50]}...")
-        query_embeddings = await service_manager.embedding_manager.generate_embeddings(
-            [request.query]
+        # Generate sparse embeddings for hybrid search
+        generate_sparse = request.strategy == SearchStrategy.HYBRID
+        embedding_result = await service_manager.embedding_manager.generate_embeddings(
+            [request.query],
+            generate_sparse=generate_sparse
         )
-        query_vector = query_embeddings[0]
+        
+        query_vector = embedding_result["embeddings"][0]
+        sparse_vector = None
+        if "sparse_embeddings" in embedding_result and embedding_result["sparse_embeddings"]:
+            sparse_vector = embedding_result["sparse_embeddings"][0]
+            await ctx.debug(f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements")
+        
         await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
         # Perform search based on strategy
         if request.strategy == SearchStrategy.HYBRID:
-            # For hybrid search, we need both dense and sparse vectors
-            # For now, we'll use dense only (sparse would require SPLADE encoding)
+            # For hybrid search, use both dense and sparse vectors
             results = await service_manager.qdrant_service.hybrid_search(
                 collection_name=request.collection,
                 query_vector=query_vector,
-                sparse_vector=None,  # TODO: Add sparse vector generation
+                sparse_vector=sparse_vector,  # Now using actual sparse vector
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
                 fusion_type="rrf",
             )
         else:
             # For dense search, use direct vector search
-            # Since QdrantService doesn't have a simple search method, use hybrid_search with dense only
             results = await service_manager.qdrant_service.hybrid_search(
                 collection_name=request.collection,
                 query_vector=query_vector,
-                sparse_vector=None,
+                sparse_vector=None,  # Dense search only
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
             )
@@ -285,9 +292,25 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
         # Apply reranking if enabled
         if request.enable_reranking and search_results:
-            # TODO: Implement BGE reranking
-            # For now, just limit to requested number
-            search_results = search_results[: request.limit]
+            await ctx.debug(f"Applying BGE reranking to {len(search_results)} results")
+            # Convert to format expected by reranker
+            results_for_reranking = [
+                {"content": r.content, "original": r}
+                for r in search_results
+            ]
+            
+            # Rerank results
+            reranked = await service_manager.embedding_manager.rerank_results(
+                query=request.query,
+                results=results_for_reranking
+            )
+            
+            # Extract reranked SearchResult objects
+            search_results = [r["original"] for r in reranked[:request.limit]]
+            await ctx.debug(f"Reranking complete, returning top {len(search_results)} results")
+        else:
+            # Without reranking, just limit to requested number
+            search_results = search_results[:request.limit]
 
         # Cache results
         cache_data = [r.model_dump() for r in search_results]
