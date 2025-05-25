@@ -1,20 +1,13 @@
 """Service configuration adapter using the unified configuration system.
 
-This module provides backward compatibility for services while using the new
-unified configuration system under the hood.
+This module provides an adapter to map the unified configuration to the format
+expected by existing service implementations.
 """
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-try:
-    from src.config import get_config
-except ImportError:
-    import sys
-    from pathlib import Path
-    # Add parent directory to path
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from src.config import get_config
+from src.config import get_config
 
 
 class ServiceConfig(BaseModel):
@@ -71,7 +64,7 @@ class APIConfig(BaseModel):
             local_cache_max_memory_mb=config.cache.local_max_memory_mb,
         )
 
-    # Keep the same field definitions for backward compatibility
+    # Field definitions matching service expectations
     # Qdrant
     qdrant_url: str = Field(default="http://localhost:6333")
     qdrant_api_key: str | None = Field(default=None)

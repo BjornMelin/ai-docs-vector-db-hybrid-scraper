@@ -177,8 +177,7 @@ class UnifiedServiceManager(BaseService):
             await self.cache_manager.initialize()
             await self.project_storage.initialize()
             
-            # Load projects from storage
-            self.projects = await self.project_storage.load_projects()
+            # Projects are managed internally by ProjectStorage
 
             self._initialized = True
             logger.info("All services initialized successfully")
