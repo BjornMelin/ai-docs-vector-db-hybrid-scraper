@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from ..config import APIConfig
+try:
+    from FlagEmbedding import FlagReranker
+except ImportError:
+    FlagReranker = None
+
+from src.config import UnifiedConfig
+
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
@@ -123,11 +129,11 @@ class TextAnalysis:
 class EmbeddingManager:
     """Manager for smart embedding provider selection."""
 
-    def __init__(self, config: APIConfig, budget_limit: float | None = None):
+    def __init__(self, config: UnifiedConfig, budget_limit: float | None = None):
         """Initialize embedding manager.
 
         Args:
-            config: API configuration
+            config: Unified configuration
             budget_limit: Optional daily budget limit in USD
         """
         self.config = config
@@ -138,20 +144,20 @@ class EmbeddingManager:
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: Any | None = None
-        if config.enable_caching:
+        if config.cache.enabled:
             from ..cache import CacheManager
             from ..cache import CacheType
 
             self.cache_manager = CacheManager(
-                redis_url=config.redis_url,
-                enable_local_cache=config.enable_local_cache,
-                enable_redis_cache=config.enable_redis_cache,
-                local_max_size=config.local_cache_max_size,
-                local_max_memory_mb=config.local_cache_max_memory_mb,
+                redis_url=config.cache.redis_url,
+                enable_local_cache=config.cache.local_enabled,
+                enable_redis_cache=config.cache.redis_enabled,
+                local_max_size=config.cache.local_max_size,
+                local_max_memory_mb=config.cache.local_max_memory_mb,
                 redis_ttl_seconds={
-                    CacheType.EMBEDDINGS: config.cache_ttl_embeddings,
-                    CacheType.CRAWL_RESULTS: config.cache_ttl_crawl,
-                    CacheType.QUERY_RESULTS: config.cache_ttl_queries,
+                    CacheType.EMBEDDINGS: config.cache.ttl_embeddings,
+                    CacheType.CRAWL_RESULTS: config.cache.ttl_crawl,
+                    CacheType.QUERY_RESULTS: config.cache.ttl_queries,
                 },
             )
 
@@ -206,38 +212,48 @@ class EmbeddingManager:
             QualityTier.BEST: "openai",
         }
 
+        # Initialize reranker if available
+        self._reranker = None
+        self._reranker_model = "BAAI/bge-reranker-v2-m3"
+        if FlagReranker is not None:
+            try:
+                self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
+                logger.info(f"Initialized reranker: {self._reranker_model}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize reranker: {e}")
+
     async def initialize(self) -> None:
         """Initialize available providers."""
         if self._initialized:
             return
 
         # Initialize OpenAI provider if API key available
-        if self.config.openai_api_key:
+        if self.config.embeddings.openai_api_key:
             try:
                 provider = OpenAIEmbeddingProvider(
-                    api_key=self.config.openai_api_key,
-                    model_name=self.config.openai_model,
-                    dimensions=self.config.openai_dimensions,
+                    api_key=self.config.embeddings.openai_api_key,
+                    model_name=self.config.embeddings.openai_model,
+                    dimensions=self.config.embeddings.openai_dimensions,
                 )
                 await provider.initialize()
                 self.providers["openai"] = provider
                 logger.info(
-                    f"Initialized OpenAI provider with {self.config.openai_model}"
+                    f"Initialized OpenAI provider with {self.config.embeddings.openai_model}"
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
         # Initialize FastEmbed provider if enabled
-        if self.config.enable_local_embeddings:
+        if self.config.embeddings.enable_local:
             try:
                 provider = FastEmbedProvider(
-                    model_name=self.config.local_embedding_model
+                    model_name=self.config.embeddings.local_model
                 )
                 await provider.initialize()
                 self.providers["fastembed"] = provider
                 logger.info(
                     f"Initialized FastEmbed provider with "
-                    f"{self.config.local_embedding_model}"
+                    f"{self.config.embeddings.local_model}"
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize FastEmbed provider: {e}")
@@ -342,7 +358,7 @@ class EmbeddingManager:
                     f"using {provider.__class__.__name__}"
                 )
         else:
-            provider = self.providers.get(self.config.preferred_embedding_provider)
+            provider = self.providers.get(self.config.embeddings.preferred_provider)
             if not provider:
                 provider = next(iter(self.providers.values()))
 
@@ -409,6 +425,7 @@ class EmbeddingManager:
         max_cost: float | None = None,
         speed_priority: bool = False,
         auto_select: bool = True,
+        generate_sparse: bool = False,
     ) -> dict[str, Any]:
         """Generate embeddings with smart provider selection.
 
@@ -419,6 +436,7 @@ class EmbeddingManager:
             max_cost: Optional maximum cost constraint
             speed_priority: Whether to prioritize speed over quality
             auto_select: Use smart selection (True) or legacy logic (False)
+            generate_sparse: Whether to generate sparse embeddings for hybrid search
 
         Returns:
             Dictionary containing embeddings and metadata
@@ -452,11 +470,11 @@ class EmbeddingManager:
             # Try to get from cache using smart selection parameters
             cached_embedding = await self.cache_manager.get_embedding(
                 text=text,
-                provider=provider_name or self.config.preferred_embedding_provider,
-                model=self.config.openai_model
+                provider=provider_name or self.config.embeddings.preferred_provider,
+                model=self.config.embeddings.openai_model
                 if provider_name == "openai"
-                else self.config.local_embedding_model,
-                dimensions=self.config.openai_dimensions,
+                else self.config.embeddings.local_model,
+                dimensions=self.config.embeddings.openai_dimensions,
             )
 
             if cached_embedding is not None:
@@ -464,10 +482,10 @@ class EmbeddingManager:
                 return {
                     "embeddings": [cached_embedding],
                     "provider": provider_name
-                    or self.config.preferred_embedding_provider,
-                    "model": self.config.openai_model
+                    or self.config.embeddings.preferred_provider,
+                    "model": self.config.embeddings.openai_model
                     if provider_name == "openai"
-                    else self.config.local_embedding_model,
+                    else self.config.embeddings.local_model,
                     "cost": 0.0,  # No cost for cached result
                     "latency_ms": (time.time() - start_time) * 1000,
                     "tokens": 0,
@@ -497,8 +515,18 @@ class EmbeddingManager:
         try:
             # Generate embeddings
             embeddings = await provider.generate_embeddings(
-                texts, batch_size=self.config.openai_batch_size
+                texts, batch_size=self.config.embeddings.batch_size
             )
+
+            # Generate sparse embeddings if requested and available
+            sparse_embeddings = None
+            if generate_sparse and hasattr(provider, "generate_sparse_embeddings"):
+                try:
+                    sparse_embeddings = await provider.generate_sparse_embeddings(texts)
+                    logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
+                except Exception as e:
+                    logger.warning(f"Failed to generate sparse embeddings: {e}")
+                    # Continue with dense embeddings only
 
             # Calculate metrics and update statistics
             metrics = self._calculate_metrics_and_update_stats(
@@ -519,7 +547,7 @@ class EmbeddingManager:
                 except Exception as e:
                     logger.warning(f"Failed to cache embedding: {e}")
 
-            return {
+            result = {
                 "embeddings": embeddings,
                 "provider": metrics["provider_key"],
                 "model": selected_model,
@@ -532,9 +560,59 @@ class EmbeddingManager:
                 "cache_hit": False,
             }
 
+            if sparse_embeddings is not None:
+                result["sparse_embeddings"] = sparse_embeddings
+
+            return result
+
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             raise
+
+    async def rerank_results(
+        self, query: str, results: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Rerank search results using BGE reranker.
+
+        Args:
+            query: Search query
+            results: List of search results with 'content' field
+
+        Returns:
+            Reranked results sorted by relevance
+        """
+        if not self._reranker:
+            logger.warning("Reranker not available, returning original results")
+            return results
+
+        if not results or len(results) <= 1:
+            return results
+
+        try:
+            # Prepare query-result pairs
+            pairs = [[query, result.get("content", "")] for result in results]
+
+            # Get reranking scores
+            scores = self._reranker.compute_score(pairs, normalize=True)
+
+            # Handle single result case where compute_score returns a float
+            if isinstance(scores, int | float):
+                scores = [scores]
+
+            # Combine results with scores and sort
+            scored_results = list(zip(results, scores, strict=False))
+            scored_results.sort(key=lambda x: x[1], reverse=True)
+
+            # Extract sorted results
+            reranked = [result for result, _ in scored_results]
+
+            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
+            return reranked
+
+        except Exception as e:
+            logger.error(f"Reranking failed: {e}")
+            # Return original results on failure
+            return results
 
     def estimate_cost(
         self,

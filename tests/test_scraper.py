@@ -6,15 +6,15 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+from src.config.enums import EmbeddingProvider
+from src.config.enums import SearchStrategy
 from src.crawl4ai_bulk_embedder import CrawlResult
 from src.crawl4ai_bulk_embedder import DocumentationSite
 from src.crawl4ai_bulk_embedder import EmbeddingConfig
 from src.crawl4ai_bulk_embedder import EmbeddingModel
-from src.crawl4ai_bulk_embedder import EmbeddingProvider
 from src.crawl4ai_bulk_embedder import ModernDocumentationScraper
 from src.crawl4ai_bulk_embedder import ScrapingConfig
 from src.crawl4ai_bulk_embedder import VectorMetrics
-from src.crawl4ai_bulk_embedder import VectorSearchStrategy
 
 
 class TestEmbeddingConfig:
@@ -25,21 +25,21 @@ class TestEmbeddingConfig:
         config = EmbeddingConfig()
         assert config.provider == EmbeddingProvider.OPENAI
         assert config.dense_model == EmbeddingModel.TEXT_EMBEDDING_3_SMALL
-        assert config.search_strategy == VectorSearchStrategy.DENSE_ONLY
+        assert config.search_strategy == SearchStrategy.DENSE
         assert config.enable_quantization is True
 
-    def test_embedding_config_hybrid(self):
-        """Test hybrid embedding configuration."""
+    def test_embedding_config_hybrid_search(self):
+        """Test hybrid search configuration."""
         config = EmbeddingConfig(
-            provider=EmbeddingProvider.HYBRID,
+            provider=EmbeddingProvider.FASTEMBED,
             dense_model=EmbeddingModel.BGE_SMALL_EN_V15,
             sparse_model=EmbeddingModel.SPLADE_PP_EN_V1,
-            search_strategy=VectorSearchStrategy.HYBRID_RRF,
+            search_strategy=SearchStrategy.HYBRID,
         )
-        assert config.provider == EmbeddingProvider.HYBRID
+        assert config.provider == EmbeddingProvider.FASTEMBED
         assert config.dense_model == EmbeddingModel.BGE_SMALL_EN_V15
         assert config.sparse_model == EmbeddingModel.SPLADE_PP_EN_V1
-        assert config.search_strategy == VectorSearchStrategy.HYBRID_RRF
+        assert config.search_strategy == SearchStrategy.HYBRID
 
     def test_embedding_config_reranking(self):
         """Test advanced 2025 reranking configuration."""
@@ -87,7 +87,7 @@ class TestScrapingConfig:
         embedding_config = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
             dense_model=EmbeddingModel.BGE_LARGE_EN_V15,
-            search_strategy=VectorSearchStrategy.HYBRID_RRF,
+            search_strategy=SearchStrategy.HYBRID,
             sparse_model=EmbeddingModel.SPLADE_PP_EN_V1,
         )
 
@@ -144,12 +144,12 @@ class TestDocumentationSite:
         assert site.max_depth == 3
         assert site.url_patterns == ["*docs*", "*api*", "*guides*"]
 
-    def test_site_validation_invalid_url(self):
-        """Test site validation with invalid URL."""
+    def test_site_validation_empty_name(self):
+        """Test site validation with empty name."""
         with pytest.raises(ValidationError):
             DocumentationSite(
-                name="test",
-                url="not-a-url",
+                name="",  # Empty name should fail
+                url="https://example.com",
             )
 
 

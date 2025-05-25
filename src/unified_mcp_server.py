@@ -25,8 +25,6 @@ from uuid import uuid4
 
 from fastmcp import Context
 from fastmcp import FastMCP
-from pydantic import BaseModel
-from pydantic import Field
 
 # Handle both module and script imports
 try:
@@ -34,23 +32,29 @@ try:
     from chunking import chunk_content
     from config.enums import ChunkingStrategy
     from config.enums import SearchStrategy
-    from services.base import BaseService
-    from services.cache.manager import CacheManager
-    from services.config import APIConfig
-    from services.crawling.manager import CrawlManager
-    from services.embeddings.manager import EmbeddingManager
-    from services.qdrant_service import QdrantService
+    from mcp.models.requests import AnalyticsRequest
+    from mcp.models.requests import BatchRequest
+    from mcp.models.requests import DocumentRequest
+    from mcp.models.requests import EmbeddingRequest
+    from mcp.models.requests import ProjectRequest
+    from mcp.models.requests import SearchRequest
+    from mcp.models.responses import SearchResult
+    from mcp.service_manager import UnifiedServiceManager
+    from security import SecurityValidator
 except ImportError:
     from .chunking import ChunkingConfig
     from .chunking import chunk_content
     from .config.enums import ChunkingStrategy
     from .config.enums import SearchStrategy
-    from .services.base import BaseService
-    from .services.cache.manager import CacheManager
-    from .services.config import APIConfig
-    from .services.crawling.manager import CrawlManager
-    from .services.embeddings.manager import EmbeddingManager
-    from .services.qdrant_service import QdrantService
+    from .mcp.models.requests import AnalyticsRequest
+    from .mcp.models.requests import BatchRequest
+    from .mcp.models.requests import DocumentRequest
+    from .mcp.models.requests import EmbeddingRequest
+    from .mcp.models.requests import ProjectRequest
+    from .mcp.models.requests import SearchRequest
+    from .mcp.models.responses import SearchResult
+    from .mcp.service_manager import UnifiedServiceManager
+    from .security import SecurityValidator
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -58,136 +62,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("ai-docs-vector-db-unified")
-
-
-# Request/Response Models
-class SearchRequest(BaseModel):
-    """Search request with advanced options"""
-
-    query: str = Field(..., description="Search query")
-    collection: str = Field(default="documentation", description="Collection to search")
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    strategy: SearchStrategy = Field(
-        default=SearchStrategy.HYBRID, description="Search strategy"
-    )
-    enable_reranking: bool = Field(default=True, description="Enable BGE reranking")
-    include_metadata: bool = Field(
-        default=True, description="Include metadata in results"
-    )
-    filters: dict[str, Any] | None = Field(default=None, description="Metadata filters")
-
-
-class SearchResult(BaseModel):
-    """Search result with metadata"""
-
-    id: str
-    content: str
-    score: float
-    url: str | None = None
-    title: str | None = None
-    metadata: dict[str, Any] | None = None
-
-
-class EmbeddingRequest(BaseModel):
-    """Embedding generation request"""
-
-    texts: list[str] = Field(..., description="Texts to embed")
-    model: str | None = Field(default=None, description="Specific model to use")
-    batch_size: int = Field(default=32, ge=1, le=100, description="Batch size")
-
-
-class DocumentRequest(BaseModel):
-    """Document processing request"""
-
-    url: str = Field(..., description="URL to process")
-    collection: str = Field(default="documentation", description="Target collection")
-    chunking_strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
-    )
-    chunk_size: int = Field(default=1600, ge=100, le=4000, description="Chunk size")
-    chunk_overlap: int = Field(default=200, ge=0, le=500, description="Chunk overlap")
-
-
-class ProjectRequest(BaseModel):
-    """Project management request"""
-
-    name: str = Field(..., description="Project name")
-    description: str | None = Field(default=None, description="Project description")
-    urls: list[str] = Field(default_factory=list, description="Initial URLs")
-    quality_tier: str = Field(default="balanced", description="Quality tier")
-
-
-class BatchRequest(BaseModel):
-    """Batch processing request"""
-
-    urls: list[str] = Field(..., description="URLs to process")
-    collection: str = Field(default="documentation", description="Target collection")
-    parallel_limit: int = Field(default=5, ge=1, le=20, description="Parallel limit")
-
-
-class AnalyticsRequest(BaseModel):
-    """Analytics request"""
-
-    collection: str | None = Field(default=None, description="Specific collection")
-    include_performance: bool = Field(
-        default=True, description="Include performance metrics"
-    )
-    include_costs: bool = Field(default=True, description="Include cost analysis")
-
-
-# Service Manager
-class UnifiedServiceManager(BaseService):
-    """Manages all services for the unified MCP server"""
-
-    def __init__(self):
-        super().__init__()
-        self.config = APIConfig()
-        self.embedding_manager: EmbeddingManager | None = None
-        self.crawl_manager: CrawlManager | None = None
-        self.qdrant_service: QdrantService | None = None
-        self.cache_manager: CacheManager | None = None
-        self.projects: dict[str, dict[str, Any]] = {}
-        self._initialized = False
-
-    async def initialize(self):
-        """Initialize all services"""
-        if self._initialized:
-            return
-
-        try:
-            # Initialize services
-            self.embedding_manager = EmbeddingManager(self.config)
-            self.crawl_manager = CrawlManager(self.config)
-            self.qdrant_service = QdrantService(url=self.config.qdrant_url)
-            self.cache_manager = CacheManager(self.config)
-
-            # Initialize each service
-            await self.embedding_manager.initialize()
-            await self.crawl_manager.initialize()
-            await self.qdrant_service.initialize()
-            await self.cache_manager.initialize()
-
-            self._initialized = True
-            logger.info("All services initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize services: {e}")
-            raise
-
-    async def cleanup(self):
-        """Cleanup all services"""
-        if self.embedding_manager:
-            await self.embedding_manager.cleanup()
-        if self.crawl_manager:
-            await self.crawl_manager.cleanup()
-        if self.qdrant_service:
-            await self.qdrant_service.cleanup()
-        if self.cache_manager:
-            await self.cache_manager.cleanup()
-
-        self._initialized = False
-        logger.info("All services cleaned up")
-
 
 # Initialize service manager
 service_manager = UnifiedServiceManager()
@@ -211,6 +85,13 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
     )
 
     try:
+        # Validate collection name and query
+        security_validator = SecurityValidator.from_unified_config()
+        request.collection = security_validator.validate_collection_name(
+            request.collection
+        )
+        request.query = security_validator.validate_query_string(request.query)
+
         # Check cache first
         cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
         cached = await service_manager.cache_manager.get(cache_key)
@@ -220,31 +101,39 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
         # Generate embedding for query
         await ctx.debug(f"Generating embeddings for query: {request.query[:50]}...")
-        query_embeddings = await service_manager.embedding_manager.generate_embeddings(
-            [request.query]
+        # Generate sparse embeddings for hybrid search
+        generate_sparse = request.strategy == SearchStrategy.HYBRID
+        embedding_result = await service_manager.embedding_manager.generate_embeddings(
+            [request.query], generate_sparse=generate_sparse
         )
-        query_vector = query_embeddings[0]
+
+        query_vector = embedding_result["embeddings"][0]
+        sparse_vector = None
+        if embedding_result.get("sparse_embeddings"):
+            sparse_vector = embedding_result["sparse_embeddings"][0]
+            await ctx.debug(
+                f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements"
+            )
+
         await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
         # Perform search based on strategy
         if request.strategy == SearchStrategy.HYBRID:
-            # For hybrid search, we need both dense and sparse vectors
-            # For now, we'll use dense only (sparse would require SPLADE encoding)
+            # For hybrid search, use both dense and sparse vectors
             results = await service_manager.qdrant_service.hybrid_search(
                 collection_name=request.collection,
                 query_vector=query_vector,
-                sparse_vector=None,  # TODO: Add sparse vector generation
+                sparse_vector=sparse_vector,  # Now using actual sparse vector
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
                 fusion_type="rrf",
             )
         else:
             # For dense search, use direct vector search
-            # Since QdrantService doesn't have a simple search method, use hybrid_search with dense only
             results = await service_manager.qdrant_service.hybrid_search(
                 collection_name=request.collection,
                 query_vector=query_vector,
-                sparse_vector=None,
+                sparse_vector=None,  # Dense search only
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
             )
@@ -264,8 +153,24 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
         # Apply reranking if enabled
         if request.enable_reranking and search_results:
-            # TODO: Implement BGE reranking
-            # For now, just limit to requested number
+            await ctx.debug(f"Applying BGE reranking to {len(search_results)} results")
+            # Convert to format expected by reranker
+            results_for_reranking = [
+                {"content": r.content, "original": r} for r in search_results
+            ]
+
+            # Rerank results
+            reranked = await service_manager.embedding_manager.rerank_results(
+                query=request.query, results=results_for_reranking
+            )
+
+            # Extract reranked SearchResult objects
+            search_results = [r["original"] for r in reranked[: request.limit]]
+            await ctx.debug(
+                f"Reranking complete, returning top {len(search_results)} results"
+            )
+        else:
+            # Without reranking, just limit to requested number
             search_results = search_results[: request.limit]
 
         # Cache results
@@ -299,6 +204,10 @@ async def search_similar(
     finding conceptually similar content.
     """
     await service_manager.initialize()
+
+    # Validate collection name
+    security_validator = SecurityValidator.from_unified_config()
+    collection = security_validator.validate_collection_name(collection)
 
     # Log if context available
     if ctx:
@@ -445,6 +354,10 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
     await ctx.info(f"Processing document {doc_id}: {request.url}")
 
     try:
+        # Validate URL using SecurityValidator
+        security_validator = SecurityValidator.from_unified_config()
+        validated_url = security_validator.validate_url(request.url)
+        request.url = validated_url
         # Check cache for existing document
         cache_key = f"doc:{request.url}"
         cached = await service_manager.cache_manager.get(cache_key)
@@ -461,14 +374,14 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
 
         # Configure chunking
         chunk_config = ChunkingConfig(
-            strategy=request.chunking_strategy,
+            strategy=request.chunk_strategy,
             chunk_size=request.chunk_size,
             chunk_overlap=request.chunk_overlap,
         )
 
         # Chunk the document
         await ctx.debug(
-            f"Chunking document {doc_id} with strategy {request.chunking_strategy}"
+            f"Chunking document {doc_id} with strategy {request.chunk_strategy}"
         )
         chunks = chunk_content(
             crawl_result.markdown,
@@ -505,7 +418,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
             vector_size=len(embeddings[0]),
             distance="Cosine",
             sparse_vector_name="sparse"
-            if request.chunking_strategy != ChunkingStrategy.BASIC
+            if request.chunk_strategy != ChunkingStrategy.BASIC
             else None,
             enable_quantization=True,
         )
@@ -522,7 +435,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
             "title": crawl_result.metadata.get("title", ""),
             "chunks_created": len(chunks),
             "collection": request.collection,
-            "chunking_strategy": request.chunking_strategy.value,
+            "chunking_strategy": request.chunk_strategy.value,
             "embedding_dimensions": len(embeddings[0]),
         }
 
@@ -559,13 +472,17 @@ async def add_documents_batch(request: BatchRequest) -> dict[str, Any]:
     }
 
     # Process URLs in batches
-    semaphore = asyncio.Semaphore(request.parallel_limit)
+    semaphore = asyncio.Semaphore(request.max_concurrent)
 
     async def process_url(url: str):
         async with semaphore:
             try:
+                # Validate URL first
+                security_validator = SecurityValidator.from_unified_config()
+                validated_url = security_validator.validate_url(url)
+
                 doc_request = DocumentRequest(
-                    url=url,
+                    url=validated_url,
                     collection=request.collection,
                 )
                 result = await add_document(doc_request)
@@ -610,8 +527,9 @@ async def create_project(request: ProjectRequest) -> dict[str, Any]:
         "urls": [],
     }
 
-    # Store project
+    # Store project in both memory and persistent storage
     service_manager.projects[project_id] = project
+    await service_manager.project_storage.save_project(project_id, project)
 
     # Create collection with quality-based config
     vector_size = 1536 if request.quality_tier == "premium" else 384
@@ -634,6 +552,12 @@ async def create_project(request: ProjectRequest) -> dict[str, Any]:
         batch_result = await add_documents_batch(batch_request)
         project["urls"] = request.urls
         project["document_count"] = len(batch_result["successful"])
+
+        # Update persistent storage
+        await service_manager.project_storage.update_project(
+            project_id,
+            {"urls": project["urls"], "document_count": project["document_count"]},
+        )
 
     return project
 
@@ -692,6 +616,79 @@ async def search_project(
     )
 
     return await search_documents(request)
+
+
+@mcp.tool()
+async def update_project(
+    project_id: str,
+    name: str | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """
+    Update project metadata.
+
+    Updates the name and/or description of an existing project.
+    """
+    await service_manager.initialize()
+
+    project = service_manager.projects.get(project_id)
+    if not project:
+        raise ValueError(f"Project {project_id} not found")
+
+    updates = {}
+    if name is not None:
+        project["name"] = name
+        updates["name"] = name
+    if description is not None:
+        project["description"] = description
+        updates["description"] = description
+
+    if updates:
+        await service_manager.project_storage.update_project(project_id, updates)
+
+    return project
+
+
+@mcp.tool()
+async def delete_project(
+    project_id: str, delete_collection: bool = True
+) -> dict[str, str]:
+    """
+    Delete a project and optionally its collection.
+
+    Args:
+        project_id: Project ID to delete
+        delete_collection: Whether to delete the associated Qdrant collection
+
+    Returns:
+        Status message
+    """
+    await service_manager.initialize()
+
+    project = service_manager.projects.get(project_id)
+    if not project:
+        raise ValueError(f"Project {project_id} not found")
+
+    # Delete collection if requested
+    if delete_collection:
+        try:
+            await service_manager.qdrant_service.delete_collection(
+                project["collection"]
+            )
+        except Exception as e:
+            logger.warning(f"Failed to delete collection {project['collection']}: {e}")
+
+    # Remove from in-memory storage
+    del service_manager.projects[project_id]
+
+    # Remove from persistent storage
+    await service_manager.project_storage.delete_project(project_id)
+
+    return {
+        "status": "deleted",
+        "project_id": project_id,
+        "collection_deleted": str(delete_collection),
+    }
 
 
 # Collection Management Tools

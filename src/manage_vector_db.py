@@ -5,20 +5,20 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations
 Provides comprehensive database management, search, and maintenance utilities
 """
 
-import asyncio
 import logging
-import os
 from typing import Any
 
 import click
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 from pydantic import Field
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance
-from qdrant_client.models import VectorParams
 from rich.console import Console
 from rich.table import Table
+
+# Import unified configuration and service layer
+from .config import get_config
+from .services.embeddings.manager import EmbeddingManager
+from .services.qdrant_service import QdrantService
+from .utils import async_to_sync_click
 
 console = Console()
 
@@ -52,50 +52,74 @@ class DatabaseStats(BaseModel):
 
 def setup_logging(level: str = "INFO") -> logging.Logger:
     """Setup logging configuration"""
+    log_level = getattr(logging, level.upper())
     logging.basicConfig(
-        level=getattr(logging, level.upper()),
+        level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    return logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+    return logger
 
 
 class VectorDBManager:
-    """Comprehensive vector database management with modern async patterns"""
+    """Comprehensive vector database management using service layer"""
 
     def __init__(
         self,
-        url: str = "http://localhost:6333",
-        openai_api_key: str | None = None,
+        qdrant_service: QdrantService | None = None,
+        embedding_manager: EmbeddingManager | None = None,
+        qdrant_url: str | None = None,
     ) -> None:
-        self.url = url
-        self.client: AsyncQdrantClient | None = None
-        self.openai_client: AsyncOpenAI | None = None
+        """Initialize with service layer components.
 
-        if openai_api_key:
-            self.openai_client = AsyncOpenAI(api_key=openai_api_key)
+        Args:
+            qdrant_service: QdrantService instance for database operations
+            embedding_manager: EmbeddingManager for generating embeddings
+            qdrant_url: Optional Qdrant URL override
+        """
+        self.qdrant_service = qdrant_service
+        self.embedding_manager = embedding_manager
+        self.qdrant_url = qdrant_url
+        self._initialized = False
 
-    async def connect(self) -> None:
-        """Connect to Qdrant client"""
-        try:
-            self.client = AsyncQdrantClient(url=self.url)
-        except Exception as e:
-            console.print(f"❌ Error connecting to Qdrant: {e}", style="red")
-            raise
+    async def initialize(self) -> None:
+        """Initialize services if not already initialized"""
+        if self._initialized:
+            return
 
-    async def disconnect(self) -> None:
-        """Disconnect from Qdrant client"""
-        if self.client:
-            await self.client.close()
-            self.client = None
+        # If services not provided, create them from unified config
+        if not self.qdrant_service or not self.embedding_manager:
+            config = get_config()
+
+            # Override Qdrant URL if provided
+            if self.qdrant_url:
+                config.qdrant.url = self.qdrant_url
+
+            if not self.qdrant_service:
+                self.qdrant_service = QdrantService(config)
+
+            if not self.embedding_manager:
+                self.embedding_manager = EmbeddingManager(config)
+
+        # Initialize services
+        await self.qdrant_service.initialize()
+        await self.embedding_manager.initialize()
+        self._initialized = True
+
+    async def cleanup(self) -> None:
+        """Cleanup services"""
+        if self.qdrant_service:
+            await self.qdrant_service.cleanup()
+        if self.embedding_manager:
+            await self.embedding_manager.cleanup()
+        self._initialized = False
 
     async def list_collections(self) -> list[str]:
         """List all collections"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
-
-            collections_response = await self.client.get_collections()
-            return [collection.name for collection in collections_response.collections]
+            await self.initialize()
+            return await self.qdrant_service.list_collections()
         except Exception as e:
             console.print(f"❌ Error listing collections: {e}", style="red")
             return []
@@ -105,12 +129,11 @@ class VectorDBManager:
     ) -> bool:
         """Create a new collection"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
-
-            await self.client.create_collection(
+            await self.initialize()
+            await self.qdrant_service.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+                vector_size=vector_size,
+                distance="Cosine",
             )
             console.print(
                 f"✅ Successfully created collection: {collection_name}", style="green"
@@ -125,10 +148,8 @@ class VectorDBManager:
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
-
-            await self.client.delete_collection(collection_name)
+            await self.initialize()
+            await self.qdrant_service.delete_collection(collection_name)
             console.print(
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
@@ -142,16 +163,18 @@ class VectorDBManager:
     async def get_collection_info(self, collection_name: str) -> CollectionInfo | None:
         """Get information about a specific collection"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
+            await self.initialize()
+            collection_info = await self.qdrant_service.get_collection_info(
+                collection_name
+            )
 
-            collection_info = await self.client.get_collection(collection_name)
-            count_result = await self.client.count(collection_name)
+            if not collection_info:
+                return None
 
             return CollectionInfo(
                 name=collection_name,
-                vector_count=count_result.count,
-                vector_size=collection_info.config.params.vectors.size,
+                vector_count=collection_info.vector_count,
+                vector_size=collection_info.vector_size,
             )
         except Exception as e:
             console.print(
@@ -169,15 +192,12 @@ class VectorDBManager:
     ) -> list[SearchResult]:
         """Search for similar vectors"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
-
-            search_results = await self.client.search(
+            await self.initialize()
+            search_results = await self.qdrant_service.search_vectors(
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
                 score_threshold=score_threshold,
-                with_payload=True,
             )
 
             results = []
@@ -202,26 +222,24 @@ class VectorDBManager:
     async def get_database_stats(self) -> DatabaseStats | None:
         """Get comprehensive database statistics"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
-
-            collections_response = await self.client.get_collections()
+            await self.initialize()
+            collection_names = await self.qdrant_service.list_collections()
             collections = []
             total_vectors = 0
 
-            for collection in collections_response.collections:
-                count_result = await self.client.count(collection.name)
-                vector_count = count_result.count
-                total_vectors += vector_count
-
-                collection_info = await self.client.get_collection(collection.name)
-                collections.append(
-                    CollectionInfo(
-                        name=collection.name,
-                        vector_count=vector_count,
-                        vector_size=collection_info.config.params.vectors.size,
-                    )
+            for collection_name in collection_names:
+                collection_info = await self.qdrant_service.get_collection_info(
+                    collection_name
                 )
+                if collection_info:
+                    total_vectors += collection_info.vector_count
+                    collections.append(
+                        CollectionInfo(
+                            name=collection_name,
+                            vector_count=collection_info.vector_count,
+                            vector_size=collection_info.vector_size,
+                        )
+                    )
 
             return DatabaseStats(
                 total_collections=len(collections),
@@ -235,18 +253,24 @@ class VectorDBManager:
     async def clear_collection(self, collection_name: str) -> bool:
         """Clear all vectors from a collection"""
         try:
-            if not self.client:
-                raise RuntimeError("Client not connected")
+            await self.initialize()
 
             # Get vector size before deletion
-            collection_info = await self.client.get_collection(collection_name)
-            vector_size = collection_info.config.params.vectors.size
+            collection_info = await self.qdrant_service.get_collection_info(
+                collection_name
+            )
+            if not collection_info:
+                console.print(f"❌ Collection {collection_name} not found", style="red")
+                return False
+
+            vector_size = collection_info.vector_size
 
             # Delete and recreate collection
-            await self.client.delete_collection(collection_name)
-            await self.client.create_collection(
+            await self.qdrant_service.delete_collection(collection_name)
+            await self.qdrant_service.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+                vector_size=vector_size,
+                distance="Cosine",
             )
 
             console.print(
@@ -259,15 +283,18 @@ class VectorDBManager:
             )
             return False
 
+    async def get_stats(self) -> DatabaseStats | None:
+        """Alias for get_database_stats for backward compatibility"""
+        return await self.get_database_stats()
 
-async def create_embeddings(text: str, openai_client: AsyncOpenAI) -> list[float]:
-    """Create embeddings for text using OpenAI"""
+
+async def create_embeddings(
+    text: str, embedding_manager: EmbeddingManager
+) -> list[float]:
+    """Create embeddings for text using EmbeddingManager"""
     try:
-        response = await openai_client.embeddings.create(
-            model="text-embedding-ada-002",
-            input=text,
-        )
-        return response.data[0].embedding
+        embeddings = await embedding_manager.create_embeddings([text])
+        return embeddings[0] if embeddings else []
     except Exception as e:
         console.print(f"❌ Error creating embeddings: {e}", style="red")
         return []
@@ -275,11 +302,17 @@ async def create_embeddings(text: str, openai_client: AsyncOpenAI) -> list[float
 
 # CLI Commands
 @click.group()
-@click.option("--url", default="http://localhost:6333", help="Qdrant server URL")
+@click.option("--url", help="Qdrant server URL (overrides config)")
 @click.option("--log-level", default="INFO", help="Logging level")
 @click.pass_context
 def cli(ctx, url, log_level):
     """Vector Database Management CLI"""
+    # Get configuration from unified config
+    unified_config = get_config()
+
+    # Use URL from command line or config
+    if not url:
+        url = unified_config.qdrant.url
     ctx.ensure_object(dict)
     ctx.obj["url"] = url
     ctx.obj["log_level"] = log_level
@@ -290,8 +323,7 @@ def cli(ctx, url, log_level):
 @click.pass_context
 async def list(ctx):
     """List all collections"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         collections = await manager.list_collections()
         if collections:
@@ -301,7 +333,7 @@ async def list(ctx):
         else:
             console.print("No collections found", style="yellow")
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
@@ -310,12 +342,11 @@ async def list(ctx):
 @click.pass_context
 async def create(ctx, collection_name, vector_size):
     """Create a new collection"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.create_collection(collection_name, vector_size)
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
@@ -323,20 +354,18 @@ async def create(ctx, collection_name, vector_size):
 @click.pass_context
 async def delete(ctx, collection_name):
     """Delete a collection"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.delete_collection(collection_name)
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
 @click.pass_context
 async def stats(ctx):
     """Show database statistics"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         stats = await manager.get_database_stats()
         if stats:
@@ -361,7 +390,7 @@ async def stats(ctx):
         else:
             console.print("Could not retrieve database stats", style="red")
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
@@ -369,8 +398,7 @@ async def stats(ctx):
 @click.pass_context
 async def info(ctx, collection_name):
     """Show collection information"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         info = await manager.get_collection_info(collection_name)
         if info:
@@ -380,7 +408,7 @@ async def info(ctx, collection_name):
         else:
             console.print(f"Collection '{collection_name}' not found", style="red")
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
@@ -388,12 +416,11 @@ async def info(ctx, collection_name):
 @click.pass_context
 async def clear(ctx, collection_name):
     """Clear all vectors from a collection"""
-    manager = VectorDBManager(ctx.obj["url"])
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
         await manager.clear_collection(collection_name)
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 @cli.command()
@@ -403,18 +430,13 @@ async def clear(ctx, collection_name):
 @click.pass_context
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents"""
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        console.print(
-            "❌ OPENAI_API_KEY environment variable required for search", style="red"
-        )
-        return
-
-    manager = VectorDBManager(ctx.obj["url"], openai_api_key)
-    await manager.connect()
+    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
     try:
+        # Initialize manager to ensure embedding_manager is available
+        await manager.initialize()
+
         # Create query embedding
-        query_vector = await create_embeddings(query, manager.openai_client)
+        query_vector = await create_embeddings(query, manager.embedding_manager)
         if not query_vector:
             console.print("Failed to create query embedding", style="red")
             return
@@ -437,31 +459,12 @@ async def search(ctx, collection_name, query, limit):
         else:
             console.print("No results found", style="yellow")
     finally:
-        await manager.disconnect()
+        await manager.cleanup()
 
 
 def main():
     """Main entry point"""
-
-    # Make the CLI async-compatible
-    def sync_cli():
-        import asyncio
-
-        return asyncio.run(cli())
-
-    # Create sync version of cli
-    for command in cli.commands.values():
-        if asyncio.iscoroutinefunction(command.callback):
-            original_callback = command.callback
-
-            def make_sync_callback(func):
-                def sync_callback(*args, **kwargs):
-                    return asyncio.run(func(*args, **kwargs))
-
-                return sync_callback
-
-            command.callback = make_sync_callback(original_callback)
-
+    async_to_sync_click(cli)
     cli()
 
 

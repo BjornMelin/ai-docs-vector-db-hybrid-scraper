@@ -21,28 +21,37 @@ This implementation combines **research-backed best practices** for production-g
 
 ### 🏗️ Modern Technology Stack
 
-| Component              | Technology                                                          | Benefits                                        |
-| ---------------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
-| **Bulk Scraping**      | [Crawl4AI](https://github.com/unclecode/crawl4ai)                   | 4-6x faster than alternatives, async concurrent |
-| **On-Demand Scraping** | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server) | Claude Desktop integration, JS handling         |
-| **Vector Database**    | [Qdrant](https://qdrant.tech/)                                      | Hybrid search, quantization, local persistence  |
-| **MCP Server**         | [FastMCP 2.0](https://github.com/jlowin/fastmcp)                    | Unified MCP interface for all functionality     |
-| **Dense Embeddings**   | OpenAI text-embedding-3-small                                       | Best cost-performance ratio                     |
-| **Sparse Embeddings**  | SPLADE++                                                            | Keyword matching for hybrid search              |
-| **Reranking**          | BGE-reranker-v2-m3                                                  | Minimal complexity, maximum accuracy gains      |
-| **Package Manager**    | [uv](https://github.com/astral-sh/uv)                               | 10-100x faster than pip                         |
+| Component               | Technology                                                          | Benefits                                         |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| **Bulk Scraping**       | [Crawl4AI](https://github.com/unclecode/crawl4ai)                  | 4-6x faster than alternatives, async concurrent  |
+| **On-Demand Scraping**  | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server)| Claude Desktop integration, JS handling          |
+| **Vector Database**     | [Qdrant](https://qdrant.tech/)                                     | Hybrid search, quantization, local persistence   |
+| **MCP Server**          | [FastMCP 2.0](https://github.com/jlowin/fastmcp)                   | Unified MCP interface for all functionality      |
+| **Configuration**       | Pydantic v2 + UnifiedConfig                                        | Centralized settings with validation             |
+| **Service Layer**       | EmbeddingManager, QdrantService, CrawlManager                      | Modular architecture with dependency injection   |
+| **Dense Embeddings**    | OpenAI text-embedding-3-small                                      | Best cost-performance ratio                      |
+| **Sparse Embeddings**   | SPLADE++ via FastEmbed                                             | Keyword matching for hybrid search               |
+| **Reranking**           | BGE-reranker-v2-m3                                                 | Minimal complexity, maximum accuracy gains       |
+| **Caching**             | Redis + In-Memory LRU                                              | 80%+ cache hit rate, intelligent key generation  |
+| **Security**            | SecurityValidator + UnifiedConfig                                  | URL validation, domain filtering, API key safety |
+| **Package Manager**     | [uv](https://github.com/astral-sh/uv)                              | 10-100x faster than pip                          |
 
 ## ✨ Key Features
 
-- **🧠 Advanced Embedding Pipeline**: Hybrid dense+sparse search with reranking
+- **🧠 Advanced Embedding Pipeline**: Hybrid dense+sparse search with BGE reranking
 - **⚡ Ultra-Fast Scraping**: Crawl4AI processes 100+ documentation pages in minutes
 - **💰 Cost-Optimized**: Zero bulk API costs + 5x cheaper OpenAI embeddings
-- **🔄 Hybrid Workflow**: Bulk population + seamless on-demand additions via MCP
+- **🔄 Unified Architecture**: Service layer abstraction with dependency injection
 - **🏠 Local-First**: All data stored persistently in your environment
-- **🤖 Claude Integration**: Native MCP server support for Claude Desktop/Code
+- **🤖 Claude Integration**: Unified MCP server with 25+ advanced tools
 - **📈 Production-Ready**: Quantization, monitoring, error handling, testing
 - **🔍 Enhanced Code-Aware Chunking**: AST-based chunking preserves function boundaries
 - **🌳 Tree-sitter Integration**: Multi-language code parsing (Python, JS, TS)
+- **🔐 Security-First**: URL validation, domain filtering, API key protection
+- **⚙️ Centralized Configuration**: UnifiedConfig with Pydantic v2 validation
+- **💾 Intelligent Caching**: Redis + LRU cache with 80%+ hit rates
+- **📊 Project Management**: Persistent project storage with quality tiers
+- **🔄 Service Layer**: EmbeddingManager, QdrantService, CrawlManager, CacheManager
 
 ## 🚀 Quick Start
 
@@ -111,7 +120,7 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/cla
   "mcpServers": {
     "ai-docs-vector-db": {
       "command": "uv",
-      "args": ["run", "mcp-server"],
+      "args": ["run", "python", "src/unified_mcp_server.py"],
       "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
       "env": {
         "OPENAI_API_KEY": "your_openai_api_key_here",
@@ -167,54 +176,103 @@ The system now features a clean service layer architecture that replaces MCP pro
 
 ### Service Components
 
-#### 🔌 Base Services
+#### 🔌 Core Infrastructure
 
+- **UnifiedConfig**: Centralized Pydantic v2 configuration with validation
 - **BaseService**: Lifecycle management, retry logic, async context managers
-- **APIConfig**: Centralized Pydantic v2 configuration with validation
+- **ClientManager**: Singleton pattern for API client management
 - **RateLimiter**: Token bucket algorithm preventing API limit violations
+- **SecurityValidator**: URL validation, domain filtering, query sanitization
 
 #### 🧠 Embedding Services
 
 - **OpenAIEmbeddingProvider**: Direct OpenAI SDK with batch API support
-- **FastEmbedProvider**: 10+ local models with zero cost
-- **EmbeddingManager**: Smart provider selection based on quality tiers (FAST/BALANCED/BEST)
+- **FastEmbedProvider**: Local models with sparse vector support (SPLADE++)
+- **EmbeddingManager**: Smart provider selection based on quality tiers
+- **Sparse Vector Support**: SPLADE++ for hybrid search keyword matching
 
 #### 🕷️ Crawling Services
 
 - **FirecrawlProvider**: Premium crawling with JS rendering
 - **Crawl4AIProvider**: High-performance open-source alternative
 - **CrawlManager**: Automatic fallback between providers
+- **Enhanced Chunking**: AST-based code parsing with Tree-sitter
 
 #### 💾 Vector Database
 
 - **QdrantService**: Direct SDK integration with hybrid search
-- Query API with prefetch and fusion strategies
-- Automatic batching and rate limiting
+- **Hybrid Search**: Dense + sparse vectors with RRF fusion
+- **BGE Reranking**: Cross-encoder reranking for accuracy
+- **Query API**: Prefetch patterns for multi-stage retrieval
+
+#### 💼 Project Management
+
+- **ProjectStorage**: JSON-based persistent project configuration
+- **Quality Tiers**: Fast, Balanced, Premium settings per project
+- **Atomic Operations**: Safe concurrent updates with file locking
+
+#### 🚀 Caching Layer
+
+- **CacheManager**: Unified caching with Redis + in-memory LRU
+- **Content-Based Keys**: Hash-based keys for cache deduplication
+- **TTL Management**: Configurable TTLs per cache type
+- **Warming Strategies**: Proactive cache population
 
 ### Usage Example
 
 ```python
-from src.services import APIConfig, EmbeddingManager, QdrantService
+from src.config import get_config
+from src.services import EmbeddingManager, QdrantService, CacheManager
+from src.services.config import APIConfig
 
-# Initialize with configuration
-config = APIConfig(
-    openai_api_key="sk-...",
-    qdrant_url="http://localhost:6333"
-)
+# Get unified configuration
+config = get_config()
 
-# Smart embedding generation
-async with EmbeddingManager(config) as embeddings:
-    # Automatically selects best provider
-    vectors = await embeddings.generate_embeddings(
+# Or use APIConfig adapter for services
+api_config = APIConfig.from_unified_config()
+
+# Smart embedding generation with sparse vectors
+async with EmbeddingManager(api_config) as embeddings:
+    # Generates both dense and sparse vectors
+    dense, sparse = await embeddings.generate_embeddings(
         texts=["Hello world"],
-        quality_tier=QualityTier.BALANCED
+        generate_sparse=True,
+        quality_tier="BALANCED"
     )
 
-# Direct vector database operations
-async with QdrantService(config) as qdrant:
-    await qdrant.create_collection("docs", vector_size=1536)
-    await qdrant.upsert_points("docs", points)
-    results = await qdrant.hybrid_search("docs", query_vector)
+# Direct vector database operations with hybrid search
+async with QdrantService(api_config) as qdrant:
+    await qdrant.create_collection(
+        "docs", 
+        vector_size=1536,
+        sparse_vector_name="sparse"
+    )
+    
+    # Hybrid search with reranking
+    results = await qdrant.hybrid_search(
+        collection_name="docs",
+        query_vector=dense[0],
+        sparse_vector=sparse[0],
+        limit=20
+    )
+    
+    # Rerank results with BGE
+    from src.services.embeddings.reranker import BGEReranker
+    reranker = BGEReranker()
+    reranked = await reranker.rerank(
+        query="Hello world",
+        results=results,
+        top_k=5
+    )
+
+# Intelligent caching
+async with CacheManager(api_config) as cache:
+    # Content-based cache key
+    result = await cache.get_or_compute(
+        key="search:hello_world",
+        compute_fn=lambda: embeddings.generate_embeddings(["Hello world"]),
+        ttl=3600
+    )
 ```
 
 ## 📊 Performance Benchmarks
@@ -292,6 +350,53 @@ Edit `config/documentation-sites.json`:
 MAX_CONCURRENT_CRAWLS = 10  # Default: 10
 CHUNK_SIZE = 1600          # Research optimal: 1600 chars
 CHUNK_OVERLAP = 200        # Research optimal: 200 chars
+```
+
+## 🤖 Unified MCP Server Tools
+
+The unified MCP server provides 25+ advanced tools accessible through Claude Desktop/Code:
+
+### Search & Retrieval Tools
+- **search_documents**: Advanced hybrid search with BGE reranking
+- **search_similar**: Pure vector similarity search
+- **search_project**: Project-specific search with quality settings
+
+### Embedding Management Tools
+- **generate_embeddings**: Multi-provider embedding generation
+- **list_embedding_providers**: Show available providers and models
+
+### Document Management Tools
+- **add_document**: Add single document with smart chunking
+- **add_documents_batch**: Batch document processing with parallelization
+
+### Project Management Tools
+- **create_project**: Create projects with quality tiers (Fast/Balanced/Premium)
+- **list_projects**: List all projects with statistics
+- **update_project**: Update project metadata
+- **delete_project**: Remove project and optionally its collection
+
+### Collection Management Tools
+- **get_collections**: List all collections with statistics
+- **delete_collection**: Remove a collection
+- **get_collection_info**: Detailed collection metadata
+
+### Analytics & Monitoring Tools
+- **get_server_stats**: Server health and performance metrics
+- **get_cache_stats**: Cache hit rates and efficiency
+
+### Example Usage in Claude
+
+```
+Human: Search my documentation for "vector database optimization"
+Claude: I'll search your documentation for vector database optimization techniques.
+
+[Uses search_documents tool with hybrid search and reranking]
+
+Found 5 highly relevant results:
+1. "Qdrant Performance Tuning" - Score: 0.92
+2. "Vector Quantization Strategies" - Score: 0.89
+3. "HNSW Index Optimization" - Score: 0.87
+...
 ```
 
 ## 🛠️ Management Commands

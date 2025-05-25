@@ -7,8 +7,8 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
+from ..config import UnifiedConfig
 from .base import BaseService
-from .config import APIConfig
 from .errors import QdrantServiceError
 
 logger = logging.getLogger(__name__)
@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 class QdrantService(BaseService):
     """Service for direct Qdrant operations."""
 
-    def __init__(self, config: APIConfig):
+    def __init__(self, config: UnifiedConfig):
         """Initialize Qdrant service.
 
         Args:
-            config: API configuration
+            config: Unified configuration
         """
         super().__init__(config)
-        self.config: APIConfig = config
+        self.config: UnifiedConfig = config
         self._client: AsyncQdrantClient | None = None
 
     async def initialize(self) -> None:
@@ -38,10 +38,10 @@ class QdrantService(BaseService):
 
         try:
             self._client = AsyncQdrantClient(
-                url=self.config.qdrant_url,
-                api_key=self.config.qdrant_api_key,
-                timeout=self.config.qdrant_timeout,
-                prefer_grpc=self.config.qdrant_prefer_grpc,
+                url=self.config.vector_db.url,
+                api_key=self.config.vector_db.api_key,
+                timeout=self.config.vector_db.timeout,
+                prefer_grpc=self.config.vector_db.prefer_grpc,
             )
 
             # Validate connection by listing collections
@@ -51,7 +51,7 @@ class QdrantService(BaseService):
                 raise QdrantServiceError(f"Qdrant connection check failed: {e}") from e
 
             self._initialized = True
-            logger.info(f"Qdrant client initialized: {self.config.qdrant_url}")
+            logger.info(f"Qdrant client initialized: {self.config.vector_db.url}")
         except Exception as e:
             self._client = None
             self._initialized = False

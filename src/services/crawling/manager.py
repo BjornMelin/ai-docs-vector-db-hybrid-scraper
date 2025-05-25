@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from ..config import APIConfig
+from ...config import UnifiedConfig
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 from .crawl4ai_provider import Crawl4AIProvider
@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 class CrawlManager:
     """Manager for crawling with multiple providers."""
 
-    def __init__(self, config: APIConfig):
+    def __init__(self, config: UnifiedConfig):
         """Initialize crawl manager.
 
         Args:
-            config: API configuration
+            config: Unified configuration
         """
         self.config = config
         self.providers: dict[str, CrawlProvider] = {}
@@ -31,9 +31,11 @@ class CrawlManager:
             return
 
         # Initialize Firecrawl if API key available
-        if self.config.firecrawl_api_key:
+        if self.config.crawling.firecrawl_api_key:
             try:
-                provider = FirecrawlProvider(api_key=self.config.firecrawl_api_key)
+                provider = FirecrawlProvider(
+                    api_key=self.config.crawling.firecrawl_api_key
+                )
                 await provider.initialize()
                 self.providers["firecrawl"] = provider
                 logger.info("Initialized Firecrawl provider")
@@ -104,8 +106,8 @@ class CrawlManager:
         else:
             # Use configured preference
             provider_order = []
-            if self.config.preferred_crawl_provider in self.providers:
-                provider_order.append(self.config.preferred_crawl_provider)
+            if self.config.crawling.preferred_provider in self.providers:
+                provider_order.append(self.config.crawling.preferred_provider)
             provider_order.extend(p for p in self.providers if p not in provider_order)
 
         # Try providers in order
@@ -165,7 +167,7 @@ class CrawlManager:
             preferred_provider = "firecrawl"
 
         # Select provider
-        provider_name = preferred_provider or self.config.preferred_crawl_provider
+        provider_name = preferred_provider or self.config.crawling.preferred_provider
         if provider_name not in self.providers:
             provider_name = next(iter(self.providers.keys()))
 
@@ -216,9 +218,9 @@ class CrawlManager:
             info[name] = {
                 "type": provider.__class__.__name__,
                 "available": True,
-                "is_preferred": name == self.config.preferred_crawl_provider,
+                "is_preferred": name == self.config.crawling.preferred_provider,
                 "has_api_key": name == "firecrawl"
-                and bool(self.config.firecrawl_api_key),
+                and bool(self.config.crawling.firecrawl_api_key),
             }
         return info
 

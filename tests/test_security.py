@@ -12,6 +12,7 @@ class TestSecurityValidator:
 
     def test_validate_url_valid(self):
         """Test valid URL validation."""
+        validator = SecurityValidator.from_unified_config()
         valid_urls = [
             "https://example.com",
             "http://docs.python.org",
@@ -20,11 +21,12 @@ class TestSecurityValidator:
         ]
 
         for url in valid_urls:
-            result = SecurityValidator.validate_url(url)
+            result = validator.validate_url(url)
             assert result == url
 
     def test_validate_url_invalid_scheme(self):
         """Test invalid URL scheme rejection."""
+        validator = SecurityValidator.from_unified_config()
         invalid_urls = [
             "javascript:alert('xss')",
             "data:text/html,<script>alert('xss')</script>",
@@ -34,10 +36,11 @@ class TestSecurityValidator:
 
         for url in invalid_urls:
             with pytest.raises(SecurityError):
-                SecurityValidator.validate_url(url)
+                validator.validate_url(url)
 
     def test_validate_url_dangerous_patterns(self):
         """Test dangerous pattern rejection."""
+        validator = SecurityValidator.from_unified_config()
         dangerous_urls = [
             "http://localhost:8080",
             "https://127.0.0.1",
@@ -48,25 +51,28 @@ class TestSecurityValidator:
 
         for url in dangerous_urls:
             with pytest.raises(SecurityError):
-                SecurityValidator.validate_url(url)
+                validator.validate_url(url)
 
     def test_validate_url_too_long(self):
         """Test URL length limit."""
+        validator = SecurityValidator.from_unified_config()
         long_url = "https://example.com/" + "a" * 2100
 
         with pytest.raises(SecurityError):
-            SecurityValidator.validate_url(long_url)
+            validator.validate_url(long_url)
 
     def test_validate_collection_name_valid(self):
         """Test valid collection name validation."""
+        validator = SecurityValidator.from_unified_config()
         valid_names = ["documentation", "my-docs", "test_collection", "docs123", "a"]
 
         for name in valid_names:
-            result = SecurityValidator.validate_collection_name(name)
+            result = validator.validate_collection_name(name)
             assert result == name
 
     def test_validate_collection_name_invalid(self):
         """Test invalid collection name rejection."""
+        validator = SecurityValidator.from_unified_config()
         invalid_names = [
             "",
             "   ",
@@ -78,10 +84,11 @@ class TestSecurityValidator:
 
         for name in invalid_names:
             with pytest.raises(SecurityError):
-                SecurityValidator.validate_collection_name(name)
+                validator.validate_collection_name(name)
 
     def test_validate_query_string_valid(self):
         """Test valid query string validation."""
+        validator = SecurityValidator.from_unified_config()
         valid_queries = [
             "how to install python",
             "API documentation",
@@ -89,7 +96,7 @@ class TestSecurityValidator:
         ]
 
         for query in valid_queries:
-            result = SecurityValidator.validate_query_string(query)
+            result = validator.validate_query_string(query)
             assert len(result) > 0
             # Should not contain dangerous characters
             assert "<" not in result
@@ -97,8 +104,9 @@ class TestSecurityValidator:
 
     def test_validate_query_string_sanitization(self):
         """Test query string sanitization."""
+        validator = SecurityValidator.from_unified_config()
         dangerous_query = "search<script>alert('xss')</script>"
-        result = SecurityValidator.validate_query_string(dangerous_query)
+        result = validator.validate_query_string(dangerous_query)
 
         # Should remove dangerous characters
         assert "<script>" not in result
@@ -106,13 +114,15 @@ class TestSecurityValidator:
 
     def test_validate_query_string_too_long(self):
         """Test query length limit."""
+        validator = SecurityValidator.from_unified_config()
         long_query = "a" * 1100
 
         with pytest.raises(SecurityError):
-            SecurityValidator.validate_query_string(long_query)
+            validator.validate_query_string(long_query)
 
     def test_sanitize_filename(self):
         """Test filename sanitization."""
+        validator = SecurityValidator.from_unified_config()
         test_cases = [
             ("normal.txt", "normal.txt"),
             ("file with spaces.txt", "file with spaces.txt"),
@@ -123,7 +133,7 @@ class TestSecurityValidator:
         ]
 
         for input_name, _ in test_cases:
-            result = SecurityValidator.sanitize_filename(input_name)
+            result = validator.sanitize_filename(input_name)
             assert len(result) <= 255
             # Should not contain dangerous characters
             assert "/" not in result
