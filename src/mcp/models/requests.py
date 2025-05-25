@@ -41,6 +41,8 @@ class DocumentRequest(BaseModel):
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
     )
+    chunk_size: int = Field(default=1600, ge=100, le=4000, description="Chunk size")
+    chunk_overlap: int = Field(default=200, ge=0, le=500, description="Chunk overlap")
     extract_metadata: bool = Field(
         default=True, description="Extract document metadata"
     )

@@ -25,34 +25,36 @@ from uuid import uuid4
 
 from fastmcp import Context
 from fastmcp import FastMCP
-from pydantic import BaseModel
-from pydantic import Field
 
 # Handle both module and script imports
 try:
     from chunking import ChunkingConfig
     from chunking import chunk_content
-    from config import get_config
     from config.enums import ChunkingStrategy
     from config.enums import SearchStrategy
-    from services.base import BaseService
-    from services.cache.manager import CacheManager
-    from services.crawling.manager import CrawlManager
-    from services.embeddings.manager import EmbeddingManager
-    from services.project_storage import ProjectStorage
-    from services.qdrant_service import QdrantService
+    from mcp.models.requests import AnalyticsRequest
+    from mcp.models.requests import BatchRequest
+    from mcp.models.requests import DocumentRequest
+    from mcp.models.requests import EmbeddingRequest
+    from mcp.models.requests import ProjectRequest
+    from mcp.models.requests import SearchRequest
+    from mcp.models.responses import SearchResult
+    from mcp.service_manager import UnifiedServiceManager
+    from security import SecurityValidator
 except ImportError:
     from .chunking import ChunkingConfig
     from .chunking import chunk_content
-    from .config import get_config
     from .config.enums import ChunkingStrategy
     from .config.enums import SearchStrategy
-    from .services.base import BaseService
-    from .services.cache.manager import CacheManager
-    from .services.crawling.manager import CrawlManager
-    from .services.embeddings.manager import EmbeddingManager
-    from .services.project_storage import ProjectStorage
-    from .services.qdrant_service import QdrantService
+    from .mcp.models.requests import AnalyticsRequest
+    from .mcp.models.requests import BatchRequest
+    from .mcp.models.requests import DocumentRequest
+    from .mcp.models.requests import EmbeddingRequest
+    from .mcp.models.requests import ProjectRequest
+    from .mcp.models.requests import SearchRequest
+    from .mcp.models.responses import SearchResult
+    from .mcp.service_manager import UnifiedServiceManager
+    from .security import SecurityValidator
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -60,144 +62,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("ai-docs-vector-db-unified")
-
-
-# Request/Response Models
-class SearchRequest(BaseModel):
-    """Search request with advanced options"""
-
-    query: str = Field(..., description="Search query")
-    collection: str = Field(default="documentation", description="Collection to search")
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    strategy: SearchStrategy = Field(
-        default=SearchStrategy.HYBRID, description="Search strategy"
-    )
-    enable_reranking: bool = Field(default=True, description="Enable BGE reranking")
-    include_metadata: bool = Field(
-        default=True, description="Include metadata in results"
-    )
-    filters: dict[str, Any] | None = Field(default=None, description="Metadata filters")
-
-
-class SearchResult(BaseModel):
-    """Search result with metadata"""
-
-    id: str
-    content: str
-    score: float
-    url: str | None = None
-    title: str | None = None
-    metadata: dict[str, Any] | None = None
-
-
-class EmbeddingRequest(BaseModel):
-    """Embedding generation request"""
-
-    texts: list[str] = Field(..., description="Texts to embed")
-    model: str | None = Field(default=None, description="Specific model to use")
-    batch_size: int = Field(default=32, ge=1, le=100, description="Batch size")
-
-
-class DocumentRequest(BaseModel):
-    """Document processing request"""
-
-    url: str = Field(..., description="URL to process")
-    collection: str = Field(default="documentation", description="Target collection")
-    chunking_strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
-    )
-    chunk_size: int = Field(default=1600, ge=100, le=4000, description="Chunk size")
-    chunk_overlap: int = Field(default=200, ge=0, le=500, description="Chunk overlap")
-
-
-class ProjectRequest(BaseModel):
-    """Project management request"""
-
-    name: str = Field(..., description="Project name")
-    description: str | None = Field(default=None, description="Project description")
-    urls: list[str] = Field(default_factory=list, description="Initial URLs")
-    quality_tier: str = Field(default="balanced", description="Quality tier")
-
-
-class BatchRequest(BaseModel):
-    """Batch processing request"""
-
-    urls: list[str] = Field(..., description="URLs to process")
-    collection: str = Field(default="documentation", description="Target collection")
-    parallel_limit: int = Field(default=5, ge=1, le=20, description="Parallel limit")
-
-
-class AnalyticsRequest(BaseModel):
-    """Analytics request"""
-
-    collection: str | None = Field(default=None, description="Specific collection")
-    include_performance: bool = Field(
-        default=True, description="Include performance metrics"
-    )
-    include_costs: bool = Field(default=True, description="Include cost analysis")
-
-
-# Service Manager
-class UnifiedServiceManager(BaseService):
-    """Manages all services for the unified MCP server"""
-
-    def __init__(self):
-        super().__init__()
-        self.config = get_config()
-        self.embedding_manager: EmbeddingManager | None = None
-        self.crawl_manager: CrawlManager | None = None
-        self.qdrant_service: QdrantService | None = None
-        self.cache_manager: CacheManager | None = None
-        self.project_storage: ProjectStorage | None = None
-        self._initialized = False
-
-    async def initialize(self):
-        """Initialize all services"""
-        if self._initialized:
-            return
-
-        try:
-            # Initialize services directly with unified config
-            self.embedding_manager = EmbeddingManager(self.config)
-            self.crawl_manager = CrawlManager(self.config)
-            self.qdrant_service = QdrantService(self.config)
-            self.cache_manager = CacheManager(self.config)
-
-            # Initialize project storage
-            self.project_storage = ProjectStorage()
-
-            # Initialize each service
-            await self.embedding_manager.initialize()
-            await self.crawl_manager.initialize()
-            await self.qdrant_service.initialize()
-            await self.cache_manager.initialize()
-            await self.project_storage.initialize()
-
-            # Projects are managed internally by ProjectStorage
-
-            self._initialized = True
-            logger.info("All services initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize services: {e}")
-            raise
-
-    async def cleanup(self):
-        """Cleanup all services"""
-        if self.embedding_manager:
-            await self.embedding_manager.cleanup()
-        if self.crawl_manager:
-            await self.crawl_manager.cleanup()
-        if self.qdrant_service:
-            await self.qdrant_service.cleanup()
-        if self.cache_manager:
-            await self.cache_manager.cleanup()
-        if self.project_storage:
-            await self.project_storage.cleanup()
-
-        self._initialized = False
-        logger.info("All services cleaned up")
-
 
 # Initialize service manager
 service_manager = UnifiedServiceManager()
@@ -222,8 +86,6 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
     try:
         # Validate collection name and query
-        from .security import SecurityValidator
-
         security_validator = SecurityValidator.from_unified_config()
         request.collection = security_validator.validate_collection_name(
             request.collection
@@ -344,8 +206,6 @@ async def search_similar(
     await service_manager.initialize()
 
     # Validate collection name
-    from .security import SecurityValidator
-
     security_validator = SecurityValidator.from_unified_config()
     collection = security_validator.validate_collection_name(collection)
 
@@ -495,8 +355,6 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
 
     try:
         # Validate URL using SecurityValidator
-        from .security import SecurityValidator
-
         security_validator = SecurityValidator.from_unified_config()
         validated_url = security_validator.validate_url(request.url)
         request.url = validated_url
@@ -516,14 +374,14 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
 
         # Configure chunking
         chunk_config = ChunkingConfig(
-            strategy=request.chunking_strategy,
+            strategy=request.chunk_strategy,
             chunk_size=request.chunk_size,
             chunk_overlap=request.chunk_overlap,
         )
 
         # Chunk the document
         await ctx.debug(
-            f"Chunking document {doc_id} with strategy {request.chunking_strategy}"
+            f"Chunking document {doc_id} with strategy {request.chunk_strategy}"
         )
         chunks = chunk_content(
             crawl_result.markdown,
@@ -560,7 +418,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
             vector_size=len(embeddings[0]),
             distance="Cosine",
             sparse_vector_name="sparse"
-            if request.chunking_strategy != ChunkingStrategy.BASIC
+            if request.chunk_strategy != ChunkingStrategy.BASIC
             else None,
             enable_quantization=True,
         )
@@ -577,7 +435,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
             "title": crawl_result.metadata.get("title", ""),
             "chunks_created": len(chunks),
             "collection": request.collection,
-            "chunking_strategy": request.chunking_strategy.value,
+            "chunking_strategy": request.chunk_strategy.value,
             "embedding_dimensions": len(embeddings[0]),
         }
 
@@ -614,14 +472,12 @@ async def add_documents_batch(request: BatchRequest) -> dict[str, Any]:
     }
 
     # Process URLs in batches
-    semaphore = asyncio.Semaphore(request.parallel_limit)
+    semaphore = asyncio.Semaphore(request.max_concurrent)
 
     async def process_url(url: str):
         async with semaphore:
             try:
                 # Validate URL first
-                from .security import SecurityValidator
-
                 security_validator = SecurityValidator.from_unified_config()
                 validated_url = security_validator.validate_url(url)
 
