@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Security utilities for MCP server."""
+"""Security utilities for MCP server with unified configuration integration."""
 
 import logging
 import os
 import re
 from typing import ClassVar
 from urllib.parse import urlparse
+
+from .config import SecurityConfig, get_config
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ class SecurityError(Exception):
 
 
 class SecurityValidator:
-    """Security validation utilities."""
+    """Security validation utilities with unified configuration integration."""
 
     # Allowed URL schemes
     ALLOWED_SCHEMES: ClassVar[set[str]] = {"http", "https"}
@@ -38,9 +40,22 @@ class SecurityValidator:
         r"172\.(1[6-9]|2[0-9]|3[0-1])\.",
     ]
 
+    def __init__(self, security_config: SecurityConfig | None = None):
+        """Initialize with security configuration.
+        
+        Args:
+            security_config: Security configuration. If None, loads from unified config.
+        """
+        self.config = security_config or get_config().security
+        logger.info(f"SecurityValidator initialized with {len(self.config.allowed_domains)} allowed domains")
+    
     @classmethod
-    def validate_url(cls, url: str) -> str:
-        """Validate and sanitize URL input.
+    def from_unified_config(cls) -> "SecurityValidator":
+        """Create SecurityValidator from unified configuration."""
+        return cls(get_config().security)
+
+    def validate_url(self, url: str) -> str:
+        """Validate and sanitize URL input using unified configuration.
 
         Args:
             url: URL to validate
@@ -61,12 +76,28 @@ class SecurityValidator:
             raise SecurityError(f"Invalid URL format: {e}") from e
 
         # Check scheme
-        if parsed.scheme.lower() not in cls.ALLOWED_SCHEMES:
+        if parsed.scheme.lower() not in self.ALLOWED_SCHEMES:
             raise SecurityError(f"URL scheme '{parsed.scheme}' not allowed")
+
+        # Check against blocked domains from config
+        domain = parsed.netloc.lower()
+        for blocked in self.config.blocked_domains:
+            if blocked.lower() in domain:
+                raise SecurityError(f"Domain '{domain}' is blocked")
+
+        # Check against allowed domains if configured
+        if self.config.allowed_domains:
+            domain_allowed = False
+            for allowed in self.config.allowed_domains:
+                if allowed.lower() in domain or domain in allowed.lower():
+                    domain_allowed = True
+                    break
+            if not domain_allowed:
+                raise SecurityError(f"Domain '{domain}' not in allowed list")
 
         # Check for dangerous patterns
         url_lower = url.lower()
-        for pattern in cls.DANGEROUS_PATTERNS:
+        for pattern in self.DANGEROUS_PATTERNS:
             if re.search(pattern, url_lower):
                 raise SecurityError(f"URL contains dangerous pattern: {pattern}")
 
@@ -75,9 +106,14 @@ class SecurityValidator:
             raise SecurityError("URL too long (max 2048 characters)")
 
         return url.strip()
-
+    
     @classmethod
-    def validate_collection_name(cls, name: str) -> str:
+    def validate_url_static(cls, url: str) -> str:
+        """Static method for backward compatibility - uses default config."""
+        validator = cls.from_unified_config()
+        return validator.validate_url(url)
+
+    def validate_collection_name(self, name: str) -> str:
         """Validate collection name.
 
         Args:
@@ -108,8 +144,7 @@ class SecurityValidator:
 
         return name
 
-    @classmethod
-    def validate_query_string(cls, query: str) -> str:
+    def validate_query_string(self, query: str) -> str:
         """Validate search query string.
 
         Args:
@@ -129,16 +164,17 @@ class SecurityValidator:
         if len(query) < 1:
             raise SecurityError("Query cannot be empty")
 
-        if len(query) > 1000:
-            raise SecurityError("Query too long (max 1000 characters)")
+        # Check max query length from config or use default
+        max_length = getattr(self.config, 'max_query_length', 1000)
+        if len(query) > max_length:
+            raise SecurityError(f"Query too long (max {max_length} characters)")
 
         # Remove potentially dangerous characters
         query = re.sub(r'[<>"\']', "", query)
 
         return query
 
-    @classmethod
-    def sanitize_filename(cls, filename: str) -> str:
+    def sanitize_filename(self, filename: str) -> str:
         """Sanitize filename for safe file operations.
 
         Args:
@@ -165,6 +201,24 @@ class SecurityValidator:
             filename = "safe_filename"
 
         return filename
+    
+    @classmethod
+    def validate_collection_name_static(cls, name: str) -> str:
+        """Static method for backward compatibility - uses default config."""
+        validator = cls.from_unified_config()
+        return validator.validate_collection_name(name)
+    
+    @classmethod
+    def validate_query_string_static(cls, query: str) -> str:
+        """Static method for backward compatibility - uses default config."""
+        validator = cls.from_unified_config()
+        return validator.validate_query_string(query)
+    
+    @classmethod
+    def sanitize_filename_static(cls, filename: str) -> str:
+        """Static method for backward compatibility - uses default config."""
+        validator = cls.from_unified_config()
+        return validator.sanitize_filename(filename)
 
 
 class APIKeyValidator:

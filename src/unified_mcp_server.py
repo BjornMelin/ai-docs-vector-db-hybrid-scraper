@@ -225,6 +225,12 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
     )
 
     try:
+        # Validate collection name and query
+        from .security import SecurityValidator
+        security_validator = SecurityValidator.from_unified_config()
+        request.collection = security_validator.validate_collection_name(request.collection)
+        request.query = security_validator.validate_query_string(request.query)
+        
         # Check cache first
         cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
         cached = await service_manager.cache_manager.get(cache_key)
@@ -336,6 +342,11 @@ async def search_similar(
     finding conceptually similar content.
     """
     await service_manager.initialize()
+
+    # Validate collection name
+    from .security import SecurityValidator
+    security_validator = SecurityValidator.from_unified_config()
+    collection = security_validator.validate_collection_name(collection)
 
     # Log if context available
     if ctx:
@@ -482,6 +493,11 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
     await ctx.info(f"Processing document {doc_id}: {request.url}")
 
     try:
+        # Validate URL using SecurityValidator
+        from .security import SecurityValidator
+        security_validator = SecurityValidator.from_unified_config()
+        validated_url = security_validator.validate_url(request.url)
+        request.url = validated_url
         # Check cache for existing document
         cache_key = f"doc:{request.url}"
         cached = await service_manager.cache_manager.get(cache_key)
@@ -601,8 +617,13 @@ async def add_documents_batch(request: BatchRequest) -> dict[str, Any]:
     async def process_url(url: str):
         async with semaphore:
             try:
+                # Validate URL first
+                from .security import SecurityValidator
+                security_validator = SecurityValidator.from_unified_config()
+                validated_url = security_validator.validate_url(url)
+                
                 doc_request = DocumentRequest(
-                    url=url,
+                    url=validated_url,
                     collection=request.collection,
                 )
                 result = await add_document(doc_request)
