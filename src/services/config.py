@@ -7,7 +7,14 @@ unified configuration system under the hood.
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from src.config import get_config
+try:
+    from src.config import get_config
+except ImportError:
+    import sys
+    from pathlib import Path
+    # Add parent directory to path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from src.config import get_config
 
 
 class ServiceConfig(BaseModel):
