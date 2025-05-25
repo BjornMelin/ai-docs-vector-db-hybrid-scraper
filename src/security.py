@@ -7,7 +7,8 @@ import re
 from typing import ClassVar
 from urllib.parse import urlparse
 
-from .config import SecurityConfig, get_config
+from .config import SecurityConfig
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +43,15 @@ class SecurityValidator:
 
     def __init__(self, security_config: SecurityConfig | None = None):
         """Initialize with security configuration.
-        
+
         Args:
             security_config: Security configuration. If None, loads from unified config.
         """
         self.config = security_config or get_config().security
-        logger.info(f"SecurityValidator initialized with {len(self.config.allowed_domains)} allowed domains")
-    
+        logger.info(
+            f"SecurityValidator initialized with {len(self.config.allowed_domains)} allowed domains"
+        )
+
     @classmethod
     def from_unified_config(cls) -> "SecurityValidator":
         """Create SecurityValidator from unified configuration."""
@@ -106,7 +109,7 @@ class SecurityValidator:
             raise SecurityError("URL too long (max 2048 characters)")
 
         return url.strip()
-    
+
     @classmethod
     def validate_url_static(cls, url: str) -> str:
         """Static method for backward compatibility - uses default config."""
@@ -165,7 +168,7 @@ class SecurityValidator:
             raise SecurityError("Query cannot be empty")
 
         # Check max query length from config or use default
-        max_length = getattr(self.config, 'max_query_length', 1000)
+        max_length = getattr(self.config, "max_query_length", 1000)
         if len(query) > max_length:
             raise SecurityError(f"Query too long (max {max_length} characters)")
 
@@ -201,19 +204,19 @@ class SecurityValidator:
             filename = "safe_filename"
 
         return filename
-    
+
     @classmethod
     def validate_collection_name_static(cls, name: str) -> str:
         """Static method for backward compatibility - uses default config."""
         validator = cls.from_unified_config()
         return validator.validate_collection_name(name)
-    
+
     @classmethod
     def validate_query_string_static(cls, query: str) -> str:
         """Static method for backward compatibility - uses default config."""
         validator = cls.from_unified_config()
         return validator.validate_query_string(query)
-    
+
     @classmethod
     def sanitize_filename_static(cls, filename: str) -> str:
         """Static method for backward compatibility - uses default config."""

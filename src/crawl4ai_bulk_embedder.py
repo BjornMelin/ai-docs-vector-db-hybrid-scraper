@@ -7,7 +7,6 @@ Based on latest Crawl4AI, Pydantic v2, and Python 3.13 best practices
 
 import asyncio
 import logging
-import os
 import sys
 from datetime import datetime
 from enum import Enum
@@ -48,13 +47,10 @@ except ImportError:
 # OpenAI client now handled by EmbeddingManager
 from pydantic import BaseModel
 from pydantic import Field
+
 # Qdrant client now handled by QdrantService
-from qdrant_client.models import Distance
 from qdrant_client.models import PointStruct
-from qdrant_client.models import SparseIndexParams
 from qdrant_client.models import SparseVector
-from qdrant_client.models import SparseVectorParams
-from qdrant_client.models import VectorParams
 from rich.console import Console
 from rich.progress import Progress
 from rich.progress import SpinnerColumn
@@ -67,15 +63,13 @@ from .chunking import EnhancedChunker
 
 # Import unified configuration
 from .config import get_config
-from .config.models import UnifiedConfig
 from .config.enums import EmbeddingProvider
 from .config.enums import SearchStrategy
+from .services.crawling.manager import CrawlManager
 
 # Import service layer
 from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
-from .services.crawling.manager import CrawlManager
-from .services.config import APIConfig
 
 console = Console()
 
@@ -286,10 +280,9 @@ class ModernDocumentationScraper:
         self.processed_urls: set[str] = set()
 
         # Initialize service layer
-        api_config = APIConfig.from_unified_config()
-        self.embedding_manager = EmbeddingManager(api_config)
-        self.qdrant_service = QdrantService(api_config)
-        self.crawl_manager = CrawlManager(api_config)
+        self.embedding_manager = EmbeddingManager(self.config)
+        self.qdrant_service = QdrantService(self.config)
+        self.crawl_manager = CrawlManager(self.config)
 
         # Enhanced logging setup
         logging.basicConfig(
@@ -379,8 +372,9 @@ class ModernDocumentationScraper:
                     collection_name=self.config.collection_name,
                     vector_size=vector_size,
                     distance="Cosine",
-                    enable_sparse=self.config.embedding.search_strategy == SearchStrategy.HYBRID,
-                    on_disk=self.config.embedding.enable_quantization
+                    enable_sparse=self.config.embedding.search_strategy
+                    == SearchStrategy.HYBRID,
+                    on_disk=self.config.embedding.enable_quantization,
                 )
                 self.logger.info(
                     f"Created collection '{self.config.collection_name}' with "
@@ -419,15 +413,17 @@ class ModernDocumentationScraper:
 
             # Use embedding manager to handle all providers
             embeddings = await self.embedding_manager.create_embeddings([text_to_embed])
-            
+
             if not embeddings:
                 return [], None
-                
+
             # Check if sparse embeddings were generated (for hybrid search)
-            if hasattr(self.embedding_manager, '_last_sparse_embeddings'):
+            if hasattr(self.embedding_manager, "_last_sparse_embeddings"):
                 sparse_data = self.embedding_manager._last_sparse_embeddings
-                return embeddings[0], {"sparse": sparse_data[0] if sparse_data else None}
-            
+                return embeddings[0], {
+                    "sparse": sparse_data[0] if sparse_data else None
+                }
+
             return embeddings[0], None
 
         except Exception as e:
@@ -926,11 +922,13 @@ def create_advanced_config() -> ScrapingConfig:
     """Create advanced configuration from unified config system"""
     # Get unified configuration
     unified_config = get_config()
-    
+
     # Validate API keys from unified config
     if unified_config.openai.api_key is None:
         console.print("❌ Missing OpenAI API key in configuration", style="red")
-        console.print("Please set: export AI_DOCS__OPENAI__API_KEY='your_key'", style="yellow")
+        console.print(
+            "Please set: export AI_DOCS__OPENAI__API_KEY='your_key'", style="yellow"
+        )
         sys.exit(1)
 
     # Create embedding configuration based on unified config
@@ -939,7 +937,8 @@ def create_advanced_config() -> ScrapingConfig:
     # Use provider from unified config
     if unified_config.embedding_provider == EmbeddingProvider.FASTEMBED:
         console.print(
-            "🚀 FastEmbed provider configured - using advanced local models", style="green"
+            "🚀 FastEmbed provider configured - using advanced local models",
+            style="green",
         )
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
@@ -1008,11 +1007,15 @@ async def main() -> None:
     try:
         # Initialize services
         await scraper_instance.initialize()
-        
+
         # Load documentation sites from unified config
         unified_config = get_config()
-        sites_to_scrape = unified_config.documentation_sites if unified_config.documentation_sites else ESSENTIAL_SITES
-        
+        sites_to_scrape = (
+            unified_config.documentation_sites
+            if unified_config.documentation_sites
+            else ESSENTIAL_SITES
+        )
+
         await scraper_instance.scrape_multiple_sites(sites_to_scrape)
         console.print(
             "\n✅ Advanced documentation scraping completed!",

@@ -10,11 +10,9 @@ from src.manage_vector_db import CollectionInfo
 from src.manage_vector_db import DatabaseStats
 from src.manage_vector_db import SearchResult
 from src.manage_vector_db import VectorDBManager
-from src.manage_vector_db import cli
-from src.manage_vector_db import main
 from src.manage_vector_db import setup_logging
-from src.services.qdrant_service import QdrantService
 from src.services.embeddings.manager import EmbeddingManager
+from src.services.qdrant_service import QdrantService
 
 
 class TestVectorDBManager:
@@ -46,8 +44,7 @@ class TestVectorDBManager:
     def db_manager(self, mock_qdrant_service, mock_embedding_manager):
         """Create VectorDBManager instance for testing."""
         manager = VectorDBManager(
-            qdrant_service=mock_qdrant_service,
-            embedding_manager=mock_embedding_manager
+            qdrant_service=mock_qdrant_service, embedding_manager=mock_embedding_manager
         )
         return manager
 
@@ -61,7 +58,7 @@ class TestVectorDBManager:
     async def test_initialize_with_services(self, db_manager):
         """Test initializing with provided services."""
         await db_manager.initialize()
-        
+
         assert db_manager._initialized is True
         db_manager.qdrant_service.initialize.assert_called_once()
         db_manager.embedding_manager.initialize.assert_called_once()
@@ -97,14 +94,14 @@ class TestVectorDBManager:
 
         assert result is True
         db_manager.qdrant_service.create_collection.assert_called_once_with(
-            collection_name="test_collection",
-            vector_size=1536,
-            distance="Cosine"
+            collection_name="test_collection", vector_size=1536, distance="Cosine"
         )
 
     async def test_create_collection_failure(self, db_manager):
         """Test creating collection with failure."""
-        db_manager.qdrant_service.create_collection.side_effect = Exception("Creation failed")
+        db_manager.qdrant_service.create_collection.side_effect = Exception(
+            "Creation failed"
+        )
 
         result = await db_manager.create_collection("test_collection", 1536)
 
@@ -115,11 +112,15 @@ class TestVectorDBManager:
         result = await db_manager.delete_collection("test_collection")
 
         assert result is True
-        db_manager.qdrant_service.delete_collection.assert_called_once_with("test_collection")
+        db_manager.qdrant_service.delete_collection.assert_called_once_with(
+            "test_collection"
+        )
 
     async def test_delete_collection_failure(self, db_manager):
         """Test deleting collection with failure."""
-        db_manager.qdrant_service.delete_collection.side_effect = Exception("Deletion failed")
+        db_manager.qdrant_service.delete_collection.side_effect = Exception(
+            "Deletion failed"
+        )
 
         result = await db_manager.delete_collection("test_collection")
 
@@ -130,7 +131,7 @@ class TestVectorDBManager:
         mock_info = MagicMock()
         mock_info.vector_count = 100
         mock_info.vector_size = 1536
-        
+
         db_manager.qdrant_service.get_collection_info.return_value = mock_info
 
         info = await db_manager.get_collection_info("test_collection")
@@ -190,7 +191,9 @@ class TestVectorDBManager:
 
     async def test_search_vectors_failure(self, db_manager):
         """Test searching vectors with failure."""
-        db_manager.qdrant_service.search_vectors.side_effect = Exception("Search failed")
+        db_manager.qdrant_service.search_vectors.side_effect = Exception(
+            "Search failed"
+        )
 
         query_vector = [0.1] * 1536
         results = await db_manager.search_vectors(
@@ -204,18 +207,24 @@ class TestVectorDBManager:
     async def test_get_database_stats_success(self, db_manager):
         """Test getting database stats successfully."""
         # Mock collections
-        db_manager.qdrant_service.list_collections.return_value = ["collection1", "collection2"]
+        db_manager.qdrant_service.list_collections.return_value = [
+            "collection1",
+            "collection2",
+        ]
 
         # Mock collection info
         mock_info1 = MagicMock()
         mock_info1.vector_count = 100
         mock_info1.vector_size = 1536
-        
+
         mock_info2 = MagicMock()
         mock_info2.vector_count = 200
         mock_info2.vector_size = 1536
-        
-        db_manager.qdrant_service.get_collection_info.side_effect = [mock_info1, mock_info2]
+
+        db_manager.qdrant_service.get_collection_info.side_effect = [
+            mock_info1,
+            mock_info2,
+        ]
 
         stats = await db_manager.get_database_stats()
 
@@ -226,7 +235,9 @@ class TestVectorDBManager:
 
     async def test_get_database_stats_failure(self, db_manager):
         """Test getting database stats with failure."""
-        db_manager.qdrant_service.list_collections.side_effect = Exception("Connection failed")
+        db_manager.qdrant_service.list_collections.side_effect = Exception(
+            "Connection failed"
+        )
 
         stats = await db_manager.get_database_stats()
 
@@ -242,11 +253,11 @@ class TestVectorDBManager:
         result = await db_manager.clear_collection("test_collection")
 
         assert result is True
-        db_manager.qdrant_service.delete_collection.assert_called_once_with("test_collection")
+        db_manager.qdrant_service.delete_collection.assert_called_once_with(
+            "test_collection"
+        )
         db_manager.qdrant_service.create_collection.assert_called_once_with(
-            collection_name="test_collection",
-            vector_size=1536,
-            distance="Cosine"
+            collection_name="test_collection", vector_size=1536, distance="Cosine"
         )
 
     async def test_clear_collection_failure(self, db_manager):
@@ -343,29 +354,28 @@ class TestCLI:
     def runner(self):
         """Create CLI test runner."""
         return CliRunner()
-    
+
     @pytest.fixture()
     def cli_sync(self):
         """Get CLI with async commands converted to sync."""
         import asyncio
-        from click.testing import CliRunner
-        
+
         # The CLI commands need to be invoked through the main() function
         # to ensure async callbacks are properly wrapped
         # Import fresh to avoid cached module
         import importlib
         import sys
-        
+
         # Remove cached module
-        if 'src.manage_vector_db' in sys.modules:
-            del sys.modules['src.manage_vector_db']
-        
+        if "src.manage_vector_db" in sys.modules:
+            del sys.modules["src.manage_vector_db"]
+
         # Re-import and get the processed CLI
-        manage_vector_db = importlib.import_module('src.manage_vector_db')
-        
+        manage_vector_db = importlib.import_module("src.manage_vector_db")
+
         # Call main() to process the CLI commands
         manage_vector_db.main.__wrapped__ = True  # Mark to avoid double wrapping
-        
+
         # Process commands
         for command in manage_vector_db.cli.commands.values():
             if asyncio.iscoroutinefunction(command.callback):
@@ -374,36 +384,41 @@ class TestCLI:
                 def make_sync_callback(func):
                     def sync_callback(*args, **kwargs):
                         return asyncio.run(func(*args, **kwargs))
+
                     sync_callback.__name__ = func.__name__
                     sync_callback.__doc__ = func.__doc__
                     return sync_callback
 
                 command.callback = make_sync_callback(original_callback)
-        
+
         return manage_vector_db.cli
 
     def test_cli_list_collections(self, runner):
         """Test the list collections CLI command."""
         # We need to patch before importing to ensure the patched class is used
         import sys
-        from unittest.mock import patch, AsyncMock, MagicMock
-        
+        from unittest.mock import AsyncMock
+        from unittest.mock import MagicMock
+        from unittest.mock import patch
+
         # Remove the module from cache to ensure fresh import with mocks
-        if 'src.manage_vector_db' in sys.modules:
-            del sys.modules['src.manage_vector_db']
-        
+        if "src.manage_vector_db" in sys.modules:
+            del sys.modules["src.manage_vector_db"]
+
         with patch("src.manage_vector_db.VectorDBManager") as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager_class.return_value = mock_manager
             mock_manager.list_collections = AsyncMock(return_value=["col1", "col2"])
             mock_manager.cleanup = AsyncMock()
-            
+
             # Import after patching
-            from src.manage_vector_db import cli, main
+            from src.manage_vector_db import cli
+            from src.manage_vector_db import main
+
             main()  # Process the CLI to make commands sync
-            
+
             result = runner.invoke(cli, ["list"])
-            
+
             assert result.exit_code == 0
             mock_manager.list_collections.assert_called_once()
             mock_manager.cleanup.assert_called_once()
@@ -416,9 +431,13 @@ class TestCLI:
             mock_manager.create_collection = AsyncMock(return_value=True)
             mock_manager.cleanup = AsyncMock()
 
-            result = runner.invoke(cli_sync, ["create", "test_collection"], catch_exceptions=False)
+            result = runner.invoke(
+                cli_sync, ["create", "test_collection"], catch_exceptions=False
+            )
 
-            mock_manager.create_collection.assert_called_once_with("test_collection", 1536)
+            mock_manager.create_collection.assert_called_once_with(
+                "test_collection", 1536
+            )
             mock_manager.cleanup.assert_called_once()
             assert result.exit_code == 0
 
@@ -430,7 +449,9 @@ class TestCLI:
             mock_manager.delete_collection = AsyncMock(return_value=True)
             mock_manager.cleanup = AsyncMock()
 
-            result = runner.invoke(cli_sync, ["delete", "test_collection"], catch_exceptions=False)
+            result = runner.invoke(
+                cli_sync, ["delete", "test_collection"], catch_exceptions=False
+            )
 
             mock_manager.delete_collection.assert_called_once_with("test_collection")
             mock_manager.cleanup.assert_called_once()
@@ -473,7 +494,9 @@ class TestCLI:
             )
             mock_manager.cleanup = AsyncMock()
 
-            result = runner.invoke(cli_sync, ["info", "test_collection"], catch_exceptions=False)
+            result = runner.invoke(
+                cli_sync, ["info", "test_collection"], catch_exceptions=False
+            )
 
             mock_manager.get_collection_info.assert_called_once_with("test_collection")
             mock_manager.cleanup.assert_called_once()
@@ -487,7 +510,9 @@ class TestCLI:
             mock_manager.clear_collection = AsyncMock(return_value=True)
             mock_manager.cleanup = AsyncMock()
 
-            result = runner.invoke(cli_sync, ["clear", "test_collection"], catch_exceptions=False)
+            result = runner.invoke(
+                cli_sync, ["clear", "test_collection"], catch_exceptions=False
+            )
 
             mock_manager.clear_collection.assert_called_once_with("test_collection")
             mock_manager.cleanup.assert_called_once()
@@ -515,11 +540,15 @@ class TestCLI:
             mock_manager.cleanup = AsyncMock()
 
             # Mock the create_embeddings function
-            with patch("src.manage_vector_db.create_embeddings") as mock_create_embeddings:
+            with patch(
+                "src.manage_vector_db.create_embeddings"
+            ) as mock_create_embeddings:
                 mock_create_embeddings.return_value = [0.1] * 1536
 
                 result = runner.invoke(
-                    cli_sync, ["search", "test_collection", "test query"], catch_exceptions=False
+                    cli_sync,
+                    ["search", "test_collection", "test query"],
+                    catch_exceptions=False,
                 )
 
                 mock_manager.initialize.assert_called_once()

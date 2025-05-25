@@ -23,15 +23,16 @@ logger = logging.getLogger(__name__)
 
 class ProjectStorageError(BaseError):
     """Project storage specific errors."""
+
     pass
 
 
 class ProjectStorage:
     """Manages persistent storage of project configurations."""
-    
+
     def __init__(self, storage_path: str | Path | None = None):
         """Initialize project storage.
-        
+
         Args:
             storage_path: Path to storage file. Defaults to data/projects.json
         """
@@ -40,43 +41,45 @@ class ProjectStorage:
             data_dir = Path(__file__).parent.parent.parent / "data"
             data_dir.mkdir(exist_ok=True)
             storage_path = data_dir / "projects.json"
-            
+
         self.storage_path = Path(storage_path)
         self._lock = asyncio.Lock()
         self._projects_cache: dict[str, dict[str, Any]] = {}
         self._initialized = False
-        
+
     async def initialize(self) -> None:
         """Initialize storage and load existing projects."""
         if self._initialized:
             return
-            
+
         try:
             # Create storage file if it doesn't exist
             if not self.storage_path.exists():
                 await self._save_projects({})
                 logger.info(f"Created new project storage at {self.storage_path}")
-            
+
             # Load existing projects
             await self.load_projects()
             self._initialized = True
             logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
-            
+
         except Exception as e:
-            raise ProjectStorageError(f"Failed to initialize project storage: {e}") from e
-    
+            raise ProjectStorageError(
+                f"Failed to initialize project storage: {e}"
+            ) from e
+
     async def load_projects(self) -> dict[str, dict[str, Any]]:
         """Load projects from storage file."""
         async with self._lock:
             try:
                 if aiofiles:
-                    async with aiofiles.open(self.storage_path, 'r') as f:
+                    async with aiofiles.open(self.storage_path, "r") as f:
                         content = await f.read()
                 else:
                     # Fallback to synchronous read
-                    with open(self.storage_path, 'r') as f:
+                    with open(self.storage_path) as f:
                         content = f.read()
-                        
+
                 self._projects_cache = json.loads(content) if content else {}
                 return self._projects_cache.copy()
             except FileNotFoundError:
@@ -85,64 +88,66 @@ class ProjectStorage:
             except json.JSONDecodeError as e:
                 logger.error(f"Invalid JSON in project storage: {e}")
                 # Backup corrupted file
-                backup_path = self.storage_path.with_suffix('.json.bak')
+                backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():
                     self.storage_path.rename(backup_path)
                     logger.warning(f"Backed up corrupted file to {backup_path}")
                 self._projects_cache = {}
                 return {}
-    
+
     async def save_project(self, project_id: str, project_data: dict[str, Any]) -> None:
         """Save a single project to storage."""
         async with self._lock:
             self._projects_cache[project_id] = project_data
             await self._save_projects(self._projects_cache)
-            
+
     async def get_project(self, project_id: str) -> dict[str, Any] | None:
         """Get a project by ID."""
         return self._projects_cache.get(project_id)
-    
+
     async def list_projects(self) -> list[dict[str, Any]]:
         """List all projects."""
         return list(self._projects_cache.values())
-    
+
     async def update_project(self, project_id: str, updates: dict[str, Any]) -> None:
         """Update a project's data."""
         async with self._lock:
             if project_id not in self._projects_cache:
                 raise ProjectStorageError(f"Project {project_id} not found")
-                
+
             self._projects_cache[project_id].update(updates)
-            self._projects_cache[project_id]["updated_at"] = datetime.utcnow().isoformat()
+            self._projects_cache[project_id]["updated_at"] = (
+                datetime.utcnow().isoformat()
+            )
             await self._save_projects(self._projects_cache)
-    
+
     async def delete_project(self, project_id: str) -> None:
         """Delete a project from storage."""
         async with self._lock:
             if project_id in self._projects_cache:
                 del self._projects_cache[project_id]
                 await self._save_projects(self._projects_cache)
-    
+
     async def _save_projects(self, projects: dict[str, dict[str, Any]]) -> None:
         """Save projects to storage file."""
         try:
             # Write to temporary file first
-            temp_path = self.storage_path.with_suffix('.tmp')
-            
+            temp_path = self.storage_path.with_suffix(".tmp")
+
             if aiofiles:
-                async with aiofiles.open(temp_path, 'w') as f:
+                async with aiofiles.open(temp_path, "w") as f:
                     await f.write(json.dumps(projects, indent=2, default=str))
             else:
                 # Fallback to synchronous write
-                with open(temp_path, 'w') as f:
+                with open(temp_path, "w") as f:
                     f.write(json.dumps(projects, indent=2, default=str))
-            
+
             # Atomically replace the old file
             temp_path.replace(self.storage_path)
-            
+
         except Exception as e:
             raise ProjectStorageError(f"Failed to save projects: {e}") from e
-    
+
     async def cleanup(self) -> None:
         """Cleanup resources."""
         self._projects_cache.clear()

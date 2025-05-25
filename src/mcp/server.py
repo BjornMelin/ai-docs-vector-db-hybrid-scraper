@@ -5,16 +5,14 @@ import logging
 from fastmcp import FastMCP
 
 from .service_manager import UnifiedServiceManager
-from .tools import (
-    analytics,
-    cache,
-    collections,
-    documents,
-    embeddings,
-    projects,
-    search,
-    utils,
-)
+from .tools import analytics
+from .tools import cache
+from .tools import collections
+from .tools import documents
+from .tools import embeddings
+from .tools import projects
+from .tools import search
+from .tools import utils
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)

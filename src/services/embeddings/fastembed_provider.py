@@ -7,8 +7,8 @@ from typing import ClassVar
 import numpy as np
 
 try:
-    from fastembed import TextEmbedding
     from fastembed import SparseTextEmbedding
+    from fastembed import TextEmbedding
 except ImportError:
     TextEmbedding = None
     SparseTextEmbedding = None
@@ -98,7 +98,7 @@ class FastEmbedProvider(EmbeddingProvider):
         self.dimensions = config["dimensions"]
         self._max_tokens = config["max_tokens"]
         self._description = config["description"]
-        
+
         # Default sparse model for hybrid search
         self._sparse_model_name = "prithvida/Splade_PP_en_v1"
 
@@ -159,30 +159,30 @@ class FastEmbedProvider(EmbeddingProvider):
 
         except Exception as e:
             raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
-    
+
     async def generate_sparse_embeddings(
         self, texts: list[str]
     ) -> list[dict[str, Any]]:
         """Generate sparse embeddings for hybrid search.
-        
+
         Args:
             texts: List of texts to embed
-            
+
         Returns:
             List of sparse embeddings with indices and values
         """
         if not self._initialized:
             raise EmbeddingServiceError("Provider not initialized")
-            
+
         if SparseTextEmbedding is None:
             raise EmbeddingServiceError("Sparse embedding support not available")
-            
+
         try:
             # Initialize sparse model if needed
             if self._sparse_model is None:
                 self._sparse_model = SparseTextEmbedding(self._sparse_model_name)
                 logger.info(f"Initialized sparse model: {self._sparse_model_name}")
-            
+
             # Generate sparse embeddings
             sparse_embeddings = []
             for result in self._sparse_model.embed(texts):
@@ -191,7 +191,7 @@ class FastEmbedProvider(EmbeddingProvider):
                     "values": result.values.tolist(),
                 }
                 sparse_embeddings.append(sparse_data)
-            
+
             return sparse_embeddings
         except Exception as e:
             raise EmbeddingServiceError(

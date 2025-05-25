@@ -32,31 +32,29 @@ from pydantic import Field
 try:
     from chunking import ChunkingConfig
     from chunking import chunk_content
+    from config import get_config
     from config.enums import ChunkingStrategy
     from config.enums import SearchStrategy
+    from config.models import UnifiedConfig
     from services.base import BaseService
     from services.cache.manager import CacheManager
     from services.cache.manager import CacheType
-    from config import get_config
-    from config.models import UnifiedConfig
     from services.crawling.manager import CrawlManager
     from services.embeddings.manager import EmbeddingManager
-    from services.qdrant_service import QdrantService
     from services.project_storage import ProjectStorage
+    from services.qdrant_service import QdrantService
 except ImportError:
     from .chunking import ChunkingConfig
     from .chunking import chunk_content
+    from .config import get_config
     from .config.enums import ChunkingStrategy
     from .config.enums import SearchStrategy
     from .services.base import BaseService
     from .services.cache.manager import CacheManager
-    from .services.cache.manager import CacheType
-    from .config import get_config
-    from .config.models import UnifiedConfig
     from .services.crawling.manager import CrawlManager
     from .services.embeddings.manager import EmbeddingManager
-    from .services.qdrant_service import QdrantService
     from .services.project_storage import ProjectStorage
+    from .services.qdrant_service import QdrantService
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -166,7 +164,7 @@ class UnifiedServiceManager(BaseService):
             self.crawl_manager = CrawlManager(self.config)
             self.qdrant_service = QdrantService(self.config)
             self.cache_manager = CacheManager(self.config)
-            
+
             # Initialize project storage
             self.project_storage = ProjectStorage()
 
@@ -176,7 +174,7 @@ class UnifiedServiceManager(BaseService):
             await self.qdrant_service.initialize()
             await self.cache_manager.initialize()
             await self.project_storage.initialize()
-            
+
             # Projects are managed internally by ProjectStorage
 
             self._initialized = True
@@ -227,10 +225,13 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
     try:
         # Validate collection name and query
         from .security import SecurityValidator
+
         security_validator = SecurityValidator.from_unified_config()
-        request.collection = security_validator.validate_collection_name(request.collection)
+        request.collection = security_validator.validate_collection_name(
+            request.collection
+        )
         request.query = security_validator.validate_query_string(request.query)
-        
+
         # Check cache first
         cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
         cached = await service_manager.cache_manager.get(cache_key)
@@ -243,16 +244,17 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
         # Generate sparse embeddings for hybrid search
         generate_sparse = request.strategy == SearchStrategy.HYBRID
         embedding_result = await service_manager.embedding_manager.generate_embeddings(
-            [request.query],
-            generate_sparse=generate_sparse
+            [request.query], generate_sparse=generate_sparse
         )
-        
+
         query_vector = embedding_result["embeddings"][0]
         sparse_vector = None
-        if "sparse_embeddings" in embedding_result and embedding_result["sparse_embeddings"]:
+        if embedding_result.get("sparse_embeddings"):
             sparse_vector = embedding_result["sparse_embeddings"][0]
-            await ctx.debug(f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements")
-        
+            await ctx.debug(
+                f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements"
+            )
+
         await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
         # Perform search based on strategy
@@ -294,22 +296,22 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
             await ctx.debug(f"Applying BGE reranking to {len(search_results)} results")
             # Convert to format expected by reranker
             results_for_reranking = [
-                {"content": r.content, "original": r}
-                for r in search_results
+                {"content": r.content, "original": r} for r in search_results
             ]
-            
+
             # Rerank results
             reranked = await service_manager.embedding_manager.rerank_results(
-                query=request.query,
-                results=results_for_reranking
+                query=request.query, results=results_for_reranking
             )
-            
+
             # Extract reranked SearchResult objects
-            search_results = [r["original"] for r in reranked[:request.limit]]
-            await ctx.debug(f"Reranking complete, returning top {len(search_results)} results")
+            search_results = [r["original"] for r in reranked[: request.limit]]
+            await ctx.debug(
+                f"Reranking complete, returning top {len(search_results)} results"
+            )
         else:
             # Without reranking, just limit to requested number
-            search_results = search_results[:request.limit]
+            search_results = search_results[: request.limit]
 
         # Cache results
         cache_data = [r.model_dump() for r in search_results]
@@ -345,6 +347,7 @@ async def search_similar(
 
     # Validate collection name
     from .security import SecurityValidator
+
     security_validator = SecurityValidator.from_unified_config()
     collection = security_validator.validate_collection_name(collection)
 
@@ -495,6 +498,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
     try:
         # Validate URL using SecurityValidator
         from .security import SecurityValidator
+
         security_validator = SecurityValidator.from_unified_config()
         validated_url = security_validator.validate_url(request.url)
         request.url = validated_url
@@ -619,9 +623,10 @@ async def add_documents_batch(request: BatchRequest) -> dict[str, Any]:
             try:
                 # Validate URL first
                 from .security import SecurityValidator
+
                 security_validator = SecurityValidator.from_unified_config()
                 validated_url = security_validator.validate_url(url)
-                
+
                 doc_request = DocumentRequest(
                     url=validated_url,
                     collection=request.collection,
@@ -693,12 +698,12 @@ async def create_project(request: ProjectRequest) -> dict[str, Any]:
         batch_result = await add_documents_batch(batch_request)
         project["urls"] = request.urls
         project["document_count"] = len(batch_result["successful"])
-        
+
         # Update persistent storage
-        await service_manager.project_storage.update_project(project_id, {
-            "urls": project["urls"],
-            "document_count": project["document_count"]
-        })
+        await service_manager.project_storage.update_project(
+            project_id,
+            {"urls": project["urls"], "document_count": project["document_count"]},
+        )
 
     return project
 
@@ -767,15 +772,15 @@ async def update_project(
 ) -> dict[str, Any]:
     """
     Update project metadata.
-    
+
     Updates the name and/or description of an existing project.
     """
     await service_manager.initialize()
-    
+
     project = service_manager.projects.get(project_id)
     if not project:
         raise ValueError(f"Project {project_id} not found")
-    
+
     updates = {}
     if name is not None:
         project["name"] = name
@@ -783,48 +788,52 @@ async def update_project(
     if description is not None:
         project["description"] = description
         updates["description"] = description
-        
+
     if updates:
         await service_manager.project_storage.update_project(project_id, updates)
-        
+
     return project
 
 
 @mcp.tool()
-async def delete_project(project_id: str, delete_collection: bool = True) -> dict[str, str]:
+async def delete_project(
+    project_id: str, delete_collection: bool = True
+) -> dict[str, str]:
     """
     Delete a project and optionally its collection.
-    
+
     Args:
         project_id: Project ID to delete
         delete_collection: Whether to delete the associated Qdrant collection
-        
+
     Returns:
         Status message
     """
     await service_manager.initialize()
-    
+
     project = service_manager.projects.get(project_id)
     if not project:
         raise ValueError(f"Project {project_id} not found")
-    
+
     # Delete collection if requested
     if delete_collection:
         try:
-            await service_manager.qdrant_service.delete_collection(project["collection"])
+            await service_manager.qdrant_service.delete_collection(
+                project["collection"]
+            )
         except Exception as e:
             logger.warning(f"Failed to delete collection {project['collection']}: {e}")
-    
+
     # Remove from in-memory storage
     del service_manager.projects[project_id]
-    
+
     # Remove from persistent storage
     await service_manager.project_storage.delete_project(project_id)
-    
+
     return {
         "status": "deleted",
         "project_id": project_id,
-        "collection_deleted": str(delete_collection)
+        "collection_deleted": str(delete_collection),
     }
 
 

@@ -3,4 +3,4 @@
 from .server import mcp
 from .service_manager import UnifiedServiceManager
 
-__all__ = ["mcp", "UnifiedServiceManager"]
+__all__ = ["UnifiedServiceManager", "mcp"]

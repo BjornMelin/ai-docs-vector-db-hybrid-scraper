@@ -7,7 +7,6 @@ from ..config import get_config
 from ..services.base import BaseService
 from ..services.cache.manager import CacheManager
 from ..services.cache.manager import CacheType
-from ..services.config import APIConfig
 from ..services.crawling.manager import CrawlManager
 from ..services.embeddings.manager import EmbeddingManager
 from ..services.project_storage import ProjectStorage
@@ -36,28 +35,25 @@ class UnifiedServiceManager(BaseService):
             return
 
         try:
-            # Initialize services with proper configuration
-            # For backward compatibility, create APIConfig from UnifiedConfig
-            api_config = APIConfig.from_unified_config()
-            
-            self.embedding_manager = EmbeddingManager(api_config)
-            self.crawl_manager = CrawlManager(api_config)
-            self.qdrant_service = QdrantService(api_config)
-            
+            # Initialize services with unified configuration
+            self.embedding_manager = EmbeddingManager(self.config)
+            self.crawl_manager = CrawlManager(self.config)
+            self.qdrant_service = QdrantService(self.config)
+
             # CacheManager uses specific parameters from unified config
             self.cache_manager = CacheManager(
                 redis_url=self.config.cache.redis_url,
-                enable_local_cache=self.config.cache.enable_local_cache,
-                enable_redis_cache=self.config.cache.enable_redis_cache,
+                enable_local_cache=self.config.cache.local_enabled,
+                enable_redis_cache=self.config.cache.redis_enabled,
                 local_max_size=self.config.cache.local_max_size,
                 local_max_memory_mb=self.config.cache.local_max_memory_mb,
                 redis_ttl_seconds={
                     CacheType.EMBEDDINGS: self.config.cache.ttl_embeddings,
-                    CacheType.CRAWL: self.config.cache.ttl_crawl,
-                    CacheType.QUERIES: self.config.cache.ttl_queries,
-                }
+                    CacheType.CRAWL_RESULTS: self.config.cache.ttl_crawl,
+                    CacheType.QUERY_RESULTS: self.config.cache.ttl_queries,
+                },
             )
-            
+
             # Initialize project storage
             self.project_storage = ProjectStorage()
 
@@ -67,7 +63,7 @@ class UnifiedServiceManager(BaseService):
             await self.qdrant_service.initialize()
             await self.cache_manager.initialize()
             await self.project_storage.initialize()
-            
+
             # Load projects from storage
             self.projects = await self.project_storage.load_projects()
 

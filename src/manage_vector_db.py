@@ -17,7 +17,6 @@ from rich.table import Table
 
 # Import unified configuration and service layer
 from .config import get_config
-from .services.config import APIConfig
 from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
 
@@ -72,7 +71,7 @@ class VectorDBManager:
         embedding_manager: EmbeddingManager | None = None,
     ) -> None:
         """Initialize with service layer components.
-        
+
         Args:
             qdrant_service: QdrantService instance for database operations
             embedding_manager: EmbeddingManager for generating embeddings
@@ -88,13 +87,13 @@ class VectorDBManager:
 
         # If services not provided, create them from unified config
         if not self.qdrant_service or not self.embedding_manager:
-            api_config = APIConfig.from_unified_config()
+            config = get_config()
 
             if not self.qdrant_service:
-                self.qdrant_service = QdrantService(api_config)
+                self.qdrant_service = QdrantService(config)
 
             if not self.embedding_manager:
-                self.embedding_manager = EmbeddingManager(api_config)
+                self.embedding_manager = EmbeddingManager(config)
 
         # Initialize services
         await self.qdrant_service.initialize()
@@ -127,7 +126,7 @@ class VectorDBManager:
             await self.qdrant_service.create_collection(
                 collection_name=collection_name,
                 vector_size=vector_size,
-                distance="Cosine"
+                distance="Cosine",
             )
             console.print(
                 f"✅ Successfully created collection: {collection_name}", style="green"
@@ -158,7 +157,9 @@ class VectorDBManager:
         """Get information about a specific collection"""
         try:
             await self.initialize()
-            collection_info = await self.qdrant_service.get_collection_info(collection_name)
+            collection_info = await self.qdrant_service.get_collection_info(
+                collection_name
+            )
 
             if not collection_info:
                 return None
@@ -220,7 +221,9 @@ class VectorDBManager:
             total_vectors = 0
 
             for collection_name in collection_names:
-                collection_info = await self.qdrant_service.get_collection_info(collection_name)
+                collection_info = await self.qdrant_service.get_collection_info(
+                    collection_name
+                )
                 if collection_info:
                     total_vectors += collection_info.vector_count
                     collections.append(
@@ -246,7 +249,9 @@ class VectorDBManager:
             await self.initialize()
 
             # Get vector size before deletion
-            collection_info = await self.qdrant_service.get_collection_info(collection_name)
+            collection_info = await self.qdrant_service.get_collection_info(
+                collection_name
+            )
             if not collection_info:
                 console.print(f"❌ Collection {collection_name} not found", style="red")
                 return False
@@ -276,7 +281,9 @@ class VectorDBManager:
         return await self.get_database_stats()
 
 
-async def create_embeddings(text: str, embedding_manager: EmbeddingManager) -> list[float]:
+async def create_embeddings(
+    text: str, embedding_manager: EmbeddingManager
+) -> list[float]:
     """Create embeddings for text using EmbeddingManager"""
     try:
         embeddings = await embedding_manager.create_embeddings([text])
@@ -450,10 +457,9 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point"""
-    import asyncio
 
     # Avoid double-wrapping if already processed
-    if hasattr(cli, '_commands_wrapped'):
+    if hasattr(cli, "_commands_wrapped"):
         cli()
         return
 
@@ -465,13 +471,14 @@ def main():
             def make_sync_callback(func):
                 def sync_callback(*args, **kwargs):
                     return asyncio.run(func(*args, **kwargs))
+
                 # Copy function metadata
                 sync_callback.__name__ = func.__name__
                 sync_callback.__doc__ = func.__doc__
                 return sync_callback
 
             command.callback = make_sync_callback(original_callback)
-    
+
     # Mark as wrapped
     cli._commands_wrapped = True
     cli()

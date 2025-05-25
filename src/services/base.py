@@ -7,7 +7,7 @@ from abc import abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any
 
-from pydantic import BaseModel
+from src.config import UnifiedConfig
 
 from .errors import APIError
 
@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 class BaseService(ABC):
     """Abstract base class for all services."""
 
-    def __init__(self, config: BaseModel | None = None):
+    def __init__(self, config: UnifiedConfig | None = None):
         """Initialize base service.
 
         Args:
-            config: Service configuration
+            config: Unified configuration
         """
         self.config = config
         self._client: Any | None = None

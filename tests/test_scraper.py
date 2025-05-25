@@ -6,6 +6,8 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+from src.config.enums import EmbeddingProvider
+from src.config.enums import SearchStrategy
 from src.crawl4ai_bulk_embedder import CrawlResult
 from src.crawl4ai_bulk_embedder import DocumentationSite
 from src.crawl4ai_bulk_embedder import EmbeddingConfig
@@ -13,8 +15,6 @@ from src.crawl4ai_bulk_embedder import EmbeddingModel
 from src.crawl4ai_bulk_embedder import ModernDocumentationScraper
 from src.crawl4ai_bulk_embedder import ScrapingConfig
 from src.crawl4ai_bulk_embedder import VectorMetrics
-from src.config.enums import EmbeddingProvider
-from src.config.enums import SearchStrategy
 
 
 class TestEmbeddingConfig:

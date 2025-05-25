@@ -3,7 +3,6 @@
 from typing import Any
 
 from pydantic import BaseModel
-from pydantic import Field
 
 
 class SearchResult(BaseModel):

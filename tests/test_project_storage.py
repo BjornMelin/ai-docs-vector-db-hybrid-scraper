@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from src.services.project_storage import ProjectStorage
 from src.services.project_storage import ProjectStorageError
 
@@ -32,9 +31,9 @@ async def test_initialize_creates_file(temp_storage_path):
     """Test that initialization creates storage file."""
     storage = ProjectStorage(temp_storage_path)
     assert not temp_storage_path.exists()
-    
+
     await storage.initialize()
-    
+
     assert temp_storage_path.exists()
     with open(temp_storage_path) as f:
         data = json.load(f)
@@ -51,13 +50,13 @@ async def test_save_and_load_project(storage):
         "description": "Test description",
         "collection": "test_collection",
     }
-    
+
     # Save project
     await storage.save_project(project_id, project_data)
-    
+
     # Load projects
     projects = await storage.load_projects()
-    
+
     assert project_id in projects
     assert projects[project_id] == project_data
 
@@ -71,13 +70,13 @@ async def test_update_project(storage):
         "name": "Initial Name",
         "description": "Initial description",
     }
-    
+
     await storage.save_project(project_id, initial_data)
-    
+
     # Update project
     updates = {"name": "Updated Name", "new_field": "new_value"}
     await storage.update_project(project_id, updates)
-    
+
     # Verify updates
     project = await storage.get_project(project_id)
     assert project["name"] == "Updated Name"
@@ -91,13 +90,13 @@ async def test_delete_project(storage):
     """Test deleting a project."""
     project_id = "test-789"
     project_data = {"id": project_id, "name": "To Delete"}
-    
+
     await storage.save_project(project_id, project_data)
     assert await storage.get_project(project_id) is not None
-    
+
     # Delete project
     await storage.delete_project(project_id)
-    
+
     assert await storage.get_project(project_id) is None
     projects = await storage.list_projects()
     assert len(projects) == 0
@@ -111,12 +110,12 @@ async def test_list_projects(storage):
         "proj2": {"id": "proj2", "name": "Project 2"},
         "proj3": {"id": "proj3", "name": "Project 3"},
     }
-    
+
     for proj_id, data in projects_data.items():
         await storage.save_project(proj_id, data)
-    
+
     projects = await storage.list_projects()
-    
+
     assert len(projects) == 3
     names = {p["name"] for p in projects}
     assert names == {"Project 1", "Project 2", "Project 3"}
@@ -128,15 +127,15 @@ async def test_persistence_across_instances(temp_storage_path):
     # First instance
     storage1 = ProjectStorage(temp_storage_path)
     await storage1.initialize()
-    
+
     project_data = {"id": "persist-test", "name": "Persistent Project"}
     await storage1.save_project("persist-test", project_data)
     await storage1.cleanup()
-    
+
     # Second instance
     storage2 = ProjectStorage(temp_storage_path)
     await storage2.initialize()
-    
+
     projects = await storage2.load_projects()
     assert "persist-test" in projects
     assert projects["persist-test"]["name"] == "Persistent Project"
@@ -145,13 +144,14 @@ async def test_persistence_across_instances(temp_storage_path):
 @pytest.mark.asyncio
 async def test_concurrent_access(storage):
     """Test concurrent project operations."""
+
     async def save_project(i):
         project_id = f"concurrent-{i}"
         await storage.save_project(project_id, {"id": project_id, "index": i})
-    
+
     # Save multiple projects concurrently
     await asyncio.gather(*[save_project(i) for i in range(10)])
-    
+
     projects = await storage.list_projects()
     assert len(projects) == 10
 
@@ -160,18 +160,18 @@ async def test_concurrent_access(storage):
 async def test_corrupted_file_recovery(temp_storage_path):
     """Test recovery from corrupted storage file."""
     # Write corrupted JSON
-    with open(temp_storage_path, 'w') as f:
+    with open(temp_storage_path, "w") as f:
         f.write("{invalid json")
-    
+
     storage = ProjectStorage(temp_storage_path)
     await storage.initialize()
-    
+
     # Should recover with empty projects
     projects = await storage.load_projects()
     assert projects == {}
-    
+
     # Backup should be created
-    backup_path = temp_storage_path.with_suffix('.json.bak')
+    backup_path = temp_storage_path.with_suffix(".json.bak")
     assert backup_path.exists()
 
 

@@ -5,19 +5,21 @@ from uuid import uuid4
 
 from fastmcp import Context
 
+from ...config.enums import SearchStrategy
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult
 from ..service_manager import UnifiedServiceManager
-from ...config.enums import SearchStrategy
 
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, service_manager: UnifiedServiceManager):
     """Register search tools with the MCP server."""
-    
+
     @mcp.tool()
-    async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchResult]:
+    async def search_documents(
+        request: SearchRequest, ctx: Context
+    ) -> list[SearchResult]:
         """
         Search documents with advanced hybrid search and reranking.
 
@@ -44,17 +46,20 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
             await ctx.debug(f"Generating embeddings for query: {request.query[:50]}...")
             # Generate sparse embeddings for hybrid search
             generate_sparse = request.strategy == SearchStrategy.HYBRID
-            embedding_result = await service_manager.embedding_manager.generate_embeddings(
-                [request.query],
-                generate_sparse=generate_sparse
+            embedding_result = (
+                await service_manager.embedding_manager.generate_embeddings(
+                    [request.query], generate_sparse=generate_sparse
+                )
             )
-            
+
             query_vector = embedding_result["embeddings"][0]
             sparse_vector = None
-            if "sparse_embeddings" in embedding_result and embedding_result["sparse_embeddings"]:
+            if embedding_result.get("sparse_embeddings"):
                 sparse_vector = embedding_result["sparse_embeddings"][0]
-                await ctx.debug(f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements")
-            
+                await ctx.debug(
+                    f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements"
+                )
+
             await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
             # Perform search based on strategy
@@ -64,7 +69,9 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
                     collection_name=request.collection,
                     query_vector=query_vector,
                     sparse_vector=sparse_vector,  # Now using actual sparse vector
-                    limit=request.limit * 3 if request.enable_reranking else request.limit,
+                    limit=request.limit * 3
+                    if request.enable_reranking
+                    else request.limit,
                     score_threshold=0.0,
                     fusion_type="rrf",
                 )
@@ -74,7 +81,9 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
                     collection_name=request.collection,
                     query_vector=query_vector,
                     sparse_vector=None,  # Dense search only
-                    limit=request.limit * 3 if request.enable_reranking else request.limit,
+                    limit=request.limit * 3
+                    if request.enable_reranking
+                    else request.limit,
                     score_threshold=0.0,
                 )
 
@@ -93,25 +102,27 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
 
             # Apply reranking if enabled
             if request.enable_reranking and search_results:
-                await ctx.debug(f"Applying BGE reranking to {len(search_results)} results")
+                await ctx.debug(
+                    f"Applying BGE reranking to {len(search_results)} results"
+                )
                 # Convert to format expected by reranker
                 results_for_reranking = [
-                    {"content": r.content, "original": r}
-                    for r in search_results
+                    {"content": r.content, "original": r} for r in search_results
                 ]
-                
+
                 # Rerank results
                 reranked = await service_manager.embedding_manager.rerank_results(
-                    query=request.query,
-                    results=results_for_reranking
+                    query=request.query, results=results_for_reranking
                 )
-                
+
                 # Extract reranked SearchResult objects
-                search_results = [r["original"] for r in reranked[:request.limit]]
-                await ctx.debug(f"Reranking complete, returning top {len(search_results)} results")
+                search_results = [r["original"] for r in reranked[: request.limit]]
+                await ctx.debug(
+                    f"Reranking complete, returning top {len(search_results)} results"
+                )
             else:
                 # Without reranking, just limit to requested number
-                search_results = search_results[:request.limit]
+                search_results = search_results[: request.limit]
 
             # Cache results
             cache_data = [r.model_dump() for r in search_results]
@@ -127,7 +138,6 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
             await ctx.error(f"Search request {request_id} failed: {e}")
             logger.error(f"Search failed: {e}")
             raise
-
 
     @mcp.tool()
     async def search_similar(

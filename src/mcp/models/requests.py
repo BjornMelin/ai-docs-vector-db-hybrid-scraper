@@ -67,9 +67,7 @@ class ProjectRequest(BaseModel):
         description="Quality tier (economy/balanced/premium)",
         pattern="^(economy|balanced|premium)$",
     )
-    urls: list[str] | None = Field(
-        default=None, description="Initial URLs to process"
-    )
+    urls: list[str] | None = Field(default=None, description="Initial URLs to process")
 
 
 class CostEstimateRequest(BaseModel):
