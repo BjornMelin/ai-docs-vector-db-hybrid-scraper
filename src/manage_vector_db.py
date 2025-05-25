@@ -20,6 +20,12 @@ from qdrant_client.models import VectorParams
 from rich.console import Console
 from rich.table import Table
 
+# Import unified configuration
+try:
+    from config import get_config
+except ImportError:
+    from .config import get_config
+
 console = Console()
 
 
@@ -275,11 +281,17 @@ async def create_embeddings(text: str, openai_client: AsyncOpenAI) -> list[float
 
 # CLI Commands
 @click.group()
-@click.option("--url", default="http://localhost:6333", help="Qdrant server URL")
+@click.option("--url", help="Qdrant server URL (overrides config)")
 @click.option("--log-level", default="INFO", help="Logging level")
 @click.pass_context
 def cli(ctx, url, log_level):
     """Vector Database Management CLI"""
+    # Get configuration from unified config
+    unified_config = get_config()
+    
+    # Use URL from command line or config
+    if not url:
+        url = unified_config.qdrant.url
     ctx.ensure_object(dict)
     ctx.obj["url"] = url
     ctx.obj["log_level"] = log_level
@@ -403,14 +415,16 @@ async def clear(ctx, collection_name):
 @click.pass_context
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents"""
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
+    # Get configuration from unified config
+    unified_config = get_config()
+    
+    if not unified_config.openai.api_key:
         console.print(
-            "❌ OPENAI_API_KEY environment variable required for search", style="red"
+            "❌ OpenAI API key not configured. Please set AI_DOCS__OPENAI__API_KEY", style="red"
         )
         return
 
-    manager = VectorDBManager(ctx.obj["url"], openai_api_key)
+    manager = VectorDBManager(ctx.obj["url"], unified_config.openai.api_key)
     await manager.connect()
     try:
         # Create query embedding

@@ -36,7 +36,9 @@ try:
     from config.enums import SearchStrategy
     from services.base import BaseService
     from services.cache.manager import CacheManager
-    from services.config import APIConfig
+    from services.cache.manager import CacheType
+    from config import get_config
+    from config.models import UnifiedConfig
     from services.crawling.manager import CrawlManager
     from services.embeddings.manager import EmbeddingManager
     from services.qdrant_service import QdrantService
@@ -47,7 +49,9 @@ except ImportError:
     from .config.enums import SearchStrategy
     from .services.base import BaseService
     from .services.cache.manager import CacheManager
-    from .services.config import APIConfig
+    from .services.cache.manager import CacheType
+    from .config import get_config
+    from .config.models import UnifiedConfig
     from .services.crawling.manager import CrawlManager
     from .services.embeddings.manager import EmbeddingManager
     from .services.qdrant_service import QdrantService
@@ -141,7 +145,7 @@ class UnifiedServiceManager(BaseService):
 
     def __init__(self):
         super().__init__()
-        self.config = APIConfig()
+        self.config = get_config()
         self.embedding_manager: EmbeddingManager | None = None
         self.crawl_manager: CrawlManager | None = None
         self.qdrant_service: QdrantService | None = None
@@ -155,11 +159,28 @@ class UnifiedServiceManager(BaseService):
             return
 
         try:
-            # Initialize services
-            self.embedding_manager = EmbeddingManager(self.config)
-            self.crawl_manager = CrawlManager(self.config)
-            self.qdrant_service = QdrantService(url=self.config.qdrant_url)
-            self.cache_manager = CacheManager(self.config)
+            # Initialize services with proper configuration
+            # For backward compatibility, create APIConfig from UnifiedConfig
+            from services.config import APIConfig
+            api_config = APIConfig.from_unified_config()
+            
+            self.embedding_manager = EmbeddingManager(api_config)
+            self.crawl_manager = CrawlManager(api_config)
+            self.qdrant_service = QdrantService(api_config)
+            
+            # CacheManager uses specific parameters from unified config
+            self.cache_manager = CacheManager(
+                redis_url=self.config.cache.redis_url,
+                enable_local_cache=self.config.cache.enable_local_cache,
+                enable_redis_cache=self.config.cache.enable_redis_cache,
+                local_max_size=self.config.cache.local_max_size,
+                local_max_memory_mb=self.config.cache.local_max_memory_mb,
+                redis_ttl_seconds={
+                    CacheType.EMBEDDINGS: self.config.cache.ttl_embeddings,
+                    CacheType.CRAWL: self.config.cache.ttl_crawl,
+                    CacheType.QUERIES: self.config.cache.ttl_queries,
+                }
+            )
 
             # Initialize each service
             await self.embedding_manager.initialize()

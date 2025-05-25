@@ -65,7 +65,9 @@ from rich.table import Table
 from .chunking import ChunkingConfig
 from .chunking import EnhancedChunker
 
-# Import enums from central location
+# Import unified configuration
+from .config import get_config
+from .config.models import UnifiedConfig
 from .config.enums import EmbeddingProvider
 from .config.enums import SearchStrategy
 
@@ -995,29 +997,29 @@ ESSENTIAL_SITES = [
 
 
 def create_advanced_config() -> ScrapingConfig:
-    """Create advanced configuration with research-backed defaults"""
-    openai_api_key_val = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key_val:
-        console.print("❌ Missing OPENAI_API_KEY environment variable", style="red")
-        console.print("Please set: export OPENAI_API_KEY='your_key'", style="yellow")
+    """Create advanced configuration from unified config system"""
+    # Get unified configuration
+    unified_config = get_config()
+    
+    # Validate API keys from unified config
+    if unified_config.openai.api_key is None:
+        console.print("❌ Missing OpenAI API key in configuration", style="red")
+        console.print("Please set: export AI_DOCS__OPENAI__API_KEY='your_key'", style="yellow")
         sys.exit(1)
 
-    # Get optional API keys
-    firecrawl_api_key_val = os.getenv("FIRECRAWL_API_KEY")
-
-    # Create embedding configuration based on available resources
+    # Create embedding configuration based on unified config
     embedding_conf = EmbeddingConfig()
 
-    # Auto-detect best configuration
-    if TextEmbedding is not None:
+    # Use provider from unified config
+    if unified_config.embedding_provider == EmbeddingProvider.FASTEMBED:
         console.print(
-            "🚀 FastEmbed available - using advanced local models", style="green"
+            "🚀 FastEmbed provider configured - using advanced local models", style="green"
         )
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.FASTEMBED,
-            dense_model=EmbeddingModel.BGE_SMALL_EN_V15,  # Fast, accurate, open source
+            dense_model=EmbeddingModel.BGE_SMALL_EN_V15,  # Maps to unified config model
             search_strategy=SearchStrategy.DENSE,
-            enable_quantization=True,
+            enable_quantization=unified_config.qdrant.quantization_enabled,
         )
 
         # Enable hybrid search if sparse models available
@@ -1034,17 +1036,17 @@ def create_advanced_config() -> ScrapingConfig:
         )
         embedding_conf = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,
-            dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Research: optimal
+            dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Maps to unified config model
             search_strategy=SearchStrategy.DENSE,
         )
 
     return ScrapingConfig(
-        openai_api_key=openai_api_key_val,
-        firecrawl_api_key=firecrawl_api_key_val,
+        openai_api_key=unified_config.openai.api_key,
+        firecrawl_api_key=unified_config.firecrawl.api_key,
         embedding=embedding_conf,
-        chunk_size=1600,  # Research: optimal for retrieval
-        chunk_overlap=320,  # 20% overlap
-        enable_firecrawl_premium=firecrawl_api_key_val is not None,
+        chunk_size=unified_config.chunking.chunk_size,
+        chunk_overlap=unified_config.chunking.chunk_overlap,
+        enable_firecrawl_premium=unified_config.firecrawl.api_key is not None,
     )
 
 
@@ -1078,7 +1080,11 @@ async def main() -> None:
     scraper_instance = ModernDocumentationScraper(current_config)
 
     try:
-        await scraper_instance.scrape_multiple_sites(ESSENTIAL_SITES)
+        # Load documentation sites from unified config
+        unified_config = get_config()
+        sites_to_scrape = unified_config.documentation_sites if unified_config.documentation_sites else ESSENTIAL_SITES
+        
+        await scraper_instance.scrape_multiple_sites(sites_to_scrape)
         console.print(
             "\n✅ Advanced documentation scraping completed!",
             style="bold green",
