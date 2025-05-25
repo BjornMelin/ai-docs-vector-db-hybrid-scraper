@@ -9,6 +9,7 @@
 **Focus:** 🚨 **CRITICAL ARCHITECTURAL CLEANUP** - GitHub Issues #16-28
 
 **Roadmap:**
+
 - Priority 0 (Issues #16-17): Critical cleanup - ✅ Issue #16 COMPLETED
 - Priority 1 (Issues #18-20): Unified server enhancements - ✅ Issue #20 COMPLETED
 - Priority 2 (Issues #21-24): Service layer refactoring - ✅ Issues #23, #24 COMPLETED
@@ -22,6 +23,7 @@
 🚨 **These GitHub issues must be completed before other development work**
 
 ### Configuration System Unification  
+
 - [ ] **Centralize Configuration Management** `refactor/unified-config` 📋 [GitHub Issue #17]
   - [ ] Create UnifiedConfig class to replace scattered configuration
   - [ ] Refactor UnifiedServiceManager to use centralized config
@@ -34,6 +36,7 @@
 ## PRIORITY 1: CORE UNIFIED SERVER ENHANCEMENTS
 
 ### Implement Sparse Vectors & Reranking
+
 - [ ] **Implement TODOs in unified_mcp_server.py** `feat/sparse-vectors` 📋 [GitHub Issue #18]
   - [ ] Complete sparse vector generation in `_generate_embeddings()`
   - [ ] Implement reranking logic in `search_documents()`
@@ -41,6 +44,7 @@
   - [ ] Test hybrid search with sparse vectors
 
 ### Persistent Storage for Projects
+
 - [ ] **Implement Project Persistence** `feat/project-persistence` 📋 [GitHub Issue #19]
   - [ ] Design project metadata schema
   - [ ] Implement SQLite/JSON storage backend
@@ -52,6 +56,7 @@
 ## PRIORITY 2: SERVICE LAYER & UTILITY REFACTORING
 
 ### Unified MCP Server Modularization
+
 - [ ] **Split unified_mcp_server.py into modules** `refactor/server-modularization`
   - [ ] Extract request/response models to `src/mcp/models.py`
   - [ ] Move MCP tool definitions to `src/mcp/tools.py`
@@ -61,6 +66,7 @@
   - [ ] Add comprehensive tests for each module
 
 ### Script Integration
+
 - [ ] **Integrate crawl4ai_bulk_embedder.py** `refactor/script-integration` 📋 [GitHub Issue #21]
   - [ ] Refactor to use UnifiedServiceManager
   - [ ] Remove direct service instantiation
@@ -78,6 +84,7 @@
 ## PRIORITY 3: CONFIGURATION & SECURITY REFINEMENTS
 
 ### Security Integration
+
 - [ ] **Integrate SecurityValidator with UnifiedConfig** `feat/security-config` 📋 [GitHub Issue #25]
   - [ ] Move SecurityValidator into UnifiedConfig
   - [ ] Add security validation to all service initialization
@@ -89,6 +96,7 @@
 ## PRIORITY 4: DOCUMENTATION & TESTING UPDATES
 
 ### Documentation Updates
+
 - [ ] **Update All Documentation** `docs/update` 📋 [GitHub Issue #27]
   - [ ] Update architecture diagrams for unified server
   - [ ] Remove references to legacy MCP servers
@@ -96,6 +104,7 @@
   - [ ] Create migration guide from old to new architecture
 
 ### Test Suite Updates
+
 - [ ] **Update Test Suite** `test/refactor` 📋 [GitHub Issue #28]
   - [ ] Remove tests for deleted MCP servers
   - [ ] Update integration tests for unified architecture
@@ -271,7 +280,7 @@
 
 ### Intelligent Caching Layer
 
-- [x] **Embedding & Crawl Caching** `feat/intelligent-caching` ✅ 
+- [x] **Embedding & Crawl Caching** `feat/intelligent-caching` ✅
   - ✅ **Redis/in-memory cache** with two-tier architecture (L1 local, L2 Redis)
   - ✅ **Content-based cache keys** using MD5 hashing with provider/model/dimensions
   - ✅ **TTL support** for embeddings (24h), crawls (1h), and queries (2h)
