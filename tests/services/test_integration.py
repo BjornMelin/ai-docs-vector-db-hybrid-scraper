@@ -1,13 +1,12 @@
 """Integration tests for service layer with mocked API responses."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+from src.config.enums import CrawlProvider
+from src.config.enums import EmbeddingProvider
 from src.config.models import UnifiedConfig
-from src.config.enums import EmbeddingProvider, CrawlProvider
 from src.services.crawling.manager import CrawlManager
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import QualityTier
@@ -16,7 +15,17 @@ from src.services.qdrant_service import QdrantService
 
 @pytest.fixture
 def integration_config():
-    """Integration test configuration."""
+    """Integration test configuration.
+
+    Using environment variable syntax (double underscore) to simulate
+    how the config would be loaded in production from environment variables.
+    Alternative syntax would be:
+        UnifiedConfig(
+            openai=OpenAIConfig(api_key="sk-test"),
+            firecrawl=FirecrawlConfig(api_key="fc-test"),
+            qdrant=QdrantConfig(url="http://localhost:6333")
+        )
+    """
     return UnifiedConfig(
         openai__api_key="sk-test-integration-key",
         firecrawl__api_key="fc-test-integration-key",
@@ -64,7 +73,9 @@ class TestServiceIntegration:
                         "generate_embeddings",
                         return_value=embedding_response,
                     ):
-                        embeddings = await embedding_manager.generate_embeddings([content])
+                        embeddings = await embedding_manager.generate_embeddings(
+                            [content]
+                        )
                         assert len(embeddings) == 1
                         assert len(embeddings[0]) == 1536
 
@@ -187,7 +198,9 @@ class TestServiceIntegration:
                         "generate_embeddings",
                         return_value=batch_embeddings,
                     ):
-                        embeddings = await embedding_manager.generate_embeddings(contents)
+                        embeddings = await embedding_manager.generate_embeddings(
+                            contents
+                        )
                         assert len(embeddings) == 3
 
                         # Store in Qdrant
@@ -209,18 +222,21 @@ class TestServiceIntegration:
                                 )
 
                                 # Prepare documents
-                                documents = []
-                                for i, (doc, embedding) in enumerate(
-                                    zip(crawl_results["data"], embeddings)
-                                ):
-                                    documents.append(
-                                        {
-                                            "id": f"doc_{i}",
-                                            "content": doc["content"],
-                                            "embedding": embedding,
-                                            "metadata": doc["metadata"],
-                                        }
+                                documents = [
+                                    {
+                                        "id": f"doc_{i}",
+                                        "content": doc["content"],
+                                        "embedding": embedding,
+                                        "metadata": doc["metadata"],
+                                    }
+                                    for i, (doc, embedding) in enumerate(
+                                        zip(
+                                            crawl_results["data"],
+                                            embeddings,
+                                            strict=False,
+                                        )
                                     )
+                                ]
 
                                 # Store batch
                                 await qdrant_service.upsert_documents(
@@ -381,7 +397,10 @@ class TestServiceIntegration:
                         collection_name="test_collection",
                         query_text="test query",
                         dense_vector=[0.1] * 1536,
-                        sparse_vector={"indices": [1, 5, 10], "values": [0.5, 0.3, 0.2]},
+                        sparse_vector={
+                            "indices": [1, 5, 10],
+                            "values": [0.5, 0.3, 0.2],
+                        },
                         limit=5,
                     )
 

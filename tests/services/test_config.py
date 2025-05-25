@@ -1,10 +1,20 @@
-"""Tests for service configuration validation."""
+"""Tests for service configuration validation.
+
+UnifiedConfig Pattern Notes:
+- For environment variables: Use double underscore syntax (e.g., 'qdrant__url')
+- For programmatic creation: Use nested configuration objects (e.g., qdrant=QdrantConfig(url="..."))
+- The double underscore syntax is automatically parsed by Pydantic when loading from environment
+"""
 
 import pytest
 from pydantic import ValidationError
-
-from src.config.models import UnifiedConfig, QdrantConfig, OpenAIConfig, CacheConfig, PerformanceConfig
-from src.config.enums import EmbeddingProvider, CrawlProvider
+from src.config.enums import CrawlProvider
+from src.config.enums import EmbeddingProvider
+from src.config.models import CacheConfig
+from src.config.models import OpenAIConfig
+from src.config.models import PerformanceConfig
+from src.config.models import QdrantConfig
+from src.config.models import UnifiedConfig
 
 
 class TestUnifiedConfig:
@@ -17,15 +27,15 @@ class TestUnifiedConfig:
         # Check nested Qdrant config
         assert config.qdrant.url == "http://localhost:6333"
         assert config.qdrant.collection_name == "documents"
-        
+
         # Check nested OpenAI config
         assert config.openai.model == "text-embedding-3-small"
         assert config.openai.dimensions == 1536
-        
+
         # Check provider preferences
         assert config.embedding_provider == EmbeddingProvider.FASTEMBED
         assert config.crawl_provider == CrawlProvider.CRAWL4AI
-        
+
         # Check performance settings
         assert config.performance.max_retries == 3
 
@@ -49,36 +59,26 @@ class TestUnifiedConfig:
     def test_url_validation(self):
         """Test URL validation."""
         # Valid URLs
-        config = UnifiedConfig(
-            qdrant=QdrantConfig(url="http://localhost:6333/")
-        )
+        config = UnifiedConfig(qdrant=QdrantConfig(url="http://localhost:6333/"))
         assert config.qdrant.url == "http://localhost:6333"  # Trailing slash removed
 
         # Invalid URL
         with pytest.raises(ValidationError, match="must start with http"):
-            UnifiedConfig(
-                qdrant=QdrantConfig(url="localhost:6333")
-            )
+            UnifiedConfig(qdrant=QdrantConfig(url="localhost:6333"))
 
     def test_openai_key_validation(self):
         """Test OpenAI API key validation."""
         # Valid key
-        config = UnifiedConfig(
-            openai=OpenAIConfig(api_key="sk-proj-test123")
-        )
+        config = UnifiedConfig(openai=OpenAIConfig(api_key="sk-proj-test123"))
         assert config.openai.api_key == "sk-proj-test123"
 
         # None is valid
-        config = UnifiedConfig(
-            openai=OpenAIConfig(api_key=None)
-        )
+        config = UnifiedConfig(openai=OpenAIConfig(api_key=None))
         assert config.openai.api_key is None
 
         # Invalid key format
         with pytest.raises(ValidationError, match="must start with 'sk-'"):
-            UnifiedConfig(
-                openai=OpenAIConfig(api_key="invalid-key")
-            )
+            UnifiedConfig(openai=OpenAIConfig(api_key="invalid-key"))
 
     def test_model_validation(self):
         """Test model name validation."""
@@ -88,16 +88,12 @@ class TestUnifiedConfig:
             "text-embedding-3-large",
             "text-embedding-ada-002",
         ]:
-            config = UnifiedConfig(
-                openai=OpenAIConfig(model=model)
-            )
+            config = UnifiedConfig(openai=OpenAIConfig(model=model))
             assert config.openai.model == model
 
         # Invalid model
         with pytest.raises(ValidationError, match="Invalid OpenAI model"):
-            UnifiedConfig(
-                openai=OpenAIConfig(model="invalid-model")
-            )
+            UnifiedConfig(openai=OpenAIConfig(model="invalid-model"))
 
     def test_numeric_validation(self):
         """Test numeric field validation."""
@@ -119,27 +115,19 @@ class TestUnifiedConfig:
 
         # Invalid dimensions (too large)
         with pytest.raises(ValidationError):
-            UnifiedConfig(
-                openai=OpenAIConfig(dimensions=4096)
-            )
+            UnifiedConfig(openai=OpenAIConfig(dimensions=4096))
 
         # Invalid batch size (too large)
         with pytest.raises(ValidationError):
-            UnifiedConfig(
-                openai=OpenAIConfig(batch_size=3000)
-            )
+            UnifiedConfig(openai=OpenAIConfig(batch_size=3000))
 
         # Invalid timeout (negative)
         with pytest.raises(ValidationError):
-            UnifiedConfig(
-                performance=PerformanceConfig(request_timeout=-1)
-            )
+            UnifiedConfig(performance=PerformanceConfig(request_timeout=-1))
 
         # Invalid retries (too many)
         with pytest.raises(ValidationError):
-            UnifiedConfig(
-                performance=PerformanceConfig(max_retries=20)
-            )
+            UnifiedConfig(performance=PerformanceConfig(max_retries=20))
 
     def test_provider_validation(self):
         """Test provider validation with required API keys."""
@@ -159,6 +147,7 @@ class TestUnifiedConfig:
 
         # Valid - Firecrawl provider with API key
         from src.config.models import FirecrawlConfig
+
         config = UnifiedConfig(
             crawl_provider=CrawlProvider.FIRECRAWL,
             firecrawl=FirecrawlConfig(api_key="fc-test123"),
@@ -181,7 +170,7 @@ class TestUnifiedConfig:
                 local_max_size=500,
             )
         )
-        
+
         assert config.cache.enable_caching is True
         assert config.cache.ttl_embeddings == 7200
         assert config.cache.local_max_size == 500
@@ -201,7 +190,7 @@ class TestUnifiedConfig:
                 redis_pool_size=20,
             ),
         )
-        
+
         assert config.qdrant.batch_size == 50
         assert config.qdrant.max_retries == 5
         assert config.openai.batch_size == 100

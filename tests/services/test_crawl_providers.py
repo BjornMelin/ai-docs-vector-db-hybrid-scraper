@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
 from src.config.enums import CrawlProvider as CrawlProviderEnum
+from src.config.models import UnifiedConfig
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider
 from src.services.crawling.manager import CrawlManager
@@ -185,7 +185,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_initialize(self, crawl4ai_provider):
         """Test provider initialization."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -198,7 +200,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_scrape_url_success(self, crawl4ai_provider):
         """Test successful URL scraping."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -221,7 +225,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_scrape_url_failure(self, crawl4ai_provider):
         """Test failed URL scraping."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -244,7 +250,9 @@ class TestCrawl4AIProvider:
         """Test multiple URL scraping."""
         urls = ["https://example1.com", "https://example2.com"]
 
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -253,9 +261,9 @@ class TestCrawl4AIProvider:
             for i, url in enumerate(urls):
                 mock_result = MagicMock()
                 mock_result.success = True
-                mock_result.markdown = f"Content {i+1}"
-                mock_result.html = f"<p>Content {i+1}</p>"
-                mock_result.metadata = {"title": f"Page {i+1}", "url": url}
+                mock_result.markdown = f"Content {i + 1}"
+                mock_result.html = f"<p>Content {i + 1}</p>"
+                mock_result.metadata = {"title": f"Page {i + 1}", "url": url}
                 mock_results.append(mock_result)
 
             mock_instance.arun.side_effect = mock_results
@@ -272,7 +280,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_crawl_website(self, crawl4ai_provider):
         """Test website crawling."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -293,12 +303,18 @@ class TestCrawl4AIProvider:
             page1_result = MagicMock()
             page1_result.success = True
             page1_result.markdown = "Page 1 content"
-            page1_result.metadata = {"title": "Page 1", "url": "https://example.com/page1"}
+            page1_result.metadata = {
+                "title": "Page 1",
+                "url": "https://example.com/page1",
+            }
 
             page2_result = MagicMock()
             page2_result.success = True
             page2_result.markdown = "Page 2 content"
-            page2_result.metadata = {"title": "Page 2", "url": "https://example.com/page2"}
+            page2_result.metadata = {
+                "title": "Page 2",
+                "url": "https://example.com/page2",
+            }
 
             mock_instance.arun.side_effect = [main_result, page1_result, page2_result]
 
@@ -315,7 +331,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_map_website(self, crawl4ai_provider):
         """Test website mapping."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -343,7 +361,9 @@ class TestCrawl4AIProvider:
     @pytest.mark.asyncio
     async def test_cleanup(self, crawl4ai_provider):
         """Test provider cleanup."""
-        with patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler") as mock_crawler:
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
@@ -362,7 +382,12 @@ class TestCrawlManager:
 
     @pytest.fixture
     def config(self):
-        """Create test configuration."""
+        """Create test configuration.
+
+        Note: Using double underscore syntax (firecrawl__api_key) here because
+        it mimics how environment variables are loaded. In production, this would
+        be set as FIRECRAWL__API_KEY environment variable.
+        """
         return UnifiedConfig(
             firecrawl__api_key="test-key",
             crawl_provider=CrawlProviderEnum.FIRECRAWL,
@@ -579,7 +604,9 @@ class TestCrawlManager:
 
             await crawl_manager.initialize()
 
-            result = await crawl_manager.crawl_website("https://example.com", max_pages=10)
+            result = await crawl_manager.crawl_website(
+                "https://example.com", max_pages=10
+            )
 
             assert len(result) == 2
             assert result[0]["url"] == "https://example.com/page1"

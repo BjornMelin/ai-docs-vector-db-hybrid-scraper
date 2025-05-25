@@ -12,20 +12,20 @@ from src.services.qdrant_service import QdrantService
 @pytest.fixture
 def config():
     """Create test configuration."""
+    # When using nested config objects directly
+    from src.config.models import QdrantConfig
     return UnifiedConfig(
-        qdrant__url="http://localhost:6333",
-        qdrant__api_key="test-key",
+        qdrant=QdrantConfig(
+            url="http://localhost:6333",
+            api_key="test-key",
+        )
     )
 
 
 @pytest.fixture
-def qdrant_service():
+def qdrant_service(config):
     """Create Qdrant service instance."""
-    return QdrantService(
-        url="http://localhost:6333",
-        api_key="test-key",
-        timeout=30.0,
-    )
+    return QdrantService(config)
 
 
 @pytest.fixture
@@ -65,6 +65,7 @@ class TestQdrantService:
                 url="http://localhost:6333",
                 api_key="test-key",
                 timeout=30.0,
+                prefer_grpc=False,
             )
 
     @pytest.mark.asyncio
@@ -177,7 +178,10 @@ class TestQdrantService:
             mock_result = MagicMock()
             mock_result.id = "doc1"
             mock_result.score = 0.95
-            mock_result.payload = {"content": "Test content", "metadata": {"title": "Test"}}
+            mock_result.payload = {
+                "content": "Test content",
+                "metadata": {"title": "Test"},
+            }
             mock_instance.search.return_value = [mock_result]
 
             mock_client.return_value = mock_instance
@@ -370,16 +374,15 @@ class TestQdrantService:
             await qdrant_service.initialize()
 
             # Create large batch of documents
-            documents = []
-            for i in range(150):  # More than typical batch size
-                documents.append(
-                    {
-                        "id": f"doc_{i}",
-                        "content": f"Content {i}",
-                        "embedding": [0.1] * 1536,
-                        "metadata": {"index": i},
-                    }
-                )
+            documents = [
+                {
+                    "id": f"doc_{i}",
+                    "content": f"Content {i}",
+                    "embedding": [0.1] * 1536,
+                    "metadata": {"index": i},
+                }
+                for i in range(150)  # More than typical batch size
+            ]
 
             await qdrant_service.upsert_documents(
                 collection_name="test_collection",
