@@ -423,6 +423,16 @@
   - [ ] Add CLI-based search and management
   - [ ] Create batch operation commands
 
+- [ ] **Example Scripts & Tutorials** `feat/examples-mvp`
+  - [ ] Create basic search example script
+  - [ ] Add bulk indexing example
+  - [ ] Implement configuration setup examples
+  - [ ] Create MCP server integration examples
+  - [ ] Add performance benchmarking scripts
+  - [ ] Create troubleshooting examples
+  - [ ] Implement end-to-end workflow examples
+  - [ ] Add Jupyter notebook tutorials
+
 - [ ] **Configuration Management** `feat/config-management`
   - [ ] Add configuration templates for different use cases
   - [ ] Implement configuration validation and suggestions
