@@ -106,16 +106,19 @@ class UnifiedServiceManager:
 ## Performance Improvements
 
 ### API Call Optimization
+
 - Direct SDK usage eliminates MCP proxy overhead
 - Connection pooling reduces connection establishment time
 - Batch operations for embedding generation
 
 ### Search Performance
+
 - Hybrid search improves relevance by 8-15%
 - BGE reranking adds 10-20% accuracy improvement
 - Caching reduces repeated search latency by 90%
 
 ### Storage Efficiency
+
 - Vector quantization reduces storage by 83-99%
 - Sparse vectors add only 20% storage overhead
 - Matryoshka embeddings enable multi-resolution search
@@ -125,6 +128,7 @@ class UnifiedServiceManager:
 ### For Existing Users
 
 1. **Configuration Migration**:
+
    ```python
    # Old: Multiple config files
    config = load_config("config.json")
@@ -135,6 +139,7 @@ class UnifiedServiceManager:
    ```
 
 2. **Service Usage**:
+
    ```python
    # Old: Direct client usage
    client = AsyncQdrantClient(url=QDRANT_URL)
@@ -145,6 +150,7 @@ class UnifiedServiceManager:
    ```
 
 3. **MCP Server**:
+
    ```json
    // Old: Multiple MCP servers
    "qdrant-mcp": {...},
@@ -160,21 +166,25 @@ class UnifiedServiceManager:
 ## Best Practices
 
 ### Configuration
+
 - Use environment variables for sensitive data
 - Override defaults in `.env` files
 - Validate configuration on startup
 
 ### Service Layer
+
 - Always use context managers for cleanup
 - Handle service-specific exceptions
 - Monitor rate limits and costs
 
 ### Search Strategy
+
 - Default to hybrid search for best accuracy
 - Use reranking for top results only
 - Cache frequent queries
 
 ### Security
+
 - Validate all user inputs
 - Use SecurityValidator for URLs and queries
 - Implement domain filtering for crawling
@@ -182,6 +192,7 @@ class UnifiedServiceManager:
 ## Future Enhancements
 
 ### Planned Improvements
+
 - GraphQL API for advanced querying
 - Multi-modal document support
 - Distributed crawling with task queues
@@ -189,6 +200,7 @@ class UnifiedServiceManager:
 - LLM-powered query expansion
 
 ### Architecture Extensions
+
 - Plugin system for custom providers
 - Event-driven architecture
 - Microservices deployment option

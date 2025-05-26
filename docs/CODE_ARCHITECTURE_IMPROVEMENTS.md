@@ -12,6 +12,7 @@ Comprehensive refactoring to eliminate code duplication, improve maintainability
 ## Current Architecture Issues
 
 ### Code Duplication Problems
+
 - **Embedding Logic**: Duplicated across multiple modules
 - **Qdrant Initialization**: Repeated client setup code
 - **Configuration Loading**: Scattered configuration patterns
@@ -19,6 +20,7 @@ Comprehensive refactoring to eliminate code duplication, improve maintainability
 - **Validation**: Repeated validation logic
 
 ### Module Organization Issues
+
 - **Flat Structure**: All modules in src/ without clear separation
 - **Mixed Concerns**: Business logic mixed with infrastructure
 - **Tight Coupling**: Direct dependencies between unrelated modules
@@ -27,7 +29,8 @@ Comprehensive refactoring to eliminate code duplication, improve maintainability
 ## Target Architecture
 
 ### Clean Architecture Principles
-```
+
+```plaintext
 src/
 ├── core/           # Core business logic (no external dependencies)
 ├── services/       # Business services and orchestration
@@ -39,7 +42,8 @@ src/
 ```
 
 ### Dependency Flow
-```
+
+```plaintext
 Infrastructure → Services → Core
      ↑              ↑        ↑
 Providers      Models   Exceptions
@@ -52,6 +56,7 @@ Providers      Models   Exceptions
 ### Phase 1: Core Domain Models
 
 #### Unified Data Models
+
 ```python
 # src/models/document.py
 from pydantic import BaseModel, Field
@@ -93,6 +98,7 @@ class SearchResult(BaseModel):
 ```
 
 #### Configuration Models
+
 ```python
 # src/models/config.py
 from pydantic import BaseModel, Field, validator
@@ -141,6 +147,7 @@ class UnifiedConfig(BaseModel):
 ### Phase 2: Service Layer Architecture
 
 #### Core Services Interface
+
 ```python
 # src/core/interfaces.py
 from abc import ABC, abstractmethod
@@ -206,6 +213,7 @@ class CrawlService(ABC):
 ```
 
 #### Centralized Client Manager
+
 ```python
 # src/infrastructure/client_manager.py
 from typing import Dict, Any, Optional
@@ -276,6 +284,7 @@ class ClientManager:
 ```
 
 #### Service Implementations
+
 ```python
 # src/services/embedding_service.py
 from src.core.interfaces import EmbeddingService
@@ -333,6 +342,7 @@ class UnifiedEmbeddingService(EmbeddingService):
 ### Phase 3: Provider Abstraction Layer
 
 #### Provider Implementations
+
 ```python
 # src/providers/openai_provider.py
 from openai import AsyncOpenAI
@@ -415,6 +425,7 @@ class FastEmbedProvider(EmbeddingService):
 ### Phase 4: Shared Utilities and Patterns
 
 #### Common Decorators
+
 ```python
 # src/utils/decorators.py
 import asyncio
@@ -507,6 +518,7 @@ def circuit_breaker(
 ```
 
 #### Configuration Loading Utilities
+
 ```python
 # src/utils/config_loader.py
 import os
@@ -574,6 +586,7 @@ class ConfigLoader:
 ### Phase 5: Exception Hierarchy
 
 #### Structured Exception System
+
 ```python
 # src/exceptions/base_exceptions.py
 class ApplicationError(Exception):
@@ -626,30 +639,35 @@ class VectorInsertError(VectorDatabaseError, RetryableError):
 ## Refactoring Strategy
 
 ### Phase 1: Models and Interfaces (Week 1)
+
 1. Create new model structure in `src/models/`
 2. Define core interfaces in `src/core/`
 3. Update existing code to use new models
 4. Comprehensive testing of models
 
 ### Phase 2: Service Layer (Week 1-2)
+
 1. Implement client manager
 2. Create service implementations
 3. Update MCP server to use new services
 4. Integration testing
 
 ### Phase 3: Provider Abstraction (Week 2)
+
 1. Implement provider classes
 2. Create provider factory
 3. Update embedding and crawling logic
 4. Provider-specific testing
 
 ### Phase 4: Utilities and Cleanup (Week 2-3)
+
 1. Implement shared utilities
 2. Add decorator patterns
 3. Remove duplicate code
 4. Final integration testing
 
 ### Phase 5: Documentation and Migration (Week 3)
+
 1. Update all documentation
 2. Create migration guides
 3. Performance benchmarking
@@ -658,6 +676,7 @@ class VectorInsertError(VectorDatabaseError, RetryableError):
 ## Code Quality Improvements
 
 ### Type Safety Enhancements
+
 ```python
 # Strict typing throughout
 from typing import TypeVar, Generic, Protocol, runtime_checkable
@@ -685,6 +704,7 @@ class DocumentProcessor(Generic[T]):
 ```
 
 ### Testing Improvements
+
 ```python
 # src/tests/conftest.py
 import pytest
@@ -719,6 +739,7 @@ def mock_embedding_service():
 ## Migration Tools
 
 ### Code Migration Script
+
 ```python
 #!/usr/bin/env python3
 """Migration script for architecture refactor."""
@@ -784,6 +805,7 @@ migrator.migrate_all()
 ## Performance Monitoring
 
 ### Architecture Metrics
+
 ```python
 # src/utils/metrics.py
 from dataclasses import dataclass
@@ -842,37 +864,43 @@ class MetricsCollector:
 ## Official Documentation References
 
 ### Python Architecture
-- **Clean Architecture**: https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
-- **Dependency Injection**: https://python-dependency-injector.ets-labs.org/
-- **Pydantic**: https://docs.pydantic.dev/latest/
-- **AsyncIO**: https://docs.python.org/3/library/asyncio.html
+
+- **Clean Architecture**: <https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html>
+- **Dependency Injection**: <https://python-dependency-injector.ets-labs.org/>
+- **Pydantic**: <https://docs.pydantic.dev/latest/>
+- **AsyncIO**: <https://docs.python.org/3/library/asyncio.html>
 
 ### Design Patterns
-- **Repository Pattern**: https://martinfowler.com/eaaCatalog/repository.html
-- **Circuit Breaker**: https://martinfowler.com/bliki/CircuitBreaker.html
-- **Retry Pattern**: https://docs.microsoft.com/en-us/azure/architecture/patterns/retry
-- **Singleton Pattern**: https://refactoring.guru/design-patterns/singleton/python/example
+
+- **Repository Pattern**: <https://martinfowler.com/eaaCatalog/repository.html>
+- **Circuit Breaker**: <https://martinfowler.com/bliki/CircuitBreaker.html>
+- **Retry Pattern**: <https://docs.microsoft.com/en-us/azure/architecture/patterns/retry>
+- **Singleton Pattern**: <https://refactoring.guru/design-patterns/singleton/python/example>
 
 ### Testing
-- **pytest-asyncio**: https://pytest-asyncio.readthedocs.io/
-- **unittest.mock**: https://docs.python.org/3/library/unittest.mock.html
-- **pytest fixtures**: https://docs.pytest.org/en/stable/fixture.html
+
+- **pytest-asyncio**: <https://pytest-asyncio.readthedocs.io/>
+- **unittest.mock**: <https://docs.python.org/3/library/unittest.mock.html>
+- **pytest fixtures**: <https://docs.pytest.org/en/stable/fixture.html>
 
 ## Success Criteria
 
 ### Code Quality Metrics
+
 - [ ] Eliminate 90%+ code duplication
 - [ ] Achieve 95%+ test coverage
 - [ ] Zero circular dependencies
 - [ ] All modules follow single responsibility
 
-### Architecture Metrics
+### Architecture Metrics (2025)
+
 - [ ] Clear separation of concerns
 - [ ] Consistent error handling patterns
 - [ ] Configurable dependency injection
 - [ ] Maintainable abstractions
 
 ### Performance Metrics
+
 - [ ] No performance regression
 - [ ] 20%+ reduction in memory usage
 - [ ] Faster startup time

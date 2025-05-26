@@ -8,7 +8,7 @@ This guide details the implementation of advanced search capabilities using Qdra
 
 ### Search Pipeline Flow
 
-```
+```plaintext
 Query Input
     ↓
 Query Analysis & Enhancement
@@ -861,21 +861,25 @@ class UnifiedSearchService:
 ## Performance Optimization Tips
 
 ### 1. Batch Processing
+
 - Process multiple queries in parallel
 - Batch embedding generation
 - Use connection pooling for Qdrant
 
 ### 2. Caching Strategy
+
 - Cache embeddings for common queries
 - Cache search results with intelligent TTL
 - Use Redis for distributed caching
 
 ### 3. Index Optimization
+
 - Use appropriate HNSW parameters
 - Enable quantization for large collections
 - Partition data by time or category
 
 ### 4. Query Optimization
+
 - Limit prefetch sizes based on needs
 - Use filters to reduce search space
 - Implement query complexity analysis

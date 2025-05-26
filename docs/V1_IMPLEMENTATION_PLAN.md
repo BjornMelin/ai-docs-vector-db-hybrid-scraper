@@ -16,7 +16,7 @@ This document outlines the complete implementation plan for V1 of our AI Documen
 
 ### Core Components
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────┐
 │                    MCP Server (FastMCP 2.0)                  │
 ├─────────────────────────────────────────────────────────────┤
@@ -43,7 +43,7 @@ This document outlines the complete implementation plan for V1 of our AI Documen
 
 ### Data Flow
 
-```
+```plaintext
 User Request → MCP Tool → Service Layer → External APIs → Response
                 ↓                ↓                           ↑
              Context      Cache Layer                   Monitoring
@@ -54,6 +54,7 @@ User Request → MCP Tool → Service Layer → External APIs → Response
 ### Phase 1: Core Infrastructure (Week 1)
 
 #### 1.1 Project Setup
+
 - [ ] Create unified MCP server structure
 - [ ] Set up FastMCP 2.0 with all decorators
 - [ ] Configure environment management
@@ -61,6 +62,7 @@ User Request → MCP Tool → Service Layer → External APIs → Response
 - [ ] Create development Docker environment
 
 #### 1.2 Service Layer Foundation
+
 ```python
 # src/services/__init__.py
 from .embedding import EmbeddingService
@@ -86,6 +88,7 @@ class BaseService:
 ```
 
 #### 1.3 Configuration System
+
 ```python
 # src/config.py
 from pydantic import BaseModel, Field
@@ -111,6 +114,7 @@ class UnifiedConfig(BaseModel):
 ### Phase 2: Embedding & Vector Services (Week 2)
 
 #### 2.1 Embedding Service Implementation
+
 ```python
 # src/services/embedding.py
 class EmbeddingService(BaseService):
@@ -149,6 +153,7 @@ class EmbeddingService(BaseService):
 ```
 
 #### 2.2 Vector Database Service
+
 ```python
 # src/services/vector_db.py
 from qdrant_client import AsyncQdrantClient
@@ -185,6 +190,7 @@ class VectorDBService(BaseService):
 ### Phase 3: Search Implementation (Week 3)
 
 #### 3.1 Hybrid Search with Qdrant Query API
+
 ```python
 # src/services/search.py
 class SearchService:
@@ -231,6 +237,7 @@ class SearchService:
 ```
 
 #### 3.2 Multi-Stage Retrieval
+
 ```python
 async def multi_stage_search(
     self,
@@ -259,6 +266,7 @@ async def multi_stage_search(
 ### Phase 4: Document Processing (Week 4)
 
 #### 4.1 Enhanced Chunking Service
+
 ```python
 # src/services/chunking.py
 from tree_sitter import Parser, Language
@@ -314,6 +322,7 @@ class ChunkingService(BaseService):
 ### Phase 5: MCP Tools Implementation (Week 5)
 
 #### 5.1 Core MCP Tools
+
 ```python
 # src/mcp_server.py
 from fastmcp import FastMCP, Context
@@ -413,6 +422,7 @@ async def hybrid_search(
 ```
 
 #### 5.2 Composed Tools
+
 ```python
 @mcp.tool()
 async def smart_index_documentation(
@@ -467,6 +477,7 @@ async def smart_index_documentation(
 ### Phase 6: Advanced Features (Week 6)
 
 #### 6.1 Streaming Support
+
 ```python
 @mcp.tool()
 async def stream_search_results(
@@ -510,6 +521,7 @@ async def stream_search_results(
 ```
 
 #### 6.2 Resource Implementation
+
 ```python
 @mcp.resource("config://embedding-models")
 async def get_embedding_models() -> dict:
@@ -580,6 +592,7 @@ async def get_collection_stats(name: str) -> dict:
 ### Phase 7: Monitoring & Analytics (Week 7)
 
 #### 7.1 Monitoring Service
+
 ```python
 # src/services/monitoring.py
 import prometheus_client as prom
@@ -630,6 +643,7 @@ class MonitoringService(BaseService):
 ```
 
 #### 7.2 Analytics Tools
+
 ```python
 @mcp.tool()
 async def get_search_analytics(
@@ -665,6 +679,7 @@ async def get_search_analytics(
 ### Phase 8: Testing & Quality Assurance (Week 8)
 
 #### 8.1 Comprehensive Test Suite
+
 ```python
 # tests/test_search.py
 import pytest
@@ -698,6 +713,7 @@ async def test_multi_stage_search():
 ```
 
 #### 8.2 Performance Benchmarks
+
 ```python
 # tests/benchmarks/test_performance.py
 import asyncio
@@ -737,6 +753,7 @@ async def benchmark_search_latency():
 ## Deployment & Operations
 
 ### Docker Configuration
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -769,6 +786,7 @@ services:
 ```
 
 ### Production Checklist
+
 - [ ] Environment variables properly configured
 - [ ] SSL/TLS enabled for all services
 - [ ] Rate limiting implemented
@@ -781,18 +799,21 @@ services:
 ## Success Metrics
 
 ### Performance Targets
+
 - Search latency: < 100ms for 95th percentile
 - Embedding generation: > 1000 embeddings/second
 - Index update time: < 5 seconds for single document
 - Cache hit rate: > 80% for common queries
 
 ### Quality Metrics
+
 - Search accuracy: > 90% relevance score
 - Test coverage: > 90%
 - Code quality: A rating on all linting tools
 - Documentation coverage: 100% of public APIs
 
 ### Business Metrics
+
 - Cost per 1M embeddings: < $50
 - Storage efficiency: > 80% compression ratio
 - Uptime: 99.9% availability
@@ -801,6 +822,7 @@ services:
 ## Risk Mitigation
 
 ### Technical Risks
+
 1. **API Rate Limits**
    - Solution: Implement exponential backoff
    - Fallback: Local embedding models
@@ -814,6 +836,7 @@ services:
    - Limits: Configurable batch sizes
 
 ### Operational Risks
+
 1. **Cost Overruns**
    - Solution: Budget alerts and limits
    - Monitoring: Real-time cost tracking

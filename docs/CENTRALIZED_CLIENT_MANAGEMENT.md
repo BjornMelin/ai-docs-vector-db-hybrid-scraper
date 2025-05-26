@@ -24,7 +24,7 @@ The Centralized Client Management system provides a unified approach to managing
 
 ### Component Structure
 
-```
+```plaintext
 src/infrastructure/
 ├── __init__.py
 └── client_manager.py    # Main ClientManager implementation
@@ -172,7 +172,7 @@ The Circuit Breaker prevents cascading failures and provides automatic recovery:
 2. **Open (Failed)**: Circuit is tripped, requests fail immediately
 3. **Half-Open (Degraded)**: Testing if service has recovered
 
-### Configuration
+### Configuration (2025)
 
 - `failure_threshold`: Number of failures before opening circuit (default: 5)
 - `recovery_timeout`: Seconds before attempting recovery (default: 60)
@@ -180,7 +180,7 @@ The Circuit Breaker prevents cascading failures and provides automatic recovery:
 
 ### Example Flow
 
-```
+```plaintext
 Normal Operation → 5 Failures → Circuit Opens → Wait 60s → 
 Half-Open (1 test) → Success → Circuit Closes → Normal Operation
                    ↓
@@ -360,6 +360,7 @@ client_health.labels(client_name='qdrant').set(
 ### From Direct Client Creation
 
 Before:
+
 ```python
 # Scattered client creation
 client = AsyncQdrantClient(url="...", api_key="...")
@@ -367,6 +368,7 @@ openai = AsyncOpenAI(api_key="...")
 ```
 
 After:
+
 ```python
 # Centralized management
 async with ClientManager(config) as manager:
@@ -377,6 +379,7 @@ async with ClientManager(config) as manager:
 ### From Service-Specific Clients
 
 Before:
+
 ```python
 class QdrantService:
     def __init__(self, config):
@@ -384,6 +387,7 @@ class QdrantService:
 ```
 
 After:
+
 ```python
 class QdrantService:
     def __init__(self, client_manager: ClientManager):
