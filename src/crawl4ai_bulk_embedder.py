@@ -365,8 +365,9 @@ class ModernDocumentationScraper:
             memory_threshold_percent=75.0,  # Use default value from unified config
             max_session_permit=self.config.crawl4ai.max_concurrent_crawls,
             monitor=CrawlerMonitor(
-                max_visible_rows=8,
-                display_mode=DisplayMode.COMPACT,
+                urls_total=site.max_pages,
+                enable_ui=True,
+                max_width=120,
             ),
         )
 

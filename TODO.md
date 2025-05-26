@@ -24,6 +24,7 @@
 - ✅ Issue #28: Test suite updates (partial)
 - ✅ Issue #33: Fix test imports to use UnifiedConfig (PR #33)
 - ✅ Issue #34: Comprehensive documentation reorganization (PR #34)
+- ✅ Issue #36: Unify models and configuration system - eliminate duplicate Pydantic models (PR #46)
 
 ---
 
