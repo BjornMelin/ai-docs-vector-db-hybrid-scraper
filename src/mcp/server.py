@@ -5,14 +5,8 @@ import logging
 from fastmcp import FastMCP
 
 from .service_manager import UnifiedServiceManager
-from .tools import analytics
-from .tools import cache
 from .tools import collections
-from .tools import documents
-from .tools import embeddings
-from .tools import projects
 from .tools import search
-from .tools import utils
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -25,30 +19,12 @@ mcp = FastMCP("ai-docs-vector-db-unified")
 service_manager = UnifiedServiceManager()
 
 # Register all tools with the MCP server
-# This maintains backward compatibility while organizing code better
+# Only registering existing tools
 
 # Search & Retrieval Tools
 search.register_tools(mcp, service_manager)
 
-# Embedding Tools
-embeddings.register_tools(mcp, service_manager)
-
-# Document Management Tools
-documents.register_tools(mcp, service_manager)
-
-# Project Management Tools
-projects.register_tools(mcp, service_manager)
-
 # Collection Management Tools
 collections.register_tools(mcp, service_manager)
-
-# Analytics Tools
-analytics.register_tools(mcp, service_manager)
-
-# Cache Management Tools
-cache.register_tools(mcp, service_manager)
-
-# Utility Tools
-utils.register_tools(mcp, service_manager)
 
 logger.info("MCP Server initialized with all tools registered")
