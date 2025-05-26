@@ -9,7 +9,6 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
 from crawl4ai import AsyncWebCrawler
@@ -58,13 +57,17 @@ from rich.progress import TextColumn
 from rich.table import Table
 
 # Import enhanced chunking module
-from .chunking import ChunkingConfig
 from .chunking import EnhancedChunker
 
 # Import unified configuration
 from .config import get_config
+from .config.enums import EmbeddingModel
 from .config.enums import EmbeddingProvider
 from .config.enums import SearchStrategy
+from .config.models import DocumentationSite
+
+# Import shared response models
+from .mcp.models.responses import CrawlResult
 from .services.crawling.manager import CrawlManager
 
 # Import service layer
@@ -72,130 +75,6 @@ from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
 
 console = Console()
-
-# Additional embedding-specific enums not in central config
-
-
-class EmbeddingModel(str, Enum):
-    """Advanced embedding models based on research findings"""
-
-    # OpenAI Models (API-based)
-    TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"  # Best cost-performance
-    TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"  # Best OpenAI performance
-
-    # FastEmbed Models (Local inference, research-backed)
-    NV_EMBED_V2 = "nvidia/NV-Embed-v2"  # #1 on MTEB leaderboard
-    BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"  # Cost-effective open source
-    BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"  # Higher accuracy
-
-    # Sparse Models for Hybrid Search
-    SPLADE_PP_EN_V1 = "prithvida/Splade_PP_en_v1"  # SPLADE++ for keyword matching
-
-
-class EmbeddingConfig(BaseModel):
-    """Advanced embedding configuration"""
-
-    provider: EmbeddingProvider = Field(
-        default=EmbeddingProvider.OPENAI, description="Embedding provider selection"
-    )
-    dense_model: EmbeddingModel = Field(
-        default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,
-        description="Dense embedding model (research: best cost-performance)",
-    )
-    sparse_model: EmbeddingModel | None = Field(
-        default=None, description="Sparse embedding model for hybrid search"
-    )
-    search_strategy: SearchStrategy = Field(
-        default=SearchStrategy.DENSE, description="Vector search strategy"
-    )
-    enable_quantization: bool = Field(
-        default=True,
-        description="Enable vector quantization (83-99% storage reduction)",
-    )
-    matryoshka_dimensions: list[int] = Field(
-        default_factory=lambda: [1536, 1024, 512, 256],
-        description="Matryoshka embedding dimensions for cost optimization",
-    )
-
-    # Advanced Reranking Configuration
-    enable_reranking: bool = Field(
-        default=False,
-        description="Enable reranking for 10-20% accuracy improvement",
-    )
-    reranker_model: str = Field(
-        default="BAAI/bge-reranker-v2-m3",
-        description="Reranker model (research: optimal minimal complexity)",
-    )
-    rerank_top_k: int = Field(
-        default=20,
-        description="Retrieve top-k for reranking, return fewer after rerank",
-    )
-
-
-class ScrapingConfig(BaseModel):
-    """Advanced scraping configuration with research-backed defaults"""
-
-    # Authentication
-    openai_api_key: str = Field(..., description="OpenAI API key")
-    firecrawl_api_key: str | None = Field(
-        default=None, description="Firecrawl API key for premium features"
-    )
-
-    # Vector Database
-    qdrant_url: str = Field(
-        default="http://localhost:6333",
-        description="Qdrant server URL",
-    )
-    collection_name: str = Field(
-        default="documents",
-        description="Qdrant collection name",
-    )
-
-    # Advanced Embedding Configuration
-    embedding: EmbeddingConfig = Field(
-        default_factory=EmbeddingConfig, description="Embedding configuration"
-    )
-
-    # Advanced Chunking Configuration
-    chunking: ChunkingConfig = Field(
-        default_factory=ChunkingConfig, description="Enhanced chunking configuration"
-    )
-
-    # Performance Settings
-    max_concurrent_crawls: int = Field(
-        default=8,
-        description="Maximum concurrent crawls",
-    )
-
-    # Legacy chunking settings (for backward compatibility, now in ChunkingConfig)
-    chunk_size: int = Field(
-        default=1600,
-        description="Characters per chunk (research: 400-600 tokens optimal)",
-    )
-    memory_threshold: float = Field(
-        default=75.0,
-        description="Memory threshold for adaptive dispatcher",
-    )
-    concurrent_limit: int = Field(default=8, description="Concurrent request limit")
-    chunk_overlap: int = Field(
-        default=320, description="Chunk overlap (20% of chunk_size)"
-    )
-    max_retries: int = Field(default=3, description="Maximum retry attempts")
-
-    # Advanced Features
-    enable_hybrid_search: bool = Field(
-        default=False,
-        description="Enable hybrid dense+sparse search (research: 8-15% improvement)",
-    )
-    enable_firecrawl_premium: bool = Field(
-        default=False, description="Use Firecrawl for premium extraction features"
-    )
-
-    def __post_init__(self):
-        """Sync legacy settings with new ChunkingConfig"""
-        # Override ChunkingConfig with legacy values if provided
-        self.chunking.chunk_size = self.chunk_size
-        self.chunking.chunk_overlap = self.chunk_overlap
 
 
 class VectorMetrics(BaseModel):
@@ -207,45 +86,6 @@ class VectorMetrics(BaseModel):
     failed_embeddings: int = Field(default=0, description="Failed embeddings")
     processing_time: float = Field(
         default=0.0, description="Processing time in seconds"
-    )
-
-
-class CrawlResult(BaseModel):
-    """Result from crawling a single page"""
-
-    url: str = Field(..., description="Page URL")
-    title: str = Field(default="", description="Page title")
-    content: str = Field(default="", description="Page content")
-    word_count: int = Field(default=0, description="Word count")
-    success: bool = Field(default=False, description="Success status")
-    site_name: str = Field(default="", description="Site name")
-    depth: int = Field(default=0, description="Crawl depth")
-    scraped_at: str = Field(
-        default_factory=lambda: datetime.now().isoformat(),
-        description="Crawl timestamp",
-    )
-    links: list[str] = Field(default_factory=list, description="Extracted links")
-    metadata: dict = Field(default_factory=dict, description="Page metadata")
-    error: str | None = Field(default=None, description="Error message if failed")
-
-
-class DocumentationSite(BaseModel):
-    """Documentation site configuration with smart defaults"""
-
-    name: str = Field(..., description="Site name")
-    url: str = Field(..., description="Base URL")
-    max_pages: int = Field(default=50, description="Maximum pages to crawl")
-    max_depth: int = Field(default=2, description="Maximum crawl depth")
-    url_patterns: list[str] = Field(
-        default_factory=lambda: [
-            "*docs*",
-            "*guide*",
-            "*tutorial*",
-            "*api*",
-            "*reference*",
-            "*concepts*",
-        ],
-        description="URL patterns to include",
     )
 
 
@@ -274,7 +114,7 @@ class ModernDocumentationScraper:
 
     # Embedding models now managed by EmbeddingManager service
 
-    def __init__(self, config: ScrapingConfig) -> None:
+    def __init__(self, config) -> None:
         self.config = config
         self.stats = ScrapingStats()
         self.processed_urls: set[str] = set()
@@ -297,9 +137,9 @@ class ModernDocumentationScraper:
 
         # Initialize Firecrawl if premium features enabled
         self.firecrawl_client = None
-        if config.enable_firecrawl_premium and config.firecrawl_api_key:
+        if config.firecrawl.api_key:
             if FirecrawlApp is not None:
-                self.firecrawl_client = FirecrawlApp(api_key=config.firecrawl_api_key)
+                self.firecrawl_client = FirecrawlApp(api_key=config.firecrawl.api_key)
                 self.logger.info("Firecrawl premium features enabled")
             else:
                 self.logger.warning(
@@ -361,7 +201,7 @@ class ModernDocumentationScraper:
         """Setup advanced Qdrant collection with hybrid search capabilities"""
         try:
             collections = await self.qdrant_service.list_collections()
-            collection_exists = self.config.collection_name in collections
+            collection_exists = self.config.qdrant.collection_name in collections
 
             if not collection_exists:
                 # Determine vector size based on embedding model
@@ -369,7 +209,7 @@ class ModernDocumentationScraper:
 
                 # Create collection using service layer
                 await self.qdrant_service.create_collection(
-                    collection_name=self.config.collection_name,
+                    collection_name=self.config.qdrant.collection_name,
                     vector_size=vector_size,
                     distance="Cosine",
                     enable_sparse=self.config.embedding.search_strategy
@@ -377,11 +217,13 @@ class ModernDocumentationScraper:
                     on_disk=self.config.embedding.enable_quantization,
                 )
                 self.logger.info(
-                    f"Created collection '{self.config.collection_name}' with "
+                    f"Created collection '{self.config.qdrant.collection_name}' with "
                     f"{'hybrid' if self.config.embedding.search_strategy == SearchStrategy.HYBRID else 'dense'} search"
                 )
             else:
-                self.logger.info(f"Collection exists: {self.config.collection_name}")
+                self.logger.info(
+                    f"Collection exists: {self.config.qdrant.collection_name}"
+                )
 
         except Exception as e:
             self.logger.error(f"Collection setup failed: {e}")
@@ -412,7 +254,9 @@ class ModernDocumentationScraper:
             text_to_embed = text[:8000]
 
             # Use embedding manager to handle all providers
-            embeddings = await self.embedding_manager.create_embeddings([text_to_embed])
+            embeddings = await self.embedding_manager.generate_embeddings(
+                [text_to_embed]
+            )
 
             if not embeddings:
                 return [], None
@@ -518,8 +362,8 @@ class ModernDocumentationScraper:
 
         # Memory adaptive dispatcher for optimal resource management
         dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=self.config.memory_threshold,
-            max_session_permit=self.config.max_concurrent_crawls,
+            memory_threshold_percent=75.0,  # Use default value from unified config
+            max_session_permit=self.config.crawl4ai.max_concurrent_crawls,
             monitor=CrawlerMonitor(
                 max_visible_rows=8,
                 display_mode=DisplayMode.COMPACT,
@@ -698,7 +542,7 @@ class ModernDocumentationScraper:
                     # Batch upsert for efficiency
                     if points_to_upsert:
                         await self.qdrant_service.upsert_points(
-                            collection_name=self.config.collection_name,
+                            collection_name=self.config.qdrant.collection_name,
                             points=points_to_upsert,
                         )
                         self.stats.successful_embeddings += len(points_to_upsert)
@@ -729,7 +573,7 @@ class ModernDocumentationScraper:
         # The MemoryAdaptiveDispatcher will manage resource allocation automatically
         # Max concurrent crawls handled by dispatcher, semaphore controls task creation
         # Adjusted semaphore allows more tasks, relying on dispatcher for concurrency
-        semaphore = asyncio.Semaphore(self.config.max_concurrent_crawls)
+        semaphore = asyncio.Semaphore(self.config.crawl4ai.max_concurrent_crawls)
 
         async def process_site_with_semaphore(
             site_to_process: DocumentationSite,
@@ -885,6 +729,10 @@ ESSENTIAL_SITES = [
         url="https://docs.qdrant.tech/",
         max_pages=60,
         max_depth=2,
+        priority="high",
+        description="Vector database documentation for AI applications",
+        crawl_pattern="*docs*",
+        exclude_patterns=["*blog*", "*news*"],
         url_patterns=["*docs*", "*concepts*", "*tutorials*", "*guides*", "*fastembed*"],
     ),
     DocumentationSite(
@@ -892,6 +740,10 @@ ESSENTIAL_SITES = [
         url="https://qdrant.github.io/fastembed/",
         max_pages=30,
         max_depth=2,
+        priority="high",
+        description="Fast embedding generation library documentation",
+        crawl_pattern="*examples*",
+        exclude_patterns=["*changelog*"],
         url_patterns=["*examples*", "*models*", "*usage*"],
     ),
     DocumentationSite(
@@ -899,6 +751,10 @@ ESSENTIAL_SITES = [
         url="https://docs.crawl4ai.com/",
         max_pages=50,
         max_depth=2,
+        priority="high",
+        description="Web crawling framework documentation",
+        crawl_pattern="*docs*",
+        exclude_patterns=["*blog*"],
         url_patterns=["*docs*", "*core*", "*advanced*", "*api*", "*extraction*"],
     ),
     DocumentationSite(
@@ -906,6 +762,10 @@ ESSENTIAL_SITES = [
         url="https://docs.pydantic.dev/",
         max_pages=40,
         max_depth=2,
+        priority="medium",
+        description="Data validation library documentation",
+        crawl_pattern="*concepts*",
+        exclude_patterns=["*v1*"],
         url_patterns=["*concepts*", "*usage*", "*api*", "*migration*", "*v2*"],
     ),
     DocumentationSite(
@@ -913,12 +773,16 @@ ESSENTIAL_SITES = [
         url="https://platform.openai.com/docs/guides/embeddings",
         max_pages=20,
         max_depth=1,
+        priority="medium",
+        description="OpenAI embedding models documentation",
+        crawl_pattern="*embeddings*",
+        exclude_patterns=["*pricing*"],
         url_patterns=["*embeddings*", "*models*", "*best-practices*"],
     ),
 ]
 
 
-def create_advanced_config() -> ScrapingConfig:
+def create_advanced_config():
     """Create advanced configuration from unified config system"""
     # Get unified configuration
     unified_config = get_config()
@@ -931,20 +795,18 @@ def create_advanced_config() -> ScrapingConfig:
         )
         sys.exit(1)
 
-    # Create embedding configuration based on unified config
-    embedding_conf = EmbeddingConfig()
-
-    # Use provider from unified config
+    # Configure embedding settings based on provider
     if unified_config.embedding_provider == EmbeddingProvider.FASTEMBED:
         console.print(
             "🚀 FastEmbed provider configured - using advanced local models",
             style="green",
         )
-        embedding_conf = EmbeddingConfig(
-            provider=EmbeddingProvider.FASTEMBED,
-            dense_model=EmbeddingModel.BGE_SMALL_EN_V15,  # Maps to unified config model
-            search_strategy=SearchStrategy.DENSE,
-            enable_quantization=unified_config.qdrant.quantization_enabled,
+        # Update embedding configuration for FastEmbed
+        unified_config.embedding.provider = EmbeddingProvider.FASTEMBED
+        unified_config.embedding.dense_model = EmbeddingModel.BGE_SMALL_EN_V15
+        unified_config.embedding.search_strategy = SearchStrategy.DENSE
+        unified_config.embedding.enable_quantization = (
+            unified_config.qdrant.quantization_enabled
         )
 
         # Enable hybrid search if sparse models available
@@ -953,26 +815,18 @@ def create_advanced_config() -> ScrapingConfig:
                 "🎯 Enabling hybrid search (research: 8-15% improvement)",
                 style="yellow",
             )
-            embedding_conf.search_strategy = SearchStrategy.HYBRID
-            embedding_conf.sparse_model = EmbeddingModel.SPLADE_PP_EN_V1
+            unified_config.embedding.search_strategy = SearchStrategy.HYBRID
+            unified_config.embedding.sparse_model = EmbeddingModel.SPLADE_PP_EN_V1
     else:
         console.print(
             "📡 Using OpenAI API - cost-optimized configuration", style="blue"
         )
-        embedding_conf = EmbeddingConfig(
-            provider=EmbeddingProvider.OPENAI,
-            dense_model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,  # Maps to unified config model
-            search_strategy=SearchStrategy.DENSE,
-        )
+        # Update embedding configuration for OpenAI
+        unified_config.embedding.provider = EmbeddingProvider.OPENAI
+        unified_config.embedding.dense_model = EmbeddingModel.TEXT_EMBEDDING_3_SMALL
+        unified_config.embedding.search_strategy = SearchStrategy.DENSE
 
-    return ScrapingConfig(
-        openai_api_key=unified_config.openai.api_key,
-        firecrawl_api_key=unified_config.firecrawl.api_key,
-        embedding=embedding_conf,
-        chunk_size=unified_config.chunking.chunk_size,
-        chunk_overlap=unified_config.chunking.chunk_overlap,
-        enable_firecrawl_premium=unified_config.firecrawl.api_key is not None,
-    )
+    return unified_config
 
 
 async def main() -> None:
@@ -993,13 +847,15 @@ async def main() -> None:
     console.print(
         f"  Search Strategy: {current_config.embedding.search_strategy.value}"
     )
-    console.print(f"  Chunk Size: {current_config.chunk_size} chars (research optimal)")
+    console.print(
+        f"  Chunk Size: {current_config.chunking.chunk_size} chars (research optimal)"
+    )
     console.print(f"  Quantization: {current_config.embedding.enable_quantization}")
     reranker_status = (
         "✅ BGE-v2-m3" if current_config.embedding.enable_reranking else "❌ Disabled"
     )
     console.print(f"  Reranking: {reranker_status}")
-    if current_config.enable_firecrawl_premium:
+    if current_config.firecrawl.api_key:
         console.print("  Firecrawl Premium: ✅ Enabled")
 
     scraper_instance = ModernDocumentationScraper(current_config)
@@ -1009,10 +865,9 @@ async def main() -> None:
         await scraper_instance.initialize()
 
         # Load documentation sites from unified config
-        unified_config = get_config()
         sites_to_scrape = (
-            unified_config.documentation_sites
-            if unified_config.documentation_sites
+            current_config.documentation_sites
+            if current_config.documentation_sites
             else ESSENTIAL_SITES
         )
 

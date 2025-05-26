@@ -18,9 +18,11 @@ from pydantic_settings import SettingsConfigDict
 
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
+from .enums import EmbeddingModel
 from .enums import EmbeddingProvider
 from .enums import Environment
 from .enums import LogLevel
+from .enums import SearchStrategy
 
 
 class CacheConfig(BaseModel):
@@ -223,8 +225,14 @@ class ChunkingConfig(BaseModel):
     chunk_overlap: int = Field(default=200, ge=0, description="Overlap between chunks")
 
     # Code-aware chunking
+    enable_ast_chunking: bool = Field(
+        default=True, description="Enable AST-based chunking when available"
+    )
     preserve_function_boundaries: bool = Field(
         default=True, description="Keep functions intact"
+    )
+    preserve_code_blocks: bool = Field(
+        default=True, description="Keep code blocks intact when possible"
     )
     supported_languages: list[str] = Field(
         default=["python", "javascript", "typescript"],
@@ -234,6 +242,9 @@ class ChunkingConfig(BaseModel):
     # Advanced options
     min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
     max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
+    detect_language: bool = Field(
+        default=True, description="Auto-detect programming language"
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -259,11 +270,23 @@ class DocumentationSite(BaseModel):
     description: str | None = Field(default=None, description="Site description")
 
     # Crawl settings
+    max_depth: int = Field(default=2, gt=0, description="Maximum crawl depth")
     crawl_pattern: str | None = Field(
         default=None, description="URL pattern for crawling"
     )
     exclude_patterns: list[str] = Field(
         default_factory=list, description="Patterns to exclude"
+    )
+    url_patterns: list[str] = Field(
+        default_factory=lambda: [
+            "*docs*",
+            "*guide*",
+            "*tutorial*",
+            "*api*",
+            "*reference*",
+            "*concepts*",
+        ],
+        description="URL patterns to include",
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -294,6 +317,48 @@ class PerformanceConfig(BaseModel):
     )
     gc_threshold: float = Field(
         default=0.8, gt=0, le=1, description="GC trigger threshold"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class EmbeddingConfig(BaseModel):
+    """Advanced embedding configuration."""
+
+    provider: EmbeddingProvider = Field(
+        default=EmbeddingProvider.OPENAI, description="Embedding provider selection"
+    )
+    dense_model: EmbeddingModel = Field(
+        default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,
+        description="Dense embedding model (research: best cost-performance)",
+    )
+    sparse_model: EmbeddingModel | None = Field(
+        default=None, description="Sparse embedding model for hybrid search"
+    )
+    search_strategy: SearchStrategy = Field(
+        default=SearchStrategy.DENSE, description="Vector search strategy"
+    )
+    enable_quantization: bool = Field(
+        default=True,
+        description="Enable vector quantization (83-99% storage reduction)",
+    )
+    matryoshka_dimensions: list[int] = Field(
+        default_factory=lambda: [1536, 1024, 512, 256],
+        description="Matryoshka embedding dimensions for cost optimization",
+    )
+
+    # Advanced Reranking Configuration
+    enable_reranking: bool = Field(
+        default=False,
+        description="Enable reranking for 10-20% accuracy improvement",
+    )
+    reranker_model: str = Field(
+        default="BAAI/bge-reranker-v2-m3",
+        description="Reranker model (research: optimal minimal complexity)",
+    )
+    rerank_top_k: int = Field(
+        default=20,
+        description="Retrieve top-k for reranking, return fewer after rerank",
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -373,6 +438,9 @@ class UnifiedConfig(BaseSettings):
     )
     chunking: ChunkingConfig = Field(
         default_factory=ChunkingConfig, description="Chunking settings"
+    )
+    embedding: EmbeddingConfig = Field(
+        default_factory=EmbeddingConfig, description="Embedding settings"
     )
     performance: PerformanceConfig = Field(
         default_factory=PerformanceConfig, description="Performance settings"

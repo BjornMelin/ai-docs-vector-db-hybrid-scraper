@@ -55,6 +55,22 @@ class SearchStrategy(str, Enum):
     HYBRID = "hybrid"
 
 
+class EmbeddingModel(str, Enum):
+    """Advanced embedding models based on research findings."""
+
+    # OpenAI Models (API-based)
+    TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"  # Best cost-performance
+    TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"  # Best OpenAI performance
+
+    # FastEmbed Models (Local inference, research-backed)
+    NV_EMBED_V2 = "nvidia/NV-Embed-v2"  # #1 on MTEB leaderboard
+    BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"  # Cost-effective open source
+    BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"  # Higher accuracy
+
+    # Sparse Models for Hybrid Search
+    SPLADE_PP_EN_V1 = "prithvida/Splade_PP_en_v1"  # SPLADE++ for keyword matching
+
+
 class QualityTier(str, Enum):
     """Quality tiers for project configuration."""
 
@@ -86,6 +102,7 @@ __all__ = [
     "CollectionStatus",
     "CrawlProvider",
     "DocumentStatus",
+    "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
     "LogLevel",

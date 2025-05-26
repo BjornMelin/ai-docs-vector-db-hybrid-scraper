@@ -100,12 +100,8 @@ def sample_documentation_site() -> dict:
     """Sample documentation site configuration."""
     return {
         "name": "test-docs",
-        "base_url": "https://test.example.com",
-        "start_urls": ["https://test.example.com/docs"],
-        "collection_name": "test_collection",
+        "url": "https://test.example.com",
         "max_depth": 2,
-        "delay": 1.0,
-        "allowed_domains": ["test.example.com"],
         "exclude_patterns": ["/api/", "/internal/"],
     }
 

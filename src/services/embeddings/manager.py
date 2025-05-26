@@ -144,14 +144,14 @@ class EmbeddingManager:
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: Any | None = None
-        if config.cache.enabled:
+        if config.cache.enable_caching:
             from ..cache import CacheManager
             from ..cache import CacheType
 
             self.cache_manager = CacheManager(
                 redis_url=config.cache.redis_url,
-                enable_local_cache=config.cache.local_enabled,
-                enable_redis_cache=config.cache.redis_enabled,
+                enable_local_cache=config.cache.enable_local_cache,
+                enable_redis_cache=config.cache.enable_redis_cache,
                 local_max_size=config.cache.local_max_size,
                 local_max_memory_mb=config.cache.local_max_memory_mb,
                 redis_ttl_seconds={

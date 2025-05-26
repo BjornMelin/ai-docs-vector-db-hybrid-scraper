@@ -293,7 +293,7 @@ async def create_embeddings(
 ) -> list[float]:
     """Create embeddings for text using EmbeddingManager"""
     try:
-        embeddings = await embedding_manager.create_embeddings([text])
+        embeddings = await embedding_manager.generate_embeddings([text])
         return embeddings[0] if embeddings else []
     except Exception as e:
         console.print(f"❌ Error creating embeddings: {e}", style="red")
