@@ -2,7 +2,6 @@
 
 import asyncio
 from unittest.mock import AsyncMock
-from unittest.mock import PropertyMock
 
 import pytest
 from src.services.cache.local_cache import LocalCache
@@ -155,7 +154,8 @@ class TestCacheManager:
     @pytest.fixture
     async def cache_manager(self):
         """Create cache manager with mocked caches."""
-        from src.config.models import UnifiedConfig, CacheConfig
+        from src.config.models import CacheConfig
+        from src.config.models import UnifiedConfig
 
         config = UnifiedConfig(
             cache=CacheConfig(
