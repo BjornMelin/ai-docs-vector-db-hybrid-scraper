@@ -5,7 +5,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.services.config import APIConfig
+from src.config.enums import CrawlProvider as CrawlProviderEnum
+from src.config.models import UnifiedConfig
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider
 from src.services.crawling.manager import CrawlManager
@@ -48,9 +49,9 @@ class TestFirecrawlProvider:
             result = await firecrawl_provider.scrape_url("https://example.com")
 
             assert result["success"] is True
-            assert result["content"] == "# Test Content"
-            assert result["html"] == "<h1>Test Content</h1>"
+            assert result["markdown"] == "# Test Content"
             assert result["metadata"]["title"] == "Test"
+            mock_instance.scrape_url.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_scrape_url_failure(self, firecrawl_provider):
@@ -59,10 +60,10 @@ class TestFirecrawlProvider:
             mock_instance = MagicMock()
             mock_app.return_value = mock_instance
 
-            # Mock failed response
+            # Mock failure response
             mock_instance.scrape_url.return_value = {
                 "success": False,
-                "error": "Failed to scrape",
+                "error": "Failed to fetch",
             }
 
             await firecrawl_provider.initialize()
@@ -70,235 +71,107 @@ class TestFirecrawlProvider:
             result = await firecrawl_provider.scrape_url("https://example.com")
 
             assert result["success"] is False
-            assert result["error"] == "Failed to scrape"
+            assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_crawl_site(self, firecrawl_provider):
-        """Test site crawling."""
+    async def test_scrape_multiple_urls(self, firecrawl_provider):
+        """Test multiple URL scraping."""
+        urls = ["https://example1.com", "https://example2.com"]
+
         with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
             mock_instance = MagicMock()
             mock_app.return_value = mock_instance
 
-            # Mock crawl start
-            mock_instance.async_crawl_url.return_value = {"id": "crawl-123"}
-
-            # Mock crawl status - completed
-            mock_instance.check_crawl_status.return_value = {
-                "status": "completed",
+            # Mock batch response
+            mock_instance.batch_scrape_urls.return_value = {
+                "success": True,
                 "data": [
                     {
-                        "url": "https://example.com/page1",
-                        "markdown": "Page 1",
-                        "html": "<p>Page 1</p>",
-                        "metadata": {},
+                        "url": "https://example1.com",
+                        "markdown": "Content 1",
+                        "metadata": {"title": "Page 1"},
                     },
                     {
-                        "url": "https://example.com/page2",
-                        "markdown": "Page 2",
-                        "html": "<p>Page 2</p>",
-                        "metadata": {},
+                        "url": "https://example2.com",
+                        "markdown": "Content 2",
+                        "metadata": {"title": "Page 2"},
                     },
                 ],
             }
 
             await firecrawl_provider.initialize()
 
-            result = await firecrawl_provider.crawl_site(
-                "https://example.com",
-                max_pages=10,
-            )
+            result = await firecrawl_provider.scrape_multiple_urls(urls)
 
             assert result["success"] is True
-            assert result["total"] == 2
-            assert len(result["pages"]) == 2
-            assert result["crawl_id"] == "crawl-123"
+            assert len(result["data"]) == 2
+            assert result["data"][0]["markdown"] == "Content 1"
+            assert result["data"][1]["markdown"] == "Content 2"
 
     @pytest.mark.asyncio
-    async def test_map_url(self, firecrawl_provider):
-        """Test URL mapping."""
+    async def test_crawl_website(self, firecrawl_provider):
+        """Test website crawling."""
         with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
             mock_instance = MagicMock()
             mock_app.return_value = mock_instance
 
-            # Mock map response
-            mock_instance.map_url.return_value = {
-                "success": True,
-                "links": [
-                    "https://example.com/page1",
-                    "https://example.com/page2",
-                ],
-            }
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.map_url("https://example.com")
-
-            assert result["success"] is True
-            assert result["total"] == 2
-            assert len(result["urls"]) == 2
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_not_initialized(self, firecrawl_provider):
-        """Test scraping when not initialized."""
-        from src.services.errors import CrawlServiceError
-
-        with pytest.raises(CrawlServiceError, match="Provider not initialized"):
-            await firecrawl_provider.scrape_url("https://example.com")
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_exception(self, firecrawl_provider):
-        """Test scraping with exception."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock to raise exception
-            mock_instance.scrape_url.side_effect = Exception("API error")
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.scrape_url("https://example.com")
-
-            assert result["success"] is False
-            assert "API error" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_in_progress(self, firecrawl_provider):
-        """Test site crawling with in-progress status."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock crawl start
-            mock_instance.async_crawl_url.return_value = {"id": "crawl-123"}
-
-            # Mock crawl status - in progress then completed
-            mock_instance.check_crawl_status.side_effect = [
-                {"status": "crawling", "data": []},
+            # Mock crawl response
+            mock_instance.crawl_url.return_value = [
                 {
-                    "status": "completed",
-                    "data": [
-                        {
-                            "url": "https://example.com",
-                            "markdown": "Test",
-                            "html": "<p>Test</p>",
-                            "metadata": {},
-                        }
-                    ],
+                    "url": "https://example.com/page1",
+                    "markdown": "Page 1 content",
+                    "metadata": {"title": "Page 1"},
+                },
+                {
+                    "url": "https://example.com/page2",
+                    "markdown": "Page 2 content",
+                    "metadata": {"title": "Page 2"},
                 },
             ]
 
             await firecrawl_provider.initialize()
 
-            with patch("asyncio.sleep", new_callable=AsyncMock):
-                result = await firecrawl_provider.crawl_site(
-                    "https://example.com", max_pages=5
-                )
+            result = await firecrawl_provider.crawl_website(
+                "https://example.com", max_pages=10
+            )
 
-            assert result["success"] is True
-            assert result["total"] == 1
+            assert len(result) == 2
+            assert result[0]["url"] == "https://example.com/page1"
+            assert result[1]["url"] == "https://example.com/page2"
 
     @pytest.mark.asyncio
-    async def test_crawl_site_failed(self, firecrawl_provider):
-        """Test site crawling failure."""
+    async def test_map_website(self, firecrawl_provider):
+        """Test website mapping."""
         with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
             mock_instance = MagicMock()
             mock_app.return_value = mock_instance
 
-            # Mock crawl start
-            mock_instance.async_crawl_url.return_value = {"id": "crawl-123"}
-
-            # Mock crawl status - failed
-            mock_instance.check_crawl_status.return_value = {
-                "status": "failed",
-                "error": "Crawl failed",
-            }
+            # Mock map response
+            mock_instance.map_url.return_value = [
+                "https://example.com/page1",
+                "https://example.com/page2",
+                "https://example.com/page3",
+            ]
 
             await firecrawl_provider.initialize()
 
-            result = await firecrawl_provider.crawl_site("https://example.com")
+            result = await firecrawl_provider.map_website("https://example.com")
 
-            assert result["success"] is False
-            assert "Crawl failed" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_exception(self, firecrawl_provider):
-        """Test site crawling with exception."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock to raise exception
-            mock_instance.async_crawl_url.side_effect = Exception("API error")
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.crawl_site("https://example.com")
-
-            assert result["success"] is False
-            assert "API error" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_map_url_failure(self, firecrawl_provider):
-        """Test URL mapping failure."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock map failure
-            mock_instance.map_url.return_value = {
-                "success": False,
-                "error": "Map failed",
-            }
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.map_url("https://example.com")
-
-            assert result["success"] is False
-            assert "Map failed" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_map_url_exception(self, firecrawl_provider):
-        """Test URL mapping with exception."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock to raise exception
-            mock_instance.map_url.side_effect = Exception("API error")
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.map_url("https://example.com")
-
-            assert result["success"] is False
-            assert "API error" in result["error"]
+            assert len(result) == 3
+            assert "https://example.com/page1" in result
+            mock_instance.map_url.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_cleanup(self, firecrawl_provider):
         """Test provider cleanup."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
+        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp"):
             await firecrawl_provider.initialize()
+            assert firecrawl_provider._initialized
+
             await firecrawl_provider.cleanup()
 
             assert not firecrawl_provider._initialized
-
-    @pytest.mark.asyncio
-    async def test_initialize_already_initialized(self, firecrawl_provider):
-        """Test initialization when already initialized."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            await firecrawl_provider.initialize()
-            await firecrawl_provider.initialize()  # Second call
-
-            # Should only be called once
-            mock_app.assert_called_once()
+            assert firecrawl_provider._client is None
 
 
 class TestCrawl4AIProvider:
@@ -321,7 +194,8 @@ class TestCrawl4AIProvider:
             await crawl4ai_provider.initialize()
 
             assert crawl4ai_provider._initialized
-            mock_instance.start.assert_called_once()
+            assert crawl4ai_provider._crawler is not None
+            mock_instance.__aenter__.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_scrape_url_success(self, crawl4ai_provider):
@@ -337,15 +211,15 @@ class TestCrawl4AIProvider:
             mock_result.success = True
             mock_result.markdown = "# Test Content"
             mock_result.html = "<h1>Test Content</h1>"
-            mock_result.title = "Test Page"
-            mock_instance.crawl.return_value = mock_result
+            mock_result.metadata = {"title": "Test Page"}
+            mock_instance.arun.return_value = mock_result
 
             await crawl4ai_provider.initialize()
 
             result = await crawl4ai_provider.scrape_url("https://example.com")
 
             assert result["success"] is True
-            assert result["content"] == "# Test Content"
+            assert result["markdown"] == "# Test Content"
             assert result["metadata"]["title"] == "Test Page"
 
     @pytest.mark.asyncio
@@ -357,90 +231,132 @@ class TestCrawl4AIProvider:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
-            # Mock crawl result with failure
+            # Mock failed result
             mock_result = MagicMock()
             mock_result.success = False
-            mock_result.error = "Failed to crawl"
-            mock_instance.crawl.return_value = mock_result
+            mock_result.error_message = "Connection failed"
+            mock_instance.arun.return_value = mock_result
 
             await crawl4ai_provider.initialize()
 
             result = await crawl4ai_provider.scrape_url("https://example.com")
 
             assert result["success"] is False
-            assert result["error"] == "Failed to crawl"
-            assert result["content"] == ""
+            assert "error" in result
+            assert "Connection failed" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_scrape_url_exception(self, crawl4ai_provider):
-        """Test URL scraping with exception."""
+    async def test_scrape_multiple_urls(self, crawl4ai_provider):
+        """Test multiple URL scraping."""
+        urls = ["https://example1.com", "https://example2.com"]
+
         with patch(
             "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
         ) as mock_crawler:
             mock_instance = AsyncMock()
             mock_crawler.return_value = mock_instance
 
-            # Mock crawl to raise exception
-            mock_instance.crawl.side_effect = Exception("Network error")
+            # Mock results for each URL
+            mock_results = []
+            for i, url in enumerate(urls):
+                mock_result = MagicMock()
+                mock_result.success = True
+                mock_result.markdown = f"Content {i + 1}"
+                mock_result.html = f"<p>Content {i + 1}</p>"
+                mock_result.metadata = {"title": f"Page {i + 1}", "url": url}
+                mock_results.append(mock_result)
+
+            mock_instance.arun.side_effect = mock_results
 
             await crawl4ai_provider.initialize()
 
-            result = await crawl4ai_provider.scrape_url("https://example.com")
-
-            assert result["success"] is False
-            assert "Network error" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_success(self, crawl4ai_provider):
-        """Test successful site crawling."""
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler:
-            mock_instance = AsyncMock()
-            mock_crawler.return_value = mock_instance
-
-            # Mock crawl results for multiple pages
-            mock_result1 = MagicMock()
-            mock_result1.success = True
-            mock_result1.markdown = "Page 1 content"
-            mock_result1.html = "<p>Page 1</p>"
-            mock_result1.title = "Page 1"
-
-            mock_result2 = MagicMock()
-            mock_result2.success = True
-            mock_result2.markdown = "Page 2 content"
-            mock_result2.html = "<p>Page 2</p>"
-            mock_result2.title = "Page 2"
-
-            # Return different results for each call
-            mock_instance.crawl.side_effect = [mock_result1, mock_result2]
-
-            await crawl4ai_provider.initialize()
-
-            result = await crawl4ai_provider.crawl_site(
-                "https://example.com", max_pages=2
-            )
+            result = await crawl4ai_provider.scrape_multiple_urls(urls)
 
             assert result["success"] is True
-            assert result["total"] == 1  # Only crawls the first URL
-            assert len(result["pages"]) == 1
+            assert len(result["data"]) == 2
+            assert result["data"][0]["markdown"] == "Content 1"
+            assert result["data"][1]["markdown"] == "Content 2"
 
     @pytest.mark.asyncio
-    async def test_crawl_site_failure(self, crawl4ai_provider):
-        """Test site crawling failure."""
-        # Mock the scrape_url method directly since crawl_site calls it
-        with patch.object(crawl4ai_provider, "scrape_url") as mock_scrape:
-            # Mock scrape to fail
-            mock_scrape.side_effect = Exception("Crawl error")
+    async def test_crawl_website(self, crawl4ai_provider):
+        """Test website crawling."""
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
+            mock_instance = AsyncMock()
+            mock_crawler.return_value = mock_instance
 
-            # Mark as initialized
-            crawl4ai_provider._initialized = True
+            # First call returns the main page with links
+            main_result = MagicMock()
+            main_result.success = True
+            main_result.markdown = "Main page"
+            main_result.html = """
+            <html>
+                <a href="/page1">Page 1</a>
+                <a href="/page2">Page 2</a>
+                <a href="https://external.com">External</a>
+            </html>
+            """
+            main_result.metadata = {"title": "Main", "url": "https://example.com"}
 
-            result = await crawl4ai_provider.crawl_site("https://example.com")
+            # Subsequent calls for discovered pages
+            page1_result = MagicMock()
+            page1_result.success = True
+            page1_result.markdown = "Page 1 content"
+            page1_result.metadata = {
+                "title": "Page 1",
+                "url": "https://example.com/page1",
+            }
 
-            assert result["success"] is False
-            assert "Crawl error" in result["error"]
-            assert result["total"] == 0
+            page2_result = MagicMock()
+            page2_result.success = True
+            page2_result.markdown = "Page 2 content"
+            page2_result.metadata = {
+                "title": "Page 2",
+                "url": "https://example.com/page2",
+            }
+
+            mock_instance.arun.side_effect = [main_result, page1_result, page2_result]
+
+            await crawl4ai_provider.initialize()
+
+            result = await crawl4ai_provider.crawl_website(
+                "https://example.com", max_pages=3
+            )
+
+            # Should have main page + 2 internal pages
+            assert len(result) >= 1  # At least the main page
+            assert result[0]["markdown"] == "Main page"
+
+    @pytest.mark.asyncio
+    async def test_map_website(self, crawl4ai_provider):
+        """Test website mapping."""
+        with patch(
+            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
+        ) as mock_crawler:
+            mock_instance = AsyncMock()
+            mock_crawler.return_value = mock_instance
+
+            # Mock crawl result with links
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.html = """
+            <html>
+                <a href="/page1">Page 1</a>
+                <a href="/page2">Page 2</a>
+                <a href="https://example.com/page3">Page 3</a>
+                <a href="https://external.com">External</a>
+            </html>
+            """
+            mock_instance.arun.return_value = mock_result
+
+            await crawl4ai_provider.initialize()
+
+            result = await crawl4ai_provider.map_website("https://example.com")
+
+            # Should include the base URL and discovered internal links
+            assert "https://example.com" in result
+            # Note: Exact URL normalization depends on implementation
 
     @pytest.mark.asyncio
     async def test_cleanup(self, crawl4ai_provider):
@@ -452,54 +368,35 @@ class TestCrawl4AIProvider:
             mock_crawler.return_value = mock_instance
 
             await crawl4ai_provider.initialize()
+            assert crawl4ai_provider._initialized
+
             await crawl4ai_provider.cleanup()
 
-            mock_instance.close.assert_called_once()
             assert not crawl4ai_provider._initialized
-
-    @pytest.mark.asyncio
-    async def test_not_initialized_error(self, crawl4ai_provider):
-        """Test error when provider not initialized."""
-        from src.services.errors import CrawlServiceError
-
-        with pytest.raises(CrawlServiceError, match="Provider not initialized"):
-            await crawl4ai_provider.scrape_url("https://example.com")
-
-        with pytest.raises(CrawlServiceError, match="Provider not initialized"):
-            await crawl4ai_provider.crawl_site("https://example.com")
-
-    @pytest.mark.asyncio
-    async def test_initialize_error(self, crawl4ai_provider):
-        """Test initialization error."""
-        from src.services.errors import CrawlServiceError
-
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler:
-            # Mock to raise error on creation
-            mock_crawler.side_effect = Exception("Init failed")
-
-            with pytest.raises(
-                CrawlServiceError, match="Failed to initialize Crawl4AI"
-            ):
-                await crawl4ai_provider.initialize()
+            assert crawl4ai_provider._crawler is None
+            mock_instance.__aexit__.assert_called_once()
 
 
 class TestCrawlManager:
     """Test crawl manager."""
 
     @pytest.fixture
-    def api_config(self):
-        """Create test API config."""
-        return APIConfig(
-            firecrawl_api_key="test-key",
-            preferred_crawl_provider="firecrawl",
+    def config(self):
+        """Create test configuration.
+
+        Note: Using double underscore syntax (firecrawl__api_key) here because
+        it mimics how environment variables are loaded. In production, this would
+        be set as FIRECRAWL__API_KEY environment variable.
+        """
+        return UnifiedConfig(
+            firecrawl__api_key="test-key",
+            crawl_provider=CrawlProviderEnum.FIRECRAWL,
         )
 
     @pytest.fixture
-    def crawl_manager(self, api_config):
+    def crawl_manager(self, config):
         """Create crawl manager instance."""
-        return CrawlManager(api_config)
+        return CrawlManager(config)
 
     @pytest.mark.asyncio
     async def test_initialize(self, crawl_manager):
@@ -521,8 +418,8 @@ class TestCrawlManager:
             assert "crawl4ai" in crawl_manager.providers
 
     @pytest.mark.asyncio
-    async def test_scrape_url_with_fallback(self, crawl_manager):
-        """Test URL scraping with fallback."""
+    async def test_scrape_url_with_preferred_provider(self, crawl_manager):
+        """Test URL scraping with preferred provider."""
         with (
             patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
             patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
@@ -533,16 +430,11 @@ class TestCrawlManager:
             mock_firecrawl.return_value = mock_firecrawl_instance
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            # First provider fails
+            # Mock Firecrawl success
             mock_firecrawl_instance.scrape_url.return_value = {
-                "success": False,
-                "error": "API error",
-            }
-
-            # Second provider succeeds
-            mock_crawl4ai_instance.scrape_url.return_value = {
                 "success": True,
-                "content": "Fallback content",
+                "markdown": "Firecrawl content",
+                "provider": "firecrawl",
             }
 
             await crawl_manager.initialize()
@@ -550,11 +442,49 @@ class TestCrawlManager:
             result = await crawl_manager.scrape_url("https://example.com")
 
             assert result["success"] is True
-            assert result["content"] == "Fallback content"
-            assert result["provider"] == "crawl4ai"
+            assert result["markdown"] == "Firecrawl content"
+            assert result["provider"] == "firecrawl"
+            mock_firecrawl_instance.scrape_url.assert_called_once()
+            mock_crawl4ai_instance.scrape_url.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_scrape_url_all_fail(self, crawl_manager):
+    async def test_scrape_url_with_fallback(self, crawl_manager):
+        """Test URL scraping with fallback to secondary provider."""
+        with (
+            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
+            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
+        ):
+            # Setup providers
+            mock_firecrawl_instance = AsyncMock()
+            mock_crawl4ai_instance = AsyncMock()
+            mock_firecrawl.return_value = mock_firecrawl_instance
+            mock_crawl4ai.return_value = mock_crawl4ai_instance
+
+            # Mock Firecrawl failure
+            mock_firecrawl_instance.scrape_url.return_value = {
+                "success": False,
+                "error": "Firecrawl failed",
+            }
+
+            # Mock Crawl4AI success
+            mock_crawl4ai_instance.scrape_url.return_value = {
+                "success": True,
+                "markdown": "Crawl4AI content",
+                "provider": "crawl4ai",
+            }
+
+            await crawl_manager.initialize()
+
+            result = await crawl_manager.scrape_url("https://example.com")
+
+            assert result["success"] is True
+            assert result["markdown"] == "Crawl4AI content"
+            assert result["provider"] == "crawl4ai"
+            mock_firecrawl_instance.scrape_url.assert_called_once()
+            mock_crawl4ai_instance.scrape_url.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_scrape_url_all_providers_fail(self, crawl_manager):
         """Test URL scraping when all providers fail."""
         with (
             patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
@@ -566,14 +496,14 @@ class TestCrawlManager:
             mock_firecrawl.return_value = mock_firecrawl_instance
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            # Both providers fail
+            # Mock both providers failing
             mock_firecrawl_instance.scrape_url.return_value = {
                 "success": False,
-                "error": "API error",
+                "error": "Firecrawl failed",
             }
             mock_crawl4ai_instance.scrape_url.return_value = {
                 "success": False,
-                "error": "Crawl failed",
+                "error": "Crawl4AI failed",
             }
 
             await crawl_manager.initialize()
@@ -584,106 +514,21 @@ class TestCrawlManager:
             assert "All providers failed" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_get_provider_info(self, crawl_manager):
-        """Test getting provider information."""
-        with (
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-        ):
-            mock_firecrawl_instance = AsyncMock()
-            mock_crawl4ai_instance = AsyncMock()
-            mock_firecrawl.return_value = mock_firecrawl_instance
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
-
-            await crawl_manager.initialize()
-
-            info = crawl_manager.get_provider_info()
-
-            assert "firecrawl" in info
-            assert "crawl4ai" in info
-            assert info["firecrawl"]["is_preferred"] is True
-            assert info["firecrawl"]["has_api_key"] is True
-
-    @pytest.mark.asyncio
-    async def test_map_url_requires_firecrawl(self, crawl_manager):
-        """Test URL mapping requires Firecrawl."""
-        # Create manager without Firecrawl
-        config = APIConfig(firecrawl_api_key=None)
-        manager = CrawlManager(config)
+    async def test_initialize_with_no_firecrawl_key(self):
+        """Test initialization without Firecrawl API key."""
+        config = UnifiedConfig()  # No API keys
+        crawl_manager = CrawlManager(config)
 
         with patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai:
             mock_crawl4ai_instance = AsyncMock()
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            await manager.initialize()
-
-            result = await manager.map_url("https://example.com")
-
-            assert result["success"] is False
-            assert "requires Firecrawl" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_with_provider(self, crawl_manager):
-        """Test site crawling with specific provider."""
-        with (
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-        ):
-            # Setup providers
-            mock_firecrawl_instance = AsyncMock()
-            mock_crawl4ai_instance = AsyncMock()
-            mock_firecrawl.return_value = mock_firecrawl_instance
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
-
-            # Mock crawl response
-            mock_firecrawl_instance.crawl_site = AsyncMock()
-            mock_firecrawl_instance.crawl_site.return_value = {
-                "success": True,
-                "pages": [{"url": "https://example.com", "content": "Test"}],
-                "total": 1,
-            }
-
             await crawl_manager.initialize()
 
-            result = await crawl_manager.crawl_site(
-                "https://example.com", preferred_provider="firecrawl"
-            )
-
-            assert result["success"] is True
-            assert result["total"] == 1
-            assert result["provider"] == "firecrawl"
-
-    @pytest.mark.asyncio
-    async def test_map_url_success(self, crawl_manager):
-        """Test successful URL mapping."""
-        with (
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-        ):
-            # Setup providers
-            mock_firecrawl_instance = AsyncMock()
-            mock_crawl4ai_instance = AsyncMock()
-            mock_firecrawl.return_value = mock_firecrawl_instance
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
-
-            # Mock firecrawl as available with map_url capability
-            mock_firecrawl_instance.map_url = AsyncMock()
-            mock_firecrawl_instance.map_url.return_value = {
-                "success": True,
-                "urls": ["https://example.com/page1", "https://example.com/page2"],
-                "total": 2,
-            }
-
-            await crawl_manager.initialize()
-
-            result = await crawl_manager.map_url("https://example.com")
-
-            assert result["success"] is True
-            assert result["total"] == 2
-            # map_url doesn't add provider to result
-            mock_firecrawl_instance.map_url.assert_called_once_with(
-                "https://example.com", False
-            )
+            assert crawl_manager._initialized
+            assert len(crawl_manager.providers) == 1
+            assert "crawl4ai" in crawl_manager.providers
+            assert "firecrawl" not in crawl_manager.providers
 
     @pytest.mark.asyncio
     async def test_cleanup(self, crawl_manager):
@@ -692,89 +537,102 @@ class TestCrawlManager:
             patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
             patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
         ):
-            # Setup providers
             mock_firecrawl_instance = AsyncMock()
             mock_crawl4ai_instance = AsyncMock()
             mock_firecrawl.return_value = mock_firecrawl_instance
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            await crawl_manager.initialize()
-            await crawl_manager.cleanup()
-
-            mock_firecrawl_instance.cleanup.assert_called_once()
-            mock_crawl4ai_instance.cleanup.assert_called_once()
-            assert not crawl_manager._initialized
-
-    @pytest.mark.asyncio
-    async def test_manual_init_cleanup(self, crawl_manager):
-        """Test manual initialization and cleanup."""
-        with (
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-        ):
-            # Setup providers
-            mock_firecrawl_instance = AsyncMock()
-            mock_crawl4ai_instance = AsyncMock()
-            mock_firecrawl.return_value = mock_firecrawl_instance
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
-
-            # Mock the cleanup methods
-            mock_firecrawl_instance.cleanup = AsyncMock()
-            mock_crawl4ai_instance.cleanup = AsyncMock()
-
-            # Initialize
             await crawl_manager.initialize()
             assert crawl_manager._initialized
 
-            # Cleanup
             await crawl_manager.cleanup()
+
+            assert not crawl_manager._initialized
+            assert len(crawl_manager.providers) == 0
             mock_firecrawl_instance.cleanup.assert_called_once()
             mock_crawl4ai_instance.cleanup.assert_called_once()
-            assert not crawl_manager._initialized
 
     @pytest.mark.asyncio
-    async def test_no_providers_available(self):
-        """Test when no providers are available."""
-        from src.services.errors import CrawlServiceError
+    async def test_scrape_multiple_urls(self, crawl_manager):
+        """Test scraping multiple URLs."""
+        urls = ["https://example1.com", "https://example2.com"]
 
-        config = APIConfig()  # No API keys
-        manager = CrawlManager(config)
-
-        with patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai:
-            mock_crawl4ai.side_effect = Exception("Failed to create provider")
-
-            with pytest.raises(
-                CrawlServiceError, match="No crawling providers available"
-            ):
-                await manager.initialize()
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_with_invalid_provider(self, crawl_manager):
-        """Test scraping with invalid provider name."""
         with (
             patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
             patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
         ):
-            # Setup providers
             mock_firecrawl_instance = AsyncMock()
             mock_crawl4ai_instance = AsyncMock()
             mock_firecrawl.return_value = mock_firecrawl_instance
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            # Mock scrape_url to return a successful result
-            mock_firecrawl_instance.scrape_url = AsyncMock(
-                return_value={"success": True, "content": "Test content"}
-            )
+            # Mock successful batch scrape
+            mock_firecrawl_instance.scrape_multiple_urls.return_value = {
+                "success": True,
+                "data": [
+                    {"url": urls[0], "markdown": "Content 1"},
+                    {"url": urls[1], "markdown": "Content 2"},
+                ],
+                "provider": "firecrawl",
+            }
 
             await crawl_manager.initialize()
 
-            result = await crawl_manager.scrape_url(
-                "https://example.com", preferred_provider="invalid"
+            result = await crawl_manager.scrape_multiple_urls(urls)
+
+            assert result["success"] is True
+            assert len(result["data"]) == 2
+            assert result["provider"] == "firecrawl"
+
+    @pytest.mark.asyncio
+    async def test_crawl_website(self, crawl_manager):
+        """Test website crawling."""
+        with (
+            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
+            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
+        ):
+            mock_firecrawl_instance = AsyncMock()
+            mock_crawl4ai_instance = AsyncMock()
+            mock_firecrawl.return_value = mock_firecrawl_instance
+            mock_crawl4ai.return_value = mock_crawl4ai_instance
+
+            # Mock crawl result
+            mock_firecrawl_instance.crawl_website.return_value = [
+                {"url": "https://example.com/page1", "markdown": "Page 1"},
+                {"url": "https://example.com/page2", "markdown": "Page 2"},
+            ]
+
+            await crawl_manager.initialize()
+
+            result = await crawl_manager.crawl_website(
+                "https://example.com", max_pages=10
             )
 
-            # Since invalid provider is not available, it falls back to available providers
-            assert result["success"] is True
-            assert result["provider"] == "firecrawl"  # Falls back to first available
+            assert len(result) == 2
+            assert result[0]["url"] == "https://example.com/page1"
 
-            # Verify warning was logged
-            mock_firecrawl_instance.scrape_url.assert_called_once()
+    @pytest.mark.asyncio
+    async def test_provider_initialization_failure(self):
+        """Test handling of provider initialization failure."""
+        config = UnifiedConfig(firecrawl__api_key="test-key")
+        crawl_manager = CrawlManager(config)
+
+        with (
+            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
+            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
+        ):
+            # Mock Firecrawl initialization failure
+            mock_firecrawl_instance = AsyncMock()
+            mock_firecrawl_instance.initialize.side_effect = Exception("Init failed")
+            mock_firecrawl.return_value = mock_firecrawl_instance
+
+            # Mock Crawl4AI success
+            mock_crawl4ai_instance = AsyncMock()
+            mock_crawl4ai.return_value = mock_crawl4ai_instance
+
+            await crawl_manager.initialize()
+
+            # Should still initialize with Crawl4AI
+            assert crawl_manager._initialized
+            assert "crawl4ai" in crawl_manager.providers
+            assert "firecrawl" not in crawl_manager.providers

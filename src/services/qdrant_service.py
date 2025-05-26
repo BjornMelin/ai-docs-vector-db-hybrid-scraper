@@ -38,10 +38,10 @@ class QdrantService(BaseService):
 
         try:
             self._client = AsyncQdrantClient(
-                url=self.config.vector_db.url,
-                api_key=self.config.vector_db.api_key,
-                timeout=self.config.vector_db.timeout,
-                prefer_grpc=self.config.vector_db.prefer_grpc,
+                url=self.config.qdrant.url,
+                api_key=self.config.qdrant.api_key,
+                timeout=self.config.qdrant.timeout,
+                prefer_grpc=self.config.qdrant.prefer_grpc,
             )
 
             # Validate connection by listing collections
@@ -51,7 +51,7 @@ class QdrantService(BaseService):
                 raise QdrantServiceError(f"Qdrant connection check failed: {e}") from e
 
             self._initialized = True
-            logger.info(f"Qdrant client initialized: {self.config.vector_db.url}")
+            logger.info(f"Qdrant client initialized: {self.config.qdrant.url}")
         except Exception as e:
             self._client = None
             self._initialized = False
