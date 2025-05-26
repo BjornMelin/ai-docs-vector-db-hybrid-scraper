@@ -452,26 +452,31 @@ ALERT_THRESHOLDS = {
 ## Best Practices
 
 ### 1. Batch Processing
+
 - Use batch sizes of 32-100 for optimal throughput
 - Implement adaptive batching based on memory
 - Utilize OpenAI Batch API for 50% cost savings
 
 ### 2. Memory Management
+
 - Enable quantization for >80% memory reduction
 - Use streaming for large datasets
 - Implement garbage collection after large operations
 
 ### 3. Connection Management
+
 - Use connection pooling for all external services
 - Implement exponential backoff for retries
 - Set appropriate timeouts for all operations
 
 ### 4. Cost Optimization
+
 - Default to text-embedding-3-small for balance
 - Use local models for privacy-sensitive data
 - Cache embeddings aggressively (24hr TTL)
 
 ### 5. Scalability
+
 - Design for horizontal scaling
 - Use async operations throughout
 - Implement circuit breakers for resilience
@@ -479,24 +484,28 @@ ALERT_THRESHOLDS = {
 ## Troubleshooting Performance Issues
 
 ### High Latency
+
 1. Check Qdrant HNSW parameters
 2. Verify quantization is enabled
 3. Monitor connection pool usage
 4. Review search complexity
 
 ### High Memory Usage
+
 1. Enable vector quantization
 2. Reduce batch sizes
 3. Implement streaming processing
 4. Clear caches periodically
 
 ### Low Accuracy
+
 1. Verify hybrid search weights
 2. Check reranking configuration
 3. Review chunking strategy
 4. Validate embedding quality
 
 ### API Cost Overruns
+
 1. Switch to batch API
 2. Increase cache TTL
 3. Use local models where appropriate

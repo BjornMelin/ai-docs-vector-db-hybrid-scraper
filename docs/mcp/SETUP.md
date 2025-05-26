@@ -118,29 +118,34 @@ For production environments with all features:
 The unified server provides 25+ tools:
 
 ### Search Tools
+
 - `search_documents` - Hybrid vector search with reranking
 - `search_by_collection` - Search within specific collections
 - `search_similar` - Find similar documents
 
 ### Document Management
+
 - `add_url` - Add single URL to index
 - `add_urls` - Bulk URL addition
 - `update_document` - Update existing documents
 - `delete_document` - Remove documents
 
 ### Collection Management
+
 - `list_collections` - Show all collections
 - `create_collection` - Create new collection
 - `delete_collection` - Remove collection
 - `get_collection_stats` - Collection metrics
 
 ### Project Management
+
 - `create_project` - Initialize new project
 - `list_projects` - Show all projects
 - `update_project` - Modify project settings
 - `delete_project` - Remove project
 
 ### Analytics
+
 - `get_usage_stats` - API usage metrics
 - `get_performance_metrics` - Search performance
 - `get_cache_stats` - Cache hit rates
@@ -158,14 +163,14 @@ After configuring Claude Desktop, restart it and check:
 
 ### 2. Test Search Functionality
 
-```
+```plaintext
 You: "Search for documentation about authentication"
 Claude: [Uses search_documents tool with your query]
 ```
 
 ### 3. Test Document Addition
 
-```
+```plaintext
 You: "Add https://docs.example.com to my documentation index"
 Claude: [Uses add_url tool to crawl and index the page]
 ```
@@ -178,7 +183,7 @@ Claude: [Uses add_url tool to crawl and index the page]
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | Yes | - | OpenAI API key for embeddings |
 | `FIRECRAWL_API_KEY` | No | - | Firecrawl API key for premium features |
-| `QDRANT_URL` | No | http://localhost:6333 | Qdrant database URL |
+| `QDRANT_URL` | No | <http://localhost:6333> | Qdrant database URL |
 | `REDIS_URL` | No | - | Redis URL for caching |
 | `LOG_LEVEL` | No | INFO | Logging level |
 | `ENABLE_CACHE` | No | true | Enable caching layer |
@@ -199,16 +204,19 @@ The unified configuration system (`src/config/models.py`) provides:
 ### Common Issues
 
 #### 1. "MCP server not found"
+
 - Ensure absolute path in `cwd`
 - Verify `uv` is in PATH
 - Check file permissions
 
 #### 2. "Connection refused"
+
 - Ensure Qdrant is running: `docker ps`
 - Check QDRANT_URL is correct
 - Verify port 6333 is not blocked
 
 #### 3. "API key invalid"
+
 - Verify OPENAI_API_KEY is set correctly
 - Check for extra spaces or quotes
 - Ensure key has proper permissions
@@ -229,11 +237,13 @@ Enable verbose logging:
 ### View Logs
 
 **macOS/Linux**:
+
 ```bash
 tail -f ~/Library/Logs/Claude/mcp-server-ai-docs-vector-db.log
 ```
 
 **Windows**:
+
 ```powershell
 Get-Content "$env:APPDATA\Claude\Logs\mcp-server-ai-docs-vector-db.log" -Tail 50 -Wait
 ```
@@ -241,13 +251,17 @@ Get-Content "$env:APPDATA\Claude\Logs\mcp-server-ai-docs-vector-db.log" -Tail 50
 ## Performance Optimization
 
 ### Connection Pooling
+
 The server uses connection pooling by default:
+
 - Qdrant: 10 connections
 - Redis: 20 connections
 - HTTP: 100 connections
 
 ### Batch Processing
+
 Enable batch operations for better performance:
+
 ```json
 {
   "env": {
@@ -258,7 +272,9 @@ Enable batch operations for better performance:
 ```
 
 ### Resource Limits
+
 Set appropriate limits:
+
 ```json
 {
   "env": {

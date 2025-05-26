@@ -12,11 +12,13 @@ After deep research using Tavily, Exa, Linkup, Firecrawl Deep Research, and Cont
 ## Current State Analysis
 
 ### What We Have
+
 - **Basic MCP Server**: Simple scraping and search tools
 - **Enhanced MCP Server**: Project management features
 - **Original Core Features**: Advanced embeddings, hybrid search, reranking (not exposed)
 
 ### What We're Missing
+
 1. **Advanced Embedding Tools**
    - Multiple providers (OpenAI, FastEmbed, Hybrid)
    - SOTA models (NV-Embed-v2, BGE models, SPLADE++)
@@ -36,7 +38,7 @@ After deep research using Tavily, Exa, Linkup, Firecrawl Deep Research, and Cont
 
 ### 1. Unified MCP Server (`unified_mcp_server.py`)
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────┐
 │                    Unified MCP Server                        │
 ├─────────────────────────────────────────────────────────────┤
@@ -61,6 +63,7 @@ After deep research using Tavily, Exa, Linkup, Firecrawl Deep Research, and Cont
 ### 2. Key Enhancement Areas
 
 #### A. Advanced Embedding Tools
+
 ```python
 @unified_mcp.tool()
 async def embed_with_provider(
@@ -75,6 +78,7 @@ async def embed_with_provider(
 ```
 
 #### B. Hybrid Search Tools
+
 ```python
 @unified_mcp.tool()
 async def hybrid_search(
@@ -91,6 +95,7 @@ async def hybrid_search(
 ```
 
 #### C. External MCP Client Integration
+
 ```python
 # Initialize external MCP clients
 firecrawl_client = Client("uvx mcp-server-firecrawl")
@@ -113,6 +118,7 @@ async def deep_research_with_rag(
 ```
 
 #### D. Unified Workflow Tools
+
 ```python
 @unified_mcp.tool()
 async def intelligent_documentation_pipeline(
@@ -131,6 +137,7 @@ async def intelligent_documentation_pipeline(
 ### 3. Implementation Strategy
 
 #### Phase 1: Core Enhancements (Priority: High)
+
 1. **Expose Advanced Embeddings**
    - Create `embed_with_provider` tool
    - Add `configure_embedding_models` tool
@@ -142,6 +149,7 @@ async def intelligent_documentation_pipeline(
    - Implement `explain_search_results` tool
 
 #### Phase 2: External Integration (Priority: High)
+
 1. **Client Setup**
    - Initialize Firecrawl and Qdrant clients
    - Create wrapper tools with enhanced functionality
@@ -153,6 +161,7 @@ async def intelligent_documentation_pipeline(
    - `enhanced_web_extract`
 
 #### Phase 3: Unified Workflows (Priority: Medium)
+
 1. **Intelligent Pipelines**
    - `intelligent_documentation_pipeline`
    - `semantic_knowledge_graph`
@@ -166,6 +175,7 @@ async def intelligent_documentation_pipeline(
 ## Technical Implementation Details
 
 ### 1. External Client Management
+
 ```python
 class ExternalMCPManager:
     """Manages connections to external MCP servers."""
@@ -183,6 +193,7 @@ class ExternalMCPManager:
 ```
 
 ### 2. Hybrid Strategy Router
+
 ```python
 class HybridStrategyRouter:
     """Routes requests to optimal providers based on content and requirements."""
@@ -194,6 +205,7 @@ class HybridStrategyRouter:
 ```
 
 ### 3. Performance Optimizations
+
 - **Caching Layer**: Redis/in-memory for embeddings
 - **Batch Processing**: Group operations for efficiency
 - **Async Everywhere**: Non-blocking operations

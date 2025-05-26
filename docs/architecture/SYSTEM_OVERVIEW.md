@@ -11,7 +11,7 @@ AI Documentation Vector DB is a production-ready hybrid scraping system that com
 
 ### High-Level Component Flow
 
-```
+```plaintext
 Documentation URLs → Crawl4AI/Firecrawl → Enhanced Chunking → 
 → Embedding Pipeline → Qdrant Vector DB → MCP Server → Claude Desktop
 ```
@@ -20,7 +20,7 @@ Documentation URLs → Crawl4AI/Firecrawl → Enhanced Chunking →
 
 The system implements a clean service layer pattern with dependency injection:
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────┐
 │                    Unified MCP Server                        │
 │                 (FastMCP 2.0 Framework)                      │
@@ -40,9 +40,10 @@ The system implements a clean service layer pattern with dependency injection:
 ## Key Components
 
 ### 1. Unified Configuration System
+
 - **Location**: `src/config/`
 - **Pattern**: Centralized Pydantic v2 models
-- **Features**: 
+- **Features**:
   - Environment variable support
   - Nested configuration objects
   - Runtime validation
@@ -51,35 +52,41 @@ The system implements a clean service layer pattern with dependency injection:
 ### 2. Service Layer Components
 
 #### EmbeddingManager
+
 - Multi-provider support (OpenAI, FastEmbed, local models)
 - Batch processing for cost optimization
 - Smart model selection based on use case
 - Sparse + dense embedding generation
 
 #### QdrantService
+
 - Direct SDK integration (no MCP overhead)
 - Hybrid search with RRF fusion
 - Vector quantization for storage efficiency
 - Connection pooling and circuit breakers
 
 #### CrawlManager
+
 - Crawl4AI for bulk processing (4-6x faster)
 - Firecrawl for on-demand scraping
 - Unified interface for both providers
 - Intelligent content extraction
 
 #### CacheManager
+
 - Multi-tier caching (memory + Redis)
 - Content-based cache keys
 - TTL and LRU eviction policies
 - 80%+ cache hit rate target
 
 ### 3. Enhanced Chunking System
+
 - **Basic**: Character-based splitting
 - **Enhanced**: Code-aware with overlap
 - **AST-Based**: Tree-sitter parsing for code
 
 ### 4. Unified MCP Server
+
 - FastMCP 2.0 implementation
 - 25+ tools for comprehensive functionality
 - Streaming support for large responses
@@ -88,18 +95,21 @@ The system implements a clean service layer pattern with dependency injection:
 ## Data Flow
 
 ### 1. Document Ingestion
+
 ```python
 URL → CrawlManager → Raw Content → Enhanced Chunking → 
 → Text Chunks → EmbeddingManager → Vectors → QdrantService
 ```
 
 ### 2. Search Pipeline
+
 ```python
 Query → SecurityValidator → EmbeddingManager → Query Vector →
 → QdrantService (Hybrid Search) → Results → Reranking → Response
 ```
 
 ### 3. Caching Strategy
+
 ```python
 Request → CacheManager → Cache Hit? → Return Cached
                      ↓ (Cache Miss)
@@ -109,16 +119,19 @@ Request → CacheManager → Cache Hit? → Return Cached
 ## Key Design Decisions
 
 ### Direct SDK Integration
+
 - **Before**: MCP-proxying added 50-80% overhead
 - **After**: Direct Qdrant/OpenAI SDK calls
 - **Result**: Faster API calls, better error handling
 
 ### Service Layer Pattern
+
 - **Benefit**: Clean separation of concerns
 - **Testing**: Easy to mock and test in isolation
 - **Extensibility**: Simple to add new providers
 
 ### Unified Configuration
+
 - **Single Source**: All config in one place
 - **Validation**: Runtime type checking
 - **Environment**: Easy deployment configuration
@@ -126,16 +139,19 @@ Request → CacheManager → Cache Hit? → Return Cached
 ## Performance Characteristics
 
 ### Speed
+
 - **Embedding Generation**: 1000+ embeddings/second
 - **Search Latency**: < 100ms (95th percentile)
 - **Cache Hit Rate**: 80%+ for common queries
 
 ### Storage
+
 - **Vector Quantization**: 83-99% size reduction
 - **Hybrid Indexing**: Optimized for both speed and accuracy
 - **Persistence**: JSON-based project storage
 
 ### Accuracy
+
 - **Hybrid Search**: 10-20% better than dense-only
 - **BGE Reranking**: Additional 10-20% improvement
 - **Chunking**: 30-50% better retrieval with AST parsing
@@ -143,12 +159,14 @@ Request → CacheManager → Cache Hit? → Return Cached
 ## Integration Points
 
 ### MCP Server Tools
+
 - `search_documents()` - Hybrid vector search
 - `add_url()` - On-demand document addition
 - `manage_collections()` - Database operations
 - `get_analytics()` - Usage and performance metrics
 
 ### Environment Variables
+
 ```bash
 OPENAI_API_KEY=sk-...          # Required for embeddings
 FIRECRAWL_API_KEY=fc-...       # Optional for premium features

@@ -5,6 +5,7 @@ This guide helps you migrate from the previous MCP server implementations to the
 ## Overview
 
 The unified MCP server (`src/unified_mcp_server.py`) consolidates all functionality from:
+
 - `mcp_server.py` (deprecated)
 - `enhanced_mcp_server.py` (deprecated)
 - `mcp_server_refactored.py` (legacy)
@@ -13,11 +14,13 @@ The unified MCP server (`src/unified_mcp_server.py`) consolidates all functional
 ## Key Improvements
 
 ### 1. **Consolidated Interface**
+
 - Single server exposing all features
 - No need to run multiple MCP servers
 - Unified configuration and management
 
 ### 2. **Advanced Features**
+
 - Hybrid search with dense+sparse vectors
 - BGE reranking for improved accuracy
 - Multi-provider embedding support
@@ -28,6 +31,7 @@ The unified MCP server (`src/unified_mcp_server.py`) consolidates all functional
 - Analytics and monitoring
 
 ### 3. **Service Layer Integration**
+
 - Uses completed service layer architecture
 - Direct SDK integration (no MCP proxying)
 - Better error handling and resilience
@@ -40,6 +44,7 @@ The unified MCP server (`src/unified_mcp_server.py`) consolidates all functional
 Replace your existing MCP configuration:
 
 **Old Configuration (Multiple Servers):**
+
 ```json
 {
   "mcpServers": {
@@ -63,6 +68,7 @@ Replace your existing MCP configuration:
 ```
 
 **New Configuration (Unified Server):**
+
 ```json
 {
   "mcpServers": {
@@ -100,12 +106,15 @@ Some tools have been renamed or consolidated:
 ### 3. Update Tool Parameters
 
 #### Search Documents
+
 **Old:**
+
 ```python
 search(query="test", collection="docs", limit=10)
 ```
 
 **New:**
+
 ```python
 search_documents({
     "query": "test",
@@ -118,12 +127,15 @@ search_documents({
 ```
 
 #### Add Document
+
 **Old:**
+
 ```python
 scrape_url(url="https://example.com", collection="docs")
 ```
 
 **New:**
+
 ```python
 add_document({
     "url": "https://example.com",
@@ -171,7 +183,9 @@ redis-cli ping
 ## New Features to Explore
 
 ### 1. **Project Management**
+
 Create projects to group related documents:
+
 ```python
 create_project({
     "name": "API Documentation",
@@ -182,7 +196,9 @@ create_project({
 ```
 
 ### 2. **Batch Processing**
+
 Process multiple documents efficiently:
+
 ```python
 add_documents_batch({
     "urls": [
@@ -196,7 +212,9 @@ add_documents_batch({
 ```
 
 ### 3. **Analytics and Monitoring**
+
 Get insights into your data:
+
 ```python
 get_analytics({
     "include_performance": true,
@@ -205,7 +223,9 @@ get_analytics({
 ```
 
 ### 4. **Cost Estimation**
+
 Estimate costs before processing:
+
 ```python
 estimate_costs({
     "text_count": 1000,
@@ -215,13 +235,17 @@ estimate_costs({
 ```
 
 ### 5. **Smart Search Strategies**
+
 Choose the optimal search approach:
+
 - **Dense**: Traditional vector similarity
 - **Sparse**: Keyword matching with SPLADE
 - **Hybrid**: Combined approach (recommended)
 
 ### 6. **Similarity Search**
+
 Find conceptually similar content:
+
 ```python
 search_similar({
     "content": "Your reference text here",
@@ -252,6 +276,7 @@ search_similar({
 ### Debug Mode
 
 Enable debug logging:
+
 ```bash
 export LOG_LEVEL=DEBUG
 uv run python src/unified_mcp_server.py
@@ -278,6 +303,7 @@ uv run python src/unified_mcp_server.py
 ## Support
 
 For issues or questions:
+
 1. Check the [troubleshooting guide](../TROUBLESHOOTING.md)
 2. Review [MCP documentation](./README.md)
 3. Open an issue on GitHub

@@ -7,6 +7,7 @@ Based on deep research of Crawl4AI, Firecrawl, Qdrant, and FastMCP documentation
 ## Key Findings from Documentation Research
 
 ### 1. Crawl4AI Advanced Features
+
 - **AsyncWebCrawler** with JS execution, custom extraction, smart chunking
 - **Deep crawling** with link analysis and multi-page strategies
 - **LLM-optimized extraction** with markdown conversion and content cleaning
@@ -19,6 +20,7 @@ Based on deep research of Crawl4AI, Firecrawl, Qdrant, and FastMCP documentation
 - **Robots.txt compliance** with caching
 
 ### 2. Firecrawl MCP Server Capabilities
+
 - **10 powerful tools**: scrape, map, crawl, search, extract, deep_research, generate_llmstxt, batch_scrape, check_batch_status
 - **Batch operations** for processing multiple URLs with built-in rate limiting
 - **Advanced extraction** with LLM-based structured data extraction
@@ -29,6 +31,7 @@ Based on deep research of Crawl4AI, Firecrawl, Qdrant, and FastMCP documentation
 - **Support for both cloud and self-hosted** deployments
 
 ### 3. Qdrant MCP Server Features
+
 - **Semantic memory layer** with store/find operations
 - **Multi-collection support** for organizing knowledge
 - **Metadata filtering** for precise retrieval
@@ -40,6 +43,7 @@ Based on deep research of Crawl4AI, Firecrawl, Qdrant, and FastMCP documentation
 - **Query API** with prefetch support for complex search strategies
 
 ### 4. FastMCP 2.0 Client Integration
+
 - **External MCP client support** via `fastmcp.Client`
 - **Tool wrapping** to expose external MCP tools as native tools
 - **Async operation** for efficient multi-server coordination
@@ -49,6 +53,7 @@ Based on deep research of Crawl4AI, Firecrawl, Qdrant, and FastMCP documentation
 - **Multi-server composition** with automatic prefixing
 
 ### 5. mcp-crawl4ai-rag Features
+
 - **Smart URL detection** for sitemaps, llms-full.txt, and regular pages
 - **Recursive crawling** with parallel processing
 - **Content chunking** by headers and size
@@ -99,6 +104,7 @@ class UnifiedMCPServer:
 ### Tool Categories to Implement
 
 #### 1. Advanced Embedding Tools
+
 ```python
 @mcp.tool()
 async def embed_with_provider(
@@ -113,6 +119,7 @@ async def embed_with_provider(
 ```
 
 #### 2. Hybrid Search Tools
+
 ```python
 @mcp.tool()
 async def hybrid_search(
@@ -129,6 +136,7 @@ async def hybrid_search(
 ```
 
 #### 3. Advanced Crawling Tools
+
 ```python
 @mcp.tool()
 async def deep_crawl(
@@ -145,6 +153,7 @@ async def deep_crawl(
 ```
 
 #### 4. External MCP Integration Tools
+
 ```python
 @mcp.tool()
 async def firecrawl_deep_research(
@@ -174,6 +183,7 @@ async def qdrant_semantic_store(
 ```
 
 #### 5. Unified Workflow Tools
+
 ```python
 @mcp.tool()
 async def intelligent_document_pipeline(
@@ -217,36 +227,42 @@ async def intelligent_document_pipeline(
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure (Week 1)
+
 1. Create `unified_mcp_server.py` with FastMCP 2.0 structure
 2. Implement external MCP client connections
 3. Set up basic tool registration framework
 4. Create configuration system for API keys and settings
 
 ### Phase 2: Advanced Embedding Tools (Week 1-2)
+
 1. Expose all embedding providers (OpenAI, FastEmbed, Hybrid)
 2. Implement SOTA models (NV-Embed-v2, BGE, SPLADE++)
 3. Add late chunking and contextual retrieval strategies
 4. Create embedding comparison tools
 
 ### Phase 3: Hybrid Search & Reranking (Week 2)
+
 1. Implement hybrid search combining dense/sparse vectors
 2. Add BGE-reranker-v2-m3 integration
 3. Create search evaluation tools
 4. Add metadata filtering and faceted search
 
 ### Phase 4: External MCP Integration (Week 3)
+
 1. Wrap Firecrawl MCP tools (especially deep_research)
 2. Integrate Qdrant MCP for semantic storage
 3. Create unified interfaces for common operations
 4. Add error handling and retry logic
 
 ### Phase 5: Unified Workflows (Week 3-4)
+
 1. Build intelligent document pipeline
 2. Create research assistant workflow
 3. Add knowledge graph building tools
 4. Implement conversation memory management
 
 ### Phase 6: Testing & Documentation (Week 4)
+
 1. Comprehensive test suite for all tools
 2. Integration tests with external MCP servers
 3. Performance benchmarks
@@ -294,6 +310,7 @@ async def intelligent_document_pipeline(
 ## Tool Inventory
 
 ### Native Tools (Our Implementation)
+
 1. **embed_with_provider** - SOTA embedding with multiple strategies (OpenAI, FastEmbed, Hybrid)
 2. **hybrid_search** - Combined dense/sparse search with BGE-reranker-v2-m3
 3. **smart_chunk** - Advanced chunking with late chunking, contextual retrieval
@@ -308,6 +325,7 @@ async def intelligent_document_pipeline(
 12. **calculate_hybrid_scores** - Implement RRF and DBSF fusion algorithms
 
 ### Proxied External Tools
+
 1. **firecrawl_scrape** - Advanced single-page scraping with JS rendering
 2. **firecrawl_batch_scrape** - Batch scraping with rate limiting
 3. **firecrawl_check_batch_status** - Monitor batch operation progress
@@ -325,6 +343,7 @@ async def intelligent_document_pipeline(
 15. **qdrant_group_results** - Group results by field
 
 ### Unified Workflow Tools
+
 1. **intelligent_document_pipeline** - End-to-end crawl → extract → embed → store
 2. **research_assistant** - Multi-source research with deep analysis
 3. **knowledge_sync** - Sync between Qdrant collections and other storage
@@ -339,6 +358,7 @@ async def intelligent_document_pipeline(
 ## Advanced Implementation Examples
 
 ### Hybrid Query with Qdrant Integration
+
 ```python
 @mcp.tool()
 async def advanced_hybrid_search(
@@ -380,6 +400,7 @@ async def advanced_hybrid_search(
 ```
 
 ### Multi-Stage Search with Reranking
+
 ```python
 @mcp.tool()
 async def multi_stage_reranked_search(
@@ -427,6 +448,7 @@ async def multi_stage_reranked_search(
 ```
 
 ### Crawl4AI Advanced Extraction
+
 ```python
 @mcp.tool()
 async def advanced_web_extraction(
@@ -493,6 +515,7 @@ async def advanced_web_extraction(
 ```
 
 ### Context-Aware Chunking
+
 ```python
 @mcp.tool()
 async def context_aware_chunking(

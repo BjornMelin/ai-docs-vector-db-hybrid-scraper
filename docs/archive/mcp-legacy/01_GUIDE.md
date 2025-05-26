@@ -13,9 +13,9 @@ Both servers integrate with existing Crawl4AI functionality and can leverage Fir
 
 1. Install dependencies:
 
-```bash
-uv pip install -e .
-```
+   ```bash
+   uv pip install -e .
+   ```
 
 2. Set up environment variables:
 
@@ -100,26 +100,27 @@ fastmcp run src/mcp_server.py --transport streamable-http --port 8000
 ## Claude Desktop Integration
 
 1. Copy the configuration to Claude Desktop config directory:
+
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 2. Add the server configuration:
 
-```json
-{
-  "mcpServers": {
-    "ai-docs-vector-db": {
-      "command": "uv",
-      "args": ["run", "mcp-server"],
-      "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key",
-        "QDRANT_URL": "http://localhost:6333"
-      }
-    }
-  }
-}
-```
+   ```json
+   {
+     "mcpServers": {
+       "ai-docs-vector-db": {
+         "command": "uv",
+         "args": ["run", "mcp-server"],
+         "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
+         "env": {
+           "OPENAI_API_KEY": "your-openai-api-key",
+           "QDRANT_URL": "http://localhost:6333"
+         }
+       }
+     }
+   }
+   ```
 
 3. Restart Claude Desktop
 
@@ -221,10 +222,12 @@ To enable integration, ensure the respective MCP servers are running and accessi
 ### Common Issues
 
 1. **OpenAI API Key Error**
+
    - Ensure `OPENAI_API_KEY` is set in environment
    - Check API key validity
 
 2. **Qdrant Connection Error**
+
    - Verify Qdrant is running at the specified URL
    - Check Docker: `docker ps | grep qdrant`
 

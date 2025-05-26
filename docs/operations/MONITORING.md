@@ -14,6 +14,7 @@ This guide covers monitoring, metrics collection, and observability for the AI D
 The unified architecture provides comprehensive metrics through various service layers:
 
 #### 1. API Performance Metrics
+
 ```python
 # Automatically collected by service layer
 - Request count and rate
@@ -23,6 +24,7 @@ The unified architecture provides comprehensive metrics through various service 
 ```
 
 #### 2. Embedding Generation Metrics
+
 ```python
 # EmbeddingManager metrics
 - Embeddings generated per second
@@ -32,6 +34,7 @@ The unified architecture provides comprehensive metrics through various service 
 ```
 
 #### 3. Vector Database Metrics
+
 ```python
 # QdrantService metrics
 - Search query latency
@@ -41,6 +44,7 @@ The unified architecture provides comprehensive metrics through various service 
 ```
 
 #### 4. Cache Performance
+
 ```python
 # CacheManager metrics
 - Hit/miss rates
@@ -115,21 +119,25 @@ GET /health/detailed
 ## Key Metrics to Monitor
 
 ### 1. Search Performance
+
 - **Target**: < 100ms p95 latency
 - **Alert**: > 200ms sustained
 - **Dashboard**: Query latency histogram
 
 ### 2. Embedding Generation
+
 - **Target**: > 1000 embeddings/second
 - **Alert**: < 500 embeddings/second
 - **Dashboard**: Throughput graph
 
 ### 3. Cache Effectiveness
+
 - **Target**: > 80% hit rate
 - **Alert**: < 60% hit rate
 - **Dashboard**: Hit/miss ratio
 
 ### 4. Error Rates
+
 - **Target**: < 0.1% error rate
 - **Alert**: > 1% error rate
 - **Dashboard**: Error rate by endpoint
@@ -151,6 +159,7 @@ start_http_server(9090)
 ### 2. Grafana Dashboards
 
 Pre-built dashboards available:
+
 - System Overview
 - Search Performance
 - Embedding Analytics
@@ -185,6 +194,7 @@ groups:
 ## Resource Monitoring
 
 ### 1. Memory Usage
+
 ```bash
 # Monitor service memory
 docker stats qdrant-vector-db
@@ -195,6 +205,7 @@ docker stats qdrant-vector-db
 ```
 
 ### 2. Disk Usage
+
 ```bash
 # Monitor vector storage
 du -sh data/qdrant/storage
@@ -205,6 +216,7 @@ du -sh data/qdrant/storage
 ```
 
 ### 3. CPU Usage
+
 ```bash
 # Monitor CPU across services
 top -p $(pgrep -f unified_mcp_server)
@@ -217,6 +229,7 @@ top -p $(pgrep -f unified_mcp_server)
 ## Performance Analysis
 
 ### 1. Slow Query Analysis
+
 ```python
 # Automatic slow query logging
 SLOW_QUERY_THRESHOLD = 0.5  # seconds
@@ -229,6 +242,7 @@ SLOW_QUERY_THRESHOLD = 0.5  # seconds
 ```
 
 ### 2. Bottleneck Detection
+
 ```python
 # Performance profiling enabled
 ENABLE_PROFILING = true
@@ -240,6 +254,7 @@ ENABLE_PROFILING = true
 ```
 
 ### 3. Cost Analysis
+
 ```python
 # API usage tracking
 {
@@ -260,6 +275,7 @@ ENABLE_PROFILING = true
 ## Debugging Tools
 
 ### 1. Request Tracing
+
 ```python
 # Enable detailed tracing
 LOG_LEVEL=DEBUG
@@ -272,6 +288,7 @@ ENABLE_REQUEST_TRACING=true
 ```
 
 ### 2. Memory Profiling
+
 ```python
 # Enable memory profiling
 import tracemalloc
@@ -283,6 +300,7 @@ top_stats = snapshot.statistics('lineno')
 ```
 
 ### 3. Query Explain Plans
+
 ```python
 # Analyze vector search performance
 result = await qdrant_service.explain_query(
@@ -294,18 +312,21 @@ result = await qdrant_service.explain_query(
 ## Monitoring Best Practices
 
 ### 1. Dashboard Organization
+
 - **Overview**: System health at a glance
 - **Service-Specific**: Deep dive per service
 - **Business Metrics**: User-facing KPIs
 - **Cost Tracking**: API usage and expenses
 
 ### 2. Alert Fatigue Prevention
+
 - Set meaningful thresholds
 - Use alert grouping
 - Implement alert suppression
 - Regular threshold review
 
 ### 3. Retention Policies
+
 - Metrics: 30 days high-res, 1 year downsampled
 - Logs: 7 days verbose, 30 days errors
 - Traces: 24 hours detailed, 7 days sampled
@@ -313,6 +334,7 @@ result = await qdrant_service.explain_query(
 ## Integration Examples
 
 ### 1. CloudWatch Integration
+
 ```python
 # AWS CloudWatch metrics
 import boto3
@@ -329,6 +351,7 @@ cloudwatch.put_metric_data(
 ```
 
 ### 2. Datadog Integration
+
 ```python
 # Datadog APM
 from ddtrace import tracer
@@ -340,6 +363,7 @@ async def search_documents(query: str):
 ```
 
 ### 3. Custom Metrics Export
+
 ```python
 # Export to any backend
 class MetricsExporter:
@@ -351,16 +375,19 @@ class MetricsExporter:
 ## Troubleshooting Monitoring Issues
 
 ### 1. Missing Metrics
+
 - Check service health endpoints
 - Verify metrics server is running
 - Confirm network connectivity
 
 ### 2. High Cardinality
+
 - Review label usage
 - Implement label limits
 - Use metric aggregation
 
 ### 3. Storage Growth
+
 - Implement retention policies
 - Use metric downsampling
 - Archive old data

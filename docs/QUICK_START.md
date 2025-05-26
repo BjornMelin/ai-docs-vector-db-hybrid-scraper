@@ -134,6 +134,7 @@ Edit `config/documentation-sites.json`:
 ### Advanced Configuration
 
 See [Unified Configuration Guide](./architecture/UNIFIED_CONFIGURATION.md) for:
+
 - Environment variables
 - Service-specific settings
 - Performance tuning
