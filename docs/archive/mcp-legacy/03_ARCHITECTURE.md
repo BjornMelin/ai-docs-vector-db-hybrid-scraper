@@ -18,6 +18,7 @@ Our unified MCP server provides comprehensive documentation management capabilit
 ### 1. Documentation Scraping Tools
 
 #### `scrape_documentation`
+
 ```python
 @mcp.tool()
 async def scrape_documentation(
@@ -42,6 +43,7 @@ async def scrape_documentation(
 ```
 
 #### `scrape_github_repo`
+
 ```python
 @mcp.tool()
 async def scrape_github_repo(
@@ -66,6 +68,7 @@ async def scrape_github_repo(
 ### 2. Advanced Search Tools
 
 #### `hybrid_search`
+
 ```python
 @mcp.tool()
 async def hybrid_search(
@@ -92,6 +95,7 @@ async def hybrid_search(
 ```
 
 #### `semantic_search`
+
 ```python
 @mcp.tool()
 async def semantic_search(
@@ -115,6 +119,7 @@ async def semantic_search(
 ```
 
 #### `multi_query_search`
+
 ```python
 @mcp.tool()
 async def multi_query_search(
@@ -136,6 +141,7 @@ async def multi_query_search(
 ### 3. Vector Database Management Tools
 
 #### `create_collection`
+
 ```python
 @mcp.tool()
 async def create_collection(
@@ -157,6 +163,7 @@ async def create_collection(
 ```
 
 #### `index_documents`
+
 ```python
 @mcp.tool()
 async def index_documents(
@@ -180,6 +187,7 @@ async def index_documents(
 ```
 
 #### `update_document`
+
 ```python
 @mcp.tool()
 async def update_document(
@@ -204,6 +212,7 @@ async def update_document(
 ### 4. Embedding Management Tools
 
 #### `generate_embeddings`
+
 ```python
 @mcp.tool()
 async def generate_embeddings(
@@ -230,6 +239,7 @@ async def generate_embeddings(
 ```
 
 #### `compare_embedding_models`
+
 ```python
 @mcp.tool()
 async def compare_embedding_models(
@@ -253,6 +263,7 @@ async def compare_embedding_models(
 ### 5. Reranking Tools
 
 #### `rerank_results`
+
 ```python
 @mcp.tool()
 async def rerank_results(
@@ -276,6 +287,7 @@ async def rerank_results(
 ### 6. Analytics and Monitoring Tools
 
 #### `get_search_analytics`
+
 ```python
 @mcp.tool()
 async def get_search_analytics(
@@ -298,6 +310,7 @@ async def get_search_analytics(
 ```
 
 #### `optimize_collection`
+
 ```python
 @mcp.tool()
 async def optimize_collection(
@@ -320,6 +333,7 @@ async def optimize_collection(
 ### 7. Composed Tools (Advanced Workflows)
 
 #### `smart_index_documentation`
+
 ```python
 @mcp.tool()
 async def smart_index_documentation(
@@ -343,6 +357,7 @@ async def smart_index_documentation(
 ```
 
 #### `migrate_collection`
+
 ```python
 @mcp.tool()
 async def migrate_collection(
@@ -446,8 +461,9 @@ async def stream_search_results(
 ### 2. Context-Aware Operations
 
 All tools receive a `Context` object enabling:
+
 - Progress reporting: `await ctx.report_progress(current, total)`
-- Logging: `await ctx.info("Processing...")` 
+- Logging: `await ctx.info("Processing...")`
 - Resource access: `await ctx.read_resource("config://settings")`
 - LLM sampling: `await ctx.sample("Summarize: " + content)`
 
@@ -472,12 +488,14 @@ async def robust_operation(params: dict, ctx: Context) -> dict:
 ## Security and Performance
 
 ### Security Measures
+
 - Input validation on all tool parameters
 - Rate limiting for expensive operations
 - API key management via environment variables
 - Sanitization of file paths and URLs
 
 ### Performance Optimizations
+
 - Connection pooling for Qdrant client
 - Embedding caching with TTL
 - Batch processing for bulk operations

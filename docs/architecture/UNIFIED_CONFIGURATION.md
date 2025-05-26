@@ -29,7 +29,7 @@ The AI Documentation Vector DB now uses a comprehensive unified configuration sy
 
 ### Architecture
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────┐
 │                  UnifiedConfig                      │
 │  ┌─────────────────────────────────────────────┐   │

@@ -1,11 +1,10 @@
 """Tests for smart model selection and cost optimization."""
 
 from unittest.mock import AsyncMock
-from unittest.mock import Mock
 
 import pytest
-from src.config.models import UnifiedConfig
 from src.config.enums import EmbeddingProvider
+from src.config.models import UnifiedConfig
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import ModelBenchmark
 from src.services.embeddings.manager import QualityTier

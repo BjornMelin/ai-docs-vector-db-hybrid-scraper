@@ -1,59 +1,32 @@
 # AI Documentation Scraper - Task List
 
-> **Last Updated:** 2025-05-22
+> **Last Updated:** 2025-05-26
 > **Status:** Advanced Implementation Complete
 > **Priority System:** High | Medium | Low
 
-## Current Sprint Goals
+## Current Status
 
-**Focus:** 🚨 **CRITICAL ARCHITECTURAL CLEANUP** - GitHub Issues #16-28
+**Sprint Completed:** ✅ Critical Architecture Cleanup & Unification (Issues #16-28) - Merged via PR #32
 
-**Roadmap:**
-
-- Priority 0 (Issues #16-17): Critical cleanup - ✅ Issue #16 COMPLETED
-- Priority 1 (Issues #18-20): Unified server enhancements - ✅ Issue #20 COMPLETED
-- Priority 2 (Issues #21-24): Service layer refactoring - ✅ Issues #23, #24 COMPLETED
-- Priority 3 (Issues #25-26): Configuration refinements - ✅ Issue #26 COMPLETED
-- Priority 4 (Issues #27-28): Documentation updates
-
----
-
-## PRIORITY 0: CRITICAL ARCHITECTURAL CLEANUP & UNIFICATION
-
-🚨 **These GitHub issues must be completed before other development work**
-
-### Configuration System Unification  
-
-- [ ] **Centralize Configuration Management** `refactor/unified-config` 📋 [GitHub Issue #17]
-  - [ ] Create UnifiedConfig class to replace scattered configuration
-  - [ ] Refactor UnifiedServiceManager to use centralized config
-  - [ ] Update all service classes to use UnifiedConfig
-  - [ ] Refactor scripts to use UnifiedConfig
-  - [ ] Remove redundant configuration parsing
+**Completed Work:**
+- ✅ Issue #16: Remove legacy MCP server files
+- ✅ Issue #17: Configuration centralization with UnifiedConfig
+- ✅ Issue #18: Sparse vectors & reranking implementation
+- ✅ Issue #19: Persistent storage for projects
+- ✅ Issue #20: Abstract direct Qdrant client access
+- ✅ Issue #21: Service layer integration for manage_vector_db.py
+- ✅ Issue #22: Service layer integration for crawl4ai_bulk_embedder.py
+- ✅ Issue #23: Consolidate error handling and rate limiting
+- ✅ Issue #24: Integrate structured logging
+- ✅ Issue #25: SecurityValidator integration with UnifiedConfig
+- ✅ Issue #26: Clean up obsolete root configuration files
+- ✅ Issue #27: Documentation updates (partial)
+- ✅ Issue #28: Test suite updates (partial)
+- ✅ Issue #33: Fix test imports to use UnifiedConfig (PR #33)
 
 ---
 
-## PRIORITY 1: CORE UNIFIED SERVER ENHANCEMENTS
-
-### Implement Sparse Vectors & Reranking
-
-- [ ] **Implement TODOs in unified_mcp_server.py** `feat/sparse-vectors` 📋 [GitHub Issue #18]
-  - [ ] Complete sparse vector generation in `_generate_embeddings()`
-  - [ ] Implement reranking logic in `search_documents()`
-  - [ ] Add proper error handling for reranking failures
-  - [ ] Test hybrid search with sparse vectors
-
-### Persistent Storage for Projects
-
-- [ ] **Implement Project Persistence** `feat/project-persistence` 📋 [GitHub Issue #19]
-  - [ ] Design project metadata schema
-  - [ ] Implement SQLite/JSON storage backend
-  - [ ] Add project save/load functionality
-  - [ ] Integrate with unified MCP server
-
----
-
-## PRIORITY 2: SERVICE LAYER & UTILITY REFACTORING
+## NEXT PRIORITIES: V1 Feature Completion
 
 ### Unified MCP Server Modularization
 
@@ -65,51 +38,13 @@
   - [ ] Update imports and maintain backward compatibility
   - [ ] Add comprehensive tests for each module
 
-### Script Integration
+### Outstanding Test Issues
 
-- [ ] **Integrate crawl4ai_bulk_embedder.py** `refactor/script-integration` 📋 [GitHub Issue #21]
-  - [ ] Refactor to use UnifiedServiceManager
-  - [ ] Remove direct service instantiation
-  - [ ] Add proper CLI interface with Click/Typer
-  - [ ] Update error handling to use service layer
-
-- [ ] **Integrate manage_vector_db.py** `refactor/script-integration` 📋 [GitHub Issue #22]
-  - [ ] Refactor to use UnifiedServiceManager
-  - [ ] Remove direct Qdrant client usage
-  - [ ] Standardize CLI interface
-  - [ ] Add progress indicators
-
----
-
-## PRIORITY 3: CONFIGURATION & SECURITY REFINEMENTS
-
-### Security Integration
-
-- [ ] **Integrate SecurityValidator with UnifiedConfig** `feat/security-config` 📋 [GitHub Issue #25]
-  - [ ] Move SecurityValidator into UnifiedConfig
-  - [ ] Add security validation to all service initialization
-  - [ ] Implement secure defaults
-  - [ ] Add security audit logging
-
----
-
-## PRIORITY 4: DOCUMENTATION & TESTING UPDATES
-
-### Documentation Updates
-
-- [ ] **Update All Documentation** `docs/update` 📋 [GitHub Issue #27]
-  - [ ] Update architecture diagrams for unified server
-  - [ ] Remove references to legacy MCP servers
-  - [ ] Update API documentation
-  - [ ] Create migration guide from old to new architecture
-
-### Test Suite Updates
-
-- [ ] **Update Test Suite** `test/refactor` 📋 [GitHub Issue #28]
-  - [ ] Remove tests for deleted MCP servers
-  - [ ] Update integration tests for unified architecture
-  - [ ] Add tests for new service abstractions
+- [ ] **Complete Test Suite Migration** `test/complete-migration`
+  - [ ] Fix remaining test failures from architectural changes
+  - [ ] Update all test fixtures for new service APIs
   - [ ] Ensure >90% coverage maintained
+  - [ ] Add integration tests for new architecture
 
 ---
 
@@ -388,6 +323,43 @@
   - [ ] Implement semantic chunking with sentence transformers (future)
   - [ ] Add hierarchical chunking for long documents (future)
 
+### Advanced Chunking Future Enhancements
+
+- [ ] **Extended Multi-Language Support** `feat/extended-languages`
+  - [ ] Add support for Go, Rust, Java parsers
+  - [ ] Create language-specific chunking rules for each
+  - [ ] Add configuration for per-language chunk preferences
+  - [ ] Implement unified interface for all language parsers
+  - [ ] Add support for mixed-language repositories
+
+- [ ] **Adaptive Chunk Sizing** `feat/adaptive-chunking`
+  - [ ] Implement dynamic chunk sizing based on code complexity
+  - [ ] Create function-size-aware chunking (larger chunks for big functions)
+  - [ ] Add configuration for maximum function chunk size (3200 chars)
+  - [ ] Implement complexity-based overlap strategies
+  - [ ] Create hierarchical chunking (file → class → method levels)
+
+- [ ] **Context-Aware Embedding Enhancement** `feat/context-embeddings`
+  - [ ] Implement related code segment grouping
+  - [ ] Add import statement handling and preservation
+  - [ ] Create cross-reference aware chunking
+  - [ ] Implement documentation-code alignment
+  - [ ] Add metadata enrichment for chunks (function type, complexity, etc.)
+
+- [ ] **Advanced Chunking Configuration** `feat/chunking-config`
+  - [ ] Create ChunkingConfig class with comprehensive options
+  - [ ] Add enable_ast_chunking toggle
+  - [ ] Implement preserve_function_boundaries option
+  - [ ] Create overlap_strategy selection (semantic/structural/hybrid)
+  - [ ] Add supported_languages configuration list
+
+- [ ] **Chunking Performance Optimization** `feat/chunking-performance`
+  - [ ] Implement lazy loading of Tree-sitter parsers
+  - [ ] Add chunking performance metrics collection
+  - [ ] Create memory usage optimization for large files
+  - [ ] Implement parallel processing for multiple files
+  - [ ] Add chunk caching for repeated content
+
 ### Performance & Scalability
 
 - [ ] **Production-Grade Performance** `feat/production-performance` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
@@ -450,6 +422,16 @@
   - [ ] Implement command auto-completion
   - [ ] Add CLI-based search and management
   - [ ] Create batch operation commands
+
+- [ ] **Example Scripts & Tutorials** `feat/examples-mvp`
+  - [ ] Create basic search example script
+  - [ ] Add bulk indexing example
+  - [ ] Implement configuration setup examples
+  - [ ] Create MCP server integration examples
+  - [ ] Add performance benchmarking scripts
+  - [ ] Create troubleshooting examples
+  - [ ] Implement end-to-end workflow examples
+  - [ ] Add Jupyter notebook tutorials
 
 - [ ] **Configuration Management** `feat/config-management`
   - [ ] Add configuration templates for different use cases
@@ -535,6 +517,13 @@
   - [ ] Create automated tagging and categorization
   - [ ] Add content freshness detection
   - [ ] Implement smart duplicate detection
+
+- [ ] **Experimental Chunking Strategies** `feat/experimental-chunking`
+  - [ ] Research and implement agentic chunking approaches
+  - [ ] Add LLM-assisted boundary detection
+  - [ ] Create domain-specific chunking rules
+  - [ ] Implement graph-based code relationship chunking
+  - [ ] Add multimodal chunking (code + diagrams + docs)
 
 ---
 

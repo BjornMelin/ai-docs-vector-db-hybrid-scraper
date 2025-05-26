@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from src.config.models import UnifiedConfig
 from src.config.enums import EmbeddingProvider as EmbeddingProviderEnum
+from src.config.models import UnifiedConfig
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import QualityTier
@@ -140,7 +140,9 @@ class TestFastEmbedProvider:
     @pytest.mark.asyncio
     async def test_initialize(self, fastembed_provider):
         """Test provider initialization."""
-        with patch("src.services.embeddings.fastembed_provider.TextEmbedding") as mock_model:
+        with patch(
+            "src.services.embeddings.fastembed_provider.TextEmbedding"
+        ) as mock_model:
             await fastembed_provider.initialize()
 
             assert fastembed_provider._initialized
@@ -149,7 +151,9 @@ class TestFastEmbedProvider:
     @pytest.mark.asyncio
     async def test_generate_embeddings(self, fastembed_provider):
         """Test embedding generation."""
-        with patch("src.services.embeddings.fastembed_provider.TextEmbedding") as mock_model:
+        with patch(
+            "src.services.embeddings.fastembed_provider.TextEmbedding"
+        ) as mock_model:
             mock_instance = MagicMock()
             mock_model.return_value = mock_instance
 
@@ -179,7 +183,9 @@ class TestFastEmbedProvider:
     @pytest.mark.asyncio
     async def test_error_handling(self, fastembed_provider):
         """Test error handling during embedding generation."""
-        with patch("src.services.embeddings.fastembed_provider.TextEmbedding") as mock_model:
+        with patch(
+            "src.services.embeddings.fastembed_provider.TextEmbedding"
+        ) as mock_model:
             mock_instance = MagicMock()
             mock_model.return_value = mock_instance
 
@@ -226,8 +232,12 @@ class TestEmbeddingManager:
     async def test_initialize(self, embedding_manager):
         """Test manager initialization."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             mock_openai_instance = AsyncMock()
             mock_fastembed_instance = AsyncMock()
@@ -245,8 +255,12 @@ class TestEmbeddingManager:
     async def test_generate_embeddings_with_preferred_provider(self, embedding_manager):
         """Test embedding generation with preferred provider."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             # Setup providers
             mock_openai_instance = AsyncMock()
@@ -274,8 +288,12 @@ class TestEmbeddingManager:
     async def test_generate_embeddings_with_fallback(self, embedding_manager):
         """Test embedding generation with fallback to secondary provider."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             # Setup providers
             mock_openai_instance = AsyncMock()
@@ -284,8 +302,8 @@ class TestEmbeddingManager:
             mock_fastembed.return_value = mock_fastembed_instance
 
             # Mock OpenAI failure
-            mock_openai_instance.generate_embeddings.side_effect = EmbeddingServiceError(
-                "OpenAI failed"
+            mock_openai_instance.generate_embeddings.side_effect = (
+                EmbeddingServiceError("OpenAI failed")
             )
 
             # Mock FastEmbed success
@@ -308,8 +326,12 @@ class TestEmbeddingManager:
     async def test_smart_provider_selection(self, embedding_manager):
         """Test smart provider selection based on quality tier."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             mock_openai_instance = AsyncMock()
             mock_fastembed_instance = AsyncMock()
@@ -334,7 +356,9 @@ class TestEmbeddingManager:
     @pytest.mark.asyncio
     async def test_batch_processing(self, embedding_manager):
         """Test batch processing of large text lists."""
-        with patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai:
+        with patch(
+            "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+        ) as mock_openai:
             mock_openai_instance = AsyncMock()
             mock_openai.return_value = mock_openai_instance
 
@@ -358,7 +382,9 @@ class TestEmbeddingManager:
     @pytest.mark.asyncio
     async def test_cost_tracking(self, embedding_manager):
         """Test cost tracking for embeddings."""
-        with patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai:
+        with patch(
+            "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+        ) as mock_openai:
             mock_openai_instance = AsyncMock()
             mock_openai.return_value = mock_openai_instance
             mock_openai_instance.generate_embeddings.return_value = [[0.1] * 1536] * 10
@@ -378,7 +404,9 @@ class TestEmbeddingManager:
     @pytest.mark.asyncio
     async def test_reranking(self, embedding_manager):
         """Test document reranking functionality."""
-        with patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai:
+        with patch(
+            "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+        ) as mock_openai:
             mock_openai_instance = AsyncMock()
             mock_openai.return_value = mock_openai_instance
 
@@ -386,12 +414,14 @@ class TestEmbeddingManager:
 
             # Mock reranker if available
             if embedding_manager._reranker is not None:
-                with patch.object(embedding_manager._reranker, "compute_score") as mock_score:
+                with patch.object(
+                    embedding_manager._reranker, "compute_score"
+                ) as mock_score:
                     mock_score.return_value = [0.9, 0.7, 0.5, 0.3, 0.1]
 
                     query = "test query"
                     documents = ["doc1", "doc2", "doc3", "doc4", "doc5"]
-                    
+
                     reranked = await embedding_manager.rerank_documents(
                         query, documents, top_k=3
                     )
@@ -405,8 +435,12 @@ class TestEmbeddingManager:
     async def test_cleanup(self, embedding_manager):
         """Test manager cleanup."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             mock_openai_instance = AsyncMock()
             mock_fastembed_instance = AsyncMock()
@@ -427,8 +461,12 @@ class TestEmbeddingManager:
     async def test_all_providers_fail(self, embedding_manager):
         """Test behavior when all providers fail."""
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider") as mock_openai,
-            patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed,
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider"
+            ) as mock_openai,
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider"
+            ) as mock_fastembed,
         ):
             mock_openai_instance = AsyncMock()
             mock_fastembed_instance = AsyncMock()
@@ -436,11 +474,11 @@ class TestEmbeddingManager:
             mock_fastembed.return_value = mock_fastembed_instance
 
             # Both providers fail
-            mock_openai_instance.generate_embeddings.side_effect = EmbeddingServiceError(
-                "OpenAI failed"
+            mock_openai_instance.generate_embeddings.side_effect = (
+                EmbeddingServiceError("OpenAI failed")
             )
-            mock_fastembed_instance.generate_embeddings.side_effect = EmbeddingServiceError(
-                "FastEmbed failed"
+            mock_fastembed_instance.generate_embeddings.side_effect = (
+                EmbeddingServiceError("FastEmbed failed")
             )
 
             await embedding_manager.initialize()
@@ -456,7 +494,9 @@ class TestEmbeddingManager:
         config = UnifiedConfig()  # No API keys
         embedding_manager = EmbeddingManager(config)
 
-        with patch("src.services.embeddings.manager.FastEmbedProvider") as mock_fastembed:
+        with patch(
+            "src.services.embeddings.manager.FastEmbedProvider"
+        ) as mock_fastembed:
             mock_fastembed_instance = AsyncMock()
             mock_fastembed.return_value = mock_fastembed_instance
 

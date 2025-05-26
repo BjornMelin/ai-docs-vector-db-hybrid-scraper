@@ -14,6 +14,7 @@ def config():
     """Create test configuration."""
     # When using nested config objects directly
     from src.config.models import QdrantConfig
+
     return UnifiedConfig(
         qdrant=QdrantConfig(
             url="http://localhost:6333",
