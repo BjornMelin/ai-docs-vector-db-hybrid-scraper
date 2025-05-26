@@ -323,6 +323,43 @@
   - [ ] Implement semantic chunking with sentence transformers (future)
   - [ ] Add hierarchical chunking for long documents (future)
 
+### Advanced Chunking Future Enhancements
+
+- [ ] **Extended Multi-Language Support** `feat/extended-languages`
+  - [ ] Add support for Go, Rust, Java parsers
+  - [ ] Create language-specific chunking rules for each
+  - [ ] Add configuration for per-language chunk preferences
+  - [ ] Implement unified interface for all language parsers
+  - [ ] Add support for mixed-language repositories
+
+- [ ] **Adaptive Chunk Sizing** `feat/adaptive-chunking`
+  - [ ] Implement dynamic chunk sizing based on code complexity
+  - [ ] Create function-size-aware chunking (larger chunks for big functions)
+  - [ ] Add configuration for maximum function chunk size (3200 chars)
+  - [ ] Implement complexity-based overlap strategies
+  - [ ] Create hierarchical chunking (file → class → method levels)
+
+- [ ] **Context-Aware Embedding Enhancement** `feat/context-embeddings`
+  - [ ] Implement related code segment grouping
+  - [ ] Add import statement handling and preservation
+  - [ ] Create cross-reference aware chunking
+  - [ ] Implement documentation-code alignment
+  - [ ] Add metadata enrichment for chunks (function type, complexity, etc.)
+
+- [ ] **Advanced Chunking Configuration** `feat/chunking-config`
+  - [ ] Create ChunkingConfig class with comprehensive options
+  - [ ] Add enable_ast_chunking toggle
+  - [ ] Implement preserve_function_boundaries option
+  - [ ] Create overlap_strategy selection (semantic/structural/hybrid)
+  - [ ] Add supported_languages configuration list
+
+- [ ] **Chunking Performance Optimization** `feat/chunking-performance`
+  - [ ] Implement lazy loading of Tree-sitter parsers
+  - [ ] Add chunking performance metrics collection
+  - [ ] Create memory usage optimization for large files
+  - [ ] Implement parallel processing for multiple files
+  - [ ] Add chunk caching for repeated content
+
 ### Performance & Scalability
 
 - [ ] **Production-Grade Performance** `feat/production-performance` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
@@ -470,6 +507,13 @@
   - [ ] Create automated tagging and categorization
   - [ ] Add content freshness detection
   - [ ] Implement smart duplicate detection
+
+- [ ] **Experimental Chunking Strategies** `feat/experimental-chunking`
+  - [ ] Research and implement agentic chunking approaches
+  - [ ] Add LLM-assisted boundary detection
+  - [ ] Create domain-specific chunking rules
+  - [ ] Implement graph-based code relationship chunking
+  - [ ] Add multimodal chunking (code + diagrams + docs)
 
 ---
 
