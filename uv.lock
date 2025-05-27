@@ -71,7 +71,7 @@ requires-dist = [
     { name = "colorlog", specifier = ">=6.9.0" },
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.6.3" },
     { name = "fastembed", specifier = "==0.6.1" },
-    { name = "fastmcp", specifier = ">=2.5.0" },
+    { name = "fastmcp", specifier = ">=2.5.1" },
     { name = "firecrawl-py", specifier = ">=2.7.0" },
     { name = "flagembedding", specifier = ">=1.3.4" },
     { name = "httpx", specifier = ">=0.28.1" },
@@ -594,7 +594,7 @@ wheels = [
 
 [[package]]
 name = "fastmcp"
-version = "2.5.0"
+version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup" },
@@ -606,9 +606,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/88/fb6be09318d69792757545b39d88a2d918f1655fae442ada61559b3113ea/fastmcp-2.5.0.tar.gz", hash = "sha256:fcad2fd281cbcb883570116a1c68939b5e5b460f497f502336204280c8385a59", size = 1035515 }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/cc/37ff3a96338234a697df31d2c70b50a1d0f5e20f045d9b7cbba052be36af/fastmcp-2.5.1.tar.gz", hash = "sha256:0d10ec65a362ae4f78bdf3b639faf35b36cc0a1c8f5461a54fac906fe821b84d", size = 1035613 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/54/fc9a2b1dc6e1fd564f158e48550f9c2a5abfa0819d3aaf5e803e63fca284/fastmcp-2.5.0-py3-none-any.whl", hash = "sha256:9001227c3923b5a3a8138f5d78869e82c8f54f9184c52dde95bf719278861043", size = 105797 },
+    { url = "https://files.pythonhosted.org/packages/df/4f/e7ec7b63eadcd5b10978dbc472fc3c36de3fc8c91f60ad7642192ed78836/fastmcp-2.5.1-py3-none-any.whl", hash = "sha256:a6fe50693954a6aed89fc6e43f227dcd66e112e3d3a1d633ee22b4f435ee8aed", size = 105789 },
 ]
 
 [[package]]

@@ -16,7 +16,6 @@ from crawl4ai import BrowserConfig
 from crawl4ai import CacheMode
 from crawl4ai import CrawlerMonitor
 from crawl4ai import CrawlerRunConfig
-from crawl4ai import DisplayMode
 from crawl4ai.async_dispatcher import MemoryAdaptiveDispatcher
 from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
 from crawl4ai.deep_crawling import BFSDeepCrawlStrategy
