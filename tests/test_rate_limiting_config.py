@@ -4,7 +4,6 @@ import pytest
 from src.config.models import PerformanceConfig
 from src.config.models import UnifiedConfig
 from src.services.rate_limiter import RateLimitManager
-from src.services.rate_limiter import initialize_rate_limiter
 
 
 class TestRateLimitingConfiguration:
@@ -79,37 +78,25 @@ class TestRateLimitingConfiguration:
         assert limiter.max_calls == 123
         assert limiter.time_window == 456
 
-    def test_rate_limit_manager_without_config(self):
-        """Test RateLimitManager fallback to defaults when no config provided."""
-        manager = RateLimitManager()
+    def test_rate_limit_manager_requires_config(self):
+        """Test that RateLimitManager requires UnifiedConfig."""
+        with pytest.raises(TypeError, match="missing 1 required positional argument"):
+            RateLimitManager()  # Should fail without config
 
-        # Check that fallback defaults are used
-        expected_defaults = {
-            "openai": {"max_calls": 500, "time_window": 60},
-            "firecrawl": {"max_calls": 100, "time_window": 60},
-            "crawl4ai": {"max_calls": 50, "time_window": 1},
-            "qdrant": {"max_calls": 100, "time_window": 1},
-        }
-        assert manager.default_limits == expected_defaults
-
-    def test_initialize_rate_limiter_function(self):
-        """Test the initialize_rate_limiter function."""
-        # Create config with custom limits
+    def test_rate_limit_manager_unknown_provider_error(self):
+        """Test that unknown providers raise clear error messages."""
         config = UnifiedConfig()
         config.performance.default_rate_limits = {
-            "global_test": {"max_calls": 999, "time_window": 111}
+            "known_provider": {"max_calls": 100, "time_window": 60}
         }
 
-        # Initialize global manager
-        initialize_rate_limiter(config)
+        manager = RateLimitManager(config)
 
-        # Import again to get the updated global instance
-        from src.services.rate_limiter import rate_limit_manager as updated_manager
-
-        # Check that global manager was updated
-        limiter = updated_manager.get_limiter("global_test")
-        assert limiter.max_calls == 999
-        assert limiter.time_window == 111
+        # Should raise error for unknown provider
+        with pytest.raises(
+            ValueError, match="No rate limits configured for provider 'unknown'"
+        ):
+            manager.get_limiter("unknown")
 
     def test_unified_config_rate_limits_integration(self):
         """Test that UnifiedConfig properly includes rate limiting configuration."""
@@ -170,17 +157,19 @@ class TestRateLimitingConfiguration:
         assert limiter_c.max_calls == 30
         assert limiter_c.time_window == 3
 
-    def test_rate_limit_manager_unknown_provider_fallback(self):
-        """Test that unknown providers fall back to default limits."""
+    def test_rate_limit_manager_configured_provider_works(self):
+        """Test that configured providers work correctly."""
         config = UnifiedConfig()
+        config.performance.default_rate_limits = {
+            "test_provider": {"max_calls": 42, "time_window": 30}
+        }
+
         manager = RateLimitManager(config)
 
-        # Request limiter for unknown provider
-        limiter = manager.get_limiter("unknown_provider")
-
-        # Should fall back to default 60/min
-        assert limiter.max_calls == 60
-        assert limiter.time_window == 60
+        # Should work for configured provider
+        limiter = manager.get_limiter("test_provider")
+        assert limiter.max_calls == 42
+        assert limiter.time_window == 30
 
     def test_complex_rate_limits_configuration(self):
         """Test complex rate limiting configuration scenarios."""

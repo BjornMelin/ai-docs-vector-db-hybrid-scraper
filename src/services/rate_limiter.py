@@ -3,9 +3,6 @@
 import asyncio
 import logging
 import time
-from collections.abc import Callable
-from functools import wraps
-from typing import Any
 from typing import TypeVar
 
 from ..config.models import UnifiedConfig
@@ -101,25 +98,14 @@ class RateLimitManager:
     with configurable limits per provider and endpoint.
     """
 
-    def __init__(self, config: UnifiedConfig | None = None):
+    def __init__(self, config: UnifiedConfig):
         """Initialize rate limit manager.
 
         Args:
-            config: UnifiedConfig instance. If None, will use defaults.
+            config: UnifiedConfig instance with rate limiting configuration.
         """
         self.limiters: dict[str, RateLimiter] = {}
-
-        # Load rate limits from config or use defaults
-        if config is not None:
-            self.default_limits = config.performance.default_rate_limits.copy()
-        else:
-            # Fallback defaults if config is not provided
-            self.default_limits = {
-                "openai": {"max_calls": 500, "time_window": 60},  # 500/min
-                "firecrawl": {"max_calls": 100, "time_window": 60},  # 100/min
-                "crawl4ai": {"max_calls": 50, "time_window": 1},  # 50/sec
-                "qdrant": {"max_calls": 100, "time_window": 1},  # 100/sec
-            }
+        self.default_limits = config.performance.default_rate_limits.copy()
 
     def get_limiter(self, provider: str, endpoint: str | None = None) -> RateLimiter:
         """Get or create rate limiter for provider/endpoint.
@@ -134,11 +120,14 @@ class RateLimitManager:
         key = f"{provider}:{endpoint}" if endpoint else provider
 
         if key not in self.limiters:
-            # Get default limits for provider
-            limits = self.default_limits.get(
-                provider,
-                {"max_calls": 60, "time_window": 60},  # Default 60/min
-            )
+            # Get limits for provider or raise error if not configured
+            if provider not in self.default_limits:
+                raise ValueError(
+                    f"No rate limits configured for provider '{provider}'. "
+                    f"Available providers: {list(self.default_limits.keys())}"
+                )
+
+            limits = self.default_limits[provider]
 
             self.limiters[key] = RateLimiter(
                 max_calls=limits["max_calls"],
@@ -169,72 +158,13 @@ class RateLimitManager:
         await limiter.acquire(tokens)
 
 
-# Global rate limit manager instance
-rate_limit_manager = RateLimitManager()
+# Note: RateLimitManager instances should be created by services
+# that inject the UnifiedConfig dependency rather than using global state.
 
 
-def initialize_rate_limiter(config: UnifiedConfig) -> None:
-    """Initialize the global rate limit manager with configuration.
-
-    This function allows updating the global rate limiter with configuration
-    after the module has been imported.
-
-    Args:
-        config: UnifiedConfig instance with rate limiting settings
-    """
-    global rate_limit_manager  # noqa: PLW0603
-    rate_limit_manager = RateLimitManager(config)
-    logger.info("Rate limit manager initialized with configuration")
-
-
-def rate_limited(
-    provider: str,
-    endpoint: str | None = None,
-    tokens: int = 1,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """Decorator for rate-limited async functions.
-
-    Automatically acquires tokens before executing the function
-    and handles rate limit waiting transparently.
-
-    Args:
-        provider: Provider name for rate limiting
-        endpoint: Optional specific endpoint
-        tokens: Number of tokens to consume
-
-    Returns:
-        Decorated function with rate limiting
-
-    Example:
-        >>> @rate_limited("openai", tokens=1)
-        ... async def call_openai_api():
-        ...     return await client.embeddings.create(...)
-    """
-
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> T:
-            # Acquire tokens before calling function
-            await rate_limit_manager.acquire(provider, endpoint, tokens)
-            return await func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def configure_rate_limits(limits: dict[str, dict[str, int]]) -> None:
-    """Configure custom rate limits for providers.
-
-    Args:
-        limits: Dictionary of provider -> limit configuration
-            Example: {
-                "openai": {"max_calls": 1000, "time_window": 60},
-                "custom_api": {"max_calls": 10, "time_window": 1}
-            }
-    """
-    rate_limit_manager.default_limits.update(limits)
-    logger.info(f"Updated rate limits for {len(limits)} providers")
+# Rate limiting decorators and global configuration functions have been removed
+# in favor of dependency injection. Services should create their own
+# RateLimitManager instances with the appropriate UnifiedConfig.
 
 
 class AdaptiveRateLimiter(RateLimiter):
