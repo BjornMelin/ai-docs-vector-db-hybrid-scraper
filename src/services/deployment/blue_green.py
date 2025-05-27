@@ -54,6 +54,8 @@ class BlueGreenDeployment(BaseService):
         validation_queries: list[str],
         rollback_on_failure: bool = True,
         validation_threshold: float = 0.7,
+        health_check_interval: int = 10,
+        health_check_duration: int = 300,
     ) -> dict[str, Any]:
         """Deploy new collection version with validation.
 
@@ -63,6 +65,8 @@ class BlueGreenDeployment(BaseService):
             validation_queries: List of queries to validate deployment
             rollback_on_failure: Whether to rollback on validation failure
             validation_threshold: Minimum score threshold for validation
+            health_check_interval: Seconds between health checks (default: 10)
+            health_check_duration: Total seconds to monitor after switch (default: 300)
 
         Returns:
             Deployment result with status and details
@@ -108,7 +112,11 @@ class BlueGreenDeployment(BaseService):
             )
 
             # 5. Monitor for issues
-            await self._monitor_after_switch(alias_name, duration_seconds=300)
+            await self._monitor_after_switch(
+                alias_name,
+                duration_seconds=health_check_duration,
+                check_interval=health_check_interval,
+            )
 
             # 6. Schedule old collection cleanup
             # Store task reference to avoid RUF006 warning
@@ -220,15 +228,18 @@ class BlueGreenDeployment(BaseService):
         return True
 
     async def _monitor_after_switch(
-        self, alias_name: str, duration_seconds: int
+        self, alias_name: str, duration_seconds: int, check_interval: int = 10
     ) -> None:
         """Monitor collection after switch for issues.
 
         Args:
             alias_name: Alias to monitor
             duration_seconds: How long to monitor
+            check_interval: Seconds between health checks
         """
-        logger.info(f"Monitoring {alias_name} for {duration_seconds}s")
+        logger.info(
+            f"Monitoring {alias_name} for {duration_seconds}s with {check_interval}s intervals"
+        )
 
         start_time = asyncio.get_event_loop().time()
         error_count = 0
@@ -255,7 +266,7 @@ class BlueGreenDeployment(BaseService):
                 logger.error(f"Monitoring error: {e}")
                 error_count += 1
 
-            await asyncio.sleep(10)
+            await asyncio.sleep(check_interval)
 
     async def _rollback(
         self,

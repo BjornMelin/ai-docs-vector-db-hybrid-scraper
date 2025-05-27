@@ -1984,6 +1984,28 @@ async def start_canary_deployment(
     if ctx:
         await ctx.info(f"Starting canary deployment for alias {alias}")
 
+    # Validate stages if provided
+    if stages:
+        for i, stage in enumerate(stages):
+            if not isinstance(stage, dict):
+                raise ValueError(f"Stage {i} must be a dictionary")
+            if "percentage" not in stage:
+                raise ValueError(f"Stage {i} missing required 'percentage' field")
+            if "duration_minutes" not in stage:
+                raise ValueError(f"Stage {i} missing required 'duration_minutes' field")
+
+            percentage = stage["percentage"]
+            if (
+                not isinstance(percentage, int | float)
+                or percentage < 0
+                or percentage > 100
+            ):
+                raise ValueError(f"Stage {i} percentage must be between 0 and 100")
+
+            duration = stage["duration_minutes"]
+            if not isinstance(duration, int | float) or duration <= 0:
+                raise ValueError(f"Stage {i} duration_minutes must be positive")
+
     deployment_id = await service_manager.canary.start_canary(
         alias_name=alias,
         new_collection=new_collection,

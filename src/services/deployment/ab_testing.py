@@ -9,12 +9,8 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
-try:
-    import numpy as np
-    from scipy import stats
-except ImportError:
-    np = None
-    stats = None
+import numpy as np
+from scipy import stats
 
 from ...config import UnifiedConfig
 from ..base import BaseService
@@ -328,48 +324,47 @@ class ABTestingManager(BaseService):
             analysis["improvement"] = None
             analysis["improvement_percent"] = None
 
-        # Statistical significance testing if scipy is available
-        if stats is not None:
-            try:
-                # Perform t-test
-                t_stat, p_value = stats.ttest_ind(control_data, treatment_data)
-                analysis["t_statistic"] = t_stat
-                analysis["p_value"] = p_value
-                analysis["significant"] = p_value < 0.05
+        # Statistical significance testing
+        try:
+            # Perform t-test
+            t_stat, p_value = stats.ttest_ind(control_data, treatment_data)
+            analysis["t_statistic"] = t_stat
+            analysis["p_value"] = p_value
+            analysis["significant"] = p_value < 0.05
 
-                # Calculate confidence interval
-                confidence_level = 0.95
-                control_sem = stats.sem(control_data)
-                treatment_sem = stats.sem(treatment_data)
+            # Calculate confidence interval
+            confidence_level = 0.95
+            control_sem = stats.sem(control_data)
+            treatment_sem = stats.sem(treatment_data)
 
-                control_ci = stats.t.interval(
-                    confidence_level,
-                    len(control_data) - 1,
-                    loc=control_mean,
-                    scale=control_sem,
-                )
-                treatment_ci = stats.t.interval(
-                    confidence_level,
-                    len(treatment_data) - 1,
-                    loc=treatment_mean,
-                    scale=treatment_sem,
-                )
+            control_ci = stats.t.interval(
+                confidence_level,
+                len(control_data) - 1,
+                loc=control_mean,
+                scale=control_sem,
+            )
+            treatment_ci = stats.t.interval(
+                confidence_level,
+                len(treatment_data) - 1,
+                loc=treatment_mean,
+                scale=treatment_sem,
+            )
 
-                analysis["control_ci"] = control_ci
-                analysis["treatment_ci"] = treatment_ci
+            analysis["control_ci"] = control_ci
+            analysis["treatment_ci"] = treatment_ci
 
-                # Effect size (Cohen's d)
-                pooled_std = (
-                    (len(control_data) - 1) * np.std(control_data, ddof=1) ** 2
-                    + (len(treatment_data) - 1) * np.std(treatment_data, ddof=1) ** 2
-                ) / (len(control_data) + len(treatment_data) - 2)
-                pooled_std = pooled_std**0.5
-                cohens_d = (treatment_mean - control_mean) / pooled_std
-                analysis["effect_size"] = cohens_d
+            # Effect size (Cohen's d)
+            pooled_std = (
+                (len(control_data) - 1) * np.std(control_data, ddof=1) ** 2
+                + (len(treatment_data) - 1) * np.std(treatment_data, ddof=1) ** 2
+            ) / (len(control_data) + len(treatment_data) - 2)
+            pooled_std = pooled_std**0.5
+            cohens_d = (treatment_mean - control_mean) / pooled_std
+            analysis["effect_size"] = cohens_d
 
-            except Exception as e:
-                logger.warning(f"Statistical analysis failed: {e}")
-                analysis["statistical_error"] = str(e)
+        except Exception as e:
+            logger.warning(f"Statistical analysis failed: {e}")
+            analysis["statistical_error"] = str(e)
 
         return analysis
 

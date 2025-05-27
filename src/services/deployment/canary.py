@@ -7,11 +7,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
-
 from ...config import UnifiedConfig
 from ..base import BaseService
 from ..errors import ServiceError

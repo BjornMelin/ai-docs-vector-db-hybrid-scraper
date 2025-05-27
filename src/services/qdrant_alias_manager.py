@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import re
+from typing import Callable
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import CreateAlias
@@ -12,7 +14,12 @@ from qdrant_client.models import DeleteAliasOperation
 from ..config import UnifiedConfig
 from .base import BaseService
 from .errors import QdrantServiceError
+
 logger = logging.getLogger(__name__)
+
+# Valid collection/alias name pattern (alphanumeric, underscore, hyphen)
+VALID_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+MAX_NAME_LENGTH = 255
 
 
 class QdrantAliasManager(BaseService):
@@ -29,13 +36,45 @@ class QdrantAliasManager(BaseService):
         self.client = client
         self._initialized = True  # Already initialized via client
 
+    @staticmethod
+    def validate_name(name: str, name_type: str = "name") -> None:
+        """Validate collection or alias name.
+
+        Args:
+            name: Name to validate
+            name_type: Type of name for error message
+
+        Raises:
+            QdrantServiceError: If name is invalid
+        """
+        if not name:
+            raise QdrantServiceError(f"{name_type} cannot be empty")
+
+        if len(name) > MAX_NAME_LENGTH:
+            raise QdrantServiceError(
+                f"{name_type} '{name}' exceeds maximum length of {MAX_NAME_LENGTH}"
+            )
+
+        if not VALID_NAME_PATTERN.match(name):
+            raise QdrantServiceError(
+                f"{name_type} '{name}' contains invalid characters. "
+                "Only alphanumeric, underscore, and hyphen are allowed."
+            )
+
     async def initialize(self) -> None:
         """No-op as client is already initialized."""
         pass
 
     async def cleanup(self) -> None:
-        """No-op as client cleanup is handled elsewhere."""
-        pass
+        """Cleanup any pending deletion tasks."""
+        if hasattr(self, "_deletion_tasks"):
+            # Cancel all pending deletion tasks
+            for task in self._deletion_tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for cancellations to complete
+            await asyncio.gather(*self._deletion_tasks, return_exceptions=True)
+            self._deletion_tasks.clear()
 
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False
@@ -53,6 +92,10 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
+        # Validate names
+        self.validate_name(alias_name, "Alias name")
+        self.validate_name(collection_name, "Collection name")
+
         try:
             # Check if alias exists
             if await self.alias_exists(alias_name):
@@ -98,6 +141,10 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
+        # Validate names
+        self.validate_name(alias_name, "Alias name")
+        self.validate_name(new_collection, "Collection name")
+
         try:
             # Get current collection
             old_collection = await self.get_collection_for_alias(alias_name)
@@ -228,6 +275,9 @@ class QdrantAliasManager(BaseService):
     ) -> None:
         """Safely delete collection after grace period.
 
+        Note: This schedules deletion but returns immediately.
+        For production use, consider using a proper task queue.
+
         Args:
             collection_name: Name of collection to delete
             grace_period_minutes: Minutes to wait before deletion
@@ -243,16 +293,27 @@ class QdrantAliasManager(BaseService):
             f"Scheduling deletion of {collection_name} in {grace_period_minutes} minutes"
         )
 
-        await asyncio.sleep(grace_period_minutes * 60)
+        # Create a background task for deletion
+        async def _delayed_delete():
+            """Background task to delete collection after delay."""
+            await asyncio.sleep(grace_period_minutes * 60)
 
-        # Double-check no aliases
-        aliases = await self.list_aliases()
-        if collection_name not in aliases.values():
-            try:
-                await self.client.delete_collection(collection_name)
-                logger.info(f"Deleted collection {collection_name}")
-            except Exception as e:
-                logger.error(f"Failed to delete collection {collection_name}: {e}")
+            # Double-check no aliases
+            aliases = await self.list_aliases()
+            if collection_name not in aliases.values():
+                try:
+                    await self.client.delete_collection(collection_name)
+                    logger.info(f"Deleted collection {collection_name}")
+                except Exception as e:
+                    logger.error(f"Failed to delete collection {collection_name}: {e}")
+
+        # Schedule as background task - returns immediately
+        task = asyncio.create_task(_delayed_delete())
+        # Store task reference to prevent garbage collection
+        if not hasattr(self, "_deletion_tasks"):
+            self._deletion_tasks = set()
+        self._deletion_tasks.add(task)
+        task.add_done_callback(self._deletion_tasks.discard)
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
         """Clone collection schema from source to target.
@@ -309,6 +370,7 @@ class QdrantAliasManager(BaseService):
         target: str,
         batch_size: int = 100,
         limit: int | None = None,
+        progress_callback: Callable | None = None,
     ) -> int:
         """Copy data from source collection to target.
 
@@ -317,6 +379,7 @@ class QdrantAliasManager(BaseService):
             target: Target collection name
             batch_size: Number of points to copy per batch
             limit: Maximum number of points to copy (None for all)
+            progress_callback: Optional callback(copied, total) for progress updates
 
         Returns:
             Number of points copied
@@ -324,7 +387,17 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
+        # Validate names
+        self.validate_name(source, "Source collection name")
+        self.validate_name(target, "Target collection name")
+
         try:
+            # Get total count for progress reporting
+            source_info = await self.client.get_collection(source)
+            total_points = source_info.points_count or 0
+
+            if limit and total_points > limit:
+                total_points = limit
             total_copied = 0
             offset = None
 
@@ -350,6 +423,13 @@ class QdrantAliasManager(BaseService):
                 total_copied += len(records)
                 logger.debug(f"Copied {total_copied} points from {source} to {target}")
 
+                # Call progress callback if provided
+                if progress_callback:
+                    try:
+                        await progress_callback(total_copied, total_points)
+                    except Exception as e:
+                        logger.warning(f"Progress callback failed: {e}")
+
                 # Check limit
                 if limit and total_copied >= limit:
                     break
@@ -365,3 +445,59 @@ class QdrantAliasManager(BaseService):
         except Exception as e:
             logger.error(f"Failed to copy collection data: {e}")
             raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
+
+    async def validate_collection_compatibility(
+        self, collection1: str, collection2: str
+    ) -> tuple[bool, str]:
+        """Validate that two collections have compatible schemas.
+
+        Args:
+            collection1: First collection name
+            collection2: Second collection name
+
+        Returns:
+            Tuple of (is_compatible, message)
+        """
+        try:
+            # Get collection info
+            info1 = await self.client.get_collection(collection1)
+            info2 = await self.client.get_collection(collection2)
+
+            # Check vector configs
+            vectors1 = info1.config.params.vectors
+            vectors2 = info2.config.params.vectors
+
+            # Convert to comparable format
+            def normalize_vectors(v):
+                if hasattr(v, "model_dump"):
+                    return v.model_dump()
+                return v
+
+            vectors1_norm = normalize_vectors(vectors1)
+            vectors2_norm = normalize_vectors(vectors2)
+
+            if vectors1_norm != vectors2_norm:
+                return (
+                    False,
+                    f"Vector configurations differ: {collection1} vs {collection2}",
+                )
+
+            # Check HNSW configs if present
+            hnsw1 = info1.config.hnsw_config
+            hnsw2 = info2.config.hnsw_config
+
+            if hnsw1 and hnsw2 and (hnsw1.m != hnsw2.m or hnsw1.ef_construct != hnsw2.ef_construct):
+                return False, "HNSW configurations differ"
+
+            # Check quantization configs if present
+            quant1 = info1.config.quantization_config
+            quant2 = info2.config.quantization_config
+
+            if (quant1 is None) != (quant2 is None):
+                return False, "Quantization configuration mismatch"
+
+            return True, "Collections are compatible"
+
+        except Exception as e:
+            logger.error(f"Failed to validate collection compatibility: {e}")
+            return False, f"Validation error: {e!s}"
