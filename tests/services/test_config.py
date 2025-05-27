@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
 from src.config.models import CacheConfig
+from src.config.models import FirecrawlConfig
 from src.config.models import OpenAIConfig
 from src.config.models import PerformanceConfig
 from src.config.models import QdrantConfig
@@ -210,3 +211,213 @@ class TestUnifiedConfig:
         # AI_DOCS__OPENAI__API_KEY=sk-test123
         # AI_DOCS__CACHE__TTL_EMBEDDINGS=7200
         pass
+
+
+class TestOpenAIConfigValidation:
+    """Test OpenAI configuration API key validation."""
+
+    def test_valid_openai_api_keys(self):
+        """Test valid OpenAI API key formats."""
+        # Valid key format with minimum length (20+ chars)
+        valid_key = "sk-" + "a" * 17  # 20 characters total
+        config = OpenAIConfig(api_key=valid_key)
+        assert config.api_key == valid_key
+        
+        # Valid longer key (traditional format)
+        valid_key_long = "sk-" + "a" * 48  # 51 characters total
+        config = OpenAIConfig(api_key=valid_key_long)
+        assert config.api_key == valid_key_long
+
+        # Valid key with mixed alphanumeric and hyphens
+        valid_key_mixed = "sk-test1234567890abcdef-test123"
+        config = OpenAIConfig(api_key=valid_key_mixed)
+        assert config.api_key == valid_key_mixed
+
+        # Valid key is None (optional)
+        config = OpenAIConfig(api_key=None)
+        assert config.api_key is None
+
+        # Valid empty string becomes None
+        config = OpenAIConfig(api_key="")
+        assert config.api_key is None
+
+        # Valid key with whitespace gets stripped
+        valid_key_whitespace = "  sk-" + "a" * 17 + "  "
+        config = OpenAIConfig(api_key=valid_key_whitespace)
+        assert config.api_key == "sk-" + "a" * 17
+
+    def test_invalid_openai_api_keys(self):
+        """Test invalid OpenAI API key formats."""
+        # Missing sk- prefix
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="invalid-prefix-" + "a" * 40)
+        assert "must start with 'sk-'" in str(exc_info.value)
+
+        # Too short
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-short")
+        assert "too short" in str(exc_info.value)
+
+        # Invalid characters (spaces) - make sure it's long enough to trigger character validation
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-invalid key with spaces123")
+        assert "invalid characters" in str(exc_info.value)
+
+        # Invalid characters (special symbols) - make sure it's long enough
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-invalid@key#with$symbols123")
+        assert "invalid characters" in str(exc_info.value)
+        
+        # Unicode characters should be rejected
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-tëst" + "a" * 15)  # Unicode chars
+        assert "non-ASCII characters" in str(exc_info.value)
+        
+        # Too long (DoS protection)
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-" + "a" * 500)  # Too long
+        assert "too long" in str(exc_info.value)
+
+        # Just the prefix without content
+        with pytest.raises(ValidationError) as exc_info:
+            OpenAIConfig(api_key="sk-")
+        assert "too short" in str(exc_info.value)
+
+
+class TestFirecrawlConfigValidation:
+    """Test Firecrawl configuration API key validation."""
+
+    def test_valid_firecrawl_api_keys(self):
+        """Test valid Firecrawl API key formats."""
+        # Valid key format with minimum length
+        valid_key = "fc-test123456"
+        config = FirecrawlConfig(api_key=valid_key)
+        assert config.api_key == valid_key
+
+        # Valid key with mixed alphanumeric, hyphens, and underscores
+        valid_key_mixed = "fc-test_123-456_789"
+        config = FirecrawlConfig(api_key=valid_key_mixed)
+        assert config.api_key == valid_key_mixed
+
+        # Valid key is None (optional)
+        config = FirecrawlConfig(api_key=None)
+        assert config.api_key is None
+
+        # Valid empty string becomes None
+        config = FirecrawlConfig(api_key="")
+        assert config.api_key is None
+
+        # Valid key with whitespace gets stripped
+        valid_key_whitespace = "  fc-test123456  "
+        config = FirecrawlConfig(api_key=valid_key_whitespace)
+        assert config.api_key == "fc-test123456"
+
+    def test_invalid_firecrawl_api_keys(self):
+        """Test invalid Firecrawl API key formats."""
+        # Missing fc- prefix
+        with pytest.raises(ValidationError) as exc_info:
+            FirecrawlConfig(api_key="invalid-prefix-123456")
+        assert "must start with 'fc-'" in str(exc_info.value)
+
+        # Too short
+        with pytest.raises(ValidationError) as exc_info:
+            FirecrawlConfig(api_key="fc-short")
+        assert "too short" in str(exc_info.value)
+
+        # Invalid characters (spaces)
+        with pytest.raises(ValidationError) as exc_info:
+            FirecrawlConfig(api_key="fc-invalid key with spaces")
+        assert "invalid characters" in str(exc_info.value)
+
+        # Invalid characters (special symbols)
+        with pytest.raises(ValidationError) as exc_info:
+            FirecrawlConfig(api_key="fc-invalid@key#with$symbols")
+        assert "invalid characters" in str(exc_info.value)
+
+        # Just the prefix without content
+        with pytest.raises(ValidationError) as exc_info:
+            FirecrawlConfig(api_key="fc-")
+        assert "too short" in str(exc_info.value)
+
+
+class TestUnifiedConfigProviderValidation:
+    """Test UnifiedConfig provider-based API key validation."""
+
+    def test_openai_provider_requires_api_key(self):
+        """Test that OpenAI provider requires valid API key."""
+        # Should fail when OpenAI provider selected but no API key
+        with pytest.raises(ValidationError) as exc_info:
+            UnifiedConfig(
+                embedding_provider=EmbeddingProvider.OPENAI,
+                openai=OpenAIConfig(api_key=None),
+            )
+        assert "OpenAI API key required" in str(exc_info.value)
+
+        # Should succeed when OpenAI provider and valid API key provided
+        config = UnifiedConfig(
+            embedding_provider=EmbeddingProvider.OPENAI,
+            openai=OpenAIConfig(api_key="sk-" + "a" * 17),
+        )
+        assert config.embedding_provider == EmbeddingProvider.OPENAI
+        assert config.openai.api_key == "sk-" + "a" * 17
+
+        # Should succeed when FastEmbed provider (no API key needed)
+        config = UnifiedConfig(
+            embedding_provider=EmbeddingProvider.FASTEMBED,
+            openai=OpenAIConfig(api_key=None),  # No key needed for FastEmbed
+        )
+        assert config.embedding_provider == EmbeddingProvider.FASTEMBED
+
+    def test_firecrawl_provider_requires_api_key(self):
+        """Test that Firecrawl provider requires valid API key."""
+        # Should fail when Firecrawl provider selected but no API key
+        with pytest.raises(ValidationError) as exc_info:
+            UnifiedConfig(
+                crawl_provider=CrawlProvider.FIRECRAWL,
+                firecrawl=FirecrawlConfig(api_key=None),
+            )
+        assert "Firecrawl API key required" in str(exc_info.value)
+
+        # Should succeed when Firecrawl provider and valid API key provided
+        config = UnifiedConfig(
+            crawl_provider=CrawlProvider.FIRECRAWL,
+            firecrawl=FirecrawlConfig(api_key="fc-test123456"),
+        )
+        assert config.crawl_provider == CrawlProvider.FIRECRAWL
+        assert config.firecrawl.api_key == "fc-test123456"
+
+        # Should succeed when Crawl4AI provider (no API key needed)
+        config = UnifiedConfig(
+            crawl_provider=CrawlProvider.CRAWL4AI,
+            firecrawl=FirecrawlConfig(api_key=None),  # No key needed for Crawl4AI
+        )
+        assert config.crawl_provider == CrawlProvider.CRAWL4AI
+
+    def test_combined_provider_validation(self):
+        """Test validation with both providers requiring API keys."""
+        # Should fail when both providers selected but keys missing
+        with pytest.raises(ValidationError) as exc_info:
+            UnifiedConfig(
+                embedding_provider=EmbeddingProvider.OPENAI,
+                crawl_provider=CrawlProvider.FIRECRAWL,
+                openai=OpenAIConfig(api_key=None),
+                firecrawl=FirecrawlConfig(api_key=None),
+            )
+        # Should mention at least one of the missing keys
+        error_msg = str(exc_info.value)
+        assert (
+            "OpenAI API key required" in error_msg
+            or "Firecrawl API key required" in error_msg
+        )
+
+        # Should succeed when both providers and valid API keys provided
+        config = UnifiedConfig(
+            embedding_provider=EmbeddingProvider.OPENAI,
+            crawl_provider=CrawlProvider.FIRECRAWL,
+            openai=OpenAIConfig(api_key="sk-" + "a" * 17),
+            firecrawl=FirecrawlConfig(api_key="fc-test123456"),
+        )
+        assert config.embedding_provider == EmbeddingProvider.OPENAI
+        assert config.crawl_provider == CrawlProvider.FIRECRAWL
+        assert config.openai.api_key == "sk-" + "a" * 17
+        assert config.firecrawl.api_key == "fc-test123456"

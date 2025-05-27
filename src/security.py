@@ -225,23 +225,7 @@ class SecurityValidator:
 
 
 class APIKeyValidator:
-    """API key validation and management."""
-
-    @staticmethod
-    def validate_openai_key(api_key: str) -> bool:
-        """Validate OpenAI API key format.
-
-        Args:
-            api_key: API key to validate
-
-        Returns:
-            True if format is valid
-        """
-        if not api_key or not isinstance(api_key, str):
-            return False
-
-        # OpenAI API keys typically start with 'sk-' and are 51+ characters
-        return api_key.startswith("sk-") and len(api_key) >= 51
+    """API key validation and management utilities."""
 
     @staticmethod
     def mask_api_key(api_key: str) -> str:
@@ -257,70 +241,3 @@ class APIKeyValidator:
             return "*" * 12
 
         return f"{api_key[:4]}{'*' * 8}{api_key[-4:]}"
-
-    @staticmethod
-    def validate_required_env_vars() -> dict[str, str]:
-        """Validate required environment variables.
-
-        Returns:
-            Dictionary of validated environment variables
-
-        Raises:
-            SecurityError: If required variables are missing or invalid
-        """
-        required_vars = ["OPENAI_API_KEY"]
-        optional_vars = ["QDRANT_URL", "FIRECRAWL_API_KEY"]
-
-        env_vars = {}
-
-        # Check required variables
-        for var in required_vars:
-            value = os.getenv(var)
-            if not value:
-                raise SecurityError(f"Required environment variable {var} is not set")
-
-            # Validate OpenAI API key format
-            if var == "OPENAI_API_KEY" and not APIKeyValidator.validate_openai_key(
-                value
-            ):
-                raise SecurityError(f"Invalid {var} format")
-
-            env_vars[var] = value
-            logger.info(f"{var}: {APIKeyValidator.mask_api_key(value)}")
-
-        # Check optional variables
-        for var in optional_vars:
-            value = os.getenv(var)
-            if value:
-                env_vars[var] = value
-                if "key" in var.lower():
-                    logger.info(f"{var}: {APIKeyValidator.mask_api_key(value)}")
-                else:
-                    logger.info(f"{var}: {value}")
-            else:
-                logger.info(f"{var}: not set (optional)")
-
-        return env_vars
-
-
-def validate_startup_security() -> dict[str, str]:
-    """Validate security requirements at startup.
-
-    Returns:
-        Validated environment variables
-
-    Raises:
-        SecurityError: If security validation fails
-    """
-    logger.info("Validating security requirements...")
-
-    try:
-        env_vars = APIKeyValidator.validate_required_env_vars()
-        logger.info("✅ Security validation passed")
-        return env_vars
-    except SecurityError as e:
-        logger.error(f"❌ Security validation failed: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Unexpected error during security validation: {e}")
-        raise SecurityError(f"Security validation error: {e}") from e

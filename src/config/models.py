@@ -4,6 +4,7 @@ This module provides a comprehensive configuration system that consolidates all
 settings across the application into a single, well-structured configuration model.
 """
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -136,9 +137,36 @@ class OpenAIConfig(BaseModel):
     @field_validator("api_key")
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
-        """Validate OpenAI API key format."""
-        if v and not v.startswith("sk-"):
+        """Validate OpenAI API key format and structure."""
+        if v is None:
+            return v
+
+        v = v.strip()
+        if not v:
+            return None
+            
+        # Check for ASCII-only characters (security requirement)
+        try:
+            v.encode('ascii')
+        except UnicodeEncodeError:
+            raise ValueError("OpenAI API key contains non-ASCII characters")
+
+        # OpenAI API keys must start with 'sk-' prefix
+        if not v.startswith("sk-"):
             raise ValueError("OpenAI API key must start with 'sk-'")
+
+        # OpenAI API keys have minimum viable length (various formats exist)
+        if len(v) < 20:
+            raise ValueError("OpenAI API key appears to be too short")
+        
+        # DoS protection - reasonable upper bound
+        if len(v) > 200:
+            raise ValueError("OpenAI API key appears to be too long")
+
+        # Check for valid characters (alphanumeric and hyphens)
+        if not re.match(r"^sk-[A-Za-z0-9-]+$", v):
+            raise ValueError("OpenAI API key contains invalid characters")
+
         return v
 
     @field_validator("model")
@@ -178,6 +206,41 @@ class FirecrawlConfig(BaseModel):
     timeout: float = Field(default=30.0, gt=0, description="Request timeout in seconds")
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("api_key")
+    @classmethod
+    def validate_api_key(cls, v: str | None) -> str | None:
+        """Validate Firecrawl API key format and structure."""
+        if v is None:
+            return v
+
+        v = v.strip()
+        if not v:
+            return None
+
+        # Firecrawl API keys must start with 'fc-' prefix
+        if not v.startswith("fc-"):
+            raise ValueError("Firecrawl API key must start with 'fc-'")
+
+        # Check for reasonable minimum length (fc- + some content)
+        if len(v) < 10:
+            raise ValueError("Firecrawl API key appears to be too short")
+        
+        # DoS protection - reasonable upper bound
+        if len(v) > 200:
+            raise ValueError("Firecrawl API key appears to be too long")
+            
+        # Check for ASCII-only characters (security requirement)
+        try:
+            v.encode('ascii')
+        except UnicodeEncodeError:
+            raise ValueError("Firecrawl API key contains non-ASCII characters")
+
+        # Check for valid characters (alphanumeric, hyphens, underscores)
+        if not re.match(r"^fc-[A-Za-z0-9_-]+$", v):
+            raise ValueError("Firecrawl API key contains invalid characters")
+
+        return v
 
 
 class Crawl4AIConfig(BaseModel):
