@@ -38,12 +38,13 @@ class ProjectStorage:
         """Initialize project storage.
 
         Args:
-            data_dir: Base data directory from UnifiedConfig
-            storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json
+            data_dir: Required base data directory from UnifiedConfig. Must be provided.
+            storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json.
+                When both storage_path and data_dir are provided, storage_path takes precedence.
         """
         if storage_path is None:
             base_dir = Path(data_dir)
-            base_dir.mkdir(exist_ok=True)
+            base_dir.mkdir(parents=True, exist_ok=True)
             storage_path = base_dir / "projects.json"
 
         self.storage_path = Path(storage_path)
