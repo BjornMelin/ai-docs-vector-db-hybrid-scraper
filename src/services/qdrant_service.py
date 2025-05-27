@@ -530,6 +530,23 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
+        # Validate input parameters
+        if not stages:
+            raise ValueError("Stages list cannot be empty")
+
+        if not isinstance(stages, list):
+            raise ValueError("Stages must be a list")
+
+        for i, stage in enumerate(stages):
+            if not isinstance(stage, dict):
+                raise ValueError(f"Stage {i} must be a dictionary")
+            if "query_vector" not in stage:
+                raise ValueError(f"Stage {i} must contain 'query_vector'")
+            if "vector_name" not in stage:
+                raise ValueError(f"Stage {i} must contain 'vector_name'")
+            if "limit" not in stage:
+                raise ValueError(f"Stage {i} must contain 'limit'")
+
         try:
             prefetch_queries = []
 
@@ -551,8 +568,7 @@ class QdrantService(BaseService):
                 )
                 prefetch_queries.append(prefetch_query)
 
-            # Final stage query
-            final_stage = stages[-1]
+            # Final stage query with fusion
             fusion_method = (
                 models.Fusion.RRF
                 if fusion_algorithm.lower() == "rrf"
@@ -562,10 +578,8 @@ class QdrantService(BaseService):
             # Execute multi-stage query
             results = await self._client.query_points(
                 collection_name=collection_name,
-                query=final_stage["query_vector"],
-                using=final_stage["vector_name"],
+                query=models.FusionQuery(fusion=fusion_method),
                 prefetch=prefetch_queries,
-                fusion=models.FusionQuery(fusion=fusion_method),
                 limit=limit,
                 params=self._get_search_params(search_accuracy),
                 with_payload=True,
@@ -709,6 +723,23 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
+        # Validate input parameters
+        if not isinstance(query_vector, list):
+            raise ValueError("query_vector must be a list")
+
+        if not query_vector:
+            raise ValueError("query_vector cannot be empty")
+
+        if not isinstance(filters, dict):
+            raise ValueError("filters must be a dictionary")
+
+        # Validate vector dimensions (assuming 1536 for OpenAI embeddings)
+        expected_dim = 1536
+        if len(query_vector) != expected_dim:
+            raise ValueError(
+                f"query_vector dimension {len(query_vector)} does not match expected {expected_dim}"
+            )
+
         try:
             # Build optimized Qdrant filter
             filter_obj = self._build_filter(filters)
@@ -785,9 +816,16 @@ class QdrantService(BaseService):
         # String field filters
         for field in ["doc_type", "language", "title", "url"]:
             if field in filters:
+                # Validate filter value is safe
+                filter_value = filters[field]
+                if not isinstance(filter_value, str | int | float | bool):
+                    raise ValueError(
+                        f"Filter value for {field} must be a simple type, got {type(filter_value)}"
+                    )
+
                 must_conditions.append(
                     models.FieldCondition(
-                        key=field, match=models.MatchValue(value=filters[field])
+                        key=field, match=models.MatchValue(value=filter_value)
                     )
                 )
 
