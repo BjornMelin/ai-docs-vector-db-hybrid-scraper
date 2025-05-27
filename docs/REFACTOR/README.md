@@ -15,25 +15,21 @@ The V1 refactor combines multiple high-impact improvements into an integrated sy
 
 ## Documentation Structure
 
-### Migration Guides
+### Core Components
 
 - [01_QDRANT_QUERY_API_MIGRATION.md](./01_QDRANT_QUERY_API_MIGRATION.md) - Migrating from search() to query_points()
-- [02_CRAWL4AI_INTEGRATION.md](./02_CRAWL4AI_INTEGRATION.md) - Replacing Firecrawl with Crawl4AI
-- [03_DRAGONFLY_CACHE_SETUP.md](./03_DRAGONFLY_CACHE_SETUP.md) - Implementing DragonflyDB caching
+- [02_PAYLOAD_INDEXING.md](./02_PAYLOAD_INDEXING.md) - Creating indexes for 10-100x faster filtering
+- [03_HNSW_OPTIMIZATION.md](./03_HNSW_OPTIMIZATION.md) - HNSW parameter tuning for accuracy
 - [04_HYDE_IMPLEMENTATION.md](./04_HYDE_IMPLEMENTATION.md) - Adding Hypothetical Document Embeddings
-- [05_BROWSER_AUTOMATION.md](./05_BROWSER_AUTOMATION.md) - Intelligent scraping fallbacks
+- [05_CRAWL4AI_INTEGRATION.md](./05_CRAWL4AI_INTEGRATION.md) - Replacing Firecrawl with Crawl4AI
+- [06_DRAGONFLYDB_CACHE.md](./06_DRAGONFLYDB_CACHE.md) - Implementing DragonflyDB caching
+- [07_BROWSER_AUTOMATION.md](./07_BROWSER_AUTOMATION.md) - Intelligent scraping fallbacks
+- [08_COLLECTION_ALIASES.md](./08_COLLECTION_ALIASES.md) - Zero-downtime deployment patterns
 
-### Architecture Documents
+### Architecture & Planning
 
 - [10_INTEGRATED_ARCHITECTURE.md](./10_INTEGRATED_ARCHITECTURE.md) - How all components work together
-- [11_PERFORMANCE_TARGETS.md](./11_PERFORMANCE_TARGETS.md) - Expected improvements and metrics
-- [12_DEPLOYMENT_STRATEGY.md](./12_DEPLOYMENT_STRATEGY.md) - Zero-downtime deployment patterns
-
-### Implementation Guides
-
 - [20_WEEK_BY_WEEK_PLAN.md](./20_WEEK_BY_WEEK_PLAN.md) - Detailed implementation timeline
-- [21_TESTING_STRATEGY.md](./21_TESTING_STRATEGY.md) - Comprehensive test requirements
-- [22_MONITORING_SETUP.md](./22_MONITORING_SETUP.md) - Metrics and observability
 
 ## Key Improvements
 
@@ -99,8 +95,8 @@ The V1 refactor combines multiple high-impact improvements into an integrated sy
 
 1. Review [10_INTEGRATED_ARCHITECTURE.md](./10_INTEGRATED_ARCHITECTURE.md) for system overview
 2. Follow [20_WEEK_BY_WEEK_PLAN.md](./20_WEEK_BY_WEEK_PLAN.md) for implementation
-3. Use migration guides for specific components
-4. Monitor progress with [11_PERFORMANCE_TARGETS.md](./11_PERFORMANCE_TARGETS.md)
+3. Use component guides for specific features
+4. Track progress via GitHub issues #55-#62
 
 ## Principles
 

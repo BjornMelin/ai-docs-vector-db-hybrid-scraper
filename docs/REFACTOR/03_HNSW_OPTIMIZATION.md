@@ -1,5 +1,7 @@
 # HNSW Configuration Optimization Guide
 
+**GitHub Issue**: [#57](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/57)
+
 ## Overview
 
 HNSW (Hierarchical Navigable Small World) is Qdrant's high-performance vector index. Proper tuning can improve search accuracy by 5-10% and reduce latency by 20-30%. Our current configuration uses defaults that aren't optimized for documentation search workloads.

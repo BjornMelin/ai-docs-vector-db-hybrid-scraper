@@ -1,5 +1,7 @@
 # DragonflyDB Cache Implementation Guide
 
+**GitHub Issue**: [#59](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/59)
+
 ## Overview
 
 DragonflyDB is a modern Redis-compatible in-memory data store that offers 4.5x better throughput and 38% less memory usage than Redis. It's designed for modern cloud workloads with better vertical scaling and lower latency.

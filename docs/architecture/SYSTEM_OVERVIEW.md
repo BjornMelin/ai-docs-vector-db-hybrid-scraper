@@ -224,7 +224,7 @@ DRAGONFLY_URL=redis://localhost:6379  # DragonflyDB cache
 
 ## V1 Implementation Status
 
-The system is undergoing a major V1 refactor to implement the enhancements described above. See the [V1 Implementation Plan](../REFACTOR/20_WEEK_BY_WEEK_PLAN.md) for timeline and [Integrated Architecture](../REFACTOR/10_INTEGRATED_ARCHITECTURE.md) for how components work together.
+The system is undergoing a major V1 refactor to implement the enhancements described above. See the [V1 Implementation Plan](../development/V1_IMPLEMENTATION_PLAN.md) for timeline and [Integrated Architecture](../REFACTOR/10_INTEGRATED_ARCHITECTURE.md) for how components work together.
 
 ### GitHub Issues Tracking
 

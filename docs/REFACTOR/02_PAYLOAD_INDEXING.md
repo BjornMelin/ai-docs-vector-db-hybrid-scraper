@@ -1,5 +1,7 @@
 # Payload Indexing Implementation Guide
 
+**GitHub Issue**: [#56](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/56)
+
 ## Overview
 
 Payload indexing in Qdrant enables 10-100x faster filtered searches by creating indexes on metadata fields. This is crucial for our documentation search system where users often filter by language, framework, version, or documentation type.

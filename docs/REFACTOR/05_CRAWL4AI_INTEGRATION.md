@@ -1,5 +1,7 @@
 # Crawl4AI Integration Guide
 
+**GitHub Issue**: [#58](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/58)
+
 ## Overview
 
 Crawl4AI is a high-performance, free web scraping library that will replace our current Firecrawl dependency. It offers 4-6x performance improvement, $0 cost, and advanced features like JavaScript execution and intelligent content extraction.

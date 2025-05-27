@@ -1,5 +1,7 @@
 # Collection Aliases Implementation Guide
 
+**GitHub Issue**: [#62](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/62)
+
 ## Overview
 
 Collection aliases in Qdrant enable zero-downtime updates, A/B testing, and seamless rollbacks. This is crucial for production systems where search availability must be maintained during updates.

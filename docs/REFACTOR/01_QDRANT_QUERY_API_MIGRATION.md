@@ -1,5 +1,7 @@
 # Qdrant Query API Migration Guide
 
+**GitHub Issue**: [#55](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/55)
+
 ## Overview
 
 This guide covers migrating from basic `search()` to Qdrant's advanced `query_points()` API, enabling multi-stage retrieval and native fusion algorithms.

@@ -1,5 +1,7 @@
 # HyDE (Hypothetical Document Embeddings) Implementation Guide
 
+**GitHub Issue**: [#60](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/60)
+
 ## Overview
 
 This guide covers implementing HyDE to improve search accuracy by 15-25% through generating synthetic documents that bridge user queries and actual content.

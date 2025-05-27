@@ -1,5 +1,7 @@
 # Browser Automation Hierarchy Implementation Guide
 
+**GitHub Issue**: [#61](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/61)
+
 ## Overview
 
 Implement a three-tier browser automation hierarchy that intelligently selects the right tool for each scraping task. This provides the best balance of performance, cost, and capability.
