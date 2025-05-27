@@ -30,17 +30,22 @@ class ProjectStorageError(BaseError):
 class ProjectStorage:
     """Manages persistent storage of project configurations."""
 
-    def __init__(self, storage_path: str | Path | None = None):
+    def __init__(
+        self,
+        data_dir: str | Path,
+        storage_path: str | Path | None = None,
+    ):
         """Initialize project storage.
 
         Args:
-            storage_path: Path to storage file. Defaults to data/projects.json
+            data_dir: Required base data directory from UnifiedConfig. Must be provided.
+            storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json.
+                When both storage_path and data_dir are provided, storage_path takes precedence.
         """
         if storage_path is None:
-            # Create data directory in project root
-            data_dir = Path(__file__).parent.parent.parent / "data"
-            data_dir.mkdir(exist_ok=True)
-            storage_path = data_dir / "projects.json"
+            base_dir = Path(data_dir)
+            base_dir.mkdir(parents=True, exist_ok=True)
+            storage_path = base_dir / "projects.json"
 
         self.storage_path = Path(storage_path)
         self._lock = asyncio.Lock()

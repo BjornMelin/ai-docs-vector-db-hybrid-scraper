@@ -13,6 +13,7 @@ except ImportError:
     FlagReranker = None
 
 from src.config import UnifiedConfig
+from src.config.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
@@ -21,57 +22,6 @@ from .openai_provider import OpenAIEmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
-# Smart Selection Constants
-CHARS_PER_TOKEN = 4  # Approximate character-to-token ratio
-CODE_KEYWORDS = {
-    "def",
-    "class",
-    "import",
-    "return",
-    "if",
-    "else",
-    "for",
-    "while",
-    "try",
-    "except",
-    "function",
-    "const",
-    "let",
-    "var",
-    "public",
-    "private",
-}
-
-# Scoring weights for smart selection
-QUALITY_WEIGHT = 0.4
-SPEED_WEIGHT = 0.3
-COST_WEIGHT = 0.3
-
-# Quality scoring parameters
-QUALITY_SCORE_FAST_THRESHOLD = 60.0
-QUALITY_SCORE_BALANCED_THRESHOLD = 75.0
-QUALITY_SCORE_BEST_THRESHOLD = 85.0
-
-# Speed scoring parameters
-SPEED_FAST_THRESHOLD = 500.0  # tokens/second
-SPEED_BALANCED_THRESHOLD = 200.0
-SPEED_SLOW_THRESHOLD = 100.0
-
-# Cost scoring parameters (per million tokens)
-COST_CHEAP_THRESHOLD = 50.0
-COST_MODERATE_THRESHOLD = 100.0
-COST_EXPENSIVE_THRESHOLD = 200.0
-
-# Budget management
-BUDGET_WARNING_THRESHOLD = 0.8  # 80%
-BUDGET_CRITICAL_THRESHOLD = 0.9  # 90%
-
-# Text analysis parameters
-COMPLEXITY_VOCAB_DIVERSITY_FACTOR = 20.0
-COMPLEXITY_AVG_WORD_LENGTH_FACTOR = 20.0
-SHORT_TEXT_THRESHOLD = 100  # characters
-LONG_TEXT_THRESHOLD = 2000  # characters
-
 
 class QualityTier(Enum):
     """Embedding quality tiers."""
@@ -79,20 +29,6 @@ class QualityTier(Enum):
     FAST = "fast"  # Local models, fastest
     BALANCED = "balanced"  # Balance of speed and quality
     BEST = "best"  # Highest quality, may be slower/costlier
-
-
-@dataclass
-class ModelBenchmark:
-    """Performance benchmark for embedding models."""
-
-    model_name: str
-    provider: str
-    avg_latency_ms: float
-    quality_score: float  # 0-100 based on retrieval accuracy
-    tokens_per_second: float
-    cost_per_million_tokens: float
-    max_context_length: int
-    embedding_dimensions: int
 
 
 @dataclass
@@ -168,49 +104,9 @@ class EmbeddingManager:
                 },
             )
 
-        # Model benchmarks (initialized with research-backed values)
-        self._benchmarks: dict[str, ModelBenchmark] = {
-            "text-embedding-3-small": ModelBenchmark(
-                model_name="text-embedding-3-small",
-                provider="openai",
-                avg_latency_ms=78,
-                quality_score=85,
-                tokens_per_second=12800,
-                cost_per_million_tokens=20.0,
-                max_context_length=8191,
-                embedding_dimensions=1536,
-            ),
-            "text-embedding-3-large": ModelBenchmark(
-                model_name="text-embedding-3-large",
-                provider="openai",
-                avg_latency_ms=120,
-                quality_score=92,
-                tokens_per_second=8300,
-                cost_per_million_tokens=130.0,
-                max_context_length=8191,
-                embedding_dimensions=3072,
-            ),
-            "BAAI/bge-small-en-v1.5": ModelBenchmark(
-                model_name="BAAI/bge-small-en-v1.5",
-                provider="fastembed",
-                avg_latency_ms=45,
-                quality_score=78,
-                tokens_per_second=22000,
-                cost_per_million_tokens=0.0,
-                max_context_length=512,
-                embedding_dimensions=384,
-            ),
-            "BAAI/bge-large-en-v1.5": ModelBenchmark(
-                model_name="BAAI/bge-large-en-v1.5",
-                provider="fastembed",
-                avg_latency_ms=89,
-                quality_score=88,
-                tokens_per_second=11000,
-                cost_per_million_tokens=0.0,
-                max_context_length=512,
-                embedding_dimensions=1024,
-            ),
-        }
+        # Model benchmarks and smart selection config (loaded from configuration)
+        self._benchmarks: dict[str, ModelBenchmark] = config.embedding.model_benchmarks
+        self._smart_config = config.embedding.smart_selection
 
         # Dynamic quality tier mappings
         self._tier_providers = {
@@ -400,7 +296,9 @@ class EmbeddingManager:
         """
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
-        actual_tokens = sum(len(text) for text in texts) // CHARS_PER_TOKEN
+        actual_tokens = sum(len(text) for text in texts) // int(
+            self._smart_config.chars_per_token
+        )
         actual_cost = actual_tokens * provider.cost_per_token
 
         # Update usage statistics
@@ -758,7 +656,7 @@ class EmbeddingManager:
 
         total_length = sum(len(text) for text in texts)
         avg_length = total_length // len(texts)
-        estimated_tokens = int(total_length / CHARS_PER_TOKEN)
+        estimated_tokens = int(total_length / self._smart_config.chars_per_token)
 
         # Analyze complexity (vocabulary diversity)
         all_words = set()
@@ -770,8 +668,10 @@ class EmbeddingManager:
             all_words.update(words)
             total_words += len(words)
 
-            # Check for code patterns using defined keywords
-            if any(keyword in text.lower() for keyword in CODE_KEYWORDS):
+            # Check for code patterns using configured keywords
+            if any(
+                keyword in text.lower() for keyword in self._smart_config.code_keywords
+            ):
                 code_indicators += 1
 
         # Complexity score based on vocabulary diversity (cap at reasonable level)
@@ -786,9 +686,9 @@ class EmbeddingManager:
         is_code = code_indicators / len(texts) > 0.3
         if is_code:
             text_type = "code"
-        elif avg_length > LONG_TEXT_THRESHOLD:
+        elif avg_length > self._smart_config.long_text_threshold:
             text_type = "long"
-        elif avg_length < SHORT_TEXT_THRESHOLD:
+        elif avg_length < self._smart_config.short_text_threshold:
             text_type = "short"
         else:
             text_type = "docs"
@@ -906,28 +806,31 @@ class EmbeddingManager:
         score = 0.0
 
         # Base quality score
-        score += benchmark.quality_score * QUALITY_WEIGHT
+        score += benchmark.quality_score * self._smart_config.quality_weight
 
         # Speed score (higher weight if speed priority)
-        speed_weight = 0.5 if speed_priority else SPEED_WEIGHT
+        speed_weight = 0.5 if speed_priority else self._smart_config.speed_weight
         speed_score = max(
             0,
-            (SPEED_BALANCED_THRESHOLD - benchmark.avg_latency_ms)
-            / SPEED_BALANCED_THRESHOLD
+            (self._smart_config.speed_balanced_threshold - benchmark.avg_latency_ms)
+            / self._smart_config.speed_balanced_threshold
             * 100,
         )
         score += speed_score * speed_weight
 
         # Cost efficiency score (lower weight if speed priority)
-        cost_weight = 0.1 if speed_priority else COST_WEIGHT
+        cost_weight = 0.1 if speed_priority else self._smart_config.cost_weight
         if benchmark.cost_per_million_tokens == 0:  # Local model
             cost_score = 100
         else:
             # Lower cost = higher score
             cost_score = max(
                 0,
-                (COST_EXPENSIVE_THRESHOLD - benchmark.cost_per_million_tokens)
-                / COST_EXPENSIVE_THRESHOLD
+                (
+                    self._smart_config.cost_expensive_threshold
+                    - benchmark.cost_per_million_tokens
+                )
+                / self._smart_config.cost_expensive_threshold
                 * 100,
             )
         score += cost_score * cost_weight
@@ -936,22 +839,27 @@ class EmbeddingManager:
         if quality_tier == QualityTier.FAST and benchmark.cost_per_million_tokens == 0:
             score += 25  # Strong bonus for local models in FAST tier
         elif quality_tier == QualityTier.BEST:
-            if benchmark.quality_score > QUALITY_SCORE_BEST_THRESHOLD:
+            if benchmark.quality_score > self._smart_config.quality_best_threshold:
                 score += 40  # Very strong bonus for high-quality models in BEST tier
-            elif benchmark.quality_score > QUALITY_SCORE_BALANCED_THRESHOLD:
+            elif (
+                benchmark.quality_score > self._smart_config.quality_balanced_threshold
+            ):
                 score += 30  # Strong bonus for good quality models
             else:
                 score -= 10  # Penalty for lower quality in BEST tier
         elif quality_tier == QualityTier.BALANCED:
             if benchmark.cost_per_million_tokens == 0:
                 score += 10  # Bonus for local in balanced
-            elif benchmark.cost_per_million_tokens < COST_CHEAP_THRESHOLD:
+            elif (
+                benchmark.cost_per_million_tokens
+                < self._smart_config.cost_cheap_threshold
+            ):
                 score += 15  # Bonus for cost-effective options
 
         # Text type specific bonuses
         if (
             text_analysis.text_type == "code"
-            and benchmark.quality_score > QUALITY_SCORE_BEST_THRESHOLD
+            and benchmark.quality_score > self._smart_config.quality_best_threshold
         ):
             score += 5  # Code needs high quality
         elif text_analysis.text_type == "short" and benchmark.avg_latency_ms < 60:
@@ -1031,13 +939,13 @@ class EmbeddingManager:
             usage_percent = (
                 self.usage_stats.daily_cost + estimated_cost
             ) / self.budget_limit
-            if usage_percent > BUDGET_CRITICAL_THRESHOLD:
+            if usage_percent > self._smart_config.budget_critical_threshold:
                 result["warnings"].append(
-                    f"Budget usage > {int(BUDGET_CRITICAL_THRESHOLD * 100)}%"
+                    f"Budget usage > {int(self._smart_config.budget_critical_threshold * 100)}%"
                 )
-            elif usage_percent > BUDGET_WARNING_THRESHOLD:
+            elif usage_percent > self._smart_config.budget_warning_threshold:
                 result["warnings"].append(
-                    f"Budget usage > {int(BUDGET_WARNING_THRESHOLD * 100)}%"
+                    f"Budget usage > {int(self._smart_config.budget_warning_threshold * 100)}%"
                 )
 
         return result

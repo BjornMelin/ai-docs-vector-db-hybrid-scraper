@@ -1101,4 +1101,197 @@ class EmbeddingServiceMetrics:
 - **Cache Hit Rate**: > 80% for repeated queries
 - **Cost Efficiency**: < $50 per million embeddings average
 
+## Configurable Model Benchmarks
+
+### Overview
+
+The embedding system now supports configurable model benchmarks, allowing users to customize model performance data without code changes. This enables:
+
+- **Custom Model Support**: Add new models with performance characteristics
+- **Benchmark Updates**: Update model performance data as new benchmarks become available
+- **Environment-Specific Tuning**: Adjust model selection based on deployment environment
+- **A/B Testing**: Compare different benchmark configurations
+
+### Configuration Structure
+
+Model benchmarks and smart selection parameters are defined in the `EmbeddingConfig`:
+
+```json
+{
+  "embedding": {
+    "smart_selection": {
+      "quality_weight": 0.4,
+      "speed_weight": 0.3,
+      "cost_weight": 0.3,
+      "quality_best_threshold": 85.0,
+      "budget_warning_threshold": 0.8,
+      "short_text_threshold": 100,
+      "long_text_threshold": 2000
+    },
+    "model_benchmarks": {
+      "text-embedding-3-small": {
+        "model_name": "text-embedding-3-small",
+        "provider": "openai",
+        "avg_latency_ms": 78,
+        "quality_score": 85,
+        "tokens_per_second": 12800,
+        "cost_per_million_tokens": 20.0,
+        "max_context_length": 8191,
+        "embedding_dimensions": 1536
+      },
+      "custom-model": {
+        "model_name": "custom-model",
+        "provider": "fastembed",
+        "avg_latency_ms": 45,
+        "quality_score": 82,
+        "tokens_per_second": 25000,
+        "cost_per_million_tokens": 0.0,
+        "max_context_length": 1024,
+        "embedding_dimensions": 768
+      }
+    }
+  }
+}
+```
+
+### Field Descriptions
+
+#### Smart Selection Configuration
+
+- **quality_weight**: Weight for quality in scoring (0-1, must sum to 1.0 with other weights)
+- **speed_weight**: Weight for speed in scoring (0-1)
+- **cost_weight**: Weight for cost efficiency in scoring (0-1)
+- **quality_best_threshold**: Minimum quality score for BEST tier (0-100)
+- **budget_warning_threshold**: Budget usage threshold for warnings (0-1)
+- **short_text_threshold**: Character threshold for short text classification
+- **long_text_threshold**: Character threshold for long text classification
+
+#### Model Benchmark Configuration
+
+- **model_name**: Unique identifier for the model
+- **provider**: Provider name (openai, fastembed, custom)
+- **avg_latency_ms**: Average response time in milliseconds
+- **quality_score**: Quality rating 0-100 based on retrieval accuracy
+- **tokens_per_second**: Processing throughput
+- **cost_per_million_tokens**: Cost per million tokens (0 for local models)
+- **max_context_length**: Maximum input context in tokens
+- **embedding_dimensions**: Vector dimensionality
+
+### Default Benchmarks
+
+The system provides research-backed default benchmarks for:
+
+- **text-embedding-3-small**: OpenAI's cost-effective model
+- **text-embedding-3-large**: OpenAI's high-accuracy model  
+- **BAAI/bge-small-en-v1.5**: FastEmbed local small model
+- **BAAI/bge-large-en-v1.5**: FastEmbed local large model
+
+### Customization Examples
+
+#### Adding a New Model
+
+```python
+from src.config.models import ModelBenchmark, UnifiedConfig
+
+config = UnifiedConfig()
+config.embedding.model_benchmarks["my-model"] = ModelBenchmark(
+    model_name="my-model",
+    provider="custom",
+    avg_latency_ms=60,
+    quality_score=88,
+    tokens_per_second=18000,
+    cost_per_million_tokens=5.0,
+    max_context_length=2048,
+    embedding_dimensions=1024
+)
+```
+
+#### Updating Performance Data
+
+```python
+# Update latency based on new benchmarks
+config.embedding.model_benchmarks["text-embedding-3-small"].avg_latency_ms = 65
+config.embedding.model_benchmarks["text-embedding-3-small"].quality_score = 87
+```
+
+#### Environment-Specific Configuration
+
+You can create different config files for different environments by overriding only the values you wish to change from the main template.
+
+**Configuration Merging Behavior:**
+- The main template `config/templates/custom-benchmarks.json` contains the full set of configuration options and default values
+- Environment-specific files (shown below) are intended as minimal overrides - they only need to specify the keys and values that differ from the template
+- When loading configuration, your application should merge the environment-specific file with the template, so that any unspecified values fall back to the defaults in `custom-benchmarks.json`
+- This pattern allows for clean, maintainable environment-specific tuning without duplicating the entire configuration
+
+**Example environment-specific override files:**
+
+**config/production-benchmarks.json** (minimal override):
+```json
+{
+  "embedding": {
+    "model_benchmarks": {
+      "text-embedding-3-small": {
+        "avg_latency_ms": 95,
+        "quality_score": 85
+      }
+    }
+  }
+}
+```
+
+**config/development-benchmarks.json** (minimal override):
+```json
+{
+  "embedding": {
+    "model_benchmarks": {
+      "text-embedding-3-small": {
+        "avg_latency_ms": 60,
+        "quality_score": 85
+      }
+    }
+  }
+}
+```
+
+> **Note**: These examples only override specific benchmark values. All other configuration values (smart_selection parameters, other model benchmarks, etc.) will use the defaults from the main template.
+
+### Smart Selection Impact
+
+Configurable benchmarks directly affect smart model selection:
+
+- **Quality Priority**: Models with higher `quality_score` preferred for quality tiers
+- **Speed Priority**: Models with lower `avg_latency_ms` preferred for speed
+- **Cost Optimization**: Models with lower `cost_per_million_tokens` preferred for budget constraints
+- **Capability Matching**: Models with appropriate `max_context_length` selected for text size
+
+### Validation
+
+The system validates benchmark configurations:
+
+```python
+# All fields are required and validated
+ModelBenchmark(
+    model_name="test",           # Required string
+    provider="test",             # Required string  
+    avg_latency_ms=100,          # Must be > 0
+    quality_score=85,            # Must be 0-100
+    tokens_per_second=1000,      # Must be > 0
+    cost_per_million_tokens=10,  # Must be >= 0
+    max_context_length=512,      # Must be > 0
+    embedding_dimensions=768     # Must be > 0
+)
+```
+
+### Usage in Practice
+
+1. **Create custom configuration template** from `config/templates/custom-benchmarks.json`
+2. **Update benchmark values** based on your environment's performance
+3. **Load configuration** using `UnifiedConfig.load_from_file()`
+4. **Test smart selection** to verify model choices meet expectations
+
+This flexible benchmark system ensures optimal model selection across different deployment scenarios while maintaining performance and cost efficiency.
+
+---
+
 This comprehensive guide provides a robust foundation for embedding model integration with flexibility for future enhancements and model additions.

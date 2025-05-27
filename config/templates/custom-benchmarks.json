@@ -1,0 +1,65 @@
+{
+  "embedding": {
+    "smart_selection": {
+      "quality_weight": 0.4,
+      "speed_weight": 0.3,
+      "cost_weight": 0.3,
+      "quality_best_threshold": 85.0,
+      "budget_warning_threshold": 0.8,
+      "short_text_threshold": 100,
+      "long_text_threshold": 2000
+    },
+    "model_benchmarks": {
+      "text-embedding-3-small": {
+        "model_name": "text-embedding-3-small",
+        "provider": "openai",
+        "avg_latency_ms": 78,
+        "quality_score": 85,
+        "tokens_per_second": 12800,
+        "cost_per_million_tokens": 20.0,
+        "max_context_length": 8191,
+        "embedding_dimensions": 1536
+      },
+      "text-embedding-3-large": {
+        "model_name": "text-embedding-3-large",
+        "provider": "openai",
+        "avg_latency_ms": 120,
+        "quality_score": 92,
+        "tokens_per_second": 8300,
+        "cost_per_million_tokens": 130.0,
+        "max_context_length": 8191,
+        "embedding_dimensions": 3072
+      },
+      "BAAI/bge-small-en-v1.5": {
+        "model_name": "BAAI/bge-small-en-v1.5",
+        "provider": "fastembed",
+        "avg_latency_ms": 45,
+        "quality_score": 78,
+        "tokens_per_second": 22000,
+        "cost_per_million_tokens": 0.0,
+        "max_context_length": 512,
+        "embedding_dimensions": 384
+      },
+      "BAAI/bge-large-en-v1.5": {
+        "model_name": "BAAI/bge-large-en-v1.5",
+        "provider": "fastembed",
+        "avg_latency_ms": 89,
+        "quality_score": 88,
+        "tokens_per_second": 11000,
+        "cost_per_million_tokens": 0.0,
+        "max_context_length": 512,
+        "embedding_dimensions": 1024
+      },
+      "custom-local-model": {
+        "model_name": "custom-local-model",
+        "provider": "fastembed",
+        "avg_latency_ms": 35,
+        "quality_score": 82,
+        "tokens_per_second": 25000,
+        "cost_per_million_tokens": 0.0,
+        "max_context_length": 1024,
+        "embedding_dimensions": 768
+      }
+    }
+  }
+}

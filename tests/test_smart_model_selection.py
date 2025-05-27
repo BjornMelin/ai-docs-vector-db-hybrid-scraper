@@ -4,9 +4,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 from src.config.enums import EmbeddingProvider
+from src.config.models import ModelBenchmark
 from src.config.models import UnifiedConfig
+from src.config.models import _get_default_model_benchmarks
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.embeddings.manager import ModelBenchmark
 from src.services.embeddings.manager import QualityTier
 from src.services.embeddings.manager import TextAnalysis
 from src.services.errors import EmbeddingServiceError
@@ -435,3 +436,189 @@ class TestModelBenchmarks:
 
         # Speed priority should increase fast model's advantage
         assert fast_advantage_speed > fast_advantage_normal
+
+
+class TestConfigurableBenchmarks:
+    """Test configurable model benchmarks functionality."""
+
+    @pytest.fixture
+    def custom_benchmarks(self):
+        """Custom model benchmarks for testing."""
+        return {
+            "custom-model-1": ModelBenchmark(
+                model_name="custom-model-1",
+                provider="openai",
+                avg_latency_ms=50,
+                quality_score=90,
+                tokens_per_second=15000,
+                cost_per_million_tokens=15.0,
+                max_context_length=8191,
+                embedding_dimensions=1536,
+            ),
+            "custom-model-2": ModelBenchmark(
+                model_name="custom-model-2",
+                provider="fastembed",
+                avg_latency_ms=25,
+                quality_score=85,
+                tokens_per_second=25000,
+                cost_per_million_tokens=0.0,
+                max_context_length=1024,
+                embedding_dimensions=768,
+            ),
+        }
+
+    @pytest.fixture
+    def config_with_custom_benchmarks(self, custom_benchmarks):
+        """Config with custom model benchmarks."""
+        # Create config with FastEmbed as default to avoid API key validation
+        config = UnifiedConfig(
+            embedding_provider=EmbeddingProvider.FASTEMBED,
+        )
+        # Set OpenAI key directly (test-only value)
+        config.openai.api_key = "test-key-for-unit-tests-only"
+        # Update the benchmarks
+        config.embedding.model_benchmarks = custom_benchmarks
+        return config
+
+    def test_manager_loads_benchmarks_from_config(self, config_with_custom_benchmarks):
+        """Test that EmbeddingManager loads benchmarks from config."""
+        manager = EmbeddingManager(config_with_custom_benchmarks)
+
+        # Should have the custom benchmarks, not defaults
+        assert len(manager._benchmarks) == 2
+        assert "custom-model-1" in manager._benchmarks
+        assert "custom-model-2" in manager._benchmarks
+        assert "text-embedding-3-small" not in manager._benchmarks
+
+        # Verify benchmark details
+        custom_1 = manager._benchmarks["custom-model-1"]
+        assert custom_1.provider == "openai"
+        assert custom_1.quality_score == 90
+        assert custom_1.cost_per_million_tokens == 15.0
+
+    def test_default_benchmarks_loaded(self):
+        """Test that default benchmarks are loaded when no custom ones provided."""
+        config = UnifiedConfig(embedding_provider=EmbeddingProvider.FASTEMBED)
+        manager = EmbeddingManager(config)
+
+        # Should have default benchmarks
+        default_benchmarks = _get_default_model_benchmarks()
+        assert len(manager._benchmarks) == len(default_benchmarks)
+        assert "text-embedding-3-small" in manager._benchmarks
+        assert "text-embedding-3-large" in manager._benchmarks
+        assert "BAAI/bge-small-en-v1.5" in manager._benchmarks
+        assert "BAAI/bge-large-en-v1.5" in manager._benchmarks
+
+    def test_custom_benchmarks_affect_smart_selection(
+        self, config_with_custom_benchmarks
+    ):
+        """Test that custom benchmarks affect smart provider selection."""
+        manager = EmbeddingManager(config_with_custom_benchmarks)
+
+        # Create mock providers to avoid initialization
+        openai_provider = AsyncMock()
+        openai_provider.model_name = "custom-model-1"
+        fastembed_provider = AsyncMock()
+        fastembed_provider.model_name = "custom-model-2"
+
+        manager.providers = {"openai": openai_provider, "fastembed": fastembed_provider}
+        manager._initialized = True
+
+        text_analysis = TextAnalysis(
+            total_length=1000,
+            avg_length=500,
+            complexity_score=0.5,
+            estimated_tokens=250,
+            text_type="docs",
+            requires_high_quality=False,
+        )
+
+        # Get recommendation
+        recommendation = manager.get_smart_provider_recommendation(
+            text_analysis, QualityTier.BALANCED
+        )
+
+        # Should recommend one of our custom models
+        assert recommendation["model"] in ["custom-model-1", "custom-model-2"]
+        assert recommendation["provider"] in ["openai", "fastembed"]
+
+    def test_benchmarks_validation(self):
+        """Test that ModelBenchmark validation works correctly."""
+        # Valid benchmark
+        valid_benchmark = ModelBenchmark(
+            model_name="test-model",
+            provider="test",
+            avg_latency_ms=100,
+            quality_score=85,
+            tokens_per_second=1000,
+            cost_per_million_tokens=10.0,
+            max_context_length=512,
+            embedding_dimensions=768,
+        )
+        assert valid_benchmark.model_name == "test-model"
+
+        # Invalid quality score (> 100)
+        with pytest.raises(ValueError):
+            ModelBenchmark(
+                model_name="test-model",
+                provider="test",
+                avg_latency_ms=100,
+                quality_score=150,  # Invalid
+                tokens_per_second=1000,
+                cost_per_million_tokens=10.0,
+                max_context_length=512,
+                embedding_dimensions=768,
+            )
+
+        # Invalid latency (negative)
+        with pytest.raises(ValueError):
+            ModelBenchmark(
+                model_name="test-model",
+                provider="test",
+                avg_latency_ms=-10,  # Invalid
+                quality_score=85,
+                tokens_per_second=1000,
+                cost_per_million_tokens=10.0,
+                max_context_length=512,
+                embedding_dimensions=768,
+            )
+
+    def test_key_value_consistency_validation(self):
+        """Test that EmbeddingConfig validates key-value consistency."""
+        from src.config.models import EmbeddingConfig
+
+        # Valid configuration (keys match model_name)
+        valid_config = EmbeddingConfig(
+            model_benchmarks={
+                "test-model": ModelBenchmark(
+                    model_name="test-model",  # Matches key
+                    provider="test",
+                    avg_latency_ms=100,
+                    quality_score=85,
+                    tokens_per_second=1000,
+                    cost_per_million_tokens=10.0,
+                    max_context_length=512,
+                    embedding_dimensions=768,
+                )
+            }
+        )
+        assert "test-model" in valid_config.model_benchmarks
+
+        # Invalid configuration (key doesn't match model_name)
+        with pytest.raises(
+            ValueError, match="Dictionary key 'wrong-key' does not match"
+        ):
+            EmbeddingConfig(
+                model_benchmarks={
+                    "wrong-key": ModelBenchmark(  # Key doesn't match model_name
+                        model_name="correct-name",
+                        provider="test",
+                        avg_latency_ms=100,
+                        quality_score=85,
+                        tokens_per_second=1000,
+                        cost_per_million_tokens=10.0,
+                        max_context_length=512,
+                        embedding_dimensions=768,
+                    )
+                }
+            )
