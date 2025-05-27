@@ -27,6 +27,7 @@
 - ✅ Issue #36: Unify models and configuration system - eliminate duplicate Pydantic models (PR #46)
 - ✅ Issue #37: Integrate structured logging into MCP server entry point (PR #47)
 - ✅ Issue #38: Centralize all startup API key validation in UnifiedConfig models (PR #48) - MERGED
+- ✅ Issue #39: Make rate limits configurable via UnifiedConfig system (feat/issue-39-configurable-rate-limits) - COMPLETED
 - ✅ Issue #40: Make model benchmarks configurable through UnifiedConfig (PR #51) - MERGED
 - ✅ Issue #41: Standardize ProjectStorage default path via UnifiedConfig (PR #49) - MERGED
 

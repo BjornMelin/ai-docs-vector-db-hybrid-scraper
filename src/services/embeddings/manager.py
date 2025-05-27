@@ -65,18 +65,25 @@ class TextAnalysis:
 class EmbeddingManager:
     """Manager for smart embedding provider selection."""
 
-    def __init__(self, config: UnifiedConfig, budget_limit: float | None = None):
+    def __init__(
+        self,
+        config: UnifiedConfig,
+        budget_limit: float | None = None,
+        rate_limiter: Any = None,
+    ):
         """Initialize embedding manager.
 
         Args:
             config: Unified configuration
             budget_limit: Optional daily budget limit in USD
+            rate_limiter: Optional RateLimitManager instance
         """
         self.config = config
         self.providers: dict[str, EmbeddingProvider] = {}
         self._initialized = False
         self.budget_limit = budget_limit
         self.usage_stats = UsageStats()
+        self.rate_limiter = rate_limiter
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: Any | None = None
@@ -130,6 +137,7 @@ class EmbeddingManager:
                     api_key=self.config.embeddings.openai_api_key,
                     model_name=self.config.embeddings.openai_model,
                     dimensions=self.config.embeddings.openai_dimensions,
+                    rate_limiter=self.rate_limiter,
                 )
                 await provider.initialize()
                 self.providers["openai"] = provider

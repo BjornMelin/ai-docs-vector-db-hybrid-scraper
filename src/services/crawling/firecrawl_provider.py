@@ -6,7 +6,7 @@ from typing import Any
 from firecrawl import FirecrawlApp
 
 from ..errors import CrawlServiceError
-from ..rate_limiter import rate_limited
+from ..rate_limiter import RateLimitManager
 from .base import CrawlProvider
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class FirecrawlProvider(CrawlProvider):
     """Firecrawl provider for web crawling."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, rate_limiter: RateLimitManager | None = None):
         """Initialize Firecrawl provider.
 
         Args:
@@ -24,6 +24,7 @@ class FirecrawlProvider(CrawlProvider):
         self.api_key = api_key
         self._client: FirecrawlApp | None = None
         self._initialized = False
+        self.rate_limiter = rate_limiter
 
     async def initialize(self) -> None:
         """Initialize Firecrawl client."""
@@ -264,7 +265,6 @@ class FirecrawlProvider(CrawlProvider):
                 "total": 0,
             }
 
-    @rate_limited("firecrawl", "scrape")
     async def _scrape_url_with_rate_limit(
         self, url: str, formats: list[str]
     ) -> dict[str, Any]:
@@ -277,13 +277,15 @@ class FirecrawlProvider(CrawlProvider):
         Returns:
             Firecrawl response
         """
+        if self.rate_limiter:
+            await self.rate_limiter.acquire("firecrawl")
+
         # Run synchronous method in thread pool to avoid blocking
         import asyncio
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._client.scrape_url, url, formats)
 
-    @rate_limited("firecrawl", "crawl")
     async def _async_crawl_url_with_rate_limit(
         self, url: str, max_pages: int, formats: list[str]
     ) -> dict[str, Any]:
@@ -297,6 +299,9 @@ class FirecrawlProvider(CrawlProvider):
         Returns:
             Crawl job info
         """
+        if self.rate_limiter:
+            await self.rate_limiter.acquire("firecrawl")
+
         import asyncio
 
         loop = asyncio.get_event_loop()

@@ -403,7 +403,49 @@ class PerformanceConfig(BaseModel):
         default=0.8, gt=0, le=1, description="GC trigger threshold"
     )
 
+    # Rate limiting configuration
+    default_rate_limits: dict[str, dict[str, int]] = Field(
+        default_factory=lambda: {
+            "openai": {"max_calls": 500, "time_window": 60},  # 500/min
+            "firecrawl": {"max_calls": 100, "time_window": 60},  # 100/min
+            "crawl4ai": {"max_calls": 50, "time_window": 1},  # 50/sec
+            "qdrant": {"max_calls": 100, "time_window": 1},  # 100/sec
+        },
+        description="Default rate limits by provider (max_calls per time_window seconds)",
+    )
+
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("default_rate_limits")
+    @classmethod
+    def validate_rate_limits(
+        cls, v: dict[str, dict[str, int]]
+    ) -> dict[str, dict[str, int]]:
+        """Validate rate limit configuration structure."""
+        for provider, limits in v.items():
+            if not isinstance(limits, dict):
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must be a dictionary"
+                )
+
+            required_keys = {"max_calls", "time_window"}
+            if not required_keys.issubset(limits.keys()):
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must contain "
+                    f"keys: {required_keys}, got: {set(limits.keys())}"
+                )
+
+            if limits["max_calls"] <= 0:
+                raise ValueError(
+                    f"max_calls for provider '{provider}' must be positive"
+                )
+
+            if limits["time_window"] <= 0:
+                raise ValueError(
+                    f"time_window for provider '{provider}' must be positive"
+                )
+
+        return v
 
 
 class SmartSelectionConfig(BaseModel):

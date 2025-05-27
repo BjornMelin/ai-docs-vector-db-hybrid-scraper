@@ -11,7 +11,7 @@ from typing import ClassVar
 from openai import AsyncOpenAI
 
 from ..errors import EmbeddingServiceError
-from ..rate_limiter import rate_limited
+from ..rate_limiter import RateLimitManager
 from .base import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         api_key: str,
         model_name: str = "text-embedding-3-small",
         dimensions: int | None = None,
+        rate_limiter: RateLimitManager | None = None,
     ):
         """Initialize OpenAI provider.
 
@@ -56,6 +57,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client: AsyncOpenAI | None = None
         self._dimensions = dimensions
         self._initialized = False
+        self.rate_limiter = rate_limiter
 
         if model_name not in self._model_configs:
             raise EmbeddingServiceError(
@@ -179,7 +181,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                     f"Failed to generate embeddings: {e}"
                 ) from e
 
-    @rate_limited("openai", "embeddings")
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
         """Generate embeddings with rate limiting.
 
@@ -189,6 +190,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Returns:
             OpenAI embeddings response
         """
+        if self.rate_limiter:
+            await self.rate_limiter.acquire("openai")
         return await self._client.embeddings.create(**params)
 
     @property
@@ -281,7 +284,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 with contextlib.suppress(OSError):
                     os.unlink(temp_file)
 
-    @rate_limited("openai", "files")
     async def _upload_file_with_rate_limit(self, file: Any, purpose: str) -> Any:
         """Upload file with rate limiting.
 
@@ -292,9 +294,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Returns:
             File response from OpenAI
         """
+        if self.rate_limiter:
+            await self.rate_limiter.acquire("openai")
         return await self._client.files.create(file=file, purpose=purpose)
 
-    @rate_limited("openai", "batches")
     async def _create_batch_with_rate_limit(
         self, input_file_id: str, endpoint: str, completion_window: str
     ) -> Any:
@@ -308,6 +311,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Returns:
             Batch response from OpenAI
         """
+        if self.rate_limiter:
+            await self.rate_limiter.acquire("openai")
         return await self._client.batches.create(
             input_file_id=input_file_id,
             endpoint=endpoint,

@@ -11,6 +11,7 @@ from ..services.crawling.manager import CrawlManager
 from ..services.embeddings.manager import EmbeddingManager
 from ..services.project_storage import ProjectStorage
 from ..services.qdrant_service import QdrantService
+from ..services.rate_limiter import RateLimitManager
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class UnifiedServiceManager(BaseService):
         self.qdrant_service: QdrantService | None = None
         self.cache_manager: CacheManager | None = None
         self.project_storage: ProjectStorage | None = None
+        self.rate_limiter: RateLimitManager | None = None
         self.projects: dict[str, dict[str, Any]] = {}  # Keep for backward compatibility
         self._initialized = False
 
@@ -35,9 +37,17 @@ class UnifiedServiceManager(BaseService):
             return
 
         try:
+            # Initialize rate limiter
+            self.rate_limiter = RateLimitManager(self.config)
+            logger.info("Rate limiter initialized")
+
             # Initialize services with unified configuration
-            self.embedding_manager = EmbeddingManager(self.config)
-            self.crawl_manager = CrawlManager(self.config)
+            self.embedding_manager = EmbeddingManager(
+                self.config, rate_limiter=self.rate_limiter
+            )
+            self.crawl_manager = CrawlManager(
+                self.config, rate_limiter=self.rate_limiter
+            )
             self.qdrant_service = QdrantService(self.config)
 
             # CacheManager uses specific parameters from unified config
@@ -86,6 +96,8 @@ class UnifiedServiceManager(BaseService):
             await self.cache_manager.cleanup()
         if self.project_storage:
             await self.project_storage.cleanup()
+        if self.rate_limiter:
+            await self.rate_limiter.cleanup()
 
         self._initialized = False
         logger.info("All services cleaned up")

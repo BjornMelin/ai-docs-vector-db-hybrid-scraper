@@ -53,7 +53,25 @@
     "retry_base_delay": 1.0,
     "retry_max_delay": 60.0,
     "max_memory_usage_mb": 2000.0,
-    "gc_threshold": 0.8
+    "gc_threshold": 0.8,
+    "default_rate_limits": {
+      "openai": {
+        "max_calls": 500,
+        "time_window": 60
+      },
+      "firecrawl": {
+        "max_calls": 100,
+        "time_window": 60
+      },
+      "crawl4ai": {
+        "max_calls": 50,
+        "time_window": 1
+      },
+      "qdrant": {
+        "max_calls": 100,
+        "time_window": 1
+      }
+    }
   },
   "security": {
     "require_api_keys": true,

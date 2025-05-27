@@ -15,15 +15,17 @@ logger = logging.getLogger(__name__)
 class CrawlManager:
     """Manager for crawling with multiple providers."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: UnifiedConfig, rate_limiter: Any = None):
         """Initialize crawl manager.
 
         Args:
             config: Unified configuration
+            rate_limiter: Optional RateLimitManager instance
         """
         self.config = config
         self.providers: dict[str, CrawlProvider] = {}
         self._initialized = False
+        self.rate_limiter = rate_limiter
 
     async def initialize(self) -> None:
         """Initialize available providers."""
@@ -33,7 +35,10 @@ class CrawlManager:
         # Initialize Firecrawl if API key available
         if self.config.firecrawl.api_key:
             try:
-                provider = FirecrawlProvider(api_key=self.config.firecrawl.api_key)
+                provider = FirecrawlProvider(
+                    api_key=self.config.firecrawl.api_key,
+                    rate_limiter=self.rate_limiter,
+                )
                 await provider.initialize()
                 self.providers["firecrawl"] = provider
                 logger.info("Initialized Firecrawl provider")
