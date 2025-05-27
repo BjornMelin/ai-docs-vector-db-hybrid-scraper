@@ -31,6 +31,11 @@
 - ✅ Issue #39: Make rate limits configurable via UnifiedConfig system (feat/issue-39-configurable-rate-limits) - COMPLETED
 - ✅ Issue #40: Make model benchmarks configurable through UnifiedConfig (PR #51) - MERGED
 - ✅ Issue #41: Standardize ProjectStorage default path via UnifiedConfig (PR #49) - MERGED
+- ✅ **V1 REFACTOR Documentation** - Integrated all V1 enhancements into core documentation (2025-05-26)
+  - ✅ Created `/docs/REFACTOR/` guides for all V1 components
+  - ✅ Updated all GitHub issues (#55-#62) with documentation references
+  - ✅ Integrated V1 plans into core architecture, features, and operations docs
+  - ✅ Cleaned up TripSage-AI research files (deleted PLAN_CRAWLING_EXTRACTION.md and RESEARCH_CRAWLING_EXTRACTION.md)
 
 ---
 
