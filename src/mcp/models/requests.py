@@ -100,6 +100,99 @@ class AnalyticsRequest(BaseModel):
     include_costs: bool = Field(default=True, description="Include cost analysis")
 
 
+class HyDESearchRequest(BaseModel):
+    """HyDE (Hypothetical Document Embeddings) search request"""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    domain: str | None = Field(
+        default=None, description="Domain hint for better generation"
+    )
+
+    # HyDE-specific options
+    num_generations: int = Field(
+        default=5, ge=1, le=10, description="Number of hypothetical documents"
+    )
+    generation_temperature: float = Field(
+        default=0.7, ge=0.0, le=1.0, description="Generation temperature"
+    )
+    max_generation_tokens: int = Field(
+        default=200, ge=50, le=500, description="Max tokens per generation"
+    )
+
+    # Search options
+    enable_reranking: bool = Field(default=True, description="Enable BGE reranking")
+    enable_caching: bool = Field(default=True, description="Enable HyDE caching")
+    fusion_algorithm: FusionAlgorithm = Field(
+        default=FusionAlgorithm.RRF, description="Fusion algorithm"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+
+    # Filters and metadata
+    filters: dict[str, Any] | None = Field(default=None, description="Metadata filters")
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+
+    # Performance options
+    force_hyde: bool = Field(
+        default=False, description="Force HyDE even if disabled globally"
+    )
+    fallback_on_error: bool = Field(
+        default=True, description="Fallback to regular search on error"
+    )
+
+
+class MultiStageSearchRequest(BaseModel):
+    """Multi-stage search request with Query API prefetch"""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+
+    # Stage configuration
+    stages: list[dict[str, Any]] = Field(..., description="Search stages configuration")
+    fusion_algorithm: FusionAlgorithm = Field(
+        default=FusionAlgorithm.RRF, description="Fusion algorithm"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+
+    # Options
+    enable_reranking: bool = Field(default=True, description="Enable reranking")
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+    filters: dict[str, Any] | None = Field(default=None, description="Metadata filters")
+
+
+class FilteredSearchRequest(BaseModel):
+    """Filtered search request using indexed payload fields"""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+
+    # Filters
+    filters: dict[str, Any] = Field(
+        ..., description="Filters to apply using indexed fields"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+
+    # Options
+    enable_reranking: bool = Field(default=True, description="Enable reranking")
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+    score_threshold: float = Field(default=0.0, description="Minimum score threshold")
+
+
 # Advanced Search Request Models for Query API
 
 
@@ -112,52 +205,4 @@ class SearchStageRequest(BaseModel):
     limit: int = Field(..., description="Number of results to retrieve in this stage")
     filters: dict[str, Any] | None = Field(
         None, description="Optional filters for this stage"
-    )
-
-
-class MultiStageSearchRequest(BaseModel):
-    """Multi-stage search request for Matryoshka embeddings"""
-
-    collection: str = Field(default="documentation", description="Collection to search")
-    stages: list[SearchStageRequest] = Field(
-        ..., description="Search stages to execute"
-    )
-    limit: int = Field(default=10, ge=1, le=100, description="Final number of results")
-    fusion_algorithm: FusionAlgorithm = Field(
-        default=FusionAlgorithm.RRF, description="Fusion algorithm"
-    )
-    search_accuracy: SearchAccuracy = Field(
-        default=SearchAccuracy.BALANCED, description="Search accuracy level"
-    )
-
-
-class HyDESearchRequest(BaseModel):
-    """HyDE (Hypothetical Document Embeddings) search request"""
-
-    query: str = Field(..., description="Original query text")
-    collection: str = Field(default="documentation", description="Collection to search")
-    num_hypothetical_docs: int = Field(
-        default=5, ge=1, le=10, description="Number of hypothetical documents"
-    )
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    fusion_algorithm: FusionAlgorithm = Field(
-        default=FusionAlgorithm.RRF, description="Fusion algorithm"
-    )
-    search_accuracy: SearchAccuracy = Field(
-        default=SearchAccuracy.BALANCED, description="Search accuracy level"
-    )
-
-
-class FilteredSearchRequest(BaseModel):
-    """Filtered search request with indexed payload optimization"""
-
-    query: str = Field(..., description="Search query")
-    collection: str = Field(default="documentation", description="Collection to search")
-    filters: dict[str, Any] = Field(..., description="Filters to apply")
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    search_accuracy: SearchAccuracy = Field(
-        default=SearchAccuracy.BALANCED, description="Search accuracy level"
-    )
-    include_metadata: bool = Field(
-        default=True, description="Include metadata in results"
     )

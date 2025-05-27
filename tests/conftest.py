@@ -31,6 +31,7 @@ except ModuleNotFoundError:  # pragma: no cover - basic fallback
         vector: list[float]
         payload: dict
 
+
 # Load test environment variables at module import
 _test_env_path = Path(__file__).parent.parent / ".env.test"
 if _test_env_path.exists():
