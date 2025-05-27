@@ -9,11 +9,15 @@ from ..services.base import BaseService
 from ..services.cache.manager import CacheManager
 from ..services.cache.manager import CacheType
 from ..services.crawling.manager import CrawlManager
+from ..services.deployment import ABTestingManager
+from ..services.deployment import BlueGreenDeployment
+from ..services.deployment import CanaryDeployment
 from ..services.embeddings.manager import EmbeddingManager
 from ..services.hyde.config import HyDEMetricsConfig
 from ..services.hyde.config import HyDEPromptConfig
 from ..services.hyde.engine import HyDEQueryEngine
 from ..services.project_storage import ProjectStorage
+from ..services.qdrant_alias_manager import QdrantAliasManager
 from ..services.qdrant_service import QdrantService
 from ..services.rate_limiter import RateLimitManager
 
@@ -29,6 +33,10 @@ class UnifiedServiceManager(BaseService):
         self.embedding_manager: EmbeddingManager | None = None
         self.crawl_manager: CrawlManager | None = None
         self.qdrant_service: QdrantService | None = None
+        self.alias_manager: QdrantAliasManager | None = None
+        self.blue_green: BlueGreenDeployment | None = None
+        self.ab_testing: ABTestingManager | None = None
+        self.canary: CanaryDeployment | None = None
         self.cache_manager: CacheManager | None = None
         self.project_storage: ProjectStorage | None = None
         self.rate_limiter: RateLimitManager | None = None
@@ -84,6 +92,32 @@ class UnifiedServiceManager(BaseService):
             await self.cache_manager.initialize()
             await self.project_storage.initialize()
 
+            # Initialize alias manager and deployment services
+            self.alias_manager = QdrantAliasManager(
+                config=self.config, client=self.qdrant_service._client
+            )
+            await self.alias_manager.initialize()
+
+            self.blue_green = BlueGreenDeployment(
+                config=self.config,
+                qdrant_service=self.qdrant_service,
+                alias_manager=self.alias_manager,
+                embedding_manager=self.embedding_manager,
+            )
+            await self.blue_green.initialize()
+
+            self.ab_testing = ABTestingManager(
+                config=self.config, qdrant_service=self.qdrant_service
+            )
+            await self.ab_testing.initialize()
+
+            self.canary = CanaryDeployment(
+                config=self.config,
+                alias_manager=self.alias_manager,
+                qdrant_service=self.qdrant_service,
+            )
+            await self.canary.initialize()
+
             # Initialize HyDE engine with all dependencies
             if self.config.hyde.enable_hyde:
                 # Convert config to component configs
@@ -121,6 +155,14 @@ class UnifiedServiceManager(BaseService):
         """Cleanup all services"""
         if self.hyde_engine:
             await self.hyde_engine.cleanup()
+        if self.canary:
+            await self.canary.cleanup()
+        if self.ab_testing:
+            await self.ab_testing.cleanup()
+        if self.blue_green:
+            await self.blue_green.cleanup()
+        if self.alias_manager:
+            await self.alias_manager.cleanup()
         if self.embedding_manager:
             await self.embedding_manager.cleanup()
         if self.crawl_manager:

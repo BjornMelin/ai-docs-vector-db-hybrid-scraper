@@ -52,6 +52,9 @@ This implementation combines **research-backed best practices** for production-g
 - **💾 Intelligent Caching**: Redis + LRU cache with 80%+ hit rates
 - **📊 Project Management**: Persistent project storage with quality tiers
 - **🔄 Service Layer**: EmbeddingManager, QdrantService, CrawlManager, CacheManager
+- **🚀 Zero-Downtime Deployments**: Collection aliases for instant switching
+- **🧪 A/B Testing**: Test new embeddings/configs on live traffic
+- **🎯 Canary Deployments**: Gradual rollout with automatic rollback
 
 ## 🚀 Quick Start
 
@@ -538,6 +541,12 @@ for result in results:
 
 "What are the latest best practices for RAG systems?"
 → Leverages your comprehensive documentation knowledge base
+
+"Deploy the new documentation index with zero downtime"
+→ Uses collection aliases for instant atomic switching
+
+"Start an A/B test between OpenAI and BGE embeddings"
+→ Routes traffic between collections with statistical analysis
 ```
 
 ## 📁 Project Structure
