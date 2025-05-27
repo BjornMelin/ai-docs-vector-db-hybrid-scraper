@@ -164,10 +164,12 @@ class QdrantService(BaseService):
         limit: int = 10,
         score_threshold: float = 0.0,
         fusion_type: str = "rrf",
+        search_accuracy: str = "balanced",
     ) -> list[dict[str, Any]]:
         """Perform hybrid search combining dense and sparse vectors.
 
         Uses Qdrant's Query API with prefetch and fusion for optimal results.
+        Enhanced with research-backed prefetch limits and search parameters.
 
         Args:
             collection_name: Collection to search
@@ -176,6 +178,7 @@ class QdrantService(BaseService):
             limit: Maximum results to return
             score_threshold: Minimum score threshold
             fusion_type: Fusion method ("rrf" or "dbsf")
+            search_accuracy: Accuracy level ("fast", "balanced", "accurate", "exact")
 
         Returns:
             List of results with id, score, and payload
@@ -186,20 +189,23 @@ class QdrantService(BaseService):
         self._validate_initialized()
 
         try:
-            # Build prefetch queries
+            # Build prefetch queries with optimized limits
             prefetch_queries = []
 
-            # Dense vector prefetch
+            # Dense vector prefetch with optimized limit
+            dense_limit = self._calculate_prefetch_limit("dense", limit)
             prefetch_queries.append(
                 models.Prefetch(
                     query=query_vector,
                     using="dense",
-                    limit=limit * 2,  # Fetch more for reranking
+                    limit=dense_limit,
+                    params=self._get_search_params(search_accuracy),
                 )
             )
 
-            # Sparse vector prefetch if available
+            # Sparse vector prefetch if available with optimized limit
             if sparse_vector:
+                sparse_limit = self._calculate_prefetch_limit("sparse", limit)
                 prefetch_queries.append(
                     models.Prefetch(
                         query=models.SparseVector(
@@ -207,7 +213,8 @@ class QdrantService(BaseService):
                             values=list(sparse_vector.values()),
                         ),
                         using="sparse",
-                        limit=limit * 2,
+                        limit=sparse_limit,
+                        params=self._get_search_params(search_accuracy),
                     )
                 )
 
@@ -225,6 +232,7 @@ class QdrantService(BaseService):
                     query=models.FusionQuery(fusion=fusion_method),
                     limit=limit,
                     score_threshold=score_threshold,
+                    params=self._get_search_params(search_accuracy),
                     with_payload=True,
                     with_vectors=False,
                 )
@@ -236,6 +244,7 @@ class QdrantService(BaseService):
                     using="dense",
                     limit=limit,
                     score_threshold=score_threshold,
+                    params=self._get_search_params(search_accuracy),
                     with_payload=True,
                     with_vectors=False,
                 )
@@ -489,3 +498,320 @@ class QdrantService(BaseService):
             return True
         except Exception as e:
             raise QdrantServiceError(f"Failed to optimize collection: {e}") from e
+
+    # Advanced Query API Methods for Issue #55
+
+    async def multi_stage_search(
+        self,
+        collection_name: str,
+        stages: list[dict[str, Any]],
+        limit: int = 10,
+        fusion_algorithm: str = "rrf",
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """
+        Perform multi-stage retrieval with different strategies.
+
+        Implements advanced Query API patterns for Matryoshka embeddings
+        and complex retrieval strategies.
+
+        Args:
+            collection_name: Collection to search
+            stages: List of search stages with query_vector, vector_name, limit, etc.
+            limit: Final number of results to return
+            fusion_algorithm: Fusion method ("rrf" or "dbsf")
+            search_accuracy: Accuracy level ("fast", "balanced", "accurate", "exact")
+
+        Returns:
+            List of results with id, score, and payload
+
+        Raises:
+            QdrantServiceError: If search fails
+        """
+        self._validate_initialized()
+
+        try:
+            prefetch_queries = []
+
+            # Build prefetch queries from all but the final stage
+            for stage in stages[:-1]:
+                # Calculate optimal prefetch limit based on vector type
+                vector_type = stage.get("vector_type", "dense")
+                stage_limit = self._calculate_prefetch_limit(
+                    vector_type, stage["limit"]
+                )
+
+                # Build prefetch query
+                prefetch_query = models.Prefetch(
+                    query=stage["query_vector"],
+                    using=stage["vector_name"],
+                    limit=stage_limit,
+                    filter=self._build_filter(stage.get("filter")),
+                    params=self._get_search_params(search_accuracy),
+                )
+                prefetch_queries.append(prefetch_query)
+
+            # Final stage query
+            final_stage = stages[-1]
+            fusion_method = (
+                models.Fusion.RRF
+                if fusion_algorithm.lower() == "rrf"
+                else models.Fusion.DBSF
+            )
+
+            # Execute multi-stage query
+            results = await self._client.query_points(
+                collection_name=collection_name,
+                query=final_stage["query_vector"],
+                using=final_stage["vector_name"],
+                prefetch=prefetch_queries,
+                fusion=models.FusionQuery(fusion=fusion_method),
+                limit=limit,
+                params=self._get_search_params(search_accuracy),
+                with_payload=True,
+                with_vectors=False,
+            )
+
+            # Format results
+            return [
+                {
+                    "id": str(point.id),
+                    "score": point.score,
+                    "payload": point.payload or {},
+                }
+                for point in results.points
+            ]
+
+        except Exception as e:
+            logger.error(
+                f"Multi-stage search failed in collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Multi-stage search failed: {e}") from e
+
+    async def hyde_search(
+        self,
+        collection_name: str,
+        query: str,
+        query_embedding: list[float],
+        hypothetical_embeddings: list[list[float]],
+        limit: int = 10,
+        fusion_algorithm: str = "rrf",
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """
+        Search using HyDE (Hypothetical Document Embeddings) with Query API prefetch.
+
+        Args:
+            collection_name: Collection to search
+            query: Original query text
+            query_embedding: Original query embedding
+            hypothetical_embeddings: List of hypothetical document embeddings
+            limit: Number of results to return
+            fusion_algorithm: Fusion method ("rrf" or "dbsf")
+            search_accuracy: Accuracy level
+
+        Returns:
+            List of search results
+
+        Raises:
+            QdrantServiceError: If search fails
+        """
+        self._validate_initialized()
+
+        try:
+            import numpy as np
+
+            # Average hypothetical embeddings for wider retrieval
+            hypothetical_vector = np.mean(hypothetical_embeddings, axis=0).tolist()
+
+            # Calculate optimal prefetch limits
+            hyde_limit = self._calculate_prefetch_limit("hyde", limit)
+            dense_limit = self._calculate_prefetch_limit("dense", limit)
+
+            # Build prefetch queries
+            prefetch_queries = [
+                # HyDE embedding - cast wider net for discovery
+                models.Prefetch(
+                    query=hypothetical_vector,
+                    using="dense",
+                    limit=hyde_limit,
+                    params=self._get_search_params(search_accuracy),
+                ),
+                # Original query - for precision
+                models.Prefetch(
+                    query=query_embedding,
+                    using="dense",
+                    limit=dense_limit,
+                    params=self._get_search_params(search_accuracy),
+                ),
+            ]
+
+            # Execute HyDE search with fusion
+            fusion_method = (
+                models.Fusion.RRF
+                if fusion_algorithm.lower() == "rrf"
+                else models.Fusion.DBSF
+            )
+
+            results = await self._client.query_points(
+                collection_name=collection_name,
+                query=query_embedding,  # Final fusion uses original query
+                using="dense",
+                prefetch=prefetch_queries,
+                fusion=models.FusionQuery(fusion=fusion_method),
+                limit=limit,
+                params=self._get_search_params(search_accuracy),
+                with_payload=True,
+                with_vectors=False,
+            )
+
+            # Format results
+            return [
+                {
+                    "id": str(point.id),
+                    "score": point.score,
+                    "payload": point.payload or {},
+                }
+                for point in results.points
+            ]
+
+        except Exception as e:
+            logger.error(
+                f"HyDE search failed in collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"HyDE search failed: {e}") from e
+
+    async def filtered_search(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        filters: dict[str, Any],
+        limit: int = 10,
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """
+        Optimized filtered search using indexed payload fields.
+
+        Args:
+            collection_name: Collection to search
+            query_vector: Query vector
+            filters: Filters to apply (doc_type, language, created_after, etc.)
+            limit: Number of results to return
+            search_accuracy: Accuracy level
+
+        Returns:
+            List of search results
+
+        Raises:
+            QdrantServiceError: If search fails
+        """
+        self._validate_initialized()
+
+        try:
+            # Build optimized Qdrant filter
+            filter_obj = self._build_filter(filters)
+
+            # Execute filtered search with Query API
+            results = await self._client.query_points(
+                collection_name=collection_name,
+                query=query_vector,
+                using="dense",
+                filter=filter_obj,
+                limit=limit,
+                params=self._get_search_params(search_accuracy),
+                with_payload=True,
+                with_vectors=False,
+            )
+
+            # Format results
+            return [
+                {
+                    "id": str(point.id),
+                    "score": point.score,
+                    "payload": point.payload or {},
+                }
+                for point in results.points
+            ]
+
+        except Exception as e:
+            logger.error(
+                f"Filtered search failed in collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Filtered search failed: {e}") from e
+
+    def _calculate_prefetch_limit(self, vector_type: str, final_limit: int) -> int:
+        """Calculate optimal prefetch limit based on research findings."""
+        # Optimal prefetch multipliers based on research
+        multipliers = {
+            "sparse": 5.0,  # Cast wider net for sparse vectors
+            "hyde": 3.0,  # Moderate expansion for hypothetical docs
+            "dense": 2.0,  # Precision focus for dense vectors
+        }
+
+        # Maximum limits to prevent performance degradation
+        max_limits = {
+            "sparse": 500,
+            "hyde": 150,
+            "dense": 200,
+        }
+
+        multiplier = multipliers.get(vector_type, 2.0)
+        max_limit = max_limits.get(vector_type, 200)
+
+        calculated = int(final_limit * multiplier)
+        return min(calculated, max_limit)
+
+    def _get_search_params(self, accuracy_level: str) -> models.SearchParams:
+        """Get optimized search parameters for different accuracy levels."""
+        params_map = {
+            "fast": models.SearchParams(hnsw_ef=50, exact=False),
+            "balanced": models.SearchParams(hnsw_ef=100, exact=False),
+            "accurate": models.SearchParams(hnsw_ef=200, exact=False),
+            "exact": models.SearchParams(exact=True),
+        }
+
+        return params_map.get(accuracy_level, params_map["balanced"])
+
+    def _build_filter(self, filters: dict[str, Any] | None) -> models.Filter | None:
+        """Build optimized Qdrant filter from filter dictionary."""
+        if not filters:
+            return None
+
+        must_conditions = []
+
+        # String field filters
+        for field in ["doc_type", "language", "title", "url"]:
+            if field in filters:
+                must_conditions.append(
+                    models.FieldCondition(
+                        key=field, match=models.MatchValue(value=filters[field])
+                    )
+                )
+
+        # Date range filters
+        if "created_after" in filters:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="created_at", range=models.Range(gte=filters["created_after"])
+                )
+            )
+
+        if "created_before" in filters:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="created_at", range=models.Range(lte=filters["created_before"])
+                )
+            )
+
+        # Numeric range filters
+        if "min_score" in filters:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="score", range=models.Range(gte=filters["min_score"])
+                )
+            )
+
+        return models.Filter(must=must_conditions) if must_conditions else None
