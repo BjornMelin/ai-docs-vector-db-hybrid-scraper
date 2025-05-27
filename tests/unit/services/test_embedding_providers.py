@@ -119,7 +119,12 @@ class TestOpenAIEmbeddingProvider:
     @pytest.mark.asyncio
     async def test_cleanup(self, openai_provider):
         """Test provider cleanup."""
-        with patch("src.services.embeddings.openai_provider.AsyncOpenAI"):
+        with patch(
+            "src.services.embeddings.openai_provider.AsyncOpenAI"
+        ) as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+
             await openai_provider.initialize()
             assert openai_provider._initialized
 
@@ -127,6 +132,7 @@ class TestOpenAIEmbeddingProvider:
 
             assert not openai_provider._initialized
             assert openai_provider._client is None
+            mock_instance.close.assert_called_once()
 
 
 class TestFastEmbedProvider:
@@ -146,7 +152,9 @@ class TestFastEmbedProvider:
             await fastembed_provider.initialize()
 
             assert fastembed_provider._initialized
-            mock_model.assert_called_once_with(model_name="BAAI/bge-small-en-v1.5")
+            mock_model.assert_called_once_with(
+                "BAAI/bge-small-en-v1.5"
+            )  # Positional argument, not keyword
 
     @pytest.mark.asyncio
     async def test_generate_embeddings(self, fastembed_provider):
@@ -219,8 +227,11 @@ class TestEmbeddingManager:
     def config(self):
         """Create test configuration."""
         return UnifiedConfig(
-            openai__api_key="sk-test-key",
             embedding_provider=EmbeddingProviderEnum.OPENAI,
+            openai={
+                "api_key": "sk-test123456789012345678901234567890"
+            },  # Valid length API key
+            cache={"enable_caching": False},  # Disable caching to simplify test
         )
 
     @pytest.fixture

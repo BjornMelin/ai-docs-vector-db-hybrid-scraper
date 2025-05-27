@@ -239,10 +239,15 @@ uv sync                                           # Install dependencies
 uv run python src/crawl4ai_bulk_embedder.py     # Bulk documentation scraping
 uv run python src/unified_mcp_server.py         # Start unified MCP server
 
-# Quality & Testing
-uv run pytest --cov=src                         # Run tests with coverage
+# Quality & Testing (NEW: Clean, Readable Output)
+./scripts/test.sh quick                          # Fast unit tests with clear results
+./scripts/test.sh clean                          # Summary only (no random dots/chars)
+./scripts/test.sh coverage                       # Full coverage report
+./scripts/test.sh failed                         # Only previously failed tests
+uv run pytest tests/unit/ -v                    # Verbose unit tests (organized structure)
+uv run pytest tests/integration/ -v             # Integration tests
 ruff check . --fix && ruff format .             # Lint and format code
-uv run pytest tests/test_chunking.py -v        # Single test file
+uv run pytest tests/unit/config/test_config.py -v  # Single test file
 
 # Database Operations  
 uv run python src/manage_vector_db.py stats     # Database statistics

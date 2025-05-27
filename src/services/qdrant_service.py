@@ -134,6 +134,19 @@ class QdrantService(BaseService):
             )
 
             logger.info(f"Created collection: {collection_name}")
+
+            # Automatically create payload indexes for optimal performance
+            try:
+                await self.create_payload_indexes(collection_name)
+                logger.info(
+                    f"Payload indexes created for collection: {collection_name}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to create payload indexes for {collection_name}: {e}. "
+                    "Collection created successfully but filtering may be slower."
+                )
+
             return True
 
         except ResponseHandlingException as e:
@@ -807,49 +820,415 @@ class QdrantService(BaseService):
         return params_map.get(accuracy_level, params_map["balanced"])
 
     def _build_filter(self, filters: dict[str, Any] | None) -> models.Filter | None:
-        """Build optimized Qdrant filter from filter dictionary."""
+        """Build optimized Qdrant filter from filter dictionary using indexed fields."""
         if not filters:
             return None
 
         must_conditions = []
 
-        # String field filters
-        for field in ["doc_type", "language", "title", "url"]:
+        # Build different types of filter conditions
+        must_conditions.extend(self._build_keyword_conditions(filters))
+        must_conditions.extend(self._build_text_conditions(filters))
+        must_conditions.extend(self._build_timestamp_conditions(filters))
+        must_conditions.extend(self._build_content_metric_conditions(filters))
+        must_conditions.extend(self._build_structural_conditions(filters))
+
+        return models.Filter(must=must_conditions) if must_conditions else None
+
+    def _build_keyword_conditions(
+        self, filters: dict[str, Any]
+    ) -> list[models.FieldCondition]:
+        """Build keyword field conditions for exact matching."""
+        conditions = []
+        keyword_fields = [
+            # Core documented fields
+            "doc_type",
+            "language",
+            "framework",
+            "version",
+            "crawl_source",
+            # System fields
+            "site_name",
+            "embedding_model",
+            "embedding_provider",
+            "search_strategy",
+            "scraper_version",
+            # Legacy compatibility
+            "url",
+        ]
+
+        for field in keyword_fields:
             if field in filters:
-                # Validate filter value is safe
                 filter_value = filters[field]
                 if not isinstance(filter_value, str | int | float | bool):
                     raise ValueError(
                         f"Filter value for {field} must be a simple type, got {type(filter_value)}"
                     )
-
-                must_conditions.append(
+                conditions.append(
                     models.FieldCondition(
                         key=field, match=models.MatchValue(value=filter_value)
                     )
                 )
+        return conditions
 
-        # Date range filters
-        if "created_after" in filters:
-            must_conditions.append(
+    def _build_text_conditions(
+        self, filters: dict[str, Any]
+    ) -> list[models.FieldCondition]:
+        """Build text field conditions for partial matching."""
+        conditions = []
+        text_fields = ["title", "content_preview"]
+
+        for field in text_fields:
+            if field in filters:
+                filter_value = filters[field]
+                if not isinstance(filter_value, str):
+                    raise ValueError(f"Text filter value for {field} must be a string")
+                conditions.append(
+                    models.FieldCondition(
+                        key=field, match=models.MatchText(text=filter_value)
+                    )
+                )
+        return conditions
+
+    def _build_timestamp_conditions(
+        self, filters: dict[str, Any]
+    ) -> list[models.FieldCondition]:
+        """Build timestamp range conditions."""
+        conditions = []
+
+        # Modern timestamp filters
+        timestamp_mappings = [
+            ("created_after", "created_at", "gte"),
+            ("created_before", "created_at", "lte"),
+            ("updated_after", "last_updated", "gte"),
+            ("updated_before", "last_updated", "lte"),
+            # Legacy compatibility
+            ("scraped_after", "scraped_at", "gte"),
+            ("scraped_before", "scraped_at", "lte"),
+        ]
+
+        for filter_key, field_key, operator in timestamp_mappings:
+            if filter_key in filters:
+                range_params = {operator: filters[filter_key]}
+                conditions.append(
+                    models.FieldCondition(
+                        key=field_key, range=models.Range(**range_params)
+                    )
+                )
+        return conditions
+
+    def _build_content_metric_conditions(
+        self, filters: dict[str, Any]
+    ) -> list[models.FieldCondition]:
+        """Build content metric range conditions."""
+        conditions = []
+
+        # Content length and quality filters
+        metric_mappings = [
+            ("min_word_count", "word_count", "gte"),
+            ("max_word_count", "word_count", "lte"),
+            ("min_char_count", "char_count", "gte"),
+            ("max_char_count", "char_count", "lte"),
+            ("min_quality_score", "quality_score", "gte"),
+            ("max_quality_score", "quality_score", "lte"),
+            # Legacy compatibility
+            ("min_score", "score", "gte"),
+        ]
+
+        for filter_key, field_key, operator in metric_mappings:
+            if filter_key in filters:
+                range_params = {operator: filters[filter_key]}
+                conditions.append(
+                    models.FieldCondition(
+                        key=field_key, range=models.Range(**range_params)
+                    )
+                )
+        return conditions
+
+    def _build_structural_conditions(
+        self, filters: dict[str, Any]
+    ) -> list[models.FieldCondition]:
+        """Build structural and metadata conditions."""
+        conditions = []
+
+        # Exact match filters
+        if "chunk_index" in filters:
+            conditions.append(
                 models.FieldCondition(
-                    key="created_at", range=models.Range(gte=filters["created_after"])
+                    key="chunk_index",
+                    match=models.MatchValue(value=filters["chunk_index"]),
                 )
             )
 
-        if "created_before" in filters:
-            must_conditions.append(
+        if "depth" in filters:
+            conditions.append(
                 models.FieldCondition(
-                    key="created_at", range=models.Range(lte=filters["created_before"])
+                    key="depth", match=models.MatchValue(value=filters["depth"])
                 )
             )
 
-        # Numeric range filters
-        if "min_score" in filters:
-            must_conditions.append(
-                models.FieldCondition(
-                    key="score", range=models.Range(gte=filters["min_score"])
+        # Range filters
+        range_mappings = [
+            ("min_total_chunks", "total_chunks", "gte"),
+            ("max_total_chunks", "total_chunks", "lte"),
+            ("min_links_count", "links_count", "gte"),
+            ("max_links_count", "links_count", "lte"),
+        ]
+
+        for filter_key, field_key, operator in range_mappings:
+            if filter_key in filters:
+                range_params = {operator: filters[filter_key]}
+                conditions.append(
+                    models.FieldCondition(
+                        key=field_key, range=models.Range(**range_params)
+                    )
                 )
+
+        return conditions
+
+    # Payload Indexing Methods for Issue #56
+
+    async def create_payload_indexes(self, collection_name: str) -> None:
+        """Create payload indexes on key metadata fields for 10-100x faster filtering.
+
+        Creates indexes on high-value fields for dramatic search performance improvements:
+        - Keyword indexes for exact matching (site_name, embedding_model, etc.)
+        - Text indexes for partial matching (title, content_preview)
+        - Integer indexes for range queries (scraped_at, word_count, etc.)
+
+        Args:
+            collection_name: Collection to index
+
+        Raises:
+            QdrantServiceError: If index creation fails
+        """
+        self._validate_initialized()
+
+        try:
+            logger.info(f"Creating payload indexes for collection: {collection_name}")
+
+            # Keyword indexes for exact matching (categorical data)
+            keyword_fields = [
+                # Core indexable fields per documentation
+                "doc_type",  # "api", "guide", "tutorial", "reference"
+                "language",  # "python", "typescript", "rust"
+                "framework",  # "fastapi", "nextjs", "react"
+                "version",  # "3.0", "14.2", "latest"
+                "crawl_source",  # "crawl4ai", "stagehand", "playwright"
+                # Additional system fields
+                "site_name",  # Documentation site name
+                "embedding_model",  # Embedding model used
+                "embedding_provider",  # Provider (openai, fastembed)
+                "search_strategy",  # Strategy (hybrid, dense, sparse)
+                "scraper_version",  # Scraper version
+            ]
+
+            for field in keyword_fields:
+                await self._client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field,
+                    field_schema=models.PayloadSchemaType.KEYWORD,
+                    wait=True,
+                )
+                logger.debug(f"Created keyword index for field: {field}")
+
+            # Text indexes for partial matching (full-text search)
+            text_fields = [
+                "title",  # Document titles
+                "content_preview",  # Content previews
+            ]
+
+            for field in text_fields:
+                await self._client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field,
+                    field_schema=models.PayloadSchemaType.TEXT,
+                    wait=True,
+                )
+                logger.debug(f"Created text index for field: {field}")
+
+            # Integer indexes for range queries
+            integer_fields = [
+                # Core timestamp fields per documentation
+                "created_at",  # Document creation timestamp
+                "last_updated",  # Last update timestamp
+                "scraped_at",  # Scraping timestamp (legacy compatibility)
+                # Content metrics
+                "word_count",  # Content length filtering
+                "char_count",  # Character count filtering
+                "quality_score",  # Content quality score
+                # Document structure
+                "chunk_index",  # Chunk position filtering
+                "total_chunks",  # Document size filtering
+                "depth",  # Crawl depth filtering
+                "links_count",  # Links count filtering
+            ]
+
+            for field in integer_fields:
+                await self._client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field,
+                    field_schema=models.PayloadSchemaType.INTEGER,
+                    wait=True,
+                )
+                logger.debug(f"Created integer index for field: {field}")
+
+            logger.info(
+                f"Successfully created {len(keyword_fields) + len(text_fields) + len(integer_fields)} "
+                f"payload indexes for collection: {collection_name}"
             )
 
-        return models.Filter(must=must_conditions) if must_conditions else None
+        except Exception as e:
+            logger.error(
+                f"Failed to create payload indexes for collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to create payload indexes: {e}") from e
+
+    async def list_payload_indexes(self, collection_name: str) -> list[str]:
+        """List all payload indexes in a collection.
+
+        Args:
+            collection_name: Collection to check
+
+        Returns:
+            List of indexed field names
+
+        Raises:
+            QdrantServiceError: If listing fails
+        """
+        self._validate_initialized()
+
+        try:
+            collection_info = await self._client.get_collection(collection_name)
+
+            # Extract indexed fields from payload schema
+            indexed_fields = []
+            if (
+                hasattr(collection_info, "payload_schema")
+                and collection_info.payload_schema
+            ):
+                for field_name, field_info in collection_info.payload_schema.items():
+                    # Check if field has index configuration
+                    if hasattr(field_info, "index") and field_info.index:
+                        indexed_fields.append(field_name)
+
+            logger.info(
+                f"Found {len(indexed_fields)} indexed fields in {collection_name}"
+            )
+            return indexed_fields
+
+        except Exception as e:
+            logger.error(
+                f"Failed to list payload indexes for collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to list payload indexes: {e}") from e
+
+    async def drop_payload_index(self, collection_name: str, field_name: str) -> None:
+        """Drop a specific payload index.
+
+        Args:
+            collection_name: Collection containing the index
+            field_name: Field to drop index for
+
+        Raises:
+            QdrantServiceError: If drop fails
+        """
+        self._validate_initialized()
+
+        try:
+            await self._client.delete_payload_index(
+                collection_name=collection_name, field_name=field_name, wait=True
+            )
+            logger.info(f"Dropped payload index for field: {field_name}")
+
+        except Exception as e:
+            logger.error(
+                f"Failed to drop payload index for field {field_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to drop payload index: {e}") from e
+
+    async def reindex_collection(self, collection_name: str) -> None:
+        """Reindex all payload fields for a collection.
+
+        Useful after bulk updates or when index performance degrades.
+
+        Args:
+            collection_name: Collection to reindex
+
+        Raises:
+            QdrantServiceError: If reindexing fails
+        """
+        self._validate_initialized()
+
+        try:
+            logger.info(f"Starting full reindex for collection: {collection_name}")
+
+            # Get existing indexes
+            existing_indexes = await self.list_payload_indexes(collection_name)
+
+            # Drop existing indexes
+            for field_name in existing_indexes:
+                try:
+                    await self.drop_payload_index(collection_name, field_name)
+                except Exception as e:
+                    logger.warning(f"Failed to drop index for {field_name}: {e}")
+
+            # Recreate all indexes
+            await self.create_payload_indexes(collection_name)
+
+            logger.info(f"Successfully reindexed collection: {collection_name}")
+
+        except Exception as e:
+            logger.error(
+                f"Failed to reindex collection {collection_name}: {e}", exc_info=True
+            )
+            raise QdrantServiceError(f"Failed to reindex collection: {e}") from e
+
+    async def get_payload_index_stats(self, collection_name: str) -> dict[str, Any]:
+        """Get statistics about payload indexes in a collection.
+
+        Args:
+            collection_name: Collection to analyze
+
+        Returns:
+            Dictionary with index statistics
+
+        Raises:
+            QdrantServiceError: If stats retrieval fails
+        """
+        self._validate_initialized()
+
+        try:
+            collection_info = await self._client.get_collection(collection_name)
+            indexed_fields = await self.list_payload_indexes(collection_name)
+
+            stats = {
+                "collection_name": collection_name,
+                "total_points": collection_info.points_count or 0,
+                "indexed_fields_count": len(indexed_fields),
+                "indexed_fields": indexed_fields,
+                "payload_schema": {},
+            }
+
+            # Add payload schema information if available
+            if (
+                hasattr(collection_info, "payload_schema")
+                and collection_info.payload_schema
+            ):
+                for field_name, field_info in collection_info.payload_schema.items():
+                    stats["payload_schema"][field_name] = {
+                        "indexed": field_name in indexed_fields,
+                        "type": str(getattr(field_info, "data_type", "unknown")),
+                    }
+
+            return stats
+
+        except Exception as e:
+            logger.error(
+                f"Failed to get payload index stats for collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to get payload index stats: {e}") from e

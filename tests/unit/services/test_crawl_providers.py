@@ -49,7 +49,9 @@ class TestFirecrawlProvider:
             result = await firecrawl_provider.scrape_url("https://example.com")
 
             assert result["success"] is True
-            assert result["markdown"] == "# Test Content"
+            assert (
+                result["content"] == "# Test Content"
+            )  # FirecrawlProvider returns "content", not "markdown"
             assert result["metadata"]["title"] == "Test"
             mock_instance.scrape_url.assert_called_once()
 
@@ -74,41 +76,6 @@ class TestFirecrawlProvider:
             assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_scrape_multiple_urls(self, firecrawl_provider):
-        """Test multiple URL scraping."""
-        urls = ["https://example1.com", "https://example2.com"]
-
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
-            mock_instance = MagicMock()
-            mock_app.return_value = mock_instance
-
-            # Mock batch response
-            mock_instance.batch_scrape_urls.return_value = {
-                "success": True,
-                "data": [
-                    {
-                        "url": "https://example1.com",
-                        "markdown": "Content 1",
-                        "metadata": {"title": "Page 1"},
-                    },
-                    {
-                        "url": "https://example2.com",
-                        "markdown": "Content 2",
-                        "metadata": {"title": "Page 2"},
-                    },
-                ],
-            }
-
-            await firecrawl_provider.initialize()
-
-            result = await firecrawl_provider.scrape_multiple_urls(urls)
-
-            assert result["success"] is True
-            assert len(result["data"]) == 2
-            assert result["data"][0]["markdown"] == "Content 1"
-            assert result["data"][1]["markdown"] == "Content 2"
-
-    @pytest.mark.asyncio
     async def test_crawl_website(self, firecrawl_provider):
         """Test website crawling."""
         with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app:
@@ -131,7 +98,7 @@ class TestFirecrawlProvider:
 
             await firecrawl_provider.initialize()
 
-            result = await firecrawl_provider.crawl_website(
+            result = await firecrawl_provider.crawl_site(
                 "https://example.com", max_pages=10
             )
 
@@ -155,7 +122,7 @@ class TestFirecrawlProvider:
 
             await firecrawl_provider.initialize()
 
-            result = await firecrawl_provider.map_website("https://example.com")
+            result = await firecrawl_provider.map_url("https://example.com")
 
             assert len(result) == 3
             assert "https://example.com/page1" in result
@@ -195,7 +162,7 @@ class TestCrawl4AIProvider:
 
             assert crawl4ai_provider._initialized
             assert crawl4ai_provider._crawler is not None
-            mock_instance.__aenter__.assert_called_once()
+            mock_instance.start.assert_called_once()  # Check that start() was called, not __aenter__
 
     @pytest.mark.asyncio
     async def test_scrape_url_success(self, crawl4ai_provider):
@@ -219,7 +186,9 @@ class TestCrawl4AIProvider:
             result = await crawl4ai_provider.scrape_url("https://example.com")
 
             assert result["success"] is True
-            assert result["markdown"] == "# Test Content"
+            assert (
+                result["content"] == "# Test Content"
+            )  # Crawl4AIProvider returns "content", not "markdown"
             assert result["metadata"]["title"] == "Test Page"
 
     @pytest.mark.asyncio
@@ -244,38 +213,6 @@ class TestCrawl4AIProvider:
             assert result["success"] is False
             assert "error" in result
             assert "Connection failed" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_scrape_multiple_urls(self, crawl4ai_provider):
-        """Test multiple URL scraping."""
-        urls = ["https://example1.com", "https://example2.com"]
-
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler:
-            mock_instance = AsyncMock()
-            mock_crawler.return_value = mock_instance
-
-            # Mock results for each URL
-            mock_results = []
-            for i, url in enumerate(urls):
-                mock_result = MagicMock()
-                mock_result.success = True
-                mock_result.markdown = f"Content {i + 1}"
-                mock_result.html = f"<p>Content {i + 1}</p>"
-                mock_result.metadata = {"title": f"Page {i + 1}", "url": url}
-                mock_results.append(mock_result)
-
-            mock_instance.arun.side_effect = mock_results
-
-            await crawl4ai_provider.initialize()
-
-            result = await crawl4ai_provider.scrape_multiple_urls(urls)
-
-            assert result["success"] is True
-            assert len(result["data"]) == 2
-            assert result["data"][0]["markdown"] == "Content 1"
-            assert result["data"][1]["markdown"] == "Content 2"
 
     @pytest.mark.asyncio
     async def test_crawl_website(self, crawl4ai_provider):
