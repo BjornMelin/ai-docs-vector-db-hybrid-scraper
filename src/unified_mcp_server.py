@@ -41,6 +41,7 @@ try:
     from mcp.models.responses import SearchResult
     from mcp.service_manager import UnifiedServiceManager
     from security import SecurityValidator
+    from services.logging_config import configure_logging
 except ImportError:
     from .chunking import ChunkingConfig
     from .chunking import chunk_content
@@ -55,9 +56,10 @@ except ImportError:
     from .mcp.models.responses import SearchResult
     from .mcp.service_manager import UnifiedServiceManager
     from .security import SecurityValidator
+    from .services.logging_config import configure_logging
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server

@@ -368,22 +368,22 @@ class TestServiceIntegration:
         )
         await qdrant_service.initialize()
         try:
-            # Mock collection info
-            with patch.object(
-                qdrant_service._client,
-                "get_collection",
-                return_value=Mock(
-                    config=Mock(
-                        params=Mock(
-                            sparse_vectors={
-                                "text-sparse": Mock(index=Mock(on_disk=False))
-                            }
+            # Mock collection info and hybrid search
+            with (
+                patch.object(
+                    qdrant_service._client,
+                    "get_collection",
+                    return_value=Mock(
+                        config=Mock(
+                            params=Mock(
+                                sparse_vectors={
+                                    "text-sparse": Mock(index=Mock(on_disk=False))
+                                }
+                            )
                         )
-                    )
+                    ),
                 ),
-            ):
-                # Mock hybrid search
-                with patch.object(
+                patch.object(
                     qdrant_service._client,
                     "search_batch",
                     return_value=[
@@ -392,20 +392,21 @@ class TestServiceIntegration:
                             Mock(id="doc2", score=0.8, payload={"content": "Doc 2"}),
                         ]
                     ],
-                ):
-                    results = await qdrant_service.hybrid_search(
-                        collection_name="test_collection",
-                        query_text="test query",
-                        dense_vector=[0.1] * 1536,
-                        sparse_vector={
-                            "indices": [1, 5, 10],
-                            "values": [0.5, 0.3, 0.2],
-                        },
-                        limit=5,
-                    )
+                ),
+            ):
+                results = await qdrant_service.hybrid_search(
+                    collection_name="test_collection",
+                    query_text="test query",
+                    dense_vector=[0.1] * 1536,
+                    sparse_vector={
+                        "indices": [1, 5, 10],
+                        "values": [0.5, 0.3, 0.2],
+                    },
+                    limit=5,
+                )
 
-                    assert len(results) > 0
-                    assert results[0].score > 0.8
+                assert len(results) > 0
+                assert results[0].score > 0.8
 
         finally:
             await qdrant_service.cleanup()

@@ -46,7 +46,7 @@ dependencies = [
     "tree-sitter-javascript>=0.23.1",
     "tree-sitter-typescript>=0.23.2",
     "redis[hiredis]>=5.3.0",
-    "fastmcp>=2.5.0",
+    "fastmcp>=2.5.1",
     "uvicorn>=0.34.0",
 ]
 
