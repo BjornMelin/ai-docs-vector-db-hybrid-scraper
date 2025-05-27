@@ -14,6 +14,14 @@ from src.services.project_storage import ProjectStorage
 from src.services.qdrant_service import QdrantService
 
 
+class APIConfig(UnifiedConfig):
+    """Minimal adapter for legacy APIConfig tests."""
+
+    @classmethod
+    def from_unified_config(cls):
+        return get_config()
+
+
 class TestUnifiedConfig:
     """Test the unified configuration system."""
 

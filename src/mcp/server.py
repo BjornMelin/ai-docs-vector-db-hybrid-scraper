@@ -4,12 +4,13 @@ import logging
 
 from fastmcp import FastMCP
 
+from ..services.logging_config import configure_logging
 from .service_manager import UnifiedServiceManager
 from .tools import collections
 from .tools import search
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server

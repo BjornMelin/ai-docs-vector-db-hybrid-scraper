@@ -4,6 +4,8 @@ import logging
 import sys
 from typing import Any
 
+from ..config import get_config
+
 
 # Custom formatter for structured logging
 class ServiceLayerFormatter(logging.Formatter):
@@ -23,7 +25,7 @@ class ServiceLayerFormatter(logging.Formatter):
 
 
 def configure_logging(
-    level: str = "INFO",
+    level: str | None = None,
     enable_color: bool = True,
     log_file: str | None = None,
 ) -> None:
@@ -34,6 +36,14 @@ def configure_logging(
         enable_color: Enable colored output for console
         log_file: Optional log file path
     """
+    config = get_config()
+
+    if level is None:
+        level = config.log_level.value
+
+    if log_file is None and hasattr(config, "log_file"):
+        log_file = config.log_file
+
     # Create root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, level.upper()))
