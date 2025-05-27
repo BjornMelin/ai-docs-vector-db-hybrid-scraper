@@ -1216,9 +1216,17 @@ config.embedding.model_benchmarks["text-embedding-3-small"].quality_score = 87
 
 #### Environment-Specific Configuration
 
-Create different config files for different environments:
+You can create different config files for different environments by overriding only the values you wish to change from the main template.
 
-**config/production-benchmarks.json**:
+**Configuration Merging Behavior:**
+- The main template `config/templates/custom-benchmarks.json` contains the full set of configuration options and default values
+- Environment-specific files (shown below) are intended as minimal overrides - they only need to specify the keys and values that differ from the template
+- When loading configuration, your application should merge the environment-specific file with the template, so that any unspecified values fall back to the defaults in `custom-benchmarks.json`
+- This pattern allows for clean, maintainable environment-specific tuning without duplicating the entire configuration
+
+**Example environment-specific override files:**
+
+**config/production-benchmarks.json** (minimal override):
 ```json
 {
   "embedding": {
@@ -1232,7 +1240,7 @@ Create different config files for different environments:
 }
 ```
 
-**config/development-benchmarks.json**:
+**config/development-benchmarks.json** (minimal override):
 ```json
 {
   "embedding": {
@@ -1245,6 +1253,8 @@ Create different config files for different environments:
   }
 }
 ```
+
+> **Note**: These examples only override specific benchmark values. All other configuration values (smart_selection parameters, other model benchmarks, etc.) will use the defaults from the main template.
 
 ### Smart Selection Impact
 

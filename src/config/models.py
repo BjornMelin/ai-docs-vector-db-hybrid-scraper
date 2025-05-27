@@ -607,6 +607,18 @@ class EmbeddingConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @model_validator(mode="after")
+    def validate_benchmark_keys(self) -> "EmbeddingConfig":
+        """Ensure dict keys match ModelBenchmark.model_name for consistency."""
+        for key, benchmark in self.model_benchmarks.items():
+            if key != benchmark.model_name:
+                raise ValueError(
+                    f"Dictionary key '{key}' does not match "
+                    f"ModelBenchmark.model_name '{benchmark.model_name}'. "
+                    f"Keys must be consistent for proper model identification."
+                )
+        return self
+
 
 class SecurityConfig(BaseModel):
     """Security settings."""

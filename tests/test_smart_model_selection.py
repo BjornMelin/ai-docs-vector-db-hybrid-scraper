@@ -6,6 +6,7 @@ import pytest
 from src.config.enums import EmbeddingProvider
 from src.config.models import ModelBenchmark
 from src.config.models import UnifiedConfig
+from src.config.models import _get_default_model_benchmarks
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import QualityTier
 from src.services.embeddings.manager import TextAnalysis
@@ -473,8 +474,8 @@ class TestConfigurableBenchmarks:
         config = UnifiedConfig(
             embedding_provider=EmbeddingProvider.FASTEMBED,
         )
-        # Set OpenAI key directly
-        config.openai.api_key = "sk-test-key-1234567890abcdef"
+        # Set OpenAI key directly (test-only value)
+        config.openai.api_key = "test-key-for-unit-tests-only"
         # Update the benchmarks
         config.embedding.model_benchmarks = custom_benchmarks
         return config
@@ -501,7 +502,8 @@ class TestConfigurableBenchmarks:
         manager = EmbeddingManager(config)
 
         # Should have default benchmarks
-        assert len(manager._benchmarks) == 4
+        default_benchmarks = _get_default_model_benchmarks()
+        assert len(manager._benchmarks) == len(default_benchmarks)
         assert "text-embedding-3-small" in manager._benchmarks
         assert "text-embedding-3-large" in manager._benchmarks
         assert "BAAI/bge-small-en-v1.5" in manager._benchmarks
@@ -579,4 +581,44 @@ class TestConfigurableBenchmarks:
                 cost_per_million_tokens=10.0,
                 max_context_length=512,
                 embedding_dimensions=768,
+            )
+
+    def test_key_value_consistency_validation(self):
+        """Test that EmbeddingConfig validates key-value consistency."""
+        from src.config.models import EmbeddingConfig
+
+        # Valid configuration (keys match model_name)
+        valid_config = EmbeddingConfig(
+            model_benchmarks={
+                "test-model": ModelBenchmark(
+                    model_name="test-model",  # Matches key
+                    provider="test",
+                    avg_latency_ms=100,
+                    quality_score=85,
+                    tokens_per_second=1000,
+                    cost_per_million_tokens=10.0,
+                    max_context_length=512,
+                    embedding_dimensions=768,
+                )
+            }
+        )
+        assert "test-model" in valid_config.model_benchmarks
+
+        # Invalid configuration (key doesn't match model_name)
+        with pytest.raises(
+            ValueError, match="Dictionary key 'wrong-key' does not match"
+        ):
+            EmbeddingConfig(
+                model_benchmarks={
+                    "wrong-key": ModelBenchmark(  # Key doesn't match model_name
+                        model_name="correct-name",
+                        provider="test",
+                        avg_latency_ms=100,
+                        quality_score=85,
+                        tokens_per_second=1000,
+                        cost_per_million_tokens=10.0,
+                        max_context_length=512,
+                        embedding_dimensions=768,
+                    )
+                }
             )
