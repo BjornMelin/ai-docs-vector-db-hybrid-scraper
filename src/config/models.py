@@ -68,6 +68,29 @@ def _validate_api_key_common(
     return value
 
 
+class ModelBenchmark(BaseModel):
+    """Performance benchmark for embedding models."""
+
+    model_name: str = Field(description="Model name")
+    provider: str = Field(description="Provider name (openai, fastembed)")
+    avg_latency_ms: float = Field(gt=0, description="Average latency in milliseconds")
+    quality_score: float = Field(
+        ge=0, le=100, description="Quality score 0-100 based on retrieval accuracy"
+    )
+    tokens_per_second: float = Field(
+        gt=0, description="Processing speed in tokens/second"
+    )
+    cost_per_million_tokens: float = Field(
+        ge=0, description="Cost per million tokens (0 for local models)"
+    )
+    max_context_length: int = Field(
+        gt=0, description="Maximum context length in tokens"
+    )
+    embedding_dimensions: int = Field(gt=0, description="Embedding vector dimensions")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class CacheConfig(BaseModel):
     """Cache configuration settings."""
 
@@ -380,7 +403,197 @@ class PerformanceConfig(BaseModel):
         default=0.8, gt=0, le=1, description="GC trigger threshold"
     )
 
+    # Rate limiting configuration
+    default_rate_limits: dict[str, dict[str, int]] = Field(
+        default_factory=lambda: {
+            "openai": {"max_calls": 500, "time_window": 60},  # 500/min
+            "firecrawl": {"max_calls": 100, "time_window": 60},  # 100/min
+            "crawl4ai": {"max_calls": 50, "time_window": 1},  # 50/sec
+            "qdrant": {"max_calls": 100, "time_window": 1},  # 100/sec
+        },
+        description="Default rate limits by provider (max_calls per time_window seconds)",
+    )
+
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("default_rate_limits")
+    @classmethod
+    def validate_rate_limits(
+        cls, v: dict[str, dict[str, int]]
+    ) -> dict[str, dict[str, int]]:
+        """Validate rate limit configuration structure."""
+        for provider, limits in v.items():
+            if not isinstance(limits, dict):
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must be a dictionary"
+                )
+
+            required_keys = {"max_calls", "time_window"}
+            if not required_keys.issubset(limits.keys()):
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must contain "
+                    f"keys: {required_keys}, got: {set(limits.keys())}"
+                )
+
+            if limits["max_calls"] <= 0:
+                raise ValueError(
+                    f"max_calls for provider '{provider}' must be positive"
+                )
+
+            if limits["time_window"] <= 0:
+                raise ValueError(
+                    f"time_window for provider '{provider}' must be positive"
+                )
+
+        return v
+
+
+class SmartSelectionConfig(BaseModel):
+    """Configuration for smart model selection algorithms."""
+
+    # Token estimation
+    chars_per_token: float = Field(
+        default=4.0, gt=0, description="Character to token ratio"
+    )
+
+    # Scoring weights (must sum to 1.0)
+    quality_weight: float = Field(
+        default=0.4, ge=0, le=1, description="Quality weight in scoring"
+    )
+    speed_weight: float = Field(
+        default=0.3, ge=0, le=1, description="Speed weight in scoring"
+    )
+    cost_weight: float = Field(
+        default=0.3, ge=0, le=1, description="Cost weight in scoring"
+    )
+
+    # Quality thresholds (0-100 scale)
+    quality_fast_threshold: float = Field(
+        default=60.0, ge=0, le=100, description="Minimum quality for FAST tier"
+    )
+    quality_balanced_threshold: float = Field(
+        default=75.0, ge=0, le=100, description="Minimum quality for BALANCED tier"
+    )
+    quality_best_threshold: float = Field(
+        default=85.0, ge=0, le=100, description="Minimum quality for BEST tier"
+    )
+
+    # Speed thresholds (tokens/second)
+    speed_fast_threshold: float = Field(
+        default=500.0, gt=0, description="Minimum speed for fast classification"
+    )
+    speed_balanced_threshold: float = Field(
+        default=200.0, gt=0, description="Minimum speed for balanced classification"
+    )
+    speed_slow_threshold: float = Field(
+        default=100.0, gt=0, description="Maximum speed for slow classification"
+    )
+
+    # Cost thresholds (per million tokens)
+    cost_cheap_threshold: float = Field(
+        default=50.0, ge=0, description="Maximum cost for cheap classification"
+    )
+    cost_moderate_threshold: float = Field(
+        default=100.0, ge=0, description="Maximum cost for moderate classification"
+    )
+    cost_expensive_threshold: float = Field(
+        default=200.0, ge=0, description="Maximum cost for expensive classification"
+    )
+
+    # Budget management
+    budget_warning_threshold: float = Field(
+        default=0.8, gt=0, le=1, description="Budget warning threshold (80%)"
+    )
+    budget_critical_threshold: float = Field(
+        default=0.9, gt=0, le=1, description="Budget critical threshold (90%)"
+    )
+
+    # Text analysis
+    short_text_threshold: int = Field(
+        default=100, gt=0, description="Short text threshold (characters)"
+    )
+    long_text_threshold: int = Field(
+        default=2000, gt=0, description="Long text threshold (characters)"
+    )
+
+    # Code detection keywords
+    code_keywords: set[str] = Field(
+        default_factory=lambda: {
+            "def",
+            "class",
+            "import",
+            "return",
+            "if",
+            "else",
+            "for",
+            "while",
+            "try",
+            "except",
+            "function",
+            "const",
+            "let",
+            "var",
+            "public",
+            "private",
+        },
+        description="Keywords for code detection",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_weights_sum_to_one(self) -> "SmartSelectionConfig":
+        """Validate that scoring weights sum to approximately 1.0."""
+        total = self.quality_weight + self.speed_weight + self.cost_weight
+        if abs(total - 1.0) > 0.01:  # Allow small floating point errors
+            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        return self
+
+
+def _get_default_model_benchmarks() -> dict[str, ModelBenchmark]:
+    """Get default model benchmarks with research-backed values."""
+    return {
+        "text-embedding-3-small": ModelBenchmark(
+            model_name="text-embedding-3-small",
+            provider="openai",
+            avg_latency_ms=78,
+            quality_score=85,
+            tokens_per_second=12800,
+            cost_per_million_tokens=20.0,
+            max_context_length=8191,
+            embedding_dimensions=1536,
+        ),
+        "text-embedding-3-large": ModelBenchmark(
+            model_name="text-embedding-3-large",
+            provider="openai",
+            avg_latency_ms=120,
+            quality_score=92,
+            tokens_per_second=8300,
+            cost_per_million_tokens=130.0,
+            max_context_length=8191,
+            embedding_dimensions=3072,
+        ),
+        "BAAI/bge-small-en-v1.5": ModelBenchmark(
+            model_name="BAAI/bge-small-en-v1.5",
+            provider="fastembed",
+            avg_latency_ms=45,
+            quality_score=78,
+            tokens_per_second=22000,
+            cost_per_million_tokens=0.0,
+            max_context_length=512,
+            embedding_dimensions=384,
+        ),
+        "BAAI/bge-large-en-v1.5": ModelBenchmark(
+            model_name="BAAI/bge-large-en-v1.5",
+            provider="fastembed",
+            avg_latency_ms=89,
+            quality_score=88,
+            tokens_per_second=11000,
+            cost_per_million_tokens=0.0,
+            max_context_length=512,
+            embedding_dimensions=1024,
+        ),
+    }
 
 
 class EmbeddingConfig(BaseModel):
@@ -422,7 +635,31 @@ class EmbeddingConfig(BaseModel):
         description="Retrieve top-k for reranking, return fewer after rerank",
     )
 
+    # Model Benchmarks
+    model_benchmarks: dict[str, ModelBenchmark] = Field(
+        default_factory=lambda: _get_default_model_benchmarks(),
+        description="Model benchmark data for smart provider selection",
+    )
+
+    # Smart Selection Configuration
+    smart_selection: SmartSelectionConfig = Field(
+        default_factory=SmartSelectionConfig,
+        description="Smart model selection algorithm configuration",
+    )
+
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_benchmark_keys(self) -> "EmbeddingConfig":
+        """Ensure dict keys match ModelBenchmark.model_name for consistency."""
+        for key, benchmark in self.model_benchmarks.items():
+            if key != benchmark.model_name:
+                raise ValueError(
+                    f"Dictionary key '{key}' does not match "
+                    f"ModelBenchmark.model_name '{benchmark.model_name}'. "
+                    f"Keys must be consistent for proper model identification."
+                )
+        return self
 
 
 class SecurityConfig(BaseModel):

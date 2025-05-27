@@ -18,6 +18,7 @@ from rich.table import Table
 from .config import get_config
 from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
+from .services.rate_limiter import RateLimitManager
 from .utils import async_to_sync_click
 
 console = Console()
@@ -96,11 +97,16 @@ class VectorDBManager:
             if self.qdrant_url:
                 config.qdrant.url = self.qdrant_url
 
+            # Initialize rate limiter
+            rate_limiter = RateLimitManager(config)
+
             if not self.qdrant_service:
                 self.qdrant_service = QdrantService(config)
 
             if not self.embedding_manager:
-                self.embedding_manager = EmbeddingManager(config)
+                self.embedding_manager = EmbeddingManager(
+                    config, rate_limiter=rate_limiter
+                )
 
         # Initialize services
         await self.qdrant_service.initialize()

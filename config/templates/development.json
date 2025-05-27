@@ -33,7 +33,25 @@
   "performance": {
     "max_concurrent_requests": 5,
     "request_timeout": 60.0,
-    "max_memory_usage_mb": 500.0
+    "max_memory_usage_mb": 500.0,
+    "default_rate_limits": {
+      "openai": {
+        "max_calls": 100,
+        "time_window": 60
+      },
+      "firecrawl": {
+        "max_calls": 20,
+        "time_window": 60
+      },
+      "crawl4ai": {
+        "max_calls": 10,
+        "time_window": 1
+      },
+      "qdrant": {
+        "max_calls": 50,
+        "time_window": 1
+      }
+    }
   },
   "security": {
     "require_api_keys": false,
