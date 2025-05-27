@@ -4,10 +4,11 @@ import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
-from src.services.cache.local_cache import LocalCache
-from src.services.cache.manager import CacheManager, CacheType
-from src.services.cache.metrics import CacheMetrics
 from src.services.cache.dragonfly_cache import DragonflyCache
+from src.services.cache.local_cache import LocalCache
+from src.services.cache.manager import CacheManager
+from src.services.cache.manager import CacheType
+from src.services.cache.metrics import CacheMetrics
 
 
 class TestLocalCache:
@@ -140,7 +141,7 @@ class TestDragonflyCache:
     async def test_error_handling(self, dragonfly_cache):
         """Test error handling."""
         from redis.exceptions import RedisError
-        
+
         # Mock Redis error
         dragonfly_cache._client.get.side_effect = RedisError("Redis connection error")
 
@@ -215,7 +216,7 @@ class TestCacheManager:
         cache_manager._search_cache = AsyncMock()
         cache_manager._embedding_cache.get_stats.return_value = {"hits": 0, "misses": 0}
         cache_manager._search_cache.get_stats.return_value = {"hits": 0, "misses": 0}
-        
+
         # Test stats retrieval
         stats = await cache_manager.get_stats()
         assert isinstance(stats, dict)
@@ -226,7 +227,7 @@ class TestCacheManager:
         # Mock the metrics to avoid AttributeError
         cache_manager._metrics = AsyncMock()
         cache_manager._metrics.get_summary.return_value = {}
-        
+
         # Test performance stats
         perf_stats = await cache_manager.get_performance_stats()
         assert isinstance(perf_stats, dict)
@@ -237,7 +238,7 @@ class TestCacheManager:
         # Test clear all
         result = await cache_manager.clear()
         assert isinstance(result, bool)
-        
+
         # Test clear specific type
         result = await cache_manager.clear(CacheType.EMBEDDINGS)
         assert isinstance(result, bool)

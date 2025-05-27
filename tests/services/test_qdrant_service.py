@@ -299,8 +299,8 @@ class TestQdrantService:
             mock_instance.search_batch.assert_called()
 
     @pytest.mark.asyncio
-    async def test_get_collection_info(self, qdrant_service):
-        """Test getting collection info."""
+    async def test_collection_info_method(self, qdrant_service):
+        """Test getting collection info method."""
         with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
