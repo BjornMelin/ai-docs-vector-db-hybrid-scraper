@@ -50,6 +50,47 @@ services:
     networks:
       - advanced-vector-network
 
+  # DragonflyDB: High-performance Redis-compatible cache
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly-cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"  # Redis-compatible port
+    volumes:
+      # Persistent storage for DragonflyDB
+      - ~/.dragonfly_data:/data:z
+    environment:
+      - DRAGONFLY_THREADS=8
+      - DRAGONFLY_MEMORY_LIMIT=4gb
+      - DRAGONFLY_SNAPSHOT_INTERVAL=3600
+      - DRAGONFLY_SAVE_SCHEDULE="0 */1 * * *"
+    command: >
+      --logtostderr
+      --cache_mode
+      --maxmemory_policy=allkeys-lru
+      --compression=zstd
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    networks:
+      - advanced-vector-network
+
   # Optional: Add monitoring for production deployments
   qdrant-exporter:
     image: qdrant/qdrant-exporter:latest

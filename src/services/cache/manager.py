@@ -1,4 +1,4 @@
-"""Two-tier cache manager orchestrating local and distributed caches."""
+"""Simplified cache manager using DragonflyDB with specialized cache layers."""
 
 import asyncio
 import hashlib
@@ -6,9 +6,11 @@ import logging
 from enum import Enum
 from typing import Any
 
+from .dragonfly_cache import DragonflyCache
+from .embedding_cache import EmbeddingCache
 from .local_cache import LocalCache
 from .metrics import CacheMetrics
-from .redis_cache import RedisCache
+from .search_cache import SearchResultCache
 
 logger = logging.getLogger(__name__)
 
@@ -22,339 +24,370 @@ class CacheType(Enum):
 
 
 class CacheManager:
-    """Two-tier cache manager with L1 (local) and L2 (Redis) caches."""
+    """Simplified two-tier cache manager with DragonflyDB and specialized cache layers."""
 
     def __init__(
         self,
-        redis_url: str = "redis://localhost:6379",
+        dragonfly_url: str = "redis://localhost:6379",
         enable_local_cache: bool = True,
-        enable_redis_cache: bool = True,
+        enable_distributed_cache: bool = True,
         local_max_size: int = 1000,
         local_max_memory_mb: float = 100.0,
         local_ttl_seconds: int = 300,  # 5 minutes
-        redis_ttl_seconds: dict[CacheType, int] | None = None,
+        distributed_ttl_seconds: dict[CacheType, int] | None = None,
         key_prefix: str = "aidocs:",
         enable_metrics: bool = True,
+        enable_specialized_caches: bool = True,
     ):
-        """Initialize cache manager.
+        """Initialize simplified cache manager with DragonflyDB.
 
         Args:
-            redis_url: Redis connection URL
+            dragonfly_url: DragonflyDB connection URL (Redis-compatible)
             enable_local_cache: Enable L1 local cache
-            enable_redis_cache: Enable L2 Redis cache
+            enable_distributed_cache: Enable L2 distributed cache
             local_max_size: Maximum entries in local cache
             local_max_memory_mb: Maximum memory for local cache
             local_ttl_seconds: Default TTL for local cache
-            redis_ttl_seconds: TTL mapping for Redis by cache type
+            distributed_ttl_seconds: TTL mapping for distributed cache by cache type
             key_prefix: Prefix for all cache keys
             enable_metrics: Enable metrics collection
+            enable_specialized_caches: Enable embedding and search result caches
         """
         self.enable_local_cache = enable_local_cache
-        self.enable_redis_cache = enable_redis_cache
+        self.enable_distributed_cache = enable_distributed_cache
         self.key_prefix = key_prefix
+        self.enable_specialized_caches = enable_specialized_caches
 
-        # Default Redis TTLs by cache type
-        self.redis_ttl_seconds = redis_ttl_seconds or {
-            CacheType.EMBEDDINGS: 86400,  # 24 hours
-            CacheType.CRAWL_RESULTS: 3600,  # 1 hour
-            CacheType.QUERY_RESULTS: 7200,  # 2 hours
+        # Default distributed cache TTLs by cache type
+        self.distributed_ttl_seconds = distributed_ttl_seconds or {
+            CacheType.EMBEDDINGS: 86400 * 7,  # 7 days for embeddings
+            CacheType.CRAWL_RESULTS: 3600,  # 1 hour for crawl results
+            CacheType.QUERY_RESULTS: 3600,  # 1 hour for search results
         }
 
-        # Initialize caches
-        self.local_cache: LocalCache | None = None
+        # Initialize local cache (L1)
+        self._local_cache = None
         if enable_local_cache:
-            self.local_cache = LocalCache(
+            self._local_cache = LocalCache(
                 max_size=local_max_size,
-                default_ttl=local_ttl_seconds,
                 max_memory_mb=local_max_memory_mb,
+                default_ttl=local_ttl_seconds,
             )
 
-        self.redis_cache: RedisCache | None = None
-        if enable_redis_cache:
-            self.redis_cache = RedisCache(
-                redis_url=redis_url,
+        # Initialize DragonflyDB cache (L2)
+        self._distributed_cache = None
+        if enable_distributed_cache:
+            self._distributed_cache = DragonflyCache(
+                redis_url=dragonfly_url,
                 key_prefix=key_prefix,
+                max_connections=50,  # Optimized for DragonflyDB
+                enable_compression=True,
+                compression_threshold=1024,
+            )
+
+        # Initialize specialized caches
+        self._embedding_cache = None
+        self._search_cache = None
+        if enable_specialized_caches and self._distributed_cache:
+            self._embedding_cache = EmbeddingCache(
+                cache=self._distributed_cache,
+                default_ttl=self.distributed_ttl_seconds[CacheType.EMBEDDINGS],
+            )
+            self._search_cache = SearchResultCache(
+                cache=self._distributed_cache,
+                default_ttl=self.distributed_ttl_seconds[CacheType.QUERY_RESULTS],
             )
 
         # Initialize metrics
-        self.metrics: CacheMetrics | None = None
-        if enable_metrics:
-            self.metrics = CacheMetrics()
+        self._metrics = CacheMetrics() if enable_metrics else None
+        logger.info(
+            f"CacheManager initialized with DragonflyDB: {dragonfly_url}, "
+            f"local={enable_local_cache}, specialized={enable_specialized_caches}"
+        )
 
-    async def get_embedding(
+    @property
+    def local_cache(self) -> LocalCache | None:
+        """Access to local cache layer."""
+        return self._local_cache
+
+    @property
+    def distributed_cache(self) -> DragonflyCache | None:
+        """Access to DragonflyDB cache layer."""
+        return self._distributed_cache
+
+    @property
+    def embedding_cache(self) -> EmbeddingCache | None:
+        """Access to embedding-specific cache."""
+        return self._embedding_cache
+
+    @property
+    def search_cache(self) -> SearchResultCache | None:
+        """Access to search result cache."""
+        return self._search_cache
+
+    @property
+    def metrics(self) -> CacheMetrics | None:
+        """Access to cache metrics."""
+        return self._metrics
+
+    async def get(
         self,
-        text: str,
-        provider: str,
-        model: str,
-        dimensions: int,
-    ) -> Any | None:
-        """Get embedding from cache.
+        key: str,
+        cache_type: CacheType = CacheType.CRAWL_RESULTS,
+        default: Any = None,
+    ) -> Any:
+        """Get value from cache with L1 -> L2 fallback.
 
         Args:
-            text: Text that was embedded
-            provider: Embedding provider
-            model: Model name
-            dimensions: Embedding dimensions
+            key: Cache key
+            cache_type: Type of cached data for TTL selection
+            default: Default value if not found
 
         Returns:
-            Cached embedding or None
+            Cached value or default
         """
-        key = self._make_embedding_key(text, provider, model, dimensions)
-        return await self._get(key, CacheType.EMBEDDINGS)
-
-    async def set_embedding(
-        self,
-        text: str,
-        provider: str,
-        model: str,
-        dimensions: int,
-        embedding: Any,
-    ) -> bool:
-        """Cache embedding.
-
-        Args:
-            text: Text that was embedded
-            provider: Embedding provider
-            model: Model name
-            dimensions: Embedding dimensions
-            embedding: Embedding vector
-
-        Returns:
-            Success status
-        """
-        key = self._make_embedding_key(text, provider, model, dimensions)
-        return await self._set(key, embedding, CacheType.EMBEDDINGS)
-
-    async def get_crawl_result(
-        self,
-        url: str,
-        provider: str,
-    ) -> Any | None:
-        """Get crawl result from cache.
-
-        Args:
-            url: URL that was crawled
-            provider: Crawl provider
-
-        Returns:
-            Cached crawl result or None
-        """
-        key = self._make_crawl_key(url, provider)
-        return await self._get(key, CacheType.CRAWL_RESULTS)
-
-    async def set_crawl_result(
-        self,
-        url: str,
-        provider: str,
-        result: Any,
-    ) -> bool:
-        """Cache crawl result.
-
-        Args:
-            url: URL that was crawled
-            provider: Crawl provider
-            result: Crawl result data
-
-        Returns:
-            Success status
-        """
-        key = self._make_crawl_key(url, provider)
-        return await self._set(key, result, CacheType.CRAWL_RESULTS)
-
-    async def get_query_result(
-        self,
-        query: str,
-        **params: Any,
-    ) -> Any | None:
-        """Get query result from cache.
-
-        Args:
-            query: Search query
-            **params: Additional query parameters
-
-        Returns:
-            Cached query result or None
-        """
-        key = self._make_query_key(query, **params)
-        return await self._get(key, CacheType.QUERY_RESULTS)
-
-    async def set_query_result(
-        self,
-        query: str,
-        result: Any,
-        **params: Any,
-    ) -> bool:
-        """Cache query result.
-
-        Args:
-            query: Search query
-            result: Query result data
-            **params: Additional query parameters
-
-        Returns:
-            Success status
-        """
-        key = self._make_query_key(query, **params)
-        return await self._set(key, result, CacheType.QUERY_RESULTS)
-
-    async def invalidate_pattern(self, pattern: str) -> int:
-        """Invalidate cache entries matching pattern.
-
-        Args:
-            pattern: Key pattern (e.g., "crawl:*:firecrawl")
-
-        Returns:
-            Number of entries invalidated
-        """
-        count = 0
-
-        # Clear from local cache (simple pattern matching)
-        if self.local_cache:
-            # Local cache doesn't support pattern matching well
-            # Would need to iterate all keys
-            await self.local_cache.clear()
-            count += 1  # Approximate
-
-        # Clear from Redis cache
-        if self.redis_cache:
-            try:
-                client = await self.redis_cache.client
-                full_pattern = f"{self.key_prefix}{pattern}"
-
-                async for key in client.scan_iter(match=full_pattern, count=100):
-                    await client.delete(key)
-                    count += 1
-
-            except Exception as e:
-                logger.error(f"Error invalidating pattern {pattern}: {e}")
-
-        return count
-
-    async def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics."""
-        stats = {
-            "enabled": {
-                "local": self.enable_local_cache,
-                "redis": self.enable_redis_cache,
-            },
-        }
-
-        if self.local_cache:
-            stats["local"] = self.local_cache.get_stats()
-
-        if self.redis_cache:
-            stats["redis"] = {
-                "size": await self.redis_cache.size(),
-            }
-
-        if self.metrics:
-            stats["metrics"] = self.metrics.get_summary()
-
-        return stats
-
-    async def close(self) -> None:
-        """Close all cache connections."""
-        if self.local_cache:
-            await self.local_cache.close()
-
-        if self.redis_cache:
-            await self.redis_cache.close()
-
-    # Private methods
-    async def _get(self, key: str, cache_type: CacheType) -> Any | None:
-        """Get value from cache hierarchy."""
         start_time = asyncio.get_event_loop().time()
+        cache_key = self._get_cache_key(key, cache_type)
 
-        # Try L1 (local) cache first
-        if self.local_cache:
-            value = await self.local_cache.get(key)
-            if value is not None:
-                if self.metrics:
-                    latency = asyncio.get_event_loop().time() - start_time
-                    self.metrics.record_hit(cache_type.value, "local", latency)
-                return value
+        try:
+            # Try L1 cache first
+            if self._local_cache:
+                value = await self._local_cache.get(cache_key)
+                if value is not None:
+                    if self._metrics:
+                        latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                        self._metrics.record_hit(cache_type, "local", latency)
+                    return value
 
-        # Try L2 (Redis) cache
-        if self.redis_cache:
-            value = await self.redis_cache.get(key)
-            if value is not None:
-                # Populate L1 cache
-                if self.local_cache:
-                    await self.local_cache.set(key, value)
+            # Try L2 cache (DragonflyDB)
+            if self._distributed_cache:
+                value = await self._distributed_cache.get(cache_key)
+                if value is not None:
+                    # Populate L1 cache for future hits
+                    if self._local_cache:
+                        await self._local_cache.set(cache_key, value)
 
-                if self.metrics:
-                    latency = asyncio.get_event_loop().time() - start_time
-                    self.metrics.record_hit(cache_type.value, "redis", latency)
-                return value
+                    if self._metrics:
+                        latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                        self._metrics.record_hit(cache_type, "distributed", latency)
+                    return value
 
-        # Cache miss
-        if self.metrics:
-            latency = asyncio.get_event_loop().time() - start_time
-            self.metrics.record_miss(cache_type.value, latency)
+            # Cache miss
+            if self._metrics:
+                latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                self._metrics.record_miss(cache_type, latency)
+            return default
 
-        return None
+        except Exception as e:
+            logger.error(f"Cache get error for key {cache_key}: {e}")
+            if self._metrics:
+                latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                self._metrics.record_miss(cache_type, latency)
+            return default
 
-    async def _set(
+    async def set(
         self,
         key: str,
         value: Any,
-        cache_type: CacheType,
+        cache_type: CacheType = CacheType.CRAWL_RESULTS,
+        ttl: int | None = None,
     ) -> bool:
-        """Set value in cache hierarchy."""
+        """Set value in both cache layers.
+
+        Args:
+            key: Cache key
+            value: Value to cache
+            cache_type: Type of cached data for TTL selection
+            ttl: Custom TTL (overrides cache_type default)
+
+        Returns:
+            True if successful
+        """
         start_time = asyncio.get_event_loop().time()
-        success = False
+        cache_key = self._get_cache_key(key, cache_type)
+        effective_ttl = ttl or self.distributed_ttl_seconds.get(cache_type, 3600)
 
-        # Set in both caches concurrently
-        tasks = []
+        success = True
+        try:
+            # Set in L1 cache
+            if self._local_cache:
+                await self._local_cache.set(
+                    cache_key, value, ttl=min(effective_ttl, 300)
+                )
 
-        if self.local_cache:
-            tasks.append(self.local_cache.set(key, value))
+            # Set in L2 cache (DragonflyDB)
+            if self._distributed_cache:
+                success = await self._distributed_cache.set(
+                    cache_key, value, ttl=effective_ttl
+                )
 
-        if self.redis_cache:
-            ttl = self.redis_ttl_seconds.get(cache_type, 3600)
-            tasks.append(self.redis_cache.set(key, value, ttl))
+            if self._metrics:
+                latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                self._metrics.record_set(cache_type, latency, success)
 
-        if tasks:
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            success = any(
-                result is True
-                for result in results
-                if not isinstance(result, Exception)
-            )
+            return success
 
-        if self.metrics:
-            latency = asyncio.get_event_loop().time() - start_time
-            self.metrics.record_set(cache_type.value, latency, success)
+        except Exception as e:
+            logger.error(f"Cache set error for key {cache_key}: {e}")
+            if self._metrics:
+                latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                self._metrics.record_set(cache_type, latency, False)
+            return False
 
-        return success
+    async def delete(
+        self, key: str, cache_type: CacheType = CacheType.CRAWL_RESULTS
+    ) -> bool:
+        """Delete value from both cache layers.
 
-    def _make_embedding_key(
+        Args:
+            key: Cache key
+            cache_type: Type of cached data
+
+        Returns:
+            True if successful
+        """
+        cache_key = self._get_cache_key(key, cache_type)
+        success = True
+
+        try:
+            # Delete from L1 cache
+            if self._local_cache:
+                await self._local_cache.delete(cache_key)
+
+            # Delete from L2 cache
+            if self._distributed_cache:
+                success = await self._distributed_cache.delete(cache_key)
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Cache delete error for key {cache_key}: {e}")
+            return False
+
+    async def clear(self, cache_type: CacheType | None = None) -> bool:
+        """Clear cache layers.
+
+        Args:
+            cache_type: Specific cache type to clear (None for all)
+
+        Returns:
+            True if successful
+        """
+        try:
+            if cache_type:
+                # Clear specific cache type by pattern
+                pattern = f"{self.key_prefix}{cache_type.value}:*"
+                if self._distributed_cache:
+                    keys = await self._distributed_cache.scan_keys(pattern)
+                    for key in keys:
+                        await self._distributed_cache.delete(key)
+                        if self._local_cache:
+                            await self._local_cache.delete(
+                                self._get_cache_key(key, cache_type)
+                            )
+            else:
+                # Clear all caches
+                if self._local_cache:
+                    await self._local_cache.clear()
+                if self._distributed_cache:
+                    await self._distributed_cache.clear()
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Cache clear error: {e}")
+            return False
+
+    async def get_stats(self) -> dict[str, Any]:
+        """Get comprehensive cache statistics.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        stats = {"manager": {"enabled_layers": []}}
+
+        if self._local_cache:
+            stats["manager"]["enabled_layers"].append("local")
+            stats["local"] = {
+                "size": await self._local_cache.size(),
+                "memory_usage": self._local_cache.get_memory_usage(),
+                "max_size": self._local_cache.max_size,
+                "max_memory_mb": self._local_cache.max_memory_mb,
+            }
+
+        if self._distributed_cache:
+            stats["manager"]["enabled_layers"].append("dragonfly")
+            stats["dragonfly"] = {
+                "size": await self._distributed_cache.size(),
+                "url": self._distributed_cache.redis_url,
+                "compression": self._distributed_cache.enable_compression,
+                "max_connections": self._distributed_cache.max_connections,
+            }
+
+        if self._embedding_cache:
+            stats["embedding_cache"] = await self._embedding_cache.get_stats()
+
+        if self._search_cache:
+            stats["search_cache"] = await self._search_cache.get_stats()
+
+        if self._metrics:
+            stats["metrics"] = self._metrics.get_summary()
+
+        return stats
+
+    async def close(self):
+        """Clean up cache resources."""
+        try:
+            if self._distributed_cache:
+                await self._distributed_cache.close()
+            logger.info("Cache manager closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing cache manager: {e}")
+
+    def _get_cache_key(self, key: str, cache_type: CacheType) -> str:
+        """Generate cache key with type prefix.
+
+        Args:
+            key: Base key
+            cache_type: Cache type for prefix
+
+        Returns:
+            Formatted cache key
+        """
+        # Create content-based hash for consistent keys
+        key_hash = hashlib.md5(key.encode()).hexdigest()[:12]
+        return f"{self.key_prefix}{cache_type.value}:{key_hash}"
+
+    # Direct access methods for specialized caches
+    async def get_embedding_direct(
+        self, content_hash: str, model: str
+    ) -> list[float] | None:
+        """Direct access to embedding cache."""
+        if not self._embedding_cache:
+            return None
+        return await self._embedding_cache.get_embedding(content_hash, model)
+
+    async def set_search_results_direct(
         self,
-        text: str,
-        provider: str,
-        model: str,
-        dimensions: int,
-    ) -> str:
-        """Create cache key for embeddings."""
-        # Normalize text for consistent hashing
-        normalized_text = text.lower().strip()
-        text_hash = hashlib.md5(normalized_text.encode()).hexdigest()
+        query_hash: str,
+        collection: str,
+        results: list[dict[str, Any]],
+        ttl: int | None = None,
+    ) -> bool:
+        """Direct access to search result cache."""
+        if not self._search_cache:
+            return False
+        return await self._search_cache.set_search_results(
+            query_hash, collection, results, ttl
+        )
 
-        return f"emb:{text_hash}:{provider}:{model}:{dimensions}"
+    async def get_performance_stats(self) -> dict[str, Any]:
+        """Get performance-focused statistics."""
+        if not self._metrics:
+            return {}
 
-    def _make_crawl_key(self, url: str, provider: str) -> str:
-        """Create cache key for crawl results."""
-        url_hash = hashlib.md5(url.encode()).hexdigest()
-        return f"crawl:{url_hash}:{provider}"
-
-    def _make_query_key(self, query: str, **params: Any) -> str:
-        """Create cache key for query results."""
-        # Include query and parameters in key
-        key_parts = [query]
-        for k, v in sorted(params.items()):
-            key_parts.append(f"{k}={v}")
-
-        key_str = "|".join(key_parts)
-        key_hash = hashlib.md5(key_str.encode()).hexdigest()
-
-        return f"query:{key_hash}"
+        return {
+            "hit_rates": self._metrics.get_hit_rates(),
+            "latency_stats": self._metrics.get_latency_stats(),
+            "operation_counts": self._metrics.get_operation_counts(),
+        }
