@@ -8,6 +8,7 @@ from functools import wraps
 from typing import Any
 from typing import TypeVar
 
+from ..config.models import UnifiedConfig
 from .errors import APIError
 
 logger = logging.getLogger(__name__)
@@ -100,17 +101,25 @@ class RateLimitManager:
     with configurable limits per provider and endpoint.
     """
 
-    def __init__(self):
-        """Initialize rate limit manager."""
+    def __init__(self, config: UnifiedConfig | None = None):
+        """Initialize rate limit manager.
+
+        Args:
+            config: UnifiedConfig instance. If None, will use defaults.
+        """
         self.limiters: dict[str, RateLimiter] = {}
 
-        # Default rate limits by provider
-        self.default_limits = {
-            "openai": {"max_calls": 500, "time_window": 60},  # 500/min
-            "firecrawl": {"max_calls": 100, "time_window": 60},  # 100/min
-            "crawl4ai": {"max_calls": 50, "time_window": 1},  # 50/sec
-            "qdrant": {"max_calls": 100, "time_window": 1},  # 100/sec
-        }
+        # Load rate limits from config or use defaults
+        if config is not None:
+            self.default_limits = config.performance.default_rate_limits.copy()
+        else:
+            # Fallback defaults if config is not provided
+            self.default_limits = {
+                "openai": {"max_calls": 500, "time_window": 60},  # 500/min
+                "firecrawl": {"max_calls": 100, "time_window": 60},  # 100/min
+                "crawl4ai": {"max_calls": 50, "time_window": 1},  # 50/sec
+                "qdrant": {"max_calls": 100, "time_window": 1},  # 100/sec
+            }
 
     def get_limiter(self, provider: str, endpoint: str | None = None) -> RateLimiter:
         """Get or create rate limiter for provider/endpoint.
@@ -162,6 +171,20 @@ class RateLimitManager:
 
 # Global rate limit manager instance
 rate_limit_manager = RateLimitManager()
+
+
+def initialize_rate_limiter(config: UnifiedConfig) -> None:
+    """Initialize the global rate limit manager with configuration.
+
+    This function allows updating the global rate limiter with configuration
+    after the module has been imported.
+
+    Args:
+        config: UnifiedConfig instance with rate limiting settings
+    """
+    global rate_limit_manager  # noqa: PLW0603
+    rate_limit_manager = RateLimitManager(config)
+    logger.info("Rate limit manager initialized with configuration")
 
 
 def rate_limited(
