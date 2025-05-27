@@ -98,9 +98,9 @@ class CacheConfig(BaseModel):
     enable_local_cache: bool = Field(
         default=True, description="Enable local in-memory cache"
     )
-    enable_redis_cache: bool = Field(default=True, description="Enable Redis cache")
-    redis_url: str = Field(
-        default="redis://localhost:6379", description="Redis connection URL"
+    enable_dragonfly_cache: bool = Field(default=True, description="Enable DragonflyDB cache")
+    dragonfly_url: str = Field(
+        default="redis://localhost:6379", description="DragonflyDB connection URL (Redis-compatible)"
     )
 
     # TTL settings (in seconds)
