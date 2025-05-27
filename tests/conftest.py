@@ -8,8 +8,28 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
-from dotenv import load_dotenv
-from qdrant_client.models import PointStruct
+
+try:
+    from dotenv import load_dotenv  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
+
+    def load_dotenv(*args, **kwargs):
+        """Fallback no-op load_dotenv implementation."""
+        return False
+
+
+try:
+    from qdrant_client.models import PointStruct  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - basic fallback
+    from dataclasses import dataclass
+
+    @dataclass
+    class PointStruct:  # type: ignore
+        """Simplified stand-in for qdrant_client.models.PointStruct."""
+
+        id: int
+        vector: list[float]
+        payload: dict
 
 # Load test environment variables at module import
 _test_env_path = Path(__file__).parent.parent / ".env.test"

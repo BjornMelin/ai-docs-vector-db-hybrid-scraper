@@ -347,10 +347,11 @@ class TestSetupLogging:
         assert logger.level == 40  # ERROR level
 
 
-# TODO: Fix CLI tests - they have issues with module loading and async wrapping
-# For now, commenting out to focus on core functionality tests
+# TODO: Fix CLI tests - they have issues with async wrapping and service mocking
+# These tests need refactoring to properly mock the VectorDatabaseManager
+# and handle async context properly. Added to GitHub Issue #74 for systematic resolution.
 @pytest.mark.skip(
-    reason="CLI tests need refactoring due to async/module loading issues"
+    reason="CLI tests need refactoring due to async/service mocking issues - tracked in Issue #74"
 )
 class TestCLI:
     """Test the CLI commands."""
