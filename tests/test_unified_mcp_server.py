@@ -2,10 +2,8 @@
 Tests for the unified MCP server
 """
 
-import sys
 from datetime import UTC
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -14,14 +12,22 @@ from uuid import uuid4
 import pytest
 from qdrant_client.models import ScoredPoint
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+@pytest.fixture
+def mock_context():
+    """Mock MCP context for tool calls"""
+    context = MagicMock()
+    context.info = AsyncMock()
+    context.debug = AsyncMock()
+    context.error = AsyncMock()
+    context.warning = AsyncMock()
+    return context
 
 
 @pytest.fixture
 def mock_service_manager():
     """Mock the service manager and its dependencies"""
-    with patch("unified_mcp_server.service_manager") as mock_sm:
+    with patch("src.unified_mcp_server.service_manager") as mock_sm:
         # Mock all service attributes
         mock_sm.config = MagicMock()
         mock_sm.config.openai_api_key = "test-key"
@@ -43,10 +49,18 @@ def mock_service_manager():
 
         # Configure embedding manager
         mock_sm.embedding_manager.generate_embeddings = AsyncMock(
-            return_value=[[0.1] * 1536]
+            return_value={
+                "embeddings": [[0.1] * 1536],
+                "sparse_embeddings": [{"indices": [1, 5, 10], "values": [0.1, 0.2, 0.3]}]
+            }
         )
         mock_sm.embedding_manager.get_current_provider_info = MagicMock(
             return_value={"name": "openai", "model": "text-embedding-3-small"}
+        )
+        mock_sm.embedding_manager.rerank_results = AsyncMock(
+            return_value=[
+                {"content": "Test content", "score": 0.95}
+            ]
         )
 
         # Configure crawl manager
@@ -146,11 +160,11 @@ class TestSearchTools:
     """Test search and retrieval tools"""
 
     @pytest.mark.asyncio
-    async def test_search_documents(self, mock_service_manager):
+    async def test_search_documents(self, mock_service_manager, mock_context):
         """Test document search with various strategies"""
-        from unified_mcp_server import SearchRequest
-        from unified_mcp_server import SearchStrategy
-        from unified_mcp_server import search_documents
+        from src.unified_mcp_server import SearchRequest
+        from src.unified_mcp_server import SearchStrategy
+        from src.unified_mcp_server import search_documents
 
         request = SearchRequest(
             query="test query",
@@ -160,7 +174,7 @@ class TestSearchTools:
             enable_reranking=True,
         )
 
-        result = await search_documents(request)
+        result = await search_documents(request, mock_context)
 
         assert len(result) == 1
         assert result[0].content == "Test content"
@@ -175,7 +189,7 @@ class TestSearchTools:
     @pytest.mark.asyncio
     async def test_search_similar(self, mock_service_manager):
         """Test similarity search"""
-        from unified_mcp_server import search_similar
+        from src.unified_mcp_server import search_similar
 
         result = await search_similar(
             content="Find similar to this",
@@ -202,8 +216,8 @@ class TestEmbeddingTools:
     @pytest.mark.asyncio
     async def test_generate_embeddings(self, mock_service_manager):
         """Test embedding generation"""
-        from unified_mcp_server import EmbeddingRequest
-        from unified_mcp_server import generate_embeddings
+        from src.unified_mcp_server import EmbeddingRequest
+        from src.unified_mcp_server import generate_embeddings
 
         request = EmbeddingRequest(
             texts=["Text 1", "Text 2"],
@@ -220,7 +234,7 @@ class TestEmbeddingTools:
     @pytest.mark.asyncio
     async def test_list_embedding_providers(self, mock_service_manager):
         """Test listing embedding providers"""
-        from unified_mcp_server import list_embedding_providers
+        from src.unified_mcp_server import list_embedding_providers
 
         result = await list_embedding_providers()
 
@@ -235,9 +249,9 @@ class TestDocumentTools:
     @pytest.mark.asyncio
     async def test_add_document(self, mock_service_manager):
         """Test adding a single document"""
-        from unified_mcp_server import ChunkingStrategy
-        from unified_mcp_server import DocumentRequest
-        from unified_mcp_server import add_document
+        from src.unified_mcp_server import ChunkingStrategy
+        from src.unified_mcp_server import DocumentRequest
+        from src.unified_mcp_server import add_document
 
         request = DocumentRequest(
             url="https://example.com/doc",
@@ -263,8 +277,8 @@ class TestDocumentTools:
     @pytest.mark.asyncio
     async def test_add_documents_batch(self, mock_service_manager):
         """Test batch document processing"""
-        from unified_mcp_server import BatchRequest
-        from unified_mcp_server import add_documents_batch
+        from src.unified_mcp_server import BatchRequest
+        from src.unified_mcp_server import add_documents_batch
 
         request = BatchRequest(
             urls=[
@@ -289,8 +303,8 @@ class TestProjectTools:
     @pytest.mark.asyncio
     async def test_create_project(self, mock_service_manager):
         """Test project creation"""
-        from unified_mcp_server import ProjectRequest
-        from unified_mcp_server import create_project
+        from src.unified_mcp_server import ProjectRequest
+        from src.unified_mcp_server import create_project
 
         request = ProjectRequest(
             name="Test Project",
@@ -314,7 +328,7 @@ class TestProjectTools:
     @pytest.mark.asyncio
     async def test_list_projects(self, mock_service_manager):
         """Test listing projects"""
-        from unified_mcp_server import list_projects
+        from src.unified_mcp_server import list_projects
 
         # Create a test project first
         mock_service_manager.projects = {
@@ -335,7 +349,7 @@ class TestProjectTools:
     @pytest.mark.asyncio
     async def test_search_project(self, mock_service_manager):
         """Test searching within a project"""
-        from unified_mcp_server import search_project
+        from src.unified_mcp_server import search_project
 
         # Create a test project
         project_id = "test-id"
@@ -363,7 +377,7 @@ class TestCollectionTools:
     @pytest.mark.asyncio
     async def test_list_collections(self, mock_service_manager):
         """Test listing collections"""
-        from unified_mcp_server import list_collections
+        from src.unified_mcp_server import list_collections
 
         result = await list_collections()
 
@@ -374,7 +388,7 @@ class TestCollectionTools:
     @pytest.mark.asyncio
     async def test_delete_collection(self, mock_service_manager):
         """Test deleting a collection"""
-        from unified_mcp_server import delete_collection
+        from src.unified_mcp_server import delete_collection
 
         result = await delete_collection("test-collection")
 
@@ -384,7 +398,7 @@ class TestCollectionTools:
     @pytest.mark.asyncio
     async def test_optimize_collection(self, mock_service_manager):
         """Test optimizing a collection"""
-        from unified_mcp_server import optimize_collection
+        from src.unified_mcp_server import optimize_collection
 
         result = await optimize_collection("test-collection")
 
@@ -401,8 +415,8 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_get_analytics(self, mock_service_manager):
         """Test getting analytics"""
-        from unified_mcp_server import AnalyticsRequest
-        from unified_mcp_server import get_analytics
+        from src.unified_mcp_server import AnalyticsRequest
+        from src.unified_mcp_server import get_analytics
 
         request = AnalyticsRequest(
             include_performance=True,
@@ -423,7 +437,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_get_system_health(self, mock_service_manager):
         """Test system health check"""
-        from unified_mcp_server import get_system_health
+        from src.unified_mcp_server import get_system_health
 
         result = await get_system_health()
 
@@ -443,7 +457,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_clear_cache(self, mock_service_manager):
         """Test clearing cache"""
-        from unified_mcp_server import clear_cache
+        from src.unified_mcp_server import clear_cache
 
         result = await clear_cache()
 
@@ -454,7 +468,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_clear_cache_pattern(self, mock_service_manager):
         """Test clearing cache with pattern"""
-        from unified_mcp_server import clear_cache
+        from src.unified_mcp_server import clear_cache
 
         result = await clear_cache(pattern="search:*")
 
@@ -466,7 +480,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_get_cache_stats(self, mock_service_manager):
         """Test getting cache statistics"""
-        from unified_mcp_server import get_cache_stats
+        from src.unified_mcp_server import get_cache_stats
 
         result = await get_cache_stats()
 
@@ -480,7 +494,7 @@ class TestUtilityTools:
     @pytest.mark.asyncio
     async def test_estimate_costs(self, mock_service_manager):
         """Test cost estimation"""
-        from unified_mcp_server import estimate_costs
+        from src.unified_mcp_server import estimate_costs
 
         result = await estimate_costs(
             text_count=1000,
@@ -496,7 +510,7 @@ class TestUtilityTools:
     @pytest.mark.asyncio
     async def test_validate_configuration(self, mock_service_manager):
         """Test configuration validation"""
-        from unified_mcp_server import validate_configuration
+        from src.unified_mcp_server import validate_configuration
 
         # Temporarily remove firecrawl key to test warning
         mock_service_manager.config.firecrawl_api_key = None
@@ -515,8 +529,8 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_search_with_cache_hit(self, mock_service_manager):
         """Test search when cache has results"""
-        from unified_mcp_server import SearchRequest
-        from unified_mcp_server import search_documents
+        from src.unified_mcp_server import SearchRequest
+        from src.unified_mcp_server import search_documents
 
         # Mock cache hit
         cached_results = [
@@ -541,8 +555,8 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_add_document_crawl_failure(self, mock_service_manager):
         """Test document addition when crawl fails"""
-        from unified_mcp_server import DocumentRequest
-        from unified_mcp_server import add_document
+        from src.unified_mcp_server import DocumentRequest
+        from src.unified_mcp_server import add_document
 
         mock_service_manager.crawl_manager.crawl_single = AsyncMock(return_value=None)
 
@@ -556,7 +570,7 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_project_not_found(self, mock_service_manager):
         """Test searching non-existent project"""
-        from unified_mcp_server import search_project
+        from src.unified_mcp_server import search_project
 
         with pytest.raises(ValueError) as exc_info:
             await search_project(
