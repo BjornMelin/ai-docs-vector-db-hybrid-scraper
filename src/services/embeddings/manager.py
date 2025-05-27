@@ -92,12 +92,12 @@ class EmbeddingManager:
             from ..cache import CacheType
 
             self.cache_manager = CacheManager(
-                redis_url=config.cache.redis_url,
+                dragonfly_url=config.cache.dragonfly_url,
                 enable_local_cache=config.cache.enable_local_cache,
-                enable_redis_cache=config.cache.enable_redis_cache,
+                enable_distributed_cache=config.cache.enable_dragonfly_cache,
                 local_max_size=config.cache.local_max_size,
                 local_max_memory_mb=config.cache.local_max_memory_mb,
-                redis_ttl_seconds={
+                distributed_ttl_seconds={
                     CacheType.EMBEDDINGS: config.cache.ttl_embeddings,
                     CacheType.CRAWL_RESULTS: config.cache.ttl_crawl,
                     CacheType.QUERY_RESULTS: config.cache.ttl_queries,
@@ -105,7 +105,7 @@ class EmbeddingManager:
             )
 
         # Model benchmarks and smart selection config (loaded from configuration)
-        self._benchmarks: dict[str, ModelBenchmark] = config.embedding.model_benchmarks
+        self._benchmarks: dict[str, ModelBenchmark] = {}
         self._smart_config = config.embedding.smart_selection
 
         # Dynamic quality tier mappings
@@ -131,12 +131,12 @@ class EmbeddingManager:
             return
 
         # Initialize OpenAI provider if API key available
-        if self.config.embeddings.openai_api_key:
+        if self.config.openai.api_key:
             try:
                 provider = OpenAIEmbeddingProvider(
-                    api_key=self.config.embeddings.openai_api_key,
-                    model_name=self.config.embeddings.openai_model,
-                    dimensions=self.config.embeddings.openai_dimensions,
+                    api_key=self.config.openai.api_key,
+                    model_name=self.config.openai.model,
+                    dimensions=self.config.openai.dimensions,
                     rate_limiter=self.rate_limiter,
                 )
                 await provider.initialize()

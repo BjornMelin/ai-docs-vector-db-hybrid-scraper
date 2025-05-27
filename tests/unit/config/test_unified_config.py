@@ -35,12 +35,14 @@ class TestUnifiedConfig:
             environment=Environment.PRODUCTION,
             debug=False,
             embedding_provider=EmbeddingProvider.OPENAI,
-            openai={"api_key": "sk-test123"},
+            openai={
+                "api_key": "sk-test123456789012345678901234567890"
+            },  # Valid length key
         )
 
         assert config.environment == Environment.PRODUCTION
         assert config.embedding_provider == EmbeddingProvider.OPENAI
-        assert config.openai.api_key == "sk-test123"
+        assert config.openai.api_key == "sk-test123456789012345678901234567890"
 
     def test_provider_validation(self):
         """Test provider API key validation."""
@@ -90,7 +92,12 @@ class TestUnifiedConfig:
         config = UnifiedConfig(
             embedding_provider=EmbeddingProvider.OPENAI,
             crawl_provider="firecrawl",
-            openai={"api_key": "sk-test123456789"},  # Add required API key
+            openai={
+                "api_key": "sk-test123456789012345678901234567890"
+            },  # Add required API key
+            firecrawl={
+                "api_key": "fc-test123456789012345678901234567890"
+            },  # Add required Firecrawl API key
         )
 
         providers = config.get_active_providers()
@@ -183,7 +190,7 @@ class TestConfigLoader:
         config_data = {
             "environment": "testing",
             "debug": False,
-            "embedding_provider": "openai",
+            "embedding_provider": "fastembed",  # Use local provider to avoid API key requirement
         }
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps(config_data))
@@ -197,7 +204,7 @@ class TestConfigLoader:
         # Environment variable should override file
         assert config.environment == Environment.PRODUCTION
         # File value should be preserved
-        assert config.embedding_provider == EmbeddingProvider.OPENAI
+        assert config.embedding_provider == EmbeddingProvider.FASTEMBED
 
 
 class TestConfigValidator:

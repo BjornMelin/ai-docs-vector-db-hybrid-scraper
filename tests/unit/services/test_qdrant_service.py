@@ -256,9 +256,7 @@ class TestQdrantService:
 
             await qdrant_service.initialize()
 
-            count = await qdrant_service.count_points(
-                collection_name="test_collection"
-            )
+            count = await qdrant_service.count_points(collection_name="test_collection")
 
             assert count == 100
             mock_instance.count.assert_called_once()

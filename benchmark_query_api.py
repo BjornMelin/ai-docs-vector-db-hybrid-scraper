@@ -31,7 +31,9 @@ async def benchmark_search_methods():
         sparse = service._calculate_prefetch_limit("sparse", limit)
         hyde = service._calculate_prefetch_limit("hyde", limit)
 
-        print(f"Final limit: {limit:2d} → Dense: {dense:3d}, Sparse: {sparse:3d}, HyDE: {hyde:3d}")
+        print(
+            f"Final limit: {limit:2d} → Dense: {dense:3d}, Sparse: {sparse:3d}, HyDE: {hyde:3d}"
+        )
 
     # Test search parameter optimization
     print("\n⚙️  Search Parameter Optimization:")
@@ -40,7 +42,7 @@ async def benchmark_search_methods():
     accuracy_levels = ["fast", "balanced", "accurate", "exact"]
     for level in accuracy_levels:
         params = service._get_search_params(level)
-        hnsw_ef = getattr(params, 'hnsw_ef', 'N/A')
+        hnsw_ef = getattr(params, "hnsw_ef", "N/A")
         exact = params.exact
         print(f"{level.capitalize():9s}: HNSW EF={hnsw_ef}, Exact={exact}")
 

@@ -27,8 +27,8 @@ def integration_config():
         )
     """
     return UnifiedConfig(
-        openai__api_key="sk-test-integration-key",
-        firecrawl__api_key="fc-test-integration-key",
+        openai__api_key="sk-test123456789012345678901234567890",  # Valid length key
+        firecrawl__api_key="fc-test123456789012345678901234567890",  # Valid length key
         qdrant__url="http://localhost:6333",
         embedding_provider=EmbeddingProvider.OPENAI,
         crawl_provider=CrawlProvider.FIRECRAWL,

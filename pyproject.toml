@@ -129,6 +129,31 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 
+# Clean output formatting
+addopts = [
+    "--tb=short",           # Shorter traceback format
+    "--strict-markers",     # Treat unknown markers as errors
+    "--disable-warnings",   # Disable pytest warnings for cleaner output
+    "--no-header",          # Remove pytest header
+    "-ra",                  # Show short test summary for all except passed
+    "--maxfail=5",          # Stop after 5 failures
+]
+
+# Test discovery
+minversion = "8.0"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests", 
+    "performance: marks tests as performance tests",
+]
+
+# Logging configuration for tests
+log_cli = false
+log_cli_level = "WARNING"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",

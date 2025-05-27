@@ -134,7 +134,7 @@ class ConfigLoader:
             environment="development",
             debug=True,
             log_level="DEBUG",
-            embedding_provider="openai",
+            embedding_provider="fastembed",  # Use local provider to avoid API key requirement
             crawl_provider="crawl4ai",
         )
 
