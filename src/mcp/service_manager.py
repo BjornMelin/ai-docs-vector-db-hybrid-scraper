@@ -4,11 +4,15 @@ import logging
 from typing import Any
 
 from ..config import get_config
+from ..infrastructure.client_manager import ClientManager
 from ..services.base import BaseService
 from ..services.cache.manager import CacheManager
 from ..services.cache.manager import CacheType
 from ..services.crawling.manager import CrawlManager
 from ..services.embeddings.manager import EmbeddingManager
+from ..services.hyde.config import HyDEMetricsConfig
+from ..services.hyde.config import HyDEPromptConfig
+from ..services.hyde.engine import HyDEQueryEngine
 from ..services.project_storage import ProjectStorage
 from ..services.qdrant_service import QdrantService
 from ..services.rate_limiter import RateLimitManager
@@ -28,6 +32,8 @@ class UnifiedServiceManager(BaseService):
         self.cache_manager: CacheManager | None = None
         self.project_storage: ProjectStorage | None = None
         self.rate_limiter: RateLimitManager | None = None
+        self.hyde_engine: HyDEQueryEngine | None = None
+        self.client_manager: ClientManager | None = None
         self.projects: dict[str, dict[str, Any]] = {}  # Keep for backward compatibility
         self._initialized = False
 
@@ -67,12 +73,39 @@ class UnifiedServiceManager(BaseService):
             # Initialize project storage with data_dir from config
             self.project_storage = ProjectStorage(data_dir=self.config.data_dir)
 
+            # Initialize client manager
+            self.client_manager = ClientManager()
+            await self.client_manager.initialize()
+
             # Initialize each service
             await self.embedding_manager.initialize()
             await self.crawl_manager.initialize()
             await self.qdrant_service.initialize()
             await self.cache_manager.initialize()
             await self.project_storage.initialize()
+
+            # Initialize HyDE engine with all dependencies
+            if self.config.hyde.enable_hyde:
+                # Convert config to component configs
+                prompt_config = HyDEPromptConfig()
+                metrics_config = HyDEMetricsConfig(
+                    ab_testing_enabled=self.config.hyde.ab_testing_enabled,
+                    control_group_percentage=self.config.hyde.control_group_percentage,
+                )
+
+                self.hyde_engine = HyDEQueryEngine(
+                    config=self.config.hyde,
+                    prompt_config=prompt_config,
+                    metrics_config=metrics_config,
+                    embedding_manager=self.embedding_manager,
+                    qdrant_service=self.qdrant_service,
+                    cache_manager=self.cache_manager.dragonfly_cache
+                    if hasattr(self.cache_manager, "dragonfly_cache")
+                    else self.cache_manager,
+                    llm_client=self.client_manager.openai_client,
+                )
+                await self.hyde_engine.initialize()
+                logger.info("HyDE engine initialized")
 
             # Load projects from storage
             self.projects = await self.project_storage.load_projects()
@@ -86,6 +119,8 @@ class UnifiedServiceManager(BaseService):
 
     async def cleanup(self):
         """Cleanup all services"""
+        if self.hyde_engine:
+            await self.hyde_engine.cleanup()
         if self.embedding_manager:
             await self.embedding_manager.cleanup()
         if self.crawl_manager:
@@ -98,6 +133,8 @@ class UnifiedServiceManager(BaseService):
             await self.project_storage.cleanup()
         if self.rate_limiter:
             await self.rate_limiter.cleanup()
+        if self.client_manager:
+            await self.client_manager.cleanup()
 
         self._initialized = False
         logger.info("All services cleaned up")

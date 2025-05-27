@@ -451,6 +451,108 @@ class PerformanceConfig(BaseModel):
         return v
 
 
+class HyDEConfig(BaseModel):
+    """Configuration for HyDE (Hypothetical Document Embeddings)."""
+
+    # Feature flags
+    enable_hyde: bool = Field(default=True, description="Enable HyDE processing")
+    enable_fallback: bool = Field(
+        default=True, description="Fall back to regular search on HyDE failure"
+    )
+    enable_reranking: bool = Field(
+        default=True, description="Apply reranking to HyDE results"
+    )
+    enable_caching: bool = Field(
+        default=True, description="Cache HyDE embeddings and results"
+    )
+
+    # Generation settings
+    num_generations: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Number of hypothetical documents to generate",
+    )
+    generation_temperature: float = Field(
+        default=0.7, ge=0.0, le=1.0, description="LLM temperature for generation"
+    )
+    max_generation_tokens: int = Field(
+        default=200, ge=50, le=500, description="Maximum tokens per generation"
+    )
+    generation_model: str = Field(
+        default="gpt-3.5-turbo", description="LLM model for generation"
+    )
+    generation_timeout_seconds: int = Field(
+        default=10, ge=1, le=60, description="Timeout for generation requests"
+    )
+
+    # Search settings
+    hyde_prefetch_limit: int = Field(
+        default=50, ge=10, le=200, description="Prefetch limit for HyDE embeddings"
+    )
+    query_prefetch_limit: int = Field(
+        default=30, ge=10, le=100, description="Prefetch limit for original query"
+    )
+    hyde_weight_in_fusion: float = Field(
+        default=0.6, ge=0.0, le=1.0, description="Weight of HyDE in fusion"
+    )
+    fusion_algorithm: str = Field(
+        default="rrf", description="Fusion algorithm (rrf or dbsf)"
+    )
+
+    # Caching settings
+    cache_ttl_seconds: int = Field(
+        default=3600, ge=300, le=86400, description="Cache TTL for HyDE embeddings"
+    )
+    cache_hypothetical_docs: bool = Field(
+        default=True, description="Cache generated hypothetical documents"
+    )
+    cache_prefix: str = Field(default="hyde", description="Cache key prefix")
+
+    # Performance settings
+    parallel_generation: bool = Field(
+        default=True, description="Generate documents in parallel"
+    )
+    max_concurrent_generations: int = Field(
+        default=5, ge=1, le=10, description="Max concurrent generation requests"
+    )
+
+    # Prompt engineering
+    use_domain_specific_prompts: bool = Field(
+        default=True, description="Use domain-specific prompts"
+    )
+    prompt_variation: bool = Field(
+        default=True, description="Use prompt variations for diversity"
+    )
+
+    # Quality control
+    min_generation_length: int = Field(
+        default=20, ge=10, le=100, description="Minimum words per generation"
+    )
+    filter_duplicates: bool = Field(
+        default=True, description="Filter duplicate generations"
+    )
+    diversity_threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0, description="Minimum diversity between generations"
+    )
+
+    # Monitoring and debugging
+    log_generations: bool = Field(
+        default=False, description="Log generated hypothetical documents"
+    )
+    track_metrics: bool = Field(
+        default=True, description="Track HyDE performance metrics"
+    )
+
+    # A/B testing
+    ab_testing_enabled: bool = Field(default=False, description="Enable A/B testing")
+    control_group_percentage: float = Field(
+        default=0.5, ge=0.0, le=1.0, description="Percentage for control group"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class SmartSelectionConfig(BaseModel):
     """Configuration for smart model selection algorithms."""
 
@@ -749,6 +851,7 @@ class UnifiedConfig(BaseSettings):
     security: SecurityConfig = Field(
         default_factory=SecurityConfig, description="Security settings"
     )
+    hyde: HyDEConfig = Field(default_factory=HyDEConfig, description="HyDE settings")
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(
