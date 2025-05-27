@@ -26,6 +26,48 @@ from .enums import LogLevel
 from .enums import SearchStrategy
 
 
+def _validate_api_key_common(
+    value: str | None,
+    prefix: str,
+    service_name: str,
+    min_length: int = 10,
+    max_length: int = 200,
+    allowed_chars: str = r"[A-Za-z0-9-]+",
+) -> str | None:
+    """Common API key validation logic."""
+    if value is None:
+        return value
+
+    value = value.strip()
+    if not value:
+        return None
+
+    # Check for ASCII-only characters (security requirement)
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError as err:
+        raise ValueError(
+            f"{service_name} API key contains non-ASCII characters"
+        ) from err
+
+    # Check required prefix
+    if not value.startswith(prefix):
+        raise ValueError(f"{service_name} API key must start with '{prefix}'")
+
+    # Length validation with DoS protection
+    if len(value) < min_length:
+        raise ValueError(f"{service_name} API key appears to be too short")
+
+    if len(value) > max_length:
+        raise ValueError(f"{service_name} API key appears to be too long")
+
+    # Character validation
+    if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
+        raise ValueError(f"{service_name} API key contains invalid characters")
+
+    return value
+
+
 class CacheConfig(BaseModel):
     """Cache configuration settings."""
 
@@ -138,36 +180,14 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate OpenAI API key format and structure."""
-        if v is None:
-            return v
-
-        v = v.strip()
-        if not v:
-            return None
-            
-        # Check for ASCII-only characters (security requirement)
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError("OpenAI API key contains non-ASCII characters")
-
-        # OpenAI API keys must start with 'sk-' prefix
-        if not v.startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
-
-        # OpenAI API keys have minimum viable length (various formats exist)
-        if len(v) < 20:
-            raise ValueError("OpenAI API key appears to be too short")
-        
-        # DoS protection - reasonable upper bound
-        if len(v) > 200:
-            raise ValueError("OpenAI API key appears to be too long")
-
-        # Check for valid characters (alphanumeric and hyphens)
-        if not re.match(r"^sk-[A-Za-z0-9-]+$", v):
-            raise ValueError("OpenAI API key contains invalid characters")
-
-        return v
+        return _validate_api_key_common(
+            v,
+            prefix="sk-",
+            service_name="OpenAI",
+            min_length=20,
+            max_length=200,
+            allowed_chars=r"[A-Za-z0-9-]+",
+        )
 
     @field_validator("model")
     @classmethod
@@ -211,36 +231,14 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate Firecrawl API key format and structure."""
-        if v is None:
-            return v
-
-        v = v.strip()
-        if not v:
-            return None
-
-        # Firecrawl API keys must start with 'fc-' prefix
-        if not v.startswith("fc-"):
-            raise ValueError("Firecrawl API key must start with 'fc-'")
-
-        # Check for reasonable minimum length (fc- + some content)
-        if len(v) < 10:
-            raise ValueError("Firecrawl API key appears to be too short")
-        
-        # DoS protection - reasonable upper bound
-        if len(v) > 200:
-            raise ValueError("Firecrawl API key appears to be too long")
-            
-        # Check for ASCII-only characters (security requirement)
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError("Firecrawl API key contains non-ASCII characters")
-
-        # Check for valid characters (alphanumeric, hyphens, underscores)
-        if not re.match(r"^fc-[A-Za-z0-9_-]+$", v):
-            raise ValueError("Firecrawl API key contains invalid characters")
-
-        return v
+        return _validate_api_key_common(
+            v,
+            prefix="fc-",
+            service_name="Firecrawl",
+            min_length=10,
+            max_length=200,
+            allowed_chars=r"[A-Za-z0-9_-]+",
+        )
 
 
 class Crawl4AIConfig(BaseModel):

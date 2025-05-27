@@ -46,14 +46,14 @@ class TestUnifiedConfig:
             embedding_provider=EmbeddingProvider.OPENAI,
             qdrant=QdrantConfig(url="https://my-qdrant.com"),
             openai=OpenAIConfig(
-                api_key="sk-test123",
+                api_key="sk-fake1234567890abcdef",
                 model="text-embedding-3-large",
                 dimensions=3072,
             ),
         )
 
         assert config.qdrant.url == "https://my-qdrant.com"
-        assert config.openai.api_key == "sk-test123"
+        assert config.openai.api_key == "sk-fake1234567890abcdef"
         assert config.openai.model == "text-embedding-3-large"
         assert config.embedding_provider == EmbeddingProvider.OPENAI
 
@@ -70,8 +70,8 @@ class TestUnifiedConfig:
     def test_openai_key_validation(self):
         """Test OpenAI API key validation."""
         # Valid key
-        config = UnifiedConfig(openai=OpenAIConfig(api_key="sk-proj-test123"))
-        assert config.openai.api_key == "sk-proj-test123"
+        config = UnifiedConfig(openai=OpenAIConfig(api_key="sk-fake1234567890abcdef"))
+        assert config.openai.api_key == "sk-fake1234567890abcdef"
 
         # None is valid
         config = UnifiedConfig(openai=OpenAIConfig(api_key=None))
@@ -135,7 +135,7 @@ class TestUnifiedConfig:
         # Valid configuration with OpenAI provider and API key
         config = UnifiedConfig(
             embedding_provider=EmbeddingProvider.OPENAI,
-            openai=OpenAIConfig(api_key="sk-test123"),
+            openai=OpenAIConfig(api_key="sk-fake1234567890abcdef"),
         )
         assert config.embedding_provider == EmbeddingProvider.OPENAI
 
@@ -222,14 +222,14 @@ class TestOpenAIConfigValidation:
         valid_key = "sk-" + "a" * 17  # 20 characters total
         config = OpenAIConfig(api_key=valid_key)
         assert config.api_key == valid_key
-        
+
         # Valid longer key (traditional format)
         valid_key_long = "sk-" + "a" * 48  # 51 characters total
         config = OpenAIConfig(api_key=valid_key_long)
         assert config.api_key == valid_key_long
 
         # Valid key with mixed alphanumeric and hyphens
-        valid_key_mixed = "sk-test1234567890abcdef-test123"
+        valid_key_mixed = "sk-fake1234567890abcdef-test123"
         config = OpenAIConfig(api_key=valid_key_mixed)
         assert config.api_key == valid_key_mixed
 
@@ -267,12 +267,12 @@ class TestOpenAIConfigValidation:
         with pytest.raises(ValidationError) as exc_info:
             OpenAIConfig(api_key="sk-invalid@key#with$symbols123")
         assert "invalid characters" in str(exc_info.value)
-        
+
         # Unicode characters should be rejected
         with pytest.raises(ValidationError) as exc_info:
             OpenAIConfig(api_key="sk-tëst" + "a" * 15)  # Unicode chars
         assert "non-ASCII characters" in str(exc_info.value)
-        
+
         # Too long (DoS protection)
         with pytest.raises(ValidationError) as exc_info:
             OpenAIConfig(api_key="sk-" + "a" * 500)  # Too long
@@ -290,12 +290,12 @@ class TestFirecrawlConfigValidation:
     def test_valid_firecrawl_api_keys(self):
         """Test valid Firecrawl API key formats."""
         # Valid key format with minimum length
-        valid_key = "fc-test123456"
+        valid_key = "fc-fake123456"
         config = FirecrawlConfig(api_key=valid_key)
         assert config.api_key == valid_key
 
         # Valid key with mixed alphanumeric, hyphens, and underscores
-        valid_key_mixed = "fc-test_123-456_789"
+        valid_key_mixed = "fc-fake_123-456_789"
         config = FirecrawlConfig(api_key=valid_key_mixed)
         assert config.api_key == valid_key_mixed
 
@@ -308,9 +308,9 @@ class TestFirecrawlConfigValidation:
         assert config.api_key is None
 
         # Valid key with whitespace gets stripped
-        valid_key_whitespace = "  fc-test123456  "
+        valid_key_whitespace = "  fc-fake123456  "
         config = FirecrawlConfig(api_key=valid_key_whitespace)
-        assert config.api_key == "fc-test123456"
+        assert config.api_key == "fc-fake123456"
 
     def test_invalid_firecrawl_api_keys(self):
         """Test invalid Firecrawl API key formats."""
@@ -381,10 +381,10 @@ class TestUnifiedConfigProviderValidation:
         # Should succeed when Firecrawl provider and valid API key provided
         config = UnifiedConfig(
             crawl_provider=CrawlProvider.FIRECRAWL,
-            firecrawl=FirecrawlConfig(api_key="fc-test123456"),
+            firecrawl=FirecrawlConfig(api_key="fc-fake123456"),
         )
         assert config.crawl_provider == CrawlProvider.FIRECRAWL
-        assert config.firecrawl.api_key == "fc-test123456"
+        assert config.firecrawl.api_key == "fc-fake123456"
 
         # Should succeed when Crawl4AI provider (no API key needed)
         config = UnifiedConfig(
@@ -415,9 +415,9 @@ class TestUnifiedConfigProviderValidation:
             embedding_provider=EmbeddingProvider.OPENAI,
             crawl_provider=CrawlProvider.FIRECRAWL,
             openai=OpenAIConfig(api_key="sk-" + "a" * 17),
-            firecrawl=FirecrawlConfig(api_key="fc-test123456"),
+            firecrawl=FirecrawlConfig(api_key="fc-fake123456"),
         )
         assert config.embedding_provider == EmbeddingProvider.OPENAI
         assert config.crawl_provider == CrawlProvider.FIRECRAWL
         assert config.openai.api_key == "sk-" + "a" * 17
-        assert config.firecrawl.api_key == "fc-test123456"
+        assert config.firecrawl.api_key == "fc-fake123456"

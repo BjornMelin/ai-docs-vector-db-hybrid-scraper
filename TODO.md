@@ -26,6 +26,7 @@
 - ✅ Issue #34: Comprehensive documentation reorganization (PR #34)
 - ✅ Issue #36: Unify models and configuration system - eliminate duplicate Pydantic models (PR #46)
 - ✅ Issue #37: Integrate structured logging into MCP server entry point (PR #47)
+- ✅ Issue #38: Centralize all startup API key validation in UnifiedConfig models (PR #48)
 
 ---
 
