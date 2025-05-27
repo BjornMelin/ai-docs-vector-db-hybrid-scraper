@@ -34,13 +34,18 @@ class CrawlManager:
 
         # Always initialize Crawl4AI as primary provider
         try:
+            # Get rate limit from configuration
+            crawl4ai_rate_limit = self.config.performance.default_rate_limits.get(
+                "crawl4ai", {"max_calls": 50, "time_window": 1}
+            )["max_calls"]
+
             # Pass configuration and rate limiter to Crawl4AI
             crawl4ai_config = {
                 "max_concurrent": self.config.performance.max_concurrent_requests,
                 "headless": True,
                 "browser": "chromium",
                 "page_timeout": int(self.config.performance.request_timeout * 1000),
-                "rate_limit": 60,
+                "rate_limit": crawl4ai_rate_limit,
             }
             provider = Crawl4AIProvider(
                 config=crawl4ai_config,

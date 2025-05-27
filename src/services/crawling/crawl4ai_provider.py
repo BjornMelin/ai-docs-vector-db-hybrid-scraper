@@ -7,6 +7,7 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
+import numpy as np
 from crawl4ai import AsyncWebCrawler
 from crawl4ai import BrowserConfig
 from crawl4ai import CrawlerRunConfig
@@ -304,10 +305,27 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     }
 
             except Exception as e:
-                self.logger.error(f"Failed to scrape {url}: {e}")
+                # Get additional context for better error reporting
+                rate_limit_status = "unknown"
+                if hasattr(self.rate_limiter, "current_calls"):
+                    rate_limit_status = f"{self.rate_limiter.current_calls}/{self.rate_limiter.max_calls}"
+
+                error_context = {
+                    "url": url,
+                    "extraction_type": extraction_type,
+                    "rate_limit_status": rate_limit_status,
+                    "semaphore_available": self.semaphore._value
+                    if hasattr(self.semaphore, "_value")
+                    else "unknown",
+                }
+
+                self.logger.error(
+                    f"Failed to scrape {url}: {e} | Context: {error_context}"
+                )
                 return {
                     "success": False,
                     "error": str(e),
+                    "error_context": error_context,
                     "content": "",
                     "metadata": {},
                     "url": url,
@@ -372,6 +390,9 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         to_visit = [url]
         base_domain = urlparse(url).netloc
 
+        # Memory optimization: limit visited_urls size for very large crawls
+        max_visited_urls = max(max_pages * 3, 1000)  # 3x safety margin, min 1000
+
         try:
             while to_visit and len(pages) < max_pages:
                 # Crawl batch of URLs
@@ -383,6 +404,15 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     if next_url not in visited_urls:
                         batch_urls.append(next_url)
                         visited_urls.add(next_url)
+
+                        # Memory optimization: trim visited_urls if it gets too large
+                        if len(visited_urls) > max_visited_urls:
+                            # Keep only the most recent 80% of URLs (simple LRU approximation)
+                            keep_count = int(max_visited_urls * 0.8)
+                            visited_urls = set(list(visited_urls)[-keep_count:])
+                            self.logger.debug(
+                                f"Trimmed visited_urls from {max_visited_urls} to {keep_count} for memory optimization"
+                            )
 
                 if not batch_urls:
                     break
@@ -423,10 +453,22 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to crawl site {url}: {e}")
+            # Enhanced error context for site crawling
+            error_context = {
+                "starting_url": url,
+                "pages_crawled": len(pages),
+                "urls_visited": len(visited_urls),
+                "urls_remaining": len(to_visit),
+                "max_pages_target": max_pages,
+            }
+
+            self.logger.error(
+                f"Failed to crawl site {url}: {e} | Context: {error_context}"
+            )
             return {
                 "success": False,
                 "error": str(e),
+                "error_context": error_context,
                 "pages": pages,
                 "total": len(pages),
                 "provider": "crawl4ai",
@@ -466,8 +508,18 @@ class CrawlCache:
 
         return result
 
-    def calculate_ttl(self, result: dict) -> int:
-        """Dynamic TTL based on content characteristics."""
+    def calculate_ttl(self, result: dict[str, Any]) -> int:
+        """Dynamic TTL based on content characteristics.
+
+        Args:
+            result: Crawl result dictionary containing URL and content
+
+        Returns:
+            TTL in seconds based on content type:
+            - API docs: 7 days (604800s)
+            - Blog posts: 30 days (2592000s)
+            - Other content: 3 days (259200s)
+        """
         url = result.get("url", "").lower()
 
         # API docs change less frequently
@@ -489,8 +541,17 @@ class CrawlBenchmark:
         self.crawl4ai = crawl4ai
         self.firecrawl = firecrawl
 
-    async def run_comparison(self, urls: list[str]) -> dict:
-        """Compare performance of both crawlers."""
+    async def run_comparison(self, urls: list[str]) -> dict[str, dict[str, Any]]:
+        """Compare performance of both crawlers.
+
+        Args:
+            urls: List of URLs to test against both crawlers
+
+        Returns:
+            Dictionary with performance statistics for each crawler including:
+            - success/failed counts
+            - timing statistics (avg, p95, min, max)
+        """
         results = {
             "crawl4ai": {"times": [], "success": 0, "failed": 0},
             "firecrawl": {"times": [], "success": 0, "failed": 0},
@@ -524,8 +585,6 @@ class CrawlBenchmark:
                     results["firecrawl"]["failed"] += 1
 
         # Calculate statistics
-        import numpy as np
-
         for _crawler, data in results.items():
             times = data["times"]
             if times:
