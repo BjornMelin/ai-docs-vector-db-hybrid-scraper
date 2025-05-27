@@ -97,3 +97,6 @@ yarn-error.log*
 
 # uv
 .uv/
+
+# Local Files
+.reference/
