@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import CreateAlias
@@ -486,7 +486,11 @@ class QdrantAliasManager(BaseService):
             hnsw1 = info1.config.hnsw_config
             hnsw2 = info2.config.hnsw_config
 
-            if hnsw1 and hnsw2 and (hnsw1.m != hnsw2.m or hnsw1.ef_construct != hnsw2.ef_construct):
+            if (
+                hnsw1
+                and hnsw2
+                and (hnsw1.m != hnsw2.m or hnsw1.ef_construct != hnsw2.ef_construct)
+            ):
                 return False, "HNSW configurations differ"
 
             # Check quantization configs if present

@@ -1,5 +1,6 @@
 """Unit tests for QdrantAliasManager."""
 
+import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -88,7 +89,12 @@ class TestQdrantAliasManager:
     @pytest.mark.asyncio
     async def test_create_alias_error(self, alias_manager, mock_client):
         """Test alias creation error handling."""
-        mock_client.get_aliases.side_effect = Exception("Connection error")
+        # Since alias_exists catches exceptions and returns False,
+        # we need to make update_collection_aliases fail instead
+        mock_client.get_aliases.return_value = MagicMock(aliases=[])
+        mock_client.update_collection_aliases.side_effect = Exception(
+            "Connection error"
+        )
 
         with pytest.raises(QdrantServiceError) as exc_info:
             await alias_manager.create_alias("test_alias", "test_collection")
@@ -261,11 +267,22 @@ class TestQdrantAliasManager:
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
         mock_client.delete_collection = AsyncMock()
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            # Set sleep to return immediately
+            mock_sleep.return_value = None
+
             await alias_manager.safe_delete_collection(
                 "test_collection", grace_period_minutes=0
             )
 
+            # Wait for all background tasks to complete
+            if hasattr(alias_manager, "_deletion_tasks"):
+                # Wait for all scheduled deletion tasks
+                await asyncio.gather(
+                    *alias_manager._deletion_tasks, return_exceptions=True
+                )
+
+            # Now check that delete was called
             mock_client.delete_collection.assert_called_once_with("test_collection")
 
     @pytest.mark.asyncio
@@ -327,6 +344,11 @@ class TestQdrantAliasManager:
     @pytest.mark.asyncio
     async def test_copy_collection_data_with_limit(self, alias_manager, mock_client):
         """Test collection data copying with limit."""
+        # Mock collection info with points count
+        source_info = MagicMock()
+        source_info.points_count = 10  # Total points in source
+        mock_client.get_collection.return_value = source_info
+
         # Mock scroll results
         points_batch = [MagicMock(id=1), MagicMock(id=2)]
 
