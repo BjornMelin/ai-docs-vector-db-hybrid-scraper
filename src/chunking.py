@@ -964,14 +964,3 @@ class EnhancedChunker:
             formatted.append(chunk_dict)
 
         return formatted
-
-
-# Legacy compatibility function
-def chunk_content(content: str, metadata: dict, config: ChunkingConfig) -> list[dict]:
-    """Legacy wrapper for compatibility with existing code."""
-    chunker = EnhancedChunker(config)
-    return chunker.chunk_content(
-        content=content,
-        title=metadata.get("title", ""),
-        url=metadata.get("url", ""),
-    )
