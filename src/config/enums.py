@@ -96,6 +96,30 @@ class CollectionStatus(str, Enum):
     RED = "red"
 
 
+class FusionAlgorithm(str, Enum):
+    """Fusion algorithms for combining multiple search results."""
+
+    RRF = "rrf"  # Reciprocal Rank Fusion - best for hybrid search
+    DBSF = "dbsf"  # Distribution-Based Score Fusion - best for similar vectors
+
+
+class SearchAccuracy(str, Enum):
+    """Search accuracy levels for HNSW parameter optimization."""
+
+    FAST = "fast"  # HNSW EF=50, prioritize speed
+    BALANCED = "balanced"  # HNSW EF=100, balance speed/accuracy
+    ACCURATE = "accurate"  # HNSW EF=200, prioritize accuracy
+    EXACT = "exact"  # Exact search, disable HNSW
+
+
+class VectorType(str, Enum):
+    """Vector types for multi-stage retrieval."""
+
+    DENSE = "dense"  # Dense embedding vectors
+    SPARSE = "sparse"  # Sparse keyword vectors (SPLADE)
+    HYDE = "hyde"  # Hypothetical document embeddings
+
+
 # Re-export commonly used enums for backward compatibility
 __all__ = [
     "ChunkingStrategy",
@@ -105,7 +129,10 @@ __all__ = [
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
+    "FusionAlgorithm",
     "LogLevel",
     "QualityTier",
+    "SearchAccuracy",
     "SearchStrategy",
+    "VectorType",
 ]

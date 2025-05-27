@@ -51,6 +51,9 @@ except ImportError:
     from .mcp.models.requests import BatchRequest
     from .mcp.models.requests import DocumentRequest
     from .mcp.models.requests import EmbeddingRequest
+    from .mcp.models.requests import FilteredSearchRequest
+    from .mcp.models.requests import HyDESearchRequest
+    from .mcp.models.requests import MultiStageSearchRequest
     from .mcp.models.requests import ProjectRequest
     from .mcp.models.requests import SearchRequest
     from .mcp.models.responses import SearchResult
@@ -119,7 +122,7 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
 
         await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
-        # Perform search based on strategy
+        # Perform search based on strategy using enhanced hybrid_search
         if request.strategy == SearchStrategy.HYBRID:
             # For hybrid search, use both dense and sparse vectors
             results = await service_manager.qdrant_service.hybrid_search(
@@ -128,7 +131,8 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
                 sparse_vector=sparse_vector,  # Now using actual sparse vector
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
-                fusion_type="rrf",
+                fusion_type=request.fusion_algorithm.value,
+                search_accuracy=request.search_accuracy.value,
             )
         else:
             # For dense search, use direct vector search
@@ -138,6 +142,8 @@ async def search_documents(request: SearchRequest, ctx: Context) -> list[SearchR
                 sparse_vector=None,  # Dense search only
                 limit=request.limit * 3 if request.enable_reranking else request.limit,
                 score_threshold=0.0,
+                fusion_type=request.fusion_algorithm.value,
+                search_accuracy=request.search_accuracy.value,
             )
 
         # Convert to search results
@@ -257,6 +263,233 @@ async def search_similar(
         if ctx:
             await ctx.error(f"Similarity search failed: {e}")
         logger.error(f"Similarity search failed: {e}")
+        raise
+
+
+# Advanced Search Tools for Query API
+
+
+@mcp.tool()
+async def multi_stage_search(
+    request: MultiStageSearchRequest, ctx: Context
+) -> list[SearchResult]:
+    """
+    Perform multi-stage retrieval with Matryoshka embeddings.
+
+    Implements advanced Query API patterns for complex retrieval strategies
+    with optimized prefetch and fusion algorithms.
+    """
+    await service_manager.initialize()
+
+    # Generate request ID for tracking
+    request_id = str(uuid4())
+    await ctx.info(
+        f"Starting multi-stage search {request_id} with {len(request.stages)} stages"
+    )
+
+    try:
+        # Validate collection name
+        security_validator = SecurityValidator.from_unified_config()
+        request.collection = security_validator.validate_collection_name(
+            request.collection
+        )
+
+        # Convert SearchStageRequest objects to dictionaries for QdrantService
+        stages = []
+        for stage_req in request.stages:
+            stage = {
+                "query_vector": stage_req.query_vector,
+                "vector_name": stage_req.vector_name,
+                "vector_type": stage_req.vector_type.value,
+                "limit": stage_req.limit,
+                "filter": stage_req.filters,
+            }
+            stages.append(stage)
+
+        # Perform multi-stage search
+        results = await service_manager.qdrant_service.multi_stage_search(
+            collection_name=request.collection,
+            stages=stages,
+            limit=request.limit,
+            fusion_algorithm=request.fusion_algorithm.value,
+            search_accuracy=request.search_accuracy.value,
+        )
+
+        # Convert to search results
+        search_results = [
+            SearchResult(
+                id=str(point["id"]),
+                content=point["payload"].get("content", ""),
+                score=point["score"],
+                url=point["payload"].get("url"),
+                title=point["payload"].get("title"),
+                metadata=point["payload"],
+            )
+            for point in results
+        ]
+
+        await ctx.info(
+            f"Multi-stage search {request_id} completed: {len(search_results)} results"
+        )
+        return search_results
+
+    except Exception as e:
+        await ctx.error(f"Multi-stage search {request_id} failed: {e}")
+        logger.error(f"Multi-stage search failed: {e}")
+        raise
+
+
+@mcp.tool()
+async def hyde_search(request: HyDESearchRequest, ctx: Context) -> list[SearchResult]:
+    """
+    Search using HyDE (Hypothetical Document Embeddings).
+
+    Generates hypothetical documents to improve retrieval accuracy
+    using advanced Query API with optimized prefetch patterns.
+    """
+    await service_manager.initialize()
+
+    # Generate request ID for tracking
+    request_id = str(uuid4())
+    await ctx.info(
+        f"Starting HyDE search {request_id} for query: {request.query[:50]}..."
+    )
+
+    try:
+        # Validate collection name and query
+        security_validator = SecurityValidator.from_unified_config()
+        request.collection = security_validator.validate_collection_name(
+            request.collection
+        )
+        request.query = security_validator.validate_query_string(request.query)
+
+        # Generate original query embedding
+        embedding_result = await service_manager.embedding_manager.generate_embeddings(
+            [request.query], generate_sparse=False
+        )
+        query_embedding = embedding_result["embeddings"][0]
+
+        # Generate hypothetical documents (simplified - in practice this would use LLM)
+        # For now, using query variations as hypothetical documents
+        hypothetical_docs = [
+            f"Documentation about {request.query}",
+            f"Guide to {request.query}",
+            f"How to use {request.query}",
+            f"{request.query} tutorial and examples",
+            f"Understanding {request.query} concepts",
+        ][: request.num_hypothetical_docs]
+
+        # Generate embeddings for hypothetical documents
+        hypothetical_embedding_result = (
+            await service_manager.embedding_manager.generate_embeddings(
+                hypothetical_docs, generate_sparse=False
+            )
+        )
+        hypothetical_embeddings = hypothetical_embedding_result["embeddings"]
+
+        await ctx.debug(
+            f"Generated {len(hypothetical_embeddings)} hypothetical document embeddings"
+        )
+
+        # Perform HyDE search
+        results = await service_manager.qdrant_service.hyde_search(
+            collection_name=request.collection,
+            query=request.query,
+            query_embedding=query_embedding,
+            hypothetical_embeddings=hypothetical_embeddings,
+            limit=request.limit,
+            fusion_algorithm=request.fusion_algorithm.value,
+            search_accuracy=request.search_accuracy.value,
+        )
+
+        # Convert to search results
+        search_results = [
+            SearchResult(
+                id=str(point["id"]),
+                content=point["payload"].get("content", ""),
+                score=point["score"],
+                url=point["payload"].get("url"),
+                title=point["payload"].get("title"),
+                metadata=point["payload"],
+            )
+            for point in results
+        ]
+
+        await ctx.info(
+            f"HyDE search {request_id} completed: {len(search_results)} results"
+        )
+        return search_results
+
+    except Exception as e:
+        await ctx.error(f"HyDE search {request_id} failed: {e}")
+        logger.error(f"HyDE search failed: {e}")
+        raise
+
+
+@mcp.tool()
+async def filtered_search(
+    request: FilteredSearchRequest, ctx: Context
+) -> list[SearchResult]:
+    """
+    Optimized filtered search using indexed payload fields.
+
+    Performs efficient filtered search with Query API optimizations
+    for high-performance filtering on indexed fields.
+    """
+    await service_manager.initialize()
+
+    # Generate request ID for tracking
+    request_id = str(uuid4())
+    await ctx.info(
+        f"Starting filtered search {request_id} with filters: {request.filters}"
+    )
+
+    try:
+        # Validate collection name and query
+        security_validator = SecurityValidator.from_unified_config()
+        request.collection = security_validator.validate_collection_name(
+            request.collection
+        )
+        request.query = security_validator.validate_query_string(request.query)
+
+        # Generate embedding for query
+        embedding_result = await service_manager.embedding_manager.generate_embeddings(
+            [request.query], generate_sparse=False
+        )
+        query_vector = embedding_result["embeddings"][0]
+
+        await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
+
+        # Perform filtered search
+        results = await service_manager.qdrant_service.filtered_search(
+            collection_name=request.collection,
+            query_vector=query_vector,
+            filters=request.filters,
+            limit=request.limit,
+            search_accuracy=request.search_accuracy.value,
+        )
+
+        # Convert to search results
+        search_results = [
+            SearchResult(
+                id=str(point["id"]),
+                content=point["payload"].get("content", ""),
+                score=point["score"],
+                url=point["payload"].get("url"),
+                title=point["payload"].get("title"),
+                metadata=point["payload"] if request.include_metadata else None,
+            )
+            for point in results
+        ]
+
+        await ctx.info(
+            f"Filtered search {request_id} completed: {len(search_results)} results"
+        )
+        return search_results
+
+    except Exception as e:
+        await ctx.error(f"Filtered search {request_id} failed: {e}")
+        logger.error(f"Filtered search failed: {e}")
         raise
 
 

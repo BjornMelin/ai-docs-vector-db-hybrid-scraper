@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from src.services.cache.dragonfly_cache import DragonflyCache
+
 # Redis removed - DragonflyDB is the only cache backend
 
 

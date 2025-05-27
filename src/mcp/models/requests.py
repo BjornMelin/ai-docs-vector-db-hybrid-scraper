@@ -6,7 +6,10 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from ...config.enums import ChunkingStrategy
+from ...config.enums import FusionAlgorithm
+from ...config.enums import SearchAccuracy
 from ...config.enums import SearchStrategy
+from ...config.enums import VectorType
 
 
 class SearchRequest(BaseModel):
@@ -23,6 +26,13 @@ class SearchRequest(BaseModel):
         default=True, description="Include metadata in results"
     )
     filters: dict[str, Any] | None = Field(default=None, description="Metadata filters")
+    # New advanced search options
+    fusion_algorithm: FusionAlgorithm = Field(
+        default=FusionAlgorithm.RRF, description="Fusion algorithm for hybrid search"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy level"
+    )
 
 
 class EmbeddingRequest(BaseModel):
@@ -88,3 +98,66 @@ class AnalyticsRequest(BaseModel):
         default=True, description="Include performance metrics"
     )
     include_costs: bool = Field(default=True, description="Include cost analysis")
+
+
+# Advanced Search Request Models for Query API
+
+
+class SearchStageRequest(BaseModel):
+    """Single stage configuration for multi-stage search"""
+
+    query_vector: list[float] = Field(..., description="Vector for this stage")
+    vector_name: str = Field(..., description="Vector field name (dense, sparse, etc.)")
+    vector_type: VectorType = Field(..., description="Type of vector for optimization")
+    limit: int = Field(..., description="Number of results to retrieve in this stage")
+    filters: dict[str, Any] | None = Field(
+        None, description="Optional filters for this stage"
+    )
+
+
+class MultiStageSearchRequest(BaseModel):
+    """Multi-stage search request for Matryoshka embeddings"""
+
+    collection: str = Field(default="documentation", description="Collection to search")
+    stages: list[SearchStageRequest] = Field(
+        ..., description="Search stages to execute"
+    )
+    limit: int = Field(default=10, ge=1, le=100, description="Final number of results")
+    fusion_algorithm: FusionAlgorithm = Field(
+        default=FusionAlgorithm.RRF, description="Fusion algorithm"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy level"
+    )
+
+
+class HyDESearchRequest(BaseModel):
+    """HyDE (Hypothetical Document Embeddings) search request"""
+
+    query: str = Field(..., description="Original query text")
+    collection: str = Field(default="documentation", description="Collection to search")
+    num_hypothetical_docs: int = Field(
+        default=5, ge=1, le=10, description="Number of hypothetical documents"
+    )
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    fusion_algorithm: FusionAlgorithm = Field(
+        default=FusionAlgorithm.RRF, description="Fusion algorithm"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy level"
+    )
+
+
+class FilteredSearchRequest(BaseModel):
+    """Filtered search request with indexed payload optimization"""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    filters: dict[str, Any] = Field(..., description="Filters to apply")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy level"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
