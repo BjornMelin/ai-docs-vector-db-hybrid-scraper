@@ -72,6 +72,7 @@ from .services.crawling.manager import CrawlManager
 # Import service layer
 from .services.embeddings.manager import EmbeddingManager
 from .services.qdrant_service import QdrantService
+from .services.rate_limiter import RateLimitManager
 
 console = Console()
 
@@ -118,10 +119,15 @@ class ModernDocumentationScraper:
         self.stats = ScrapingStats()
         self.processed_urls: set[str] = set()
 
+        # Initialize rate limiter
+        self.rate_limiter = RateLimitManager(self.config)
+
         # Initialize service layer
-        self.embedding_manager = EmbeddingManager(self.config)
+        self.embedding_manager = EmbeddingManager(
+            self.config, rate_limiter=self.rate_limiter
+        )
         self.qdrant_service = QdrantService(self.config)
-        self.crawl_manager = CrawlManager(self.config)
+        self.crawl_manager = CrawlManager(self.config, rate_limiter=self.rate_limiter)
 
         # Enhanced logging setup
         logging.basicConfig(
@@ -157,6 +163,9 @@ class ModernDocumentationScraper:
 
     async def initialize(self) -> None:
         """Initialize async services"""
+        if self.rate_limiter:
+            await self.rate_limiter.initialize()
+            self.logger.info("Rate limiter initialized")
         await self.embedding_manager.initialize()
         await self.qdrant_service.initialize()
         await self.crawl_manager.initialize()
@@ -167,6 +176,8 @@ class ModernDocumentationScraper:
         await self.embedding_manager.cleanup()
         await self.qdrant_service.cleanup()
         await self.crawl_manager.cleanup()
+        if self.rate_limiter:
+            await self.rate_limiter.cleanup()
         self.logger.info("All services cleaned up successfully")
 
     # Embedding model initialization removed - now handled by EmbeddingManager service
