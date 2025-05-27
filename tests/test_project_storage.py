@@ -21,7 +21,9 @@ async def temp_storage_path():
 @pytest.fixture
 async def storage(temp_storage_path):
     """Create a ProjectStorage instance with temporary file."""
-    storage = ProjectStorage(temp_storage_path)
+    storage = ProjectStorage(
+        data_dir=temp_storage_path.parent, storage_path=temp_storage_path
+    )
     await storage.initialize()
     return storage
 
@@ -29,7 +31,9 @@ async def storage(temp_storage_path):
 @pytest.mark.asyncio
 async def test_initialize_creates_file(temp_storage_path):
     """Test that initialization creates storage file."""
-    storage = ProjectStorage(temp_storage_path)
+    storage = ProjectStorage(
+        data_dir=temp_storage_path.parent, storage_path=temp_storage_path
+    )
     assert not temp_storage_path.exists()
 
     await storage.initialize()
@@ -125,7 +129,9 @@ async def test_list_projects(storage):
 async def test_persistence_across_instances(temp_storage_path):
     """Test that projects persist across storage instances."""
     # First instance
-    storage1 = ProjectStorage(temp_storage_path)
+    storage1 = ProjectStorage(
+        data_dir=temp_storage_path.parent, storage_path=temp_storage_path
+    )
     await storage1.initialize()
 
     project_data = {"id": "persist-test", "name": "Persistent Project"}
@@ -133,7 +139,9 @@ async def test_persistence_across_instances(temp_storage_path):
     await storage1.cleanup()
 
     # Second instance
-    storage2 = ProjectStorage(temp_storage_path)
+    storage2 = ProjectStorage(
+        data_dir=temp_storage_path.parent, storage_path=temp_storage_path
+    )
     await storage2.initialize()
 
     projects = await storage2.load_projects()
@@ -163,7 +171,9 @@ async def test_corrupted_file_recovery(temp_storage_path):
     with open(temp_storage_path, "w") as f:
         f.write("{invalid json")
 
-    storage = ProjectStorage(temp_storage_path)
+    storage = ProjectStorage(
+        data_dir=temp_storage_path.parent, storage_path=temp_storage_path
+    )
     await storage.initialize()
 
     # Should recover with empty projects
@@ -180,3 +190,25 @@ async def test_update_nonexistent_project(storage):
     """Test updating a project that doesn't exist."""
     with pytest.raises(ProjectStorageError, match="Project nonexistent not found"):
         await storage.update_project("nonexistent", {"name": "New Name"})
+
+
+@pytest.mark.asyncio
+async def test_data_dir_creates_default_path():
+    """Test that providing only data_dir creates projects.json in that directory."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_dir = Path(tmpdir) / "custom_data"
+        storage = ProjectStorage(data_dir=data_dir)
+
+        # Verify the storage path is set correctly
+        assert storage.storage_path == data_dir / "projects.json"
+
+        await storage.initialize()
+
+        # Verify the directory and file were created
+        assert data_dir.exists()
+        assert storage.storage_path.exists()
+
+        # Test saving data
+        await storage.save_project("test-1", {"name": "Test Project"})
+        projects = await storage.load_projects()
+        assert "test-1" in projects
