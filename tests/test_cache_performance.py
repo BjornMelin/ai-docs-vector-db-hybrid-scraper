@@ -6,34 +6,27 @@ from typing import Any
 
 import pytest
 from src.services.cache.dragonfly_cache import DragonflyCache
-from src.services.cache.redis_cache import RedisCache
+# Redis removed - DragonflyDB is the only cache backend
 
 
 class CachePerformanceBenchmarks:
     """Performance benchmarks for cache implementations."""
 
-    @pytest.fixture(params=["redis", "dragonfly"])
-    async def cache(self, request):
-        """Create cache instance based on parameter."""
-        if request.param == "redis":
-            cache = RedisCache(
-                redis_url="redis://localhost:6379",
-                key_prefix="bench:redis:",
-                max_connections=50,
-            )
-        else:
-            cache = DragonflyCache(
-                redis_url="redis://localhost:6379",
-                key_prefix="bench:dragonfly:",
-                max_connections=50,
-            )
+    @pytest.fixture
+    async def cache(self):
+        """Create DragonflyDB cache instance."""
+        cache = DragonflyCache(
+            redis_url="redis://localhost:6379",
+            key_prefix="bench:dragonfly:",
+            max_connections=50,
+        )
 
         try:
             # Test connection
             await cache.client
-            yield cache, request.param
+            yield cache, "dragonfly"
         except Exception as e:
-            pytest.skip(f"Could not connect to {request.param}: {e}")
+            pytest.skip(f"Could not connect to DragonflyDB: {e}")
         finally:
             await cache.close()
 
@@ -354,79 +347,5 @@ class CachePerformanceBenchmarks:
             )
 
 
-@pytest.mark.asyncio
-@pytest.mark.performance
-async def test_compare_backends():
-    """Direct comparison between Redis and DragonflyDB."""
-    results = {"redis": {}, "dragonfly": {}}
-
-    for backend in ["redis", "dragonfly"]:
-        if backend == "redis":
-            cache = RedisCache(
-                redis_url="redis://localhost:6379",
-                key_prefix=f"compare:{backend}:",
-            )
-        else:
-            cache = DragonflyCache(
-                redis_url="redis://localhost:6379",
-                key_prefix=f"compare:{backend}:",
-            )
-
-        try:
-            await cache.client  # Test connection
-
-            # Benchmark operations
-            test_data = {f"key_{i}": f"value_{i}" for i in range(1000)}
-
-            # Single operations
-            start = time.time()
-            for k, v in test_data.items():
-                await cache.set(k, v)
-            results[backend]["single_set"] = 1000 / (time.time() - start)
-
-            start = time.time()
-            for k in test_data:
-                await cache.get(k)
-            results[backend]["single_get"] = 1000 / (time.time() - start)
-
-            # Batch operations
-            start = time.time()
-            await cache.set_many(test_data)
-            results[backend]["batch_set"] = 1000 / (time.time() - start)
-
-            start = time.time()
-            await cache.get_many(list(test_data.keys()))
-            results[backend]["batch_get"] = 1000 / (time.time() - start)
-
-            await cache.close()
-
-        except Exception as e:
-            pytest.skip(f"Could not test {backend}: {e}")
-
-    # Print comparison
-    print("\n" + "=" * 60)
-    print("PERFORMANCE COMPARISON (ops/sec)")
-    print("=" * 60)
-
-    for operation in ["single_set", "single_get", "batch_set", "batch_get"]:
-        if operation in results["redis"] and operation in results["dragonfly"]:
-            redis_perf = results["redis"][operation]
-            dragonfly_perf = results["dragonfly"][operation]
-            improvement = dragonfly_perf / redis_perf
-
-            print(f"{operation.upper()}:")
-            print(f"  Redis:      {redis_perf:8.0f} ops/sec")
-            print(f"  DragonflyDB: {dragonfly_perf:8.0f} ops/sec")
-            print(f"  Improvement: {improvement:6.1f}x")
-            print()
-
-    # Verify DragonflyDB improvements
-    if "dragonfly" in results and "redis" in results:
-        for operation in ["batch_set", "batch_get"]:
-            if operation in results["dragonfly"] and operation in results["redis"]:
-                improvement = (
-                    results["dragonfly"][operation] / results["redis"][operation]
-                )
-                assert improvement > 1.2, (
-                    f"DragonflyDB not faster for {operation}: {improvement}x"
-                )
+# Redis comparison removed - DragonflyDB is the only cache backend
+# Performance tests above validate DragonflyDB meets performance targets
