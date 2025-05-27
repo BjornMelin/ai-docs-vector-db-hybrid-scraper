@@ -77,16 +77,17 @@ class TestUnifiedConfig:
         from src.config.models import OpenAIConfig
         from src.config.models import QdrantConfig
 
+        # Test-only API keys - not real credentials, used for validation testing
         config = UnifiedConfig(
-            openai=OpenAIConfig(api_key="sk-test_key_123"),
-            firecrawl=FirecrawlConfig(api_key="fc-test_key_123"),
+            openai=OpenAIConfig(api_key="sk-testkey123456789012345678901234567890"),
+            firecrawl=FirecrawlConfig(api_key="fc-testkey123"),
             qdrant=QdrantConfig(
                 url="http://custom:6333", collection_name="custom_collection"
             ),
             embedding_provider=EmbeddingProvider.FASTEMBED,
         )
-        assert config.openai.api_key == "sk-test_key_123"
-        assert config.firecrawl.api_key == "fc-test_key_123"
+        assert config.openai.api_key == "sk-testkey123456789012345678901234567890"
+        assert config.firecrawl.api_key == "fc-testkey123"
         assert config.qdrant.url == "http://custom:6333"
         assert config.qdrant.collection_name == "custom_collection"
         assert config.embedding_provider == EmbeddingProvider.FASTEMBED
@@ -226,11 +227,14 @@ class TestModernDocumentationScraper:
     async def test_scraper_setup_collection(self, scraper):
         """Test setting up Qdrant collection."""
         with (
+            patch.object(scraper.qdrant_service, "initialize", AsyncMock()),
             patch.object(
                 scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])
             ),
             patch.object(scraper.qdrant_service, "create_collection", AsyncMock()),
         ):
+            # Initialize the service first
+            scraper.qdrant_service._initialized = True
             await scraper.setup_collection()
             scraper.qdrant_service.list_collections.assert_called_once()
             scraper.qdrant_service.create_collection.assert_called_once()
@@ -281,17 +285,43 @@ class TestModernDocumentationScraper:
         mock_crawler_class,
         scraper,
         sample_documentation_site,
-        mock_crawl4ai,
     ):
         """Test successful documentation site crawling."""
-        mock_crawler_class.return_value = mock_crawl4ai
-        site = DocumentationSite(**sample_documentation_site)
+        # Create mock crawler
+        mock_crawler = MagicMock()
+        mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
+        mock_crawler.__aexit__ = AsyncMock(return_value=None)
 
+        # Create async generator for crawl results
+        async def mock_crawl_generator():
+            yield MagicMock(
+                success=True,
+                url="https://test.example.com/page1",
+                markdown="Test content for page 1",
+                metadata={"title": "Test Page 1", "depth": 0},
+                links={"internal": ["https://test.example.com/page2"]},
+                error_message=None,
+            )
+            yield MagicMock(
+                success=True,
+                url="https://test.example.com/page2",
+                markdown="Test content for page 2",
+                metadata={"title": "Test Page 2", "depth": 1},
+                links={"internal": []},
+                error_message=None,
+            )
+
+        mock_crawler.arun = AsyncMock(return_value=mock_crawl_generator())
+        mock_crawler_class.return_value = mock_crawler
+
+        site = DocumentationSite(**sample_documentation_site)
         results = await scraper.crawl_documentation_site(site)
 
-        assert len(results) > 0
+        assert len(results) == 2
         assert all(isinstance(result, CrawlResult) for result in results)
-        mock_crawl4ai.arun.assert_called()
+        assert results[0].url == "https://test.example.com/page1"
+        assert results[1].url == "https://test.example.com/page2"
+        mock_crawler.arun.assert_called()
 
     @patch("src.crawl4ai_bulk_embedder.AsyncWebCrawler")
     async def test_crawl_documentation_site_failure(
@@ -381,11 +411,19 @@ class TestModernDocumentationScraper:
         sites = [DocumentationSite(**sample_documentation_site)]
 
         with (
+            patch.object(scraper, "initialize", AsyncMock()),
+            patch.object(
+                scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])
+            ),
+            patch.object(scraper.qdrant_service, "create_collection", AsyncMock()),
             patch.object(
                 scraper, "crawl_documentation_site", AsyncMock(return_value=[])
             ),
             patch.object(scraper, "process_and_embed_results", AsyncMock()),
+            patch.object(scraper, "cleanup", AsyncMock()),
         ):
+            # Initialize the service to avoid initialization error
+            scraper.qdrant_service._initialized = True
             await scraper.scrape_multiple_sites(sites)
 
             scraper.crawl_documentation_site.assert_called_once()

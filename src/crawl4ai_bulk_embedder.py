@@ -176,8 +176,7 @@ class ModernDocumentationScraper:
         await self.embedding_manager.cleanup()
         await self.qdrant_service.cleanup()
         await self.crawl_manager.cleanup()
-        if self.rate_limiter:
-            await self.rate_limiter.cleanup()
+        # RateLimitManager doesn't need cleanup - it's stateless
         self.logger.info("All services cleaned up successfully")
 
     # Embedding model initialization removed - now handled by EmbeddingManager service
@@ -405,7 +404,7 @@ class ModernDocumentationScraper:
             page_timeout=30000,
             verbose=True,
             stream=True,  # Enable streaming for memory efficiency
-            dispatcher=dispatcher,  # Integrate dispatcher with crawler config
+            # dispatcher=dispatcher,  # Integrate dispatcher with crawler config
         )
 
         crawled_results = []
