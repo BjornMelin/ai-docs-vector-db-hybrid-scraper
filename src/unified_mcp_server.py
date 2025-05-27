@@ -389,7 +389,7 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
         chunks = chunker.chunk_content(
             content=crawl_result.markdown,
             title=crawl_result.metadata.get("title", ""),
-            url=request.url,
+            url=crawl_result.metadata.get("url", request.url),
         )
         await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
 
