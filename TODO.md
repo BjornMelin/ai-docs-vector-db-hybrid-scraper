@@ -9,6 +9,7 @@
 **Sprint Completed:** ✅ Critical Architecture Cleanup & Unification (Issues #16-28) - Merged via PR #32
 
 **Completed Work:**
+
 - ✅ Issue #16: Remove legacy MCP server files
 - ✅ Issue #17: Configuration centralization with UnifiedConfig
 - ✅ Issue #18: Sparse vectors & reranking implementation
@@ -30,22 +31,101 @@
 - ✅ Issue #39: Make rate limits configurable via UnifiedConfig system (feat/issue-39-configurable-rate-limits) - COMPLETED
 - ✅ Issue #40: Make model benchmarks configurable through UnifiedConfig (PR #51) - MERGED
 - ✅ Issue #41: Standardize ProjectStorage default path via UnifiedConfig (PR #49) - MERGED
+- ✅ **V1 REFACTOR Documentation** - Integrated all V1 enhancements into core documentation (2025-05-26)
+  - ✅ Created `/docs/REFACTOR/` guides for all V1 components
+  - ✅ Updated all GitHub issues (#55-#62) with documentation references
+  - ✅ Integrated V1 plans into core architecture, features, and operations docs
+  - ✅ Cleaned up TripSage-AI research files (deleted PLAN_CRAWLING_EXTRACTION.md and RESEARCH_CRAWLING_EXTRACTION.md)
 
 ---
 
-## NEXT PRIORITIES: V1 Feature Completion
+## NEXT PRIORITIES: V1 Feature Completion - Integrated Implementation
 
-### Unified MCP Server Modularization
+### 🚀 V1 FOUNDATION SPRINT (Week 0: 2-3 days) - IMMEDIATE START
 
-- [ ] **Split unified_mcp_server.py into modules** `refactor/server-modularization`
+- [ ] **Qdrant Query API Implementation** `feat/query-api` [Issue #55](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/55)
+  - [ ] Replace all `search()` calls with `query_points()`
+  - [ ] Implement prefetch configuration for multi-stage retrieval
+  - [ ] Add native RRF/DBSFusion support
+  - [ ] Update search interfaces with Query API parameters
+  - [ ] Performance benchmarks (target: 15-30% improvement)
+  
+- [ ] **Payload Indexing for Fast Filtering** `feat/payload-indexing` [Issue #56](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/56)
+  - [ ] Create payload index creation function
+  - [ ] Add indexes: doc_type, source_url, language, created_at, crawl_source
+  - [ ] Migration script for existing collections
+  - [ ] Performance benchmarks (target: 10-100x improvement)
+
+- [ ] **HNSW Configuration Optimization** `perf/hnsw-tuning` [Issue #57](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/57)
+  - [ ] Update to m=16, ef_construct=200, ef=100
+  - [ ] Add max_indexing_threads=0 for parallel processing
+  - [ ] Create comparison benchmarks
+
+### 🕷️ CRAWL4AI INTEGRATION (Weeks 1-3)
+
+- [ ] **Primary Bulk Scraper Implementation** `feat/crawl4ai` [Issue #58](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/58)
+  - [ ] Create Crawl4AI provider implementation
+  - [ ] Provider abstraction layer for crawling
+  - [ ] Enhanced metadata extraction (all indexed fields!)
+  - [ ] JS rendering detection and handling
+  - [ ] Fallback mechanism to Firecrawl
+  - [ ] Update bulk embedder
+  - [ ] Migration guide from Firecrawl
+  - [ ] Performance: 4-6x improvement, $0 cost
+
+### 🐉 DRAGONFLY CACHE LAYER (Weeks 2-4)
+
+- [ ] **High-Performance Cache Implementation** `feat/dragonfly` [Issue #59](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/59)
+  - [ ] DragonflyDB Docker service configuration
+  - [ ] DragonflyDB cache provider
+  - [ ] HyDE embedding caching (1hr TTL)
+  - [ ] Search result caching (30min TTL)
+  - [ ] Query vector caching
+  - [ ] Cache warming strategies
+  - [ ] Metrics and monitoring
+  - [ ] Target: 4.5x throughput, <50ms response
+
+### 🧠 HYDE IMPLEMENTATION (Weeks 3-5)
+
+- [ ] **Hypothetical Document Embeddings** `feat/hyde` [Issue #60](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/60)
+  - [ ] HyDE query engine component
+  - [ ] LLM integration for hypothetical generation
+  - [ ] Multi-generation averaging (n=5)
+  - [ ] Query API prefetch integration
+  - [ ] DragonflyDB caching for HyDE
+  - [ ] A/B testing capability
+  - [ ] Target: 15-25% accuracy improvement
+
+### 🤖 BROWSER AUTOMATION (Weeks 5-7)
+
+- [ ] **Intelligent Fallback System** `feat/browser-automation` [Issue #61](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/61)
+  - [ ] Stagehand integration (AI-powered)
+  - [ ] Playwright fallback
+  - [ ] JS rendering detection
+  - [ ] Fallback decision logic
+  - [ ] Browser pool management
+  - [ ] Performance monitoring
+  - [ ] Target: 100% success rate
+
+### 🔄 COLLECTION MANAGEMENT (Throughout)
+
+- [ ] **Zero-Downtime Updates** `feat/collection-aliases` [Issue #62](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/62)
+  - [ ] Versioned collection management
+  - [ ] Atomic alias updates
+  - [ ] Collection cloning
+  - [ ] Rollback capability
+  - [ ] A/B testing support
+  - [ ] Lifecycle management
+
+### 📋 Supporting Tasks
+
+- [ ] **Unified MCP Server Modularization** `refactor/server-modularization`
   - [ ] Extract request/response models to `src/mcp/models.py`
   - [ ] Move MCP tool definitions to `src/mcp/tools.py`
   - [ ] Create service orchestration in `src/mcp/orchestration.py`
   - [ ] Keep main server initialization in unified_mcp_server.py
   - [ ] Update imports and maintain backward compatibility
   - [ ] Add comprehensive tests for each module
-
-### Outstanding Test Issues
 
 - [ ] **Complete Test Suite Migration** `test/complete-migration`
   - [ ] Fix remaining test failures from architectural changes
@@ -598,29 +678,61 @@
 
 ---
 
-## NEXT MILESTONE: Advanced Features & Ecosystem
+## NEXT MILESTONE: V1 Integrated Implementation
 
-**Target Date:** End of February 2025
+**Target Date:** 7-8 weeks from start
 
-**V1 Success Criteria:**
+**V1 Implementation Timeline:**
 
-- [ ] Direct API/SDK integration working (no MCP overhead)
-- [ ] Smart model selection reducing costs by 30-50%
-- [ ] Caching layer with 80%+ hit rate for common operations
-- [ ] Batch processing implemented with OpenAI batch API
-- [ ] Local-only mode fully functional with FastEmbed
-- [ ] Code duplication eliminated (DRY principle achieved)
-- [ ] Test coverage increased to 90%+ with async tests
-- [ ] MCP server enhanced with streaming and composition
+- **Week 0**: Foundation Sprint (Query API, Indexing, HNSW)
+- **Weeks 1-3**: Crawl4AI Integration
+- **Weeks 2-4**: DragonflyDB Setup
+- **Weeks 3-5**: HyDE Implementation
+- **Weeks 5-7**: Browser Automation
+- **Throughout**: Collection Management
 
-**Post-V1 Success Criteria:**
+**V1 Success Metrics:**
 
-- [ ] Advanced reranking pipeline with multiple model support
-- [ ] Multi-modal document processing (images, tables, PDFs)
-- [ ] Production-grade performance optimizations
-- [ ] Rich CLI interface with interactive features
-- [ ] Enhanced monitoring and analytics dashboard
-- [ ] Additional MCP server integrations
+### Performance Targets
+
+- [ ] **Search Latency**: <40ms (vs 100ms baseline) - 60% improvement
+- [ ] **Filtered Searches**: 10-100x faster with payload indexing
+- [ ] **Cache Hit Rate**: >80% with DragonflyDB
+- [ ] **Crawling Speed**: 4-6x faster with Crawl4AI
+- [ ] **Search Accuracy**: 95%+ (vs 89.3% baseline)
+
+### Cost Targets  
+
+- [ ] **Crawling Costs**: $0 (Crawl4AI vs Firecrawl subscription)
+- [ ] **Cache Memory**: -38% usage (DragonflyDB vs Redis)
+- [ ] **Overall Reduction**: 70% total cost savings
+
+### Reliability Targets
+
+- [ ] **Scraping Success**: 100% with intelligent fallbacks
+- [ ] **Deployment Downtime**: 0ms with collection aliases
+- [ ] **Rollback Time**: <5 seconds
+- [ ] **Test Coverage**: >90% maintained
+
+### Feature Completeness
+
+- [ ] Query API with prefetch implemented [#55]
+- [ ] Payload indexing operational [#56]
+- [ ] HNSW optimized configuration [#57]
+- [ ] Crawl4AI fully integrated [#58]
+- [ ] DragonflyDB cache layer active [#59]
+- [ ] HyDE improving accuracy [#60]
+- [ ] Browser automation fallbacks working [#61]
+- [ ] Zero-downtime deployments enabled [#62]
+
+**Post-V1 Features (V2):**
+See [TODO-V2.md](./TODO-V2.md) for:
+
+- Advanced Query Enhancement
+- Multi-Collection Search
+- Comprehensive Analytics
+- Export/Import Tools
+- Enterprise Features
 
 ---
 

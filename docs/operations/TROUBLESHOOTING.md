@@ -1,10 +1,11 @@
 # 🔧 Troubleshooting Guide
 
-> **Comprehensive solutions for common issues with the AI Documentation Scraper**
+> **V1 Status**: Enhanced with Query API, HyDE, and DragonflyDB troubleshooting  
+> **Coverage**: Common issues and V1-specific performance problems
 
 ## 📋 Quick Diagnosis
 
-Run our automated diagnostic script first:
+Run our V1 diagnostic scripts first:
 
 ```bash
 # Health check for entire system
@@ -745,6 +746,252 @@ docker stats --no-stream qdrant-sota-2025 | tail -n 1
 
 echo "=================================="
 echo "Benchmark complete"
+```
+
+## 🆕 V1-Specific Troubleshooting
+
+### Issue: Query API Returns Fewer Results Than Expected
+
+**Symptoms**: `query_points()` returns fewer results than traditional `search()`  
+**Cause**: Aggressive prefetch filtering or fusion settings
+
+**Solution**:
+
+```python
+# Increase prefetch limits
+query_request = QueryRequest(
+    prefetch=[
+        PrefetchQuery(
+            query=embedding,
+            using="dense",
+            limit=200,  # Increase from 100
+            filter=None  # Remove filters temporarily
+        )
+    ],
+    query=FusionQuery(fusion=Fusion.RRF),
+    limit=20  # Get more candidates
+)
+```
+
+### Issue: HyDE Increasing Latency Too Much
+
+**Symptoms**: Search latency > 500ms with HyDE enabled  
+**Cause**: Synchronous LLM generation or no caching
+
+**Solution**:
+
+```python
+# 1. Enable aggressive caching
+hyde_service = HyDEService(
+    llm_client=llm,
+    embedding_service=embedder,
+    cache=DragonflyCache(ttl=86400)  # 24hr cache
+)
+
+# 2. Use faster LLM
+hyde_config = {
+    "model": "gpt-3.5-turbo",  # Not GPT-4
+    "max_tokens": 150,  # Reduce from 200
+    "temperature": 0.5  # Lower for consistency
+}
+
+# 3. Pre-generate for common queries
+common_queries = ["how to", "what is", "tutorial"]
+await hyde_service.pre_warm_cache(common_queries)
+```
+
+### Issue: DragonflyDB Memory Usage Growing
+
+**Symptoms**: DragonflyDB consuming > 4GB RAM  
+**Cause**: No eviction policy or compression disabled
+
+**Solution**:
+
+```yaml
+# docker-compose.yml
+dragonfly:
+  image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+  command: >
+    --cache_mode
+    --maxmemory_policy=allkeys-lru
+    --maxmemory=4gb
+    --compression=zstd
+    --compression_level=3
+  environment:
+    - DRAGONFLY_THREADS=8
+```
+
+### Issue: Payload Index Queries Still Slow
+
+**Symptoms**: Filtered searches taking > 100ms  
+**Cause**: Indexes not created or wrong field types
+
+**Solution**:
+
+```python
+# 1. Verify indexes exist
+info = await qdrant.get_collection(collection_name)
+print(f"Indexed fields: {info.payload_schema}")
+
+# 2. Create missing indexes
+await qdrant.create_payload_index(
+    collection_name=collection_name,
+    field_name="language",
+    field_schema=PayloadSchemaType.KEYWORD,  # Not TEXT
+    wait=True  # Wait for completion
+)
+
+# 3. Monitor index usage
+await qdrant.search(
+    collection_name=collection_name,
+    query_vector=embedding,
+    query_filter=Filter(
+        must=[
+            FieldCondition(
+                key="language",
+                match=MatchValue(value="python")
+            )
+        ]
+    ),
+    with_payload=True,
+    score_threshold=0.7
+)
+```
+
+### Issue: Collection Alias Update Failing
+
+**Symptoms**: Alias operations timeout or fail  
+**Cause**: Concurrent operations or invalid collection state
+
+**Solution**:
+
+```python
+# 1. Use atomic operations
+async def safe_alias_update(old_collection: str, new_collection: str, alias: str):
+    try:
+        # Single atomic operation
+        await qdrant.update_collection_aliases(
+            change_aliases_operations=[
+                DeleteAliasOperation(
+                    delete_alias=DeleteAlias(
+                        alias_name=alias
+                    )
+                ),
+                CreateAliasOperation(
+                    create_alias=CreateAlias(
+                        collection_name=new_collection,
+                        alias_name=alias
+                    )
+                )
+            ]
+        )
+    except Exception as e:
+        # Rollback on failure
+        logger.error(f"Alias update failed: {e}")
+        # Keep old collection active
+```
+
+### V1 Performance Degradation Checklist
+
+If V1 performance degrades over time:
+
+1. **Cache Health**:
+
+   ```bash
+   # Check DragonflyDB stats
+   docker exec dragonfly redis-cli INFO stats
+   # Look for evicted_keys, hit_rate
+   ```
+
+2. **Query API Efficiency**:
+
+   ```python
+   # Monitor prefetch effectiveness
+   metrics = await qdrant.get_collection(collection_name)
+   print(f"Points: {metrics.points_count}")
+   print(f"Segments: {metrics.segments_count}")
+   # More segments = slower queries
+   ```
+
+3. **HyDE Cache Coverage**:
+
+   ```python
+   # Check cache hit rate
+   stats = await hyde_service.get_cache_stats()
+   if stats["hit_rate"] < 0.6:
+       # Increase cache TTL or size
+       pass
+   ```
+
+4. **Index Utilization**:
+
+   ```python
+   # Profile query to ensure index usage
+   import time
+   
+   start = time.time()
+   results = await qdrant.search(
+       collection_name=collection_name,
+       query_vector=embedding,
+       query_filter=complex_filter
+   )
+   
+   if time.time() - start > 0.1:  # 100ms
+       print("Consider adding more indexes")
+   ```
+
+### V1 Debugging Tools
+
+```python
+# V1 Debug Helper
+class V1DebugHelper:
+    """Debug V1 performance issues."""
+    
+    async def diagnose_search_performance(self, query: str):
+        """Complete V1 search diagnosis."""
+        
+        results = {
+            "query": query,
+            "timestamps": {},
+            "cache_hits": {},
+            "bottlenecks": []
+        }
+        
+        # 1. Check cache
+        start = time.time()
+        cached = await self.cache.get(query)
+        results["timestamps"]["cache_check"] = time.time() - start
+        results["cache_hits"]["query"] = cached is not None
+        
+        # 2. HyDE generation
+        if not cached:
+            start = time.time()
+            hyde_embedding = await self.hyde_service.enhance(query)
+            hyde_time = time.time() - start
+            results["timestamps"]["hyde"] = hyde_time
+            
+            if hyde_time > 0.2:
+                results["bottlenecks"].append("HyDE generation slow")
+        
+        # 3. Query API search
+        start = time.time()
+        search_results = await self.search_with_query_api(query)
+        search_time = time.time() - start
+        results["timestamps"]["search"] = search_time
+        
+        if search_time > 0.1:
+            results["bottlenecks"].append("Query API slow")
+        
+        # 4. Reranking
+        start = time.time()
+        reranked = await self.rerank(query, search_results)
+        rerank_time = time.time() - start
+        results["timestamps"]["rerank"] = rerank_time
+        
+        if rerank_time > 0.05:
+            results["bottlenecks"].append("Reranking slow")
+        
+        return results
 ```
 
 ## 📞 Getting Help

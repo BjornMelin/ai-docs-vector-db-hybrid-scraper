@@ -1,16 +1,71 @@
 # AI Documentation Scraper - V2 Feature Roadmap
 
 > **Created:** 2025-05-22
-> **Purpose:** Future enhancements after initial unified MCP server release
+> **Updated:** 2025-05-27
+> **Purpose:** Future enhancements after V1 integrated implementation
 > **Priority System:** High | Medium | Low
 
 ## Overview
 
-This document contains advanced features and optimizations planned for V2 after the initial release of our unified MCP server with API/SDK integration.
+This document contains advanced features and optimizations planned for V2 after the V1 integrated implementation with Qdrant optimizations, Crawl4AI, DragonflyDB, HyDE, and browser automation.
 
 ---
 
 ## V2 HIGH PRIORITY FEATURES
+
+### Advanced Qdrant Features
+
+- [ ] **Matryoshka Embeddings Support** `feat/matryoshka-embeddings-v2`
+  - [ ] Implement OpenAI dimension reduction (512, 768, 1536)
+  - [ ] Create multi-stage retrieval with increasing dimensions
+  - [ ] Add dimension-aware caching strategies
+  - [ ] Implement cost/accuracy tradeoff optimization
+  - [ ] Create benchmarks for different dimension configurations
+  - [ ] Add adaptive dimension selection based on query
+  - [ ] Implement fallback strategies for dimension mismatches
+  - [ ] Document best practices for Matryoshka usage
+
+- [ ] **Advanced Collection Sharding** `feat/collection-sharding-v2`
+  - [ ] Implement time-based collection partitioning
+  - [ ] Create language-based sharding strategies
+  - [ ] Add category-based collection separation
+  - [ ] Implement cross-collection search federation
+  - [ ] Create shard routing optimization
+  - [ ] Add automatic shard rebalancing
+  - [ ] Implement shard-aware caching
+  - [ ] Create monitoring for shard performance
+
+- [ ] **Qdrant Cloud Integration** `feat/qdrant-cloud-v2`
+  - [ ] Add Qdrant Cloud configuration options
+  - [ ] Implement cloud-specific optimizations
+  - [ ] Create hybrid local/cloud deployment
+  - [ ] Add cloud backup strategies
+  - [ ] Implement cloud cost monitoring
+  - [ ] Create migration tools local→cloud
+  - [ ] Add multi-region support
+  - [ ] Implement cloud-native features
+
+### Advanced MCP Features
+
+- [ ] **Streaming Support** `feat/mcp-streaming-v2`
+  - [ ] Implement streaming for large search results
+  - [ ] Add chunked response handling
+  - [ ] Create memory-efficient result iteration
+  - [ ] Implement progress callbacks for long operations
+  - [ ] Add streaming support for bulk operations
+  - [ ] Create backpressure handling
+  - [ ] Implement partial result delivery
+  - [ ] Add stream error recovery
+
+- [ ] **Tool Composition** `feat/tool-composition-v2`
+  - [ ] Create smart_index_document composed tool
+  - [ ] Implement pipeline-based tool execution
+  - [ ] Add tool dependency resolution
+  - [ ] Create tool execution orchestration
+  - [ ] Implement tool result caching
+  - [ ] Add tool execution monitoring
+  - [ ] Create tool versioning support
+  - [ ] Implement tool rollback capabilities
 
 ### Advanced Caching Features
 

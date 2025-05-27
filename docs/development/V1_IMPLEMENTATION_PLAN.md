@@ -1,869 +1,464 @@
 # V1 Implementation Plan - AI Documentation Vector DB
 
+**Status**: Active Refactor  
+**Last Updated**: 2025-05-26  
+**Timeline**: 8 weeks  
+**GitHub Issues**: #55-#62
+
 ## Executive Summary
 
-This document outlines the complete implementation plan for V1 of our AI Documentation Vector DB system. The plan focuses on building a production-ready MCP server with advanced search capabilities, multiple embedding model support, and intelligent document processing.
+This document outlines the V1 refactor implementation plan that will deliver 50-70% compound performance improvements through synergistic integration of eight key components: Qdrant Query API, payload indexing, HNSW optimization, Crawl4AI scraping, DragonflyDB caching, HyDE query enhancement, browser automation hierarchy, and collection aliases.
 
 ## Project Goals
 
-1. **Unified MCP Server** - Single server handling all documentation operations
-2. **Direct API Integration** - Use Qdrant SDK and OpenAI SDK directly (no MCP proxying)
-3. **Advanced Search** - Hybrid search with reranking and multi-stage retrieval
-4. **Smart Model Selection** - Automatic embedding model selection based on task
-5. **Production Ready** - Monitoring, caching, error handling, and cost optimization
+1. **50-70% Performance Improvement** - Through compound gains from multiple optimizations
+2. **Zero Downtime Updates** - Collection aliases for seamless deployments
+3. **$0 Crawling Costs** - Replace Firecrawl with Crawl4AI
+4. **15-25% Better Accuracy** - HyDE query enhancement
+5. **Production Ready** - Comprehensive monitoring, testing, and documentation
 
-## Technical Architecture
-
-### Core Components
+## V1 Architecture Overview
 
 ```plaintext
 ┌─────────────────────────────────────────────────────────────┐
-│                    MCP Server (FastMCP 2.0)                  │
+│                    Unified MCP Server                        │
+│                 (FastMCP 2.0 + Aliases)                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Tools Layer                                                 │
-│  ├── Scraping Tools (scrape_documentation, scrape_github)   │
-│  ├── Search Tools (hybrid_search, semantic_search)          │
-│  ├── Management Tools (create_collection, index_documents)  │
-│  ├── Analytics Tools (get_analytics, optimize_collection)   │
-│  └── Composed Tools (smart_index_documentation)             │
+│                 Enhanced Service Layer                        │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │EmbeddingMgr │  │Qdrant+Query │  │AutomationRouter │   │
+│  │   + HyDE    │  │API+Indexes  │  │ Crawl4AI/Stage  │   │
+│  └─────────────┘  └──────────────┘  └─────────────────┘   │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │DragonflyDB  │  │AliasManager  │  │SecurityValidator│   │
+│  │Cache Layer  │  │Zero-Downtime │  │    Enhanced     │   │
+│  └─────────────┘  └──────────────┘  └─────────────────┘   │
 ├─────────────────────────────────────────────────────────────┤
-│  Services Layer                                              │
-│  ├── Embedding Service (OpenAI, BGE, FastEmbed)            │
-│  ├── Vector DB Service (Qdrant SDK)                        │
-│  ├── Chunking Service (Basic, Enhanced, AST)               │
-│  ├── Caching Service (Redis/In-Memory)                     │
-│  └── Monitoring Service (Metrics, Logging)                 │
-├─────────────────────────────────────────────────────────────┤
-│  Resources Layer                                             │
-│  ├── Configuration Resources                                │
-│  ├── Statistics Resources                                   │
-│  └── Analytics Resources                                    │
+│              Unified Configuration (Pydantic v2)             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
+## Implementation Timeline
 
-```plaintext
-User Request → MCP Tool → Service Layer → External APIs → Response
-                ↓                ↓                           ↑
-             Context      Cache Layer                   Monitoring
-```
+### Week 0: Foundation (May 27 - June 2)
 
-## Implementation Phases
+**Focus**: Query API (#55) + Payload Indexing (#56)
 
-### Phase 1: Core Infrastructure (Week 1)
+#### Objectives
 
-#### 1.1 Project Setup
+- Migrate from `search()` to `query_points()` API
+- Implement payload indexing for metadata fields
+- Achieve 15-30% base performance improvement
 
-- [ ] Create unified MCP server structure
-- [ ] Set up FastMCP 2.0 with all decorators
-- [ ] Configure environment management
-- [ ] Set up testing framework with pytest-asyncio
-- [ ] Create development Docker environment
+#### Tasks
 
-#### 1.2 Service Layer Foundation
+- [ ] Update QdrantService to use Query API
+- [ ] Implement prefetch configuration for multi-stage retrieval
+- [ ] Add native fusion support (RRF, DBSFusion)
+- [ ] Create payload indexes for language, framework, version
+- [ ] Add text indexes for title and description fields
+- [ ] Update search methods to use indexed queries
+- [ ] Benchmark performance improvements
 
-```python
-# src/services/__init__.py
-from .embedding import EmbeddingService
-from .vector_db import VectorDBService
-from .chunking import ChunkingService
-from .caching import CachingService
-from .monitoring import MonitoringService
+#### Success Metrics
 
-# src/services/base.py
-class BaseService:
-    """Base service with common functionality"""
-    def __init__(self, config: dict):
-        self.config = config
-        self._client = None
-    
-    async def initialize(self):
-        """Async initialization"""
-        pass
-    
-    async def cleanup(self):
-        """Cleanup resources"""
-        pass
-```
+- Query API fully implemented
+- 10x+ improvement in filtered searches
+- All tests passing
 
-#### 1.3 Configuration System
+### Week 1: Qdrant Enhancements (June 3-9)
 
-```python
-# src/config.py
-from pydantic import BaseModel, Field
-from typing import Optional
+**Focus**: HNSW Optimization (#57)
 
-class EmbeddingConfig(BaseModel):
-    default_model: str = "text-embedding-3-small"
-    model_selection_strategy: str = "auto"
-    batch_size: int = 100
-    cache_ttl: int = 3600
-    
-class QdrantConfig(BaseModel):
-    url: str = "http://localhost:6333"
-    api_key: Optional[str] = None
-    default_collection: str = "documentation"
-    
-class UnifiedConfig(BaseModel):
-    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
-    qdrant: QdrantConfig = Field(default_factory=QdrantConfig)
-    # ... more configs
-```
+#### Objectives (HNSW Optimization)
 
-### Phase 2: Embedding & Vector Services (Week 2)
+- Fine-tune HNSW parameters for documentation workload
+- Implement adaptive search parameters
+- Create A/B testing framework
 
-#### 2.1 Embedding Service Implementation
+#### Tasks (HNSW Optimization)
 
-```python
-# src/services/embedding.py
-class EmbeddingService(BaseService):
-    def __init__(self, config: EmbeddingConfig):
-        super().__init__(config)
-        self.models = {
-            "text-embedding-3-small": OpenAIEmbedder(model="text-embedding-3-small"),
-            "text-embedding-3-large": OpenAIEmbedder(model="text-embedding-3-large"),
-            "bge-base-en-v1.5": LocalEmbedder(model="BAAI/bge-base-en-v1.5"),
-            # More models...
-        }
-    
-    async def select_model(self, text: str, requirements: dict) -> str:
-        """Smart model selection based on text and requirements"""
-        if requirements.get("speed") == "fast":
-            return "text-embedding-3-small"
-        elif requirements.get("accuracy") == "high":
-            return "text-embedding-3-large"
-        elif requirements.get("local_only"):
-            return "bge-base-en-v1.5"
-        
-        # Auto selection based on text characteristics
-        text_length = len(text)
-        if text_length < 1000:
-            return "text-embedding-3-small"
-        else:
-            return "text-embedding-3-large"
-    
-    async def generate_embeddings(
-        self,
-        texts: list[str],
-        model: str = "auto",
-        batch_size: int = 100
-    ) -> list[list[float]]:
-        """Generate embeddings with batching and caching"""
-```
+- [ ] Benchmark current HNSW performance
+- [ ] Test m=16, ef_construct=200 configuration
+- [ ] Implement adaptive ef_retrieve based on time budget
+- [ ] Create collection-specific optimization profiles
+- [ ] Add HNSW monitoring dashboard
+- [ ] Set up A/B testing for configuration changes
 
-#### 2.2 Vector Database Service
+#### Success Metrics (HNSW Optimization)
 
-```python
-# src/services/vector_db.py
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import *
+- 5%+ accuracy improvement (97% recall@10)
+- 20%+ latency reduction (P95 < 85ms)
+- Monitoring dashboard operational
 
-class VectorDBService(BaseService):
-    async def initialize(self):
-        self.client = AsyncQdrantClient(
-            url=self.config.url,
-            api_key=self.config.api_key
-        )
-    
-    async def create_optimized_collection(
-        self,
-        name: str,
-        optimization: str = "balanced"
-    ):
-        """Create collection with optimization profile"""
-        profiles = {
-            "balanced": {
-                "vectors": {
-                    "dense": VectorParams(size=768, distance=Distance.COSINE),
-                    "sparse": SparseVectorParams()
-                },
-                "quantization_config": ScalarQuantization(
-                    type=ScalarType.INT8,
-                    quantile=0.95
-                )
-            },
-            # More profiles...
-        }
-```
+### Week 2: Crawl4AI Integration (June 10-16)
 
-### Phase 3: Search Implementation (Week 3)
+**Focus**: Primary Scraper Migration (#58)
 
-#### 3.1 Hybrid Search with Qdrant Query API
+#### Objectives (Crawl4AI Integration)
 
-```python
-# src/services/search.py
-class SearchService:
-    async def hybrid_search(
-        self,
-        query: str,
-        collection: str,
-        fusion_method: str = "rrf"
-    ) -> SearchResults:
-        """Implement Qdrant Query API with prefetch"""
-        
-        # Generate embeddings
-        dense_vector = await self.embedding_service.generate_embedding(query)
-        sparse_vector = await self.generate_sparse_vector(query)
-        
-        # Build query with prefetch
-        search_params = {
-            "prefetch": [
-                {
-                    "query": {"indices": sparse_vector.indices, "values": sparse_vector.values},
-                    "using": "sparse",
-                    "limit": 100
-                },
-                {
-                    "query": dense_vector,
-                    "using": "dense", 
-                    "limit": 100
-                }
-            ],
-            "query": {"fusion": fusion_method},
-            "limit": 10
-        }
-        
-        results = await self.qdrant.query_points(
-            collection_name=collection,
-            **search_params
-        )
-        
-        # Rerank if enabled
-        if self.config.enable_reranking:
-            results = await self.rerank_results(query, results)
-        
-        return results
-```
+- Replace Firecrawl with Crawl4AI
+- Achieve 4-6x crawling performance improvement
+- Eliminate crawling costs
 
-#### 3.2 Multi-Stage Retrieval
+#### Tasks (Crawl4AI Integration)
 
-```python
-async def multi_stage_search(
-    self,
-    query: str,
-    stages: list[dict]
-) -> SearchResults:
-    """Multi-stage search with nested prefetch"""
-    
-    # Example: Small → Large → Rerank
-    search_params = {
-        "prefetch": {
-            "prefetch": {
-                "query": small_vector,
-                "using": "small",
-                "limit": 1000
-            },
-            "query": large_vector,
-            "using": "large",
-            "limit": 100
-        },
-        "query": reranking_query,
-        "limit": 10
-    }
-```
+- [ ] Install Crawl4AI dependencies
+- [ ] Create Crawl4AIProvider service class
+- [ ] Implement JavaScript execution patterns
+- [ ] Add intelligent content extraction
+- [ ] Set up caching integration
+- [ ] Create migration fallback mechanism
+- [ ] Update bulk embedder to use Crawl4AI
+- [ ] Run comprehensive benchmarks
 
-### Phase 4: Document Processing (Week 4)
+#### Success Metrics (Crawl4AI Integration)
 
-#### 4.1 Enhanced Chunking Service
+- 4x+ performance improvement verified
+- $0 crawling costs
+- All existing functionality maintained
 
-```python
-# src/services/chunking.py
-from tree_sitter import Parser, Language
-import tiktoken
+### Week 3: DragonflyDB Cache (June 17-23)
 
-class ChunkingService(BaseService):
-    def __init__(self):
-        self.tokenizer = tiktoken.get_encoding("cl100k_base")
-        self.parsers = {
-            "python": Parser(Language("python")),
-            "javascript": Parser(Language("javascript")),
-            "typescript": Parser(Language("typescript"))
-        }
-    
-    async def chunk_document(
-        self,
-        content: str,
-        strategy: str = "enhanced",
-        target_size: int = 1600
-    ) -> list[Chunk]:
-        """Intelligent document chunking"""
-        
-        if strategy == "ast" and self.detect_code_language(content):
-            return await self.ast_chunk(content)
-        elif strategy == "enhanced":
-            return await self.enhanced_chunk(content)
-        else:
-            return await self.basic_chunk(content)
-    
-    async def ast_chunk(self, code: str) -> list[Chunk]:
-        """AST-based code chunking"""
-        language = self.detect_code_language(code)
-        parser = self.parsers[language]
-        tree = parser.parse(bytes(code, "utf8"))
-        
-        # Extract logical units (functions, classes)
-        chunks = []
-        for node in self.walk_tree(tree.root_node):
-            if node.type in ["function_definition", "class_definition"]:
-                chunk_text = code[node.start_byte:node.end_byte]
-                chunks.append(Chunk(
-                    text=chunk_text,
-                    metadata={
-                        "type": node.type,
-                        "language": language,
-                        "start_line": node.start_point[0]
-                    }
-                ))
-        
-        return chunks
-```
+**Focus**: High-Performance Caching (#59)
 
-### Phase 5: MCP Tools Implementation (Week 5)
+#### Objectives (DragonflyDB Cache)
 
-#### 5.1 Core MCP Tools
+- Replace Redis with DragonflyDB
+- Implement advanced caching patterns
+- Achieve 4.5x throughput improvement
+
+#### Tasks (DragonflyDB Cache)
+
+- [ ] Add DragonflyDB to docker-compose
+- [ ] Create DragonflyCache service
+- [ ] Implement cache-aside pattern with stale-while-revalidate
+- [ ] Add embedding-specific cache layer
+- [ ] Create search result caching
+- [ ] Set up cache warming strategies
+- [ ] Add cache monitoring metrics
+
+#### Success Metrics (DragonflyDB Cache)
+
+- 3x+ cache performance improvement
+- 0.8ms P99 latency achieved
+- 80%+ cache hit rate
+
+### Week 4: HyDE Implementation (June 24-30)
+
+**Focus**: Query Enhancement (#60)
+
+#### Objectives (HyDE Implementation)
+
+- Implement Hypothetical Document Embeddings
+- Integrate with Query API prefetch
+- Achieve 15-25% accuracy improvement
+
+#### Tasks (HyDE Implementation)
+
+- [ ] Create HyDE service class
+- [ ] Integrate Claude Haiku for generation
+- [ ] Add HyDE result caching
+- [ ] Integrate with Query API prefetch stages
+- [ ] Create A/B testing framework
+- [ ] Add performance monitoring
+- [ ] Validate accuracy improvements
+
+#### Success Metrics (HyDE Implementation)
+
+- 15%+ accuracy improvement measured
+- HyDE caching operational
+- A/B tests showing positive results
+
+### Week 5: Browser Automation (July 1-7)
+
+**Focus**: Intelligent Scraping (#61)
+
+#### Objectives (Browser Automation)
+
+- Implement three-tier automation hierarchy
+- Optimize tool selection per site
+- Achieve 97% overall success rate
+
+#### Tasks (Browser Automation)
+
+- [ ] Create AutomationRouter class
+- [ ] Implement tool selection logic
+- [ ] Add Stagehand adapter for AI automation
+- [ ] Update Playwright adapter
+- [ ] Create fallback mechanisms
+- [ ] Add performance monitoring per tool
+- [ ] Build site-specific configurations
+
+#### Success Metrics (Browser Automation)
+
+- 95%+ success rate across all sites
+- Intelligent routing working correctly
+- Performance metrics tracked per tool
+
+### Week 6: Collection Aliases (July 8-14)
+
+**Focus**: Zero-Downtime Updates (#62)
+
+#### Objectives (Collection Aliases)
+
+- Implement collection alias management
+- Enable blue-green deployments
+- Add A/B testing capabilities
+
+#### Tasks (Collection Aliases)
+
+- [ ] Create QdrantAliasManager class
+- [ ] Implement blue-green deployment pattern
+- [ ] Add A/B testing framework
+- [ ] Build canary deployment system
+- [ ] Create deployment monitoring
+- [ ] Add automatic rollback mechanisms
+- [ ] Update MCP server to use aliases
+
+#### Success Metrics (Collection Aliases)
+
+- Zero-downtime deployment verified
+- Rollback mechanism tested
+- A/B testing framework operational
+
+### Week 7: Integration & Testing (July 15-21)
+
+**Focus**: System Integration
+
+#### Objectives (Integration & Testing)
+
+- Integrate all components
+- Comprehensive testing
+- Performance validation
+
+#### Tasks (Integration & Testing)
+
+- [ ] Integration testing of all components
+- [ ] End-to-end performance benchmarks
+- [ ] Load testing with production workloads
+- [ ] Security audit
+- [ ] Cost analysis and optimization
+- [ ] Bug fixes and optimizations
+- [ ] Deployment preparation
+
+#### Success Metrics (Integration & Testing)
+
+- All integration tests passing
+- 50-70% compound improvement verified
+- Production readiness checklist complete
+
+### Week 8: Documentation & Launch (July 22-28)
+
+**Focus**: Documentation and Rollout
+
+#### Objectives (Documentation & Launch)
+
+- Complete documentation
+- Production deployment
+- Monitoring setup
+
+#### Tasks (Documentation & Launch)
+
+- [ ] Update all core documentation
+- [ ] Create migration guides
+- [ ] Set up production monitoring
+- [ ] Deploy to production environment
+- [ ] Gradual rollout with monitoring
+- [ ] Gather initial feedback
+- [ ] Plan V2 features
+
+#### Success Metrics (Documentation & Launch)
+
+- Documentation 100% complete
+- Successful production deployment
+- Monitoring showing expected improvements
+
+## Component Integration & Synergies
+
+### How Components Work Together
 
 ```python
-# src/mcp_server.py
-from fastmcp import FastMCP, Context
-from .services import *
-
-mcp = FastMCP(
-    name="AI Documentation Vector DB",
-    instructions="Advanced documentation management with hybrid search"
-)
-
-# Initialize services
-embedding_service = EmbeddingService(config.embedding)
-vector_service = VectorDBService(config.qdrant)
-search_service = SearchService(embedding_service, vector_service)
-
-@mcp.tool()
-async def scrape_documentation(
-    url: str,
-    max_depth: int = 3,
-    chunk_strategy: str = "enhanced",
-    ctx: Context
-) -> dict:
-    """Scrape and index documentation"""
-    try:
-        await ctx.info(f"Starting scrape of {url}")
-        
-        # Scraping logic
-        documents = await scraper.crawl(url, max_depth)
-        await ctx.report_progress(0.3, 1.0, "Documents scraped")
-        
-        # Chunking
-        all_chunks = []
-        for doc in documents:
-            chunks = await chunking_service.chunk_document(
-                doc.content,
-                strategy=chunk_strategy
-            )
-            all_chunks.extend(chunks)
-        
-        await ctx.report_progress(0.6, 1.0, "Documents chunked")
-        
-        # Embedding generation
-        embeddings = await embedding_service.generate_embeddings(
-            [chunk.text for chunk in all_chunks],
-            batch_size=100
-        )
-        
-        await ctx.report_progress(0.9, 1.0, "Embeddings generated")
-        
-        # Index in Qdrant
-        await vector_service.index_chunks(all_chunks, embeddings)
-        
-        return {
-            "success": True,
-            "documents_processed": len(documents),
-            "chunks_created": len(all_chunks),
-            "url": url
-        }
-        
-    except Exception as e:
-        await ctx.error(f"Scraping failed: {e}")
-        raise ToolError(f"Failed to scrape {url}: {e}")
-
-@mcp.tool()
-async def hybrid_search(
-    query: str,
-    collection: str = "documentation",
-    fusion_method: str = "rrf",
-    limit: int = 10,
-    ctx: Context
-) -> dict:
-    """Advanced hybrid search"""
-    results = await search_service.hybrid_search(
-        query=query,
-        collection=collection,
-        fusion_method=fusion_method,
-        limit=limit
+# Example: Integrated Search Flow
+async def enhanced_search(query: str) -> list[SearchResult]:
+    # 1. Check DragonflyDB cache (0.8ms)
+    cache_key = f"search:{hash(query)}"
+    if cached := await dragonfly.get(cache_key):
+        return cached
+    
+    # 2. Generate HyDE enhancement (+15-25% accuracy)
+    hyde_doc = await hyde_service.generate(query)
+    
+    # 3. Create embedding with caching
+    embedding = await embedding_manager.generate(hyde_doc)
+    
+    # 4. Query with prefetch and indexes (15-30% faster)
+    results = await qdrant.query_points(
+        collection_name=alias_manager.resolve("documentation"),
+        query=embedding,
+        filter=Filter(must=[
+            FieldCondition(key="language", match="python")  # 10-100x faster
+        ]),
+        prefetch=[
+            Prefetch(query=embedding, using="dense", limit=100)
+        ],
+        limit=10
     )
     
-    # Format results
-    formatted_results = []
-    for result in results:
-        formatted_results.append({
-            "content": result.payload.get("content"),
-            "url": result.payload.get("url"),
-            "score": result.score,
-            "metadata": result.payload.get("metadata", {})
-        })
+    # 5. Cache results
+    await dragonfly.set(cache_key, results, ttl=3600)
     
-    return {
-        "query": query,
-        "results": formatted_results,
-        "total": len(formatted_results),
-        "search_type": "hybrid",
-        "fusion_method": fusion_method
-    }
+    return results
 ```
 
-#### 5.2 Composed Tools
+### Compound Performance Gains
 
-```python
-@mcp.tool()
-async def smart_index_documentation(
-    source: str,
-    project_name: str,
-    auto_configure: bool = True,
-    ctx: Context
-) -> dict:
-    """Complete documentation indexing pipeline"""
-    
-    # 1. Detect source type
-    source_type = detect_source_type(source)
-    await ctx.info(f"Detected source type: {source_type}")
-    
-    # 2. Create optimized collection
-    if auto_configure:
-        optimization = "balanced"
-        if "api" in project_name.lower():
-            optimization = "speed"
-        elif "research" in project_name.lower():
-            optimization = "accuracy"
-    
-    collection_name = f"{project_name}_docs"
-    await create_collection(
-        name=collection_name,
-        optimized_for=optimization,
-        ctx=ctx
-    )
-    
-    # 3. Scrape based on source type
-    if source_type == "github":
-        scrape_result = await scrape_github_repo(source, ctx=ctx)
-    else:
-        scrape_result = await scrape_documentation(source, ctx=ctx)
-    
-    # 4. Set up monitoring
-    await setup_collection_monitoring(collection_name, ctx=ctx)
-    
-    # 5. Generate recommendations
-    recommendations = await analyze_collection(collection_name)
-    
-    return {
-        "success": True,
-        "project_name": project_name,
-        "collection": collection_name,
-        "documents_indexed": scrape_result["documents_processed"],
-        "optimization": optimization,
-        "recommendations": recommendations
-    }
-```
-
-### Phase 6: Advanced Features (Week 6)
-
-#### 6.1 Streaming Support
-
-```python
-@mcp.tool()
-async def stream_search_results(
-    query: str,
-    collection: str,
-    page_size: int = 20,
-    ctx: Context
-) -> AsyncIterator[dict]:
-    """Stream large result sets"""
-    offset = 0
-    total_results = None
-    
-    while True:
-        results = await search_service.search(
-            query=query,
-            collection=collection,
-            limit=page_size,
-            offset=offset
-        )
-        
-        if total_results is None:
-            total_results = results.total
-            await ctx.info(f"Found {total_results} total results")
-        
-        if not results.items:
-            break
-        
-        yield {
-            "results": [r.dict() for r in results.items],
-            "offset": offset,
-            "total": total_results,
-            "has_more": offset + page_size < total_results
-        }
-        
-        offset += page_size
-        await ctx.report_progress(
-            min(offset, total_results),
-            total_results,
-            f"Streaming results..."
-        )
-```
-
-#### 6.2 Resource Implementation
-
-```python
-@mcp.resource("config://embedding-models")
-async def get_embedding_models() -> dict:
-    """Available embedding models"""
-    return {
-        "models": {
-            "text-embedding-3-small": {
-                "provider": "openai",
-                "dimensions": 768,
-                "max_tokens": 8191,
-                "cost_per_1m": 0.02,
-                "speed": "fast",
-                "accuracy": "good",
-                "use_cases": ["general", "fast_search"]
-            },
-            "text-embedding-3-large": {
-                "provider": "openai", 
-                "dimensions": 3072,
-                "max_tokens": 8191,
-                "cost_per_1m": 0.13,
-                "speed": "medium",
-                "accuracy": "excellent",
-                "use_cases": ["high_accuracy", "research"]
-            },
-            "bge-base-en-v1.5": {
-                "provider": "local",
-                "dimensions": 768,
-                "max_tokens": 512,
-                "cost_per_1m": 0,
-                "speed": "fast",
-                "accuracy": "good",
-                "use_cases": ["local", "privacy"]
-            }
-        },
-        "selection_guide": {
-            "speed": ["text-embedding-3-small", "bge-base-en-v1.5"],
-            "accuracy": ["text-embedding-3-large"],
-            "cost": ["bge-base-en-v1.5", "text-embedding-3-small"],
-            "privacy": ["bge-base-en-v1.5"]
-        }
-    }
-
-@mcp.resource("stats://collection/{name}")
-async def get_collection_stats(name: str) -> dict:
-    """Real-time collection statistics"""
-    stats = await vector_service.get_collection_info(name)
-    performance = await monitoring_service.get_performance_metrics(name)
-    
-    return {
-        "collection": name,
-        "vectors": {
-            "total": stats.vectors_count,
-            "indexed": stats.indexed_vectors_count
-        },
-        "storage": {
-            "size_mb": stats.size_mb,
-            "compression_ratio": stats.compression_ratio
-        },
-        "performance": {
-            "avg_search_latency_ms": performance.avg_latency,
-            "p95_latency_ms": performance.p95_latency,
-            "searches_per_second": performance.qps
-        },
-        "last_updated": stats.updated_at
-    }
-```
-
-### Phase 7: Monitoring & Analytics (Week 7)
-
-#### 7.1 Monitoring Service
-
-```python
-# src/services/monitoring.py
-import prometheus_client as prom
-from dataclasses import dataclass
-from datetime import datetime
-
-class MonitoringService(BaseService):
-    def __init__(self):
-        # Metrics
-        self.search_latency = prom.Histogram(
-            'search_latency_seconds',
-            'Search request latency',
-            ['collection', 'search_type']
-        )
-        self.embedding_generation = prom.Counter(
-            'embeddings_generated_total',
-            'Total embeddings generated',
-            ['model']
-        )
-        self.cache_hits = prom.Counter(
-            'cache_hits_total',
-            'Cache hit rate',
-            ['cache_type']
-        )
-        
-    async def record_search(
-        self,
-        collection: str,
-        search_type: str,
-        latency: float,
-        results_count: int
-    ):
-        """Record search metrics"""
-        self.search_latency.labels(
-            collection=collection,
-            search_type=search_type
-        ).observe(latency)
-        
-        # Store in time-series DB
-        await self.store_metric({
-            "type": "search",
-            "collection": collection,
-            "search_type": search_type,
-            "latency": latency,
-            "results": results_count,
-            "timestamp": datetime.utcnow()
-        })
-```
-
-#### 7.2 Analytics Tools
-
-```python
-@mcp.tool()
-async def get_search_analytics(
-    collection: str = None,
-    time_range: str = "7d",
-    ctx: Context
-) -> dict:
-    """Comprehensive search analytics"""
-    
-    analytics = await monitoring_service.get_analytics(
-        collection=collection,
-        time_range=time_range
-    )
-    
-    return {
-        "summary": {
-            "total_searches": analytics.total_searches,
-            "unique_queries": analytics.unique_queries,
-            "avg_latency_ms": analytics.avg_latency,
-            "cache_hit_rate": analytics.cache_hit_rate
-        },
-        "top_queries": analytics.top_queries[:10],
-        "performance_trend": analytics.performance_trend,
-        "cost_breakdown": {
-            "embeddings": analytics.embedding_cost,
-            "storage": analytics.storage_cost,
-            "total": analytics.total_cost
-        },
-        "recommendations": generate_optimization_recommendations(analytics)
-    }
-```
-
-### Phase 8: Testing & Quality Assurance (Week 8)
-
-#### 8.1 Comprehensive Test Suite
-
-```python
-# tests/test_search.py
-import pytest
-from unittest.mock import AsyncMock
-
-@pytest.mark.asyncio
-async def test_hybrid_search():
-    """Test hybrid search functionality"""
-    # Mock services
-    mock_embedding = AsyncMock()
-    mock_vector = AsyncMock()
-    
-    search_service = SearchService(mock_embedding, mock_vector)
-    
-    # Test search
-    results = await search_service.hybrid_search(
-        query="test query",
-        collection="test_collection",
-        fusion_method="rrf"
-    )
-    
-    assert results is not None
-    assert len(results) <= 10
-    mock_embedding.generate_embedding.assert_called_once()
-    mock_vector.query_points.assert_called_once()
-
-@pytest.mark.asyncio 
-async def test_multi_stage_search():
-    """Test multi-stage retrieval"""
-    # Test implementation
-```
-
-#### 8.2 Performance Benchmarks
-
-```python
-# tests/benchmarks/test_performance.py
-import asyncio
-import time
-
-async def benchmark_embedding_generation():
-    """Benchmark embedding generation"""
-    texts = ["Sample text"] * 1000
-    
-    start = time.time()
-    embeddings = await embedding_service.generate_embeddings(texts)
-    duration = time.time() - start
-    
-    print(f"Generated {len(embeddings)} embeddings in {duration:.2f}s")
-    print(f"Throughput: {len(embeddings)/duration:.2f} embeddings/sec")
-
-async def benchmark_search_latency():
-    """Benchmark search performance"""
-    queries = [
-        "simple query",
-        "complex technical documentation query with multiple terms",
-        "multilingual query 多语言查询"
-    ]
-    
-    for query in queries:
-        times = []
-        for _ in range(10):
-            start = time.time()
-            await search_service.hybrid_search(query)
-            times.append(time.time() - start)
-        
-        avg_time = sum(times) / len(times)
-        print(f"Query: {query[:30]}...")
-        print(f"Average latency: {avg_time*1000:.2f}ms")
-```
-
-## Deployment & Operations
-
-### Docker Configuration
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  mcp-server:
-    build: .
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - QDRANT_URL=http://qdrant:6333
-      - REDIS_URL=redis://redis:6379
-    ports:
-      - "8000:8000"
-    depends_on:
-      - qdrant
-      - redis
-  
-  qdrant:
-    image: qdrant/qdrant:v1.11.0
-    volumes:
-      - qdrant_data:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__ENABLE_TLS=false
-      - QDRANT__STORAGE__PERFORMANCE__OPTIMIZER_AUTO_OPTIMIZATION_INTERVAL_MS=30000
-    
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-```
-
-### Production Checklist
-
-- [ ] Environment variables properly configured
-- [ ] SSL/TLS enabled for all services
-- [ ] Rate limiting implemented
-- [ ] Monitoring dashboards set up
-- [ ] Backup strategy in place
-- [ ] Load testing completed
-- [ ] Security audit performed
-- [ ] Documentation complete
-
-## Success Metrics
-
-### Performance Targets
-
-- Search latency: < 100ms for 95th percentile
-- Embedding generation: > 1000 embeddings/second
-- Index update time: < 5 seconds for single document
-- Cache hit rate: > 80% for common queries
-
-### Quality Metrics
-
-- Search accuracy: > 90% relevance score
-- Test coverage: > 90%
-- Code quality: A rating on all linting tools
-- Documentation coverage: 100% of public APIs
-
-### Business Metrics
-
-- Cost per 1M embeddings: < $50
-- Storage efficiency: > 80% compression ratio
-- Uptime: 99.9% availability
-- User satisfaction: > 4.5/5 rating
+| Component | Individual Gain | Compound Effect |
+|-----------|-----------------|-----------------|
+| Query API | 15-30% faster | Base improvement |
+| Payload Indexing | 10-100x filtering | Enables complex queries |
+| DragonflyDB | 3x cache speed | Faster cache hits |
+| HyDE | 15-25% accuracy | Better first-time queries |
+| Crawl4AI | 6x crawl speed | Faster indexing |
+| HNSW Tuning | 5% accuracy | Better base search |
+| **Total** | - | **50-70% overall** |
 
 ## Risk Mitigation
 
 ### Technical Risks
 
-1. **API Rate Limits**
-   - Solution: Implement exponential backoff
-   - Fallback: Local embedding models
+1. **Integration Complexity**
+   - Mitigation: Incremental rollout with feature flags
+   - Fallback: Keep existing implementations available
 
-2. **Vector DB Performance**
-   - Solution: Proper indexing and sharding
-   - Monitoring: Real-time performance metrics
+2. **Performance Regression**
+   - Mitigation: Comprehensive benchmarking at each stage
+   - Monitoring: Real-time performance tracking
 
-3. **Memory Usage**
-   - Solution: Streaming and pagination
-   - Limits: Configurable batch sizes
+3. **Data Migration**
+   - Mitigation: Use collection aliases for safe switching
+   - Recovery: Keep backups of all collections
 
 ### Operational Risks
 
 1. **Cost Overruns**
-   - Solution: Budget alerts and limits
+   - Mitigation: HyDE caching to minimize LLM calls
    - Monitoring: Real-time cost tracking
 
-2. **Data Loss**
-   - Solution: Regular backups
-   - Recovery: Point-in-time restoration
+2. **Downtime**
+   - Mitigation: Collection aliases for zero-downtime
+   - Testing: Thorough staging environment validation
 
-## Timeline Summary
+## Success Metrics (V1 Implementation Plan)
 
-- **Week 1**: Core infrastructure and setup
-- **Week 2**: Embedding and vector services
-- **Week 3**: Search implementation
-- **Week 4**: Document processing
-- **Week 5**: MCP tools implementation
-- **Week 6**: Advanced features
-- **Week 7**: Monitoring and analytics
-- **Week 8**: Testing and deployment
+### Performance Targets
 
-Total estimated time: 8 weeks for complete V1 implementation
+- **Search Latency**: < 50ms P95 (from 100ms)
+- **Crawl Speed**: 0.4s average (from 2.5s)
+- **Cache Hit Rate**: > 80%
+- **Filtered Search**: < 20ms (from 1000ms+)
+- **Accuracy**: 15-25% improvement with HyDE
+
+### Quality Metrics
+
+- **Test Coverage**: > 90%
+- **Success Rate**: > 97% for automation
+- **Zero Downtime**: Verified through aliases
+- **Documentation**: 100% complete
+
+### Cost Targets
+
+- **Crawling**: $0 (from $15/1K pages)
+- **Caching**: 38% less memory with DragonflyDB
+- **Storage**: 83%+ compression maintained
+
+## Testing Strategy
+
+### Unit Testing
+
+- Each service tested in isolation
+- Mock external dependencies
+- > 90% code coverage
+
+### Integration Testing
+
+- Test component interactions
+- Validate compound performance gains
+- End-to-end scenarios
+
+### Performance Testing
+
+- Benchmark each optimization
+- Load testing with production data
+- Latency percentile tracking
+
+### A/B Testing
+
+- HyDE accuracy validation
+- HNSW configuration comparison
+- Cache strategy effectiveness
+
+## Deployment Strategy
+
+### Staging Environment
+
+- Full production mirror
+- Performance validation
+- Integration testing
+
+### Production Rollout
+
+1. Deploy infrastructure (DragonflyDB, monitoring)
+2. Roll out Qdrant enhancements with aliases
+3. Enable Crawl4AI with fallback
+4. Activate HyDE with A/B testing
+5. Full system activation
+
+### Rollback Plan
+
+- Collection aliases for instant rollback
+- Feature flags for component control
+- Automated monitoring triggers
+
+## Documentation Requirements
+
+### Developer Documentation
+
+- API changes for Query API
+- Service implementation guides
+- Testing procedures
+
+### Operations Documentation
+
+- Monitoring setup
+- Deployment procedures
+- Troubleshooting guides
+
+### User Documentation
+
+- Performance improvements
+- New features (HyDE, filters)
+- Migration guide
 
 ## Next Steps
 
-1. Review and approve implementation plan
-2. Set up development environment
-3. Begin Phase 1 implementation
-4. Schedule weekly progress reviews
-5. Prepare for beta testing with select users
+1. **Immediate Actions**
+   - Review and approve plan
+   - Set up development branches
+   - Begin Week 0 implementation
 
-This plan provides a solid foundation for building a production-ready AI documentation vector database with advanced search capabilities.
+2. **Week 0 Preparation**
+   - Read Query API documentation
+   - Set up performance benchmarking
+   - Prepare test datasets
+
+3. **Communication**
+   - Weekly progress updates
+   - GitHub issue tracking
+   - Team sync meetings
+
+## Conclusion
+
+This V1 implementation plan delivers substantial performance improvements through carefully orchestrated component integration. The 8-week timeline allows for thorough implementation and testing while maintaining system stability through collection aliases and comprehensive monitoring.
+
+The compound effect of all optimizations will transform the system into a state-of-the-art documentation search platform with industry-leading performance and reliability.

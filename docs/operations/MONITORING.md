@@ -1,11 +1,11 @@
 # Monitoring & Observability Guide
 
-**Status**: Current  
-**Last Updated**: 2025-05-26
+> **V1 Status**: Enhanced with DragonflyDB metrics and Query API monitoring  
+> **Performance**: Real-time tracking of 50-70% performance improvements
 
 ## Overview
 
-This guide covers monitoring, metrics collection, and observability for the AI Documentation Vector DB system in production environments.
+This guide covers V1 enhanced monitoring, metrics collection, and observability for the AI Documentation Vector DB system. Our V1 implementation provides comprehensive tracking of Query API performance, HyDE accuracy improvements, DragonflyDB cache efficiency, and overall system health.
 
 ## Metrics Collection
 
@@ -43,11 +43,27 @@ The unified architecture provides comprehensive metrics through various service 
 - Memory usage
 ```
 
-#### 4. Cache Performance
+#### 4. V1 DragonflyDB Cache Performance
 
 ```python
-# CacheManager metrics
-- Hit/miss rates
+# V1 Enhanced cache metrics
+- Hit/miss rates (target: 80%+)
+- Embedding cache efficiency
+- Search result cache coverage
+- Reranking cache performance
+- Memory usage and eviction rates
+- Compression ratios
+```
+
+#### 5. V1 Query API Performance
+
+```python
+# Query API specific metrics
+- Multi-stage retrieval latency
+- Prefetch efficiency
+- Payload index usage
+- Filter performance
+- RRF fusion effectiveness
 - TTL effectiveness
 - Memory usage
 - Eviction rates
@@ -391,6 +407,156 @@ class MetricsExporter:
 - Implement retention policies
 - Use metric downsampling
 - Archive old data
+
+## V1 Enhanced Monitoring
+
+### 1. HyDE Performance Tracking
+
+Monitor the effectiveness of Hypothetical Document Embeddings:
+
+```python
+class V1HyDEMetrics:
+    """Track HyDE enhancement effectiveness."""
+    
+    def __init__(self):
+        self.metrics = {
+            "hyde_queries_total": Counter("hyde_queries_total"),
+            "hyde_accuracy_improvement": Histogram("hyde_accuracy_improvement"),
+            "hyde_generation_time": Histogram("hyde_generation_time_seconds"),
+            "hyde_cache_hit_rate": Gauge("hyde_cache_hit_rate")
+        }
+    
+    async def track_hyde_query(self, original_score: float, hyde_score: float):
+        """Track accuracy improvement from HyDE."""
+        improvement = (hyde_score - original_score) / original_score
+        self.metrics["hyde_accuracy_improvement"].observe(improvement)
+        self.metrics["hyde_queries_total"].inc()
+```
+
+### 2. Query API Multi-Stage Monitoring
+
+Track performance across retrieval stages:
+
+```python
+# V1 Query API metrics
+QUERY_API_METRICS = {
+    "prefetch_latency": Histogram("query_api_prefetch_seconds"),
+    "fusion_effectiveness": Histogram("query_api_fusion_score"),
+    "payload_filter_speedup": Histogram("payload_filter_speedup_ratio"),
+    "total_stages": Counter("query_api_stages_total"),
+}
+
+# Example tracking
+async def track_query_api_performance(
+    prefetch_time: float,
+    filter_time: float,
+    baseline_time: float
+):
+    """Track Query API performance improvements."""
+    QUERY_API_METRICS["prefetch_latency"].observe(prefetch_time)
+    
+    # Calculate filter speedup
+    speedup = baseline_time / filter_time if filter_time > 0 else 100
+    QUERY_API_METRICS["payload_filter_speedup"].observe(speedup)
+```
+
+### 3. DragonflyDB Advanced Metrics
+
+Monitor DragonflyDB-specific performance:
+
+```python
+# DragonflyDB monitoring
+dragonfly_metrics = {
+    "memory_usage_bytes": Gauge("dragonfly_memory_bytes"),
+    "compression_ratio": Gauge("dragonfly_compression_ratio"),
+    "throughput_ops": Counter("dragonfly_operations_total"),
+    "embedding_cache_size": Gauge("dragonfly_embedding_cache_mb"),
+    "search_cache_size": Gauge("dragonfly_search_cache_mb"),
+}
+
+# Dashboard queries
+DRAGONFLY_DASHBOARDS = {
+    "cache_efficiency": """
+        rate(dragonfly_cache_hits[5m]) / 
+        (rate(dragonfly_cache_hits[5m]) + rate(dragonfly_cache_misses[5m]))
+    """,
+    "cost_savings": """
+        (dragonfly_embedding_cache_hits * 0.02) / 1000000  # Saved API costs
+    """
+}
+```
+
+### 4. V1 Performance Dashboard
+
+Comprehensive V1 metrics dashboard configuration:
+
+```yaml
+# Grafana dashboard for V1 enhancements
+panels:
+  - title: "V1 Overall Performance"
+    queries:
+      - expr: |
+          (query_api_speedup + hyde_accuracy_improvement + 
+           dragonfly_cache_efficiency) / 3
+    visualization: gauge
+    thresholds:
+      - value: 0.5
+        color: green
+        text: "50% improvement"
+      - value: 0.7
+        color: blue
+        text: "70% improvement"
+
+  - title: "Component Performance Breakdown"
+    queries:
+      - expr: query_api_prefetch_seconds{quantile="0.95"}
+        legend: "Query API (p95)"
+      - expr: hyde_generation_time_seconds{quantile="0.95"}
+        legend: "HyDE Generation (p95)"
+      - expr: dragonfly_operation_latency_seconds{quantile="0.95"}
+        legend: "DragonflyDB (p95)"
+
+  - title: "Cost Optimization"
+    queries:
+      - expr: sum(rate(embedding_api_calls_saved[1h])) * 0.02
+        legend: "Hourly Savings ($)"
+```
+
+### 5. V1 Alerting Rules
+
+Enhanced alerting for V1 components:
+
+```yaml
+groups:
+  - name: v1_performance_alerts
+    rules:
+      - alert: HyDEPerformanceDegradation
+        expr: |
+          avg(hyde_accuracy_improvement) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HyDE improvement below 15% threshold"
+      
+      - alert: DragonflyDBCacheIneffective
+        expr: |
+          dragonfly_cache_hit_rate < 0.6
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cache hit rate below 60%"
+      
+      - alert: QueryAPISlowPrefetch
+        expr: |
+          histogram_quantile(0.95, query_api_prefetch_seconds) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Query API prefetch exceeding 100ms"
+```
 
 ## Related Documentation
 
