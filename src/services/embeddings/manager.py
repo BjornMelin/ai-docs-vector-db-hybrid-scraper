@@ -13,6 +13,7 @@ except ImportError:
     FlagReranker = None
 
 from src.config import UnifiedConfig
+from src.config.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
@@ -82,20 +83,6 @@ class QualityTier(Enum):
 
 
 @dataclass
-class ModelBenchmark:
-    """Performance benchmark for embedding models."""
-
-    model_name: str
-    provider: str
-    avg_latency_ms: float
-    quality_score: float  # 0-100 based on retrieval accuracy
-    tokens_per_second: float
-    cost_per_million_tokens: float
-    max_context_length: int
-    embedding_dimensions: int
-
-
-@dataclass
 class UsageStats:
     """Usage statistics tracking."""
 
@@ -161,49 +148,8 @@ class EmbeddingManager:
                 },
             )
 
-        # Model benchmarks (initialized with research-backed values)
-        self._benchmarks: dict[str, ModelBenchmark] = {
-            "text-embedding-3-small": ModelBenchmark(
-                model_name="text-embedding-3-small",
-                provider="openai",
-                avg_latency_ms=78,
-                quality_score=85,
-                tokens_per_second=12800,
-                cost_per_million_tokens=20.0,
-                max_context_length=8191,
-                embedding_dimensions=1536,
-            ),
-            "text-embedding-3-large": ModelBenchmark(
-                model_name="text-embedding-3-large",
-                provider="openai",
-                avg_latency_ms=120,
-                quality_score=92,
-                tokens_per_second=8300,
-                cost_per_million_tokens=130.0,
-                max_context_length=8191,
-                embedding_dimensions=3072,
-            ),
-            "BAAI/bge-small-en-v1.5": ModelBenchmark(
-                model_name="BAAI/bge-small-en-v1.5",
-                provider="fastembed",
-                avg_latency_ms=45,
-                quality_score=78,
-                tokens_per_second=22000,
-                cost_per_million_tokens=0.0,
-                max_context_length=512,
-                embedding_dimensions=384,
-            ),
-            "BAAI/bge-large-en-v1.5": ModelBenchmark(
-                model_name="BAAI/bge-large-en-v1.5",
-                provider="fastembed",
-                avg_latency_ms=89,
-                quality_score=88,
-                tokens_per_second=11000,
-                cost_per_million_tokens=0.0,
-                max_context_length=512,
-                embedding_dimensions=1024,
-            ),
-        }
+        # Model benchmarks (loaded from configuration)
+        self._benchmarks: dict[str, ModelBenchmark] = config.embedding.model_benchmarks
 
         # Dynamic quality tier mappings
         self._tier_providers = {
