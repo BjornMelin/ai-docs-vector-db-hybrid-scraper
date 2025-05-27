@@ -1103,7 +1103,7 @@ class EmbeddingServiceMetrics:
 
 ## Configurable Model Benchmarks
 
-### Overview
+### Overview Benchmarking
 
 The embedding system now supports configurable model benchmarks, allowing users to customize model performance data without code changes. This enables:
 
@@ -1219,6 +1219,7 @@ config.embedding.model_benchmarks["text-embedding-3-small"].quality_score = 87
 You can create different config files for different environments by overriding only the values you wish to change from the main template.
 
 **Configuration Merging Behavior:**
+
 - The main template `config/templates/custom-benchmarks.json` contains the full set of configuration options and default values
 - Environment-specific files (shown below) are intended as minimal overrides - they only need to specify the keys and values that differ from the template
 - When loading configuration, your application should merge the environment-specific file with the template, so that any unspecified values fall back to the defaults in `custom-benchmarks.json`
@@ -1227,6 +1228,7 @@ You can create different config files for different environments by overriding o
 **Example environment-specific override files:**
 
 **config/production-benchmarks.json** (minimal override):
+
 ```json
 {
   "embedding": {
@@ -1241,6 +1243,7 @@ You can create different config files for different environments by overriding o
 ```
 
 **config/development-benchmarks.json** (minimal override):
+
 ```json
 {
   "embedding": {
