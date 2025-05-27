@@ -48,6 +48,7 @@ dependencies = [
     "redis[hiredis]>=5.3.0",
     "fastmcp>=2.5.1",
     "uvicorn>=0.34.0",
+    "scipy>=1.15.0",
 ]
 
 [project.optional-dependencies]
