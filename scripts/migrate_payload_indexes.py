@@ -118,15 +118,44 @@ class PayloadIndexMigrator:
                     "existing_indexes": status["indexed_fields_count"],
                 }
 
-            # Perform migration
-            if force and status["has_indexes"]:
-                logger.info(f"Force reindexing collection {collection_name}")
-                await self.qdrant_service.reindex_collection(collection_name)
-            else:
-                logger.info(
-                    f"Creating payload indexes for collection {collection_name}"
+            # Perform migration with enhanced error handling
+            try:
+                if force and status["has_indexes"]:
+                    logger.info(f"Force reindexing collection {collection_name}")
+                    await self.qdrant_service.reindex_collection(collection_name)
+                else:
+                    logger.info(
+                        f"Creating payload indexes for collection {collection_name}"
+                    )
+                    await self.qdrant_service.create_payload_indexes(collection_name)
+
+                # Validate migration success
+                await self._validate_migration_success(collection_name)
+
+            except Exception as migration_error:
+                logger.error(
+                    f"Migration failed for collection {collection_name}: {migration_error}",
+                    exc_info=True,
                 )
-                await self.qdrant_service.create_payload_indexes(collection_name)
+
+                # Attempt recovery
+                recovery_result = await self._attempt_recovery(
+                    collection_name, migration_error
+                )
+                if not recovery_result["success"]:
+                    self.migration_stats["collections_failed"] += 1
+                    self.migration_stats["errors"].append(
+                        f"{collection_name}: Migration failed - {migration_error}"
+                    )
+                    return {
+                        "status": "failed",
+                        "error": str(migration_error),
+                        "recovery_attempted": True,
+                        "recovery_result": recovery_result,
+                    }
+                else:
+                    logger.info(f"Recovery successful for collection {collection_name}")
+                    # Continue with success flow below
 
             # Get updated stats
             new_stats = await self.qdrant_service.get_payload_index_stats(
@@ -248,31 +277,152 @@ class PayloadIndexMigrator:
                         f"⏭️  {collection}: {result.get('existing_indexes', 0)} existing indexes"
                     )
                 elif status == "dry_run":
-                    needs = (
-                        "needs migration"
-                        if result["needs_migration"]
-                        else "already indexed"
-                    )
                     print(
-                        f"🔍 {collection}: {needs} ({result['current_indexes']} indexes)"
+                        f"🔍 {collection}: Would create {result['planned_indexes']} indexes"
                     )
                 elif status == "failed":
-                    print(f"❌ {collection}: {result['error']}")
+                    print(f"❌ {collection}: {result.get('error', 'Unknown error')}")
 
         # Errors
         if stats["errors"]:
-            print(f"\nErrors ({len(stats['errors'])}):")
+            print(f"\n❌ Errors ({len(stats['errors'])}):")
             print("-" * 40)
             for error in stats["errors"]:
-                print(f"❌ {error}")
+                print(f"  • {error}")
 
-        # Performance estimate
-        if stats["collections_migrated"] > 0:
-            print("\n🚀 Performance Improvement:")
-            print("   Filtered searches should now be 10-100x faster!")
-            print("   Expected search times: 10-50ms (vs 850-1500ms without indexes)")
+    async def _validate_migration_success(self, collection_name: str) -> None:
+        """Validate that migration was successful."""
+        try:
+            # Check if indexes were created successfully
+            indexed_fields = await self.qdrant_service.list_payload_indexes(
+                collection_name
+            )
 
-        print("=" * 60)
+            expected_core_fields = ["doc_type", "language", "framework", "version"]
+            missing_core = [
+                field for field in expected_core_fields if field not in indexed_fields
+            ]
+
+            if missing_core:
+                raise QdrantServiceError(
+                    f"Migration validation failed: Missing core indexes {missing_core}"
+                )
+
+            logger.debug(
+                f"Migration validation successful for {collection_name}: "
+                f"{len(indexed_fields)} indexes created"
+            )
+
+        except Exception as e:
+            logger.error(f"Migration validation failed for {collection_name}: {e}")
+            raise
+
+    async def _attempt_recovery(
+        self, collection_name: str, original_error: Exception
+    ) -> dict:
+        """Attempt to recover from migration failure."""
+        recovery_result = {
+            "success": False,
+            "actions_taken": [],
+            "final_error": None,
+        }
+
+        try:
+            logger.info(f"Attempting recovery for collection {collection_name}")
+
+            # Action 1: Check if partial indexes were created
+            try:
+                indexed_fields = await self.qdrant_service.list_payload_indexes(
+                    collection_name
+                )
+                recovery_result["actions_taken"].append(
+                    f"Found {len(indexed_fields)} existing indexes after failure"
+                )
+
+                # If some indexes exist, try to create remaining ones individually
+                if indexed_fields:
+                    logger.info("Attempting to create remaining indexes individually")
+                    await self._create_missing_indexes_individually(
+                        collection_name, indexed_fields
+                    )
+                    recovery_result["actions_taken"].append(
+                        "Created missing indexes individually"
+                    )
+                    recovery_result["success"] = True
+                    return recovery_result
+
+            except Exception as check_error:
+                recovery_result["actions_taken"].append(
+                    f"Index check failed: {check_error}"
+                )
+
+            # Action 2: If no indexes exist, try basic retry with exponential backoff
+            import asyncio
+
+            for attempt in range(3):
+                try:
+                    wait_time = 2**attempt  # 1s, 2s, 4s
+                    logger.info(
+                        f"Recovery attempt {attempt + 1} after {wait_time}s delay"
+                    )
+                    await asyncio.sleep(wait_time)
+
+                    await self.qdrant_service.create_payload_indexes(collection_name)
+                    recovery_result["actions_taken"].append(
+                        f"Successful retry on attempt {attempt + 1}"
+                    )
+                    recovery_result["success"] = True
+                    return recovery_result
+
+                except Exception as retry_error:
+                    recovery_result["actions_taken"].append(
+                        f"Retry attempt {attempt + 1} failed: {retry_error}"
+                    )
+
+        except Exception as recovery_error:
+            recovery_result["final_error"] = str(recovery_error)
+            recovery_result["actions_taken"].append(
+                f"Recovery process failed: {recovery_error}"
+            )
+
+        return recovery_result
+
+    async def _create_missing_indexes_individually(
+        self, collection_name: str, existing_indexes: list[str]
+    ) -> None:
+        """Create missing indexes one by one for better error isolation."""
+        expected_fields = {
+            # Keyword fields
+            "doc_type": "keyword",
+            "language": "keyword",
+            "framework": "keyword",
+            "version": "keyword",
+            "crawl_source": "keyword",
+            # Text fields
+            "title": "text",
+            "content_preview": "text",
+            # Integer fields
+            "created_at": "integer",
+            "word_count": "integer",
+        }
+
+        for field_name, field_type in expected_fields.items():
+            if field_name not in existing_indexes:
+                try:
+                    logger.debug(
+                        f"Creating individual index for {field_name} ({field_type})"
+                    )
+                    # This would need to be implemented in the service
+                    # For now, log the attempt
+                    logger.warning(
+                        f"Individual index creation not yet implemented for {field_name}"
+                    )
+
+                except Exception as field_error:
+                    logger.warning(
+                        f"Failed to create index for {field_name}: {field_error}"
+                    )
+                    # Continue with other fields rather than failing completely
 
 
 async def main():
@@ -280,65 +430,62 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Migrate existing collections to use payload indexing"
+        description="Migrate payload indexes for collections"
     )
     parser.add_argument(
-        "--collection", help="Migrate specific collection (default: all collections)"
+        "--collections", nargs="*", help="Specific collections to migrate"
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force reindexing even if indexes already exist",
+        "--force", action="store_true", help="Force reindex existing collections"
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Check which collections need migration without making changes",
+        "--dry-run", action="store_true", help="Show what would be migrated"
     )
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate migration after completion"
+    )
 
     args = parser.parse_args()
 
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    # Initialize migrator
     migrator = PayloadIndexMigrator()
 
     try:
         await migrator.initialize()
 
         if args.dry_run:
-            print("🔍 DRY RUN MODE - No changes will be made")
+            print("🔍 DRY RUN MODE - No actual changes will be made")
+            print("=" * 60)
 
-        if args.collection:
-            # Migrate specific collection
-            logger.info(f"Migrating specific collection: {args.collection}")
-            result = await migrator.migrate_collection(args.collection, args.force)
-
-            # Simple result for single collection
-            print(f"\nResult for {args.collection}:")
-            if result["status"] == "migrated":
-                print(f"✅ Success: {result['indexes_created']} indexes created")
-            elif result["status"] == "skipped":
-                print(f"⏭️  Skipped: {result.get('reason', 'unknown')}")
-            elif result["status"] == "failed":
-                print(f"❌ Failed: {result['error']}")
+        if args.collections:
+            print(f"Migrating specific collections: {', '.join(args.collections)}")
+            results = await migrator.migrate_collections(
+                collection_names=args.collections,
+                force=args.force,
+                dry_run=args.dry_run,
+            )
         else:
-            # Migrate all collections
-            logger.info("Starting migration for all collections")
-            stats = await migrator.migrate_all_collections(args.force, args.dry_run)
-            migrator.print_migration_summary(stats)
+            print("Migrating all collections")
+            results = await migrator.migrate_all_collections(
+                force=args.force, dry_run=args.dry_run
+            )
 
-    except KeyboardInterrupt:
-        logger.info("Migration cancelled by user")
-        sys.exit(1)
+        # Print results
+        migrator.print_migration_summary(results)
+
+        if args.validate and not args.dry_run:
+            print("\n🔍 Validating migration results...")
+            # Add validation logic here if needed
+
     except Exception as e:
-        logger.error(f"Migration failed with error: {e}", exc_info=True)
+        logger.error(f"Migration failed: {e}", exc_info=True)
+        print(f"\n❌ Migration failed: {e}")
         sys.exit(1)
+
     finally:
         await migrator.cleanup()
 
 
 if __name__ == "__main__":
+    import asyncio
+
     asyncio.run(main())

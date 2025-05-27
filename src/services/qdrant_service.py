@@ -1,6 +1,7 @@
 """Qdrant service with direct SDK integration."""
 
 import logging
+import time
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
@@ -1232,3 +1233,259 @@ class QdrantService(BaseService):
                 exc_info=True,
             )
             raise QdrantServiceError(f"Failed to get payload index stats: {e}") from e
+
+    async def validate_index_health(self, collection_name: str) -> dict[str, Any]:
+        """Validate the health and status of payload indexes for a collection.
+
+        Args:
+            collection_name: Collection to validate
+
+        Returns:
+            Health status report with validation results
+
+        Raises:
+            QdrantServiceError: If validation fails
+        """
+        self._validate_initialized()
+
+        try:
+            logger.info(f"Validating index health for collection: {collection_name}")
+
+            # Get collection information
+            collection_info = await self._client.get_collection(collection_name)
+            indexed_fields = await self.list_payload_indexes(collection_name)
+
+            # Define expected core indexes
+            expected_keyword_fields = [
+                "doc_type",
+                "language",
+                "framework",
+                "version",
+                "crawl_source",
+                "site_name",
+                "embedding_model",
+                "embedding_provider",
+            ]
+            expected_text_fields = ["title", "content_preview"]
+            expected_integer_fields = [
+                "created_at",
+                "last_updated",
+                "word_count",
+                "char_count",
+            ]
+
+            all_expected = (
+                expected_keyword_fields + expected_text_fields + expected_integer_fields
+            )
+
+            # Check index status
+            missing_indexes = [
+                field for field in all_expected if field not in indexed_fields
+            ]
+            extra_indexes = [
+                field for field in indexed_fields if field not in all_expected
+            ]
+
+            # Calculate health score
+            expected_count = len(all_expected)
+            present_count = len([f for f in all_expected if f in indexed_fields])
+            health_score = (
+                (present_count / expected_count) * 100 if expected_count > 0 else 0
+            )
+
+            # Determine health status
+            if health_score >= 95:
+                status = "healthy"
+            elif health_score >= 80:
+                status = "warning"
+            else:
+                status = "critical"
+
+            health_report = {
+                "collection_name": collection_name,
+                "status": status,
+                "health_score": round(health_score, 2),
+                "total_points": collection_info.points_count or 0,
+                "index_summary": {
+                    "expected_indexes": expected_count,
+                    "present_indexes": present_count,
+                    "missing_indexes": len(missing_indexes),
+                    "extra_indexes": len(extra_indexes),
+                },
+                "missing_indexes": missing_indexes,
+                "extra_indexes": extra_indexes,
+                "recommendations": self._generate_index_recommendations(
+                    missing_indexes, extra_indexes, status
+                ),
+                "validation_timestamp": int(time.time()),
+            }
+
+            logger.info(
+                f"Index health validation completed for {collection_name}: "
+                f"Status={status}, Score={health_score:.1f}%"
+            )
+
+            return health_report
+
+        except Exception as e:
+            logger.error(
+                f"Failed to validate index health for collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to validate index health: {e}") from e
+
+    def _generate_index_recommendations(
+        self, missing_indexes: list[str], extra_indexes: list[str], status: str
+    ) -> list[str]:
+        """Generate recommendations based on index health analysis."""
+        recommendations = []
+
+        if missing_indexes:
+            recommendations.append(
+                f"Create missing indexes for optimal performance: {', '.join(missing_indexes)}"
+            )
+
+        if extra_indexes:
+            recommendations.append(
+                f"Consider removing unused indexes to reduce overhead: {', '.join(extra_indexes)}"
+            )
+
+        if status == "critical":
+            recommendations.append(
+                "Critical: Run migration script to create essential indexes for performance"
+            )
+        elif status == "warning":
+            recommendations.append(
+                "Warning: Some indexes are missing, performance may be suboptimal"
+            )
+
+        if not recommendations:
+            recommendations.append("All indexes are healthy and optimally configured")
+
+        return recommendations
+
+    async def get_index_usage_stats(self, collection_name: str) -> dict[str, Any]:
+        """Get detailed usage statistics for payload indexes.
+
+        Args:
+            collection_name: Collection to analyze
+
+        Returns:
+            Detailed index usage statistics
+
+        Raises:
+            QdrantServiceError: If stats retrieval fails
+        """
+        self._validate_initialized()
+
+        try:
+            logger.debug(
+                f"Collecting index usage stats for collection: {collection_name}"
+            )
+
+            # Get basic collection info
+            collection_info = await self._client.get_collection(collection_name)
+            indexed_fields = await self.list_payload_indexes(collection_name)
+
+            # Calculate index efficiency metrics
+            total_points = collection_info.points_count or 0
+            index_overhead = (
+                len(indexed_fields) * 0.1
+            )  # Estimated 10% overhead per index
+
+            usage_stats = {
+                "collection_name": collection_name,
+                "collection_stats": {
+                    "total_points": total_points,
+                    "indexed_fields_count": len(indexed_fields),
+                    "estimated_index_overhead_percent": round(index_overhead, 2),
+                },
+                "index_details": {},
+                "performance_metrics": {
+                    "expected_filter_speedup": "10-100x for indexed fields",
+                    "index_selectivity": "High for keyword fields, Medium for text fields",
+                    "memory_efficiency": "Optimized with proper field type mapping",
+                },
+                "optimization_suggestions": [],
+            }
+
+            # Categorize indexes by type for detailed analysis
+            keyword_indexes = []
+            text_indexes = []
+            integer_indexes = []
+
+            expected_keyword_fields = [
+                "doc_type",
+                "language",
+                "framework",
+                "version",
+                "crawl_source",
+                "site_name",
+                "embedding_model",
+                "embedding_provider",
+            ]
+            expected_text_fields = ["title", "content_preview"]
+            expected_integer_fields = [
+                "created_at",
+                "last_updated",
+                "word_count",
+                "char_count",
+            ]
+
+            for field in indexed_fields:
+                if field in expected_keyword_fields:
+                    keyword_indexes.append(field)
+                elif field in expected_text_fields:
+                    text_indexes.append(field)
+                elif field in expected_integer_fields:
+                    integer_indexes.append(field)
+
+            usage_stats["index_details"] = {
+                "keyword_indexes": {
+                    "count": len(keyword_indexes),
+                    "fields": keyword_indexes,
+                    "performance": "Excellent (exact matching, highest selectivity)",
+                },
+                "text_indexes": {
+                    "count": len(text_indexes),
+                    "fields": text_indexes,
+                    "performance": "Good (full-text search, moderate selectivity)",
+                },
+                "integer_indexes": {
+                    "count": len(integer_indexes),
+                    "fields": integer_indexes,
+                    "performance": "Very Good (range queries, high selectivity)",
+                },
+            }
+
+            # Generate optimization suggestions
+            if total_points > 100000:
+                usage_stats["optimization_suggestions"].append(
+                    "Large collection detected: Monitor query performance and consider composite indexes"
+                )
+
+            if len(indexed_fields) > 15:
+                usage_stats["optimization_suggestions"].append(
+                    "Many indexes detected: Consider removing unused indexes to reduce overhead"
+                )
+
+            if not keyword_indexes:
+                usage_stats["optimization_suggestions"].append(
+                    "No keyword indexes found: Add core metadata indexes for better filter performance"
+                )
+
+            if not usage_stats["optimization_suggestions"]:
+                usage_stats["optimization_suggestions"].append(
+                    "Index configuration is optimal for current collection size"
+                )
+
+            usage_stats["generated_at"] = int(time.time())
+
+            return usage_stats
+
+        except Exception as e:
+            logger.error(
+                f"Failed to get index usage stats for collection {collection_name}: {e}",
+                exc_info=True,
+            )
+            raise QdrantServiceError(f"Failed to get index usage stats: {e}") from e
