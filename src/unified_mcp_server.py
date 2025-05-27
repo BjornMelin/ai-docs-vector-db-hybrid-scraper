@@ -483,8 +483,77 @@ async def hyde_search(request: HyDESearchRequest, ctx: Context) -> list[SearchRe
             raise e from fallback_error
 
 
+async def _perform_ab_test_search(
+    query: str,
+    collection: str,
+    limit: int,
+    domain: str | None,
+    use_cache: bool,
+    ctx: Context | None,
+) -> tuple[list, dict]:
+    """Perform A/B test comparing HyDE vs regular search."""
+    import asyncio
+
+    # HyDE search
+    hyde_task = service_manager.hyde_engine.enhanced_search(
+        query=query,
+        collection_name=collection,
+        limit=limit * 2,  # Get more for comparison
+        domain=domain,
+        use_cache=use_cache,
+        force_hyde=True,
+    )
+
+    # Regular search for comparison
+    regular_task = service_manager.qdrant_service.hybrid_search(
+        collection_name=collection,
+        query_vector=None,  # Will be generated inside
+        sparse_vector=None,
+        limit=limit * 2,
+        score_threshold=0.0,
+        fusion_type="rrf",
+        search_accuracy="balanced",
+    )
+
+    # Wait for both to complete
+    hyde_results, regular_results = await asyncio.gather(
+        hyde_task, regular_task, return_exceptions=True
+    )
+
+    # Handle any exceptions
+    if isinstance(hyde_results, Exception):
+        if ctx:
+            await ctx.warning(f"HyDE search failed in A/B test: {hyde_results}")
+        hyde_results = []
+    if isinstance(regular_results, Exception):
+        if ctx:
+            await ctx.warning(f"Regular search failed in A/B test: {regular_results}")
+        regular_results = []
+
+    # Compare results
+    ab_test_results = {
+        "hyde_count": len(hyde_results) if hyde_results else 0,
+        "regular_count": len(regular_results) if regular_results else 0,
+        "hyde_avg_score": sum(
+            r.get("score", 0) if isinstance(r, dict) else r.score for r in hyde_results
+        )
+        / len(hyde_results)
+        if hyde_results
+        else 0,
+        "regular_avg_score": sum(r.score for r in regular_results)
+        / len(regular_results)
+        if regular_results
+        else 0,
+    }
+
+    # Use HyDE results as primary
+    search_results = hyde_results[:limit] if hyde_results else regular_results[:limit]
+
+    return search_results, ab_test_results
+
+
 @mcp.tool()
-async def hyde_search_advanced(
+async def hyde_search_advanced(  # noqa: PLR0912, PLR0915
     query: str,
     collection: str = "documentation",
     domain: str | None = None,
@@ -546,77 +615,16 @@ async def hyde_search_advanced(
 
         start_time = time.time()
 
-        # Perform A/B testing if enabled
+        # Perform search based on configuration
         if enable_ab_testing:
             if ctx:
                 await ctx.debug("Running A/B test: HyDE vs Regular search")
 
-            # Run both searches in parallel
-            import asyncio
-
-            # HyDE search
-            hyde_task = service_manager.hyde_engine.enhanced_search(
-                query=query,
-                collection_name=collection,
-                limit=limit * 2,  # Get more for comparison
-                domain=domain,
-                use_cache=use_cache,
-                force_hyde=True,
-            )
-
-            # Regular search for comparison
-            regular_task = service_manager.qdrant_service.hybrid_search(
-                collection_name=collection,
-                query_vector=None,  # Will be generated inside
-                sparse_vector=None,
-                limit=limit * 2,
-                score_threshold=0.0,
-                fusion_type="rrf",
-                search_accuracy="balanced",
-            )
-
-            # Wait for both to complete
             try:
-                hyde_results, regular_results = await asyncio.gather(
-                    hyde_task, regular_task, return_exceptions=True
+                search_results, ab_test_results = await _perform_ab_test_search(
+                    query, collection, limit, domain, use_cache, ctx
                 )
-
-                # Handle any exceptions
-                if isinstance(hyde_results, Exception):
-                    if ctx:
-                        await ctx.warning(
-                            f"HyDE search failed in A/B test: {hyde_results}"
-                        )
-                    hyde_results = []
-                if isinstance(regular_results, Exception):
-                    if ctx:
-                        await ctx.warning(
-                            f"Regular search failed in A/B test: {regular_results}"
-                        )
-                    regular_results = []
-
-                # Compare results
-                result["ab_test_results"] = {
-                    "hyde_count": len(hyde_results) if hyde_results else 0,
-                    "regular_count": len(regular_results) if regular_results else 0,
-                    "hyde_avg_score": sum(
-                        r.get("score", 0) if isinstance(r, dict) else r.score
-                        for r in hyde_results
-                    )
-                    / len(hyde_results)
-                    if hyde_results
-                    else 0,
-                    "regular_avg_score": sum(r.score for r in regular_results)
-                    / len(regular_results)
-                    if regular_results
-                    else 0,
-                }
-
-                # Use HyDE results as primary
-                search_results = (
-                    hyde_results[:limit] if hyde_results else regular_results[:limit]
-                )
-
+                result["ab_test_results"] = ab_test_results
             except Exception as ab_error:
                 if ctx:
                     await ctx.warning(f"A/B testing failed: {ab_error}")
