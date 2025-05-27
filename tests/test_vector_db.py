@@ -347,11 +347,6 @@ class TestSetupLogging:
         assert logger.level == 40  # ERROR level
 
 
-# TODO: Fix CLI tests - they have issues with module loading and async wrapping
-# For now, commenting out to focus on core functionality tests
-@pytest.mark.skip(
-    reason="CLI tests need refactoring due to async/module loading issues"
-)
 class TestCLI:
     """Test the CLI commands."""
 
