@@ -77,6 +77,7 @@ class TestUnifiedConfig:
         from src.config.models import OpenAIConfig
         from src.config.models import QdrantConfig
 
+        # Test-only API keys - not real credentials, used for validation testing
         config = UnifiedConfig(
             openai=OpenAIConfig(api_key="sk-testkey123456789012345678901234567890"),
             firecrawl=FirecrawlConfig(api_key="fc-testkey123"),
@@ -290,7 +291,7 @@ class TestModernDocumentationScraper:
         mock_crawler = MagicMock()
         mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
         mock_crawler.__aexit__ = AsyncMock(return_value=None)
-        
+
         # Create async generator for crawl results
         async def mock_crawl_generator():
             yield MagicMock(
@@ -303,16 +304,16 @@ class TestModernDocumentationScraper:
             )
             yield MagicMock(
                 success=True,
-                url="https://test.example.com/page2", 
+                url="https://test.example.com/page2",
                 markdown="Test content for page 2",
                 metadata={"title": "Test Page 2", "depth": 1},
                 links={"internal": []},
                 error_message=None,
             )
-        
+
         mock_crawler.arun = AsyncMock(return_value=mock_crawl_generator())
         mock_crawler_class.return_value = mock_crawler
-        
+
         site = DocumentationSite(**sample_documentation_site)
         results = await scraper.crawl_documentation_site(site)
 
@@ -411,7 +412,9 @@ class TestModernDocumentationScraper:
 
         with (
             patch.object(scraper, "initialize", AsyncMock()),
-            patch.object(scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])),
+            patch.object(
+                scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])
+            ),
             patch.object(scraper.qdrant_service, "create_collection", AsyncMock()),
             patch.object(
                 scraper, "crawl_documentation_site", AsyncMock(return_value=[])

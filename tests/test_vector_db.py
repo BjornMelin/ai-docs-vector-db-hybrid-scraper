@@ -349,7 +349,9 @@ class TestSetupLogging:
 
 # TODO: Fix CLI tests - they have issues with module loading and async wrapping
 # For now, commenting out to focus on core functionality tests
-@pytest.mark.skip(reason="CLI tests need refactoring due to async/module loading issues")
+@pytest.mark.skip(
+    reason="CLI tests need refactoring due to async/module loading issues"
+)
 class TestCLI:
     """Test the CLI commands."""
 
@@ -409,8 +411,8 @@ class TestCLI:
             mock_manager.cleanup = AsyncMock()
 
             # Import and use the CLI directly
-            from src.manage_vector_db import cli
             from src.manage_vector_db import async_to_sync_click
+            from src.manage_vector_db import cli
 
             # Apply async_to_sync_click to the cli
             async_to_sync_click(cli)
