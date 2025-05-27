@@ -32,23 +32,17 @@ class ProjectStorage:
 
     def __init__(
         self,
+        data_dir: str | Path,
         storage_path: str | Path | None = None,
-        data_dir: str | Path | None = None,
     ):
         """Initialize project storage.
 
         Args:
-            storage_path: Path to storage file. If not provided, defaults to data_dir/projects.json
-            data_dir: Base data directory. If not provided, defaults to project root/data
+            data_dir: Base data directory from UnifiedConfig
+            storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json
         """
         if storage_path is None:
-            # Use provided data_dir or fall back to old default
-            if data_dir is not None:
-                base_dir = Path(data_dir)
-            else:
-                # Fallback to maintain backward compatibility
-                base_dir = Path(__file__).parent.parent.parent / "data"
-
+            base_dir = Path(data_dir)
             base_dir.mkdir(exist_ok=True)
             storage_path = base_dir / "projects.json"
 
