@@ -11,14 +11,8 @@ import sys
 from datetime import datetime
 from typing import Any
 
-from crawl4ai import AsyncWebCrawler
-from crawl4ai import BrowserConfig
-from crawl4ai import CacheMode
-from crawl4ai import CrawlerMonitor
-from crawl4ai import CrawlerRunConfig
-from crawl4ai.async_dispatcher import MemoryAdaptiveDispatcher
-from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
-from crawl4ai.deep_crawling import BFSDeepCrawlStrategy
+# Crawl4AI imports are now handled by CrawlManager
+# Only keep filter imports for backward compatibility
 from crawl4ai.deep_crawling.filters import ContentTypeFilter
 from crawl4ai.deep_crawling.filters import FilterChain
 from crawl4ai.deep_crawling.filters import URLPatternFilter
@@ -354,110 +348,56 @@ class ModernDocumentationScraper:
         self,
         site: DocumentationSite,
     ) -> list[CrawlResult]:
-        """Crawl documentation site using advanced Crawl4AI features"""
+        """Crawl documentation site using enhanced CrawlManager with Crawl4AI"""
         self.logger.info(f"Crawling {site.name}: {site.url}")
-
-        # Enhanced browser configuration
-        browser_config = BrowserConfig(
-            headless=True,
-            user_agent="Modern-Doc-Scraper/3.0 (Python 3.13; AI-Ready; Crawl4AI)",
-            accept_downloads=False,
-            java_script_enabled=True,
-            verbose=False,
-        )
-
-        # Advanced crawler configuration with filters and strategies
-        filter_chain = self.create_filter_chain(site)
-
-        # Memory adaptive dispatcher for optimal resource management
-        dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=75.0,  # Use default value from unified config
-            max_session_permit=self.config.crawl4ai.max_concurrent_crawls,
-            monitor=CrawlerMonitor(
-                urls_total=site.max_pages,
-                enable_ui=True,
-                max_width=120,
-            ),
-        )
-
-        run_config = CrawlerRunConfig(
-            deep_crawl_strategy=BFSDeepCrawlStrategy(
-                max_depth=site.max_depth,
-                include_external=False,
-                filter_chain=filter_chain,
-            ),
-            scraping_strategy=LXMLWebScrapingStrategy(),
-            cache_mode=CacheMode.BYPASS,
-            word_count_threshold=50,
-            excluded_tags=[
-                "nav",
-                "footer",
-                "header",
-                "aside",
-                "script",
-                "style",
-                "noscript",
-            ],
-            remove_overlay_elements=True,
-            process_iframes=False,
-            wait_for_images=False,
-            page_timeout=30000,
-            verbose=True,
-            stream=True,  # Enable streaming for memory efficiency
-            # dispatcher=dispatcher,  # Integrate dispatcher with crawler config
-        )
 
         crawled_results = []
 
-        async with AsyncWebCrawler(
-            config=browser_config,
-            dispatcher=dispatcher,  # type: ignore
-        ) as crawler:
-            try:
-                # Use streaming approach for better memory management
-                async for crawl_output in await crawler.arun(
-                    url=site.url, config=run_config
-                ):
-                    if crawl_output.success and crawl_output.markdown:
-                        # Track unique URLs
-                        if crawl_output.url not in self.processed_urls:
-                            self.processed_urls.add(crawl_output.url)
+        try:
+            # Use CrawlManager's enhanced crawl_site method
+            result = await self.crawl_manager.crawl_site(
+                url=site.url,
+                max_pages=site.max_pages,
+                formats=["markdown"],
+                preferred_provider="crawl4ai",  # Explicitly use Crawl4AI
+            )
 
-                            crawl_result_item = CrawlResult(
-                                url=crawl_output.url,
-                                title=crawl_output.metadata.get("title", "No Title"),
-                                content=crawl_output.markdown,
-                                word_count=len(crawl_output.markdown.split()),
-                                success=True,
-                                site_name=site.name,
-                                depth=crawl_output.metadata.get("depth", 0),
-                                scraped_at=datetime.now().isoformat(),
-                                links=(
-                                    crawl_output.links.get("internal", [])[:10]
-                                    if crawl_output.links
-                                    else []
-                                ),
-                            )
-                            crawled_results.append(crawl_result_item)
-
-                            # Respect max_pages limit
-                            if len(crawled_results) >= site.max_pages:
-                                break
-                    elif not crawl_output.success:
-                        self.stats.failed_crawls += 1
-                        self.logger.warning(
-                            f"Crawl failed for {crawl_output.url}: "
-                            f"{crawl_output.error_message}"
-                        )
-
+            if result["success"]:
                 self.logger.info(
-                    f"Successfully crawled {len(crawled_results)} pages "
-                    f"from {site.name}",
+                    f"Successfully crawled {result['total']} pages from {site.name} "
+                    f"using {result['provider']}"
                 )
 
-            except Exception as e:
-                self.logger.error(f"Crawling failed for {site.url}: {e}")
+                # Process each page into CrawlResult objects
+                for page in result["pages"]:
+                    # Track unique URLs
+                    if page["url"] not in self.processed_urls:
+                        self.processed_urls.add(page["url"])
+
+                        crawl_result_item = CrawlResult(
+                            url=page["url"],
+                            title=page.get("title", "No Title"),
+                            content=page["content"],
+                            word_count=len(page["content"].split()),
+                            success=True,
+                            site_name=site.name,
+                            depth=page.get("metadata", {}).get("depth", 0),
+                            scraped_at=datetime.now().isoformat(),
+                            links=[],  # Links extraction handled by provider
+                        )
+                        crawled_results.append(crawl_result_item)
+
+                        # Update stats
+                        self.stats.unique_urls = len(self.processed_urls)
+            else:
+                self.logger.error(
+                    f"Crawling failed for {site.url}: {result.get('error', 'Unknown error')}"
+                )
                 self.stats.failed_crawls += 1
+
+        except Exception as e:
+            self.logger.error(f"Crawling failed for {site.url}: {e}")
+            self.stats.failed_crawls += 1
 
         return crawled_results
 

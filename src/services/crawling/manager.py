@@ -32,7 +32,27 @@ class CrawlManager:
         if self._initialized:
             return
 
-        # Initialize Firecrawl if API key available
+        # Always initialize Crawl4AI as primary provider
+        try:
+            # Pass configuration and rate limiter to Crawl4AI
+            crawl4ai_config = {
+                "max_concurrent": self.config.performance.max_concurrent_requests,
+                "headless": True,
+                "browser": "chromium",
+                "page_timeout": int(self.config.performance.request_timeout * 1000),
+                "rate_limit": 60,
+            }
+            provider = Crawl4AIProvider(
+                config=crawl4ai_config,
+                rate_limiter=self.rate_limiter,
+            )
+            await provider.initialize()
+            self.providers["crawl4ai"] = provider
+            logger.info("Initialized Crawl4AI provider as primary")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Crawl4AI provider: {e}")
+
+        # Initialize Firecrawl if API key available (as fallback)
         if self.config.firecrawl.api_key:
             try:
                 provider = FirecrawlProvider(
@@ -41,18 +61,9 @@ class CrawlManager:
                 )
                 await provider.initialize()
                 self.providers["firecrawl"] = provider
-                logger.info("Initialized Firecrawl provider")
+                logger.info("Initialized Firecrawl provider as fallback")
             except Exception as e:
                 logger.warning(f"Failed to initialize Firecrawl provider: {e}")
-
-        # Always initialize Crawl4AI as fallback
-        try:
-            provider = Crawl4AIProvider()
-            await provider.initialize()
-            self.providers["crawl4ai"] = provider
-            logger.info("Initialized Crawl4AI provider")
-        except Exception as e:
-            logger.warning(f"Failed to initialize Crawl4AI provider: {e}")
 
         if not self.providers:
             raise CrawlServiceError("No crawling providers available")
@@ -109,8 +120,8 @@ class CrawlManager:
         else:
             # Use configured preference
             provider_order = []
-            if self.config.crawling.preferred_provider in self.providers:
-                provider_order.append(self.config.crawling.preferred_provider)
+            if self.config.crawl_provider in self.providers:
+                provider_order.append(self.config.crawl_provider)
             provider_order.extend(p for p in self.providers if p not in provider_order)
 
         # Try providers in order
@@ -165,12 +176,12 @@ class CrawlManager:
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
 
-        # For site crawling, prefer Firecrawl if available
-        if not preferred_provider and "firecrawl" in self.providers:
-            preferred_provider = "firecrawl"
+        # For site crawling, prefer Crawl4AI for better performance
+        if not preferred_provider and "crawl4ai" in self.providers:
+            preferred_provider = "crawl4ai"
 
         # Select provider
-        provider_name = preferred_provider or self.config.crawling.preferred_provider
+        provider_name = preferred_provider or self.config.crawl_provider
         if provider_name not in self.providers:
             provider_name = next(iter(self.providers.keys()))
 
@@ -221,9 +232,9 @@ class CrawlManager:
             info[name] = {
                 "type": provider.__class__.__name__,
                 "available": True,
-                "is_preferred": name == self.config.crawling.preferred_provider,
+                "is_preferred": name == self.config.crawl_provider,
                 "has_api_key": name == "firecrawl"
-                and bool(self.config.crawling.firecrawl_api_key),
+                and bool(self.config.firecrawl.api_key),
             }
         return info
 
