@@ -29,7 +29,7 @@ from fastmcp import FastMCP
 # Handle both module and script imports
 try:
     from chunking import ChunkingConfig
-    from chunking import chunk_content
+    from chunking import EnhancedChunker
     from config.enums import ChunkingStrategy
     from config.enums import SearchStrategy
     from mcp.models.requests import AnalyticsRequest
@@ -44,7 +44,7 @@ try:
     from services.logging_config import configure_logging
 except ImportError:
     from .chunking import ChunkingConfig
-    from .chunking import chunk_content
+    from .chunking import EnhancedChunker
     from .config.enums import ChunkingStrategy
     from .config.enums import SearchStrategy
     from .mcp.models.requests import AnalyticsRequest
@@ -385,10 +385,11 @@ async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]
         await ctx.debug(
             f"Chunking document {doc_id} with strategy {request.chunk_strategy}"
         )
-        chunks = chunk_content(
-            crawl_result.markdown,
-            crawl_result.metadata,
-            chunk_config,
+        chunker = EnhancedChunker(chunk_config)
+        chunks = chunker.chunk_content(
+            content=crawl_result.markdown,
+            title=crawl_result.metadata.get("title", ""),
+            url=crawl_result.metadata.get("url", request.url),
         )
         await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
 
