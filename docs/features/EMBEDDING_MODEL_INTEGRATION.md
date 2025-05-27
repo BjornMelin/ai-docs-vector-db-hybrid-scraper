@@ -1114,11 +1114,20 @@ The embedding system now supports configurable model benchmarks, allowing users 
 
 ### Configuration Structure
 
-Model benchmarks are defined in the `EmbeddingConfig.model_benchmarks` field:
+Model benchmarks and smart selection parameters are defined in the `EmbeddingConfig`:
 
 ```json
 {
   "embedding": {
+    "smart_selection": {
+      "quality_weight": 0.4,
+      "speed_weight": 0.3,
+      "cost_weight": 0.3,
+      "quality_best_threshold": 85.0,
+      "budget_warning_threshold": 0.8,
+      "short_text_threshold": 100,
+      "long_text_threshold": 2000
+    },
     "model_benchmarks": {
       "text-embedding-3-small": {
         "model_name": "text-embedding-3-small",
@@ -1146,6 +1155,18 @@ Model benchmarks are defined in the `EmbeddingConfig.model_benchmarks` field:
 ```
 
 ### Field Descriptions
+
+#### Smart Selection Configuration
+
+- **quality_weight**: Weight for quality in scoring (0-1, must sum to 1.0 with other weights)
+- **speed_weight**: Weight for speed in scoring (0-1)
+- **cost_weight**: Weight for cost efficiency in scoring (0-1)
+- **quality_best_threshold**: Minimum quality score for BEST tier (0-100)
+- **budget_warning_threshold**: Budget usage threshold for warnings (0-1)
+- **short_text_threshold**: Character threshold for short text classification
+- **long_text_threshold**: Character threshold for long text classification
+
+#### Model Benchmark Configuration
 
 - **model_name**: Unique identifier for the model
 - **provider**: Provider name (openai, fastembed, custom)

@@ -406,6 +406,108 @@ class PerformanceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class SmartSelectionConfig(BaseModel):
+    """Configuration for smart model selection algorithms."""
+
+    # Token estimation
+    chars_per_token: float = Field(
+        default=4.0, gt=0, description="Character to token ratio"
+    )
+
+    # Scoring weights (must sum to 1.0)
+    quality_weight: float = Field(
+        default=0.4, ge=0, le=1, description="Quality weight in scoring"
+    )
+    speed_weight: float = Field(
+        default=0.3, ge=0, le=1, description="Speed weight in scoring"
+    )
+    cost_weight: float = Field(
+        default=0.3, ge=0, le=1, description="Cost weight in scoring"
+    )
+
+    # Quality thresholds (0-100 scale)
+    quality_fast_threshold: float = Field(
+        default=60.0, ge=0, le=100, description="Minimum quality for FAST tier"
+    )
+    quality_balanced_threshold: float = Field(
+        default=75.0, ge=0, le=100, description="Minimum quality for BALANCED tier"
+    )
+    quality_best_threshold: float = Field(
+        default=85.0, ge=0, le=100, description="Minimum quality for BEST tier"
+    )
+
+    # Speed thresholds (tokens/second)
+    speed_fast_threshold: float = Field(
+        default=500.0, gt=0, description="Minimum speed for fast classification"
+    )
+    speed_balanced_threshold: float = Field(
+        default=200.0, gt=0, description="Minimum speed for balanced classification"
+    )
+    speed_slow_threshold: float = Field(
+        default=100.0, gt=0, description="Maximum speed for slow classification"
+    )
+
+    # Cost thresholds (per million tokens)
+    cost_cheap_threshold: float = Field(
+        default=50.0, ge=0, description="Maximum cost for cheap classification"
+    )
+    cost_moderate_threshold: float = Field(
+        default=100.0, ge=0, description="Maximum cost for moderate classification"
+    )
+    cost_expensive_threshold: float = Field(
+        default=200.0, ge=0, description="Maximum cost for expensive classification"
+    )
+
+    # Budget management
+    budget_warning_threshold: float = Field(
+        default=0.8, gt=0, le=1, description="Budget warning threshold (80%)"
+    )
+    budget_critical_threshold: float = Field(
+        default=0.9, gt=0, le=1, description="Budget critical threshold (90%)"
+    )
+
+    # Text analysis
+    short_text_threshold: int = Field(
+        default=100, gt=0, description="Short text threshold (characters)"
+    )
+    long_text_threshold: int = Field(
+        default=2000, gt=0, description="Long text threshold (characters)"
+    )
+
+    # Code detection keywords
+    code_keywords: set[str] = Field(
+        default_factory=lambda: {
+            "def",
+            "class",
+            "import",
+            "return",
+            "if",
+            "else",
+            "for",
+            "while",
+            "try",
+            "except",
+            "function",
+            "const",
+            "let",
+            "var",
+            "public",
+            "private",
+        },
+        description="Keywords for code detection",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_weights_sum_to_one(self) -> "SmartSelectionConfig":
+        """Validate that scoring weights sum to approximately 1.0."""
+        total = self.quality_weight + self.speed_weight + self.cost_weight
+        if abs(total - 1.0) > 0.01:  # Allow small floating point errors
+            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        return self
+
+
 def _get_default_model_benchmarks() -> dict[str, ModelBenchmark]:
     """Get default model benchmarks with research-backed values."""
     return {
@@ -495,6 +597,12 @@ class EmbeddingConfig(BaseModel):
     model_benchmarks: dict[str, ModelBenchmark] = Field(
         default_factory=lambda: _get_default_model_benchmarks(),
         description="Model benchmark data for smart provider selection",
+    )
+
+    # Smart Selection Configuration
+    smart_selection: SmartSelectionConfig = Field(
+        default_factory=SmartSelectionConfig,
+        description="Smart model selection algorithm configuration",
     )
 
     model_config = ConfigDict(extra="forbid")
