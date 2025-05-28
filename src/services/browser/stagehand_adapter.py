@@ -112,11 +112,19 @@ class StagehandAdapter(BaseService):
 
         try:
             page = await self._create_and_navigate_page(url, timeout)
-            extraction_results, screenshots = await self._execute_instructions(page, instructions)
+            extraction_results, screenshots = await self._execute_instructions(
+                page, instructions
+            )
             final_content = await self._perform_final_extraction(page)
 
             return await self._build_success_result(
-                page, url, start_time, extraction_results, screenshots, final_content, instructions
+                page,
+                url,
+                start_time,
+                extraction_results,
+                screenshots,
+                final_content,
+                instructions,
             )
 
         except Exception as e:
@@ -135,7 +143,9 @@ class StagehandAdapter(BaseService):
         await page.goto(url, wait_until="networkidle", timeout=timeout)
         return page
 
-    async def _execute_instructions(self, page, instructions: list[str]) -> tuple[dict, list]:
+    async def _execute_instructions(
+        self, page, instructions: list[str]
+    ) -> tuple[dict, list]:
         """Execute all instructions and collect results."""
         extraction_results = {}
         screenshots = []
@@ -158,7 +168,12 @@ class StagehandAdapter(BaseService):
         return extraction_results, screenshots
 
     async def _execute_single_instruction(
-        self, page, instruction: str, index: int, extraction_results: dict, screenshots: list
+        self,
+        page,
+        instruction: str,
+        index: int,
+        extraction_results: dict,
+        screenshots: list,
     ):
         """Execute a single instruction based on its type."""
         instruction_lower = instruction.lower()
@@ -180,11 +195,13 @@ class StagehandAdapter(BaseService):
             await asyncio.sleep(1)
         elif "screenshot" in instruction_lower:
             screenshot = await page.screenshot()
-            screenshots.append({
-                "instruction": instruction,
-                "timestamp": time.time(),
-                "data": screenshot,
-            })
+            screenshots.append(
+                {
+                    "instruction": instruction,
+                    "timestamp": time.time(),
+                    "data": screenshot,
+                }
+            )
         else:
             # General AI action
             result = await self._stagehand.act(page, instruction)
@@ -199,8 +216,14 @@ class StagehandAdapter(BaseService):
         )
 
     async def _build_success_result(
-        self, page, url: str, start_time: float, extraction_results: dict,
-        screenshots: list, final_content: dict, instructions: list
+        self,
+        page,
+        url: str,
+        start_time: float,
+        extraction_results: dict,
+        screenshots: list,
+        final_content: dict,
+        instructions: list,
     ) -> dict[str, Any]:
         """Build successful scraping result."""
         html = await page.content()

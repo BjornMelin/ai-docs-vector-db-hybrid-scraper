@@ -382,7 +382,9 @@ class PlaywrightAdapter(BaseService):
         """Execute drag and drop action."""
         await page.drag_and_drop(action.source, action.target)
 
-    def _create_success_result(self, index: int, action_type: str, start_time: float) -> dict[str, Any]:
+    def _create_success_result(
+        self, index: int, action_type: str, start_time: float
+    ) -> dict[str, Any]:
         """Create success result dictionary."""
         return {
             "action_index": index,

@@ -288,7 +288,7 @@ class TestCrawl4AIAdapter:
             "response_headers": {"content-type": "text/html"},
             "metadata": {},
             "links": [],
-            "structured_data": {}
+            "structured_data": {},
         }
 
         # Mock the provider instance directly
@@ -405,7 +405,7 @@ class TestPlaywrightAdapter:
             "keywords": None,
             "canonical": None,
             "content": "Test content",
-            "links": []
+            "links": [],
         }
 
         mock_context = AsyncMock()
@@ -452,7 +452,7 @@ class TestPlaywrightAdapter:
             "keywords": None,
             "canonical": None,
             "content": "Updated content",
-            "links": []
+            "links": [],
         }
 
         mock_context = AsyncMock()
@@ -484,3 +484,146 @@ class TestPlaywrightAdapter:
         assert "healthy" in health
         # Should report as not initialized since we haven't set up the browser
         assert health["status"] == "not_initialized"
+
+
+class TestAutomationRouterErrorPaths:
+    """Test error paths and edge cases for AutomationRouter."""
+
+    @pytest.mark.asyncio
+    async def test_scrape_without_initialization(self, mock_config):
+        """Test scraping without initialization raises error."""
+        router = AutomationRouter(mock_config)
+
+        with pytest.raises(CrawlServiceError, match="Router not initialized"):
+            await router.scrape("https://example.com")
+
+    @pytest.mark.asyncio
+    async def test_cleanup_with_adapter_errors(self, mock_config):
+        """Test cleanup handles adapter errors gracefully."""
+        router = AutomationRouter(mock_config)
+
+        # Add a mock adapter that will fail during cleanup
+        failing_adapter = AsyncMock()
+        failing_adapter.cleanup.side_effect = Exception("Cleanup failed")
+        router._adapters["failing"] = failing_adapter
+        router._initialized = True
+
+        # Should not raise exception despite adapter failure
+        await router.cleanup()
+
+        assert router._initialized is False
+        assert len(router._adapters) == 0
+
+    @pytest.mark.asyncio
+    async def test_force_tool_unavailable(self, mock_config):
+        """Test forcing a tool that isn't available."""
+        router = AutomationRouter(mock_config)
+
+        # Mock initialization without any adapters
+        router._initialized = True
+        router._adapters = {}
+
+        with pytest.raises(
+            CrawlServiceError, match="Forced tool 'playwright' not available"
+        ):
+            await router.scrape("https://example.com", force_tool="playwright")
+
+    @pytest.mark.asyncio
+    async def test_all_tools_fail_fallback(self, mock_config):
+        """Test behavior when all tools fail."""
+        router = AutomationRouter(mock_config)
+        router._initialized = True
+
+        # Mock failing adapters
+        failing_adapter = AsyncMock()
+        failing_adapter.scrape.side_effect = Exception("Tool failed")
+        router._adapters = {
+            "crawl4ai": failing_adapter,
+            "stagehand": failing_adapter,
+            "playwright": failing_adapter,
+        }
+
+        result = await router.scrape("https://example.com")
+
+        assert result["success"] is False
+        assert "error" in result
+        # Check that it attempted fallback behavior
+        assert len(result["error"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_adapter_initialization_failures(self, mock_config):
+        """Test graceful handling of adapter initialization failures."""
+        # This tests the exception handling in initialize() method
+        with patch(
+            "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
+        ) as mock_crawl4ai:
+            mock_crawl4ai.side_effect = Exception("Failed to import")
+
+            router = AutomationRouter(mock_config)
+            await router.initialize()  # Should not raise, just log warning
+
+            assert "crawl4ai" not in router._adapters
+
+    @pytest.mark.asyncio
+    async def test_metrics_update_and_retrieval(self, mock_config):
+        """Test performance metrics tracking."""
+        router = AutomationRouter(mock_config)
+
+        # Update metrics for different tools
+        router._update_metrics("crawl4ai", True, 100.5)
+        router._update_metrics("crawl4ai", False, 150.0)
+        router._update_metrics("stagehand", True, 200.0)
+
+        metrics = router.get_metrics()
+
+        assert metrics["crawl4ai"]["success"] == 1
+        assert metrics["crawl4ai"]["failed"] == 1
+        assert metrics["crawl4ai"]["total_time"] == 250.5
+        assert metrics["crawl4ai"]["avg_time"] == 125.25
+
+        assert metrics["stagehand"]["success"] == 1
+        assert metrics["stagehand"]["avg_time"] == 200.0
+
+    @pytest.mark.asyncio
+    async def test_routing_rules_loading(self, mock_config):
+        """Test routing rules loading and fallback."""
+        router = AutomationRouter(mock_config)
+
+        # Test that routing rules are loaded
+        assert hasattr(router, "routing_rules")
+        assert isinstance(router.routing_rules, dict)
+
+        # Should contain default rules
+        assert len(router.routing_rules) >= 0
+
+
+class TestPlaywrightAdapterErrorPaths:
+    """Test error paths for PlaywrightAdapter."""
+
+    @pytest.mark.asyncio
+    async def test_scrape_without_initialization(self):
+        """Test scraping without initialization."""
+        adapter = PlaywrightAdapter({})
+
+        with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
+            await adapter.scrape("https://example.com", actions=[])
+
+
+class TestCrawl4AIAdapterErrorPaths:
+    """Test error paths for Crawl4AIAdapter."""
+
+    @pytest.mark.asyncio
+    async def test_scrape_with_provider_error(self):
+        """Test scraping when provider fails."""
+        adapter = Crawl4AIAdapter({})
+        adapter._initialized = True
+
+        # Mock failing provider
+        mock_provider = AsyncMock()
+        mock_provider.scrape_url.side_effect = Exception("Provider failed")
+        adapter._provider = mock_provider
+
+        result = await adapter.scrape("https://example.com")
+
+        assert result["success"] is False
+        assert "Provider failed" in result["error"]

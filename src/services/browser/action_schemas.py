@@ -44,7 +44,9 @@ class WaitAction(BaseAction):
     """Wait for a specified duration."""
 
     type: Literal["wait"] = "wait"
-    timeout: int = Field(..., gt=0, le=30000, description="Wait duration in milliseconds")
+    timeout: int = Field(
+        ..., gt=0, le=30000, description="Wait duration in milliseconds"
+    )
 
 
 class WaitForSelectorAction(BaseAction):
@@ -52,7 +54,9 @@ class WaitForSelectorAction(BaseAction):
 
     type: Literal["wait_for_selector"] = "wait_for_selector"
     selector: str = Field(..., description="CSS selector to wait for")
-    timeout: int = Field(default=5000, gt=0, le=30000, description="Timeout in milliseconds")
+    timeout: int = Field(
+        default=5000, gt=0, le=30000, description="Timeout in milliseconds"
+    )
 
 
 class WaitForLoadStateAction(BaseAction):
@@ -77,7 +81,9 @@ class ScrollAction(BaseAction):
     def validate_y_position(cls, v, values):
         """Validate Y position is required for position scrolling."""
         if values.get("direction") == "position" and v == 0:
-            raise ValueError("Y position must be specified for position-based scrolling")
+            raise ValueError(
+                "Y position must be specified for position-based scrolling"
+            )
         return v
 
 
@@ -116,7 +122,9 @@ class PressAction(BaseAction):
 
     type: Literal["press"] = "press"
     key: str = Field(..., description="Key to press (e.g., 'Enter', 'ArrowDown')")
-    selector: str = Field(default="", description="Optional selector to focus before pressing key")
+    selector: str = Field(
+        default="", description="Optional selector to focus before pressing key"
+    )
 
 
 class DragAndDropAction(BaseAction):

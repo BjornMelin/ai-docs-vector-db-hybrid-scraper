@@ -626,12 +626,8 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         recommendations = summary["recommendations"]
         print("\n🎯 RECOMMENDATIONS")
         print("-" * 40)
-        print(
-            f"Best Overall: {recommendations.get('recommended_config', 'unknown')}"
-        )
-        print(
-            f"Fastest Creation: {recommendations.get('fastest_creation', 'unknown')}"
-        )
+        print(f"Best Overall: {recommendations.get('recommended_config', 'unknown')}")
+        print(f"Fastest Creation: {recommendations.get('fastest_creation', 'unknown')}")
         print(f"Fastest Search: {recommendations.get('fastest_search', 'unknown')}")
 
         if "recommended_settings" in recommendations:
@@ -656,10 +652,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         print("-" * 40)
 
         for _budget_key, budget_results in adaptive_results.items():
-            if (
-                isinstance(budget_results, dict)
-                and "time_budget_ms" in budget_results
-            ):
+            if isinstance(budget_results, dict) and "time_budget_ms" in budget_results:
                 budget = budget_results["time_budget_ms"]
                 final_ef = budget_results.get("final_ef", 0)
                 final_time = budget_results.get("final_search_time_ms", 0)

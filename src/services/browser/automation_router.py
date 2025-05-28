@@ -97,15 +97,15 @@ class AutomationRouter(BaseService):
                 "supabase.com",
                 "netlify.com",
                 "railway.app",
-                "planetscale.com"
+                "planetscale.com",
             ],
             "playwright": [
                 "github.com",
                 "stackoverflow.com",
                 "discord.com",
                 "slack.com",
-                "app.posthog.com"
-            ]
+                "app.posthog.com",
+            ],
         }
 
     async def initialize(self) -> None:
@@ -305,7 +305,10 @@ class AutomationRouter(BaseService):
 
         # Check for complex JavaScript patterns in URL
         js_patterns = ["spa", "react", "vue", "angular", "app"]
-        if any(pattern in url.lower() for pattern in js_patterns) and "stagehand" in self._adapters:
+        if (
+            any(pattern in url.lower() for pattern in js_patterns)
+            and "stagehand" in self._adapters
+        ):
             return "stagehand"
 
         return None

@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.hnsw_optimizer import HNSWOptimizer
 from src.services.qdrant_service import QdrantService
@@ -84,25 +83,24 @@ class TestBrowserAutomationIntegration:
     @pytest.mark.asyncio
     async def test_automation_router_with_fallback_chain(self, mock_unified_config):
         """Test complete automation router fallback chain."""
-        router = AutomationRouter(mock_unified_config)
-
         url = "https://vercel.com/docs/api"  # Should prefer Stagehand
 
         # Mock all adapters to test fallback chain
         with (
             patch(
-                "src.services.browser.automation_router.StagehandAdapter"
+                "src.services.browser.stagehand_adapter.StagehandAdapter"
             ) as mock_stagehand,
             patch(
-                "src.services.browser.automation_router.PlaywrightAdapter"
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
             ) as mock_playwright,
             patch(
-                "src.services.browser.automation_router.Crawl4AIAdapter"
+                "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
             ) as mock_crawl4ai,
         ):
             # Setup Stagehand failure
             mock_stagehand_instance = AsyncMock()
             mock_stagehand_instance.scrape.side_effect = Exception("Stagehand failed")
+            mock_stagehand_instance.initialize = AsyncMock()
             mock_stagehand.return_value = mock_stagehand_instance
 
             # Setup Playwright success
@@ -112,13 +110,19 @@ class TestBrowserAutomationIntegration:
                 "metadata": {"tool": "playwright", "status_code": 200},
                 "success": True,
             }
+            mock_playwright_instance.initialize = AsyncMock()
             mock_playwright.return_value = mock_playwright_instance
 
-            # Crawl4AI should not be called in this scenario
+            # Setup Crawl4AI
             mock_crawl4ai_instance = AsyncMock()
+            mock_crawl4ai_instance.initialize = AsyncMock()
             mock_crawl4ai.return_value = mock_crawl4ai_instance
 
-            result = await router.scrape_with_fallback(url)
+            # Initialize router after mocks are set up
+            router = AutomationRouter(mock_unified_config)
+            await router.initialize()
+
+            result = await router.scrape(url)
 
             assert result["success"] is True
             assert result["metadata"]["tool"] == "playwright"
@@ -143,13 +147,13 @@ class TestBrowserAutomationIntegration:
         # Mock successful responses for all tools
         with (
             patch(
-                "src.services.browser.automation_router.Crawl4AIAdapter"
+                "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
             ) as mock_crawl4ai,
             patch(
-                "src.services.browser.automation_router.StagehandAdapter"
+                "src.services.browser.stagehand_adapter.StagehandAdapter"
             ) as mock_stagehand,
             patch(
-                "src.services.browser.automation_router.PlaywrightAdapter"
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
             ) as mock_playwright,
         ):
             # Setup successful responses
@@ -164,7 +168,7 @@ class TestBrowserAutomationIntegration:
 
             # Scrape all URLs
             for url in urls:
-                await router.scrape_with_fallback(url)
+                await router.scrape(url)
 
             # Check performance metrics
             health = await router.health_check()
@@ -291,9 +295,7 @@ class TestHNSWOptimizationIntegration:
 
         # Cache should be populated after first request
         cache_key_pattern = f"{collection_name}:ef_"
-        cache_keys = [
-            k for k in optimizer._performance_cache if cache_key_pattern in k
-        ]
+        cache_keys = [k for k in optimizer._performance_cache if cache_key_pattern in k]
         assert len(cache_keys) > 0
 
 
@@ -339,12 +341,12 @@ class TestIntegratedWorkflow:
         # Test that different tools are selected for different content types
         router = AutomationRouter(mock_unified_config)
 
-        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+        with patch.object(router, "scrape") as mock_scrape:
             mock_scrape.side_effect = mock_scrape_results
 
             results = []
             for url in urls:
-                result = await router.scrape_with_fallback(url)
+                result = await router.scrape(url)
                 results.append(result)
 
             # Verify different tools were used appropriately
@@ -387,7 +389,7 @@ class TestIntegratedWorkflow:
                 "success": True,
             }
 
-            result = await router.scrape_with_fallback(url)
+            result = await router.scrape(url)
             assert result["success"] is True
             assert result["metadata"]["tool"] == "playwright"
 
@@ -419,10 +421,11 @@ class TestIntegratedWorkflow:
     async def test_performance_monitoring_integration(self, mock_unified_config):
         """Test performance monitoring across both systems."""
         router = AutomationRouter(mock_unified_config)
+        await router.initialize()
         _service = QdrantService(mock_unified_config)
 
         # Mock successful operations
-        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+        with patch.object(router, "scrape") as mock_scrape:
             mock_scrape.return_value = {
                 "content": "Test content",
                 "metadata": {"tool": "crawl4ai"},
@@ -432,7 +435,7 @@ class TestIntegratedWorkflow:
             # Perform multiple operations
             urls = [f"https://example{i}.com" for i in range(5)]
             for url in urls:
-                await router.scrape_with_fallback(url)
+                await router.scrape(url)
 
         # Check aggregated health metrics
         browser_health = await router.health_check()
@@ -474,7 +477,7 @@ class TestConcurrentOperations:
 
         urls = [f"https://example{i}.com" for i in range(10)]
 
-        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+        with patch.object(router, "scrape") as mock_scrape:
             mock_scrape.return_value = {
                 "content": "Test content",
                 "metadata": {"tool": "crawl4ai"},
@@ -482,7 +485,7 @@ class TestConcurrentOperations:
             }
 
             # Execute concurrent scraping
-            tasks = [router.scrape_with_fallback(url) for url in urls]
+            tasks = [router.scrape(url) for url in urls]
             results = await asyncio.gather(*tasks)
 
             assert len(results) == 10
