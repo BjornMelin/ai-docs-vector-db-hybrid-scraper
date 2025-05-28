@@ -133,6 +133,104 @@ class CacheConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class HNSWConfig(BaseModel):
+    """HNSW index configuration for different collection types."""
+
+    m: int = Field(
+        default=16, gt=0, le=64, description="HNSW M parameter (connections per node)"
+    )
+    ef_construct: int = Field(
+        default=200, gt=0, le=1000, description="HNSW ef_construct parameter"
+    )
+    full_scan_threshold: int = Field(
+        default=10000, gt=0, description="When to use full scan instead of HNSW"
+    )
+    max_indexing_threads: int = Field(
+        default=0, ge=0, description="Max threads for indexing (0 = auto)"
+    )
+
+    # Runtime ef recommendations
+    min_ef: int = Field(default=50, gt=0, description="Minimum ef value for searches")
+    balanced_ef: int = Field(default=100, gt=0, description="Balanced ef value")
+    max_ef: int = Field(default=200, gt=0, description="Maximum ef value for searches")
+
+    # Adaptive ef settings
+    enable_adaptive_ef: bool = Field(
+        default=True, description="Enable adaptive ef selection based on time budget"
+    )
+    default_time_budget_ms: int = Field(
+        default=100, gt=0, description="Default time budget for adaptive ef (ms)"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CollectionHNSWConfigs(BaseModel):
+    """Collection-specific HNSW configurations."""
+
+    api_reference: HNSWConfig = Field(
+        default_factory=lambda: HNSWConfig(
+            m=20,
+            ef_construct=300,
+            full_scan_threshold=5000,
+            min_ef=100,
+            balanced_ef=150,
+            max_ef=200,
+        ),
+        description="High accuracy for API documentation",
+    )
+
+    tutorials: HNSWConfig = Field(
+        default_factory=lambda: HNSWConfig(
+            m=16,
+            ef_construct=200,
+            full_scan_threshold=10000,
+            min_ef=75,
+            balanced_ef=100,
+            max_ef=150,
+        ),
+        description="Balanced for tutorial content",
+    )
+
+    blog_posts: HNSWConfig = Field(
+        default_factory=lambda: HNSWConfig(
+            m=12,
+            ef_construct=150,
+            full_scan_threshold=20000,
+            min_ef=50,
+            balanced_ef=75,
+            max_ef=100,
+        ),
+        description="Fast for blog content",
+    )
+
+    code_examples: HNSWConfig = Field(
+        default_factory=lambda: HNSWConfig(
+            m=18,
+            ef_construct=250,
+            full_scan_threshold=8000,
+            min_ef=100,
+            balanced_ef=125,
+            max_ef=175,
+        ),
+        description="Code-specific optimization",
+    )
+
+    general: HNSWConfig = Field(
+        default_factory=lambda: HNSWConfig(
+            m=16,
+            ef_construct=200,
+            full_scan_threshold=10000,
+            min_ef=75,
+            balanced_ef=100,
+            max_ef=150,
+        ),
+        description="Default balanced configuration",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
 
@@ -150,13 +248,24 @@ class QdrantConfig(BaseModel):
     )
     max_retries: int = Field(default=3, ge=0, le=10, description="Max retry attempts")
 
-    # Index settings
+    # HNSW settings (legacy - use collection_hnsw_configs for new collections)
     hnsw_ef_construct: int = Field(
-        default=200, gt=0, description="HNSW ef_construct parameter"
+        default=200, gt=0, description="HNSW ef_construct parameter (legacy)"
     )
-    hnsw_m: int = Field(default=16, gt=0, description="HNSW M parameter")
+    hnsw_m: int = Field(default=16, gt=0, description="HNSW M parameter (legacy)")
     quantization_enabled: bool = Field(
         default=True, description="Enable vector quantization"
+    )
+
+    # Collection-specific HNSW configurations
+    collection_hnsw_configs: CollectionHNSWConfigs = Field(
+        default_factory=CollectionHNSWConfigs,
+        description="Collection-specific HNSW configurations",
+    )
+
+    # Enable HNSW optimization features
+    enable_hnsw_optimization: bool = Field(
+        default=True, description="Enable HNSW parameter optimization"
     )
 
     model_config = ConfigDict(extra="forbid")
