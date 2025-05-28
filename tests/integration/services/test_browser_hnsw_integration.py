@@ -410,7 +410,7 @@ class TestIntegratedWorkflow:
         """Test error recovery across browser automation and HNSW optimization."""
         router = AutomationRouter(mock_unified_config)
         service = QdrantService(mock_unified_config)
-        
+
         # Initialize both router and service
         await router.initialize()
         service._initialized = True  # Mock initialization
@@ -418,21 +418,29 @@ class TestIntegratedWorkflow:
         # Test browser automation error recovery
         url = "https://problematic-site.com"
 
-        with (
-            patch.object(router, '_adapters', {
-                'crawl4ai': MagicMock(),
-                'stagehand': MagicMock(),
-                'playwright': MagicMock()
-            })
+        with patch.object(
+            router,
+            "_adapters",
+            {
+                "crawl4ai": MagicMock(),
+                "stagehand": MagicMock(),
+                "playwright": MagicMock(),
+            },
         ):
             # All tools fail except Playwright
-            router._adapters['crawl4ai'].scrape = AsyncMock(side_effect=Exception("Crawl4AI failed"))
-            router._adapters['stagehand'].scrape = AsyncMock(side_effect=Exception("Stagehand failed"))
-            router._adapters['playwright'].scrape = AsyncMock(return_value={
-                "content": "Recovered content",
-                "metadata": {"tool": "playwright"},
-                "success": True,
-            })
+            router._adapters["crawl4ai"].scrape = AsyncMock(
+                side_effect=Exception("Crawl4AI failed")
+            )
+            router._adapters["stagehand"].scrape = AsyncMock(
+                side_effect=Exception("Stagehand failed")
+            )
+            router._adapters["playwright"].scrape = AsyncMock(
+                return_value={
+                    "content": "Recovered content",
+                    "metadata": {"tool": "playwright"},
+                    "success": True,
+                }
+            )
 
             result = await router.scrape(url)
             assert result["success"] is True
@@ -452,7 +460,7 @@ class TestIntegratedWorkflow:
         mock_optimizer.adaptive_ef_retrieve.return_value = {
             "results": [{"id": "1", "score": 0.9}],
             "ef_used": 128,
-            "search_time_ms": 50
+            "search_time_ms": 50,
         }
         service._hnsw_optimizer = mock_optimizer
 
@@ -472,16 +480,22 @@ class TestIntegratedWorkflow:
         _service = QdrantService(mock_unified_config)
 
         # Mock the adapters and manually update metrics to test the monitoring system
-        with patch.object(router, '_adapters', {
-            'crawl4ai': MagicMock(),
-            'stagehand': MagicMock(),
-            'playwright': MagicMock()
-        }):
-            router._adapters['crawl4ai'].scrape = AsyncMock(return_value={
-                "content": "Test content",
-                "metadata": {"tool": "crawl4ai"},
-                "success": True,
-            })
+        with patch.object(
+            router,
+            "_adapters",
+            {
+                "crawl4ai": MagicMock(),
+                "stagehand": MagicMock(),
+                "playwright": MagicMock(),
+            },
+        ):
+            router._adapters["crawl4ai"].scrape = AsyncMock(
+                return_value={
+                    "content": "Test content",
+                    "metadata": {"tool": "crawl4ai"},
+                    "success": True,
+                }
+            )
 
             # Perform multiple operations and manually track metrics
             urls = [f"https://example{i}.com" for i in range(5)]

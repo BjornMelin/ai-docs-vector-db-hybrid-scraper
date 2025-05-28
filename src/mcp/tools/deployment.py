@@ -6,14 +6,9 @@ from typing import Any
 from fastmcp import Context
 
 from ...config.enums import SearchStrategy
+from ...infrastructure.client_manager import ClientManager
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult
-
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 

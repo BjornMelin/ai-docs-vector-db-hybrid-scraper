@@ -10,15 +10,10 @@ from fastmcp import Context
 from ...chunking import ChunkingConfig
 from ...chunking import EnhancedChunker
 from ...config.enums import ChunkingStrategy
+from ...infrastructure.client_manager import ClientManager
 from ...security import SecurityValidator
 from ..models.requests import BatchRequest
 from ..models.requests import DocumentRequest
-
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 

@@ -5,13 +5,8 @@ from datetime import UTC
 from datetime import datetime
 from typing import Any
 
+from ...infrastructure.client_manager import ClientManager
 from ..models.requests import AnalyticsRequest
-
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 

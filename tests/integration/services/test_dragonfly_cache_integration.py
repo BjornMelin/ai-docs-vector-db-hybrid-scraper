@@ -176,8 +176,10 @@ class TestDragonflyDBIntegration:
             "embedding_cache": {"total_embeddings": 50},
             "search_cache": {"total_searches": 25},
         }
-        
-        with patch.object(cache_manager, "get_stats", AsyncMock(return_value=expected_stats)):
+
+        with patch.object(
+            cache_manager, "get_stats", AsyncMock(return_value=expected_stats)
+        ):
             stats = await cache_manager.get_stats()
 
             assert "manager" in stats

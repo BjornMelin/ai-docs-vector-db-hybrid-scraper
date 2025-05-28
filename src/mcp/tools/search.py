@@ -5,23 +5,13 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-# Handle both module and script imports
-try:
-    from config.enums import SearchStrategy
-    from infrastructure.client_manager import ClientManager
-    from mcp.models.requests import SearchRequest
-    from mcp.models.responses import SearchResult
-    from services.cache.manager import CacheManager
-    from services.core.qdrant_service import QdrantService
-    from services.embeddings.manager import EmbeddingManager
-except ImportError:
-    from ...config.enums import SearchStrategy
-    from ...infrastructure.client_manager import ClientManager
-    from ...services.cache.manager import CacheManager
-    from ...services.core.qdrant_service import QdrantService
-    from ...services.embeddings.manager import EmbeddingManager
-    from ..models.requests import SearchRequest
-    from ..models.responses import SearchResult
+from ...config.enums import SearchStrategy
+from ...infrastructure.client_manager import ClientManager
+from ...services.cache.manager import CacheManager
+from ...services.core.qdrant_service import QdrantService
+from ...services.embeddings.manager import EmbeddingManager
+from ..models.requests import SearchRequest
+from ..models.responses import SearchResult
 
 logger = logging.getLogger(__name__)
 

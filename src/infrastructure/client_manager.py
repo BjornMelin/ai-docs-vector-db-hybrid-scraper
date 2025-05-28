@@ -18,7 +18,10 @@ from pydantic import Field
 from pydantic import field_validator
 from qdrant_client import AsyncQdrantClient
 
-from ..services.errors import APIError
+try:
+    from services.errors import APIError
+except ImportError:
+    from ..services.errors import APIError
 
 logger = logging.getLogger(__name__)
 

@@ -7,19 +7,18 @@ best practices with lazy initialization and modular tool registration.
 
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+# Setup import paths
+sys.path.insert(0, str(Path(__file__).parent))
 
 from fastmcp import FastMCP
 
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-    from mcp.tool_registry import register_all_tools
-    from services.logging_config import configure_logging
-except ImportError:
-    from .infrastructure.client_manager import ClientManager
-    from .mcp.tool_registry import register_all_tools
-    from .services.logging_config import configure_logging
+from infrastructure.client_manager import ClientManager
+from mcp.tool_registry import register_all_tools
+from services.logging_config import configure_logging
 
 # Initialize logging
 configure_logging()
@@ -47,12 +46,54 @@ mcp = FastMCP(
 client_manager = None
 
 
+def validate_configuration():
+    """Validate configuration at startup.
+
+    Checks for required API keys and validates critical settings.
+    """
+    from config import get_config
+
+    config = get_config()
+    warnings = []
+    errors = []
+
+    # Check API keys based on enabled providers
+    if "openai" in config.get_active_providers():
+        if not config.openai.api_key:
+            errors.append("OpenAI API key is required when OpenAI provider is enabled")
+
+    if "firecrawl" in config.crawling.providers:
+        if not config.firecrawl.api_key:
+            warnings.append(
+                "Firecrawl API key not set - premium features will be unavailable"
+            )
+
+    # Check Qdrant connection
+    if not config.qdrant.url:
+        errors.append("Qdrant URL is required")
+
+    # Log warnings
+    for warning in warnings:
+        logger.warning(f"Configuration warning: {warning}")
+
+    # Raise on errors
+    if errors:
+        for error in errors:
+            logger.error(f"Configuration error: {error}")
+        raise ValueError(f"Configuration validation failed: {'; '.join(errors)}")
+
+    logger.info("Configuration validation passed")
+
+
 @asynccontextmanager
 async def lifespan():
     """Server lifecycle management with lazy initialization."""
     global client_manager
 
     try:
+        # Validate configuration first
+        validate_configuration()
+
         # Initialize client manager
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
         client_manager = ClientManager.from_unified_config()

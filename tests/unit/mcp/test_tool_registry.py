@@ -19,7 +19,7 @@ async def test_register_all_tools():
     client_manager = Mock(spec=ClientManager)
 
     # Mock all tool modules
-    with patch("src.mcp.tool_registry.tools") as mock_tools:
+    with patch("src.mcp.tools") as mock_tools:
         # Create mock modules
         for module_name in [
             "search",
@@ -80,7 +80,7 @@ async def test_tool_registration_logs():
 
     client_manager = Mock(spec=ClientManager)
 
-    with patch("src.mcp.tool_registry.tools") as mock_tools:
+    with patch("src.mcp.tools") as mock_tools:
         with patch("src.mcp.tool_registry.logger") as mock_logger:
             # Create mock modules
             for module_name in [

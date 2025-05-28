@@ -1,6 +1,5 @@
 """Integration tests for crawl4ai_bulk_embedder module."""
 
-from datetime import datetime
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -13,11 +12,9 @@ from src.config.models import DocumentationSite
 from src.config.models import EmbeddingConfig
 from src.config.models import QdrantConfig
 from src.config.models import UnifiedConfig
-from src.crawl4ai_bulk_embedder import (
-    CrawlResult,
-    ModernDocumentationScraper,
-    VectorMetrics,
-)
+from src.crawl4ai_bulk_embedder import CrawlResult
+from src.crawl4ai_bulk_embedder import ModernDocumentationScraper
+from src.crawl4ai_bulk_embedder import VectorMetrics
 from src.mcp.models.responses import CrawlResult
 
 
@@ -94,7 +91,9 @@ class TestDocumentationSite:
             url="https://test.example.com",
         )
         assert site.name == "Test Docs"
-        assert str(site.url) == "https://test.example.com/"  # HttpUrl adds trailing slash
+        assert (
+            str(site.url) == "https://test.example.com/"
+        )  # HttpUrl adds trailing slash
         assert site.max_pages == 50  # default
         assert site.max_depth == 2  # default
 
@@ -154,7 +153,9 @@ class TestCrawlResult:
             error="Connection timeout",  # Changed from error_message to error
         )
         assert result.success is False
-        assert result.error == "Connection timeout"  # Changed from error_message to error
+        assert (
+            result.error == "Connection timeout"
+        )  # Changed from error_message to error
 
 
 class TestVectorMetrics:
@@ -213,9 +214,12 @@ class TestModernDocumentationScraper:
 
     async def test_scraper_setup_collection(self, scraper):
         """Test collection setup"""
-        with patch.object(
-            scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])
-        ), patch.object(scraper.qdrant_service, "create_collection", AsyncMock()):
+        with (
+            patch.object(
+                scraper.qdrant_service, "list_collections", AsyncMock(return_value=[])
+            ),
+            patch.object(scraper.qdrant_service, "create_collection", AsyncMock()),
+        ):
             await scraper.setup_collection()
             scraper.qdrant_service.create_collection.assert_called_once()
 
@@ -287,7 +291,9 @@ class TestModernDocumentationScraper:
         }
 
         with patch.object(
-            scraper.crawl_manager, "crawl_site", AsyncMock(return_value=mock_crawl_result)
+            scraper.crawl_manager,
+            "crawl_site",
+            AsyncMock(return_value=mock_crawl_result),
         ):
             site = DocumentationSite(**sample_documentation_site)
             results = await scraper.crawl_documentation_site(site)
@@ -318,7 +324,9 @@ class TestModernDocumentationScraper:
         }
 
         with patch.object(
-            scraper.crawl_manager, "crawl_site", AsyncMock(return_value=mock_crawl_result)
+            scraper.crawl_manager,
+            "crawl_site",
+            AsyncMock(return_value=mock_crawl_result),
         ):
             site = DocumentationSite(**sample_documentation_site)
             results = await scraper.crawl_documentation_site(site)
@@ -373,9 +381,11 @@ class TestModernDocumentationScraper:
 
     async def test_cleanup_services(self, scraper):
         """Test service cleanup"""
-        with patch.object(scraper.embedding_manager, "cleanup", AsyncMock()), patch.object(
-            scraper.qdrant_service, "cleanup", AsyncMock()
-        ), patch.object(scraper.crawl_manager, "cleanup", AsyncMock()):
+        with (
+            patch.object(scraper.embedding_manager, "cleanup", AsyncMock()),
+            patch.object(scraper.qdrant_service, "cleanup", AsyncMock()),
+            patch.object(scraper.crawl_manager, "cleanup", AsyncMock()),
+        ):
             await scraper.cleanup()
             scraper.embedding_manager.cleanup.assert_called_once()
             scraper.qdrant_service.cleanup.assert_called_once()
@@ -395,9 +405,13 @@ class TestModernDocumentationScraper:
             (sites[1], []),
         ]
 
-        with patch.object(scraper, "setup_collection", AsyncMock()), patch.object(
-            scraper, "crawl_documentation_site", AsyncMock(return_value=[])
-        ), patch.object(scraper, "process_and_embed_results", AsyncMock()):
+        with (
+            patch.object(scraper, "setup_collection", AsyncMock()),
+            patch.object(
+                scraper, "crawl_documentation_site", AsyncMock(return_value=[])
+            ),
+            patch.object(scraper, "process_and_embed_results", AsyncMock()),
+        ):
             await scraper.scrape_multiple_sites(sites)
 
             assert scraper.stats.start_time is not None

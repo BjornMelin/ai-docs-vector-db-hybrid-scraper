@@ -8,13 +8,8 @@ from uuid import uuid4
 
 from fastmcp import Context
 
+from ...infrastructure.client_manager import ClientManager
 from ...security import SecurityValidator
-
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 

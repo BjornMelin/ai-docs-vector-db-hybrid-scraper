@@ -7,14 +7,10 @@ from typing import Any
 from uuid import uuid4
 
 from ...config.enums import SearchStrategy
+from ...infrastructure.client_manager import ClientManager
 from ..models.requests import ProjectRequest
 from ..models.responses import SearchResult
 
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
 logger = logging.getLogger(__name__)
 
 

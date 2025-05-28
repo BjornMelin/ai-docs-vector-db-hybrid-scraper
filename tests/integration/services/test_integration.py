@@ -29,13 +29,13 @@ def integration_config(monkeypatch):
     # Use monkeypatch to set environment variables for the test
     monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test123456789012345678901234567890")
     monkeypatch.setenv("QDRANT_URL", "http://localhost:6333")
-    
+
     # Use FastEmbed to avoid OpenAI API key requirement
     config = UnifiedConfig(
         embedding_provider=EmbeddingProvider.FASTEMBED,
         crawl_provider=CrawlProvider.CRAWL4AI,  # Use crawl4ai to avoid firecrawl key issues
     )
-    
+
     return config
 
 

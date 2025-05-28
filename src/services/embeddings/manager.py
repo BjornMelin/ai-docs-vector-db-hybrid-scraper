@@ -149,14 +149,11 @@ class EmbeddingManager:
 
         # Initialize FastEmbed provider - always available for local embeddings
         try:
-            provider = FastEmbedProvider(
-                model_name=self.config.fastembed.model
-            )
+            provider = FastEmbedProvider(model_name=self.config.fastembed.model)
             await provider.initialize()
             self.providers["fastembed"] = provider
             logger.info(
-                f"Initialized FastEmbed provider with "
-                f"{self.config.fastembed.model}"
+                f"Initialized FastEmbed provider with {self.config.fastembed.model}"
             )
         except Exception as e:
             logger.warning(f"Failed to initialize FastEmbed provider: {e}")
@@ -373,14 +370,19 @@ class EmbeddingManager:
             text = texts[0]
 
             # Try to get from cache using embedding cache directly
-            if hasattr(self.cache_manager, '_embedding_cache') and self.cache_manager._embedding_cache:
-                cached_embedding = await self.cache_manager._embedding_cache.get_embedding(
-                    text=text,
-                    provider=provider_name or self.config.embedding_provider.value,
-                    model=self.config.openai.model
-                    if provider_name == "openai"
-                    else self.config.fastembed.model,
-                    dimensions=self.config.openai.dimensions,
+            if (
+                hasattr(self.cache_manager, "_embedding_cache")
+                and self.cache_manager._embedding_cache
+            ):
+                cached_embedding = (
+                    await self.cache_manager._embedding_cache.get_embedding(
+                        text=text,
+                        provider=provider_name or self.config.embedding_provider.value,
+                        model=self.config.openai.model
+                        if provider_name == "openai"
+                        else self.config.fastembed.model,
+                        dimensions=self.config.openai.dimensions,
+                    )
                 )
 
                 if cached_embedding is not None:
@@ -388,18 +390,20 @@ class EmbeddingManager:
                     return {
                         "embeddings": [cached_embedding],
                         "provider": provider_name
-                    or self.config.embedding_provider.value,
-                    "model": self.config.openai.model
-                    if provider_name == "openai"
-                    else self.config.fastembed.model,
-                    "cost": 0.0,  # No cost for cached result
-                    "latency_ms": (time.time() - start_time) * 1000,
-                    "tokens": 0,
-                    "reasoning": "Retrieved from cache",
-                    "quality_tier": quality_tier.value if quality_tier else "default",
-                    "usage_stats": self.get_usage_report(),
-                    "cache_hit": True,
-                }
+                        or self.config.embedding_provider.value,
+                        "model": self.config.openai.model
+                        if provider_name == "openai"
+                        else self.config.fastembed.model,
+                        "cost": 0.0,  # No cost for cached result
+                        "latency_ms": (time.time() - start_time) * 1000,
+                        "tokens": 0,
+                        "reasoning": "Retrieved from cache",
+                        "quality_tier": quality_tier.value
+                        if quality_tier
+                        else "default",
+                        "usage_stats": self.get_usage_report(),
+                        "cache_hit": True,
+                    }
 
         # Select provider and model
         provider, selected_model, estimated_cost, reasoning = (
@@ -421,7 +425,8 @@ class EmbeddingManager:
         try:
             # Generate embeddings
             embeddings = await provider.generate_embeddings(
-                texts, batch_size=32  # Default batch size
+                texts,
+                batch_size=32,  # Default batch size
             )
 
             # Generate sparse embeddings if requested and available
@@ -442,7 +447,10 @@ class EmbeddingManager:
             # Cache the embedding if enabled and single text
             if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
                 try:
-                    if hasattr(self.cache_manager, '_embedding_cache') and self.cache_manager._embedding_cache:
+                    if (
+                        hasattr(self.cache_manager, "_embedding_cache")
+                        and self.cache_manager._embedding_cache
+                    ):
                         await self.cache_manager._embedding_cache.set_embedding(
                             text=texts[0],
                             model=selected_model,

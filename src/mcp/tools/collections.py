@@ -3,11 +3,7 @@
 import logging
 from typing import Any
 
-# Handle both module and script imports
-try:
-    from infrastructure.client_manager import ClientManager
-except ImportError:
-    from ...infrastructure.client_manager import ClientManager
+from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
