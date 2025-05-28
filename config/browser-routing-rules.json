@@ -1,0 +1,25 @@
+{
+  "routing_rules": {
+    "stagehand": [
+      "vercel.com",
+      "clerk.com", 
+      "supabase.com",
+      "netlify.com",
+      "railway.app",
+      "planetscale.com"
+    ],
+    "playwright": [
+      "github.com",
+      "stackoverflow.com",
+      "discord.com",
+      "slack.com",
+      "app.posthog.com"
+    ]
+  },
+  "description": "Browser automation routing rules for site-specific tool selection",
+  "rules_explanation": {
+    "stagehand": "Sites that need AI-powered interaction due to complex React apps, heavy client-side rendering, or dynamic content",
+    "playwright": "Sites that need specific automation for authentication, complex pagination, or heavy JavaScript interactions",
+    "crawl4ai": "Default tool for all other sites (fastest for documentation scraping)"
+  }
+}

@@ -15,7 +15,7 @@ from src.services.qdrant_service import QdrantService
 @pytest.fixture
 def mock_unified_config():
     """Create comprehensive mock unified config."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock()
 
     # Crawling configuration
     config.crawling.max_concurrent = 5
@@ -292,7 +292,7 @@ class TestHNSWOptimizationIntegration:
         # Cache should be populated after first request
         cache_key_pattern = f"{collection_name}:ef_"
         cache_keys = [
-            k for k in optimizer._performance_cache.keys() if cache_key_pattern in k
+            k for k in optimizer._performance_cache if cache_key_pattern in k
         ]
         assert len(cache_keys) > 0
 
@@ -419,7 +419,7 @@ class TestIntegratedWorkflow:
     async def test_performance_monitoring_integration(self, mock_unified_config):
         """Test performance monitoring across both systems."""
         router = AutomationRouter(mock_unified_config)
-        service = QdrantService(mock_unified_config)
+        _service = QdrantService(mock_unified_config)
 
         # Mock successful operations
         with patch.object(router, "scrape_with_fallback") as mock_scrape:

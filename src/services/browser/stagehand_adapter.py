@@ -111,126 +111,16 @@ class StagehandAdapter(BaseService):
         page = None
 
         try:
-            # Create new page
-            page = await self._stagehand.new_page()
+            page = await self._create_and_navigate_page(url, timeout)
+            extraction_results, screenshots = await self._execute_instructions(page, instructions)
+            final_content = await self._perform_final_extraction(page)
 
-            # Navigate to page
-            await page.goto(url, wait_until="networkidle", timeout=timeout)
-
-            # Execute AI-driven actions based on instructions
-            extraction_results = {}
-            screenshots = []
-
-            for i, instruction in enumerate(instructions):
-                self.logger.info(
-                    f"Executing instruction {i + 1}/{len(instructions)}: {instruction}"
-                )
-
-                try:
-                    if "click" in instruction.lower():
-                        await self._stagehand.click(page, instruction)
-                        await asyncio.sleep(0.5)  # Brief pause after click
-
-                    elif (
-                        "type" in instruction.lower() or "enter" in instruction.lower()
-                    ):
-                        await self._stagehand.type(page, instruction)
-                        await asyncio.sleep(0.5)
-
-                    elif "extract" in instruction.lower():
-                        content = await self._stagehand.extract(page, instruction)
-                        extraction_results[f"extraction_{i}"] = content
-
-                    elif "wait" in instruction.lower():
-                        wait_time = self._extract_wait_time(instruction)
-                        await asyncio.sleep(wait_time / 1000)  # Convert to seconds
-
-                    elif "scroll" in instruction.lower():
-                        await page.evaluate(
-                            "window.scrollTo(0, document.body.scrollHeight)"
-                        )
-                        await asyncio.sleep(1)
-
-                    elif "screenshot" in instruction.lower():
-                        screenshot = await page.screenshot()
-                        screenshots.append(
-                            {
-                                "instruction": instruction,
-                                "timestamp": time.time(),
-                                "data": screenshot,
-                            }
-                        )
-
-                    else:
-                        # General AI action
-                        result = await self._stagehand.act(page, instruction)
-                        if result:
-                            extraction_results[f"action_{i}"] = result
-
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to execute instruction '{instruction}': {e}"
-                    )
-                    continue
-
-            # Final content extraction
-            final_content = await self._stagehand.extract(
-                page,
-                "Extract all documentation content including code examples, text, and structured information",
+            return await self._build_success_result(
+                page, url, start_time, extraction_results, screenshots, final_content, instructions
             )
 
-            # Get page content and metadata
-            html = await page.content()
-            title = await page.title()
-            url_final = page.url  # May have changed due to redirects
-
-            # Combine all extracted content
-            combined_content = []
-            if final_content.get("content"):
-                combined_content.append(final_content["content"])
-
-            for key, value in extraction_results.items():
-                if isinstance(value, dict) and value.get("content"):
-                    combined_content.append(value["content"])
-                elif isinstance(value, str):
-                    combined_content.append(value)
-
-            processing_time = (time.time() - start_time) * 1000
-
-            return {
-                "success": True,
-                "url": url_final,
-                "content": "\n\n".join(combined_content),
-                "html": html,
-                "title": title,
-                "metadata": {
-                    "extraction_method": "stagehand_ai",
-                    "instructions_executed": len(instructions),
-                    "successful_extractions": len(extraction_results),
-                    "processing_time_ms": processing_time,
-                    "ai_model": self.stagehand_config.get("model", "unknown"),
-                    **final_content.get("metadata", {}),
-                },
-                "extraction_results": extraction_results,
-                "screenshots": screenshots,
-                "ai_insights": final_content.get("insights", {}),
-            }
-
         except Exception as e:
-            processing_time = (time.time() - start_time) * 1000
-            self.logger.error(f"Stagehand error for {url}: {e}")
-
-            return {
-                "success": False,
-                "url": url,
-                "error": str(e),
-                "content": "",
-                "metadata": {
-                    "extraction_method": "stagehand_ai",
-                    "processing_time_ms": processing_time,
-                    "instructions_attempted": len(instructions),
-                },
-            }
+            return self._build_error_result(url, start_time, str(e), instructions)
 
         finally:
             if page:
@@ -238,6 +128,135 @@ class StagehandAdapter(BaseService):
                     await page.close()
                 except Exception as e:
                     self.logger.warning(f"Failed to close page: {e}")
+
+    async def _create_and_navigate_page(self, url: str, timeout: int):
+        """Create new page and navigate to URL."""
+        page = await self._stagehand.new_page()
+        await page.goto(url, wait_until="networkidle", timeout=timeout)
+        return page
+
+    async def _execute_instructions(self, page, instructions: list[str]) -> tuple[dict, list]:
+        """Execute all instructions and collect results."""
+        extraction_results = {}
+        screenshots = []
+
+        for i, instruction in enumerate(instructions):
+            self.logger.info(
+                f"Executing instruction {i + 1}/{len(instructions)}: {instruction}"
+            )
+
+            try:
+                await self._execute_single_instruction(
+                    page, instruction, i, extraction_results, screenshots
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to execute instruction '{instruction}': {e}"
+                )
+                continue
+
+        return extraction_results, screenshots
+
+    async def _execute_single_instruction(
+        self, page, instruction: str, index: int, extraction_results: dict, screenshots: list
+    ):
+        """Execute a single instruction based on its type."""
+        instruction_lower = instruction.lower()
+
+        if "click" in instruction_lower:
+            await self._stagehand.click(page, instruction)
+            await asyncio.sleep(0.5)
+        elif "type" in instruction_lower or "enter" in instruction_lower:
+            await self._stagehand.type(page, instruction)
+            await asyncio.sleep(0.5)
+        elif "extract" in instruction_lower:
+            content = await self._stagehand.extract(page, instruction)
+            extraction_results[f"extraction_{index}"] = content
+        elif "wait" in instruction_lower:
+            wait_time = self._extract_wait_time(instruction)
+            await asyncio.sleep(wait_time / 1000)
+        elif "scroll" in instruction_lower:
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(1)
+        elif "screenshot" in instruction_lower:
+            screenshot = await page.screenshot()
+            screenshots.append({
+                "instruction": instruction,
+                "timestamp": time.time(),
+                "data": screenshot,
+            })
+        else:
+            # General AI action
+            result = await self._stagehand.act(page, instruction)
+            if result:
+                extraction_results[f"action_{index}"] = result
+
+    async def _perform_final_extraction(self, page) -> dict:
+        """Perform final content extraction."""
+        return await self._stagehand.extract(
+            page,
+            "Extract all documentation content including code examples, text, and structured information",
+        )
+
+    async def _build_success_result(
+        self, page, url: str, start_time: float, extraction_results: dict,
+        screenshots: list, final_content: dict, instructions: list
+    ) -> dict[str, Any]:
+        """Build successful scraping result."""
+        html = await page.content()
+        title = await page.title()
+        url_final = page.url
+
+        # Combine all extracted content
+        combined_content = []
+        if final_content.get("content"):
+            combined_content.append(final_content["content"])
+
+        for _key, value in extraction_results.items():
+            if isinstance(value, dict) and value.get("content"):
+                combined_content.append(value["content"])
+            elif isinstance(value, str):
+                combined_content.append(value)
+
+        processing_time = (time.time() - start_time) * 1000
+
+        return {
+            "success": True,
+            "url": url_final,
+            "content": "\n\n".join(combined_content),
+            "html": html,
+            "title": title,
+            "metadata": {
+                "extraction_method": "stagehand_ai",
+                "instructions_executed": len(instructions),
+                "successful_extractions": len(extraction_results),
+                "processing_time_ms": processing_time,
+                "ai_model": self.stagehand_config.get("model", "unknown"),
+                **final_content.get("metadata", {}),
+            },
+            "extraction_results": extraction_results,
+            "screenshots": screenshots,
+            "ai_insights": final_content.get("insights", {}),
+        }
+
+    def _build_error_result(
+        self, url: str, start_time: float, error: str, instructions: list
+    ) -> dict[str, Any]:
+        """Build error result."""
+        processing_time = (time.time() - start_time) * 1000
+        self.logger.error(f"Stagehand error for {url}: {error}")
+
+        return {
+            "success": False,
+            "url": url,
+            "error": error,
+            "content": "",
+            "metadata": {
+                "extraction_method": "stagehand_ai",
+                "processing_time_ms": processing_time,
+                "instructions_attempted": len(instructions),
+            },
+        }
 
     def _extract_wait_time(self, instruction: str) -> int:
         """Extract wait time from instruction text.

@@ -7,6 +7,7 @@ HNSW parameter testing and optimization capabilities.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import sys
@@ -96,10 +97,8 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
 
             try:
                 # Delete existing collection if present
-                try:
+                with contextlib.suppress(Exception):
                     await self.qdrant_service.delete_collection(collection_name)
-                except Exception:
-                    pass  # Collection might not exist
 
                 # Time collection creation with HNSW config
                 creation_start = time.time()
@@ -319,7 +318,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         logger.info("Benchmarking adaptive EF selection")
 
         # Create optimized collection for testing
-        test_collection = "adaptive_ef_test"
+        _test_collection = "adaptive_ef_test"
 
         try:
             await self.setup_test_collection(with_indexes=True)
@@ -553,16 +552,22 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         }
 
     def print_hnsw_results(self, results: dict[str, Any]):
-        """Print formatted HNSW benchmark results.
+        """Print formatted HNSW benchmark results."""
+        self._print_header()
+        self._print_metadata(results)
+        self._print_config_tests(results)
+        self._print_recommendations(results)
+        self._print_adaptive_results(results)
+        self._print_footer()
 
-        Args:
-            results: HNSW benchmark results
-        """
+    def _print_header(self):
+        """Print benchmark header."""
         print("\n" + "=" * 80)
         print("HNSW CONFIGURATION OPTIMIZATION BENCHMARK RESULTS")
         print("=" * 80)
 
-        # Metadata
+    def _print_metadata(self, results: dict[str, Any]):
+        """Print benchmark metadata."""
         metadata = results.get("metadata", {})
         print(
             f"\nBenchmark Duration: {metadata.get('total_duration_seconds', 0):.2f} seconds"
@@ -570,88 +575,103 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         print(f"Qdrant URL: {metadata.get('qdrant_url', 'unknown')}")
         print(f"Configurations Tested: {metadata.get('hnsw_configs_tested', 0)}")
 
-        # Configuration test results
+    def _print_config_tests(self, results: dict[str, Any]):
+        """Print configuration test results."""
         config_tests = results.get("configuration_tests", {})
-        if config_tests:
-            print("\n🔧 HNSW CONFIGURATION PERFORMANCE")
-            print("-" * 50)
+        if not config_tests:
+            return
 
-            for config_name, config_results in config_tests.items():
-                if "error" in config_results:
-                    print(f"{config_name}: ERROR - {config_results['error']}")
-                    continue
+        print("\n🔧 HNSW CONFIGURATION PERFORMANCE")
+        print("-" * 50)
 
-                creation_time = config_results.get("creation_time_seconds", 0)
-                insertion_time = config_results.get("insertion_time_seconds", 0)
-                points_count = config_results.get("points_count", 0)
+        for config_name, config_results in config_tests.items():
+            self._print_config_result(config_name, config_results)
 
-                print(f"\n{config_name.replace('_', ' ').title()}:")
-                print(f"  Creation: {creation_time:.2f}s")
-                print(f"  Insertion: {insertion_time:.2f}s")
-                print(f"  Points: {points_count}")
+    def _print_config_result(self, config_name: str, config_results: dict[str, Any]):
+        """Print individual configuration result."""
+        if "error" in config_results:
+            print(f"{config_name}: ERROR - {config_results['error']}")
+            return
 
-                # Show best EF performance
-                search_perf = config_results.get("search_performance", {})
-                if search_perf:
-                    best_ef = min(
-                        search_perf.values(),
-                        key=lambda x: x.get("avg_time_ms", float("inf")),
-                        default={},
-                    )
-                    if best_ef:
-                        print(
-                            f"  Best EF: {best_ef.get('ef_value', 'unknown')} "
-                            f"({best_ef.get('avg_time_ms', 0):.1f}ms, "
-                            f"{best_ef.get('avg_recall', 0):.1%} recall)"
-                        )
+        creation_time = config_results.get("creation_time_seconds", 0)
+        insertion_time = config_results.get("insertion_time_seconds", 0)
+        points_count = config_results.get("points_count", 0)
 
-        # Comparison summary
-        summary = results.get("comparison_summary", {})
-        if summary and "recommendations" in summary:
-            recommendations = summary["recommendations"]
-            print("\n🎯 RECOMMENDATIONS")
-            print("-" * 40)
-            print(
-                f"Best Overall: {recommendations.get('recommended_config', 'unknown')}"
+        print(f"\n{config_name.replace('_', ' ').title()}:")
+        print(f"  Creation: {creation_time:.2f}s")
+        print(f"  Insertion: {insertion_time:.2f}s")
+        print(f"  Points: {points_count}")
+
+        # Show best EF performance
+        search_perf = config_results.get("search_performance", {})
+        if search_perf:
+            best_ef = min(
+                search_perf.values(),
+                key=lambda x: x.get("avg_time_ms", float("inf")),
+                default={},
             )
-            print(
-                f"Fastest Creation: {recommendations.get('fastest_creation', 'unknown')}"
-            )
-            print(f"Fastest Search: {recommendations.get('fastest_search', 'unknown')}")
-
-            if "recommended_settings" in recommendations:
-                settings = recommendations["recommended_settings"]
-                print("\nRecommended HNSW Settings:")
-                print(f"  m = {settings.get('m', 16)}")
-                print(f"  ef_construct = {settings.get('ef_construct', 200)}")
-
-                expected = settings.get("expected_performance", {})
+            if best_ef:
                 print(
-                    f"  Expected: {expected.get('avg_search_time_ms', 0):.1f}ms, "
-                    f"{expected.get('avg_recall', 0):.1%} recall"
+                    f"  Best EF: {best_ef.get('ef_value', 'unknown')} "
+                    f"({best_ef.get('avg_time_ms', 0):.1f}ms, "
+                    f"{best_ef.get('avg_recall', 0):.1%} recall)"
                 )
 
-        # Adaptive EF results
+    def _print_recommendations(self, results: dict[str, Any]):
+        """Print recommendations summary."""
+        summary = results.get("comparison_summary", {})
+        if not summary or "recommendations" not in summary:
+            return
+
+        recommendations = summary["recommendations"]
+        print("\n🎯 RECOMMENDATIONS")
+        print("-" * 40)
+        print(
+            f"Best Overall: {recommendations.get('recommended_config', 'unknown')}"
+        )
+        print(
+            f"Fastest Creation: {recommendations.get('fastest_creation', 'unknown')}"
+        )
+        print(f"Fastest Search: {recommendations.get('fastest_search', 'unknown')}")
+
+        if "recommended_settings" in recommendations:
+            settings = recommendations["recommended_settings"]
+            print("\nRecommended HNSW Settings:")
+            print(f"  m = {settings.get('m', 16)}")
+            print(f"  ef_construct = {settings.get('ef_construct', 200)}")
+
+            expected = settings.get("expected_performance", {})
+            print(
+                f"  Expected: {expected.get('avg_search_time_ms', 0):.1f}ms, "
+                f"{expected.get('avg_recall', 0):.1%} recall"
+            )
+
+    def _print_adaptive_results(self, results: dict[str, Any]):
+        """Print adaptive EF results."""
         adaptive_results = results.get("adaptive_ef_tests", {})
-        if adaptive_results and "error" not in adaptive_results:
-            print("\n⚡ ADAPTIVE EF PERFORMANCE")
-            print("-" * 40)
+        if not adaptive_results or "error" in adaptive_results:
+            return
 
-            for budget_key, budget_results in adaptive_results.items():
-                if (
-                    isinstance(budget_results, dict)
-                    and "time_budget_ms" in budget_results
-                ):
-                    budget = budget_results["time_budget_ms"]
-                    final_ef = budget_results.get("final_ef", 0)
-                    final_time = budget_results.get("final_search_time_ms", 0)
-                    utilization = budget_results.get("budget_utilized_percent", 0)
+        print("\n⚡ ADAPTIVE EF PERFORMANCE")
+        print("-" * 40)
 
-                    print(
-                        f"Budget {budget}ms: EF={final_ef}, "
-                        f"Time={final_time:.1f}ms ({utilization:.0f}% used)"
-                    )
+        for _budget_key, budget_results in adaptive_results.items():
+            if (
+                isinstance(budget_results, dict)
+                and "time_budget_ms" in budget_results
+            ):
+                budget = budget_results["time_budget_ms"]
+                final_ef = budget_results.get("final_ef", 0)
+                final_time = budget_results.get("final_search_time_ms", 0)
+                utilization = budget_results.get("budget_utilized_percent", 0)
 
+                print(
+                    f"Budget {budget}ms: EF={final_ef}, "
+                    f"Time={final_time:.1f}ms ({utilization:.0f}% used)"
+                )
+
+    def _print_footer(self):
+        """Print benchmark footer."""
         print("\n" + "=" * 80)
 
 

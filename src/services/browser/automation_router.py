@@ -1,7 +1,9 @@
 """Intelligent browser automation router with three-tier hierarchy."""
 
+import json
 import logging
 import time
+from pathlib import Path
 from typing import Any
 from typing import Literal
 from urllib.parse import urlparse
@@ -36,27 +38,8 @@ class AutomationRouter(BaseService):
         self._adapters: dict[str, Any] = {}
         self._initialized = False
 
-        # Site-specific routing rules
-        self.routing_rules = {
-            # Sites that need Stagehand (AI-powered interaction)
-            "stagehand": [
-                "vercel.com",  # Complex React app
-                "clerk.com",  # Heavy client-side rendering
-                "supabase.com",  # Dynamic documentation
-                "netlify.com",  # Interactive demos
-                "railway.app",  # Dynamic content
-                "planetscale.com",  # Complex UI components
-            ],
-            # Sites that need Playwright (specific automation)
-            "playwright": [
-                "github.com",  # Authentication required
-                "stackoverflow.com",  # Complex pagination
-                "discord.com",  # Heavy JavaScript
-                "slack.com",  # Authentication flows
-                "app.posthog.com",  # Dashboard interactions
-            ],
-            # Default to Crawl4AI for everything else
-        }
+        # Load site-specific routing rules from configuration
+        self.routing_rules = self._load_routing_rules()
 
         # Performance metrics tracking
         self.metrics = {
@@ -73,6 +56,56 @@ class AutomationRouter(BaseService):
                 "avg_time": 0.0,
                 "total_time": 0.0,
             },
+        }
+
+    def _load_routing_rules(self) -> dict[str, list[str]]:
+        """Load routing rules from configuration file.
+
+        Returns:
+            Dictionary mapping tool names to lists of domains
+        """
+        try:
+            # Get project root directory (3 levels up from this file)
+            project_root = Path(__file__).parent.parent.parent.parent
+            config_file = project_root / "config" / "browser-routing-rules.json"
+
+            if config_file.exists():
+                with open(config_file) as f:
+                    config = json.load(f)
+                    routing_rules = config.get("routing_rules", {})
+                    logger.info(f"Loaded routing rules from {config_file}")
+                    return routing_rules
+            else:
+                logger.warning(f"Routing rules file not found: {config_file}")
+
+        except Exception as e:
+            logger.error(f"Failed to load routing rules: {e}")
+
+        # Fallback to default rules if loading fails
+        return self._get_default_routing_rules()
+
+    def _get_default_routing_rules(self) -> dict[str, list[str]]:
+        """Get default routing rules as fallback.
+
+        Returns:
+            Default routing rules dictionary
+        """
+        return {
+            "stagehand": [
+                "vercel.com",
+                "clerk.com",
+                "supabase.com",
+                "netlify.com",
+                "railway.app",
+                "planetscale.com"
+            ],
+            "playwright": [
+                "github.com",
+                "stackoverflow.com",
+                "discord.com",
+                "slack.com",
+                "app.posthog.com"
+            ]
         }
 
     async def initialize(self) -> None:
@@ -238,36 +271,52 @@ class AutomationRouter(BaseService):
         """
         domain = urlparse(url).netloc.lower()
 
-        # Check explicit routing rules
-        for tool, domains in self.routing_rules.items():
-            if any(d in domain for d in domains):
-                if tool in self._adapters:
-                    return tool
+        # Check explicit routing rules first
+        route_tool = self._check_routing_rules(domain)
+        if route_tool:
+            return route_tool
 
-        # Check if interaction is required
+        # Check for interaction requirements
+        interaction_tool = self._check_interaction_requirements(
+            url, interaction_required, custom_actions
+        )
+        if interaction_tool:
+            return interaction_tool
+
+        # Default fallback selection
+        return self._get_default_tool()
+
+    def _check_routing_rules(self, domain: str) -> str | None:
+        """Check if domain matches explicit routing rules."""
+        for tool, domains in self.routing_rules.items():
+            if any(d in domain for d in domains) and tool in self._adapters:
+                return tool
+        return None
+
+    def _check_interaction_requirements(
+        self, url: str, interaction_required: bool, custom_actions: list[dict] | None
+    ) -> str | None:
+        """Check if interaction requirements suggest a specific tool."""
         if interaction_required or custom_actions:
-            # Prefer Stagehand for AI-powered interactions
             if "stagehand" in self._adapters:
                 return "stagehand"
-            # Fallback to Playwright for manual control
-            elif "playwright" in self._adapters:
+            if "playwright" in self._adapters:
                 return "playwright"
 
         # Check for complex JavaScript patterns in URL
-        if any(
-            pattern in url.lower()
-            for pattern in ["spa", "react", "vue", "angular", "app"]
-        ):
-            if "stagehand" in self._adapters:
-                return "stagehand"
+        js_patterns = ["spa", "react", "vue", "angular", "app"]
+        if any(pattern in url.lower() for pattern in js_patterns) and "stagehand" in self._adapters:
+            return "stagehand"
 
-        # Default to fastest option
+        return None
+
+    def _get_default_tool(self) -> str:
+        """Get default tool based on availability."""
         if "crawl4ai" in self._adapters:
             return "crawl4ai"
-        elif "playwright" in self._adapters:
+        if "playwright" in self._adapters:
             return "playwright"
-        else:
-            return "stagehand"
+        return "stagehand"
 
     async def _try_crawl4ai(
         self,
@@ -427,7 +476,7 @@ class AutomationRouter(BaseService):
             "metadata": {},
             "url": url,
             "provider": "none",
-            "failed_tools": [failed_tool] + fallback_tools,
+            "failed_tools": [failed_tool, *fallback_tools],
         }
 
     def _get_basic_js(self, url: str) -> str:
@@ -442,12 +491,12 @@ class AutomationRouter(BaseService):
         return """
         // Wait for content to load
         await new Promise(r => setTimeout(r, 2000));
-        
+
         // Expand collapsed sections
         document.querySelectorAll('[aria-expanded="false"]').forEach(el => {
             try { el.click(); } catch(e) {}
         });
-        
+
         // Click show more buttons
         document.querySelectorAll('button, a').forEach(el => {
             const text = el.textContent?.toLowerCase() || '';
@@ -455,7 +504,7 @@ class AutomationRouter(BaseService):
                 try { el.click(); } catch(e) {}
             }
         });
-        
+
         // Scroll to load lazy content
         window.scrollTo(0, document.body.scrollHeight);
         await new Promise(r => setTimeout(r, 1000));

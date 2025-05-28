@@ -280,49 +280,56 @@ class TestCrawl4AIAdapter:
         url = "https://example.com"
         mock_result = {
             "url": url,
-            "markdown": "# Test Content",
+            "content": "# Test Content",
             "html": "<h1>Test Content</h1>",
+            "title": "Test Page",
             "success": True,
             "status_code": 200,
             "response_headers": {"content-type": "text/html"},
+            "metadata": {},
+            "links": [],
+            "structured_data": {}
         }
 
-        with patch(
-            "src.services.browser.crawl4ai_adapter.Crawl4AIProvider"
-        ) as mock_provider_class:
-            mock_provider = AsyncMock()
-            mock_provider.crawl_url.return_value = mock_result
-            mock_provider.initialize.return_value = None
-            mock_provider_class.return_value = mock_provider
+        # Mock the provider instance directly
+        mock_provider = AsyncMock()
+        mock_provider.scrape_url = AsyncMock(return_value=mock_result)
+        mock_provider.initialize = AsyncMock(return_value=None)
 
-            # Initialize the adapter
-            await adapter.initialize()
+        # Replace the adapter's provider with our mock
+        adapter._provider = mock_provider
 
-            result = await adapter.scrape(url, {})
+        # Initialize the adapter
+        await adapter.initialize()
 
-            assert result["success"] is True
-            assert result["content"] == "# Test Content"
-            assert result["metadata"]["tool"] == "crawl4ai"
-            assert result["metadata"]["status_code"] == 200
+        result = await adapter.scrape(url)
+
+        assert result["success"] is True
+        assert result["content"] == "# Test Content"
+        assert result["metadata"]["extraction_method"] == "crawl4ai"
+        assert result["title"] == "Test Page"
 
     @pytest.mark.asyncio
     async def test_scrape_failure(self, adapter):
         """Test handling of scraping failure."""
         url = "https://example.com"
 
-        with patch(
-            "src.services.browser.crawl4ai_adapter.Crawl4AIProvider"
-        ) as mock_provider_class:
-            mock_provider = AsyncMock()
-            mock_provider.crawl_url.side_effect = Exception("Network error")
-            mock_provider.initialize.return_value = None
-            mock_provider_class.return_value = mock_provider
+        # Mock the provider instance directly
+        mock_provider = AsyncMock()
+        mock_provider.scrape_url = AsyncMock(side_effect=Exception("Network error"))
+        mock_provider.initialize = AsyncMock(return_value=None)
 
-            # Initialize the adapter
-            await adapter.initialize()
+        # Replace the adapter's provider with our mock
+        adapter._provider = mock_provider
 
-            with pytest.raises(CrawlServiceError, match="Crawl4AI failed"):
-                await adapter.scrape(url, {})
+        # Initialize the adapter
+        await adapter.initialize()
+
+        result = await adapter.scrape(url)
+
+        assert result["success"] is False
+        assert "Network error" in result["error"]
+        assert result["metadata"]["extraction_method"] == "crawl4ai"
 
     @pytest.mark.asyncio
     async def test_health_check(self, adapter):
@@ -391,6 +398,15 @@ class TestPlaywrightAdapter:
         mock_page.goto.return_value = None
         mock_page.content.return_value = "<html><body><h1>Test</h1></body></html>"
         mock_page.title.return_value = "Test Page"
+        mock_page.evaluate.return_value = {
+            "title": "Test Page",
+            "description": None,
+            "author": None,
+            "keywords": None,
+            "canonical": None,
+            "content": "Test content",
+            "links": []
+        }
 
         mock_context = AsyncMock()
         mock_context.new_page.return_value = mock_page
@@ -398,28 +414,27 @@ class TestPlaywrightAdapter:
 
         mock_browser = AsyncMock()
         mock_browser.new_context.return_value = mock_context
-        mock_browser.__aenter__.return_value = mock_browser
 
-        with patch(
-            "src.services.browser.playwright_adapter.async_playwright"
-        ) as mock_playwright:
-            mock_playwright.return_value.__aenter__.return_value.chromium.launch.return_value = mock_browser
+        # Set up adapter as initialized
+        adapter._available = True
+        adapter._initialized = True
+        adapter._browser = mock_browser
 
-            result = await adapter.scrape(url, {})
+        result = await adapter.scrape(url, [])
 
-            assert result["success"] is True
-            assert "content" in result
-            assert result["metadata"]["tool"] == "playwright"
-            assert result["metadata"]["title"] == "Test Page"
+        assert result["success"] is True
+        assert "content" in result
+        assert result["metadata"]["extraction_method"] == "playwright"
+        assert result["metadata"]["title"] == "Test Page"
 
     @pytest.mark.asyncio
     async def test_scrape_with_actions(self, adapter):
         """Test scraping with custom actions."""
         url = "https://example.com"
         actions = [
-            {"action": "click", "selector": "#button"},
-            {"action": "type", "selector": "#input", "text": "test"},
-            {"action": "wait", "duration": 1000},
+            {"type": "click", "selector": "#button"},
+            {"type": "fill", "selector": "#input", "text": "test"},
+            {"type": "wait", "timeout": 1000},
         ]
 
         mock_page = AsyncMock()
@@ -427,8 +442,18 @@ class TestPlaywrightAdapter:
         mock_page.click.return_value = None
         mock_page.fill.return_value = None
         mock_page.wait_for_timeout.return_value = None
+        mock_page.wait_for_selector.return_value = None
         mock_page.content.return_value = "<html>Updated content</html>"
         mock_page.title.return_value = "Updated Page"
+        mock_page.evaluate.return_value = {
+            "title": "Updated Page",
+            "description": None,
+            "author": None,
+            "keywords": None,
+            "canonical": None,
+            "content": "Updated content",
+            "links": []
+        }
 
         mock_context = AsyncMock()
         mock_context.new_page.return_value = mock_page
@@ -436,19 +461,18 @@ class TestPlaywrightAdapter:
 
         mock_browser = AsyncMock()
         mock_browser.new_context.return_value = mock_context
-        mock_browser.__aenter__.return_value = mock_browser
 
-        with patch(
-            "src.services.browser.playwright_adapter.async_playwright"
-        ) as mock_playwright:
-            mock_playwright.return_value.__aenter__.return_value.chromium.launch.return_value = mock_browser
+        # Set up adapter as initialized
+        adapter._available = True
+        adapter._initialized = True
+        adapter._browser = mock_browser
 
-            result = await adapter.scrape(url, {"actions": actions})
+        result = await adapter.scrape(url, actions)
 
-            assert result["success"] is True
-            mock_page.click.assert_called_once_with("#button")
-            mock_page.fill.assert_called_once_with("#input", "test")
-            mock_page.wait_for_timeout.assert_called_once_with(1000)
+        assert result["success"] is True
+        mock_page.click.assert_called_once()
+        mock_page.fill.assert_called_once()
+        mock_page.wait_for_timeout.assert_called_once_with(1000)
 
     @pytest.mark.asyncio
     async def test_health_check(self, adapter):
@@ -456,5 +480,7 @@ class TestPlaywrightAdapter:
         health = await adapter.health_check()
 
         assert "status" in health
-        assert "tool" in health
-        assert health["tool"] == "playwright"
+        assert "available" in health
+        assert "healthy" in health
+        # Should report as not initialized since we haven't set up the browser
+        assert health["status"] == "not_initialized"

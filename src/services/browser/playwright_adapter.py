@@ -5,8 +5,11 @@ import logging
 import time
 from typing import Any
 
+from pydantic import ValidationError
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
+from .action_schemas import validate_actions
 
 logger = logging.getLogger(__name__)
 
@@ -175,9 +178,15 @@ class PlaywrightAdapter(BaseService):
             # Navigate to URL
             await page.goto(url, wait_until="networkidle", timeout=timeout)
 
+            # Validate actions before executing
+            try:
+                validated_actions = validate_actions(actions)
+            except ValidationError as e:
+                raise CrawlServiceError(f"Invalid actions: {e}") from e
+
             # Execute custom actions
             action_results = []
-            for i, action in enumerate(actions):
+            for i, action in enumerate(validated_actions):
                 try:
                     result = await self._execute_action(page, action, i)
                     action_results.append(result)
@@ -242,131 +251,157 @@ class PlaywrightAdapter(BaseService):
                     self.logger.warning(f"Failed to close context: {e}")
 
     async def _execute_action(
-        self, page: Page, action: dict, index: int
+        self, page: Page, action: Any, index: int
     ) -> dict[str, Any]:
         """Execute a single action.
 
         Args:
             page: Playwright page instance
-            action: Action dictionary
+            action: Validated action model
             index: Action index for tracking
 
         Returns:
             Action result
         """
-        action_type = action.get("type", "")
+        action_type = action.type
         start_time = time.time()
 
         try:
-            if action_type == "click":
-                selector = action["selector"]
-                await page.wait_for_selector(selector, timeout=5000)
-                await page.click(selector)
+            result = await self._perform_action(page, action_type, action, index)
+            if result:  # Some actions return custom results
+                return result
 
-            elif action_type == "type":
-                selector = action["selector"]
-                text = action["text"]
-                await page.wait_for_selector(selector, timeout=5000)
-                await page.type(selector, text)
-
-            elif action_type == "fill":
-                selector = action["selector"]
-                text = action["text"]
-                await page.wait_for_selector(selector, timeout=5000)
-                await page.fill(selector, text)
-
-            elif action_type == "wait":
-                timeout = action.get("timeout", 1000)
-                await page.wait_for_timeout(timeout)
-
-            elif action_type == "wait_for_selector":
-                selector = action["selector"]
-                timeout = action.get("timeout", 5000)
-                await page.wait_for_selector(selector, timeout=timeout)
-
-            elif action_type == "wait_for_load_state":
-                state = action.get("state", "networkidle")
-                await page.wait_for_load_state(state)
-
-            elif action_type == "scroll":
-                direction = action.get("direction", "bottom")
-                if direction == "bottom":
-                    await page.evaluate(
-                        "window.scrollTo(0, document.body.scrollHeight)"
-                    )
-                elif direction == "top":
-                    await page.evaluate("window.scrollTo(0, 0)")
-                else:
-                    # Scroll to specific position
-                    y_position = action.get("y", 0)
-                    await page.evaluate(f"window.scrollTo(0, {y_position})")
-
-            elif action_type == "screenshot":
-                path = action.get("path", f"screenshot_{index}.png")
-                full_page = action.get("full_page", False)
-                screenshot = await page.screenshot(path=path, full_page=full_page)
-                return {
-                    "action_index": index,
-                    "action_type": action_type,
-                    "success": True,
-                    "screenshot_path": path,
-                    "screenshot_size": len(screenshot),
-                    "execution_time_ms": (time.time() - start_time) * 1000,
-                }
-
-            elif action_type == "evaluate":
-                script = action["script"]
-                result = await page.evaluate(script)
-                return {
-                    "action_index": index,
-                    "action_type": action_type,
-                    "success": True,
-                    "result": result,
-                    "execution_time_ms": (time.time() - start_time) * 1000,
-                }
-
-            elif action_type == "hover":
-                selector = action["selector"]
-                await page.wait_for_selector(selector, timeout=5000)
-                await page.hover(selector)
-
-            elif action_type == "select":
-                selector = action["selector"]
-                value = action["value"]
-                await page.wait_for_selector(selector, timeout=5000)
-                await page.select_option(selector, value)
-
-            elif action_type == "press":
-                key = action["key"]
-                selector = action.get("selector")
-                if selector:
-                    await page.press(selector, key)
-                else:
-                    await page.keyboard.press(key)
-
-            elif action_type == "drag_and_drop":
-                source = action["source"]
-                target = action["target"]
-                await page.drag_and_drop(source, target)
-
-            else:
-                raise ValueError(f"Unknown action type: {action_type}")
-
-            return {
-                "action_index": index,
-                "action_type": action_type,
-                "success": True,
-                "execution_time_ms": (time.time() - start_time) * 1000,
-            }
+            return self._create_success_result(index, action_type, start_time)
 
         except Exception as e:
-            return {
-                "action_index": index,
-                "action_type": action_type,
-                "success": False,
-                "error": str(e),
-                "execution_time_ms": (time.time() - start_time) * 1000,
-            }
+            return self._create_error_result(index, action_type, start_time, str(e))
+
+    async def _perform_action(
+        self, page: Page, action_type: str, action: dict, index: int
+    ) -> dict[str, Any] | None:
+        """Perform the specific action based on type."""
+        # Input actions
+        if action_type in ("click", "type", "fill", "hover", "select"):
+            await self._execute_input_action(page, action_type, action)
+
+        # Wait actions
+        elif action_type in ("wait", "wait_for_selector", "wait_for_load_state"):
+            await self._execute_wait_action(page, action_type, action)
+
+        # Navigation actions
+        elif action_type == "scroll":
+            await self._execute_scroll_action(page, action)
+
+        # Actions with custom results
+        elif action_type == "screenshot":
+            return await self._execute_screenshot_action(page, action, index)
+        elif action_type == "evaluate":
+            return await self._execute_evaluate_action(page, action, index)
+
+        # Interaction actions
+        elif action_type == "press":
+            await self._execute_press_action(page, action)
+        elif action_type == "drag_and_drop":
+            await self._execute_drag_drop_action(page, action)
+
+        else:
+            raise ValueError(f"Unknown action type: {action_type}")
+
+        return None  # No custom result
+
+    async def _execute_input_action(self, page: Page, action_type: str, action: Any):
+        """Execute input-related actions."""
+        selector = action.selector
+        await page.wait_for_selector(selector, timeout=5000)
+
+        if action_type == "click":
+            await page.click(selector)
+        elif action_type == "type":
+            await page.type(selector, action.text)
+        elif action_type == "fill":
+            await page.fill(selector, action.text)
+        elif action_type == "hover":
+            await page.hover(selector)
+        elif action_type == "select":
+            await page.select_option(selector, action.value)
+
+    async def _execute_wait_action(self, page: Page, action_type: str, action: Any):
+        """Execute wait-related actions."""
+        if action_type == "wait":
+            await page.wait_for_timeout(action.timeout)
+        elif action_type == "wait_for_selector":
+            await page.wait_for_selector(action.selector, timeout=action.timeout)
+        elif action_type == "wait_for_load_state":
+            await page.wait_for_load_state(action.state)
+
+    async def _execute_scroll_action(self, page: Page, action: Any):
+        """Execute scroll action."""
+        if action.direction == "bottom":
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        elif action.direction == "top":
+            await page.evaluate("window.scrollTo(0, 0)")
+        else:
+            await page.evaluate(f"window.scrollTo(0, {action.y})")
+
+    async def _execute_screenshot_action(
+        self, page: Page, action: Any, index: int
+    ) -> dict[str, Any]:
+        """Execute screenshot action with custom result."""
+        path = action.path if action.path else f"screenshot_{index}.png"
+        screenshot = await page.screenshot(path=path, full_page=action.full_page)
+
+        return {
+            "action_index": index,
+            "action_type": "screenshot",
+            "success": True,
+            "screenshot_path": path,
+            "screenshot_size": len(screenshot),
+        }
+
+    async def _execute_evaluate_action(
+        self, page: Page, action: Any, index: int
+    ) -> dict[str, Any]:
+        """Execute evaluate action with custom result."""
+        result = await page.evaluate(action.script)
+
+        return {
+            "action_index": index,
+            "action_type": "evaluate",
+            "success": True,
+            "result": result,
+        }
+
+    async def _execute_press_action(self, page: Page, action: Any):
+        """Execute press action."""
+        if action.selector:
+            await page.press(action.selector, action.key)
+        else:
+            await page.keyboard.press(action.key)
+
+    async def _execute_drag_drop_action(self, page: Page, action: Any):
+        """Execute drag and drop action."""
+        await page.drag_and_drop(action.source, action.target)
+
+    def _create_success_result(self, index: int, action_type: str, start_time: float) -> dict[str, Any]:
+        """Create success result dictionary."""
+        return {
+            "action_index": index,
+            "action_type": action_type,
+            "success": True,
+            "execution_time_ms": (time.time() - start_time) * 1000,
+        }
+
+    def _create_error_result(
+        self, index: int, action_type: str, start_time: float, error: str
+    ) -> dict[str, Any]:
+        """Create error result dictionary."""
+        return {
+            "action_index": index,
+            "action_type": action_type,
+            "success": False,
+            "error": error,
+            "execution_time_ms": (time.time() - start_time) * 1000,
+        }
 
     async def _extract_content(self, page: Page) -> dict[str, str]:
         """Extract content from page.
@@ -430,7 +465,7 @@ class PlaywrightAdapter(BaseService):
                     const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
                     return meta ? meta.content : null;
                 };
-                
+
                 const getLinks = () => {
                     const links = Array.from(document.querySelectorAll('a[href]'));
                     return links.map(link => ({
@@ -439,7 +474,7 @@ class PlaywrightAdapter(BaseService):
                         title: link.title || null,
                     })).filter(link => link.href && link.text);
                 };
-                
+
                 return {
                     title: document.title,
                     description: getMeta('description'),
@@ -488,10 +523,10 @@ class PlaywrightAdapter(BaseService):
             metrics = await page.evaluate("""
             () => {
                 if (!window.performance) return {};
-                
+
                 const navigation = performance.getEntriesByType('navigation')[0];
                 const paint = performance.getEntriesByType('paint');
-                
+
                 return {
                     loadTime: navigation?.loadEventEnd - navigation?.loadEventStart || 0,
                     domContentLoadedTime: navigation?.domContentLoadedEventEnd - navigation?.domContentLoadedEventStart || 0,
