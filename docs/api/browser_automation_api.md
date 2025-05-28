@@ -5,6 +5,7 @@ This document provides comprehensive API documentation for the browser automatio
 ## Overview
 
 The browser automation system implements a three-tier fallback hierarchy:
+
 1. **Crawl4AI** - High-performance bulk processing (primary)
 2. **Stagehand** - AI-powered intelligent automation (fallback)
 3. **Playwright** - Direct browser control (final fallback)
@@ -20,13 +21,16 @@ The central orchestrator that manages adapter selection and fallback behavior.
 Primary scraping method with intelligent routing and fallback.
 
 **Parameters:**
+
 - `url` (str): Target URL to scrape
 - `actions` (list, optional): Structured actions for Playwright adapter
 - `instructions` (list, optional): Natural language instructions for Stagehand
 - `**kwargs`: Additional adapter-specific configuration
 
 **Returns:**
+
 - `dict`: Standardized result format:
+
   ```python
   {
       "success": bool,
@@ -73,6 +77,7 @@ result = await router.scrape(
 ```
 
 **Error Handling:**
+
 - Automatic fallback between adapters on failure
 - Comprehensive error logging with adapter context
 - Graceful degradation with partial results when possible
@@ -82,13 +87,16 @@ result = await router.scrape(
 Force usage of a specific adapter, bypassing routing logic.
 
 **Parameters:**
+
 - `adapter_name` (str): One of 'crawl4ai', 'stagehand', 'playwright'
 - `*args, **kwargs`: Arguments passed directly to adapter
 
 **Returns:**
+
 - `dict`: Same format as `scrape()` method
 
 **Usage:**
+
 ```python
 # Force Stagehand for complex interactions
 result = await router.force_adapter(
@@ -103,6 +111,7 @@ result = await router.force_adapter(
 Retrieve detailed performance metrics for monitoring and optimization.
 
 **Returns:**
+
 ```python
 {
     "total_requests": int,
@@ -130,6 +139,7 @@ AI-powered browser automation using natural language instructions.
 Execute AI-driven automation based on natural language instructions.
 
 **Key Features:**
+
 - **Intelligent Instruction Parsing**: Automatically categorizes instructions (click, type, extract, etc.)
 - **Adaptive Execution**: AI adapts to UI changes and dynamic content
 - **Content Extraction**: Combines structured extractions with final content sweep
@@ -138,6 +148,7 @@ Execute AI-driven automation based on natural language instructions.
 **Instruction Categories:**
 
 1. **Navigation & Interaction:**
+
    ```python
    instructions = [
        "click on the login button",
@@ -148,6 +159,7 @@ Execute AI-driven automation based on natural language instructions.
    ```
 
 2. **Content Extraction:**
+
    ```python
    instructions = [
        "extract the main article content",
@@ -157,6 +169,7 @@ Execute AI-driven automation based on natural language instructions.
    ```
 
 3. **Documentation & Verification:**
+
    ```python
    instructions = [
        "take a screenshot of the current state",
@@ -166,6 +179,7 @@ Execute AI-driven automation based on natural language instructions.
    ```
 
 **Advanced Usage Pattern:**
+
 ```python
 # Multi-stage documentation scraping
 complex_instructions = [
@@ -195,6 +209,7 @@ ai_insights = result["ai_insights"]
 Comprehensive AI capability testing for validation and benchmarking.
 
 **Returns:**
+
 ```python
 {
     "success": bool,
@@ -261,6 +276,7 @@ evaluate_action = {
 #### Complex Automation Patterns
 
 **Multi-Step Form Handling:**
+
 ```python
 form_actions = [
     {"type": "fill", "selector": "input[name='username']", "value": "demo"},
@@ -273,6 +289,7 @@ form_actions = [
 ```
 
 **Dynamic Content Handling:**
+
 ```python
 dynamic_actions = [
     {"type": "wait_for_load_state", "state": "networkidle"},
@@ -284,6 +301,7 @@ dynamic_actions = [
 ```
 
 **SPA Navigation Pattern:**
+
 ```python
 spa_actions = [
     {"type": "click", "selector": "nav a[href='/api-docs']"},
@@ -302,12 +320,14 @@ High-performance bulk processing adapter optimized for documentation sites.
 Optimized scraping with intelligent content extraction and caching.
 
 **Performance Features:**
+
 - **Intelligent Caching**: Content-based cache keys with 80%+ hit rates
 - **Batch Processing**: Optimized for bulk documentation processing
 - **Smart Content Detection**: Automatic article/documentation content identification
 - **Link Discovery**: Intelligent sitemap and link following
 
 **Configuration Options:**
+
 ```python
 config = {
     "max_pages": 100,
@@ -342,6 +362,7 @@ circuit_config = {
 ### Retry Strategies
 
 **Exponential Backoff:**
+
 ```python
 retry_config = {
     "max_retries": 3,
@@ -396,6 +417,7 @@ pool_config = {
 ### Memory Management
 
 **Resource Cleanup Patterns:**
+
 ```python
 async def safe_scrape_pattern(url: str):
     adapter = None
@@ -415,6 +437,7 @@ async def safe_scrape_pattern(url: str):
 ### Monitoring and Metrics
 
 **Health Check Implementation:**
+
 ```python
 health_status = await adapter.health_check()
 # Returns:
@@ -430,6 +453,7 @@ health_status = await adapter.health_check()
 ```
 
 **Performance Monitoring:**
+
 ```python
 metrics = router.get_performance_metrics()
 # Monitor:
