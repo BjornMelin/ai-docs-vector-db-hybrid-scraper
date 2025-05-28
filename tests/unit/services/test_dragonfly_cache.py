@@ -83,7 +83,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.get.return_value = json.dumps("test_value").encode()
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.get("test_key")
             assert result == "test_value"
             mock_client.get.assert_called_once_with("test:test_key")
@@ -94,7 +94,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.get.return_value = None
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.get("missing_key")
             assert result is None
             mock_client.get.assert_called_once_with("test:missing_key")
@@ -105,7 +105,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.set.return_value = True
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.set("test_key", "test_value", ttl=300)
             assert result is True
             mock_client.set.assert_called_once()
@@ -116,7 +116,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.delete.return_value = 1
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.delete("test_key")
             assert result is True
             mock_client.delete.assert_called_once_with("test:test_key")
@@ -127,7 +127,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.exists.return_value = 1
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.exists("test_key")
             assert result is True
             mock_client.exists.assert_called_once_with("test:test_key")
@@ -138,7 +138,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.ttl.return_value = 300
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.ttl("test_key")
             assert result == 300
             mock_client.ttl.assert_called_once_with("test:test_key")
@@ -149,7 +149,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.dbsize.return_value = 100
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.size()
             assert result == 100
             mock_client.dbsize.assert_called_once()
@@ -160,7 +160,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.flushdb.return_value = True
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.clear()
             assert result is True
             mock_client.flushdb.assert_called_once()
@@ -175,7 +175,7 @@ class TestDragonflyCache:
             json.dumps("value3").encode(),
         ]
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             keys = ["key1", "key2", "key3"]
             result = await cache.mget(keys)
             expected = {"key1": "value1", "key2": None, "key3": "value3"}
@@ -193,7 +193,7 @@ class TestDragonflyCache:
         mock_client.pipeline.return_value.__aenter__ = AsyncMock(return_value=mock_pipe)
         mock_client.pipeline.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             # Test batch set
             data = {"key1": "value1", "key2": "value2", "key3": "value3"}
             result = await cache.set_many(data, ttl=300)
@@ -212,7 +212,7 @@ class TestDragonflyCache:
 
         mock_client.scan_iter.return_value = mock_scan_iter()
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.scan_keys("key*")
             assert "key1" in result
             assert "key2" in result
@@ -226,7 +226,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.get.side_effect = RedisError("Connection failed")
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.get("test_key")
             assert result is None  # Should return None on error
 
@@ -236,7 +236,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.memory_usage.return_value = 1024
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             result = await cache.get_memory_usage("test_key")
             assert result == 1024
 
@@ -266,7 +266,7 @@ class TestDragonflyCache:
         mock_client = AsyncMock()
         mock_client.get.return_value = json.dumps("test_value").encode()
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             # Execute multiple concurrent operations
             tasks = [cache.get(f"key_{i}") for i in range(10)]
             results = await asyncio.gather(*tasks)
@@ -284,7 +284,7 @@ class TestDragonflyCache:
         mock_client.get.return_value = None  # Cache miss
         mock_client.set.return_value = True
 
-        with patch.object(cache, "_get_client", return_value=mock_client):
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
             # Simulate cache-aside pattern
             cached_value = await cache.get("user:123")
             if cached_value is None:
@@ -293,4 +293,31 @@ class TestDragonflyCache:
                 await cache.set("user:123", fresh_value, ttl=3600)
                 cached_value = fresh_value
 
-            assert cached_value == {"id": 123, "name": "John"}
+        assert cached_value == {"id": 123, "name": "John"}
+
+    @pytest.mark.asyncio
+    async def test_connection_failure_handled_gracefully(self, cache):
+        """Ensure connection errors are handled without raising."""
+        from redis.exceptions import ConnectionError
+
+        with patch.object(
+            cache,
+            "client",
+            AsyncMock(side_effect=ConnectionError("unavailable")),
+        ):
+            result = await cache.get("fail_key")
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_set_custom_ttl(self, cache):
+        """Verify TTL parameter is forwarded to the client."""
+        mock_client = AsyncMock()
+        mock_client.set.return_value = True
+
+        with patch.object(cache, "client", AsyncMock(return_value=mock_client)):
+            await cache.set("custom_ttl", "value", ttl=123, nx=True)
+
+            mock_client.set.assert_awaited_once()
+            args, kwargs = mock_client.set.call_args
+            assert kwargs.get("ex") == 123
+            assert kwargs.get("nx") is True
