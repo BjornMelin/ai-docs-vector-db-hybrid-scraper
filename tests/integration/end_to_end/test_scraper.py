@@ -279,72 +279,79 @@ class TestModernDocumentationScraper:
             else:
                 assert chunk["title"] == "Test Page"
 
-    @patch("src.crawl4ai_bulk_embedder.AsyncWebCrawler")
     async def test_crawl_documentation_site_success(
         self,
-        mock_crawler_class,
         scraper,
         sample_documentation_site,
     ):
         """Test successful documentation site crawling."""
-        # Create mock crawler
-        mock_crawler = MagicMock()
-        mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
-        mock_crawler.__aexit__ = AsyncMock(return_value=None)
+        # Mock the crawl_site method
+        mock_crawl_result = {
+            "success": True,
+            "total": 2,
+            "provider": "crawl4ai",
+            "pages": [
+                {
+                    "url": "https://test.example.com/page1",
+                    "content": "Test content for page 1",
+                    "title": "Test Page 1",
+                    "metadata": {
+                        "depth": 0,
+                        "source_url": "https://test.example.com/page1",
+                    },
+                },
+                {
+                    "url": "https://test.example.com/page2",
+                    "content": "Test content for page 2",
+                    "title": "Test Page 2",
+                    "metadata": {
+                        "depth": 1,
+                        "source_url": "https://test.example.com/page2",
+                    },
+                },
+            ],
+        }
 
-        # Create async generator for crawl results
-        async def mock_crawl_generator():
-            yield MagicMock(
-                success=True,
-                url="https://test.example.com/page1",
-                markdown="Test content for page 1",
-                metadata={"title": "Test Page 1", "depth": 0},
-                links={"internal": ["https://test.example.com/page2"]},
-                error_message=None,
+        with patch.object(
+            scraper.crawl_manager, "crawl_site", AsyncMock(return_value=mock_crawl_result)
+        ):
+            site = DocumentationSite(**sample_documentation_site)
+            results = await scraper.crawl_documentation_site(site)
+
+            assert len(results) == 2
+            assert all(isinstance(result, CrawlResult) for result in results)
+            assert results[0].url == "https://test.example.com/page1"
+            assert results[1].url == "https://test.example.com/page2"
+            scraper.crawl_manager.crawl_site.assert_called_once_with(
+                url=site.url,
+                max_pages=site.max_pages,
+                formats=["markdown"],
+                preferred_provider="crawl4ai",
             )
-            yield MagicMock(
-                success=True,
-                url="https://test.example.com/page2",
-                markdown="Test content for page 2",
-                metadata={"title": "Test Page 2", "depth": 1},
-                links={"internal": []},
-                error_message=None,
-            )
 
-        mock_crawler.arun = AsyncMock(return_value=mock_crawl_generator())
-        mock_crawler_class.return_value = mock_crawler
-
-        site = DocumentationSite(**sample_documentation_site)
-        results = await scraper.crawl_documentation_site(site)
-
-        assert len(results) == 2
-        assert all(isinstance(result, CrawlResult) for result in results)
-        assert results[0].url == "https://test.example.com/page1"
-        assert results[1].url == "https://test.example.com/page2"
-        mock_crawler.arun.assert_called()
-
-    @patch("src.crawl4ai_bulk_embedder.AsyncWebCrawler")
     async def test_crawl_documentation_site_failure(
         self,
-        mock_crawler_class,
         scraper,
         sample_documentation_site,
     ):
         """Test documentation site crawling with failures."""
-        mock_crawler = MagicMock()
-        mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
-        mock_crawler.__aexit__ = AsyncMock(return_value=None)
-        mock_crawler.arun = AsyncMock(
-            return_value=MagicMock(success=False, error_message="Connection failed"),
-        )
-        mock_crawler_class.return_value = mock_crawler
+        # Mock the crawl_site method to return a failure
+        mock_crawl_result = {
+            "success": False,
+            "total": 0,
+            "pages": [],
+            "error": "Connection failed",
+        }
 
-        site = DocumentationSite(**sample_documentation_site)
+        with patch.object(
+            scraper.crawl_manager, "crawl_site", AsyncMock(return_value=mock_crawl_result)
+        ):
+            site = DocumentationSite(**sample_documentation_site)
+            results = await scraper.crawl_documentation_site(site)
 
-        results = await scraper.crawl_documentation_site(site)
-
-        # Should still return results, but with failures
-        assert isinstance(results, list)
+            # Should still return results, but empty due to failure
+            assert isinstance(results, list)
+            assert len(results) == 0
 
     async def test_create_embeddings_success(self, scraper):
         """Test successful embedding creation."""

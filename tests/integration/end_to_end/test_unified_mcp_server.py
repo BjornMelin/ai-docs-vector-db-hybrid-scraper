@@ -49,18 +49,24 @@ def mock_service_manager():
 
         # Configure embedding manager
         mock_sm.embedding_manager.generate_embeddings = AsyncMock(
-            return_value={
-                "embeddings": [[0.1] * 1536],
-                "sparse_embeddings": [
-                    {"indices": [1, 5, 10], "values": [0.1, 0.2, 0.3]}
-                ],
-            }
+            return_value=[[0.1] * 1536]  # Return a list of embeddings directly
         )
         mock_sm.embedding_manager.get_current_provider_info = MagicMock(
             return_value={"name": "openai", "model": "text-embedding-3-small"}
         )
         mock_sm.embedding_manager.rerank_results = AsyncMock(
-            return_value=[{"content": "Test content", "score": 0.95}]
+            return_value=[
+                {
+                    "original": MagicMock(
+                        content="Test content",
+                        score=0.95,
+                        url="https://example.com",
+                        title="Test",
+                        metadata={},
+                    ),
+                    "score": 0.95,
+                }
+            ]
         )
 
         # Configure crawl manager
