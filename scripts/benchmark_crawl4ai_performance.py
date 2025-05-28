@@ -10,6 +10,7 @@ This script validates the 4-6x performance improvement claims by:
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 import platform
@@ -26,7 +27,7 @@ from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
 from src.config.loader import ConfigLoader
-from src.infrastructure.client_manager import UnifiedClientManager
+from src.infrastructure.client_manager import ClientManager
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider
 from src.services.rate_limiter import RateLimiter
@@ -36,6 +37,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 console = Console()
+
+
+def validate_api_keys() -> None:
+    """Validate required API keys for benchmarking."""
+    required_keys = {
+        "FIRECRAWL_API_KEY": "Required for Firecrawl provider benchmarking",
+        "OPENAI_API_KEY": "Required for embedding operations",
+    }
+
+    missing_keys = []
+    for key, description in required_keys.items():
+        if not os.getenv(key):
+            missing_keys.append(f"  - {key}: {description}")
+
+    if missing_keys:
+        console.print(
+            "\n[red]Missing required API keys:[/red]\n"
+            + "\n".join(missing_keys)
+            + "\n\nSet these environment variables before running benchmarks."
+        )
+        raise ValueError("Missing required API keys")
+
+    console.print("[green]✓ All required API keys validated[/green]")
 
 
 class BenchmarkMetrics(BaseModel):
@@ -66,7 +90,7 @@ class CrawlerBenchmark:
     def __init__(self):
         """Initialize benchmark with both providers."""
         self.config = ConfigLoader().load_config()
-        self.client_manager = UnifiedClientManager(self.config)
+        self.client_manager = ClientManager(self.config)
 
         # Initialize providers
         self.crawl4ai_provider = Crawl4AIProvider(
@@ -122,26 +146,36 @@ class CrawlerBenchmark:
         Returns:
             Tuple of (elapsed_time, result_dict)
         """
-        # Record initial resources
+        # Record initial resources with proper async timing
         process = psutil.Process()
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
-        initial_cpu = process.cpu_percent(interval=0.1)
+
+        # Start CPU measurement in background
+        cpu_task = asyncio.create_task(self._measure_cpu_async(process))
 
         start_time = time.time()
         try:
             result = await provider.scrape_url(url)
             elapsed = time.time() - start_time
 
-            # Measure resource usage
+            # Measure final resource usage
             final_memory = process.memory_info().rss / 1024 / 1024
-            final_cpu = process.cpu_percent(interval=0.1)
+            avg_cpu = await cpu_task  # Get average CPU usage
 
-            result["memory_delta"] = final_memory - initial_memory
-            result["cpu_usage"] = (initial_cpu + final_cpu) / 2
+            result["memory_delta"] = max(
+                0, final_memory - initial_memory
+            )  # Ensure non-negative
+            result["cpu_usage"] = avg_cpu
 
             return elapsed, result
         except Exception as e:
             elapsed = time.time() - start_time
+            # Cancel CPU monitoring if still running
+            if not cpu_task.done():
+                cpu_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await cpu_task
+
             error_type = type(e).__name__
             logger.error(f"{provider_name} failed on {url}: {error_type}: {e}")
             return elapsed, {
@@ -152,6 +186,32 @@ class CrawlerBenchmark:
                 "memory_delta": 0,
                 "cpu_usage": 0,
             }
+
+    async def _measure_cpu_async(
+        self, process: psutil.Process, duration: float = 1.0
+    ) -> float:
+        """Measure average CPU usage over a duration.
+
+        Args:
+            process: Process to monitor
+            duration: Measurement duration in seconds
+
+        Returns:
+            Average CPU percentage
+        """
+        measurements = []
+        interval = 0.1  # Sample every 100ms
+        samples = int(duration / interval)
+
+        try:
+            for _ in range(samples):
+                measurements.append(process.cpu_percent(interval=None))
+                await asyncio.sleep(interval)
+
+            return sum(measurements) / len(measurements) if measurements else 0.0
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            # Handle process termination or access issues
+            return 0.0
 
     async def benchmark_single_urls(self) -> dict[str, BenchmarkMetrics]:
         """Benchmark single URL scraping for both providers."""
@@ -560,6 +620,9 @@ class CrawlerBenchmark:
 
 async def main():
     """Run the benchmark."""
+    # Validate API keys before starting
+    validate_api_keys()
+
     benchmark = CrawlerBenchmark()
     await benchmark.run_full_benchmark()
 
