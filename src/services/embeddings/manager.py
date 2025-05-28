@@ -372,21 +372,22 @@ class EmbeddingManager:
             # For now, only cache single text embeddings (V2 will handle batches)
             text = texts[0]
 
-            # Try to get from cache using smart selection parameters
-            cached_embedding = await self.cache_manager.get_embedding(
-                text=text,
-                provider=provider_name or self.config.embedding_provider.value,
-                model=self.config.openai.model
-                if provider_name == "openai"
-                else self.config.fastembed.model,
-                dimensions=self.config.openai.dimensions,
-            )
+            # Try to get from cache using embedding cache directly
+            if hasattr(self.cache_manager, '_embedding_cache') and self.cache_manager._embedding_cache:
+                cached_embedding = await self.cache_manager._embedding_cache.get_embedding(
+                    text=text,
+                    provider=provider_name or self.config.embedding_provider.value,
+                    model=self.config.openai.model
+                    if provider_name == "openai"
+                    else self.config.fastembed.model,
+                    dimensions=self.config.openai.dimensions,
+                )
 
-            if cached_embedding is not None:
-                logger.info("Cache hit for embedding")
-                return {
-                    "embeddings": [cached_embedding],
-                    "provider": provider_name
+                if cached_embedding is not None:
+                    logger.info("Cache hit for embedding")
+                    return {
+                        "embeddings": [cached_embedding],
+                        "provider": provider_name
                     or self.config.embedding_provider.value,
                     "model": self.config.openai.model
                     if provider_name == "openai"
@@ -441,14 +442,15 @@ class EmbeddingManager:
             # Cache the embedding if enabled and single text
             if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
                 try:
-                    await self.cache_manager.set_embedding(
-                        text=texts[0],
-                        provider=metrics["provider_key"],
-                        model=selected_model,
-                        dimensions=len(embeddings[0]),
-                        embedding=embeddings[0],
-                    )
-                    logger.info("Cached embedding for future use")
+                    if hasattr(self.cache_manager, '_embedding_cache') and self.cache_manager._embedding_cache:
+                        await self.cache_manager._embedding_cache.set_embedding(
+                            text=texts[0],
+                            model=selected_model,
+                            embedding=embeddings[0],
+                            provider=metrics["provider_key"],
+                            dimensions=len(embeddings[0]),
+                        )
+                        logger.info("Cached embedding for future use")
                 except Exception as e:
                     logger.warning(f"Failed to cache embedding: {e}")
 
