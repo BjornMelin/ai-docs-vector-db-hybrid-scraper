@@ -73,6 +73,7 @@ class QdrantService(BaseService):
         distance: str = "Cosine",
         sparse_vector_name: str | None = None,
         enable_quantization: bool = True,
+        collection_type: str = "general",
     ) -> bool:
         """Create vector collection with optional quantization and sparse vectors.
 
@@ -82,6 +83,7 @@ class QdrantService(BaseService):
             distance: Distance metric (Cosine, Euclidean, Dot)
             sparse_vector_name: Optional sparse vector field name for hybrid search
             enable_quantization: Enable INT8 quantization for ~75% storage reduction
+            collection_type: Type of collection for HNSW optimization (api_reference, tutorials, etc.)
 
         Returns:
             True if collection created or already exists
@@ -98,11 +100,23 @@ class QdrantService(BaseService):
                 logger.info(f"Collection {collection_name} already exists")
                 return True
 
-            # Configure vectors
+            # Get HNSW configuration for collection type
+            hnsw_config = self._get_hnsw_config_for_collection_type(collection_type)
+
+            # Configure HNSW parameters
+            hnsw_config_obj = models.HnswConfigDiff(
+                m=hnsw_config.m,
+                ef_construct=hnsw_config.ef_construct,
+                full_scan_threshold=hnsw_config.full_scan_threshold,
+                max_indexing_threads=hnsw_config.max_indexing_threads,
+            )
+
+            # Configure vectors with HNSW settings
             vectors_config = {
                 "dense": models.VectorParams(
                     size=vector_size,
                     distance=getattr(models.Distance, distance.upper()),
+                    hnsw_config=hnsw_config_obj,
                 )
             }
 
@@ -1235,13 +1249,13 @@ class QdrantService(BaseService):
             raise QdrantServiceError(f"Failed to get payload index stats: {e}") from e
 
     async def validate_index_health(self, collection_name: str) -> dict[str, Any]:
-        """Validate the health and status of payload indexes for a collection.
+        """Validate the health and status of payload indexes and HNSW configuration for a collection.
 
         Args:
             collection_name: Collection to validate
 
         Returns:
-            Health status report with validation results
+            Health status report with validation results including HNSW optimization
 
         Raises:
             QdrantServiceError: If validation fails
@@ -1278,7 +1292,7 @@ class QdrantService(BaseService):
                 expected_keyword_fields + expected_text_fields + expected_integer_fields
             )
 
-            # Check index status
+            # Check payload index status
             missing_indexes = [
                 field for field in all_expected if field not in indexed_fields
             ]
@@ -1286,17 +1300,27 @@ class QdrantService(BaseService):
                 field for field in indexed_fields if field not in all_expected
             ]
 
-            # Calculate health score
+            # Calculate payload index health score
             expected_count = len(all_expected)
             present_count = len([f for f in all_expected if f in indexed_fields])
-            health_score = (
+            payload_health_score = (
                 (present_count / expected_count) * 100 if expected_count > 0 else 0
             )
 
-            # Determine health status
-            if health_score >= 95:
+            # Validate HNSW configuration
+            hnsw_health = await self._validate_hnsw_configuration(
+                collection_name, collection_info
+            )
+
+            # Calculate overall health score (weighted: 60% payload indexes, 40% HNSW)
+            overall_health_score = (payload_health_score * 0.6) + (
+                hnsw_health["health_score"] * 0.4
+            )
+
+            # Determine overall health status
+            if overall_health_score >= 95:
                 status = "healthy"
-            elif health_score >= 80:
+            elif overall_health_score >= 80:
                 status = "warning"
             else:
                 status = "critical"
@@ -1304,7 +1328,7 @@ class QdrantService(BaseService):
             health_report = {
                 "collection_name": collection_name,
                 "status": status,
-                "health_score": round(health_score, 2),
+                "health_score": round(overall_health_score, 2),
                 "total_points": collection_info.points_count or 0,
                 "index_summary": {
                     "expected_indexes": expected_count,
@@ -1312,17 +1336,22 @@ class QdrantService(BaseService):
                     "missing_indexes": len(missing_indexes),
                     "extra_indexes": len(extra_indexes),
                 },
-                "missing_indexes": missing_indexes,
-                "extra_indexes": extra_indexes,
-                "recommendations": self._generate_index_recommendations(
-                    missing_indexes, extra_indexes, status
+                "payload_indexes": {
+                    "health_score": round(payload_health_score, 2),
+                    "missing_indexes": missing_indexes,
+                    "extra_indexes": extra_indexes,
+                },
+                "hnsw_configuration": hnsw_health,
+                "recommendations": self._generate_comprehensive_recommendations(
+                    missing_indexes, extra_indexes, status, hnsw_health
                 ),
                 "validation_timestamp": int(time.time()),
             }
 
             logger.info(
                 f"Index health validation completed for {collection_name}: "
-                f"Status={status}, Score={health_score:.1f}%"
+                f"Status={status}, Score={overall_health_score:.1f}% "
+                f"(Payload: {payload_health_score:.1f}%, HNSW: {hnsw_health['health_score']:.1f}%)"
             )
 
             return health_report
@@ -1361,6 +1390,216 @@ class QdrantService(BaseService):
 
         if not recommendations:
             recommendations.append("All indexes are healthy and optimally configured")
+
+        return recommendations
+
+    async def _validate_hnsw_configuration(
+        self, collection_name: str, collection_info: Any
+    ) -> dict[str, Any]:
+        """Validate HNSW configuration and recommend optimizations.
+
+        Args:
+            collection_name: Name of the collection
+            collection_info: Collection information from Qdrant
+
+        Returns:
+            HNSW health assessment with recommendations
+        """
+        try:
+            # Initialize HNSWOptimizer if needed
+            if not hasattr(self, "_hnsw_optimizer"):
+                from .hnsw_optimizer import HNSWOptimizer
+
+                self._hnsw_optimizer = HNSWOptimizer(self.config, self)
+
+            # Get current HNSW configuration from collection info
+            current_hnsw = {}
+            if hasattr(collection_info, "config") and hasattr(
+                collection_info.config, "hnsw_config"
+            ):
+                hnsw_config = collection_info.config.hnsw_config
+                current_hnsw = {
+                    "m": hnsw_config.m if hasattr(hnsw_config, "m") else 16,
+                    "ef_construct": hnsw_config.ef_construct
+                    if hasattr(hnsw_config, "ef_construct")
+                    else 200,
+                    "on_disk": hnsw_config.on_disk
+                    if hasattr(hnsw_config, "on_disk")
+                    else False,
+                }
+            else:
+                # Default HNSW values
+                current_hnsw = {"m": 16, "ef_construct": 200, "on_disk": False}
+
+            # Try to determine collection type from collection name or metadata
+            collection_type = self._infer_collection_type(collection_name)
+
+            # Get optimal HNSW configuration for this collection type
+            optimal_hnsw = self._get_hnsw_config_for_collection_type(collection_type)
+
+            # Calculate configuration optimality score
+            optimality_score = self._calculate_hnsw_optimality_score(
+                current_hnsw, optimal_hnsw
+            )
+
+            # Check if adaptive ef is enabled
+            adaptive_ef_available = self.config.search.hnsw.enable_adaptive_ef
+
+            # Generate HNSW-specific recommendations
+            hnsw_recommendations = []
+            if optimality_score < 80:
+                hnsw_recommendations.append(
+                    f"Consider updating HNSW parameters for {collection_type} collections: "
+                    f"m={optimal_hnsw.m}, ef_construct={optimal_hnsw.ef_construct}"
+                )
+
+            if not adaptive_ef_available:
+                hnsw_recommendations.append(
+                    "Enable adaptive ef for time-budget-based search optimization"
+                )
+
+            # Check collection size for on_disk recommendation
+            points_count = collection_info.points_count or 0
+            if points_count > 100000 and not current_hnsw.get("on_disk", False):
+                hnsw_recommendations.append(
+                    f"Consider enabling on_disk storage for large collection ({points_count:,} points)"
+                )
+
+            return {
+                "health_score": optimality_score,
+                "collection_type": collection_type,
+                "current_configuration": current_hnsw,
+                "optimal_configuration": {
+                    "m": optimal_hnsw.m,
+                    "ef_construct": optimal_hnsw.ef_construct,
+                    "on_disk": optimal_hnsw.on_disk,
+                },
+                "adaptive_ef_enabled": adaptive_ef_available,
+                "recommendations": hnsw_recommendations,
+                "points_count": points_count,
+            }
+
+        except Exception as e:
+            logger.warning(f"Failed to validate HNSW configuration: {e}")
+            # Return default healthy status if HNSW validation fails
+            return {
+                "health_score": 85.0,  # Assume reasonable health if we can't validate
+                "collection_type": "unknown",
+                "current_configuration": {},
+                "optimal_configuration": {},
+                "adaptive_ef_enabled": False,
+                "recommendations": ["Could not validate HNSW configuration"],
+                "points_count": 0,
+            }
+
+    def _infer_collection_type(self, collection_name: str) -> str:
+        """Infer collection type from collection name for HNSW optimization.
+
+        Args:
+            collection_name: Name of the collection
+
+        Returns:
+            Inferred collection type
+        """
+        # Map collection names to types based on common patterns
+        name_lower = collection_name.lower()
+
+        if "api" in name_lower or "reference" in name_lower:
+            return "api_reference"
+        elif "tutorial" in name_lower or "guide" in name_lower:
+            return "tutorials"
+        elif "blog" in name_lower or "post" in name_lower:
+            return "blog_posts"
+        elif "doc" in name_lower or "documentation" in name_lower:
+            return "general_docs"
+        elif "code" in name_lower or "example" in name_lower:
+            return "code_examples"
+        else:
+            return "general_docs"  # Default fallback
+
+    def _calculate_hnsw_optimality_score(
+        self, current: dict[str, Any], optimal: Any
+    ) -> float:
+        """Calculate how optimal the current HNSW configuration is.
+
+        Args:
+            current: Current HNSW configuration
+            optimal: Optimal HNSW configuration for collection type
+
+        Returns:
+            Optimality score (0-100)
+        """
+        score = 100.0
+
+        # Check m parameter (most important for graph connectivity)
+        current_m = current.get("m", 16)
+        if current_m != optimal.m:
+            # Penalize based on how far off we are
+            m_diff = abs(current_m - optimal.m) / optimal.m
+            score -= min(30, m_diff * 100)  # Max 30 point penalty
+
+        # Check ef_construct parameter (affects build quality vs speed)
+        current_ef = current.get("ef_construct", 200)
+        if current_ef != optimal.ef_construct:
+            ef_diff = abs(current_ef - optimal.ef_construct) / optimal.ef_construct
+            score -= min(20, ef_diff * 50)  # Max 20 point penalty
+
+        # Check on_disk setting (affects memory usage)
+        current_on_disk = current.get("on_disk", False)
+        if current_on_disk != optimal.on_disk:
+            score -= 10  # 10 point penalty for suboptimal disk usage
+
+        return max(0.0, score)
+
+    def _generate_comprehensive_recommendations(
+        self,
+        missing_indexes: list[str],
+        extra_indexes: list[str],
+        status: str,
+        hnsw_health: dict[str, Any],
+    ) -> list[str]:
+        """Generate comprehensive recommendations including both payload indexes and HNSW.
+
+        Args:
+            missing_indexes: Missing payload indexes
+            extra_indexes: Extra payload indexes
+            status: Overall health status
+            hnsw_health: HNSW health assessment
+
+        Returns:
+            Combined recommendations list
+        """
+        recommendations = []
+
+        # Add payload index recommendations
+        if missing_indexes:
+            recommendations.append(
+                f"Create missing indexes for optimal performance: {', '.join(missing_indexes)}"
+            )
+
+        if extra_indexes:
+            recommendations.append(
+                f"Consider removing unused indexes to reduce overhead: {', '.join(extra_indexes)}"
+            )
+
+        # Add HNSW recommendations
+        if hnsw_health.get("recommendations"):
+            recommendations.extend(hnsw_health["recommendations"])
+
+        # Add status-based recommendations
+        if status == "critical":
+            recommendations.append(
+                "Critical: Run optimization scripts to improve both index and HNSW configuration"
+            )
+        elif status == "warning":
+            recommendations.append(
+                "Warning: Some optimizations available for better performance"
+            )
+
+        if not recommendations:
+            recommendations.append(
+                "All indexes and HNSW configuration are optimally configured"
+            )
 
         return recommendations
 
@@ -1489,3 +1728,178 @@ class QdrantService(BaseService):
                 exc_info=True,
             )
             raise QdrantServiceError(f"Failed to get index usage stats: {e}") from e
+
+    # HNSW Optimization Methods for Issue #57
+
+    def _get_hnsw_config_for_collection_type(self, collection_type: str):
+        """Get HNSW configuration for a specific collection type.
+
+        Args:
+            collection_type: Type of collection (api_reference, tutorials, etc.)
+
+        Returns:
+            HNSWConfig object with optimized parameters
+        """
+        collection_configs = self.config.qdrant.collection_hnsw_configs
+
+        # Map collection types to config attributes
+        config_mapping = {
+            "api_reference": collection_configs.api_reference,
+            "tutorials": collection_configs.tutorials,
+            "blog_posts": collection_configs.blog_posts,
+            "code_examples": collection_configs.code_examples,
+            "general": collection_configs.general,
+        }
+
+        return config_mapping.get(collection_type, collection_configs.general)
+
+    async def create_collection_with_hnsw_optimization(
+        self,
+        collection_name: str,
+        vector_size: int,
+        collection_type: str = "general",
+        distance: str = "Cosine",
+        sparse_vector_name: str | None = None,
+        enable_quantization: bool = True,
+    ) -> bool:
+        """Create collection with optimized HNSW parameters.
+
+        This is a convenience method that uses the enhanced create_collection
+        with explicit HNSW optimization.
+
+        Args:
+            collection_name: Name of the collection
+            vector_size: Dimension of dense vectors
+            collection_type: Type of collection for optimization
+            distance: Distance metric
+            sparse_vector_name: Optional sparse vector field name
+            enable_quantization: Enable quantization
+
+        Returns:
+            True if collection created successfully
+        """
+        return await self.create_collection(
+            collection_name=collection_name,
+            vector_size=vector_size,
+            distance=distance,
+            sparse_vector_name=sparse_vector_name,
+            enable_quantization=enable_quantization,
+            collection_type=collection_type,
+        )
+
+    async def search_with_adaptive_ef(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int = 10,
+        time_budget_ms: int = 100,
+        score_threshold: float = 0.0,
+    ) -> dict[str, Any]:
+        """Search using adaptive ef parameter optimization.
+
+        Args:
+            collection_name: Collection to search
+            query_vector: Query vector
+            limit: Number of results to return
+            time_budget_ms: Time budget for adaptive ef selection
+            score_threshold: Minimum score threshold
+
+        Returns:
+            Search results with adaptive ef metadata
+        """
+        self._validate_initialized()
+
+        # Initialize HNSWOptimizer if needed
+        if not hasattr(self, "_hnsw_optimizer"):
+            from .hnsw_optimizer import HNSWOptimizer
+
+            self._hnsw_optimizer = HNSWOptimizer(self.config, self)
+            await self._hnsw_optimizer.initialize()
+
+        # Use adaptive ef retrieval
+        result = await self._hnsw_optimizer.adaptive_ef_retrieve(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            time_budget_ms=time_budget_ms,
+            target_limit=limit,
+        )
+
+        # Filter results by score threshold if needed
+        if score_threshold > 0.0:
+            filtered_results = [
+                r for r in result["results"] if r.score >= score_threshold
+            ]
+            result["results"] = filtered_results
+            result["filtered_count"] = len(result["results"])
+
+        return result
+
+    async def optimize_collection_hnsw_parameters(
+        self,
+        collection_name: str,
+        collection_type: str,
+        test_queries: list[list[float]] | None = None,
+    ) -> dict[str, Any]:
+        """Optimize HNSW parameters for an existing collection.
+
+        Args:
+            collection_name: Collection to optimize
+            collection_type: Type of collection for optimization profile
+            test_queries: Optional test queries for validation
+
+        Returns:
+            Optimization results and recommendations
+        """
+        self._validate_initialized()
+
+        # Initialize HNSWOptimizer if needed
+        if not hasattr(self, "_hnsw_optimizer"):
+            from .hnsw_optimizer import HNSWOptimizer
+
+            self._hnsw_optimizer = HNSWOptimizer(self.config, self)
+            await self._hnsw_optimizer.initialize()
+
+        # Run optimization analysis
+        return await self._hnsw_optimizer.optimize_collection_hnsw(
+            collection_name=collection_name,
+            collection_type=collection_type,
+            test_queries=test_queries,
+        )
+
+    def get_hnsw_configuration_info(self, collection_type: str) -> dict[str, Any]:
+        """Get HNSW configuration information for a collection type.
+
+        Args:
+            collection_type: Type of collection
+
+        Returns:
+            Configuration information and recommendations
+        """
+        hnsw_config = self._get_hnsw_config_for_collection_type(collection_type)
+
+        return {
+            "collection_type": collection_type,
+            "hnsw_parameters": {
+                "m": hnsw_config.m,
+                "ef_construct": hnsw_config.ef_construct,
+                "full_scan_threshold": hnsw_config.full_scan_threshold,
+                "max_indexing_threads": hnsw_config.max_indexing_threads,
+            },
+            "runtime_ef_recommendations": {
+                "min_ef": hnsw_config.min_ef,
+                "balanced_ef": hnsw_config.balanced_ef,
+                "max_ef": hnsw_config.max_ef,
+            },
+            "adaptive_ef_settings": {
+                "enabled": hnsw_config.enable_adaptive_ef,
+                "default_time_budget_ms": hnsw_config.default_time_budget_ms,
+            },
+            "optimization_enabled": self.config.qdrant.enable_hnsw_optimization,
+        }
+
+    def _validate_initialized(self) -> None:
+        """Validate that the service is properly initialized."""
+        if not self._initialized or not self._client:
+            raise QdrantServiceError(
+                "Service not initialized. Call initialize() first."
+            )

@@ -1,0 +1,515 @@
+"""Integration tests for browser automation and HNSW optimization features."""
+
+import asyncio
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
+import pytest
+from src.config import UnifiedConfig
+from src.services.browser.automation_router import AutomationRouter
+from src.services.hnsw_optimizer import HNSWOptimizer
+from src.services.qdrant_service import QdrantService
+
+
+@pytest.fixture
+def mock_unified_config():
+    """Create comprehensive mock unified config."""
+    config = MagicMock(spec=UnifiedConfig)
+
+    # Crawling configuration
+    config.crawling.max_concurrent = 5
+    config.crawling.timeout = 30
+    config.crawling.headless = True
+    config.crawling.delay_between_requests = 1.0
+
+    # Qdrant configuration
+    config.qdrant.url = "http://localhost:6333"
+    config.qdrant.timeout = 30
+    config.qdrant.api_key = None
+
+    # HNSW configuration
+    config.search.hnsw.enable_adaptive_ef = True
+    config.search.hnsw.default_ef_construct = 200
+    config.search.hnsw.default_m = 16
+
+    # Collection-specific HNSW configs
+    config.search.collection_hnsw_configs.api_reference.m = 24
+    config.search.collection_hnsw_configs.api_reference.ef_construct = 300
+    config.search.collection_hnsw_configs.api_reference.on_disk = False
+
+    config.search.collection_hnsw_configs.tutorials.m = 16
+    config.search.collection_hnsw_configs.tutorials.ef_construct = 200
+    config.search.collection_hnsw_configs.tutorials.on_disk = False
+
+    # Embedding configuration
+    config.embeddings.provider = "openai"
+    config.embeddings.model = "text-embedding-3-small"
+    config.embeddings.batch_size = 32
+
+    return config
+
+
+@pytest.fixture
+def mock_qdrant_client():
+    """Create comprehensive mock Qdrant client."""
+    client = AsyncMock()
+
+    # Mock collection creation
+    client.create_collection.return_value = True
+
+    # Mock collection info
+    mock_collection_info = MagicMock()
+    mock_collection_info.points_count = 10000
+    mock_collection_info.config.hnsw_config.m = 16
+    mock_collection_info.config.hnsw_config.ef_construct = 200
+    mock_collection_info.config.hnsw_config.on_disk = False
+    client.get_collection.return_value = mock_collection_info
+
+    # Mock search results
+    client.search.return_value = [
+        MagicMock(id="1", score=0.9, payload={"title": "Test Doc 1"}),
+        MagicMock(id="2", score=0.8, payload={"title": "Test Doc 2"}),
+    ]
+
+    # Mock upsert operations
+    client.upsert.return_value = MagicMock(status="ok")
+
+    return client
+
+
+class TestBrowserAutomationIntegration:
+    """Test browser automation integration scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_automation_router_with_fallback_chain(self, mock_unified_config):
+        """Test complete automation router fallback chain."""
+        router = AutomationRouter(mock_unified_config)
+
+        url = "https://vercel.com/docs/api"  # Should prefer Stagehand
+
+        # Mock all adapters to test fallback chain
+        with (
+            patch(
+                "src.services.browser.automation_router.StagehandAdapter"
+            ) as mock_stagehand,
+            patch(
+                "src.services.browser.automation_router.PlaywrightAdapter"
+            ) as mock_playwright,
+            patch(
+                "src.services.browser.automation_router.Crawl4AIAdapter"
+            ) as mock_crawl4ai,
+        ):
+            # Setup Stagehand failure
+            mock_stagehand_instance = AsyncMock()
+            mock_stagehand_instance.scrape.side_effect = Exception("Stagehand failed")
+            mock_stagehand.return_value = mock_stagehand_instance
+
+            # Setup Playwright success
+            mock_playwright_instance = AsyncMock()
+            mock_playwright_instance.scrape.return_value = {
+                "content": "Playwright scraped content",
+                "metadata": {"tool": "playwright", "status_code": 200},
+                "success": True,
+            }
+            mock_playwright.return_value = mock_playwright_instance
+
+            # Crawl4AI should not be called in this scenario
+            mock_crawl4ai_instance = AsyncMock()
+            mock_crawl4ai.return_value = mock_crawl4ai_instance
+
+            result = await router.scrape_with_fallback(url)
+
+            assert result["success"] is True
+            assert result["metadata"]["tool"] == "playwright"
+            assert "content" in result
+
+            # Verify fallback chain was followed
+            mock_stagehand_instance.scrape.assert_called_once()
+            mock_playwright_instance.scrape.assert_called_once()
+            mock_crawl4ai_instance.scrape.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_automation_router_performance_tracking(self, mock_unified_config):
+        """Test performance metrics tracking across tools."""
+        router = AutomationRouter(mock_unified_config)
+
+        urls = [
+            "https://example1.com",  # Crawl4AI
+            "https://vercel.com/docs",  # Stagehand
+            "https://github.com/user/repo",  # Playwright
+        ]
+
+        # Mock successful responses for all tools
+        with (
+            patch(
+                "src.services.browser.automation_router.Crawl4AIAdapter"
+            ) as mock_crawl4ai,
+            patch(
+                "src.services.browser.automation_router.StagehandAdapter"
+            ) as mock_stagehand,
+            patch(
+                "src.services.browser.automation_router.PlaywrightAdapter"
+            ) as mock_playwright,
+        ):
+            # Setup successful responses
+            for mock_adapter in [mock_crawl4ai, mock_stagehand, mock_playwright]:
+                mock_instance = AsyncMock()
+                mock_instance.scrape.return_value = {
+                    "content": "Test content",
+                    "metadata": {"status_code": 200},
+                    "success": True,
+                }
+                mock_adapter.return_value = mock_instance
+
+            # Scrape all URLs
+            for url in urls:
+                await router.scrape_with_fallback(url)
+
+            # Check performance metrics
+            health = await router.health_check()
+
+            assert "tools" in health
+            assert "crawl4ai" in health["tools"]
+            assert health["tools"]["crawl4ai"]["success_count"] >= 1
+            assert health["tools"]["crawl4ai"]["total_requests"] >= 1
+            assert "avg_response_time" in health["tools"]["crawl4ai"]
+
+
+class TestHNSWOptimizationIntegration:
+    """Test HNSW optimization integration scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_qdrant_service_with_hnsw_optimization_workflow(
+        self, mock_unified_config, mock_qdrant_client
+    ):
+        """Test complete HNSW optimization workflow."""
+        service = QdrantService(mock_unified_config)
+        service._client = mock_qdrant_client
+
+        collection_name = "api_reference_docs"
+        collection_type = "api_reference"
+        vector_size = 768
+
+        # Test collection creation with optimization
+        with patch.object(service, "create_collection") as mock_create:
+            await service.create_collection_with_hnsw_optimization(
+                collection_name, vector_size, collection_type
+            )
+
+            mock_create.assert_called_once()
+
+        # Test adaptive search
+        query_vector = [0.1] * vector_size
+        time_budget_ms = 100
+
+        # Mock HNSWOptimizer
+        mock_optimizer = AsyncMock()
+        mock_optimizer.optimize_ef_retrieve.return_value = {
+            "optimal_ef": 150,
+            "estimated_time_ms": 85,
+            "performance_stats": {"cached_results": 0},
+        }
+        service._hnsw_optimizer = mock_optimizer
+
+        search_result = await service.search_with_adaptive_ef(
+            collection_name, query_vector, time_budget_ms
+        )
+
+        assert "results" in search_result
+        assert search_result["ef_used"] == 150
+        assert "optimization_stats" in search_result
+
+    @pytest.mark.asyncio
+    async def test_hnsw_health_validation_integration(
+        self, mock_unified_config, mock_qdrant_client
+    ):
+        """Test integrated health validation with HNSW assessment."""
+        service = QdrantService(mock_unified_config)
+        service._client = mock_qdrant_client
+
+        collection_name = "tutorial_content"
+
+        # Mock payload indexes
+        with patch.object(service, "list_payload_indexes") as mock_list_indexes:
+            mock_list_indexes.return_value = [
+                "doc_type",
+                "language",
+                "framework",
+                "version",
+                "title",
+                "created_at",
+                "word_count",
+            ]
+
+            health_report = await service.validate_index_health(collection_name)
+
+            # Verify comprehensive health report
+            assert "status" in health_report
+            assert "health_score" in health_report
+            assert "payload_indexes" in health_report
+            assert "hnsw_configuration" in health_report
+            assert "recommendations" in health_report
+
+            # Verify HNSW-specific validation
+            hnsw_config = health_report["hnsw_configuration"]
+            assert "health_score" in hnsw_config
+            assert "collection_type" in hnsw_config
+            assert hnsw_config["collection_type"] == "tutorials"
+
+            # Verify comprehensive recommendations
+            recommendations = health_report["recommendations"]
+            assert len(recommendations) > 0
+
+    @pytest.mark.asyncio
+    async def test_hnsw_optimizer_caching_behavior(
+        self, mock_unified_config, mock_qdrant_client
+    ):
+        """Test HNSW optimizer caching across multiple requests."""
+        service = QdrantService(mock_unified_config)
+        service._client = mock_qdrant_client
+
+        optimizer = HNSWOptimizer(mock_unified_config, service)
+        service._hnsw_optimizer = optimizer
+
+        collection_name = "test_collection"
+        query_vector = [0.1] * 768
+        time_budget_ms = 100
+
+        # First request should benchmark and cache results
+        result1 = await optimizer.optimize_ef_retrieve(
+            collection_name, query_vector, time_budget_ms
+        )
+
+        # Second request should use cached results
+        result2 = await optimizer.optimize_ef_retrieve(
+            collection_name, query_vector, time_budget_ms
+        )
+
+        assert result1["optimal_ef"] > 0
+        assert result2["optimal_ef"] > 0
+
+        # Cache should be populated after first request
+        cache_key_pattern = f"{collection_name}:ef_"
+        cache_keys = [
+            k for k in optimizer._performance_cache.keys() if cache_key_pattern in k
+        ]
+        assert len(cache_keys) > 0
+
+
+class TestIntegratedWorkflow:
+    """Test complete integrated workflow scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_complete_scraping_and_optimization_workflow(
+        self, mock_unified_config
+    ):
+        """Test complete workflow: scraping -> embedding -> optimization."""
+        # This would test the integration with bulk embedder
+        # Mock components for integration test
+
+        urls = [
+            "https://docs.example.com/api",
+            "https://vercel.com/guides/tutorial",
+            "https://github.com/user/examples",
+        ]
+
+        # Mock browser automation results
+        mock_scrape_results = [
+            {
+                "url": urls[0],
+                "content": "API documentation content",
+                "metadata": {"tool": "crawl4ai", "doc_type": "api_reference"},
+                "success": True,
+            },
+            {
+                "url": urls[1],
+                "content": "Tutorial guide content",
+                "metadata": {"tool": "stagehand", "doc_type": "tutorial"},
+                "success": True,
+            },
+            {
+                "url": urls[2],
+                "content": "Code examples content",
+                "metadata": {"tool": "playwright", "doc_type": "code_example"},
+                "success": True,
+            },
+        ]
+
+        # Test that different tools are selected for different content types
+        router = AutomationRouter(mock_unified_config)
+
+        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+            mock_scrape.side_effect = mock_scrape_results
+
+            results = []
+            for url in urls:
+                result = await router.scrape_with_fallback(url)
+                results.append(result)
+
+            # Verify different tools were used appropriately
+            tools_used = [r["metadata"]["tool"] for r in results]
+            assert len(set(tools_used)) > 1  # Multiple tools should be used
+
+            # Verify content was extracted
+            for result in results:
+                assert result["success"] is True
+                assert len(result["content"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_error_recovery_integration(self, mock_unified_config):
+        """Test error recovery across browser automation and HNSW optimization."""
+        router = AutomationRouter(mock_unified_config)
+        service = QdrantService(mock_unified_config)
+
+        # Test browser automation error recovery
+        url = "https://problematic-site.com"
+
+        with (
+            patch(
+                "src.services.browser.automation_router.Crawl4AIAdapter"
+            ) as mock_crawl4ai,
+            patch(
+                "src.services.browser.automation_router.StagehandAdapter"
+            ) as mock_stagehand,
+            patch(
+                "src.services.browser.automation_router.PlaywrightAdapter"
+            ) as mock_playwright,
+        ):
+            # All tools fail except Playwright
+            mock_crawl4ai.return_value.scrape.side_effect = Exception("Crawl4AI failed")
+            mock_stagehand.return_value.scrape.side_effect = Exception(
+                "Stagehand failed"
+            )
+            mock_playwright.return_value.scrape.return_value = {
+                "content": "Recovered content",
+                "metadata": {"tool": "playwright"},
+                "success": True,
+            }
+
+            result = await router.scrape_with_fallback(url)
+            assert result["success"] is True
+            assert result["metadata"]["tool"] == "playwright"
+
+        # Test HNSW optimization error recovery
+        mock_client = AsyncMock()
+        mock_client.search.return_value = [MagicMock(id="1", score=0.9)]
+        service._client = mock_client
+
+        collection_name = "test_collection"
+        query_vector = [0.1] * 768
+        time_budget_ms = 100
+
+        # Mock optimizer failure, should fallback to regular search
+        mock_optimizer = AsyncMock()
+        mock_optimizer.optimize_ef_retrieve.side_effect = Exception("Optimizer failed")
+        service._hnsw_optimizer = mock_optimizer
+
+        with patch.object(service, "search") as mock_search:
+            mock_search.return_value = [{"id": "1", "score": 0.9}]
+
+            result = await service.search_with_adaptive_ef(
+                collection_name, query_vector, time_budget_ms
+            )
+
+            assert "results" in result
+            assert result["ef_used"] == "fallback"
+
+    @pytest.mark.asyncio
+    async def test_performance_monitoring_integration(self, mock_unified_config):
+        """Test performance monitoring across both systems."""
+        router = AutomationRouter(mock_unified_config)
+        service = QdrantService(mock_unified_config)
+
+        # Mock successful operations
+        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+            mock_scrape.return_value = {
+                "content": "Test content",
+                "metadata": {"tool": "crawl4ai"},
+                "success": True,
+            }
+
+            # Perform multiple operations
+            urls = [f"https://example{i}.com" for i in range(5)]
+            for url in urls:
+                await router.scrape_with_fallback(url)
+
+        # Check aggregated health metrics
+        browser_health = await router.health_check()
+
+        assert "overall_status" in browser_health
+        assert "tools" in browser_health
+        assert browser_health["tools"]["crawl4ai"]["success_count"] == 5
+        assert browser_health["tools"]["crawl4ai"]["success_rate"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_configuration_consistency_integration(self, mock_unified_config):
+        """Test that configuration is consistently applied across components."""
+        router = AutomationRouter(mock_unified_config)
+        service = QdrantService(mock_unified_config)
+        optimizer = HNSWOptimizer(mock_unified_config, service)
+
+        # Verify configuration consistency
+        assert router.config == mock_unified_config
+        assert service.config == mock_unified_config
+        assert optimizer.config == mock_unified_config
+
+        # Verify HNSW settings are properly propagated
+        api_config = service._get_hnsw_config_for_collection_type("api_reference")
+        assert api_config.m == 24
+        assert api_config.ef_construct == 300
+
+        tutorial_config = service._get_hnsw_config_for_collection_type("tutorials")
+        assert tutorial_config.m == 16
+        assert tutorial_config.ef_construct == 200
+
+
+class TestConcurrentOperations:
+    """Test concurrent operations across browser automation and HNSW optimization."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_browser_automation(self, mock_unified_config):
+        """Test concurrent browser automation operations."""
+        router = AutomationRouter(mock_unified_config)
+
+        urls = [f"https://example{i}.com" for i in range(10)]
+
+        with patch.object(router, "scrape_with_fallback") as mock_scrape:
+            mock_scrape.return_value = {
+                "content": "Test content",
+                "metadata": {"tool": "crawl4ai"},
+                "success": True,
+            }
+
+            # Execute concurrent scraping
+            tasks = [router.scrape_with_fallback(url) for url in urls]
+            results = await asyncio.gather(*tasks)
+
+            assert len(results) == 10
+            assert all(r["success"] for r in results)
+            assert mock_scrape.call_count == 10
+
+    @pytest.mark.asyncio
+    async def test_concurrent_hnsw_optimization(self, mock_unified_config):
+        """Test concurrent HNSW optimization operations."""
+        service = QdrantService(mock_unified_config)
+        optimizer = HNSWOptimizer(mock_unified_config, service)
+
+        mock_client = AsyncMock()
+        mock_client.search.return_value = [MagicMock(id="1", score=0.9)]
+        service._client = mock_client
+
+        collection_name = "test_collection"
+        query_vectors = [[0.1 + i * 0.01] * 768 for i in range(5)]
+        time_budget_ms = 100
+
+        # Execute concurrent optimizations
+        tasks = [
+            optimizer.optimize_ef_retrieve(collection_name, vector, time_budget_ms)
+            for vector in query_vectors
+        ]
+        results = await asyncio.gather(*tasks)
+
+        assert len(results) == 5
+        assert all("optimal_ef" in r for r in results)
+        assert all(r["optimal_ef"] > 0 for r in results)
