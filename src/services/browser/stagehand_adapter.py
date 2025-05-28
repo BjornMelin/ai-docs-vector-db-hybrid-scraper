@@ -79,11 +79,13 @@ class StagehandAdapter(BaseService):
         if self._stagehand:
             try:
                 await self._stagehand.stop()
+            except Exception as e:
+                self.logger.error(f"Error cleaning up Stagehand: {e}")
+            finally:
+                # Always reset state even if stop() fails
                 self._stagehand = None
                 self._initialized = False
                 self.logger.info("Stagehand adapter cleaned up")
-            except Exception as e:
-                self.logger.error(f"Error cleaning up Stagehand: {e}")
 
     async def scrape(
         self,
@@ -307,7 +309,9 @@ class StagehandAdapter(BaseService):
                 time_value = int(match.group(1))
 
                 # Convert to milliseconds if needed
-                if "second" in pattern or pattern.endswith("s"):
+                if ("second" in pattern and "millisecond" not in pattern) or (
+                    pattern.endswith("s") and not pattern.endswith("ms")
+                ):
                     return time_value * 1000
                 else:
                     return time_value
