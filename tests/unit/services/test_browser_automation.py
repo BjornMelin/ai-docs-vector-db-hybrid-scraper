@@ -678,112 +678,116 @@ class TestStagehandAdapterErrorPaths:
     @pytest.mark.asyncio
     async def test_initialization_failure(self, mock_config):
         """Test initialization failure handling."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_stagehand.start.side_effect = Exception(
-                    "Stagehand failed to start"
-                )
-                mock_stagehand_class.return_value = mock_stagehand
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_stagehand.start.side_effect = Exception("Stagehand failed to start")
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
+            adapter = StagehandAdapter(mock_config)
 
-                with pytest.raises(
-                    CrawlServiceError, match="Failed to initialize Stagehand"
-                ):
-                    await adapter.initialize()
+            with pytest.raises(
+                CrawlServiceError, match="Failed to initialize Stagehand"
+            ):
+                await adapter.initialize()
 
     @pytest.mark.asyncio
     async def test_cleanup_with_error(self, mock_config):
         """Test cleanup when stagehand.stop() fails."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_stagehand.stop.side_effect = Exception("Stop failed")
-                mock_stagehand_class.return_value = mock_stagehand
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_stagehand.stop.side_effect = Exception("Stop failed")
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
-                adapter._stagehand = mock_stagehand
-                adapter._initialized = True
+            adapter = StagehandAdapter(mock_config)
+            adapter._stagehand = mock_stagehand
+            adapter._initialized = True
 
-                # Should not raise exception, just log error
-                await adapter.cleanup()
+            # Should not raise exception, just log error
+            await adapter.cleanup()
 
-                # After cleanup with error, _stagehand should still be None
-                # and _initialized should be False (cleanup sets these even on error)
-                assert adapter._stagehand is None
-                assert not adapter._initialized
+            # After cleanup with error, _stagehand should still be None
+            # and _initialized should be False (cleanup sets these even on error)
+            assert adapter._stagehand is None
+            assert not adapter._initialized
 
     @pytest.mark.asyncio
     async def test_page_navigation_failure(self, mock_config):
         """Test handling of page navigation failures."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_page = AsyncMock()
-                mock_page.goto.side_effect = Exception("Navigation failed")
-                mock_stagehand.new_page.return_value = mock_page
-                mock_stagehand_class.return_value = mock_stagehand
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_page = AsyncMock()
+            mock_page.goto.side_effect = Exception("Navigation failed")
+            mock_stagehand.new_page.return_value = mock_page
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
-                adapter._stagehand = mock_stagehand
-                adapter._initialized = True
+            adapter = StagehandAdapter(mock_config)
+            adapter._stagehand = mock_stagehand
+            adapter._initialized = True
 
-                result = await adapter.scrape(
-                    "https://example.com", ["extract content"]
-                )
+            result = await adapter.scrape("https://example.com", ["extract content"])
 
-                assert result["success"] is False
-                assert "Navigation failed" in result["error"]
+            assert result["success"] is False
+            assert "Navigation failed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_instruction_execution_patterns(self, mock_config):
         """Test different instruction execution patterns."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_page = AsyncMock()
-                mock_page.content.return_value = "<html>Test</html>"
-                mock_page.title.return_value = "Test Page"
-                mock_page.url = "https://example.com"
-                mock_stagehand.new_page.return_value = mock_page
-                mock_stagehand.extract.return_value = {"content": "extracted content"}
-                mock_stagehand_class.return_value = mock_stagehand
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_page = AsyncMock()
+            mock_page.content.return_value = "<html>Test</html>"
+            mock_page.title.return_value = "Test Page"
+            mock_page.url = "https://example.com"
+            mock_stagehand.new_page.return_value = mock_page
+            mock_stagehand.extract.return_value = {"content": "extracted content"}
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
-                adapter._stagehand = mock_stagehand
-                adapter._initialized = True
+            adapter = StagehandAdapter(mock_config)
+            adapter._stagehand = mock_stagehand
+            adapter._initialized = True
 
-                # Test various instruction types
-                instructions = [
-                    "click on the button",
-                    "type hello world",
-                    "enter your name",
-                    "extract main content",
-                    "wait 2 seconds",
-                    "scroll down",
-                    "take screenshot",
-                    "custom action",
-                ]
+            # Test various instruction types
+            instructions = [
+                "click on the button",
+                "type hello world",
+                "enter your name",
+                "extract main content",
+                "wait 2 seconds",
+                "scroll down",
+                "take screenshot",
+                "custom action",
+            ]
 
-                result = await adapter.scrape("https://example.com", instructions)
+            result = await adapter.scrape("https://example.com", instructions)
 
-                assert result["success"] is True
-                assert result["metadata"]["instructions_executed"] == len(instructions)
+            assert result["success"] is True
+            assert result["metadata"]["instructions_executed"] == len(instructions)
 
-                # Verify different methods were called
-                mock_stagehand.click.assert_called()
-                mock_stagehand.type.assert_called()
-                mock_stagehand.extract.assert_called()
-                mock_stagehand.act.assert_called()
+            # Verify different methods were called
+            mock_stagehand.click.assert_called()
+            mock_stagehand.type.assert_called()
+            mock_stagehand.extract.assert_called()
+            mock_stagehand.act.assert_called()
 
     @pytest.mark.asyncio
     async def test_wait_time_extraction(self, mock_config):
@@ -909,75 +913,77 @@ class TestStagehandAdapterErrorPaths:
     @pytest.mark.asyncio
     async def test_page_close_failure(self, mock_config):
         """Test handling of page close failures."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_page = AsyncMock()
-                mock_page.close.side_effect = Exception("Close failed")
-                mock_page.content.return_value = "<html>Test</html>"
-                mock_page.title.return_value = "Test Page"
-                mock_page.url = "https://example.com"
-                mock_stagehand.new_page.return_value = mock_page
-                mock_stagehand.extract.return_value = {"content": "test"}
-                mock_stagehand_class.return_value = mock_stagehand
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_page = AsyncMock()
+            mock_page.close.side_effect = Exception("Close failed")
+            mock_page.content.return_value = "<html>Test</html>"
+            mock_page.title.return_value = "Test Page"
+            mock_page.url = "https://example.com"
+            mock_stagehand.new_page.return_value = mock_page
+            mock_stagehand.extract.return_value = {"content": "test"}
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
-                adapter._stagehand = mock_stagehand
-                adapter._initialized = True
+            adapter = StagehandAdapter(mock_config)
+            adapter._stagehand = mock_stagehand
+            adapter._initialized = True
 
-                # Should complete successfully despite page close failure
-                result = await adapter.scrape(
-                    "https://example.com", ["extract content"]
-                )
+            # Should complete successfully despite page close failure
+            result = await adapter.scrape("https://example.com", ["extract content"])
 
-                assert result["success"] is True
-                mock_page.close.assert_called_once()
+            assert result["success"] is True
+            mock_page.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_content_combination_logic(self, mock_config):
         """Test content combination from multiple extractions."""
-        with patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True):
-            with patch(
+        with (
+            patch("src.services.browser.stagehand_adapter.STAGEHAND_AVAILABLE", True),
+            patch(
                 "src.services.browser.stagehand_adapter.Stagehand"
-            ) as mock_stagehand_class:
-                mock_stagehand = AsyncMock()
-                mock_page = AsyncMock()
-                mock_page.content.return_value = "<html>Test</html>"
-                mock_page.title.return_value = "Test Page"
-                mock_page.url = "https://example.com"
-                mock_stagehand.new_page.return_value = mock_page
+            ) as mock_stagehand_class,
+        ):
+            mock_stagehand = AsyncMock()
+            mock_page = AsyncMock()
+            mock_page.content.return_value = "<html>Test</html>"
+            mock_page.title.return_value = "Test Page"
+            mock_page.url = "https://example.com"
+            mock_stagehand.new_page.return_value = mock_page
 
-                # Mock different extraction results
-                extract_call_count = 0
+            # Mock different extraction results
+            extract_call_count = 0
 
-                def mock_extract(page, instruction):
-                    nonlocal extract_call_count
-                    extract_call_count += 1
-                    if "documentation content" in instruction.lower():
-                        # This is the final extraction call
-                        return {
-                            "content": "final content",
-                            "metadata": {"source": "final"},
-                        }
-                    else:
-                        # This is an instruction-based extraction
-                        return {"content": "instruction content"}
+            def mock_extract(page, instruction):
+                nonlocal extract_call_count
+                extract_call_count += 1
+                if "documentation content" in instruction.lower():
+                    # This is the final extraction call
+                    return {
+                        "content": "final content",
+                        "metadata": {"source": "final"},
+                    }
+                else:
+                    # This is an instruction-based extraction
+                    return {"content": "instruction content"}
 
-                mock_stagehand.extract.side_effect = mock_extract
-                mock_stagehand_class.return_value = mock_stagehand
+            mock_stagehand.extract.side_effect = mock_extract
+            mock_stagehand_class.return_value = mock_stagehand
 
-                adapter = StagehandAdapter(mock_config)
-                adapter._stagehand = mock_stagehand
-                adapter._initialized = True
+            adapter = StagehandAdapter(mock_config)
+            adapter._stagehand = mock_stagehand
+            adapter._initialized = True
 
-                result = await adapter.scrape(
-                    "https://example.com", ["extract test content"]
-                )
+            result = await adapter.scrape(
+                "https://example.com", ["extract test content"]
+            )
 
-                assert result["success"] is True
-                # Should combine final content and instruction extractions
-                assert "final content" in result["content"]
-                assert "instruction content" in result["content"]
-                assert result["metadata"]["source"] == "final"
+            assert result["success"] is True
+            # Should combine final content and instruction extractions
+            assert "final content" in result["content"]
+            assert "instruction content" in result["content"]
+            assert result["metadata"]["source"] == "final"
