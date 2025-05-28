@@ -88,7 +88,7 @@ async def _perform_ab_test_search(
     return search_results, ab_test_results
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register advanced search tools with the MCP server."""
 
     # Import search_documents from search module to use as fallback

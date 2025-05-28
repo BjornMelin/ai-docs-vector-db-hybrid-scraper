@@ -42,9 +42,6 @@ mcp = FastMCP(
     """,
 )
 
-# Global client manager (initialized lazily)
-client_manager = None
-
 
 def validate_configuration():
     """Validate configuration at startup.
@@ -58,15 +55,13 @@ def validate_configuration():
     errors = []
 
     # Check API keys based on enabled providers
-    if "openai" in config.get_active_providers():
-        if not config.openai.api_key:
-            errors.append("OpenAI API key is required when OpenAI provider is enabled")
+    if "openai" in config.get_active_providers() and not config.openai.api_key:
+        errors.append("OpenAI API key is required when OpenAI provider is enabled")
 
-    if "firecrawl" in config.crawling.providers:
-        if not config.firecrawl.api_key:
-            warnings.append(
-                "Firecrawl API key not set - premium features will be unavailable"
-            )
+    if "firecrawl" in config.crawling.providers and not config.firecrawl.api_key:
+        warnings.append(
+            "Firecrawl API key not set - premium features will be unavailable"
+        )
 
     # Check Qdrant connection
     if not config.qdrant.url:
@@ -88,20 +83,18 @@ def validate_configuration():
 @asynccontextmanager
 async def lifespan():
     """Server lifecycle management with lazy initialization."""
-    global client_manager
-
     try:
         # Validate configuration first
         validate_configuration()
 
         # Initialize client manager
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
-        client_manager = ClientManager.from_unified_config()
-        await client_manager.initialize()
+        lifespan.client_manager = ClientManager.from_unified_config()
+        await lifespan.client_manager.initialize()
 
         # Register all tools
         logger.info("Registering MCP tools...")
-        await register_all_tools(mcp, client_manager)
+        await register_all_tools(mcp, lifespan.client_manager)
 
         logger.info("Server initialization complete")
         yield
@@ -109,8 +102,8 @@ async def lifespan():
     finally:
         # Cleanup on shutdown
         logger.info("Shutting down server...")
-        if client_manager:
-            await client_manager.cleanup()
+        if hasattr(lifespan, 'client_manager'):
+            await lifespan.client_manager.cleanup()
         logger.info("Server shutdown complete")
 
 

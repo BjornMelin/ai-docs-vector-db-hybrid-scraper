@@ -18,7 +18,7 @@ from ..models.requests import DocumentRequest
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register document management tools with the MCP server."""
 
     @mcp.tool()

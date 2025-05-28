@@ -15,7 +15,6 @@ from src.config.models import UnifiedConfig
 from src.crawl4ai_bulk_embedder import CrawlResult
 from src.crawl4ai_bulk_embedder import ModernDocumentationScraper
 from src.crawl4ai_bulk_embedder import VectorMetrics
-from src.mcp.models.responses import CrawlResult
 
 
 class TestEmbeddingConfig:

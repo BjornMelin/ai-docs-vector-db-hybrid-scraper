@@ -499,7 +499,7 @@ class TestIntegratedWorkflow:
 
             # Perform multiple operations and manually track metrics
             urls = [f"https://example{i}.com" for i in range(5)]
-            for url in urls:
+            for _ in range(len(urls)):
                 # Simulate the metric tracking that would happen in _update_metrics
                 router._update_metrics("crawl4ai", True, 0.1)
 

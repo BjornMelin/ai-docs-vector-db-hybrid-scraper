@@ -63,24 +63,26 @@ async def test_server_lifespan():
     """Test server lifespan management."""
     import unified_mcp_server
 
-    with patch("unified_mcp_server.validate_configuration"):
-        with patch("unified_mcp_server.ClientManager") as mock_cm:
-            with patch("unified_mcp_server.register_all_tools") as mock_register:
-                # Mock client manager
-                mock_client_manager = AsyncMock()
-                mock_client_manager.initialize = AsyncMock()
-                mock_client_manager.cleanup = AsyncMock()
-                mock_cm.from_unified_config.return_value = mock_client_manager
+    with (
+        patch("unified_mcp_server.validate_configuration"),
+        patch("unified_mcp_server.ClientManager") as mock_cm,
+        patch("unified_mcp_server.register_all_tools") as mock_register,
+    ):
+        # Mock client manager
+        mock_client_manager = AsyncMock()
+        mock_client_manager.initialize = AsyncMock()
+        mock_client_manager.cleanup = AsyncMock()
+        mock_cm.from_unified_config.return_value = mock_client_manager
 
-                # Test lifespan
-                async with unified_mcp_server.lifespan() as _:
-                    # Verify initialization
-                    mock_cm.from_unified_config.assert_called_once()
-                    mock_client_manager.initialize.assert_called_once()
-                    mock_register.assert_called_once()
+        # Test lifespan
+        async with unified_mcp_server.lifespan() as _:
+            # Verify initialization
+            mock_cm.from_unified_config.assert_called_once()
+            mock_client_manager.initialize.assert_called_once()
+            mock_register.assert_called_once()
 
-                # Verify cleanup
-                mock_client_manager.cleanup.assert_called_once()
+        # Verify cleanup
+        mock_client_manager.cleanup.assert_called_once()
 
 
 def test_server_run_modes():

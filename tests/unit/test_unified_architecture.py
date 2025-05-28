@@ -175,38 +175,42 @@ class TestUnifiedServerLifecycle:
     @pytest.mark.asyncio
     async def test_lifespan_initialization(self):
         """Test server lifespan initialization."""
-        with patch("src.unified_mcp_server.ClientManager") as MockCM:
-            with patch("src.unified_mcp_server.register_all_tools") as mock_register:
-                # Import after patching
-                from src.unified_mcp_server import lifespan
+        with (
+            patch("src.unified_mcp_server.ClientManager") as MockCM,
+            patch("src.unified_mcp_server.register_all_tools") as mock_register,
+        ):
+            # Import after patching
+            from src.unified_mcp_server import lifespan
 
-                # Setup mocks
-                mock_cm_instance = AsyncMock()
-                mock_cm_instance.initialize = AsyncMock()
-                mock_cm_instance.cleanup = AsyncMock()
-                MockCM.from_unified_config.return_value = mock_cm_instance
+            # Setup mocks
+            mock_cm_instance = AsyncMock()
+            mock_cm_instance.initialize = AsyncMock()
+            mock_cm_instance.cleanup = AsyncMock()
+            MockCM.from_unified_config.return_value = mock_cm_instance
 
-                # Run lifespan
-                async with lifespan():
-                    # Verify initialization
-                    MockCM.from_unified_config.assert_called_once()
-                    mock_cm_instance.initialize.assert_called_once()
-                    mock_register.assert_called_once()
+            # Run lifespan
+            async with lifespan():
+                # Verify initialization
+                MockCM.from_unified_config.assert_called_once()
+                mock_cm_instance.initialize.assert_called_once()
+                mock_register.assert_called_once()
 
-                # Verify cleanup
-                mock_cm_instance.cleanup.assert_called_once()
+            # Verify cleanup
+            mock_cm_instance.cleanup.assert_called_once()
 
     def test_transport_configuration(self):
         """Test transport configuration from environment."""
         # Test stdio (default)
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("src.unified_mcp_server.mcp") as mock_mcp:
-                # Execute main block
-                exec(
-                    """
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("src.unified_mcp_server.mcp") as mock_mcp,
+        ):
+            # Execute main block
+            exec(
+                """
 if __name__ == "__main__":
     transport = os.getenv("FASTMCP_TRANSPORT", "stdio")
-    
+
     if transport == "streamable-http":
         mcp.run(
             transport="streamable-http",
@@ -216,27 +220,29 @@ if __name__ == "__main__":
     else:
         mcp.run(transport="stdio")
 """,
-                    {"os": os, "mcp": mock_mcp},
-                )
+                {"os": os, "mcp": mock_mcp},
+            )
 
-                mock_mcp.run.assert_called_once_with(transport="stdio")
+            mock_mcp.run.assert_called_once_with(transport="stdio")
 
         # Test HTTP transport
-        with patch.dict(
-            os.environ,
-            {
-                "FASTMCP_TRANSPORT": "streamable-http",
-                "FASTMCP_HOST": "0.0.0.0",
-                "FASTMCP_PORT": "9000",
-            },
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "FASTMCP_TRANSPORT": "streamable-http",
+                    "FASTMCP_HOST": "0.0.0.0",
+                    "FASTMCP_PORT": "9000",
+                },
+            ),
+            patch("src.unified_mcp_server.mcp") as mock_mcp,
         ):
-            with patch("src.unified_mcp_server.mcp") as mock_mcp:
-                # Execute main block
-                exec(
-                    """
+            # Execute main block
+            exec(
+                """
 if __name__ == "__main__":
     transport = os.getenv("FASTMCP_TRANSPORT", "stdio")
-    
+
     if transport == "streamable-http":
         mcp.run(
             transport="streamable-http",
@@ -246,9 +252,9 @@ if __name__ == "__main__":
     else:
         mcp.run(transport="stdio")
 """,
-                    {"os": os, "mcp": mock_mcp},
-                )
+                {"os": os, "mcp": mock_mcp},
+            )
 
-                mock_mcp.run.assert_called_once_with(
-                    transport="streamable-http", host="0.0.0.0", port=9000
-                )
+            mock_mcp.run.assert_called_once_with(
+                transport="streamable-http", host="0.0.0.0", port=9000
+            )

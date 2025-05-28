@@ -80,37 +80,39 @@ async def test_tool_registration_logs():
 
     client_manager = Mock(spec=ClientManager)
 
-    with patch("src.mcp.tools") as mock_tools:
-        with patch("src.mcp.tool_registry.logger") as mock_logger:
-            # Create mock modules
-            for module_name in [
-                "search",
-                "documents",
-                "embeddings",
-                "collections",
-                "projects",
-                "advanced_search",
-                "payload_indexing",
-                "deployment",
-                "analytics",
-                "cache",
-                "utilities",
-            ]:
-                module = Mock()
-                module.register_tools = Mock()
-                setattr(mock_tools, module_name, module)
+    with (
+        patch("src.mcp.tools") as mock_tools,
+        patch("src.mcp.tool_registry.logger") as mock_logger,
+    ):
+        # Create mock modules
+        for module_name in [
+            "search",
+            "documents",
+            "embeddings",
+            "collections",
+            "projects",
+            "advanced_search",
+            "payload_indexing",
+            "deployment",
+            "analytics",
+            "cache",
+            "utilities",
+        ]:
+            module = Mock()
+            module.register_tools = Mock()
+            setattr(mock_tools, module_name, module)
 
-            await register_all_tools(mcp, client_manager)
+        await register_all_tools(mcp, client_manager)
 
-            # Verify logging
-            assert mock_logger.info.call_count >= 4  # At least 4 info logs
+        # Verify logging
+        assert mock_logger.info.call_count >= 4  # At least 4 info logs
 
-            # Check for specific log messages
-            log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-            assert any("Registering core tools" in msg for msg in log_calls)
-            assert any("Registering management tools" in msg for msg in log_calls)
-            assert any("Registering advanced tools" in msg for msg in log_calls)
-            assert any("Registering utility tools" in msg for msg in log_calls)
-            assert any(
-                "Successfully registered 11 tool modules" in msg for msg in log_calls
-            )
+        # Check for specific log messages
+        log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+        assert any("Registering core tools" in msg for msg in log_calls)
+        assert any("Registering management tools" in msg for msg in log_calls)
+        assert any("Registering advanced tools" in msg for msg in log_calls)
+        assert any("Registering utility tools" in msg for msg in log_calls)
+        assert any(
+            "Successfully registered 11 tool modules" in msg for msg in log_calls
+        )
