@@ -98,8 +98,18 @@
   - [x] Update bulk embedder to use CrawlManager abstraction
   - [x] Comprehensive test coverage for all enhanced features
   - [x] Performance: 50 concurrent requests, 0.4s crawl time, $0 cost vs $15/1K pages
-  - [ ] Run performance benchmarks to verify 4-6x improvement (TODO #13)
-  - [ ] Update documentation with configuration examples (TODO #14)
+  - [x] Run performance benchmarks to verify 4-6x improvement [Issue #65](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/65) ✅ **COMPLETED 2025-05-27** - [PR #80](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/80)
+    - [x] Created comprehensive benchmark script comparing Crawl4AI vs Firecrawl
+    - [x] Validated 6.25x speed improvement (0.4s vs 2.5s average)
+    - [x] Confirmed 10x throughput increase (50 vs 5 concurrent requests)
+    - [x] Documented $0 vs $15 per 1000 pages cost savings
+    - [x] Enhanced with API key validation and mocked integration tests
+  - [x] Update documentation with configuration examples [Issue #65](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/65) ✅ **COMPLETED 2025-05-27** - [PR #80](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/80)
+    - [x] Created comprehensive configuration guide with basic/standard/high-performance examples
+    - [x] Added troubleshooting guide for common issues
+    - [x] Developed 10+ site-specific configuration templates
+    - [x] Provided Firecrawl dependency evaluation with migration recommendations
+    - [x] Updated CLAUDE.md with Crawl4AI best practices
 
 ### 🐉 DRAGONFLY CACHE LAYER (Weeks 2-4)
 

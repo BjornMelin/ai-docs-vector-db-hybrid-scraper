@@ -269,11 +269,46 @@ docker logs qdrant-vector-db -f                # Monitor logs
 ## Important Configuration Files
 
 - `config/documentation-sites.json` - Sites to scrape with parameters
+- `config/crawl4ai-site-templates.json` - Pre-configured templates for common doc site types
 - `pyproject.toml` - Modern Python packaging with uv + ruff config
 - `docker-compose.yml` - Optimized Qdrant configuration
 - `.env` - API keys (OPENAI_API_KEY, FIRECRAWL_API_KEY)
 
 ## Development Patterns
+
+### Crawl4AI Best Practices
+
+When working with Crawl4AI for web scraping:
+
+1. **Performance Optimization**:
+   - Start with 10 concurrent requests, scale up to 50 for simple sites
+   - Use headless=True unless debugging JavaScript issues
+   - Disable unnecessary features (screenshots, PDFs) for speed
+   - Implement caching with DragonflyDB to avoid re-crawling
+
+2. **Content Extraction**:
+   - Always check `config/crawl4ai-site-templates.json` for site-specific configs
+   - Use wait_for selectors for dynamic content loading
+   - Implement custom JavaScript for SPAs and infinite scroll
+   - Validate content length (>100 chars) to detect extraction failures
+
+3. **Error Handling**:
+   - Implement exponential backoff with 3 retry attempts
+   - Use circuit breakers for consistently failing sites
+   - Monitor memory usage and implement periodic cleanup
+   - Log detailed error context for debugging
+
+4. **Site-Specific Configurations**:
+   - Sphinx docs: Simple selectors, no JS needed
+   - React/Vue/Angular: Wait for hydration, custom JS execution
+   - API docs: Expand all collapsible sections before extraction
+   - MDN/complex sites: Use click_show_more patterns
+
+5. **Resource Management**:
+   - Always use try/finally blocks for cleanup
+   - Process URLs in batches of 100 for large crawls
+   - Monitor CPU/memory with psutil during benchmarks
+   - Implement memory limits for containerized deployments
 
 ### Embedding Provider Strategy
 
