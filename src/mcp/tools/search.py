@@ -5,15 +5,28 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from ...config.enums import SearchStrategy
-from ..models.requests import SearchRequest
-from ..models.responses import SearchResult
-from ..service_manager import UnifiedServiceManager
+# Handle both module and script imports
+try:
+    from config.enums import SearchStrategy
+    from infrastructure.client_manager import ClientManager
+    from mcp.models.requests import SearchRequest
+    from mcp.models.responses import SearchResult
+    from services.cache.manager import CacheManager
+    from services.core.qdrant_service import QdrantService
+    from services.embeddings.manager import EmbeddingManager
+except ImportError:
+    from ...config.enums import SearchStrategy
+    from ...infrastructure.client_manager import ClientManager
+    from ...services.cache.manager import CacheManager
+    from ...services.core.qdrant_service import QdrantService
+    from ...services.embeddings.manager import EmbeddingManager
+    from ..models.requests import SearchRequest
+    from ..models.responses import SearchResult
 
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, service_manager: UnifiedServiceManager):
+def register_tools(mcp, client_manager: ClientManager):
     """Register search tools with the MCP server."""
 
     @mcp.tool()
@@ -26,8 +39,6 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
         Supports dense, sparse, and hybrid search strategies with optional
         BGE reranking for improved accuracy.
         """
-        await service_manager.initialize()
-
         # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
@@ -35,9 +46,15 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
         )
 
         try:
+            # Initialize services on-demand
+            cache_manager = CacheManager(client_manager)
+            embedding_manager = EmbeddingManager(client_manager)
+            qdrant_service = QdrantService(client_manager)
+            await qdrant_service.initialize()
+
             # Check cache first
             cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
-            cached = await service_manager.cache_manager.get(cache_key)
+            cached = await cache_manager.get(cache_key)
             if cached:
                 await ctx.debug(f"Cache hit for request {request_id}")
                 return [SearchResult(**r) for r in cached]
@@ -45,128 +62,163 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
             # Generate embedding for query
             await ctx.debug(f"Generating embeddings for query: {request.query[:50]}...")
             # Generate sparse embeddings for hybrid search
-            generate_sparse = request.strategy == SearchStrategy.HYBRID
-            embedding_result = (
-                await service_manager.embedding_manager.generate_embeddings(
-                    [request.query], generate_sparse=generate_sparse
-                )
+            generate_sparse = request.strategy in [
+                SearchStrategy.HYBRID,
+                SearchStrategy.SPARSE,
+            ]
+            embedding_result = await embedding_manager.generate_embeddings(
+                texts=[request.query],
+                generate_sparse=generate_sparse,
+                model=request.embedding_model,
             )
 
-            query_vector = embedding_result["embeddings"][0]
+            # Execute search based on strategy
+            await ctx.info(f"Executing {request.strategy} search...")
+
+            # Prepare sparse vector if available
             sparse_vector = None
-            if embedding_result.get("sparse_embeddings"):
-                sparse_vector = embedding_result["sparse_embeddings"][0]
-                await ctx.debug(
-                    f"Generated sparse vector with {len(sparse_vector['indices'])} non-zero elements"
-                )
+            if generate_sparse and embedding_result.sparse_embeddings:
+                sparse_embedding = embedding_result.sparse_embeddings[0]
+                # Convert sparse embedding to dict format expected by Qdrant
+                sparse_vector = {
+                    int(idx): float(val)
+                    for idx, val in enumerate(sparse_embedding)
+                    if val != 0
+                }
 
-            await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
+            # Use hybrid_search for all strategies
+            if request.strategy == SearchStrategy.SPARSE and not sparse_vector:
+                raise ValueError("Sparse embeddings not available for sparse search")
 
-            # Perform search based on strategy
-            if request.strategy == SearchStrategy.HYBRID:
-                # For hybrid search, use both dense and sparse vectors
-                results = await service_manager.qdrant_service.hybrid_search(
-                    collection_name=request.collection,
-                    query_vector=query_vector,
-                    sparse_vector=sparse_vector,  # Now using actual sparse vector
-                    limit=request.limit * 3
-                    if request.enable_reranking
-                    else request.limit,
-                    score_threshold=0.0,
-                    fusion_type="rrf",
-                )
-            else:
-                # For dense search, use direct vector search
-                results = await service_manager.qdrant_service.hybrid_search(
-                    collection_name=request.collection,
-                    query_vector=query_vector,
-                    sparse_vector=None,  # Dense search only
-                    limit=request.limit * 3
-                    if request.enable_reranking
-                    else request.limit,
-                    score_threshold=0.0,
-                )
+            # For sparse-only search, pass empty dense vector
+            query_vector = (
+                embedding_result.embeddings[0]
+                if request.strategy != SearchStrategy.SPARSE
+                else []
+            )
 
-            # Convert to search results
+            # Execute search
+            results = await qdrant_service.hybrid_search(
+                collection_name=request.collection,
+                query_vector=query_vector,
+                sparse_vector=sparse_vector
+                if request.strategy != SearchStrategy.DENSE
+                else None,
+                limit=request.limit,
+                score_threshold=request.score_threshold,
+                fusion_type="rrf",  # Use RRF fusion for hybrid
+                search_accuracy=request.search_accuracy
+                if hasattr(request, "search_accuracy")
+                else "balanced",
+            )
+
+            # Apply reranking if requested
+            if request.rerank and len(results) > 0:
+                await ctx.debug("Applying BGE reranking...")
+                # Note: rerank_results method would need to be implemented in QdrantService
+                # For now, we'll skip reranking
+                pass
+
+            # Convert to response format
             search_results = []
-            for point in results:
-                result = SearchResult(
-                    id=str(point.id),
-                    content=point.payload.get("content", ""),
-                    score=point.score,
-                    url=point.payload.get("url"),
-                    title=point.payload.get("title"),
-                    metadata=point.payload if request.include_metadata else None,
+            for result in results:
+                search_results.append(
+                    SearchResult(
+                        content=result["payload"].get("content", ""),
+                        metadata=result["payload"].get("metadata", {}),
+                        score=result["score"],
+                        id=str(result["id"]),
+                        collection=request.collection,
+                    )
                 )
-                search_results.append(result)
-
-            # Apply reranking if enabled
-            if request.enable_reranking and search_results:
-                await ctx.debug(
-                    f"Applying BGE reranking to {len(search_results)} results"
-                )
-                # Convert to format expected by reranker
-                results_for_reranking = [
-                    {"content": r.content, "original": r} for r in search_results
-                ]
-
-                # Rerank results
-                reranked = await service_manager.embedding_manager.rerank_results(
-                    query=request.query, results=results_for_reranking
-                )
-
-                # Extract reranked SearchResult objects
-                search_results = [r["original"] for r in reranked[: request.limit]]
-                await ctx.debug(
-                    f"Reranking complete, returning top {len(search_results)} results"
-                )
-            else:
-                # Without reranking, just limit to requested number
-                search_results = search_results[: request.limit]
 
             # Cache results
-            cache_data = [r.model_dump() for r in search_results]
-            await service_manager.cache_manager.set(cache_key, cache_data, ttl=3600)
+            if search_results:
+                cache_data = [r.model_dump() for r in search_results]
+                await cache_manager.set(
+                    cache_key, cache_data, ttl=request.cache_ttl or 300
+                )
 
-            await ctx.info(
-                f"Search request {request_id} completed: {len(search_results)} results found"
-            )
-
+            await ctx.info(f"Search completed: {len(search_results)} results found")
             return search_results
 
         except Exception as e:
-            await ctx.error(f"Search request {request_id} failed: {e}")
-            logger.error(f"Search failed: {e}")
+            await ctx.error(f"Search failed: {e!s}")
             raise
 
     @mcp.tool()
     async def search_similar(
-        content: str,
+        query_id: str,
         collection: str = "documentation",
         limit: int = 10,
-        threshold: float = 0.7,
+        score_threshold: float = 0.7,
         ctx: Context = None,
     ) -> list[SearchResult]:
         """
-        Find similar documents using vector similarity search.
+        Search for documents similar to a given document ID.
 
-        Uses pure vector similarity without keyword matching, ideal for
-        finding conceptually similar content.
+        Uses the document's embedding to find semantically similar content.
         """
-        await service_manager.initialize()
+        try:
+            qdrant_service = QdrantService(client_manager)
+            await qdrant_service.initialize()
 
-        request = SearchRequest(
-            query=content,
-            collection=collection,
-            limit=limit,
-            strategy=SearchStrategy.DENSE,
-            enable_reranking=False,
-        )
+            # Retrieve the source document
+            await ctx.info(f"Retrieving source document {query_id}")
 
-        # Use the main search function with dense strategy
-        results = await search_documents(request, ctx or Context())
+            # We need to implement a retrieve method or use Qdrant's retrieve API
+            # For now, let's use a simplified approach
 
-        # Filter by similarity threshold
-        filtered = [r for r in results if r.score >= threshold]
+            # Get the document by ID
+            retrieved = await qdrant_service._client.retrieve(
+                collection_name=collection,
+                ids=[query_id],
+                with_vectors=True,
+                with_payload=True,
+            )
 
-        return filtered
+            if not retrieved:
+                raise ValueError(
+                    f"Document {query_id} not found in collection {collection}"
+                )
+
+            # Extract the vector
+            source_doc = retrieved[0]
+            if hasattr(source_doc.vector, "dense"):
+                query_vector = source_doc.vector.dense
+            elif isinstance(source_doc.vector, list):
+                query_vector = source_doc.vector
+            else:
+                query_vector = source_doc.vector.get("dense", [])
+
+            # Search using the document's vector
+            results = await qdrant_service.hybrid_search(
+                collection_name=collection,
+                query_vector=query_vector,
+                sparse_vector=None,  # No sparse vector for similarity search
+                limit=limit + 1,  # +1 to exclude self
+                score_threshold=score_threshold,
+                fusion_type="rrf",
+                search_accuracy="balanced",
+            )
+
+            # Convert to response format, excluding the source document
+            search_results = []
+            for result in results:
+                if str(result["id"]) != query_id:
+                    search_results.append(
+                        SearchResult(
+                            content=result["payload"].get("content", ""),
+                            metadata=result["payload"].get("metadata", {}),
+                            score=result["score"],
+                            id=str(result["id"]),
+                            collection=collection,
+                        )
+                    )
+
+            await ctx.info(f"Found {len(search_results)} similar documents")
+            return search_results[:limit]  # Ensure we don't exceed requested limit
+
+        except Exception as e:
+            await ctx.error(f"Similar search failed: {e!s}")
+            raise

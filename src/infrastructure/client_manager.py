@@ -178,6 +178,29 @@ class ClientManager:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    @classmethod
+    def from_unified_config(cls) -> "ClientManager":
+        """Create ClientManager from unified configuration.
+
+        This factory method loads configuration from environment variables
+        and creates a properly configured ClientManager instance.
+        """
+        import os
+
+        config = ClientManagerConfig(
+            # Qdrant settings
+            qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
+            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            # OpenAI settings
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            # Firecrawl settings
+            firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY"),
+            # Redis settings
+            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+        )
+
+        return cls(config)
+
     def __init__(self, config: ClientManagerConfig | None = None):
         """Initialize client manager.
 

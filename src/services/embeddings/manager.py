@@ -142,25 +142,24 @@ class EmbeddingManager:
                 await provider.initialize()
                 self.providers["openai"] = provider
                 logger.info(
-                    f"Initialized OpenAI provider with {self.config.embeddings.openai_model}"
+                    f"Initialized OpenAI provider with {self.config.openai.model}"
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
-        # Initialize FastEmbed provider if enabled
-        if self.config.embeddings.enable_local:
-            try:
-                provider = FastEmbedProvider(
-                    model_name=self.config.embeddings.local_model
-                )
-                await provider.initialize()
-                self.providers["fastembed"] = provider
-                logger.info(
-                    f"Initialized FastEmbed provider with "
-                    f"{self.config.embeddings.local_model}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize FastEmbed provider: {e}")
+        # Initialize FastEmbed provider - always available for local embeddings
+        try:
+            provider = FastEmbedProvider(
+                model_name=self.config.fastembed.model
+            )
+            await provider.initialize()
+            self.providers["fastembed"] = provider
+            logger.info(
+                f"Initialized FastEmbed provider with "
+                f"{self.config.fastembed.model}"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize FastEmbed provider: {e}")
 
         if not self.providers:
             raise EmbeddingServiceError(
@@ -262,7 +261,7 @@ class EmbeddingManager:
                     f"using {provider.__class__.__name__}"
                 )
         else:
-            provider = self.providers.get(self.config.embeddings.preferred_provider)
+            provider = self.providers.get(self.config.embedding_provider.value)
             if not provider:
                 provider = next(iter(self.providers.values()))
 
@@ -376,11 +375,11 @@ class EmbeddingManager:
             # Try to get from cache using smart selection parameters
             cached_embedding = await self.cache_manager.get_embedding(
                 text=text,
-                provider=provider_name or self.config.embeddings.preferred_provider,
-                model=self.config.embeddings.openai_model
+                provider=provider_name or self.config.embedding_provider.value,
+                model=self.config.openai.model
                 if provider_name == "openai"
-                else self.config.embeddings.local_model,
-                dimensions=self.config.embeddings.openai_dimensions,
+                else self.config.fastembed.model,
+                dimensions=self.config.openai.dimensions,
             )
 
             if cached_embedding is not None:
@@ -388,10 +387,10 @@ class EmbeddingManager:
                 return {
                     "embeddings": [cached_embedding],
                     "provider": provider_name
-                    or self.config.embeddings.preferred_provider,
-                    "model": self.config.embeddings.openai_model
+                    or self.config.embedding_provider.value,
+                    "model": self.config.openai.model
                     if provider_name == "openai"
-                    else self.config.embeddings.local_model,
+                    else self.config.fastembed.model,
                     "cost": 0.0,  # No cost for cached result
                     "latency_ms": (time.time() - start_time) * 1000,
                     "tokens": 0,
@@ -421,7 +420,7 @@ class EmbeddingManager:
         try:
             # Generate embeddings
             embeddings = await provider.generate_embeddings(
-                texts, batch_size=self.config.embeddings.batch_size
+                texts, batch_size=32  # Default batch size
             )
 
             # Generate sparse embeddings if requested and available

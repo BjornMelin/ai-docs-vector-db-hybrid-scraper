@@ -7,14 +7,14 @@ import pytest
 from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
 from src.config.models import UnifiedConfig
+from src.services.core.qdrant_service import QdrantService
 from src.services.crawling.manager import CrawlManager
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import QualityTier
-from src.services.qdrant_service import QdrantService
 
 
 @pytest.fixture
-def integration_config():
+def integration_config(monkeypatch):
     """Integration test configuration.
 
     Using environment variable syntax (double underscore) to simulate
@@ -26,13 +26,17 @@ def integration_config():
             qdrant=QdrantConfig(url="http://localhost:6333")
         )
     """
-    return UnifiedConfig(
-        openai__api_key="sk-test123456789012345678901234567890",  # Valid length key
-        firecrawl__api_key="fc-test123456789012345678901234567890",  # Valid length key
-        qdrant__url="http://localhost:6333",
-        embedding_provider=EmbeddingProvider.OPENAI,
-        crawl_provider=CrawlProvider.FIRECRAWL,
+    # Use monkeypatch to set environment variables for the test
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test123456789012345678901234567890")
+    monkeypatch.setenv("QDRANT_URL", "http://localhost:6333")
+    
+    # Use FastEmbed to avoid OpenAI API key requirement
+    config = UnifiedConfig(
+        embedding_provider=EmbeddingProvider.FASTEMBED,
+        crawl_provider=CrawlProvider.CRAWL4AI,  # Use crawl4ai to avoid firecrawl key issues
     )
+    
+    return config
 
 
 class TestServiceIntegration:

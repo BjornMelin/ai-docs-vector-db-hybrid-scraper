@@ -1,6 +1,5 @@
 """MCP Server Package - Modularized implementation of the unified MCP server."""
 
-from .server import mcp
-from .service_manager import UnifiedServiceManager
+from .tool_registry import register_all_tools
 
-__all__ = ["UnifiedServiceManager", "mcp"]
+__all__ = ["register_all_tools"]

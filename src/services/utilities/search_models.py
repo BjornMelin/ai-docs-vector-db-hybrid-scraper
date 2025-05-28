@@ -5,9 +5,9 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from ..config.enums import FusionAlgorithm
-from ..config.enums import SearchAccuracy
-from ..config.enums import VectorType
+from ...config.enums import FusionAlgorithm
+from ...config.enums import SearchAccuracy
+from ...config.enums import VectorType
 
 
 class SearchStage(BaseModel):

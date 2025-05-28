@@ -14,8 +14,8 @@ from scipy import stats
 
 from ...config import UnifiedConfig
 from ..base import BaseService
+from ..core.qdrant_service import QdrantService
 from ..errors import ServiceError
-from ..qdrant_service import QdrantService
 
 logger = logging.getLogger(__name__)
 

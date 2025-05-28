@@ -16,7 +16,7 @@ from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
 from ..base import BaseService
 from ..errors import CrawlServiceError
-from ..rate_limiter import RateLimiter
+from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
 
 logger = logging.getLogger(__name__)

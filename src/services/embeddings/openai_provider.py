@@ -11,7 +11,7 @@ from typing import ClassVar
 from openai import AsyncOpenAI
 
 from ..errors import EmbeddingServiceError
-from ..rate_limiter import RateLimitManager
+from ..utilities.rate_limiter import RateLimitManager
 from .base import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
