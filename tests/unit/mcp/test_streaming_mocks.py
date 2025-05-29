@@ -2,16 +2,9 @@
 
 import asyncio
 import json
-import sys
-from pathlib import Path
 from typing import Any
 
 import pytest
-
-# Add src to path for imports
-src_path = str(Path(__file__).parent.parent.parent.parent / "src")
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
 
 
 class MockStreamingTransport:

@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
 import os
+import sys
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -8,6 +9,11 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
+# Add src to path for all tests - eliminates need for import path manipulation
+src_path = str(Path(__file__).parent.parent / "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 try:
     from dotenv import load_dotenv  # type: ignore

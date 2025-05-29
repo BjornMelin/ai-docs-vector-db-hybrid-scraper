@@ -48,6 +48,45 @@ mcp = FastMCP(
 )
 
 
+def _validate_streaming_config(errors: list, warnings: list) -> None:
+    """Validate streaming configuration parameters."""
+    transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
+    if transport != "streamable-http":
+        return
+
+    # Validate port
+    try:
+        port = int(os.getenv("FASTMCP_PORT", "8000"))
+        if port <= 0 or port > 65535:
+            errors.append(f"Invalid port number: {port}. Must be between 1 and 65535")
+    except ValueError:
+        errors.append(
+            f"Invalid port value: {os.getenv('FASTMCP_PORT')}. Must be a valid integer"
+        )
+
+    # Validate buffer size
+    try:
+        buffer_size = int(os.getenv("FASTMCP_BUFFER_SIZE", "8192"))
+        if buffer_size <= 0:
+            warnings.append(
+                f"Buffer size {buffer_size} is very small and may impact performance"
+            )
+    except ValueError:
+        errors.append(
+            f"Invalid buffer size: {os.getenv('FASTMCP_BUFFER_SIZE')}. Must be a valid integer"
+        )
+
+    # Validate max response size
+    try:
+        max_response_size = int(os.getenv("FASTMCP_MAX_RESPONSE_SIZE", "10485760"))
+        if max_response_size <= 0:
+            errors.append("Max response size must be positive")
+    except ValueError:
+        errors.append(
+            f"Invalid max response size: {os.getenv('FASTMCP_MAX_RESPONSE_SIZE')}. Must be a valid integer"
+        )
+
+
 def validate_configuration():
     """Validate configuration at startup.
 
@@ -71,6 +110,9 @@ def validate_configuration():
     # Check Qdrant connection
     if not config.qdrant.url:
         errors.append("Qdrant URL is required")
+
+    # Validate streaming configuration
+    _validate_streaming_config(errors, warnings)
 
     # Log warnings
     for warning in warnings:

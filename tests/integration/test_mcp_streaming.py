@@ -3,18 +3,11 @@
 import asyncio
 import json
 import os
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
-# Add src to path for imports
-src_path = str(Path(__file__).parent.parent.parent / "src")
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
 
 
 @pytest.fixture
