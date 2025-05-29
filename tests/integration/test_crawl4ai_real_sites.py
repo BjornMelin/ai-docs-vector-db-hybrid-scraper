@@ -8,7 +8,6 @@ import asyncio
 import os
 import time
 from typing import ClassVar
-from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
@@ -150,7 +149,7 @@ Complete beginner's guide to JavaScript.
             success = mock_data.get("success", True)
             # Simulate realistic timing
             await asyncio.sleep(0.1)
-            
+
             return {
                 "success": success,
                 "url": url,
