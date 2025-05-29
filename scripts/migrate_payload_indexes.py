@@ -10,14 +10,10 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from config import UnifiedConfig
-from services.errors import QdrantServiceError
-from services.qdrant_service import QdrantService
+from src.config import UnifiedConfig
+from src.services.core.qdrant_service import QdrantService
+from src.services.errors import QdrantServiceError
 
 # Configure logging
 logging.basicConfig(

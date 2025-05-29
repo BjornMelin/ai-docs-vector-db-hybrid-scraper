@@ -11,15 +11,11 @@ import logging
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from config import UnifiedConfig
-from services.embeddings.manager import EmbeddingManager
-from services.qdrant_service import QdrantService
+from src.config import UnifiedConfig
+from src.services.core.qdrant_service import QdrantService
+from src.services.embeddings.manager import EmbeddingManager
 
 # Configure logging
 logging.basicConfig(
