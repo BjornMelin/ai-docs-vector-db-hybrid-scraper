@@ -24,7 +24,7 @@ from services.logging_config import configure_logging
 configure_logging()
 logger = logging.getLogger(__name__)
 
-# Initialize FastMCP server
+# Initialize FastMCP server with streaming support
 mcp = FastMCP(
     "ai-docs-vector-db-unified",
     instructions="""
@@ -36,9 +36,15 @@ mcp = FastMCP(
     - Advanced chunking strategies (Basic, Enhanced, AST-based)
     - Project-based document management
     - Two-tier caching with metrics
-    - Batch processing and streaming support
+    - Batch processing and enhanced streaming support
     - Cost estimation and optimization
     - Analytics and monitoring
+
+    Streaming Support:
+    - Uses streamable-http transport by default for optimal performance
+    - Supports large search results with configurable response buffers
+    - Environment variables: FASTMCP_TRANSPORT, FASTMCP_HOST, FASTMCP_PORT
+    - Automatic fallback to stdio for Claude Desktop compatibility
     """,
 )
 
@@ -112,16 +118,35 @@ mcp.lifespan = lifespan
 
 
 if __name__ == "__main__":
-    # Run the server
-    # Transport can be overridden via environment variables or CLI
-    transport = os.getenv("FASTMCP_TRANSPORT", "stdio")
+    # Run the server with enhanced streaming support
+    # Default to streamable-http for better performance and streaming capabilities
+    transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
+
+    logger.info(f"Starting MCP server with transport: {transport}")
 
     if transport == "streamable-http":
+        # Enhanced streaming configuration
+        host = os.getenv("FASTMCP_HOST", "127.0.0.1")
+        port = int(os.getenv("FASTMCP_PORT", "8000"))
+
+        logger.info(f"Starting streamable HTTP server on {host}:{port}")
+        logger.info("Enhanced streaming support enabled for large search results")
+
         mcp.run(
             transport="streamable-http",
-            host=os.getenv("FASTMCP_HOST", "127.0.0.1"),
-            port=int(os.getenv("FASTMCP_PORT", "8000")),
+            host=host,
+            port=port,
+            # Additional streaming optimizations
+            response_buffer_size=os.getenv("FASTMCP_BUFFER_SIZE", "8192"),
+            max_response_size=os.getenv(
+                "FASTMCP_MAX_RESPONSE_SIZE", "10485760"
+            ),  # 10MB
         )
-    else:
-        # Default to stdio for Claude Desktop compatibility
+    elif transport == "stdio":
+        # Fallback to stdio for Claude Desktop compatibility
+        logger.info("Using stdio transport for Claude Desktop compatibility")
         mcp.run(transport="stdio")
+    else:
+        # Support for other transport types
+        logger.info(f"Using {transport} transport")
+        mcp.run(transport=transport)

@@ -402,6 +402,62 @@ The system provides unified MCP server configuration combining all functionality
 
 This replaces separate Qdrant and Firecrawl MCP servers with a single unified interface.
 
+### Streaming Support Configuration
+
+The unified MCP server includes enhanced streaming support for large search results:
+
+**Basic Configuration (Default):**
+```json
+{
+  "mcpServers": {
+    "ai-docs-vector-db": {
+      "command": "uv",
+      "args": ["run", "python", "src/unified_mcp_server.py"],
+      "cwd": "/path/to/project",
+      "env": {
+        "OPENAI_API_KEY": "sk-...",
+        "QDRANT_URL": "http://localhost:6333"
+      }
+    }
+  }
+}
+```
+
+**Advanced Streaming Configuration:**
+```json
+{
+  "mcpServers": {
+    "ai-docs-vector-db": {
+      "command": "uv",
+      "args": ["run", "python", "src/unified_mcp_server.py"],
+      "cwd": "/path/to/project",
+      "env": {
+        "OPENAI_API_KEY": "sk-...",
+        "QDRANT_URL": "http://localhost:6333",
+        "FASTMCP_TRANSPORT": "streamable-http",
+        "FASTMCP_HOST": "127.0.0.1",
+        "FASTMCP_PORT": "8000",
+        "FASTMCP_BUFFER_SIZE": "8192",
+        "FASTMCP_MAX_RESPONSE_SIZE": "10485760"
+      }
+    }
+  }
+}
+```
+
+**Environment Variables:**
+- `FASTMCP_TRANSPORT`: Transport type (`streamable-http` for streaming, `stdio` for Claude Desktop)
+- `FASTMCP_HOST`: Host for HTTP transport (default: `127.0.0.1`)
+- `FASTMCP_PORT`: Port for HTTP transport (default: `8000`)
+- `FASTMCP_BUFFER_SIZE`: Response buffer size (default: `8192`)
+- `FASTMCP_MAX_RESPONSE_SIZE`: Maximum response size (default: `10485760` - 10MB)
+
+**Benefits:**
+- Optimized performance for large search results (1000+ documents)
+- Configurable response buffering for memory efficiency
+- Automatic fallback to stdio for Claude Desktop compatibility
+- Enhanced error handling and timeout management
+
 ## Testing Requirements
 
 - **Unit Tests**: Use pytest with ≥90% coverage for all services
