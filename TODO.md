@@ -15,7 +15,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### **Verified V1 Foundation Components:**
 
 - ✅ **Core Infrastructure**: Unified Configuration, Client Management, Enhanced Chunking - CONFIRMED
-- ✅ **Advanced Services**: Crawl4AI, DragonflyDB Cache, HyDE, Browser Automation, Collection Management - CONFIRMED  
+- ✅ **Advanced Services**: Crawl4AI, DragonflyDB Cache, HyDE, Browser Automation, Collection Management - CONFIRMED
 - ✅ **Database & Search**: Qdrant Service with Query API, Embedding Manager with smart selection - CONFIRMED
 - ✅ **MCP Integration**: Unified server with FastMCP 2.0, complete tool set, modular architecture - CONFIRMED
 - ✅ **Testing & Quality**: 51 test files, >90% coverage maintained, comprehensive async patterns - CONFIRMED
@@ -91,16 +91,17 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - ✅ Added comprehensive input validation and security improvements
   - ✅ Performance: 15-30% latency improvement through optimized execution
   - ✅ Comprehensive test suite with 8 new Query API tests (100% pass rate)
-  
 - ✅ **Payload Indexing for Fast Filtering** `feat/payload-indexing` [Issue #56](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/56) ✅ **COMPLETED 2025-05-27** - [PR #69](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/69)
+
   - ✅ Created comprehensive payload index system with field type optimization
   - ✅ Added indexes: doc_type, language, framework, created_at, crawl_source + 15 more fields
   - ✅ Migration script with exponential backoff recovery and individual index fallback
   - ✅ Performance: 10-100x improvement for filtered searches achieved
 
 - ✅ **HNSW Configuration Optimization** `perf/hnsw-tuning` [Issue #57](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/57) ✅ **COMPLETED 2025-05-28**
+
   - ✅ Updated to m=16, ef_construct=200, ef=100 with optimized parameters
-  - ✅ Added max_indexing_threads=0 for parallel processing capabilities  
+  - ✅ Added max_indexing_threads=0 for parallel processing capabilities
   - ✅ Comprehensive benchmarking suite with adaptive EF optimization
   - ✅ HNSWOptimizer service with performance caching and metrics
   - ✅ Integration with QdrantService for seamless optimization
@@ -193,6 +194,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### 📋 Supporting Tasks
 
 - ✅ **Unified MCP Server Modularization** `refactor/server-modularization` ✅ **COMPLETED 2025-05-28** - [PR #82](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/82)
+
   - ✅ Extract request/response models to `src/mcp/models/` with comprehensive schemas
   - ✅ Move MCP tool definitions to modular `src/mcp/tools/` structure (9 tool modules)
   - ✅ Create centralized tool registration in `src/mcp/tool_registry.py`
@@ -218,11 +220,13 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### 🧪 Test Organization & Infrastructure
 
 - ✅ **Test Directory Restructure** - Organized tests into hierarchical structure
+
   - ✅ Created `tests/unit/`, `tests/integration/`, `tests/performance/`, `tests/fixtures/`
   - ✅ Added comprehensive `__init__.py` files with documentation for each subdirectory
   - ✅ Moved all test files from flat structure to organized hierarchy
 
 - ✅ **Enhanced Test Configuration** - Improved pytest setup for better output readability
+
   - ✅ Updated `pyproject.toml` with optimized pytest configuration
   - ✅ Added clean output formatting, disabled warnings, shortened tracebacks
   - ✅ Created `scripts/test.sh` for multiple test execution modes (quick, clean, coverage, all)
@@ -230,7 +234,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 
 - ✅ **Test Fixes & Debugging** - Resolved broken tests across multiple components
   - ✅ Fixed API key validation issues in `test_unified_config.py` (valid-length keys)
-  - ✅ Resolved crawling provider test failures (method signatures, return values)  
+  - ✅ Resolved crawling provider test failures (method signatures, return values)
   - ✅ Fixed embedding provider async mock setup and parameter format issues
   - ✅ Updated config loader to use local providers for example configurations
   - ✅ Corrected EmbeddingManager config attribute references
@@ -349,30 +353,35 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Comprehensive Documentation Suite (Completed 2025-05-22)
 
 - [x] **MCP Server Architecture** (`docs/MCP_SERVER_ARCHITECTURE.md`)
+
   - 25+ tool specifications with complete implementations
   - Resource-based architecture design
   - Streaming and composition support
   - Context-aware operation patterns
 
 - [x] **V1 Implementation Plan** (`docs/V1_IMPLEMENTATION_PLAN.md`)
+
   - 8-week phased implementation timeline
   - Complete technical architecture
   - Service layer implementations
   - Testing and deployment strategies
 
 - [x] **Advanced Search Implementation** (`docs/ADVANCED_SEARCH_IMPLEMENTATION.md`)
+
   - Qdrant Query API with prefetch and fusion
   - Hybrid search with RRF/DBSF
   - Multi-stage retrieval patterns
   - Reranking with BGE-reranker-v2-m3
 
 - [x] **Embedding Model Integration** (`docs/EMBEDDING_MODEL_INTEGRATION.md`)
+
   - Multi-provider architecture (OpenAI, BGE, FastEmbed)
   - Smart model selection algorithms
   - Cost optimization strategies
   - Performance monitoring and quality assurance
 
 - [x] **Vector Database Best Practices** (`docs/VECTOR_DB_BEST_PRACTICES.md`)
+
   - Collection design patterns
   - Performance optimization techniques
   - Operational procedures
@@ -404,6 +413,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Smart Model Selection & Cost Optimization
 
 - [x] **Intelligent Model Selection** `feat/smart-model-selection` ✅ **COMPLETED**
+
   - [x] Implement auto-selection based on text length and quality requirements
   - [x] Add quality tiers: fast (small models), balanced, best (research-backed)
   - [x] Create cost tracking for each embedding provider
@@ -412,8 +422,9 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [x] Create model recommendation API based on use case
   - [x] Add cost estimation before processing
   - [x] Implement budget limits and warnings
-  
+
   **Implementation Details:**
+
   - ✅ **Multi-criteria scoring** with quality, speed, and cost weights
   - ✅ **Text analysis** for complexity, type detection (code/docs/short/long)
   - ✅ **Budget management** with 80%/90% warning thresholds
@@ -442,6 +453,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Code Architecture Improvements
 
 - [x] **Centralized Client Management** `feat/centralized-clients` 📋 [Architecture Guide](docs/CODE_ARCHITECTURE_IMPROVEMENTS.md) ✅ **COMPLETED 2025-05-24**
+
   - [x] Create unified ClientManager class for all API clients 📖 [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
   - [x] Implement singleton pattern for client instances 📖 [Singleton Pattern](https://refactoring.guru/design-patterns/singleton/python/example)
   - [x] Add connection pooling for Qdrant client 📖 [AsyncIO Patterns](https://docs.python.org/3/library/asyncio.html)
@@ -455,6 +467,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - ⚡ **Benefits**: Centralized client lifecycle, automatic recovery, fault tolerance, resource efficiency
 
 - [x] **Unified Configuration System** `feat/unified-config` ✅ **COMPLETED**
+
   - [x] Create single UnifiedConfig dataclass for all settings
   - [x] Consolidate scattered configuration files
   - [x] Implement environment variable validation
@@ -463,8 +476,9 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [x] Implement configuration migration tools
   - [x] Add configuration hot-reloading support
   - [x] Create configuration documentation generator
-  
+
   **Implementation Details:**
+
   - ✅ **Comprehensive UnifiedConfig**: Single configuration class in `src/config/models.py`
   - ✅ **Environment validation**: Pydantic v2 models with field validation
   - ✅ **Configuration templates**: Multiple templates in `config/templates/`
@@ -475,6 +489,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Batch Processing Optimization
 
 - [x] **Efficient Batch Operations** `feat/batch-processing` ✅ **COMPLETED**
+
   - [x] Implement batch embedding with optimal chunk sizes
   - [ ] Add OpenAI batch API support for cost reduction 📖 [OpenAI Batch API](https://platform.openai.com/docs/guides/batch) (V2 Feature)
   - [x] Create Qdrant bulk upsert optimization 📖 [Qdrant Performance](https://qdrant.tech/documentation/guides/optimization/)
@@ -483,8 +498,9 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [x] Create batch retry logic with exponential backoff
   - [x] Implement batch validation and error recovery
   - [x] Add batch operation scheduling
-  
+
   **Implementation Details:**
+
   - ✅ **Batch Embedding**: Configurable batch sizes (default 100) in `EmbeddingManager`
   - ✅ **Bulk Upsert**: Qdrant batch operations with optimized chunk processing
   - ✅ **Parallel Processing**: Async/await patterns with semaphore control
@@ -507,6 +523,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Enhanced Testing & Quality
 
 - [ ] **Comprehensive Async Test Suite** `feat/async-test-suite` 📋 [Testing Guide](docs/TESTING_QUALITY_ENHANCEMENTS.md)
+
   - [ ] Add pytest-asyncio configuration and fixtures 📖 [pytest-asyncio](https://pytest-asyncio.readthedocs.io/)
   - [ ] Create async test patterns for all API operations 📖 [pytest Guide](https://docs.pytest.org/en/stable/)
   - [ ] Implement mock clients for Qdrant, OpenAI, Firecrawl 📖 [unittest.mock](https://docs.python.org/3/library/unittest.mock.html)
@@ -529,6 +546,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Enhanced Advanced Features
 
 - [ ] **Advanced Reranking Pipeline** `feat/advanced-reranking`
+
   - [ ] Implement ColBERT-style reranking for comparison
   - [ ] Add reranking model auto-selection based on query type
   - [ ] Create reranking performance benchmarks
@@ -536,6 +554,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Implement adaptive reranking thresholds
 
 - [ ] **Multi-Modal Document Processing** `feat/multimodal-docs`
+
   - [ ] Add image extraction and OCR for documentation
   - [ ] Implement table parsing and structured data extraction
   - [ ] Add PDF documentation processing capabilities
@@ -554,6 +573,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Advanced Chunking Future Enhancements
 
 - [ ] **Extended Multi-Language Support** `feat/extended-languages`
+
   - [ ] Add support for Go, Rust, Java parsers
   - [ ] Create language-specific chunking rules for each
   - [ ] Add configuration for per-language chunk preferences
@@ -561,6 +581,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Add support for mixed-language repositories
 
 - [ ] **Adaptive Chunk Sizing** `feat/adaptive-chunking`
+
   - [ ] Implement dynamic chunk sizing based on code complexity
   - [ ] Create function-size-aware chunking (larger chunks for big functions)
   - [ ] Add configuration for maximum function chunk size (3200 chars)
@@ -568,6 +589,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Create hierarchical chunking (file → class → method levels)
 
 - [ ] **Context-Aware Embedding Enhancement** `feat/context-embeddings`
+
   - [ ] Implement related code segment grouping
   - [ ] Add import statement handling and preservation
   - [ ] Create cross-reference aware chunking
@@ -575,6 +597,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Add metadata enrichment for chunks (function type, complexity, etc.)
 
 - [ ] **Advanced Chunking Configuration** `feat/chunking-config`
+
   - [ ] Create ChunkingConfig class with comprehensive options
   - [ ] Add enable_ast_chunking toggle
   - [ ] Implement preserve_function_boundaries option
@@ -591,6 +614,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Performance & Scalability
 
 - [ ] **Production-Grade Performance** `feat/production-performance` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
+
   - [ ] Implement connection pooling for Qdrant 📖 [AsyncIO Patterns](https://docs.python.org/3/library/asyncio.html)
   - [ ] Add distributed processing capabilities
   - [ ] Create batch embedding optimization 📖 [OpenAI Batch API](https://platform.openai.com/docs/guides/batch)
@@ -606,21 +630,27 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 
 ### Enhanced MCP Server Features
 
-- [x] **Basic Streaming Support** `feat/mcp-streaming-basic` ✅ **COMPLETED 2025-05-29**
-  - [x] Enable streaming transport in unified MCP server
-  - [x] Add streamable-http transport configuration
-  - [x] Update FastMCP server initialization for streaming
-  - [x] Test streaming with large search results
-  - [x] Update documentation with streaming configuration
-  
+- ✅ **Basic Streaming Support** `feat/mcp-streaming-basic` ✅ **COMPLETED 2025-05-29** - [PR #84](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/84) **MERGED**
+
+  - ✅ Enable streaming transport in unified MCP server
+  - ✅ Add streamable-http transport configuration
+  - ✅ Update FastMCP server initialization for streaming
+  - ✅ Test streaming with large search results
+  - ✅ Update documentation with streaming configuration
+  - ✅ Enhanced startup validation for streaming configuration
+  - ✅ Comprehensive test suite with 40/41 tests passing (98% success rate)
+
   **Implementation Details:**
+
   - ✅ **Default Transport**: Changed from `stdio` to `streamable-http` for optimal performance
-  - ✅ **Environment Variables**: Added support for `FASTMCP_TRANSPORT`, `FASTMCP_HOST`, `FASTMCP_PORT`
+  - ✅ **Environment Variables**: Added support for `FASTMCP_TRANSPORT`, `FASTMCP_HOST`, `FASTMCP_PORT`, `FASTMCP_BUFFER_SIZE`, `FASTMCP_MAX_RESPONSE_SIZE`
   - ✅ **Response Buffering**: Configurable buffer size and max response size for large results
   - ✅ **Automatic Fallback**: Maintains stdio compatibility for Claude Desktop
-  - ✅ **Documentation**: Updated CLAUDE.md with comprehensive streaming configuration examples
+  - ✅ **Documentation**: Updated CLAUDE.md with comprehensive streaming configuration examples and performance comparison table
+  - ✅ **Testing**: Created comprehensive test suite covering unit, integration, performance, and edge cases
+  - ✅ **Infrastructure**: Enhanced test imports with global src path setup in conftest.py
 
-- [ ] **Advanced Tool Composition** `feat/tool-composition-v2` (V2 Feature)  
+- [ ] **Advanced Tool Composition** `feat/tool-composition-v2` (V2 Feature)
   - Advanced orchestration and pipeline features planned for V2
   - Current modular architecture supports basic composition patterns
 
@@ -643,6 +673,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Enhanced Usability
 
 - [ ] **Advanced CLI Interface** `feat/advanced-cli`
+
   - [ ] Create rich CLI with progress visualization
   - [ ] Add interactive configuration wizard
   - [ ] Implement command auto-completion
@@ -650,6 +681,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Create batch operation commands
 
 - [ ] **Example Scripts & Tutorials** `feat/examples-mvp`
+
   - [ ] Create basic search example script
   - [ ] Add bulk indexing example
   - [ ] Implement configuration setup examples
@@ -660,6 +692,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Add Jupyter notebook tutorials
 
 - [ ] **Configuration Management** `feat/config-management`
+
   - [ ] Add configuration templates for different use cases
   - [ ] Implement configuration validation and suggestions
   - [ ] Create environment-specific configurations
@@ -688,6 +721,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Advanced Search & Retrieval
 
 - [ ] **Intelligent Search Features** `feat/intelligent-search`
+
   - [ ] Add query expansion and suggestion
   - [ ] Implement search result clustering
   - [ ] Create personalized search ranking
@@ -708,6 +742,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Advanced Integrations
 
 - [ ] **Additional MCP Servers** `feat/additional-mcp`
+
   - [ ] Integrate with GitHub MCP server
   - [ ] Add Slack/Discord documentation bots
   - [ ] Create custom documentation MCP servers
@@ -715,6 +750,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Implement cross-platform synchronization
 
 - [ ] **API & Webhooks** `feat/api-webhooks`
+
   - [ ] Create FastAPI REST API interface
   - [ ] Add webhook support for real-time updates
   - [ ] Implement API authentication and rate limiting
@@ -731,6 +767,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Future Technologies
 
 - [ ] **Experimental Features** `feat/experimental`
+
   - [ ] Add support for latest embedding models (2025+)
   - [ ] Experiment with vector databases alternatives
   - [ ] Implement advanced RAG techniques
@@ -738,6 +775,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - [ ] Explore federated learning for embeddings
 
 - [ ] **AI-Powered Enhancements** `feat/ai-enhancements`
+
   - [ ] Add automated documentation quality assessment
   - [ ] Implement intelligent content summarization
   - [ ] Create automated tagging and categorization
@@ -840,7 +878,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 - [ ] **Crawling Speed**: 4-6x faster with Crawl4AI
 - [ ] **Search Accuracy**: 95%+ (vs 89.3% baseline)
 
-### Cost Targets  
+### Cost Targets
 
 - [ ] **Crawling Costs**: $0 (Crawl4AI vs Firecrawl subscription)
 - [ ] **Cache Memory**: -38% usage (DragonflyDB vs Redis)
@@ -944,6 +982,7 @@ Our implementation has achieved **state-of-the-art 2025 performance**:
 ### Code Refactoring & Deduplication
 
 - [ ] **Eliminate Code Duplication** `refactor/deduplication`
+
   - [ ] Extract common embedding logic to shared module
   - [ ] Consolidate Qdrant client initialization
   - [ ] Create shared configuration loading utilities
