@@ -5,7 +5,9 @@ This directory contains pre-configured templates for common use cases. Each temp
 ## Available Templates
 
 ### 🚀 production.json
+
 **Use Case:** Production deployment with high performance and reliability
+
 - Uses OpenAI embeddings for best quality
 - Redis caching enabled for performance
 - Vector quantization enabled for storage efficiency
@@ -13,7 +15,9 @@ This directory contains pre-configured templates for common use cases. Each temp
 - Optimized batch sizes and concurrency settings
 
 ### 🛠️ development.json
+
 **Use Case:** Local development and testing
+
 - Debug mode enabled with verbose logging
 - Uses local FastEmbed for faster iteration
 - Redis caching disabled (local cache only)
@@ -21,7 +25,9 @@ This directory contains pre-configured templates for common use cases. Each temp
 - Browser not headless for visual debugging
 
 ### 🏠 local-only.json
+
 **Use Case:** Privacy-conscious deployment without cloud services
+
 - All processing done locally with FastEmbed
 - No external API dependencies
 - Optimized for single-machine deployment
@@ -29,7 +35,9 @@ This directory contains pre-configured templates for common use cases. Each temp
 - Restricted to localhost connections only
 
 ### 🧪 testing.json
+
 **Use Case:** Automated testing and CI/CD pipelines
+
 - Minimal resource usage
 - Caching disabled for test isolation
 - Small batch sizes for fast execution
@@ -37,7 +45,9 @@ This directory contains pre-configured templates for common use cases. Each temp
 - Single concurrent operations for predictability
 
 ### 📄 minimal.json
+
 **Use Case:** Quick start with minimal configuration
+
 - Relies on sensible defaults
 - Only essential settings specified
 - Good starting point for customization
@@ -46,11 +56,13 @@ This directory contains pre-configured templates for common use cases. Each temp
 ## How to Use
 
 1. **Copy a template:**
+
    ```bash
    cp config/templates/production.json config.json
    ```
 
 2. **Set environment variables for sensitive data:**
+
    ```bash
    export AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
    export AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
@@ -62,6 +74,7 @@ This directory contains pre-configured templates for common use cases. Each temp
    - Use the config management CLI for validation
 
 4. **Validate your configuration:**
+
    ```bash
    python -m src.manage_config validate --config-file config.json
    ```
@@ -81,6 +94,7 @@ Choose your template based on:
 ## Customization Tips
 
 1. **API Keys:** Never store API keys in config files. Use environment variables:
+
    ```bash
    AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
    AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
@@ -122,6 +136,7 @@ export AI_DOCS__SECURITY__ALLOWED_DOMAINS='["example.com", "docs.example.com"]'
 If you have existing configuration files:
 
 1. Run the migration script:
+
    ```bash
    python scripts/migrate_config.py
    ```

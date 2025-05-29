@@ -18,16 +18,19 @@ Payload indexing in Qdrant provides 10-100x performance improvement for filtered
 ### Real-World Scenarios
 
 #### Small Collections (< 10,000 documents)
+
 - **Baseline**: 10-50ms average query time
 - **With indexes**: 1-5ms average query time
 - **Improvement**: 2-50x faster
 
 #### Medium Collections (10,000 - 100,000 documents)
+
 - **Baseline**: 50-200ms average query time
 - **With indexes**: 1-10ms average query time
 - **Improvement**: 10-200x faster
 
 #### Large Collections (> 100,000 documents)
+
 - **Baseline**: 200-2000ms average query time
 - **With indexes**: 2-20ms average query time
 - **Improvement**: 100-1000x faster
@@ -35,6 +38,7 @@ Payload indexing in Qdrant provides 10-100x performance improvement for filtered
 ## Indexed Fields and Performance Characteristics
 
 ### Keyword Fields (Highest Performance)
+
 Fields optimized for exact matching with maximum selectivity:
 
 ```python
@@ -53,6 +57,7 @@ keyword_fields = [
 **Performance**: Sub-millisecond exact matches, highest selectivity
 
 ### Text Fields (Good Performance)
+
 Fields optimized for full-text search with moderate selectivity:
 
 ```python
@@ -65,6 +70,7 @@ text_fields = [
 **Performance**: 5-15ms for text searches, good for content discovery
 
 ### Integer Fields (Very Good Performance)
+
 Fields optimized for range queries and numerical comparisons:
 
 ```python
@@ -83,12 +89,14 @@ integer_fields = [
 ## Benchmark Results
 
 ### Test Environment
+
 - **Collection Size**: 50,000 technical documentation chunks
 - **Hardware**: Standard cloud instance (4 CPU, 8GB RAM)
 - **Qdrant Version**: Latest with quantization enabled
 
 ### Baseline Performance (No Indexes)
-```
+
+```plaintext
 Filter by doc_type="api": 156ms average
 Filter by language="python": 143ms average
 Filter by framework="fastapi": 167ms average
@@ -97,7 +105,8 @@ Combined filters: 445ms average
 ```
 
 ### Optimized Performance (With Indexes)
-```
+
+```plaintext
 Filter by doc_type="api": 1.2ms average (130x improvement)
 Filter by language="python": 0.8ms average (179x improvement)
 Filter by framework="fastapi": 1.1ms average (152x improvement)
@@ -106,6 +115,7 @@ Combined filters: 3.7ms average (120x improvement)
 ```
 
 ### Memory Overhead
+
 - **Index Storage**: ~10% overhead per indexed field
 - **Total Overhead**: ~150% for full index suite (15 fields)
 - **Memory Efficiency**: Excellent ROI for query performance
@@ -113,6 +123,7 @@ Combined filters: 3.7ms average (120x improvement)
 ## Usage Examples
 
 ### High-Performance Filtering
+
 ```python
 # Extremely fast keyword filtering (sub-millisecond)
 results = await qdrant_service.search_points(
@@ -139,6 +150,7 @@ recent_docs = await qdrant_service.search_points(
 ```
 
 ### Complex Queries with Multiple Indexes
+
 ```python
 # Complex filtering with excellent performance (2-10ms)
 results = await qdrant_service.search_points(
@@ -158,12 +170,14 @@ results = await qdrant_service.search_points(
 ## Optimization Guidelines
 
 ### Field Selection Strategy
+
 1. **Index heavily filtered fields first**: `doc_type`, `language`, `framework`
 2. **Add temporal indexes for analytics**: `created_at`, `last_updated`
 3. **Include content metrics for quality**: `word_count`, `quality_score`
 4. **Limit text indexes to essential fields**: Avoid over-indexing content
 
 ### Performance Monitoring
+
 ```python
 # Monitor index health and usage
 health_report = await qdrant_service.validate_index_health("collection_name")
@@ -175,6 +189,7 @@ print(f"Optimization Suggestions: {health_report['recommendations']}")
 ```
 
 ### Migration Best Practices
+
 1. **Test on development collections first**
 2. **Monitor query performance before/after migration**
 3. **Use migration script for automatic index creation**
@@ -183,6 +198,7 @@ print(f"Optimization Suggestions: {health_report['recommendations']}")
 ## Troubleshooting
 
 ### Common Performance Issues
+
 1. **Missing indexes on frequently filtered fields**
    - Solution: Run index health validation and create missing indexes
 
@@ -193,6 +209,7 @@ print(f"Optimization Suggestions: {health_report['recommendations']}")
    - Solution: Use keyword indexes for exact matches, integer indexes for ranges
 
 ### Monitoring Commands
+
 ```bash
 # Run migration with validation
 python scripts/migrate_payload_indexes.py --validate

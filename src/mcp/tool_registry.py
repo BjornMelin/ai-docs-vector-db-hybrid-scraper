@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
-
-    from infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 

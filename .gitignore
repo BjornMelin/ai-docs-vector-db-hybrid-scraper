@@ -100,3 +100,4 @@ yarn-error.log*
 
 # Local Files
 .reference/
+claude_task.pid

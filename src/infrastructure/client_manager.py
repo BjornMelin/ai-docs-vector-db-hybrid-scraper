@@ -17,11 +17,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 from qdrant_client import AsyncQdrantClient
-
-try:
-    from services.errors import APIError
-except ImportError:
-    from ..services.errors import APIError
+from src.services.errors import APIError
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +186,7 @@ class ClientManager:
         """
         import os
 
-        from ..config.loader import ConfigLoader
+        from src.config.loader import ConfigLoader
 
         # Load the unified configuration
         unified_config = ConfigLoader.load_config()

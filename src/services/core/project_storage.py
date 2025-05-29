@@ -13,10 +13,7 @@ except ImportError:
     # Fallback to synchronous file operations if aiofiles not available
     aiofiles = None
 
-try:
-    from ..errors import BaseError
-except ImportError:
-    from src.services.errors import BaseError
+from src.services.errors import BaseError
 
 logger = logging.getLogger(__name__)
 

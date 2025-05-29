@@ -5,6 +5,7 @@ This guide provides comprehensive configuration examples and best practices for 
 ## Overview
 
 Crawl4AI is a high-performance, free web scraping library that provides:
+
 - 4-6x faster performance compared to alternatives
 - Advanced JavaScript execution capabilities
 - Intelligent content extraction
@@ -389,6 +390,7 @@ async def monitored_crawl(url: str):
 ## Best Practices
 
 ### 1. **Resource Management**
+
 ```python
 # Always use context managers or explicit cleanup
 async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -397,16 +399,19 @@ async with AsyncWebCrawler(config=browser_config) as crawler:
 ```
 
 ### 2. **Error Recovery**
+
 - Implement retry logic with exponential backoff
 - Use circuit breakers for failing sites
 - Log detailed error context for debugging
 
 ### 3. **Performance Tuning**
+
 - Start with conservative concurrency (10)
 - Monitor memory and CPU usage
 - Adjust based on target site characteristics
 
 ### 4. **Content Validation**
+
 ```python
 def validate_crawl_result(result: dict) -> bool:
     """Validate crawled content quality."""
@@ -428,6 +433,7 @@ def validate_crawl_result(result: dict) -> bool:
 ```
 
 ### 5. **Site-Specific Optimization**
+
 - Profile target sites before bulk crawling
 - Adjust timeouts based on page load times
 - Use custom JavaScript for complex interactions

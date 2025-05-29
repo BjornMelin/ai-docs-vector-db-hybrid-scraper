@@ -5,12 +5,19 @@ description = "🚀 Hybrid AI documentation scraping system combining Crawl4AI (
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.13"
-authors = [
-    { name = "BjornMelin", email = "your-email@example.com" }
-]
+authors = [{ name = "BjornMelin", email = "your-email@example.com" }]
 keywords = [
-    "ai", "vector-database", "documentation", "scraping", "crawl4ai", 
-    "firecrawl", "qdrant", "claude", "mcp", "embeddings", "search"
+    "ai",
+    "vector-database",
+    "documentation",
+    "scraping",
+    "crawl4ai",
+    "firecrawl",
+    "qdrant",
+    "claude",
+    "mcp",
+    "embeddings",
+    "search",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -91,23 +98,28 @@ src = ["src", "tests", "examples"]
 [tool.ruff.lint]
 # Basic but comprehensive rule selection
 select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # pyflakes
-    "I",      # isort
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "UP",     # pyupgrade
-    "SIM",    # flake8-simplify
-    "RUF",    # Ruff-specific rules
-    "PL",     # pylint (basic subset)
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+    "PL",  # pylint (basic subset)
 ]
 
 ignore = [
-    "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
-    "PLR0913",  # Too many arguments
-    "PLR2004",  # Magic value used in comparison
-    "E501",     # Line too long (handled by formatter)
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",    # Missing docstrings
+    "PLR0913", # Too many arguments
+    "PLR2004", # Magic value used in comparison
+    "E501",    # Line too long (handled by formatter)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -132,12 +144,12 @@ python_functions = ["test_*"]
 
 # Clean output formatting
 addopts = [
-    "--tb=short",           # Shorter traceback format
-    "--strict-markers",     # Treat unknown markers as errors
-    "--disable-warnings",   # Disable pytest warnings for cleaner output
-    "--no-header",          # Remove pytest header
-    "-ra",                  # Show short test summary for all except passed
-    "--maxfail=5",          # Stop after 5 failures
+    "--tb=short",         # Shorter traceback format
+    "--strict-markers",   # Treat unknown markers as errors
+    "--disable-warnings", # Disable pytest warnings for cleaner output
+    "--no-header",        # Remove pytest header
+    "-ra",                # Show short test summary for all except passed
+    "--maxfail=5",        # Stop after 5 failures
 ]
 
 # Test discovery
@@ -145,7 +157,7 @@ minversion = "8.0"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests", 
+    "unit: marks tests as unit tests",
     "performance: marks tests as performance tests",
 ]
 
@@ -156,6 +168,4 @@ log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [dependency-groups]
-dev = [
-    "pytest>=8.3.5",
-]
+dev = ["pytest>=8.3.5"]

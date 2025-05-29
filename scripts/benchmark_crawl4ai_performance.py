@@ -30,7 +30,7 @@ from src.config.loader import ConfigLoader
 from src.infrastructure.client_manager import ClientManager
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider
-from src.services.rate_limiter import RateLimiter
+from src.services.utilities.rate_limiter import RateLimiter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
