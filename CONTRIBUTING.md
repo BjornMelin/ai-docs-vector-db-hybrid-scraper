@@ -5,6 +5,7 @@ We welcome contributions to make this project even better! This guide will help 
 ## 🚀 Quick Start for Contributors
 
 ### Prerequisites
+
 - **Python 3.13+** with `uv` package manager
 - **Docker Desktop** for local development
 - **Git** for version control
@@ -13,12 +14,14 @@ We welcome contributions to make this project even better! This guide will help 
 ### Development Setup
 
 1. **Fork and Clone**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/ai-docs-vector-db-hybrid-scraper.git
    cd ai-docs-vector-db-hybrid-scraper
    ```
 
 2. **Environment Setup**
+
    ```bash
    # Install uv if not already available
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -33,6 +36,7 @@ We welcome contributions to make this project even better! This guide will help 
    ```
 
 3. **Start Development Services**
+
    ```bash
    # Start Qdrant database
    docker-compose up -d
@@ -48,6 +52,7 @@ We welcome contributions to make this project even better! This guide will help 
 We follow **modern best practices** for clean, maintainable code:
 
 #### Python Code Style
+
 ```bash
 # Format and lint all code before committing
 ruff check . --fix
@@ -61,12 +66,14 @@ uv run pytest --cov=src --cov-report=html
 ```
 
 #### Required Code Quality
+
 - **Type Hints**: All functions must have complete type annotations
 - **Docstrings**: Follow Google-style docstrings for all public functions
 - **Testing**: Maintain >=90% test coverage
 - **Performance**: Follow advanced performance patterns
 
 #### Example Code Structure
+
 ```python
 from typing import Any
 from pydantic import BaseModel, Field
@@ -103,6 +110,7 @@ async def example_function(config: ExampleConfig) -> dict[str, Any]:
 ### Git Workflow
 
 #### Branch Naming
+
 - `feat/feature-name` - New features
 - `fix/bug-description` - Bug fixes  
 - `docs/update-topic` - Documentation updates
@@ -110,6 +118,7 @@ async def example_function(config: ExampleConfig) -> dict[str, Any]:
 - `test/test-area` - Test additions/improvements
 
 #### Commit Messages
+
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```bash
@@ -129,6 +138,7 @@ change: code
 #### Pull Request Process
 
 1. **Create Feature Branch**
+
    ```bash
    git checkout -b feat/your-feature-name
    git push -u origin feat/your-feature-name
@@ -141,6 +151,7 @@ change: code
    - Test locally
 
 3. **Pre-commit Checklist**
+
    ```bash
    # Run full test suite
    uv run pytest --cov=src
@@ -165,7 +176,8 @@ change: code
 ## 🧪 Testing Guidelines
 
 ### Test Structure
-```
+
+```plaintext
 tests/
 ├── unit/                 # Unit tests for individual components
 ├── integration/          # Integration tests for full workflows
@@ -176,6 +188,7 @@ tests/
 ### Writing Tests
 
 #### Unit Tests
+
 ```python
 import pytest
 from src.crawl4ai_bulk_embedder import EmbeddingConfig, EmbeddingProvider
@@ -196,6 +209,7 @@ async def test_embedding_config_validation():
 ```
 
 #### Integration Tests
+
 ```python
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -206,6 +220,7 @@ async def test_full_scraping_pipeline():
 ```
 
 #### Performance Tests
+
 ```python
 @pytest.mark.benchmark
 def test_embedding_generation_speed(benchmark):
@@ -239,6 +254,7 @@ uv run pytest --benchmark-only
 ## 📚 Documentation Contributions
 
 ### Documentation Types
+
 - **API Documentation**: Auto-generated from docstrings
 - **User Guides**: Step-by-step tutorials in `/docs`
 - **Technical Specs**: Implementation details and research
@@ -247,18 +263,21 @@ uv run pytest --benchmark-only
 ### Writing Documentation
 
 #### User Guides
+
 - Use clear, actionable headings
 - Include code examples for every concept
 - Test all code examples
 - Use consistent formatting
 
 #### API Documentation
+
 - Complete docstrings for all public functions
 - Include usage examples
 - Document all parameters and return values
 - Note any side effects or requirements
 
 ### Building Documentation
+
 ```bash
 # Install documentation dependencies
 uv add mkdocs mkdocs-material
@@ -275,24 +294,28 @@ uv run mkdocs build
 ### High-Priority Areas
 
 #### 🔬 Research & Optimization
+
 - **Embedding Models**: Test and integrate new high-performance models
 - **Vector Quantization**: Explore advanced quantization techniques
 - **Hybrid Search**: Improve sparse-dense fusion algorithms
 - **Reranking**: Experiment with new cross-encoder models
 
 #### ⚡ Performance Improvements
+
 - **Memory Optimization**: Reduce memory footprint
 - **Parallel Processing**: Improve concurrent operations
 - **Caching**: Implement intelligent caching strategies
 - **Batch Processing**: Optimize batch sizes and operations
 
 #### 🤖 MCP Integration
+
 - **New MCP Servers**: Add support for additional MCP servers
 - **Claude Integration**: Improve Claude Desktop workflows
 - **Real-time Updates**: Implement live documentation updates
 - **Advanced Queries**: Support complex search patterns
 
 #### 🌐 Crawler Enhancements
+
 - **Site Support**: Add support for complex documentation sites
 - **Content Extraction**: Improve content quality and structure
 - **Error Handling**: Robust handling of edge cases
@@ -301,18 +324,21 @@ uv run mkdocs build
 ### Medium-Priority Areas
 
 #### 📊 Analytics & Monitoring
+
 - Performance dashboards
 - Usage analytics
 - Cost tracking
 - Quality metrics
 
 #### 🔧 DevOps & Infrastructure
+
 - CI/CD improvements
 - Docker optimizations
 - Deployment automation
 - Monitoring setup
 
 #### 🎨 User Experience
+
 - CLI improvements
 - Configuration management
 - Error messages
@@ -321,11 +347,13 @@ uv run mkdocs build
 ## 🐛 Bug Reports
 
 ### Before Reporting
+
 1. **Search Existing Issues**: Check if the bug is already reported
 2. **Reproduce Locally**: Ensure you can consistently reproduce the issue
 3. **Check Documentation**: Verify it's not a configuration issue
 
 ### Bug Report Template
+
 ```markdown
 ## Bug Description
 Clear and concise description of the bug.
@@ -360,6 +388,7 @@ Any other relevant information.
 ## 💡 Feature Requests
 
 ### Feature Request Template
+
 ```markdown
 ## Feature Description
 Clear description of the proposed feature.
@@ -383,13 +412,16 @@ Technical considerations or constraints.
 ## 🏆 Recognition
 
 ### Contributors
+
 All contributors are recognized in our:
+
 - **README.md**: Major contributors section
 - **Release Notes**: Feature and fix acknowledgments  
 - **Documentation**: Author attribution
 - **Social Media**: Community highlights
 
 ### Types of Contributions
+
 - **Code**: New features, bug fixes, optimizations
 - **Documentation**: Guides, examples, API docs
 - **Research**: Performance analysis, model evaluation
@@ -400,28 +432,34 @@ All contributors are recognized in our:
 ## 📞 Getting Help
 
 ### Community Support
+
 - **GitHub Discussions**: General questions and ideas
 - **GitHub Issues**: Bug reports and feature requests
 - **Discord/Slack**: Real-time community chat (link in README)
 
 ### Maintainer Contact
+
 - **Email**: [maintainer email if available]
 - **GitHub**: @BjornMelin
 - **Response Time**: We aim to respond within 48 hours
 
 ### Office Hours
+
 - **Weekly Community Call**: [If applicable]
 - **Maintainer Office Hours**: [If applicable]
 
 ## 📝 Legal
 
 ### Contributor License Agreement
+
 By contributing to this project, you agree that your contributions will be licensed under the same [MIT License](LICENSE) as the project.
 
 ### Code of Conduct
+
 We are committed to providing a welcoming and inclusive experience for everyone. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ### Attribution
+
 All contributions are valued and will be appropriately attributed in project documentation and release notes.
 
 ---
@@ -434,6 +472,6 @@ All contributions are valued and will be appropriately attributed in project doc
 4. **Test Thoroughly**: Ensure your changes work reliably
 5. **Document**: Help others understand your contributions
 
-**Thank you for helping make this project better! 🎉**
+## Thank you for helping make this project better! 🎉
 
 Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation processing.

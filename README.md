@@ -360,36 +360,42 @@ CHUNK_OVERLAP = 200        # Research optimal: 200 chars
 The unified MCP server provides 25+ advanced tools accessible through Claude Desktop/Code:
 
 ### Search & Retrieval Tools
+
 - **search_documents**: Advanced hybrid search with BGE reranking
 - **search_similar**: Pure vector similarity search
 - **search_project**: Project-specific search with quality settings
 
 ### Embedding Management Tools
+
 - **generate_embeddings**: Multi-provider embedding generation
 - **list_embedding_providers**: Show available providers and models
 
 ### Document Management Tools
+
 - **add_document**: Add single document with smart chunking
 - **add_documents_batch**: Batch document processing with parallelization
 
 ### Project Management Tools
+
 - **create_project**: Create projects with quality tiers (Fast/Balanced/Premium)
 - **list_projects**: List all projects with statistics
 - **update_project**: Update project metadata
 - **delete_project**: Remove project and optionally its collection
 
 ### Collection Management Tools
+
 - **get_collections**: List all collections with statistics
 - **delete_collection**: Remove a collection
 - **get_collection_info**: Detailed collection metadata
 
 ### Analytics & Monitoring Tools
+
 - **get_server_stats**: Server health and performance metrics
 - **get_cache_stats**: Cache hit rates and efficiency
 
 ### Example Usage in Claude
 
-```
+```plaintext
 Human: Search my documentation for "vector database optimization"
 Claude: I'll search your documentation for vector database optimization techniques.
 

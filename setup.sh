@@ -22,13 +22,13 @@ fi
 echo -e "${BLUE}📋 Checking system requirements...${NC}"
 
 # Check Node.js
-if ! command -v node &> /dev/null; then
+if ! command -v node &>/dev/null; then
     echo -e "${RED}❌ Node.js is required but not installed.${NC}"
     exit 1
 fi
 
 # Check Docker
-if ! command -v docker &> /dev/null; then
+if ! command -v docker &>/dev/null; then
     echo -e "${RED}❌ Docker is required but not installed.${NC}"
     exit 1
 fi
@@ -37,7 +37,7 @@ echo -e "${GREEN}✅ System requirements met${NC}"
 
 # Install UV package manager (the fastest Python package manager)
 echo -e "${BLUE}🦀 Installing UV package manager...${NC}"
-if ! command -v uv &> /dev/null; then
+if ! command -v uv &>/dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     source $HOME/.cargo/env
     echo -e "${GREEN}✅ UV installed successfully${NC}"
@@ -87,7 +87,7 @@ docker-compose up -d
 
 # Wait for Qdrant to be ready
 echo -e "${BLUE}⏳ Waiting for Qdrant to be ready...${NC}"
-until curl -s http://localhost:6333/health > /dev/null; do
+until curl -s http://localhost:6333/health >/dev/null; do
     sleep 2
 done
 

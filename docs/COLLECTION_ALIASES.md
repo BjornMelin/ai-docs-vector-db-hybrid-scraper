@@ -5,6 +5,7 @@ This guide covers the collection alias system that enables zero-downtime deploym
 ## Overview
 
 Collection aliases provide:
+
 - **Zero-downtime deployments**: Instantly switch between collection versions
 - **Safe rollbacks**: Keep the old version until confident
 - **A/B testing**: Test changes on real traffic
@@ -15,6 +16,7 @@ Collection aliases provide:
 ### Alias Management
 
 #### search_with_alias
+
 Search using a collection alias instead of a direct collection name.
 
 ```bash
@@ -23,6 +25,7 @@ Search using a collection alias instead of a direct collection name.
 ```
 
 #### list_aliases
+
 View all configured aliases and their target collections.
 
 ```bash
@@ -30,6 +33,7 @@ View all configured aliases and their target collections.
 ```
 
 #### create_alias
+
 Create or update an alias to point to a collection.
 
 ```bash
@@ -39,6 +43,7 @@ Create or update an alias to point to a collection.
 ### Deployment Patterns
 
 #### deploy_new_index
+
 Deploy a new collection version with zero downtime using blue-green deployment.
 
 ```bash
@@ -46,6 +51,7 @@ Deploy a new collection version with zero downtime using blue-green deployment.
 ```
 
 The deployment process:
+
 1. Creates a new collection with timestamp suffix
 2. Populates it from the specified source
 3. Runs validation queries
@@ -54,6 +60,7 @@ The deployment process:
 6. Schedules old collection cleanup
 
 #### start_ab_test
+
 Start an A/B test between two collections.
 
 ```bash
@@ -61,12 +68,14 @@ Start an A/B test between two collections.
 ```
 
 Features:
+
 - Deterministic user routing
 - Automatic metric collection (latency, relevance, clicks)
 - Statistical analysis with p-values
 - Effect size calculation
 
 #### analyze_ab_test
+
 Get statistical analysis of an A/B test.
 
 ```bash
@@ -74,6 +83,7 @@ Get statistical analysis of an A/B test.
 ```
 
 #### start_canary_deployment
+
 Start a gradual rollout with health monitoring.
 
 ```bash
@@ -81,12 +91,14 @@ Start a gradual rollout with health monitoring.
 ```
 
 Default stages:
+
 - 5% traffic for 30 minutes
 - 25% traffic for 60 minutes
 - 50% traffic for 120 minutes
 - 100% traffic
 
 #### get_canary_status
+
 Check the progress of a canary deployment.
 
 ```bash
@@ -94,6 +106,7 @@ Check the progress of a canary deployment.
 ```
 
 #### pause_canary / resume_canary
+
 Control canary deployment progression.
 
 ```bash
@@ -193,30 +206,38 @@ status = await get_canary_status(deployment_id)
 ## Best Practices
 
 ### 1. Validation Queries
+
 Always include representative validation queries that cover:
+
 - Common search patterns
 - Edge cases
 - Different content types
 - Various query lengths
 
 ### 2. Monitoring Thresholds
+
 Set appropriate thresholds for canary deployments:
+
 - Error rate: < 5% (default)
 - Latency: < 200ms (default)
 - Adjust based on your SLAs
 
 ### 3. Rollback Strategy
+
 - Always enable `rollback_on_failure` for production
 - Keep old collections for at least 24 hours
 - Test rollback procedures regularly
 
 ### 4. A/B Test Design
+
 - Run tests for statistical significance (minimum 100 samples per variant)
 - Use consistent user assignment for better results
 - Track multiple metrics to avoid optimization bias
 
 ### 5. Collection Naming
+
 Use descriptive naming conventions:
+
 - `docs_v1`, `docs_v2` for versions
 - `docs_2024_01_15` for dated releases
 - `docs_experimental_bge` for feature branches
@@ -224,7 +245,8 @@ Use descriptive naming conventions:
 ## Architecture
 
 ### Alias Resolution Flow
-```
+
+```plaintext
 User Query → Alias → Current Collection → Search Results
              ↓
         Alias Manager
@@ -233,7 +255,8 @@ User Query → Alias → Current Collection → Search Results
 ```
 
 ### Blue-Green Pattern
-```
+
+```plaintext
 Alias: "production"
   ├─ Blue (Current): docs_v1 ← Live Traffic
   └─ Green (New): docs_v2 ← Building & Testing
@@ -247,7 +270,8 @@ Alias: "production"
 ```
 
 ### Canary Stages
-```
+
+```plaintext
 Stage 1: 5% → Monitor → Health Check → Continue/Rollback
 Stage 2: 25% → Monitor → Health Check → Continue/Rollback
 Stage 3: 50% → Monitor → Health Check → Continue/Rollback
@@ -257,19 +281,24 @@ Stage 4: 100% → Complete
 ## Troubleshooting
 
 ### Deployment Failures
+
 If a deployment fails:
+
 1. Check validation query results
 2. Verify collection schema compatibility
 3. Review error logs
 4. Manual rollback: `switch_alias(alias, old_collection)`
 
 ### A/B Test Issues
+
 - Ensure both collections have the same schema
 - Verify traffic split adds up to 1.0
 - Check metric tracking is working
 
 ### Canary Stuck
+
 If canary deployment is stuck:
+
 1. Check current status
 2. Review health metrics
 3. Manually pause/resume

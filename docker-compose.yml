@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   qdrant:
@@ -6,8 +6,8 @@ services:
     container_name: qdrant-vector-db
     restart: unless-stopped
     ports:
-      - "6333:6333"  # HTTP API
-      - "6334:6334"  # gRPC API (high performance)
+      - "6333:6333" # HTTP API
+      - "6334:6334" # gRPC API (high performance)
     volumes:
       # Persistent storage mapping to WSL/local directory
       - ~/.qdrant_data:/qdrant/storage:z
@@ -16,23 +16,23 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__LOG_LEVEL=INFO
-      
+
       # Storage optimizations for hybrid search + quantization
       - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
       - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true
       - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8
       - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=16
-      
+
       # Memory and performance tuning
       - QDRANT__STORAGE__WRITE_CONSISTENCY_FACTOR=1
       - QDRANT__STORAGE__REPLICATION_FACTOR=1
-      
+
       # Hybrid search optimizations
       - QDRANT__STORAGE__SPARSE_VECTORS__ON_DISK=true
       - QDRANT__STORAGE__QUANTIZATION__SCALAR__TYPE=int8
       - QDRANT__STORAGE__HNSW__M=16
       - QDRANT__STORAGE__HNSW__EF_CONSTRUCT=128
-      
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 30s
@@ -43,10 +43,10 @@ services:
       resources:
         limits:
           memory: 4G
-          cpus: '2.0'
+          cpus: "2.0"
         reservations:
           memory: 2G
-          cpus: '1.0'
+          cpus: "1.0"
     networks:
       - advanced-vector-network
 
@@ -56,7 +56,7 @@ services:
     container_name: dragonfly-cache
     restart: unless-stopped
     ports:
-      - "6379:6379"  # Redis-compatible port
+      - "6379:6379" # Redis-compatible port
     volumes:
       # Persistent storage for DragonflyDB
       - ~/.dragonfly_data:/data:z
@@ -84,10 +84,10 @@ services:
       resources:
         limits:
           memory: 4G
-          cpus: '2.0'
+          cpus: "2.0"
         reservations:
           memory: 2G
-          cpus: '1.0'
+          cpus: "1.0"
     networks:
       - advanced-vector-network
 
@@ -120,23 +120,23 @@ x-production-settings: &production
     resources:
       limits:
         memory: 8G
-        cpus: '4.0'
+        cpus: "4.0"
       reservations:
         memory: 4G
-        cpus: '2.0'
+        cpus: "2.0"
     restart_policy:
       condition: on-failure
       delay: 5s
       max_attempts: 3
       window: 120s
 
-# Development override for resource-constrained environments  
+# Development override for resource-constrained environments
 x-development-settings: &development
   deploy:
     resources:
       limits:
         memory: 2G
-        cpus: '1.0'
+        cpus: "1.0"
       reservations:
         memory: 1G
-        cpus: '0.5'
+        cpus: "0.5"
