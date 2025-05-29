@@ -75,7 +75,7 @@ The system implements advanced patterns with compound performance gains:
 #### Browser Automation Router
 
 - **Crawl4AI Primary**: 4-6x faster, $0 cost
-- **Stagehand AI**: Complex interactions
+- **browser-use AI**: Complex interactions
 - **Playwright Fallback**: Maximum control
 - Intelligent tool selection per site
 - 97% overall success rate
@@ -106,7 +106,7 @@ The system implements advanced patterns with compound performance gains:
 ### 1. V1 Document Ingestion
 
 ```python
-URL → AutomationRouter → Crawl4AI/Stagehand/Playwright → Raw Content → 
+URL → AutomationRouter → Crawl4AI/browser-use/Playwright → Raw Content → 
 → Enhanced Chunking → Text Chunks → EmbeddingManager → Vectors → 
 → QdrantService (with payload indexing) → Collection Alias
 ```

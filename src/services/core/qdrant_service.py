@@ -1029,7 +1029,7 @@ class QdrantService(BaseService):
                 "language",  # "python", "typescript", "rust"
                 "framework",  # "fastapi", "nextjs", "react"
                 "version",  # "3.0", "14.2", "latest"
-                "crawl_source",  # "crawl4ai", "stagehand", "playwright"
+                "crawl_source",  # "crawl4ai", "browser_use", "playwright"
                 # Additional system fields
                 "site_name",  # Documentation site name
                 "embedding_model",  # Embedding model used

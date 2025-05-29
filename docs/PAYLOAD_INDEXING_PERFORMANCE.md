@@ -47,7 +47,7 @@ keyword_fields = [
     "language",           # python, typescript, rust, go
     "framework",          # fastapi, nextjs, react, vue
     "version",            # 3.0, 14.2, latest
-    "crawl_source",       # crawl4ai, stagehand, playwright
+    "crawl_source",       # crawl4ai, browser_use, playwright
     "site_name",          # Documentation site identifier
     "embedding_model",    # text-embedding-3-small, etc.
     "embedding_provider", # openai, fastembed
