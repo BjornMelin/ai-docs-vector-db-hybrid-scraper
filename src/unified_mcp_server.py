@@ -102,7 +102,7 @@ async def lifespan():
     finally:
         # Cleanup on shutdown
         logger.info("Shutting down server...")
-        if hasattr(lifespan, 'client_manager'):
+        if hasattr(lifespan, "client_manager"):
             await lifespan.client_manager.cleanup()
         logger.info("Server shutdown complete")
 

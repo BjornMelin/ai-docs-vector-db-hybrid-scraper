@@ -11,14 +11,25 @@ import pytest
 from fastmcp import FastMCP
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
+src_path = str(Path(__file__).parent.parent.parent.parent / "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 
 @pytest.mark.asyncio
 async def test_server_initialization():
     """Test that the server initializes correctly."""
-    # Import the server module
-    import unified_mcp_server
+    # Mock the imports before loading the module
+    with patch.dict(
+        "sys.modules",
+        {
+            "mcp.tool_registry": Mock(register_all_tools=AsyncMock()),
+            "infrastructure.client_manager": Mock(ClientManager=Mock),
+            "services.logging_config": Mock(configure_logging=Mock()),
+        },
+    ):
+        # Import the server module
+        import unified_mcp_server
 
     # Verify server is created
     assert isinstance(unified_mcp_server.mcp, FastMCP)

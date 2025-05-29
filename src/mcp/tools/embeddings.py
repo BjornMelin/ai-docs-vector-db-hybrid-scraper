@@ -23,7 +23,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Initialize embedding manager on-demand
-            embedding_manager = EmbeddingManager(client_manager)
+            embedding_manager = EmbeddingManager(client_manager.unified_config)
 
             # Generate embeddings
             result = await embedding_manager.generate_embeddings(
@@ -62,7 +62,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Initialize embedding manager
-            embedding_manager = EmbeddingManager(client_manager)
+            embedding_manager = EmbeddingManager(client_manager.unified_config)
 
             # Get available providers
             providers = []

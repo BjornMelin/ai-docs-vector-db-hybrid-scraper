@@ -139,7 +139,9 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             raise
 
     @mcp.tool()
-    async def add_documents_batch(request: BatchRequest) -> dict[str, Any]:
+    async def add_documents_batch(
+        request: BatchRequest, ctx: Context
+    ) -> dict[str, Any]:
         """
         Add multiple documents in batch with optimized processing.
 
@@ -166,7 +168,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                         url=validated_url,
                         collection=request.collection,
                     )
-                    result = await add_document(doc_request)
+                    result = await add_document(doc_request, ctx)
                     results["successful"].append(result)
                 except Exception as e:
                     results["failed"].append(

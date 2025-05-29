@@ -38,8 +38,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         try:
             # Initialize services on-demand
             cache_manager = CacheManager(client_manager)
-            embedding_manager = EmbeddingManager(client_manager)
-            qdrant_service = QdrantService(client_manager)
+            embedding_manager = EmbeddingManager(client_manager.unified_config)
+            qdrant_service = QdrantService(client_manager.unified_config)
             await qdrant_service.initialize()
 
             # Check cache first
@@ -150,7 +150,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Uses the document's embedding to find semantically similar content.
         """
         try:
-            qdrant_service = QdrantService(client_manager)
+            qdrant_service = QdrantService(client_manager.unified_config)
             await qdrant_service.initialize()
 
             # Retrieve the source document

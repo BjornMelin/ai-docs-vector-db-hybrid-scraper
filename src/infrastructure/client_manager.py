@@ -190,6 +190,11 @@ class ClientManager:
         """
         import os
 
+        from ..config.loader import ConfigLoader
+
+        # Load the unified configuration
+        unified_config = ConfigLoader.load_config()
+
         config = ClientManagerConfig(
             # Qdrant settings
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
@@ -202,7 +207,9 @@ class ClientManager:
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
         )
 
-        return cls(config)
+        instance = cls(config)
+        instance.unified_config = unified_config
+        return instance
 
     def __init__(self, config: ClientManagerConfig | None = None):
         """Initialize client manager.
@@ -220,6 +227,7 @@ class ClientManager:
             return
 
         self.config = config or ClientManagerConfig()
+        self.unified_config = None  # Will be set by from_unified_config
         self._clients: dict[str, Any] = {}
         self._locks: dict[str, asyncio.Lock] = {}
         self._health: dict[str, ClientHealth] = {}
