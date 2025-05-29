@@ -81,16 +81,19 @@ class HNSWOptimizer(BaseService):
 
             # Use cached ef directly
             start_time = time.time()
-            results = await self.qdrant_service._client.search(
+            results = await self.qdrant_service._client.query_points(
                 collection_name=collection_name,
-                query_vector=query_vector,
+                query=query_vector,
+                using="dense",
                 limit=target_limit,
-                search_params=models.SearchParams(hnsw_ef=cached_ef, exact=False),
+                params=models.SearchParams(hnsw_ef=cached_ef, exact=False),
+                with_payload=True,
+                with_vectors=False,
             )
             search_time_ms = (time.time() - start_time) * 1000
 
             return {
-                "results": results,
+                "results": results.points,
                 "ef_used": cached_ef,
                 "search_time_ms": search_time_ms,
                 "time_budget_ms": time_budget_ms,
@@ -113,11 +116,14 @@ class HNSWOptimizer(BaseService):
             start_time = time.time()
 
             try:
-                results = await self.qdrant_service._client.search(
+                results = await self.qdrant_service._client.query_points(
                     collection_name=collection_name,
-                    query_vector=query_vector,
+                    query=query_vector,
+                    using="dense",
                     limit=target_limit,
-                    search_params=models.SearchParams(hnsw_ef=current_ef, exact=False),
+                    params=models.SearchParams(hnsw_ef=current_ef, exact=False),
+                    with_payload=True,
+                    with_vectors=False,
                 )
 
                 search_time_ms = (time.time() - start_time) * 1000
@@ -167,7 +173,7 @@ class HNSWOptimizer(BaseService):
             del self.adaptive_ef_cache[oldest_key]
 
         return {
-            "results": best_results or [],
+            "results": best_results.points if best_results else [],
             "ef_used": best_ef,
             "search_time_ms": final_search_time,
             "time_budget_ms": time_budget_ms,
@@ -446,11 +452,14 @@ class HNSWOptimizer(BaseService):
             start_time = time.time()
 
             try:
-                await self.qdrant_service._client.search(
+                await self.qdrant_service._client.query_points(
                     collection_name=collection_name,
-                    query_vector=query_vector,
+                    query=query_vector,
+                    using="dense",
                     limit=10,
-                    search_params=models.SearchParams(hnsw_ef=ef_value, exact=False),
+                    params=models.SearchParams(hnsw_ef=ef_value, exact=False),
+                    with_payload=True,
+                    with_vectors=False,
                 )
 
                 search_time_ms = (time.time() - start_time) * 1000
