@@ -1408,7 +1408,7 @@ class QdrantService(BaseService):
         try:
             # Initialize HNSWOptimizer if needed
             if not hasattr(self, "_hnsw_optimizer"):
-                from .hnsw_optimizer import HNSWOptimizer
+                from ..utilities.hnsw_optimizer import HNSWOptimizer
 
                 self._hnsw_optimizer = HNSWOptimizer(self.config, self)
 
@@ -1811,7 +1811,7 @@ class QdrantService(BaseService):
 
         # Initialize HNSWOptimizer if needed
         if not hasattr(self, "_hnsw_optimizer"):
-            from .hnsw_optimizer import HNSWOptimizer
+            from ..utilities.hnsw_optimizer import HNSWOptimizer
 
             self._hnsw_optimizer = HNSWOptimizer(self.config, self)
             await self._hnsw_optimizer.initialize()
@@ -1854,7 +1854,7 @@ class QdrantService(BaseService):
 
         # Initialize HNSWOptimizer if needed
         if not hasattr(self, "_hnsw_optimizer"):
-            from .hnsw_optimizer import HNSWOptimizer
+            from ..utilities.hnsw_optimizer import HNSWOptimizer
 
             self._hnsw_optimizer = HNSWOptimizer(self.config, self)
             await self._hnsw_optimizer.initialize()
