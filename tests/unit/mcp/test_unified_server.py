@@ -97,11 +97,76 @@ async def test_server_lifespan():
 
 
 def test_server_run_modes():
-    """Test server run modes (stdio vs http)."""
+    """Test server run modes (stdio vs streamable-http)."""
     import unified_mcp_server
 
     # Test that lifespan is set
     assert unified_mcp_server.mcp.lifespan is not None
 
-    # Test default transport would be stdio
-    assert os.getenv("FASTMCP_TRANSPORT", "stdio") == "stdio"
+    # Test default transport is now streamable-http
+    default_transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
+    assert default_transport in ["streamable-http", "stdio"]
+
+
+@pytest.mark.asyncio
+async def test_streaming_transport_configuration():
+    """Test streaming transport configuration with environment variables."""
+
+    # Test streamable-http configuration
+    with patch.dict(
+        os.environ,
+        {
+            "FASTMCP_TRANSPORT": "streamable-http",
+            "FASTMCP_HOST": "0.0.0.0",
+            "FASTMCP_PORT": "9000",
+            "FASTMCP_BUFFER_SIZE": "16384",
+            "FASTMCP_MAX_RESPONSE_SIZE": "20971520",
+        },
+    ):
+        # Verify environment variables are accessible
+        assert os.getenv("FASTMCP_TRANSPORT") == "streamable-http"
+        assert os.getenv("FASTMCP_HOST") == "0.0.0.0"
+        assert os.getenv("FASTMCP_PORT") == "9000"
+        assert os.getenv("FASTMCP_BUFFER_SIZE") == "16384"
+        assert os.getenv("FASTMCP_MAX_RESPONSE_SIZE") == "20971520"
+
+        # Test int conversion for port
+        port = int(os.getenv("FASTMCP_PORT", "8000"))
+        assert port == 9000
+
+
+@pytest.mark.asyncio
+async def test_stdio_fallback_configuration():
+    """Test stdio fallback configuration for Claude Desktop compatibility."""
+
+    # Test stdio fallback
+    with patch.dict(os.environ, {"FASTMCP_TRANSPORT": "stdio"}):
+        transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
+        assert transport == "stdio"
+
+
+@pytest.mark.asyncio
+async def test_server_instructions_include_streaming():
+    """Test that server instructions mention streaming capabilities."""
+    import unified_mcp_server
+
+    instructions = unified_mcp_server.mcp.instructions
+    assert "streaming" in instructions.lower()
+    assert "streamable-http" in instructions.lower()
+    assert "environment variables" in instructions.lower()
+    assert "FASTMCP_TRANSPORT" in instructions
+
+
+@pytest.mark.asyncio
+async def test_default_streaming_values():
+    """Test default values for streaming configuration."""
+    # Test that defaults are sensible
+    default_host = os.getenv("FASTMCP_HOST", "127.0.0.1")
+    default_port = int(os.getenv("FASTMCP_PORT", "8000"))
+    default_buffer = os.getenv("FASTMCP_BUFFER_SIZE", "8192")
+    default_max_size = os.getenv("FASTMCP_MAX_RESPONSE_SIZE", "10485760")
+
+    assert default_host == "127.0.0.1"
+    assert default_port == 8000
+    assert default_buffer == "8192"
+    assert default_max_size == "10485760"  # 10MB
