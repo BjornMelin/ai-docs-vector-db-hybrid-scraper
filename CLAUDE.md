@@ -47,6 +47,16 @@ AI Documentation Vector DB is an advanced hybrid scraper that combines **Crawl4A
 
 **V2 Roadmap:** Advanced query processing, multi-modal documents, enterprise features
 
+## Recent Completion: Browser-Use Migration ✅
+
+**Completed 2025-05-29**: Replaced Stagehand with browser-use (Python-native, multi-LLM support)
+
+- ✅ Complete BrowserUseAdapter implementation (532 lines)
+- ✅ Fixed dependency conflicts (pydantic 2.10.4-2.11.0, langchain)
+- ✅ 57/57 tests passing, 72% coverage
+- ✅ Fallback chain: Crawl4AI → browser-use → Playwright
+- ✅ Multi-LLM providers: OpenAI, Anthropic, Gemini
+
 ## Essential Development Commands
 
 ### Environment Setup

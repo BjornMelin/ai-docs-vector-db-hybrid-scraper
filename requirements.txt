@@ -4,21 +4,22 @@
 
 # Core web crawling and scraping
 crawl4ai[all]>=0.6.3
-aiohttp>=3.11.18
+firecrawl-py>=2.7.1
+aiohttp>=3.12.4
 asyncio-throttle>=1.0.2
 
-# Advanced Vector database and embeddings (research-backed stack)
-qdrant-client[fastembed]>=1.14.2  # Hybrid search support with FastEmbed integration
-openai>=1.82.0
-fastembed==0.6.1  # Pinned to match qdrant-client[fastembed] requirement
-FlagEmbedding>=1.3.4  # BGE-VL multimodal support (2025), 10-20% accuracy improvement
-firecrawl-py>=2.7.0  # Premium extraction features (optional)
+# Vector database and embeddings
+qdrant-client[fastembed]>=1.14.2
+openai>=1.82.1
+fastembed==0.6.1
+FlagEmbedding>=1.3.5
 
 # Data processing and analysis
 pandas>=2.2.3
 numpy>=2.2.6
+scipy>=1.15.3
 
-# Advanced AST-based chunking (Phase 2)
+# AST-based chunking
 tree-sitter>=0.24.0
 tree-sitter-python>=0.23.6
 tree-sitter-javascript>=0.23.1
@@ -29,25 +30,38 @@ python-dotenv>=1.1.0
 colorlog>=6.9.0
 tqdm>=4.67.1
 
-# Caching layer (V1 MVP)
-redis[hiredis]>=5.3.0  # Async Redis with hiredis C parser for performance
+# Caching layer
+redis[hiredis]>=6.2.0
 
-# Enhanced performance with latest versions
+# Browser automation
 playwright>=1.52.0
 httpx>=0.28.1
+browser-use>=0.2.5
+langchain-openai>=0.3.15
+langchain-anthropic>=0.2.16
+langchain-google-genai>=1.0.1
+
+# MCP server & API
+fastmcp>=2.5.2
+uvicorn>=0.34.2
+
+# Configuration and validation
+pydantic>=2.11.5
+pydantic-settings>=2.8.0
+click>=8.2.1
+rich>=14.0.0
+
+# Additional dependencies
+pyyaml>=6.0.2
+aiofiles>=24.1.0
 
 # Development and testing
 pytest>=8.3.5
-pytest-asyncio>=0.26.0
+pytest-asyncio>=1.0.0
 pytest-cov>=6.1.1
-pytest-mock>=3.14.0
+pytest-mock>=3.14.1
 black>=25.1.0
-ruff>=0.11.11
-
-# Additional dependencies for modern Python features
-pydantic>=2.11.5
-click>=8.2.1
-rich>=14.0.0
+ruff>=0.11.12
 
 # Installation Notes:
 # ===================

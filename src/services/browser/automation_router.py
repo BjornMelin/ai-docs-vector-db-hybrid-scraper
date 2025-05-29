@@ -20,7 +20,7 @@ class AutomationRouter(BaseService):
 
     Implements a three-tier automation hierarchy:
     1. Crawl4AI (90% of sites) - 4-6x faster, $0 cost
-    2. Stagehand (Complex interactions) - AI-powered automation
+    2. browser-use (Complex interactions) - AI-powered automation with multi-LLM support
     3. Playwright (Maximum control) - Full programmatic control
     """
 
@@ -44,7 +44,7 @@ class AutomationRouter(BaseService):
         # Performance metrics tracking
         self.metrics = {
             "crawl4ai": {"success": 0, "failed": 0, "avg_time": 0.0, "total_time": 0.0},
-            "stagehand": {
+            "browser_use": {
                 "success": 0,
                 "failed": 0,
                 "avg_time": 0.0,
@@ -91,13 +91,16 @@ class AutomationRouter(BaseService):
             Default routing rules dictionary
         """
         return {
-            "stagehand": [
+            "browser_use": [
                 "vercel.com",
                 "clerk.com",
                 "supabase.com",
                 "netlify.com",
                 "railway.app",
                 "planetscale.com",
+                "react.dev",
+                "nextjs.org",
+                "docs.anthropic.com",
             ],
             "playwright": [
                 "github.com",
@@ -105,6 +108,7 @@ class AutomationRouter(BaseService):
                 "discord.com",
                 "slack.com",
                 "app.posthog.com",
+                "notion.so",
             ],
         }
 
@@ -132,25 +136,28 @@ class AutomationRouter(BaseService):
         except Exception as e:
             self.logger.warning(f"Failed to initialize Crawl4AI adapter: {e}")
 
-        # Initialize Stagehand adapter if available
+        # Initialize BrowserUse adapter if available
         try:
-            from .stagehand_adapter import StagehandAdapter
+            from .browser_use_adapter import BrowserUseAdapter
 
             adapter_config = {
-                "env": "LOCAL",  # Use local LLM
+                "llm_provider": "openai",  # Default to OpenAI
+                "model": "gpt-4o-mini",  # Cost-optimized model
                 "headless": True,
-                "model": "ollama/llama2",
-                "enable_caching": True,
-                "debug": False,
+                "timeout": 30000,
+                "max_retries": 3,
+                "max_steps": 20,
+                "disable_security": False,
+                "generate_gif": False,
             }
 
-            adapter = StagehandAdapter(adapter_config)
+            adapter = BrowserUseAdapter(adapter_config)
             await adapter.initialize()
-            self._adapters["stagehand"] = adapter
-            self.logger.info("Initialized Stagehand adapter")
+            self._adapters["browser_use"] = adapter
+            self.logger.info("Initialized BrowserUse adapter")
 
         except Exception as e:
-            self.logger.warning(f"Failed to initialize Stagehand adapter: {e}")
+            self.logger.warning(f"Failed to initialize BrowserUse adapter: {e}")
 
         # Initialize Playwright adapter
         try:
@@ -195,7 +202,7 @@ class AutomationRouter(BaseService):
         url: str,
         interaction_required: bool = False,
         custom_actions: list[dict] | None = None,
-        force_tool: Literal["crawl4ai", "stagehand", "playwright"] | None = None,
+        force_tool: Literal["crawl4ai", "browser_use", "playwright"] | None = None,
         timeout: int = 30000,
     ) -> dict[str, Any]:
         """Route scraping to appropriate tool based on URL and requirements.
@@ -232,8 +239,8 @@ class AutomationRouter(BaseService):
         try:
             if tool == "crawl4ai":
                 result = await self._try_crawl4ai(url, custom_actions, timeout)
-            elif tool == "stagehand":
-                result = await self._try_stagehand(url, custom_actions, timeout)
+            elif tool == "browser_use":
+                result = await self._try_browser_use(url, custom_actions, timeout)
             else:  # playwright
                 result = await self._try_playwright(url, custom_actions, timeout)
 
@@ -298,8 +305,8 @@ class AutomationRouter(BaseService):
     ) -> str | None:
         """Check if interaction requirements suggest a specific tool."""
         if interaction_required or custom_actions:
-            if "stagehand" in self._adapters:
-                return "stagehand"
+            if "browser_use" in self._adapters:
+                return "browser_use"
             if "playwright" in self._adapters:
                 return "playwright"
 
@@ -307,9 +314,9 @@ class AutomationRouter(BaseService):
         js_patterns = ["spa", "react", "vue", "angular", "app"]
         if (
             any(pattern in url.lower() for pattern in js_patterns)
-            and "stagehand" in self._adapters
+            and "browser_use" in self._adapters
         ):
-            return "stagehand"
+            return "browser_use"
 
         return None
 
@@ -319,7 +326,7 @@ class AutomationRouter(BaseService):
             return "crawl4ai"
         if "playwright" in self._adapters:
             return "playwright"
-        return "stagehand"
+        return "browser_use"
 
     async def _try_crawl4ai(
         self,
@@ -353,38 +360,33 @@ class AutomationRouter(BaseService):
             timeout=timeout,
         )
 
-    async def _try_stagehand(
+    async def _try_browser_use(
         self,
         url: str,
         custom_actions: list[dict] | None = None,
         timeout: int = 30000,
     ) -> dict[str, Any]:
-        """Try scraping with Stagehand AI.
+        """Try scraping with browser-use AI.
 
         Args:
             url: URL to scrape
-            custom_actions: Custom actions (converted to instructions)
+            custom_actions: Custom actions (converted to natural language task)
             timeout: Timeout in milliseconds
 
         Returns:
             Scraping result
         """
-        adapter = self._adapters["stagehand"]
+        adapter = self._adapters["browser_use"]
 
-        # Convert custom actions to Stagehand instructions
+        # Convert custom actions to natural language task
         if custom_actions:
-            instructions = self._convert_to_instructions(custom_actions)
+            task = self._convert_to_task(custom_actions)
         else:
-            instructions = [
-                "Extract all documentation content",
-                "Expand collapsed sections if present",
-                "Click on any 'show more' or 'load more' buttons",
-                "Wait for dynamic content to load",
-            ]
+            task = "Extract all documentation content including code examples. Expand any collapsed sections or interactive elements. Click on any 'show more' or 'load more' buttons and wait for dynamic content to load."
 
         return await adapter.scrape(
             url=url,
-            instructions=instructions,
+            task=task,
             timeout=timeout,
         )
 
@@ -432,9 +434,9 @@ class AutomationRouter(BaseService):
         """
         # Define fallback order
         fallback_order = {
-            "crawl4ai": ["stagehand", "playwright"],
-            "stagehand": ["playwright", "crawl4ai"],
-            "playwright": ["stagehand", "crawl4ai"],
+            "crawl4ai": ["browser_use", "playwright"],
+            "browser_use": ["playwright", "crawl4ai"],
+            "playwright": ["browser_use", "crawl4ai"],
         }
 
         fallback_tools = [
@@ -451,8 +453,8 @@ class AutomationRouter(BaseService):
 
                 if fallback_tool == "crawl4ai":
                     result = await self._try_crawl4ai(url, custom_actions, timeout)
-                elif fallback_tool == "stagehand":
-                    result = await self._try_stagehand(url, custom_actions, timeout)
+                elif fallback_tool == "browser_use":
+                    result = await self._try_browser_use(url, custom_actions, timeout)
                 else:
                     result = await self._try_playwright(url, custom_actions, timeout)
 
@@ -551,42 +553,48 @@ class AutomationRouter(BaseService):
 
         return "\n".join(js_lines)
 
-    def _convert_to_instructions(self, actions: list[dict]) -> list[str]:
-        """Convert custom actions to Stagehand instructions.
+    def _convert_to_task(self, actions: list[dict]) -> str:
+        """Convert custom actions to browser-use natural language task.
 
         Args:
             actions: List of action dictionaries
 
         Returns:
-            List of instruction strings
+            Natural language task description
         """
-        instructions = []
+        task_parts = []
 
         for action in actions:
             action_type = action.get("type", "")
 
             if action_type == "click":
                 selector = action.get("selector", "")
-                instructions.append(f"Click on element with selector '{selector}'")
+                task_parts.append(f"click on element with selector '{selector}'")
 
             elif action_type == "type":
                 selector = action.get("selector", "")
                 text = action.get("text", "")
-                instructions.append(
-                    f"Type '{text}' in element with selector '{selector}'"
+                task_parts.append(
+                    f"type '{text}' in element with selector '{selector}'"
                 )
 
             elif action_type == "wait":
                 timeout = action.get("timeout", 1000)
-                instructions.append(f"Wait for {timeout} milliseconds")
+                task_parts.append(f"wait for {timeout} milliseconds")
 
             elif action_type == "scroll":
-                instructions.append("Scroll to the bottom of the page")
+                task_parts.append("scroll to the bottom of the page")
 
             elif action_type == "extract":
-                instructions.append("Extract all visible content from the page")
+                task_parts.append("extract all visible content from the page")
 
-        return instructions
+            elif action_type == "expand":
+                task_parts.append("expand any collapsed sections or menus")
+
+        if task_parts:
+            return f"Navigate to the page, then {', '.join(task_parts)}, and finally extract all documentation content including code examples."
+        else:
+            return "Navigate to the page and extract all documentation content including code examples."
 
     def _update_metrics(self, tool: str, success: bool, elapsed: float) -> None:
         """Update performance metrics for a tool.

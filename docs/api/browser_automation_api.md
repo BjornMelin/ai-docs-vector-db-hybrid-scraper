@@ -7,7 +7,7 @@ This document provides comprehensive API documentation for the browser automatio
 The browser automation system implements a three-tier fallback hierarchy:
 
 1. **Crawl4AI** - High-performance bulk processing (primary)
-2. **Stagehand** - AI-powered intelligent automation (fallback)
+2. **browser-use** - AI-powered intelligent automation with multi-LLM support (fallback)
 3. **Playwright** - Direct browser control (final fallback)
 
 ## Core Components
@@ -24,7 +24,7 @@ Primary scraping method with intelligent routing and fallback.
 
 - `url` (str): Target URL to scrape
 - `actions` (list, optional): Structured actions for Playwright adapter
-- `instructions` (list, optional): Natural language instructions for Stagehand
+- `instructions` (list, optional): Natural language instructions for browser-use
 - `**kwargs`: Additional adapter-specific configuration
 
 **Returns:**

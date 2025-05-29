@@ -74,8 +74,8 @@ class PlaywrightAdapter(BaseService):
             )
 
         # Browser management
-        self._playwright = None
-        self._browser: Browser | None = None
+        self._playwright: Any | None = None
+        self._browser: Any | None = None  # Browser instance when available
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -152,8 +152,8 @@ class PlaywrightAdapter(BaseService):
             raise CrawlServiceError("Adapter not initialized")
 
         start_time = time.time()
-        context: BrowserContext | None = None
-        page: Page | None = None
+        context: Any | None = None  # BrowserContext when available
+        page: Any | None = None  # Page when available
 
         try:
             # Create browser context with settings
@@ -251,7 +251,7 @@ class PlaywrightAdapter(BaseService):
                     self.logger.warning(f"Failed to close context: {e}")
 
     async def _execute_action(
-        self, page: Page, action: Any, index: int
+        self, page: Any, action: Any, index: int
     ) -> dict[str, Any]:
         """Execute a single action.
 
@@ -277,7 +277,7 @@ class PlaywrightAdapter(BaseService):
             return self._create_error_result(index, action_type, start_time, str(e))
 
     async def _perform_action(
-        self, page: Page, action_type: str, action: dict, index: int
+        self, page: Any, action_type: str, action: dict, index: int
     ) -> dict[str, Any] | None:
         """Perform the specific action based on type."""
         # Input actions
@@ -309,7 +309,7 @@ class PlaywrightAdapter(BaseService):
 
         return None  # No custom result
 
-    async def _execute_input_action(self, page: Page, action_type: str, action: Any):
+    async def _execute_input_action(self, page: Any, action_type: str, action: Any):
         """Execute input-related actions."""
         selector = action.selector
         await page.wait_for_selector(selector, timeout=5000)
@@ -325,7 +325,7 @@ class PlaywrightAdapter(BaseService):
         elif action_type == "select":
             await page.select_option(selector, action.value)
 
-    async def _execute_wait_action(self, page: Page, action_type: str, action: Any):
+    async def _execute_wait_action(self, page: Any, action_type: str, action: Any):
         """Execute wait-related actions."""
         if action_type == "wait":
             await page.wait_for_timeout(action.timeout)
@@ -334,7 +334,7 @@ class PlaywrightAdapter(BaseService):
         elif action_type == "wait_for_load_state":
             await page.wait_for_load_state(action.state)
 
-    async def _execute_scroll_action(self, page: Page, action: Any):
+    async def _execute_scroll_action(self, page: Any, action: Any):
         """Execute scroll action."""
         if action.direction == "bottom":
             await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -344,7 +344,7 @@ class PlaywrightAdapter(BaseService):
             await page.evaluate(f"window.scrollTo(0, {action.y})")
 
     async def _execute_screenshot_action(
-        self, page: Page, action: Any, index: int
+        self, page: Any, action: Any, index: int
     ) -> dict[str, Any]:
         """Execute screenshot action with custom result."""
         path = action.path if action.path else f"screenshot_{index}.png"
@@ -359,7 +359,7 @@ class PlaywrightAdapter(BaseService):
         }
 
     async def _execute_evaluate_action(
-        self, page: Page, action: Any, index: int
+        self, page: Any, action: Any, index: int
     ) -> dict[str, Any]:
         """Execute evaluate action with custom result."""
         result = await page.evaluate(action.script)
@@ -371,14 +371,14 @@ class PlaywrightAdapter(BaseService):
             "result": result,
         }
 
-    async def _execute_press_action(self, page: Page, action: Any):
+    async def _execute_press_action(self, page: Any, action: Any):
         """Execute press action."""
         if action.selector:
             await page.press(action.selector, action.key)
         else:
             await page.keyboard.press(action.key)
 
-    async def _execute_drag_drop_action(self, page: Page, action: Any):
+    async def _execute_drag_drop_action(self, page: Any, action: Any):
         """Execute drag and drop action."""
         await page.drag_and_drop(action.source, action.target)
 
@@ -405,7 +405,7 @@ class PlaywrightAdapter(BaseService):
             "execution_time_ms": (time.time() - start_time) * 1000,
         }
 
-    async def _extract_content(self, page: Page) -> dict[str, str]:
+    async def _extract_content(self, page: Any) -> dict[str, str]:
         """Extract content from page.
 
         Args:
@@ -451,7 +451,7 @@ class PlaywrightAdapter(BaseService):
             self.logger.warning(f"Failed to extract body content: {e}")
             return {"text": "", "html": ""}
 
-    async def _extract_metadata(self, page: Page) -> dict[str, Any]:
+    async def _extract_metadata(self, page: Any) -> dict[str, Any]:
         """Extract page metadata.
 
         Args:
@@ -512,7 +512,7 @@ class PlaywrightAdapter(BaseService):
                 "headings": [],
             }
 
-    async def _get_performance_metrics(self, page: Page) -> dict[str, Any]:
+    async def _get_performance_metrics(self, page: Any) -> dict[str, Any]:
         """Get page performance metrics.
 
         Args:
