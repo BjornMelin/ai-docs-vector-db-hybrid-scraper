@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import pytest
 from qdrant_client.http.exceptions import ResponseHandlingException
 from src.config import UnifiedConfig
+from src.services.core.qdrant_service import QdrantService
 from src.services.errors import QdrantServiceError
-from src.services.qdrant_service import QdrantService
 
 
 @pytest.fixture

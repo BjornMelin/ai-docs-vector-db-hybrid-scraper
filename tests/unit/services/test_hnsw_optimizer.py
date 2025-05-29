@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from src.config import UnifiedConfig
-from src.services.hnsw_optimizer import HNSWOptimizer
+from src.services.utilities.hnsw_optimizer import HNSWOptimizer
 
 
 @pytest.fixture

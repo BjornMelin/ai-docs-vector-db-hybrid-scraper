@@ -33,6 +33,12 @@ class SearchRequest(BaseModel):
     search_accuracy: SearchAccuracy = Field(
         default=SearchAccuracy.BALANCED, description="Search accuracy level"
     )
+    embedding_model: str | None = Field(
+        default=None, description="Specific embedding model to use"
+    )
+    score_threshold: float = Field(default=0.0, description="Minimum score threshold")
+    rerank: bool = Field(default=True, description="Enable reranking")
+    cache_ttl: int | None = Field(default=None, description="Cache TTL in seconds")
 
 
 class EmbeddingRequest(BaseModel):
@@ -41,6 +47,9 @@ class EmbeddingRequest(BaseModel):
     texts: list[str] = Field(..., description="Texts to embed")
     model: str | None = Field(default=None, description="Specific model to use")
     batch_size: int = Field(default=32, ge=1, le=100, description="Batch size")
+    generate_sparse: bool = Field(
+        default=False, description="Generate sparse embeddings"
+    )
 
 
 class DocumentRequest(BaseModel):

@@ -8,9 +8,9 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from ..config import UnifiedConfig
-from .base import BaseService
-from .errors import QdrantServiceError
+from ...config import UnifiedConfig
+from ..base import BaseService
+from ..errors import QdrantServiceError
 
 logger = logging.getLogger(__name__)
 

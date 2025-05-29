@@ -11,8 +11,8 @@ from src.manage_vector_db import DatabaseStats
 from src.manage_vector_db import SearchResult
 from src.manage_vector_db import VectorDBManager
 from src.manage_vector_db import setup_logging
+from src.services.core.qdrant_service import QdrantService
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.qdrant_service import QdrantService
 
 
 class TestVectorDBManager:

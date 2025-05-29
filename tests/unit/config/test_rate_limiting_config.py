@@ -3,7 +3,7 @@
 import pytest
 from src.config.models import PerformanceConfig
 from src.config.models import UnifiedConfig
-from src.services.rate_limiter import RateLimitManager
+from src.services.utilities.rate_limiter import RateLimitManager
 
 
 class TestRateLimitingConfiguration:

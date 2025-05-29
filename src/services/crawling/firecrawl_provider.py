@@ -6,7 +6,7 @@ from typing import Any
 from firecrawl import FirecrawlApp
 
 from ..errors import CrawlServiceError
-from ..rate_limiter import RateLimitManager
+from ..utilities.rate_limiter import RateLimitManager
 from .base import CrawlProvider
 
 logger = logging.getLogger(__name__)

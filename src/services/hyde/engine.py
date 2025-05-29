@@ -8,10 +8,10 @@ from typing import Any
 import numpy as np
 
 from ..base import BaseService
+from ..core.qdrant_service import QdrantService
 from ..embeddings.manager import EmbeddingManager
 from ..errors import EmbeddingServiceError
 from ..errors import QdrantServiceError
-from ..qdrant_service import QdrantService
 from .cache import HyDECache
 from .config import HyDEConfig
 from .config import HyDEMetricsConfig

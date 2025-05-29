@@ -3,12 +3,12 @@
 import logging
 from typing import Any
 
-from ..service_manager import UnifiedServiceManager
+from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, service_manager: UnifiedServiceManager):
+def register_tools(mcp, client_manager: ClientManager):
     """Register collection management tools with the MCP server."""
 
     @mcp.tool()
@@ -18,14 +18,12 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
 
         Returns information about each collection including size and status.
         """
-        await service_manager.initialize()
-
-        collections = await service_manager.qdrant_service.list_collections()
+        collections = await client_manager.qdrant_service.list_collections()
         collection_info = []
 
         for collection_name in collections:
             try:
-                info = await service_manager.qdrant_service.get_collection_info(
+                info = await client_manager.qdrant_service.get_collection_info(
                     collection_name
                 )
                 collection_info.append(
@@ -54,13 +52,11 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
 
         Permanently removes the collection and all its data.
         """
-        await service_manager.initialize()
-
         try:
-            await service_manager.qdrant_service.delete_collection(collection_name)
+            await client_manager.qdrant_service.delete_collection(collection_name)
 
             # Clear cache entries for this collection
-            await service_manager.cache_manager.clear(pattern=f"*:{collection_name}:*")
+            await client_manager.cache_manager.clear(pattern=f"*:{collection_name}:*")
 
             return {"status": "deleted", "collection": collection_name}
         except Exception as e:
@@ -74,11 +70,9 @@ def register_tools(mcp, service_manager: UnifiedServiceManager):
 
         Rebuilds indexes and optimizes storage.
         """
-        await service_manager.initialize()
-
         try:
             # Get current collection info
-            info = await service_manager.qdrant_service.get_collection_info(
+            info = await client_manager.qdrant_service.get_collection_info(
                 collection_name
             )
 

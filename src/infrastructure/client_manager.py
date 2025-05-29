@@ -18,7 +18,10 @@ from pydantic import Field
 from pydantic import field_validator
 from qdrant_client import AsyncQdrantClient
 
-from ..services.errors import APIError
+try:
+    from services.errors import APIError
+except ImportError:
+    from ..services.errors import APIError
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +181,36 @@ class ClientManager:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    @classmethod
+    def from_unified_config(cls) -> "ClientManager":
+        """Create ClientManager from unified configuration.
+
+        This factory method loads configuration from environment variables
+        and creates a properly configured ClientManager instance.
+        """
+        import os
+
+        from ..config.loader import ConfigLoader
+
+        # Load the unified configuration
+        unified_config = ConfigLoader.load_config()
+
+        config = ClientManagerConfig(
+            # Qdrant settings
+            qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
+            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            # OpenAI settings
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            # Firecrawl settings
+            firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY"),
+            # Redis settings
+            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+        )
+
+        instance = cls(config)
+        instance.unified_config = unified_config
+        return instance
+
     def __init__(self, config: ClientManagerConfig | None = None):
         """Initialize client manager.
 
@@ -194,6 +227,7 @@ class ClientManager:
             return
 
         self.config = config or ClientManagerConfig()
+        self.unified_config = None  # Will be set by from_unified_config
         self._clients: dict[str, Any] = {}
         self._locks: dict[str, asyncio.Lock] = {}
         self._health: dict[str, ClientHealth] = {}

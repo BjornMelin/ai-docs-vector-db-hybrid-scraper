@@ -61,12 +61,12 @@ from .config.models import DocumentationSite
 
 # Import shared response models
 from .mcp.models.responses import CrawlResult
+from .services.core.qdrant_service import QdrantService
 from .services.crawling.manager import CrawlManager
 
 # Import service layer
 from .services.embeddings.manager import EmbeddingManager
-from .services.qdrant_service import QdrantService
-from .services.rate_limiter import RateLimitManager
+from .services.utilities.rate_limiter import RateLimitManager
 
 console = Console()
 

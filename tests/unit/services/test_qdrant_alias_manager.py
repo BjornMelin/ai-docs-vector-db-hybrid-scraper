@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 from src.config import UnifiedConfig
+from src.services.core.qdrant_alias_manager import QdrantAliasManager
 from src.services.errors import QdrantServiceError
-from src.services.qdrant_alias_manager import QdrantAliasManager
 
 
 class TestQdrantAliasManager:

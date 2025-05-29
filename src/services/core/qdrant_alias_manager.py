@@ -11,9 +11,9 @@ from qdrant_client.models import CreateAliasOperation
 from qdrant_client.models import DeleteAlias
 from qdrant_client.models import DeleteAliasOperation
 
-from ..config import UnifiedConfig
-from .base import BaseService
-from .errors import QdrantServiceError
+from ...config import UnifiedConfig
+from ..base import BaseService
+from ..errors import QdrantServiceError
 
 logger = logging.getLogger(__name__)
 

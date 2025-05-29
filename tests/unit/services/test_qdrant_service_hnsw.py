@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from src.config import UnifiedConfig
-from src.services.qdrant_service import QdrantService
+from src.services.core.qdrant_service import QdrantService
 
 
 @pytest.fixture

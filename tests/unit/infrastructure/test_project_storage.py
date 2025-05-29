@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from src.services.project_storage import ProjectStorage
-from src.services.project_storage import ProjectStorageError
+from src.services.core.project_storage import ProjectStorage
+from src.services.core.project_storage import ProjectStorageError
 
 
 @pytest.fixture
