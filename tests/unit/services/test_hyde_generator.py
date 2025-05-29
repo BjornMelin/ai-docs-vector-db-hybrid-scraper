@@ -168,7 +168,9 @@ class TestHypotheticalDocumentGenerator:
         assert result.generation_time > 0
 
     @pytest.mark.asyncio
-    async def test_generate_documents_parallel(self, mock_openai_client, mock_client_manager):
+    async def test_generate_documents_parallel(
+        self, mock_openai_client, mock_client_manager
+    ):
         """Test parallel document generation."""
         config = HyDEConfig(parallel_generation=True, num_generations=3)
         prompt_config = HyDEPromptConfig()
@@ -188,7 +190,9 @@ class TestHypotheticalDocumentGenerator:
         assert len(result.documents) == config.num_generations
 
     @pytest.mark.asyncio
-    async def test_generate_documents_sequential(self, mock_openai_client, mock_client_manager):
+    async def test_generate_documents_sequential(
+        self, mock_openai_client, mock_client_manager
+    ):
         """Test sequential document generation."""
         config = HyDEConfig(parallel_generation=False, num_generations=2)
         prompt_config = HyDEPromptConfig()
@@ -215,7 +219,9 @@ class TestHypotheticalDocumentGenerator:
         pass
 
     @pytest.mark.asyncio
-    async def test_generate_documents_timeout_handling(self, mock_openai_client, mock_client_manager):
+    async def test_generate_documents_timeout_handling(
+        self, mock_openai_client, mock_client_manager
+    ):
         """Test timeout handling during generation."""
         config = HyDEConfig(generation_timeout_seconds=1)  # Short timeout
         prompt_config = HyDEPromptConfig()
