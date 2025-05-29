@@ -32,7 +32,7 @@ def qdrant_service(config):
 @pytest.fixture
 def mock_qdrant_client():
     """Create a properly mocked Qdrant client."""
-    with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+    with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
         mock_instance = AsyncMock()
         # Mock connection check
         mock_instance.get_collections = AsyncMock(
@@ -50,7 +50,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_initialize(self, qdrant_service):
         """Test service initialization."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             # Create a mock instance with async get_collections method
             mock_instance = MagicMock()
             mock_instance.get_collections = AsyncMock(
@@ -72,7 +72,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_create_collection_success(self, qdrant_service):
         """Test successful collection creation."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.create_collection = AsyncMock()
@@ -94,7 +94,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_delete_collection(self, qdrant_service):
         """Test collection deletion."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.delete_collection = AsyncMock()
@@ -111,7 +111,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_list_collections(self, qdrant_service):
         """Test listing collections."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             # Mock collections list
             mock_collection = MagicMock()
@@ -130,7 +130,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_upsert_points(self, qdrant_service):
         """Test document upsertion."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.upsert = AsyncMock()
@@ -167,7 +167,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_search(self, qdrant_service):
         """Test vector search."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
 
@@ -200,7 +200,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_search_with_filter(self, qdrant_service):
         """Test vector search with metadata filter."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.query_points.return_value = MagicMock(points=[])
@@ -225,7 +225,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_get_collection_info(self, qdrant_service):
         """Test getting collection information."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
 
@@ -248,7 +248,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_count_points(self, qdrant_service):
         """Test counting points in collection."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.count.return_value = MagicMock(count=100)
@@ -264,7 +264,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_hybrid_search(self, qdrant_service):
         """Test hybrid search with dense and sparse vectors."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
 
@@ -299,7 +299,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_collection_info_method(self, qdrant_service):
         """Test getting collection info method."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_info = MagicMock()
@@ -319,7 +319,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_cleanup(self, qdrant_service):
         """Test service cleanup."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.close = AsyncMock()
@@ -337,7 +337,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_error_handling(self, qdrant_service):
         """Test error handling in operations."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
 
@@ -358,7 +358,7 @@ class TestQdrantService:
     @pytest.mark.asyncio
     async def test_batch_operations(self, qdrant_service):
         """Test batch operations."""
-        with patch("src.services.qdrant_service.AsyncQdrantClient") as mock_client:
+        with patch("src.services.core.qdrant_service.AsyncQdrantClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get_collections.return_value = MagicMock(collections=[])
             mock_instance.upsert = AsyncMock()
