@@ -15,11 +15,11 @@ from rich.console import Console
 from rich.table import Table
 
 # Import unified configuration and service layer
-from .config import get_config
-from .services.core.qdrant_service import QdrantService
-from .services.embeddings.manager import EmbeddingManager
-from .services.utilities.rate_limiter import RateLimitManager
-from .utils import async_to_sync_click
+from src.config import get_config
+from src.services.core.qdrant_service import QdrantService
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.utilities.rate_limiter import RateLimitManager
+from src.utils import async_to_sync_click
 
 console = Console()
 

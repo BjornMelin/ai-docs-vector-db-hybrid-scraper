@@ -49,24 +49,24 @@ from rich.progress import SpinnerColumn
 from rich.progress import TextColumn
 from rich.table import Table
 
-# Import enhanced chunking module
-from .chunking import EnhancedChunker
-
 # Import unified configuration
-from .config import get_config
-from .config.enums import EmbeddingModel
-from .config.enums import EmbeddingProvider
-from .config.enums import SearchStrategy
-from .config.models import DocumentationSite
+from src.config import get_config
+from src.config.enums import EmbeddingModel
+from src.config.enums import EmbeddingProvider
+from src.config.enums import SearchStrategy
+from src.config.models import DocumentationSite
 
 # Import shared response models
-from .mcp.models.responses import CrawlResult
-from .services.core.qdrant_service import QdrantService
-from .services.crawling.manager import CrawlManager
+from src.mcp.models.responses import CrawlResult
+from src.services.core.qdrant_service import QdrantService
+from src.services.crawling.manager import CrawlManager
 
 # Import service layer
-from .services.embeddings.manager import EmbeddingManager
-from .services.utilities.rate_limiter import RateLimitManager
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.utilities.rate_limiter import RateLimitManager
+
+# Import enhanced chunking module
+from .chunking import EnhancedChunker
 
 console = Console()
 

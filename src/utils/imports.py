@@ -32,7 +32,7 @@ def resolve_imports():
         @resolve_imports()
         def main():
             # Your imports will work correctly here
-            from infrastructure.client_manager import ClientManager
+            from src.infrastructure.client_manager import ClientManager
     """
 
     def decorator(func):

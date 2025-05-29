@@ -7,8 +7,8 @@ import re
 from typing import ClassVar
 from urllib.parse import urlparse
 
-from .config import SecurityConfig
-from .config import get_config
+from src.config import SecurityConfig
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 

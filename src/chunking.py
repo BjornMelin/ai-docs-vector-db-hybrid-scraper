@@ -15,10 +15,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 # Handle both module and script imports
-try:
-    from config.enums import ChunkingStrategy
-except ImportError:
-    from .config.enums import ChunkingStrategy
+from src.config.enums import ChunkingStrategy
 
 # Tree-sitter imports (will be available after adding to requirements)
 try:

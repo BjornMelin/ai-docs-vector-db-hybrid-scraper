@@ -15,10 +15,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from fastmcp import FastMCP
-
-from infrastructure.client_manager import ClientManager
-from mcp.tool_registry import register_all_tools
-from services.logging_config import configure_logging
+from src.infrastructure.client_manager import ClientManager
+from src.mcp.tool_registry import register_all_tools
+from src.services.logging_config import configure_logging
 
 # Initialize logging
 configure_logging()
@@ -54,7 +53,7 @@ def validate_configuration():
 
     Checks for required API keys and validates critical settings.
     """
-    from config import get_config
+    from src.config import get_config
 
     config = get_config()
     warnings = []
