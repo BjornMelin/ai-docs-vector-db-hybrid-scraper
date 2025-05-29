@@ -54,9 +54,11 @@ class TestStreamingEdgeCases:
             # Zero buffer should be handled gracefully in implementation
 
         # Test invalid buffer size
-        with patch.dict(os.environ, {"FASTMCP_BUFFER_SIZE": "invalid"}):
-            with pytest.raises(ValueError):
-                int(os.getenv("FASTMCP_BUFFER_SIZE", "8192"))
+        with (
+            patch.dict(os.environ, {"FASTMCP_BUFFER_SIZE": "invalid"}),
+            pytest.raises(ValueError),
+        ):
+            int(os.getenv("FASTMCP_BUFFER_SIZE", "8192"))
 
     def test_max_response_size_limits(self):
         """Test maximum response size limit enforcement."""

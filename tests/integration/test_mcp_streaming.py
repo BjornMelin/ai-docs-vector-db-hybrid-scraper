@@ -64,26 +64,27 @@ def mock_client_manager():
 @pytest.mark.asyncio
 async def test_streaming_transport_initialization():
     """Test that streaming transport initializes correctly."""
-    with patch.dict(
-        os.environ,
-        {
-            "FASTMCP_TRANSPORT": "streamable-http",
-            "FASTMCP_HOST": "127.0.0.1",
-            "FASTMCP_PORT": "8000",
-        },
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "FASTMCP_TRANSPORT": "streamable-http",
+                "FASTMCP_HOST": "127.0.0.1",
+                "FASTMCP_PORT": "8000",
+            },
+        ),
+        patch("unified_mcp_server.mcp.run") as _,
     ):
-        # Mock the FastMCP server run method
-        with patch("unified_mcp_server.mcp.run") as mock_run:
-            # Import after setting environment
+        # Import after setting environment
 
-            # Test that the correct parameters would be passed
-            transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
-            host = os.getenv("FASTMCP_HOST", "127.0.0.1")
-            port = int(os.getenv("FASTMCP_PORT", "8000"))
+        # Test that the correct parameters would be passed
+        transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
+        host = os.getenv("FASTMCP_HOST", "127.0.0.1")
+        port = int(os.getenv("FASTMCP_PORT", "8000"))
 
-            assert transport == "streamable-http"
-            assert host == "127.0.0.1"
-            assert port == 8000
+        assert transport == "streamable-http"
+        assert host == "127.0.0.1"
+        assert port == 8000
 
 
 @pytest.mark.asyncio
@@ -190,9 +191,8 @@ async def test_response_size_limits(large_search_results):
 async def test_streaming_error_handling():
     """Test error handling in streaming scenarios."""
     # Test invalid port configuration
-    with patch.dict(os.environ, {"FASTMCP_PORT": "invalid"}):
-        with pytest.raises(ValueError):
-            int(os.getenv("FASTMCP_PORT", "8000"))
+    with patch.dict(os.environ, {"FASTMCP_PORT": "invalid"}), pytest.raises(ValueError):
+        int(os.getenv("FASTMCP_PORT", "8000"))
 
     # Test missing environment handling
     with patch.dict(os.environ, {}, clear=True):

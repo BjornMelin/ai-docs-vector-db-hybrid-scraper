@@ -184,7 +184,7 @@ async def test_concurrent_request_performance():
         }
 
     # Verify concurrency scaling
-    for concurrency, metrics in performance_results.items():
+    for _, metrics in performance_results.items():
         # Should handle at least 5 requests per second
         assert metrics["requests_per_second"] >= 1.0
 
