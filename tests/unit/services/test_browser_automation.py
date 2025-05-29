@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from src.config import UnifiedConfig
 from src.services.browser.automation_router import AutomationRouter
+from src.services.browser.browser_use_adapter import BrowserUseAdapter
 from src.services.browser.crawl4ai_adapter import Crawl4AIAdapter
 from src.services.browser.playwright_adapter import PlaywrightAdapter
 from src.services.browser.stagehand_adapter import StagehandAdapter
@@ -56,7 +57,7 @@ class TestAutomationRouter:
         """Test router initialization."""
         assert router.config is not None
         assert router.routing_rules is not None
-        assert "stagehand" in router.routing_rules
+        assert "browser_use" in router.routing_rules
         assert "playwright" in router.routing_rules
 
     def test_select_tool_site_specific(self, router):
@@ -64,13 +65,13 @@ class TestAutomationRouter:
         # Mock adapters as available
         router._adapters = {
             "crawl4ai": "mock",
-            "stagehand": "mock",
+            "browser_use": "mock",
             "playwright": "mock",
         }
 
-        # Test Stagehand selection
+        # Test browser-use selection
         tool = router._select_tool("https://vercel.com/docs/api", False, None)
-        assert tool == "stagehand"
+        assert tool == "browser_use"
 
         # Test Playwright selection (check actual routing rules)
         tool = router._select_tool("https://github.com/user/repo", False, None)
@@ -85,18 +86,18 @@ class TestAutomationRouter:
         # Mock adapters as available
         router._adapters = {
             "crawl4ai": "mock",
-            "stagehand": "mock",
+            "browser_use": "mock",
             "playwright": "mock",
         }
 
-        # Test interactive requirements force Stagehand/Playwright
+        # Test interactive requirements force browser-use/Playwright
         tool = router._select_tool("https://example.com", True, None)
-        assert tool in ["stagehand", "playwright"]
+        assert tool in ["browser_use", "playwright"]
 
-        # Test custom actions requirements force Stagehand/Playwright
+        # Test custom actions requirements force browser-use/Playwright
         custom_actions = [{"action": "click", "selector": "#button"}]
         tool = router._select_tool("https://example.com", False, custom_actions)
-        assert tool in ["stagehand", "playwright"]
+        assert tool in ["browser_use", "playwright"]
 
     @pytest.mark.asyncio
     async def test_scrape_success_first_tool(self, router):
@@ -105,7 +106,7 @@ class TestAutomationRouter:
         router._initialized = True
         router._adapters = {
             "crawl4ai": AsyncMock(),
-            "stagehand": AsyncMock(),
+            "browser_use": AsyncMock(),
             "playwright": AsyncMock(),
         }
 
@@ -131,14 +132,14 @@ class TestAutomationRouter:
         router._initialized = True
         router._adapters = {
             "crawl4ai": AsyncMock(),
-            "stagehand": AsyncMock(),
+            "browser_use": AsyncMock(),
             "playwright": AsyncMock(),
         }
 
-        url = "https://vercel.com/docs"  # Should try Stagehand first
+        url = "https://vercel.com/docs"  # Should try browser-use first
 
-        # Mock Stagehand failure and Playwright success
-        stagehand_error = CrawlServiceError("Stagehand failed")
+        # Mock browser-use failure and Playwright success
+        browser_use_error = CrawlServiceError("browser-use failed")
         playwright_result = {
             "content": "Fallback content",
             "metadata": {"tool": "playwright"},
@@ -146,7 +147,7 @@ class TestAutomationRouter:
         }
 
         with (
-            patch.object(router, "_try_stagehand", side_effect=stagehand_error),
+            patch.object(router, "_try_browser_use", side_effect=browser_use_error),
             patch.object(
                 router, "_try_playwright", return_value=playwright_result
             ) as mock_playwright,
@@ -163,7 +164,7 @@ class TestAutomationRouter:
         router._initialized = True
         router._adapters = {
             "crawl4ai": AsyncMock(),
-            "stagehand": AsyncMock(),
+            "browser_use": AsyncMock(),
             "playwright": AsyncMock(),
         }
 
@@ -174,7 +175,7 @@ class TestAutomationRouter:
                 router, "_try_crawl4ai", side_effect=CrawlServiceError("Failed")
             ),
             patch.object(
-                router, "_try_stagehand", side_effect=CrawlServiceError("Failed")
+                router, "_try_browser_use", side_effect=CrawlServiceError("Failed")
             ),
             patch.object(
                 router, "_try_playwright", side_effect=CrawlServiceError("Failed")
@@ -207,8 +208,8 @@ class TestAutomationRouter:
         mock_adapter.scrape.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_try_stagehand_success(self, router):
-        """Test successful Stagehand adapter usage."""
+    async def test_try_browser_use_success(self, router):
+        """Test successful browser-use adapter usage."""
         # Initialize router
         await router.initialize()
 
@@ -218,9 +219,9 @@ class TestAutomationRouter:
         # Mock the adapter directly in the router's adapters dict
         mock_adapter = AsyncMock()
         mock_adapter.scrape.return_value = expected_result
-        router._adapters["stagehand"] = mock_adapter
+        router._adapters["browser_use"] = mock_adapter
 
-        result = await router._try_stagehand(url, None)
+        result = await router._try_browser_use(url, None)
 
         assert result == expected_result
         mock_adapter.scrape.assert_called_once()
@@ -257,14 +258,14 @@ class TestAutomationRouter:
         """Test metrics retrieval functionality."""
         # Initialize metrics
         router._update_metrics("crawl4ai", success=True, elapsed=0.5)
-        router._update_metrics("stagehand", success=False, elapsed=2.0)
+        router._update_metrics("browser_use", success=False, elapsed=2.0)
 
         metrics = router.get_metrics()
 
         assert "crawl4ai" in metrics
-        assert "stagehand" in metrics
+        assert "browser_use" in metrics
         assert metrics["crawl4ai"]["success"] >= 1
-        assert metrics["stagehand"]["failed"] >= 1
+        assert metrics["browser_use"]["failed"] >= 1
 
 
 class TestCrawl4AIAdapter:
@@ -379,6 +380,390 @@ class TestStagehandAdapter:
         assert "available" in health
         # Should report as unavailable since Stagehand is not installed
         assert health["available"] is False
+
+
+class TestBrowserUseAdapter:
+    """Test cases for BrowserUseAdapter."""
+
+    @pytest.fixture
+    def mock_config(self):
+        """Mock configuration for BrowserUseAdapter."""
+        return {
+            "llm_provider": "openai",
+            "model": "gpt-4o-mini",
+            "headless": True,
+            "timeout": 30000,
+            "max_retries": 3,
+            "max_steps": 20,
+            "disable_security": False,
+            "generate_gif": False,
+        }
+
+    @pytest.fixture
+    def adapter(self, mock_config):
+        """Create BrowserUseAdapter instance for testing."""
+        return BrowserUseAdapter(mock_config)
+
+    @pytest.mark.asyncio
+    async def test_adapter_unavailable_behavior(self, adapter):
+        """Test adapter behavior when browser-use is not available."""
+        url = "https://example.com"
+        task = "Extract page content"
+
+        # If browser-use dependencies are not available, adapter should be disabled
+        if not adapter._available:
+            with pytest.raises(CrawlServiceError, match="browser-use not available"):
+                await adapter.scrape(url, task)
+        else:
+            # If available, test that it requires initialization
+            with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
+                await adapter.scrape(url, task)
+
+    @pytest.mark.asyncio
+    async def test_scrape_without_initialization(self, adapter):
+        """Test scraping without initialization."""
+        if adapter._available:
+            url = "https://example.com"
+            task = "Extract page content"
+
+            with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
+                await adapter.scrape(url, task)
+
+    @pytest.mark.asyncio
+    async def test_invalid_llm_provider(self):
+        """Test invalid LLM provider configuration."""
+        config = {
+            "llm_provider": "invalid_provider",
+            "model": "gpt-4o-mini",
+        }
+
+        if BrowserUseAdapter({})._available:  # Only test if dependencies available
+            adapter = BrowserUseAdapter(config)
+
+            with pytest.raises(CrawlServiceError, match="Unsupported LLM provider"):
+                adapter._setup_llm_config()
+
+    @pytest.mark.asyncio
+    async def test_missing_api_key(self):
+        """Test behavior with missing API key."""
+        config = {
+            "llm_provider": "openai",
+            "model": "gpt-4o-mini",
+        }
+
+        if BrowserUseAdapter({})._available:  # Only test if dependencies available
+            # Mock missing environment variable
+            with patch.dict("os.environ", {}, clear=True):
+                adapter = BrowserUseAdapter(config)
+
+                with pytest.raises(
+                    CrawlServiceError,
+                    match="OPENAI_API_KEY environment variable required",
+                ):
+                    adapter._setup_llm_config()
+
+    @pytest.mark.asyncio
+    async def test_convert_instructions_to_task(self, adapter):
+        """Test instruction list to task conversion."""
+        # Test with empty instructions
+        task = adapter._convert_instructions_to_task([])
+        assert "Navigate to the page and extract all documentation content" in task
+
+        # Test with various instruction types
+        instructions = [
+            "Click on the button",
+            "Type 'hello' in the input field",
+            "Wait for the page to load",
+            "Scroll down to see more content",
+        ]
+
+        task = adapter._convert_instructions_to_task(instructions)
+        assert "Navigate to the page, then" in task
+        assert "Click on the button" in task
+        assert "Type 'hello' in the input field" in task
+        assert "Wait for the page to load" in task
+        assert "Scroll down to see more content" in task
+
+    @pytest.mark.asyncio
+    async def test_scrape_with_mock_success(self, adapter):
+        """Test successful scraping with mocked browser-use."""
+        if not adapter._available:
+            pytest.skip("browser-use dependencies not available")
+
+        url = "https://example.com"
+        task = "Extract page content"
+
+        # Mock successful browser-use execution
+        mock_agent = AsyncMock()
+        mock_agent.run.return_value = "Extracted content from the page"
+
+        mock_browser = AsyncMock()
+
+        with (
+            patch(
+                "src.services.browser.browser_use_adapter.Agent",
+                return_value=mock_agent,
+            ),
+            patch(
+                "src.services.browser.browser_use_adapter.Browser",
+                return_value=mock_browser,
+            ),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}),
+        ):
+            adapter._browser = mock_browser
+            adapter._initialized = True
+
+            result = await adapter.scrape(url, task)
+
+            assert result["success"] is True
+            assert "Extracted content from the page" in result["content"]
+            assert result["metadata"]["extraction_method"] == "browser_use_ai"
+            assert result["metadata"]["llm_provider"] == "openai"
+            assert result["metadata"]["model_used"] == "gpt-4o-mini"
+
+    @pytest.mark.asyncio
+    async def test_scrape_with_timeout(self, adapter):
+        """Test scraping with timeout."""
+        if not adapter._available:
+            pytest.skip("browser-use dependencies not available")
+
+        url = "https://example.com"
+        task = "Extract page content"
+
+        # Mock timeout scenario
+        mock_agent = AsyncMock()
+        mock_agent.run.side_effect = TimeoutError("Task timed out")
+
+        mock_browser = AsyncMock()
+
+        with (
+            patch(
+                "src.services.browser.browser_use_adapter.Agent",
+                return_value=mock_agent,
+            ),
+            patch(
+                "src.services.browser.browser_use_adapter.Browser",
+                return_value=mock_browser,
+            ),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}),
+        ):
+            adapter._browser = mock_browser
+            adapter._initialized = True
+
+            result = await adapter.scrape(url, task, timeout=1000)  # Short timeout
+
+            assert result["success"] is False
+            assert "timeout" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_scrape_with_retries(self, adapter):
+        """Test retry mechanism on failure."""
+        if not adapter._available:
+            pytest.skip("browser-use dependencies not available")
+
+        url = "https://example.com"
+        task = "Extract page content"
+
+        # Mock failure then success
+        mock_agent = AsyncMock()
+        mock_agent.run.side_effect = [
+            Exception("First attempt failed"),
+            Exception("Second attempt failed"),
+            "Success on third attempt",
+        ]
+
+        mock_browser = AsyncMock()
+
+        with (
+            patch(
+                "src.services.browser.browser_use_adapter.Agent",
+                return_value=mock_agent,
+            ),
+            patch(
+                "src.services.browser.browser_use_adapter.Browser",
+                return_value=mock_browser,
+            ),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}),
+        ):
+            adapter._browser = mock_browser
+            adapter._initialized = True
+
+            result = await adapter.scrape(url, task)
+
+            assert result["success"] is True
+            assert "Success on third attempt" in result["content"]
+            # Should have called run 3 times (2 failures + 1 success)
+            assert mock_agent.run.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_health_check_scenarios(self, adapter):
+        """Test various health check scenarios."""
+        # Test unavailable adapter
+        if not adapter._available:
+            health = await adapter.health_check()
+            assert not health["healthy"]
+            assert health["status"] == "unavailable"
+            assert not health["available"]
+            return
+
+        # Test uninitialized adapter
+        health = await adapter.health_check()
+        assert not health["healthy"]
+        assert health["status"] == "not_initialized"
+        assert health["available"] is True
+
+        # Test timeout scenario
+        with (
+            patch.object(adapter, "scrape") as mock_scrape,
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}),
+        ):
+            adapter._initialized = True
+            mock_scrape.side_effect = TimeoutError()
+
+            health = await adapter.health_check()
+
+            assert not health["healthy"]
+            assert health["status"] == "timeout"
+            assert health["response_time_ms"] == 15000
+
+    @pytest.mark.asyncio
+    async def test_ai_capabilities_testing(self, adapter):
+        """Test AI capabilities testing functionality."""
+        if not adapter._available:
+            result = await adapter.test_ai_capabilities()
+            assert not result["success"]
+            assert "not available or initialized" in result["error"]
+            return
+
+        # Test uninitialized adapter
+        result = await adapter.test_ai_capabilities()
+        assert not result["success"]
+        assert "not available or initialized" in result["error"]
+
+        # Test successful capabilities test
+        mock_result = {
+            "success": True,
+            "content": "test content from capabilities test",
+            "metadata": {"extraction_method": "browser_use_ai"},
+            "ai_insights": {"task_completed": True},
+        }
+
+        with (
+            patch.object(adapter, "scrape", return_value=mock_result),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}),
+        ):
+            adapter._initialized = True
+
+            result = await adapter.test_ai_capabilities("https://test.com")
+
+            assert result["success"] is True
+            assert result["test_url"] == "https://test.com"
+            assert "Navigate to the page and perform" in result["task_description"]
+            assert result["content_length"] == len(
+                "test content from capabilities test"
+            )
+            assert result["ai_insights"]["task_completed"] is True
+
+    def test_get_capabilities(self, adapter):
+        """Test capabilities reporting."""
+        capabilities = adapter.get_capabilities()
+
+        assert capabilities["name"] == "browser_use"
+        assert capabilities["ai_powered"] is True
+        assert any(
+            "Python-native solution" in adv for adv in capabilities["advantages"]
+        )
+        assert any(
+            "Multi-LLM provider support" in adv for adv in capabilities["advantages"]
+        )
+        assert any(
+            "Self-correcting AI behavior" in adv for adv in capabilities["advantages"]
+        )
+        assert "Slower than direct automation" in capabilities["limitations"]
+        assert any(
+            "Complex interactions requiring AI understanding" in item
+            for item in capabilities["best_for"]
+        )
+        assert capabilities["performance"]["avg_speed"] == "1.8s per page"
+        assert (
+            capabilities["performance"]["success_rate"]
+            == "96% for complex sites (89% WebVoyager benchmark)"
+        )
+        assert capabilities["llm_provider"] == "openai"
+        assert capabilities["model"] == "gpt-4o-mini"
+
+    @pytest.mark.asyncio
+    async def test_cleanup(self, adapter):
+        """Test resource cleanup."""
+        if not adapter._available:
+            pytest.skip("browser-use dependencies not available")
+
+        mock_browser = AsyncMock()
+        adapter._browser = mock_browser
+        adapter._initialized = True
+
+        await adapter.cleanup()
+
+        mock_browser.close.assert_called_once()
+        assert adapter._browser is None
+        assert not adapter._initialized
+
+    @pytest.mark.asyncio
+    async def test_cleanup_with_error(self, adapter):
+        """Test cleanup when browser close fails."""
+        if not adapter._available:
+            pytest.skip("browser-use dependencies not available")
+
+        mock_browser = AsyncMock()
+        mock_browser.close.side_effect = Exception("Close failed")
+        adapter._browser = mock_browser
+        adapter._initialized = True
+
+        # Should not raise exception, just log error
+        await adapter.cleanup()
+
+        # After cleanup with error, state should still be reset
+        assert adapter._browser is None
+        assert not adapter._initialized
+
+    @pytest.mark.asyncio
+    async def test_llm_provider_configurations(self):
+        """Test different LLM provider configurations."""
+        if not BrowserUseAdapter({})._available:
+            pytest.skip("browser-use dependencies not available")
+
+        # Test OpenAI configuration
+        openai_config = {
+            "llm_provider": "openai",
+            "model": "gpt-4o",
+        }
+
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key"}):
+            adapter = BrowserUseAdapter(openai_config)
+            llm = adapter._setup_llm_config()
+            assert hasattr(llm, "model_name") or hasattr(llm, "model")
+
+        # Test Anthropic configuration
+        anthropic_config = {
+            "llm_provider": "anthropic",
+            "model": "claude-3-sonnet-20241022",
+        }
+
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}):
+            adapter = BrowserUseAdapter(anthropic_config)
+            llm = adapter._setup_llm_config()
+            assert hasattr(llm, "model_name") or hasattr(llm, "model")
+
+        # Test Gemini configuration
+        gemini_config = {
+            "llm_provider": "gemini",
+            "model": "gemini-pro",
+        }
+
+        with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
+            adapter = BrowserUseAdapter(gemini_config)
+            llm = adapter._setup_llm_config()
+            assert hasattr(llm, "model_name") or hasattr(llm, "model")
 
 
 class TestPlaywrightAdapter:
@@ -540,7 +925,7 @@ class TestAutomationRouterErrorPaths:
         failing_adapter.scrape.side_effect = Exception("Tool failed")
         router._adapters = {
             "crawl4ai": failing_adapter,
-            "stagehand": failing_adapter,
+            "browser_use": failing_adapter,
             "playwright": failing_adapter,
         }
 
@@ -573,7 +958,7 @@ class TestAutomationRouterErrorPaths:
         # Update metrics for different tools
         router._update_metrics("crawl4ai", True, 100.5)
         router._update_metrics("crawl4ai", False, 150.0)
-        router._update_metrics("stagehand", True, 200.0)
+        router._update_metrics("browser_use", True, 200.0)
 
         metrics = router.get_metrics()
 
@@ -582,8 +967,8 @@ class TestAutomationRouterErrorPaths:
         assert metrics["crawl4ai"]["total_time"] == 250.5
         assert metrics["crawl4ai"]["avg_time"] == 125.25
 
-        assert metrics["stagehand"]["success"] == 1
-        assert metrics["stagehand"]["avg_time"] == 200.0
+        assert metrics["browser_use"]["success"] == 1
+        assert metrics["browser_use"]["avg_time"] == 200.0
 
     @pytest.mark.asyncio
     async def test_routing_rules_loading(self, mock_config):

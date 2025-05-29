@@ -17,7 +17,7 @@ try:
     STAGEHAND_AVAILABLE = True
 except ImportError:
     STAGEHAND_AVAILABLE = False
-    Stagehand = None
+    Stagehand = None  # type: ignore
 
 
 class StagehandAdapter(BaseService):
@@ -53,7 +53,7 @@ class StagehandAdapter(BaseService):
             "viewport": config.get("viewport", {"width": 1920, "height": 1080}),
         }
 
-        self._stagehand: Stagehand | None = None
+        self._stagehand: Any | None = None  # Stagehand instance when available
         self._initialized = False
 
     async def initialize(self) -> None:

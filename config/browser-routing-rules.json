@@ -1,25 +1,42 @@
 {
   "routing_rules": {
-    "stagehand": [
+    "browser_use": [
       "vercel.com",
       "clerk.com", 
       "supabase.com",
       "netlify.com",
       "railway.app",
-      "planetscale.com"
+      "planetscale.com",
+      "react.dev",
+      "nextjs.org",
+      "docs.anthropic.com",
+      "docs.openai.com",
+      "beta.openai.com"
     ],
     "playwright": [
       "github.com",
       "stackoverflow.com",
       "discord.com",
       "slack.com",
-      "app.posthog.com"
+      "app.posthog.com",
+      "notion.so"
     ]
   },
   "description": "Browser automation routing rules for site-specific tool selection",
   "rules_explanation": {
-    "stagehand": "Sites that need AI-powered interaction due to complex React apps, heavy client-side rendering, or dynamic content",
-    "playwright": "Sites that need specific automation for authentication, complex pagination, or heavy JavaScript interactions",
-    "crawl4ai": "Default tool for all other sites (fastest for documentation scraping)"
+    "browser_use": "Sites that need AI-powered interaction due to complex React apps, heavy client-side rendering, dynamic content, or require natural language reasoning. Uses multi-LLM support (OpenAI, Anthropic, Gemini) for optimal cost/performance balance.",
+    "playwright": "Sites that need specific automation for authentication, complex pagination, or heavy JavaScript interactions requiring maximum programmatic control",
+    "crawl4ai": "Default tool for all other sites (fastest and most cost-effective for documentation scraping)"
+  },
+  "llm_configuration": {
+    "default_provider": "openai",
+    "default_model": "gpt-4o-mini",
+    "cost_optimization": "Use gpt-4o-mini for routine tasks, gpt-4o for complex interactions",
+    "fallback_order": ["openai", "anthropic", "gemini"],
+    "environment_variables": {
+      "OPENAI_API_KEY": "Required for OpenAI models",
+      "ANTHROPIC_API_KEY": "Optional for Anthropic models",
+      "GOOGLE_API_KEY": "Optional for Gemini models"
+    }
   }
 }
