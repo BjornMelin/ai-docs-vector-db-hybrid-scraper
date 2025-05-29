@@ -232,13 +232,14 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
 
                 try:
                     # Perform search with specific EF
-                    results = await self.qdrant_service._client.search(
+                    results = await self.qdrant_service._client.query_points(
                         collection_name=collection_name,
-                        query_vector=query_vector,
+                        query=query_vector,
+                        using="dense",
                         limit=10,
-                        search_params=models.SearchParams(
-                            hnsw_ef=ef_value, exact=False
-                        ),
+                        params=models.SearchParams(hnsw_ef=ef_value, exact=False),
+                        with_payload=True,
+                        with_vectors=False,
                     )
 
                     search_time = time.time() - start_time
@@ -246,7 +247,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
 
                     # Calculate recall (simplified - compare with exact search)
                     recall = await self._calculate_recall(
-                        collection_name, query_vector, results, ef_value
+                        collection_name, query_vector, results.points, ef_value
                     )
                     recall_scores.append(recall)
 
@@ -288,16 +289,19 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         """
         try:
             # Get exact search results
-            exact_results = await self.qdrant_service._client.search(
+            exact_results = await self.qdrant_service._client.query_points(
                 collection_name=collection_name,
-                query_vector=query_vector,
+                query=query_vector,
+                using="dense",
                 limit=len(hnsw_results),
-                search_params=models.SearchParams(exact=True),
+                params=models.SearchParams(exact=True),
+                with_payload=True,
+                with_vectors=False,
             )
 
             # Extract IDs
             hnsw_ids = {str(result.id) for result in hnsw_results}
-            exact_ids = {str(result.id) for result in exact_results}
+            exact_ids = {str(result.id) for result in exact_results.points}
 
             # Calculate recall
             intersection = len(hnsw_ids.intersection(exact_ids))
@@ -370,11 +374,14 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
             start_time = time.time()
 
             try:
-                await self.qdrant_service._client.search(
+                await self.qdrant_service._client.query_points(
                     collection_name=collection_name,
-                    query_vector=query_vector,
+                    query=query_vector,
+                    using="dense",
                     limit=10,
-                    search_params=models.SearchParams(hnsw_ef=ef, exact=False),
+                    params=models.SearchParams(hnsw_ef=ef, exact=False),
+                    with_payload=True,
+                    with_vectors=False,
                 )
 
                 search_time_ms = (time.time() - start_time) * 1000

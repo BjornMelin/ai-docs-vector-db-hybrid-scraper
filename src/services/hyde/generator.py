@@ -6,9 +6,9 @@ import logging
 import time
 from typing import Any
 
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from ...infrastructure.client_manager import ClientManager
 from ..base import BaseService
 from ..errors import EmbeddingServiceError
 from .config import HyDEConfig
@@ -35,19 +35,20 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         config: HyDEConfig,
         prompt_config: HyDEPromptConfig,
-        llm_client: AsyncOpenAI,
+        client_manager: ClientManager | None = None,
     ):
         """Initialize generator.
 
         Args:
             config: HyDE configuration
             prompt_config: Prompt configuration
-            llm_client: OpenAI async client
+            client_manager: Optional client manager (will create one if not provided)
         """
         super().__init__(config)
         self.config = config
         self.prompt_config = prompt_config
-        self.llm_client = llm_client
+        self.client_manager = client_manager or ClientManager.from_unified_config()
+        self._llm_client = None
 
         # Metrics tracking
         self.generation_count = 0
@@ -68,8 +69,15 @@ class HypotheticalDocumentGenerator(BaseService):
             return
 
         try:
+            # Initialize client manager and get OpenAI client
+            await self.client_manager.initialize()
+            self._llm_client = await self.client_manager.get_openai_client()
+
+            if not self._llm_client:
+                raise EmbeddingServiceError("OpenAI client not available")
+
             # Test LLM connection
-            await self.llm_client.models.list()
+            await self._llm_client.models.list()
 
             self._initialized = True
             logger.info("HyDE document generator initialized")
@@ -81,8 +89,9 @@ class HypotheticalDocumentGenerator(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup generator resources."""
-        if self.llm_client:
-            await self.llm_client.close()
+        if self.client_manager:
+            await self.client_manager.cleanup()
+        self._llm_client = None
         self._initialized = False
         logger.info("HyDE document generator cleaned up")
 
@@ -293,7 +302,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
         try:
             response = await asyncio.wait_for(
-                self.llm_client.chat.completions.create(
+                self._llm_client.chat.completions.create(
                     model=self.config.generation_model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=self.config.generation_temperature,
