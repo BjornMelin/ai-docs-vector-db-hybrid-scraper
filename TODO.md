@@ -9,6 +9,7 @@
 **V1 Foundation Verification:** ✅ **COMPREHENSIVE IMPLEMENTATION REVIEW COMPLETED 2025-05-29**
 
 **Dependencies Update:** ✅ **ALL DEPENDENCIES UPDATED AND VERIFIED 2025-05-29**
+
 - ✅ Updated all packages to latest compatible versions
 - ✅ Added missing dependencies: `pydantic-settings`, `pyyaml`, `aiofiles`
 - ✅ Fixed version conflicts (fastembed pinned to 0.6.1 for qdrant-client compatibility)
@@ -98,6 +99,22 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - ✅ Added comprehensive input validation and security improvements
   - ✅ Performance: 15-30% latency improvement through optimized execution
   - ✅ Comprehensive test suite with 8 new Query API tests (100% pass rate)
+
+- ✅ **Advanced Query Processing with Multi-Stage Retrieval** `feat/advanced-query-processing` [Issue #87](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/87) ✅ **COMPLETED 2025-05-30** - **CLOSED AS COMPLETE**
+  - ✅ Multi-stage search with Query API fully implemented and production-ready
+  - ✅ Complete HyDE implementation with generator, caching, and Query API integration
+  - ✅ Enhanced Query API usage with optimized payload field filtering  
+  - ✅ Advanced MCP tools with comprehensive request models (HyDESearchRequest, MultiStageSearchRequest, FilteredSearchRequest)
+  - ✅ Extensive test coverage: 558-line HyDE test suite, Query API tests, comprehensive error handling
+  - ✅ **Status**: 75-80% complete - Core functionality production-ready, remaining features moved to Issue #91
+
+- [ ] **Complete Advanced Query Processing (100% Feature Completion)** `feat/complete-query-processing` [Issue #91](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/91) - **IN PROGRESS**
+  - [ ] Advanced query intent classification (expand beyond 4 basic categories)
+  - [ ] True Matryoshka embeddings with dimension reduction (512, 768, 1536)
+  - [ ] Centralized query processing pipeline for unified orchestration
+  - [ ] Enhanced MCP integration using new query processing capabilities
+  - [ ] **Goal**: Complete remaining 20-25% for 100% advanced query processing implementation
+  - [ ] **Timeline**: 3-4 days estimated effort
 - ✅ **Payload Indexing for Fast Filtering** `feat/payload-indexing` [Issue #56](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues/56) ✅ **COMPLETED 2025-05-27** - [PR #69](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/pull/69)
 
   - ✅ Created comprehensive payload index system with field type optimization
@@ -1142,14 +1159,25 @@ _This TODO reflects our evolution from basic implementation to Advanced 2025 ach
 
 ## V2 FEATURES
 
-Additional advanced features have been moved to [TODO-V2.md](./TODO-V2.md) for implementation after the initial unified MCP server release. These include:
+Additional advanced features have been moved to [TODO-V2.md](./TODO-V2.md) for implementation after the initial unified MCP server release.
 
-- Advanced Query Enhancement & HyDE
-- Multi-Collection Search
-- Comprehensive Usage Analytics
-- Export/Import Tools
-- Context-Aware Chunking
-- Incremental Updates
+### ✅ **V2 Issues Status Update (2025-05-30)**
+
+- **Issue #87**: ✅ **CLOSED COMPLETE** - Advanced Query Processing (75-80% implemented, core functionality production-ready)
+- **Issue #88**: 🔄 **REOPENED FOR V2** - Multi-Collection Search (V2 feature, reopened for future tracking)
+- **Issue #89**: 🔄 **REOPENED FOR V2** - Comprehensive Analytics (partial foundation exists, advanced features for V2)  
+- **Issue #90**: 🔄 **REOPENED FOR V2** - Export/Import Tools (V2 feature, reopened for future tracking)
+- **Issue #91**: 🔄 **IN PROGRESS** - Complete Advanced Query Processing for 100% feature completion
+
+### 📋 **V2 Features Include:**
+
+- **Advanced Query Enhancement Completion** (Issue #91) - Complete remaining query processing features for 100% implementation
+- **Multi-Collection Search** (Issue #88) - Cross-collection federation and intelligent result merging  
+- **Comprehensive Analytics** (Issue #89) - Real-time dashboards, search quality monitoring, intelligent alerting
+- **Export/Import Tools** (Issue #90) - Multi-format data portability, automated backup, cross-platform migration
+- Context-Aware Chunking strategies
+- Incremental Updates with smart detection
+- Enterprise-grade features and scalability
 - And more...
 
 The current TODO focuses on essential features for a solid V1 release with direct API/SDK integration.
