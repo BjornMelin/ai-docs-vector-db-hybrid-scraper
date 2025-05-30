@@ -7,7 +7,7 @@
   "cache": {
     "enable_caching": false,
     "enable_local_cache": false,
-    "enable_redis_cache": false
+    "enable_dragonfly_cache": false
   },
   "qdrant": {
     "url": "http://localhost:6333",

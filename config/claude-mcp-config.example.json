@@ -8,7 +8,9 @@
         "OPENAI_API_KEY": "sk-REPLACE-WITH-YOUR-OPENAI-API-KEY",
         "FIRECRAWL_API_KEY": "fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY-OPTIONAL",
         "QDRANT_URL": "http://localhost:6333",
-        "REDIS_URL": "redis://localhost:6379"
+        "REDIS_URL": "redis://localhost:6379",
+        "ANTHROPIC_API_KEY": "sk-REPLACE-WITH-YOUR-ANTHROPIC-KEY-OPTIONAL",
+        "GEMINI_API_KEY": "REPLACE-WITH-YOUR-GEMINI-KEY-OPTIONAL"
       }
     }
   }

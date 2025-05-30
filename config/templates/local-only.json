@@ -7,7 +7,7 @@
   "cache": {
     "enable_caching": true,
     "enable_local_cache": true,
-    "enable_redis_cache": false,
+    "enable_dragonfly_cache": false,
     "local_max_size": 2000,
     "local_max_memory_mb": 200.0
   },

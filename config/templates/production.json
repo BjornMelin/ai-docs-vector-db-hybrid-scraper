@@ -7,8 +7,8 @@
   "cache": {
     "enable_caching": true,
     "enable_local_cache": true,
-    "enable_redis_cache": true,
-    "redis_url": "redis://redis:6379",
+    "enable_dragonfly_cache": true,
+    "dragonfly_url": "redis://dragonfly:6379",
     "ttl_embeddings": 86400,
     "ttl_crawl": 3600,
     "ttl_queries": 7200,

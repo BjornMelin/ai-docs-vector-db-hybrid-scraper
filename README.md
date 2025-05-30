@@ -24,6 +24,8 @@ This implementation combines **research-backed best practices** for production-g
 | Component               | Technology                                                          | Benefits                                         |
 | ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
 | **Bulk Scraping**       | [Crawl4AI](https://github.com/unclecode/crawl4ai)                  | 4-6x faster than alternatives, async concurrent  |
+| **Browser Automation**  | Three-tier hierarchy (Crawl4AI → browser-use → Playwright)         | AI-powered + fallback chain for complex sites   |
+| **AI Browser Control**  | [browser-use](https://github.com/gregpr07/browser-use)             | Python-native, multi-LLM, self-correcting AI    |
 | **On-Demand Scraping**  | [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server)| Claude Desktop integration, JS handling          |
 | **Vector Database**     | [Qdrant](https://qdrant.tech/)                                     | Hybrid search, quantization, local persistence   |
 | **MCP Server**          | [FastMCP 2.0](https://github.com/jlowin/fastmcp)                   | Unified MCP interface for all functionality      |
@@ -32,7 +34,7 @@ This implementation combines **research-backed best practices** for production-g
 | **Dense Embeddings**    | OpenAI text-embedding-3-small                                      | Best cost-performance ratio                      |
 | **Sparse Embeddings**   | SPLADE++ via FastEmbed                                             | Keyword matching for hybrid search               |
 | **Reranking**           | BGE-reranker-v2-m3                                                 | Minimal complexity, maximum accuracy gains       |
-| **Caching**             | Redis + In-Memory LRU                                              | 80%+ cache hit rate, intelligent key generation  |
+| **Caching**             | DragonflyDB + In-Memory LRU                                        | 4.5x faster than Redis, 38% less memory usage   |
 | **Security**            | SecurityValidator + UnifiedConfig                                  | URL validation, domain filtering, API key safety |
 | **Package Manager**     | [uv](https://github.com/astral-sh/uv)                              | 10-100x faster than pip                          |
 
@@ -49,7 +51,7 @@ This implementation combines **research-backed best practices** for production-g
 - **🌳 Tree-sitter Integration**: Multi-language code parsing (Python, JS, TS)
 - **🔐 Security-First**: URL validation, domain filtering, API key protection
 - **⚙️ Centralized Configuration**: UnifiedConfig with Pydantic v2 validation
-- **💾 Intelligent Caching**: Redis + LRU cache with 80%+ hit rates
+- **💾 Intelligent Caching**: DragonflyDB + LRU cache with 80%+ hit rates
 - **📊 Project Management**: Persistent project storage with quality tiers
 - **🔄 Service Layer**: EmbeddingManager, QdrantService, CrawlManager, CacheManager
 - **🚀 Zero-Downtime Deployments**: Collection aliases for instant switching
@@ -85,17 +87,24 @@ chmod +x setup.sh
 cat > .env << EOF
 OPENAI_API_KEY="your_openai_api_key_here"
 FIRECRAWL_API_KEY="your_firecrawl_api_key_here"  # Optional
+
+# Optional: Configure browser-use for complex automation
+ANTHROPIC_API_KEY="your_anthropic_api_key_here"  # For Claude models
+GEMINI_API_KEY="your_gemini_api_key_here"        # For Gemini models
+BROWSER_USE_LLM_PROVIDER="openai"                # openai, anthropic, gemini, local
+BROWSER_USE_MODEL="gpt-4o-mini"                  # Cost-optimized model
 EOF
 ```
 
-### 3. Start Qdrant Database
+### 3. Start Services (Qdrant + DragonflyDB)
 
 ```bash
-# Start optimized Qdrant with persistent storage
+# Start optimized Qdrant + DragonflyDB with persistent storage
 ./scripts/start-services.sh
 
-# Verify Qdrant is running
-curl http://localhost:6333/health
+# Verify services are running
+curl http://localhost:6333/health  # Qdrant
+curl http://localhost:6379/ping    # DragonflyDB
 ```
 
 ### 4. Run Advanced Documentation Scraping
@@ -216,7 +225,7 @@ The system now features a clean service layer architecture that replaces MCP pro
 
 #### 🚀 Caching Layer
 
-- **CacheManager**: Unified caching with Redis + in-memory LRU
+- **CacheManager**: Unified caching with DragonflyDB + in-memory LRU
 - **Content-Based Keys**: Hash-based keys for cache deduplication
 - **TTL Management**: Configurable TTLs per cache type
 - **Warming Strategies**: Proactive cache population
@@ -268,7 +277,7 @@ async with QdrantService(api_config) as qdrant:
         top_k=5
     )
 
-# Intelligent caching
+# Intelligent caching with DragonflyDB
 async with CacheManager(api_config) as cache:
     # Content-based cache key
     result = await cache.get_or_compute(
@@ -479,6 +488,31 @@ services:
           memory: 4G
         reservations:
           memory: 2G
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly-cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ~/.dragonfly_data:/data
+    environment:
+      - DRAGONFLY_THREADS=8
+      - DRAGONFLY_MEMORY_LIMIT=4gb
+      - DRAGONFLY_SNAPSHOT_INTERVAL=3600
+      - DRAGONFLY_SAVE_SCHEDULE="0 */1 * * *"
+    command: >
+      --logtostderr
+      --cache_mode
+      --maxmemory_policy=allkeys-lru
+      --compression=zstd
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
 ```
 
 ### Docker Management
@@ -488,10 +522,13 @@ services:
 docker-compose up -d
 
 # Monitor performance
-docker stats qdrant-vector-db
+docker stats qdrant-vector-db dragonfly-cache
 
 # Backup vector database
 docker exec qdrant-vector-db qdrant-backup
+
+# Monitor DragonflyDB cache
+docker exec dragonfly-cache dragonfly-cli info
 
 # Scale for production
 docker-compose --profile production up -d
@@ -762,7 +799,7 @@ This implementation synthesizes research and best practices from:
 - **Embedding Models**: [MTEB Leaderboard](https://huggingface.co/spaces/mteb/leaderboard) • [OpenAI Embeddings Research](https://openai.com/research/)
 - **Hybrid Search**: [Qdrant Hybrid Search](https://qdrant.tech/articles/hybrid-search/) • [Microsoft RAG Research](https://aka.ms/rageval)
 - **Reranking**: [BGE Reranker Papers](https://arxiv.org/abs/2309.07597) • [FlagEmbedding Research](https://github.com/FlagOpen/FlagEmbedding)
-- **Infrastructure**: [Crawl4AI](https://github.com/unclecode/crawl4ai) • [Firecrawl](https://github.com/mendableai/firecrawl) • [Qdrant](https://github.com/qdrant/qdrant)
+- **Infrastructure**: [Crawl4AI](https://github.com/unclecode/crawl4ai) • [browser-use](https://github.com/gregpr07/browser-use) • [Firecrawl](https://github.com/mendableai/firecrawl) • [Qdrant](https://github.com/qdrant/qdrant) • [DragonflyDB](https://github.com/dragonflydb/dragonfly)
 - **MCP Protocol**: [Model Context Protocol](https://modelcontextprotocol.io/) • [Anthropic MCP Documentation](https://docs.anthropic.com/en/docs/build-with-claude/computer-use)
 
 ## 🔗 Related Projects & Resources
@@ -770,8 +807,10 @@ This implementation synthesizes research and best practices from:
 ### Official Documentation
 
 - [Crawl4AI Documentation](https://docs.crawl4ai.com/) - High-performance web crawling
+- [browser-use Documentation](https://github.com/gregpr07/browser-use) - AI-powered browser automation
 - [Firecrawl MCP Server](https://docs.firecrawl.dev/mcp) - Claude Desktop integration
 - [Qdrant Documentation](https://qdrant.tech/documentation/) - Vector database operations
+- [DragonflyDB Documentation](https://www.dragonflydb.io/docs) - High-performance cache
 - [MCP Server Registry](https://github.com/modelcontextprotocol/servers) - Available MCP servers
 
 ### Research Papers & Benchmarks

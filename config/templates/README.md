@@ -9,7 +9,7 @@ This directory contains pre-configured templates for common use cases. Each temp
 **Use Case:** Production deployment with high performance and reliability
 
 - Uses OpenAI embeddings for best quality
-- Redis caching enabled for performance
+- DragonflyDB caching enabled for performance
 - Vector quantization enabled for storage efficiency
 - Security features enabled (API keys, rate limiting)
 - Optimized batch sizes and concurrency settings
@@ -20,7 +20,7 @@ This directory contains pre-configured templates for common use cases. Each temp
 
 - Debug mode enabled with verbose logging
 - Uses local FastEmbed for faster iteration
-- Redis caching disabled (local cache only)
+- DragonflyDB caching disabled (local cache only)
 - Smaller batch sizes for easier debugging
 - Browser not headless for visual debugging
 
@@ -124,7 +124,7 @@ You can override any setting using environment variables:
 export AI_DOCS__ENVIRONMENT=staging
 
 # Override nested settings
-export AI_DOCS__CACHE__REDIS_URL=redis://prod-redis:6379
+export AI_DOCS__CACHE__REDIS_URL=redis://prod-dragonfly:6379
 export AI_DOCS__QDRANT__URL=http://qdrant-cluster:6333
 
 # Override arrays (as JSON)
