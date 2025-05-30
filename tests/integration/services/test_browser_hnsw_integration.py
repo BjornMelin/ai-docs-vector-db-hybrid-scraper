@@ -83,13 +83,13 @@ class TestBrowserAutomationIntegration:
     @pytest.mark.asyncio
     async def test_automation_router_with_fallback_chain(self, mock_unified_config):
         """Test complete automation router fallback chain."""
-        url = "https://vercel.com/docs/api"  # Should prefer Stagehand
+        url = "https://vercel.com/docs/api"  # Should prefer browser_use
 
         # Mock all adapters to test fallback chain
         with (
             patch(
-                "src.services.browser.stagehand_adapter.StagehandAdapter"
-            ) as mock_stagehand,
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_browser_use,
             patch(
                 "src.services.browser.playwright_adapter.PlaywrightAdapter"
             ) as mock_playwright,
@@ -97,11 +97,13 @@ class TestBrowserAutomationIntegration:
                 "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
             ) as mock_crawl4ai,
         ):
-            # Setup Stagehand failure
-            mock_stagehand_instance = AsyncMock()
-            mock_stagehand_instance.scrape.side_effect = Exception("Stagehand failed")
-            mock_stagehand_instance.initialize = AsyncMock()
-            mock_stagehand.return_value = mock_stagehand_instance
+            # Setup browser_use failure
+            mock_browser_use_instance = AsyncMock()
+            mock_browser_use_instance.scrape.side_effect = Exception(
+                "browser_use failed"
+            )
+            mock_browser_use_instance.initialize = AsyncMock()
+            mock_browser_use.return_value = mock_browser_use_instance
 
             # Setup Playwright success
             mock_playwright_instance = AsyncMock()
@@ -129,7 +131,7 @@ class TestBrowserAutomationIntegration:
             assert "content" in result
 
             # Verify fallback chain was followed
-            mock_stagehand_instance.scrape.assert_called_once()
+            mock_browser_use_instance.scrape.assert_called_once()
             mock_playwright_instance.scrape.assert_called_once()
             mock_crawl4ai_instance.scrape.assert_not_called()
 
@@ -140,7 +142,7 @@ class TestBrowserAutomationIntegration:
 
         urls = [
             "https://example1.com",  # Crawl4AI
-            "https://vercel.com/docs",  # Stagehand
+            "https://vercel.com/docs",  # browser_use
             "https://github.com/user/repo",  # Playwright
         ]
 
@@ -150,14 +152,14 @@ class TestBrowserAutomationIntegration:
                 "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
             ) as mock_crawl4ai,
             patch(
-                "src.services.browser.stagehand_adapter.StagehandAdapter"
-            ) as mock_stagehand,
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_browser_use,
             patch(
                 "src.services.browser.playwright_adapter.PlaywrightAdapter"
             ) as mock_playwright,
         ):
             # Setup successful responses
-            for mock_adapter in [mock_crawl4ai, mock_stagehand, mock_playwright]:
+            for mock_adapter in [mock_crawl4ai, mock_browser_use, mock_playwright]:
                 mock_instance = AsyncMock()
                 mock_instance.scrape.return_value = {
                     "content": "Test content",
@@ -374,7 +376,7 @@ class TestIntegratedWorkflow:
             {
                 "url": urls[1],
                 "content": "Tutorial guide content",
-                "metadata": {"tool": "stagehand", "doc_type": "tutorial"},
+                "metadata": {"tool": "browser_use", "doc_type": "tutorial"},
                 "success": True,
             },
             {
@@ -423,7 +425,7 @@ class TestIntegratedWorkflow:
             "_adapters",
             {
                 "crawl4ai": MagicMock(),
-                "stagehand": MagicMock(),
+                "browser_use": MagicMock(),
                 "playwright": MagicMock(),
             },
         ):
@@ -431,8 +433,8 @@ class TestIntegratedWorkflow:
             router._adapters["crawl4ai"].scrape = AsyncMock(
                 side_effect=Exception("Crawl4AI failed")
             )
-            router._adapters["stagehand"].scrape = AsyncMock(
-                side_effect=Exception("Stagehand failed")
+            router._adapters["browser_use"].scrape = AsyncMock(
+                side_effect=Exception("browser_use failed")
             )
             router._adapters["playwright"].scrape = AsyncMock(
                 return_value={
@@ -485,7 +487,7 @@ class TestIntegratedWorkflow:
             "_adapters",
             {
                 "crawl4ai": MagicMock(),
-                "stagehand": MagicMock(),
+                "browser_use": MagicMock(),
                 "playwright": MagicMock(),
             },
         ):

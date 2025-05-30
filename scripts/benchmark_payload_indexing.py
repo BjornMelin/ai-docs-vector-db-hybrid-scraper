@@ -119,7 +119,7 @@ class PayloadIndexingBenchmark:
         languages = ["python", "typescript", "javascript", "rust"]
         frameworks = ["fastapi", "nextjs", "react", "django", "flask"]
         versions = ["1.0", "2.0", "3.0", "latest"]
-        crawl_sources = ["crawl4ai", "stagehand", "playwright"]
+        crawl_sources = ["crawl4ai", "browser_use", "playwright"]
         sites = [
             "FastAPI Documentation",
             "Next.js Docs",

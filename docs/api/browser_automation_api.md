@@ -88,7 +88,7 @@ Force usage of a specific adapter, bypassing routing logic.
 
 **Parameters:**
 
-- `adapter_name` (str): One of 'crawl4ai', 'stagehand', 'playwright'
+- `adapter_name` (str): One of 'crawl4ai', 'browser_use', 'playwright'
 - `*args, **kwargs`: Arguments passed directly to adapter
 
 **Returns:**
@@ -98,9 +98,9 @@ Force usage of a specific adapter, bypassing routing logic.
 **Usage:**
 
 ```python
-# Force Stagehand for complex interactions
+# Force browser-use for complex interactions
 result = await router.force_adapter(
-    "stagehand",
+    "browser_use",
     "https://complex-site.com",
     ["Navigate to settings", "Enable notifications"]
 )
@@ -117,12 +117,12 @@ Retrieve detailed performance metrics for monitoring and optimization.
     "total_requests": int,
     "adapter_usage": {
         "crawl4ai": {"count": int, "success_rate": float},
-        "stagehand": {"count": int, "success_rate": float},
+        "browser_use": {"count": int, "success_rate": float},
         "playwright": {"count": int, "success_rate": float}
     },
     "avg_response_times": {
         "crawl4ai": float,  # milliseconds
-        "stagehand": float,
+        "browser_use": float,
         "playwright": float
     },
     "fallback_frequency": float,  # percentage
@@ -130,79 +130,86 @@ Retrieve detailed performance metrics for monitoring and optimization.
 }
 ```
 
-### StagehandAdapter
+### BrowserUseAdapter
 
-AI-powered browser automation using natural language instructions.
+AI-powered browser automation using natural language tasks with multi-LLM support.
 
-#### `async scrape(url: str, instructions: list, timeout: int = 30000) -> dict`
+#### `async scrape(url: str, task: str, timeout: int = 30000) -> dict`
 
-Execute AI-driven automation based on natural language instructions.
+Execute AI-driven automation based on natural language task descriptions.
 
 **Key Features:**
 
-- **Intelligent Instruction Parsing**: Automatically categorizes instructions (click, type, extract, etc.)
-- **Adaptive Execution**: AI adapts to UI changes and dynamic content
-- **Content Extraction**: Combines structured extractions with final content sweep
-- **Screenshot Capture**: Automatic visual documentation of key steps
+- **Multi-LLM Support**: OpenAI, Anthropic, Gemini, and local models
+- **Cost Optimization**: Default GPT-4o-mini for routine tasks, GPT-4o for complex interactions
+- **Self-Correcting Behavior**: AI learns from mistakes and adapts execution
+- **Natural Language Tasks**: Describe what you want, not how to do it
+- **Python-Native**: No TypeScript dependencies, fully async
 
-**Instruction Categories:**
+**Task Examples:**
 
-1. **Navigation & Interaction:**
-
-   ```python
-   instructions = [
-       "click on the login button",
-       "type 'username' in the email field",
-       "scroll to the bottom of the page",
-       "wait for 3 seconds"
-   ]
-   ```
-
-2. **Content Extraction:**
+1. **Simple Content Extraction:**
 
    ```python
-   instructions = [
-       "extract the main article content",
-       "find all code examples on the page",
-       "get the page title and metadata"
-   ]
+   task = "Extract all documentation content including code examples"
+   result = await adapter.scrape("https://docs.example.com", task)
    ```
 
-3. **Documentation & Verification:**
+2. **Complex Interactive Tasks:**
 
    ```python
-   instructions = [
-       "take a screenshot of the current state",
-       "verify the page loaded correctly",
-       "capture any error messages"
-   ]
+   task = """
+   Navigate to the API section, expand any collapsed code examples,
+   extract all endpoint documentation with their parameters,
+   and collect any authentication requirements.
+   """
+   result = await adapter.scrape("https://api-docs.example.com", task)
    ```
 
-**Advanced Usage Pattern:**
+3. **Multi-Step Documentation Scraping:**
+
+   ```python
+   task = """
+   1. Wait for the page to fully load
+   2. Handle any cookie banners by dismissing them
+   3. Navigate to the getting started guide
+   4. Extract all step-by-step instructions
+   5. Find and expand any collapsed sections
+   6. Collect all code snippets and examples
+   """
+   result = await adapter.scrape("https://docs.example.com/guide", task)
+   ```
+
+**LLM Provider Configuration:**
 
 ```python
-# Multi-stage documentation scraping
-complex_instructions = [
-    "Navigate to the API documentation section",
-    "Extract all endpoint descriptions",
-    "Click on each code example to expand it",
-    "Screenshot each expanded example",
-    "Extract the complete code snippets",
-    "Navigate to the authentication section",
-    "Extract authentication requirements"
-]
+# OpenAI (default)
+config = {
+    "llm_provider": "openai",
+    "model": "gpt-4o-mini",  # Cost-optimized
+    "headless": True,
+    "max_steps": 20,
+    "max_retries": 3
+}
 
-result = await adapter.scrape(
-    "https://api-docs.example.com",
-    complex_instructions,
-    timeout=60000  # Extended timeout for complex operations
-)
+# Anthropic
+config = {
+    "llm_provider": "anthropic", 
+    "model": "claude-3-haiku-20240307",
+    "headless": True
+}
 
-# Access structured results
-extractions = result["extraction_results"]
-screenshots = result["screenshots"]
-ai_insights = result["ai_insights"]
+# Gemini
+config = {
+    "llm_provider": "gemini",
+    "model": "gemini-pro",
+    "headless": True
+}
 ```
+
+#### `async scrape_with_instructions(url: str, instructions: list, timeout: int = 30000) -> dict`
+
+Compatibility method that converts instruction lists to natural language tasks.
 
 #### `async test_ai_capabilities(test_url: str = "https://example.com") -> dict`
 
@@ -214,12 +221,11 @@ Comprehensive AI capability testing for validation and benchmarking.
 {
     "success": bool,
     "test_url": str,
-    "instructions_count": int,
+    "task_description": str,
     "execution_time_ms": float,
-    "extractions_count": int,
-    "screenshots_count": int,
     "content_length": int,
     "ai_insights": dict,
+    "metadata": dict,
     "error": str  # Only if success=False
 }
 ```
@@ -382,7 +388,7 @@ error_result = {
     "success": False,
     "error": "Detailed error message",
     "error_context": {
-        "adapter": "stagehand",
+        "adapter": "browser_use",
         "operation": "page_navigation",
         "url": "https://example.com",
         "instruction": "click on submit button",
@@ -422,7 +428,7 @@ pool_config = {
 async def safe_scrape_pattern(url: str):
     adapter = None
     try:
-        adapter = StagehandAdapter(config)
+        adapter = BrowserUseAdapter(config)
         await adapter.initialize()
         result = await adapter.scrape(url, instructions)
         return result
@@ -473,24 +479,25 @@ metrics = router.get_performance_metrics()
 result = await router.scrape(url)  # Preferred
 
 # Force specific adapters only when needed
-result = await router.force_adapter("stagehand", url, instructions)
+result = await router.force_adapter("browser_use", url, task)
 ```
 
-### 2. Instruction Design for Stagehand
+### 2. Task Design for Browser-Use
 
 ```python
-# Good: Specific and actionable
-instructions = [
-    "Click the 'Get Started' button in the hero section",
-    "Wait for the tutorial page to load",
-    "Extract the step-by-step instructions"
-]
+# Good: Clear and specific natural language tasks
+task = """
+Navigate to the documentation page, expand any collapsed sections,
+and extract all API endpoint information including parameters,
+examples, and response formats.
+"""
+
+# Good: Simple extraction task
+task = "Extract all code examples and their explanations from this tutorial page"
 
 # Avoid: Vague or overly complex
-instructions = [
-    "Do something with the page",  # Too vague
-    "Navigate through all sections and extract everything"  # Too complex
-]
+task = "Do something with the page"  # Too vague
+task = "Analyze everything and give me all information"  # Too broad
 ```
 
 ### 3. Error Handling Patterns
@@ -538,7 +545,8 @@ OPENAI_API_KEY=sk-...  # For AI-powered features
 
 # Optional
 PLAYWRIGHT_BROWSERS_PATH=/opt/playwright  # Custom browser path
-STAGEHAND_MODEL=ollama/llama2             # Custom AI model
+BROWSER_USE_LLM_PROVIDER=openai          # LLM provider (openai, anthropic, gemini)
+BROWSER_USE_MODEL=gpt-4o-mini             # Model for cost optimization
 CRAWL4AI_CACHE_DIR=/tmp/crawl_cache       # Cache directory
 ```
 
@@ -546,11 +554,13 @@ CRAWL4AI_CACHE_DIR=/tmp/crawl_cache       # Cache directory
 
 ```python
 config = {
-    "stagehand": {
-        "model": "ollama/llama2",
+    "browser_use": {
+        "llm_provider": "openai",
+        "model": "gpt-4o-mini",
         "headless": True,
-        "viewport": {"width": 1920, "height": 1080},
-        "enable_caching": True,
+        "timeout": 30000,
+        "max_retries": 3,
+        "max_steps": 20,
         "debug_screenshots": False
     },
     "playwright": {

@@ -92,9 +92,12 @@ until curl -s http://localhost:6333/health >/dev/null; do
 done
 
 echo -e "${GREEN}✅ Setup complete!${NC}"
-echo -e "${YELLOW}🔑 Don't forget to set your API keys:${NC}"
+echo -e "${YELLOW}🔑 Required API keys:${NC}"
 echo -e "   export OPENAI_API_KEY='your_openai_api_key'"
-echo -e "   export FIRECRAWL_API_KEY='your_firecrawl_api_key'"
+echo -e "${YELLOW}🔑 Optional API keys:${NC}"
+echo -e "   export FIRECRAWL_API_KEY='your_firecrawl_api_key'  # For premium scraping"
+echo -e "   export ANTHROPIC_API_KEY='your_anthropic_api_key'  # For browser-use with Claude"
+echo -e "   export GEMINI_API_KEY='your_gemini_api_key'        # For browser-use with Gemini"
 echo ""
 echo -e "${BLUE}🚀 Quick start with UV:${NC}"
 echo -e "   1. Set your API keys (above)"

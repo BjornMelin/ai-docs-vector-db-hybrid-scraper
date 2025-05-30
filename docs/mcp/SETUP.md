@@ -40,13 +40,13 @@ OPENAI_API_KEY=sk-...
 # Optional
 FIRECRAWL_API_KEY=fc-...
 QDRANT_URL=http://localhost:6333
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://localhost:6379  # DragonflyDB (Redis-compatible)
 ```
 
 ### 3. Start Services
 
 ```bash
-# Start Qdrant and Redis
+# Start Qdrant and DragonflyDB
 ./scripts/start-services.sh
 
 # Verify services
