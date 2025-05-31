@@ -64,7 +64,7 @@ class TestDragonflyCache:
     @pytest.mark.asyncio
     async def test_initialize_success(self, cache, mock_redis):
         """Test successful cache initialization."""
-        with patch("aioredis.from_url", return_value=mock_redis):
+        with patch("redis.from_url", return_value=mock_redis):
             await cache.initialize()
 
         assert cache._initialized is True
@@ -74,7 +74,7 @@ class TestDragonflyCache:
     @pytest.mark.asyncio
     async def test_initialize_connection_failure(self, cache):
         """Test initialization with connection failure."""
-        with patch("aioredis.from_url", side_effect=Exception("Connection refused")):
+        with patch("redis.from_url", side_effect=Exception("Connection refused")):
             with pytest.raises(CacheError, match="Failed to connect to DragonflyDB"):
                 await cache.initialize()
 
@@ -83,14 +83,14 @@ class TestDragonflyCache:
         """Test initialization when ping fails."""
         mock_redis.ping.side_effect = Exception("Ping failed")
 
-        with patch("aioredis.from_url", return_value=mock_redis):
+        with patch("redis.from_url", return_value=mock_redis):
             with pytest.raises(CacheError, match="Failed to connect to DragonflyDB"):
                 await cache.initialize()
 
     @pytest.mark.asyncio
     async def test_initialize_idempotent(self, cache, mock_redis):
         """Test that initialization is idempotent."""
-        with patch("aioredis.from_url", return_value=mock_redis):
+        with patch("redis.from_url", return_value=mock_redis):
             await cache.initialize()
             await cache.initialize()  # Second call
 
@@ -710,7 +710,7 @@ class TestPerformanceOptimizations:
             "max_idle": 20,
         }
 
-        with patch("aioredis.from_url") as mock_from_url:
+        with patch("redis.from_url") as mock_from_url:
             await cache.initialize(pool_config=pool_config)
 
             # Verify pool configuration was passed

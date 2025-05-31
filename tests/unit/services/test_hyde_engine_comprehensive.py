@@ -235,9 +235,9 @@ class TestHyDESearch:
         query = "machine learning algorithms"
         collection = "documentation"
 
-        results = await hyde_engine.search(
+        results = await hyde_engine.enhanced_search(
             query=query,
-            collection=collection,
+            collection_name=collection,
             limit=10,
         )
 
@@ -285,9 +285,9 @@ class TestHyDESearch:
         query = "machine learning algorithms"
         collection = "documentation"
 
-        results = await hyde_engine.search(
+        results = await hyde_engine.enhanced_search(
             query=query,
-            collection=collection,
+            collection_name=collection,
             limit=10,
         )
 

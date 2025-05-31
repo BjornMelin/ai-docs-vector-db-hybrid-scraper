@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.services.cache.base import CacheBackend
+from src.services.cache.base import CacheInterface
 from src.services.cache.manager import CacheManager
 from src.services.errors import CacheError
 
@@ -47,7 +47,7 @@ def manager(mock_config):
 @pytest.fixture
 def mock_local_cache():
     """Create mock local cache."""
-    cache = AsyncMock(spec=CacheBackend)
+    cache = AsyncMock(spec=CacheInterface)
     cache.initialize = AsyncMock()
     cache.cleanup = AsyncMock()
     cache.get = AsyncMock(return_value=None)
@@ -62,7 +62,7 @@ def mock_local_cache():
 @pytest.fixture
 def mock_dragonfly_cache():
     """Create mock Dragonfly cache."""
-    cache = AsyncMock(spec=CacheBackend)
+    cache = AsyncMock(spec=CacheInterface)
     cache.initialize = AsyncMock()
     cache.cleanup = AsyncMock()
     cache.get = AsyncMock(return_value=None)
