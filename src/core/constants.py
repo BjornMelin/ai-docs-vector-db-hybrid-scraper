@@ -135,9 +135,33 @@ PROGRAMMING_LANGUAGES = [
 
 # Code detection keywords
 CODE_KEYWORDS = {
-    "def", "class", "import", "return", "if", "else", "for", "while", "try", "except",
-    "function", "const", "let", "var", "public", "private", "protected", "static",
-    "async", "await", "yield", "lambda", "with", "as", "from", "package", "interface",
+    "def",
+    "class",
+    "import",
+    "return",
+    "if",
+    "else",
+    "for",
+    "while",
+    "try",
+    "except",
+    "function",
+    "const",
+    "let",
+    "var",
+    "public",
+    "private",
+    "protected",
+    "static",
+    "async",
+    "await",
+    "yield",
+    "lambda",
+    "with",
+    "as",
+    "from",
+    "package",
+    "interface",
 }
 
 # API endpoints and URLs
@@ -202,9 +226,7 @@ MIN_VECTOR_DIMENSIONS = 50
 MAX_VECTOR_DIMENSIONS = 10000
 
 # Common vector dimensions for validation
-COMMON_VECTOR_DIMENSIONS = [
-    128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096
-]
+COMMON_VECTOR_DIMENSIONS = [128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096]
 
 # HTTP status codes
 HTTP_STATUS = {

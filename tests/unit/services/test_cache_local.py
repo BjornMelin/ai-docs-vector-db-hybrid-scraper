@@ -313,13 +313,7 @@ class TestMemoryManagement:
 
     def test_get_size_of_nested_structures(self, cache):
         """Test size estimation for nested structures."""
-        nested_dict = {
-            "level1": {
-                "level2": {
-                    "level3": [1, 2, 3, {"level4": "value"}]
-                }
-            }
-        }
+        nested_dict = {"level1": {"level2": {"level3": [1, 2, 3, {"level4": "value"}]}}}
         size = cache._get_size(nested_dict)
         assert size > 0
 
@@ -438,6 +432,7 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_sets(self, cache):
         """Test concurrent set operations."""
+
         async def set_value(key, value):
             await cache.set(key, value)
 
@@ -773,4 +768,3 @@ class TestMemorySafety:
         size = cache._get_size(obj1, seen=set())
         assert size > 0
         assert size < 10000  # Reasonable size
-

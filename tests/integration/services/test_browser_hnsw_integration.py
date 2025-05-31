@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 from src.services.browser.automation_router import AutomationRouter
-from src.services.core.qdrant_service import QdrantService
 from src.services.utilities.hnsw_optimizer import HNSWOptimizer
+from src.services.vector_db.service import QdrantService
 
 
 @pytest.fixture

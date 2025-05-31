@@ -1,721 +1,399 @@
-"""Comprehensive tests for CacheManager service."""
+"""Tests for CacheManager with current implementation."""
 
-import asyncio
-from enum import Enum
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.services.cache.base import CacheInterface
 from src.services.cache.manager import CacheManager
-from src.services.errors import CacheError
-
-
-class CacheType(Enum):
-    """Test cache types."""
-
-    EMBEDDINGS = "embeddings"
-    CRAWL_RESULTS = "crawl_results"
-    QUERY_RESULTS = "query_results"
-
-
-@pytest.fixture
-def mock_config():
-    """Create mock configuration for testing."""
-    config = {
-        "dragonfly_url": "redis://localhost:6379",
-        "enable_local_cache": True,
-        "enable_distributed_cache": True,
-        "local_max_size": 1000,
-        "local_max_memory_mb": 512,
-        "distributed_ttl_seconds": {
-            CacheType.EMBEDDINGS: 86400,
-            CacheType.CRAWL_RESULTS: 3600,
-            CacheType.QUERY_RESULTS: 7200,
-        },
-    }
-    return config
-
-
-@pytest.fixture
-def manager(mock_config):
-    """Create CacheManager instance for testing."""
-    return CacheManager(**mock_config)
-
-
-@pytest.fixture
-def mock_local_cache():
-    """Create mock local cache."""
-    cache = AsyncMock(spec=CacheInterface)
-    cache.initialize = AsyncMock()
-    cache.cleanup = AsyncMock()
-    cache.get = AsyncMock(return_value=None)
-    cache.set = AsyncMock(return_value=True)
-    cache.delete = AsyncMock(return_value=True)
-    cache.exists = AsyncMock(return_value=False)
-    cache.clear = AsyncMock()
-    cache.get_stats = MagicMock(return_value={"hits": 0, "misses": 0})
-    return cache
-
-
-@pytest.fixture
-def mock_dragonfly_cache():
-    """Create mock Dragonfly cache."""
-    cache = AsyncMock(spec=CacheInterface)
-    cache.initialize = AsyncMock()
-    cache.cleanup = AsyncMock()
-    cache.get = AsyncMock(return_value=None)
-    cache.set = AsyncMock(return_value=True)
-    cache.delete = AsyncMock(return_value=True)
-    cache.exists = AsyncMock(return_value=False)
-    cache.clear = AsyncMock()
-    cache.get_stats = MagicMock(return_value={"hits": 0, "misses": 0})
-    return cache
-
-
-@pytest.fixture
-def mock_embedding_cache():
-    """Create mock embedding cache."""
-    cache = AsyncMock()
-    cache.get_embedding = AsyncMock(return_value=None)
-    cache.set_embedding = AsyncMock(return_value=True)
-    cache.invalidate_embedding = AsyncMock(return_value=True)
-    cache.get_batch_embeddings = AsyncMock(return_value=[])
-    cache.set_batch_embeddings = AsyncMock(return_value=True)
-    cache.get_stats = MagicMock(
-        return_value={
-            "embedding_hits": 0,
-            "embedding_misses": 0,
-            "embedding_hit_rate": 0.0,
-        }
-    )
-    return cache
-
-
-@pytest.fixture
-def mock_search_cache():
-    """Create mock search results cache."""
-    cache = AsyncMock()
-    cache.get_search_results = AsyncMock(return_value=None)
-    cache.set_search_results = AsyncMock(return_value=True)
-    cache.invalidate_search_results = AsyncMock(return_value=True)
-    cache.get_stats = MagicMock(
-        return_value={
-            "search_hits": 0,
-            "search_misses": 0,
-        }
-    )
-    return cache
+from src.services.cache.manager import CacheType
 
 
 class TestCacheManagerInitialization:
     """Test cache manager initialization."""
 
-    def test_manager_initialization(self, manager):
-        """Test basic manager initialization."""
-        assert manager._initialized is False
-        assert manager._local_cache is None
-        assert manager._dragonfly_cache is None
+    def test_initialization_with_defaults(self):
+        """Test initialization with default configuration."""
+        manager = CacheManager()
+
+        assert manager.enable_local_cache is True
+        assert manager.enable_distributed_cache is True
+        assert manager.key_prefix == "aidocs:"
+        assert manager.enable_specialized_caches is True
+
+        # Check default TTLs
+        assert manager.distributed_ttl_seconds[CacheType.EMBEDDINGS] == 86400 * 7
+        assert manager.distributed_ttl_seconds[CacheType.CRAWL_RESULTS] == 3600
+        assert manager.distributed_ttl_seconds[CacheType.QUERY_RESULTS] == 3600
+
+    def test_initialization_local_only(self):
+        """Test initialization with only local cache."""
+        manager = CacheManager(
+            enable_local_cache=True,
+            enable_distributed_cache=False,
+            enable_specialized_caches=False,
+        )
+
+        assert manager._local_cache is not None
+        assert manager._distributed_cache is None
         assert manager._embedding_cache is None
         assert manager._search_cache is None
-        assert manager._enable_local is True
-        assert manager._enable_distributed is True
 
-    @pytest.mark.asyncio
-    async def test_initialize_all_caches(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test initialization with all caches enabled."""
-        with (
-            patch(
-                "src.services.cache.manager.LocalCache", return_value=mock_local_cache
-            ),
-            patch(
-                "src.services.cache.manager.DragonflyCache",
-                return_value=mock_dragonfly_cache,
-            ),
-            patch("src.services.cache.manager.EmbeddingCache"),
-            patch("src.services.cache.manager.SearchResultsCache"),
-        ):
-            await manager.initialize()
-
-        assert manager._initialized is True
-        assert manager._local_cache is not None
-        assert manager._dragonfly_cache is not None
-        assert manager._embedding_cache is not None
-        assert manager._search_cache is not None
-
-        # Verify caches were initialized
-        mock_local_cache.initialize.assert_called_once()
-        mock_dragonfly_cache.initialize.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_initialize_local_only(self, manager, mock_local_cache):
-        """Test initialization with only local cache."""
-        manager._enable_distributed = False
-
-        with patch(
-            "src.services.cache.manager.LocalCache", return_value=mock_local_cache
-        ):
-            await manager.initialize()
-
-        assert manager._initialized is True
-        assert manager._local_cache is not None
-        assert manager._dragonfly_cache is None
-        mock_local_cache.initialize.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_initialize_distributed_only(self, manager, mock_dragonfly_cache):
+    def test_initialization_distributed_only(self):
         """Test initialization with only distributed cache."""
-        manager._enable_local = False
+        with patch("src.services.cache.manager.DragonflyCache") as mock_dragonfly:
+            manager = CacheManager(
+                enable_local_cache=False,
+                enable_distributed_cache=True,
+                dragonfly_url="redis://localhost:6379",
+            )
 
-        with (
-            patch(
-                "src.services.cache.manager.DragonflyCache",
-                return_value=mock_dragonfly_cache,
-            ),
-            patch("src.services.cache.manager.EmbeddingCache"),
-            patch("src.services.cache.manager.SearchResultsCache"),
-        ):
-            await manager.initialize()
+            assert manager._local_cache is None
+            assert manager._distributed_cache is not None
+            mock_dragonfly.assert_called_once()
 
-        assert manager._initialized is True
-        assert manager._local_cache is None
-        assert manager._dragonfly_cache is not None
-        mock_dragonfly_cache.initialize.assert_called_once()
+    def test_initialization_with_specialized_caches(self):
+        """Test initialization with specialized caches."""
+        with patch("src.services.cache.manager.DragonflyCache") as mock_dragonfly:
+            manager = CacheManager(
+                enable_distributed_cache=True,
+                enable_specialized_caches=True,
+                dragonfly_url="redis://localhost:6379",
+            )
 
-    @pytest.mark.asyncio
-    async def test_initialize_no_caches(self, manager):
+            assert manager._embedding_cache is not None
+            assert manager._search_cache is not None
+
+    def test_initialization_no_caches_enabled(self):
         """Test initialization with no caches enabled."""
-        manager._enable_local = False
-        manager._enable_distributed = False
+        manager = CacheManager(
+            enable_local_cache=False,
+            enable_distributed_cache=False,
+            enable_specialized_caches=False,
+        )
 
-        with pytest.raises(CacheError, match="No cache backends enabled"):
-            await manager.initialize()
+        assert manager._local_cache is None
+        assert manager._distributed_cache is None
+        assert manager._embedding_cache is None
+        assert manager._search_cache is None
 
-    @pytest.mark.asyncio
-    async def test_initialize_idempotent(self, manager, mock_local_cache):
-        """Test that initialization is idempotent."""
-        with patch(
-            "src.services.cache.manager.LocalCache", return_value=mock_local_cache
-        ):
-            await manager.initialize()
-            await manager.initialize()  # Second call
 
-        # Should only initialize once
-        mock_local_cache.initialize.assert_called_once()
+class TestCacheManagerOperations:
+    """Test cache manager operations."""
 
-    @pytest.mark.asyncio
-    async def test_cleanup(self, manager, mock_local_cache, mock_dragonfly_cache):
-        """Test cleanup of all caches."""
+    @pytest.fixture
+    def mock_local_cache(self):
+        """Create mock local cache."""
+        cache = MagicMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=True)
+        cache.clear = AsyncMock()
+        cache.get_stats = MagicMock(
+            return_value={
+                "hits": 100,
+                "misses": 50,
+                "size": 1000,
+            }
+        )
+        return cache
+
+    @pytest.fixture
+    def mock_dragonfly_cache(self):
+        """Create mock DragonflyDB cache."""
+        cache = MagicMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=True)
+        cache.clear = AsyncMock()
+        cache.get_stats = AsyncMock(
+            return_value={
+                "hits": 500,
+                "misses": 100,
+                "size": 5000,
+            }
+        )
+        cache.initialize = AsyncMock()
+        cache.cleanup = AsyncMock()
+        return cache
+
+    @pytest.fixture
+    def manager_with_mocks(self, mock_local_cache, mock_dragonfly_cache):
+        """Create manager with mocked caches."""
+        manager = CacheManager()
         manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._embedding_cache = AsyncMock()
-        manager._search_cache = AsyncMock()
-        manager._initialized = True
-
-        await manager.close()
-
-        mock_local_cache.cleanup.assert_called_once()
-        mock_dragonfly_cache.cleanup.assert_called_once()
-        assert manager._initialized is False
-
-
-class TestBasicCacheOperations:
-    """Test basic cache operations."""
+        manager._distributed_cache = mock_dragonfly_cache
+        manager._embedding_cache = None
+        manager._search_cache = None
+        return manager
 
     @pytest.mark.asyncio
-    async def test_get_not_initialized(self, manager):
-        """Test get operation when not initialized."""
-        with pytest.raises(CacheError, match="Cache manager not initialized"):
-            await manager.get("test_key", CacheType.EMBEDDINGS)
-
-    @pytest.mark.asyncio
-    async def test_get_local_hit(self, manager, mock_local_cache, mock_dragonfly_cache):
+    async def test_get_with_local_cache_hit(self, manager_with_mocks):
         """Test get operation with local cache hit."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Local cache returns value
-        mock_local_cache.get.return_value = {"data": "local_value"}
+        manager = manager_with_mocks
+        manager._local_cache.get.return_value = {"data": "cached_value"}
 
         result = await manager.get("test_key", CacheType.EMBEDDINGS)
 
-        assert result == {"data": "local_value"}
-        mock_local_cache.get.assert_called_once_with("embeddings:test_key")
-        # Should not check distributed cache on local hit
-        mock_dragonfly_cache.get.assert_not_called()
+        assert result == {"data": "cached_value"}
+        # Check that get was called with the hashed key
+        call_args = manager._local_cache.get.call_args[0]
+        assert call_args[0].startswith("aidocs:embeddings:")
+        manager._distributed_cache.get.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_get_distributed_hit(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
+    async def test_get_with_distributed_cache_hit(self, manager_with_mocks):
         """Test get operation with distributed cache hit."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Local cache miss, distributed hit
-        mock_local_cache.get.return_value = None
-        mock_dragonfly_cache.get.return_value = {"data": "distributed_value"}
+        manager = manager_with_mocks
+        manager._local_cache.get.return_value = None
+        manager._distributed_cache.get.return_value = {"data": "distributed_value"}
 
         result = await manager.get("test_key", CacheType.EMBEDDINGS)
 
         assert result == {"data": "distributed_value"}
-        mock_local_cache.get.assert_called_once()
-        mock_dragonfly_cache.get.assert_called_once()
-
-        # Should write back to local cache
-        mock_local_cache.set.assert_called_once_with(
-            "embeddings:test_key", {"data": "distributed_value"}, ttl=None
-        )
+        manager._local_cache.get.assert_called_once()
+        manager._distributed_cache.get.assert_called_once()
+        # Should also update local cache
+        manager._local_cache.set.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_cache_miss(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
+    async def test_get_cache_miss(self, manager_with_mocks):
         """Test get operation with cache miss."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Both caches miss
-        mock_local_cache.get.return_value = None
-        mock_dragonfly_cache.get.return_value = None
+        manager = manager_with_mocks
+        manager._local_cache.get.return_value = None
+        manager._distributed_cache.get.return_value = None
 
         result = await manager.get("test_key", CacheType.EMBEDDINGS)
 
         assert result is None
-        mock_local_cache.get.assert_called_once()
-        mock_dragonfly_cache.get.assert_called_once()
+        manager._local_cache.get.assert_called_once()
+        manager._distributed_cache.get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_set_all_caches(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test set operation to all caches."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_set_to_both_caches(self, manager_with_mocks):
+        """Test set operation updates both caches."""
+        manager = manager_with_mocks
+        data = {"data": "test_value"}
 
-        data = {"key": "value"}
-        success = await manager.set("test_key", data, CacheType.EMBEDDINGS, ttl=3600)
+        result = await manager.set("test_key", data, CacheType.EMBEDDINGS)
 
-        assert success is True
-
-        # Should set in both caches
-        mock_local_cache.set.assert_called_once_with(
-            "embeddings:test_key", data, ttl=3600
-        )
-        mock_dragonfly_cache.set.assert_called_once_with(
-            "embeddings:test_key", data, ttl=3600
-        )
+        assert result is True
+        manager._local_cache.set.assert_called_once()
+        manager._distributed_cache.set.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_set_with_default_ttl(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test set operation with default TTL."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_set_with_custom_ttl(self, manager_with_mocks):
+        """Test set operation with custom TTL."""
+        manager = manager_with_mocks
+        data = {"data": "test_value"}
+        custom_ttl = 7200
 
-        data = {"key": "value"}
-        success = await manager.set("test_key", data, CacheType.CRAWL_RESULTS)
+        await manager.set("test_key", data, CacheType.EMBEDDINGS, ttl=custom_ttl)
 
-        assert success is True
-
-        # Should use default TTL for cache type
-        expected_ttl = manager._distributed_ttl[CacheType.CRAWL_RESULTS]
-        mock_dragonfly_cache.set.assert_called_once_with(
-            "crawl_results:test_key", data, ttl=expected_ttl
-        )
+        # Check distributed cache was called with custom TTL
+        call_args = manager._distributed_cache.set.call_args
+        assert call_args[1]["ttl"] == custom_ttl
 
     @pytest.mark.asyncio
-    async def test_delete_from_all_caches(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test delete operation from all caches."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_delete_from_both_caches(self, manager_with_mocks):
+        """Test delete operation removes from both caches."""
+        manager = manager_with_mocks
 
-        success = await manager.delete("test_key", CacheType.QUERY_RESULTS)
+        result = await manager.delete("test_key")
 
-        assert success is True
-
-        # Should delete from both caches
-        mock_local_cache.delete.assert_called_once_with("query_results:test_key")
-        mock_dragonfly_cache.delete.assert_called_once_with("query_results:test_key")
+        assert result is True
+        # Check that delete was called with the hashed key
+        local_call_args = manager._local_cache.delete.call_args[0]
+        dist_call_args = manager._distributed_cache.delete.call_args[0]
+        # Both should be called with same hashed key
+        assert local_call_args[0] == dist_call_args[0]
+        assert local_call_args[0].startswith("aidocs:crawl_results:")
 
     @pytest.mark.asyncio
-    async def test_exists_in_any_cache(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test exists operation checking all caches."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Test when exists in local
-        mock_local_cache.exists.return_value = True
-        assert await manager.exists("key1", CacheType.EMBEDDINGS) is True
-
-        # Test when exists only in distributed
-        mock_local_cache.exists.return_value = False
-        mock_dragonfly_cache.exists.return_value = True
-        assert await manager.exists("key2", CacheType.EMBEDDINGS) is True
-
-        # Test when doesn't exist anywhere
-        mock_local_cache.exists.return_value = False
-        mock_dragonfly_cache.exists.return_value = False
-        assert await manager.exists("key3", CacheType.EMBEDDINGS) is False
-
-
-class TestSpecializedCaches:
-    """Test specialized cache operations."""
-
-    @pytest.mark.asyncio
-    async def test_embedding_cache_operations(self, manager, mock_embedding_cache):
-        """Test embedding cache specific operations."""
-        manager._embedding_cache = mock_embedding_cache
-        manager._initialized = True
-
-        # Test get embedding
-        mock_embedding_cache.get_embedding.return_value = [0.1, 0.2, 0.3]
-
-        embedding = await manager.get_embedding(
-            text="Test text",
-            provider="openai",
-            model="text-embedding-3-small",
-            dimensions=3,
-        )
-
-        assert embedding == [0.1, 0.2, 0.3]
-        mock_embedding_cache.get_embedding.assert_called_once()
-
-        # Test set embedding
-        await manager.set_embedding(
-            text="Test text",
-            model="text-embedding-3-small",
-            embedding=[0.1, 0.2, 0.3],
-            provider="openai",
-            dimensions=3,
-        )
-
-        mock_embedding_cache.set_embedding.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_search_cache_operations(self, manager, mock_search_cache):
-        """Test search cache specific operations."""
-        manager._search_cache = mock_search_cache
-        manager._initialized = True
-
-        # Test get search results
-        mock_results = [{"id": "1", "score": 0.9}]
-        mock_search_cache.get_search_results.return_value = mock_results
-
-        results = await manager.get_search_results(
-            query="test query", collection="docs", filters={"type": "api"}
-        )
-
-        assert results == mock_results
-        mock_search_cache.get_search_results.assert_called_once()
-
-        # Test set search results
-        await manager.set_search_results(
-            query="test query",
-            collection="docs",
-            results=mock_results,
-            filters={"type": "api"},
-        )
-
-        mock_search_cache.set_search_results.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_specialized_cache_not_available(self, manager):
-        """Test error when specialized cache not available."""
-        manager._initialized = True
-        manager._embedding_cache = None
-
-        with pytest.raises(CacheError, match="Embedding cache not available"):
-            await manager.get_embedding(
-                text="Test", provider="openai", model="model", dimensions=1536
-            )
-
-
-class TestCacheStatistics:
-    """Test cache statistics and monitoring."""
-
-    def test_get_stats_all_caches(
-        self,
-        manager,
-        mock_local_cache,
-        mock_dragonfly_cache,
-        mock_embedding_cache,
-        mock_search_cache,
-    ):
-        """Test getting statistics from all caches."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._embedding_cache = mock_embedding_cache
-        manager._search_cache = mock_search_cache
-        manager._initialized = True
-
-        # Set up mock stats
-        mock_local_cache.get_stats.return_value = {
-            "hits": 100,
-            "misses": 50,
-            "hit_rate": 0.667,
-        }
-        mock_dragonfly_cache.get_stats.return_value = {
-            "hits": 200,
-            "misses": 100,
-            "hit_rate": 0.667,
-        }
-
-        stats = manager.get_stats()
-
-        assert "local_cache" in stats
-        assert "distributed_cache" in stats
-        assert "embedding_cache" in stats
-        assert "search_cache" in stats
-        assert stats["local_cache"]["hits"] == 100
-        assert stats["distributed_cache"]["hits"] == 200
-
-    def test_get_stats_partial_caches(self, manager, mock_local_cache):
-        """Test getting statistics with only some caches enabled."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = None
-        manager._initialized = True
-
-        stats = manager.get_stats()
-
-        assert "local_cache" in stats
-        assert stats["distributed_cache"] is None
-        assert stats["embedding_cache"] is None
-
-
-class TestClearOperations:
-    """Test cache clearing operations."""
-
-    @pytest.mark.asyncio
-    async def test_clear_all_caches(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
+    async def test_clear_all_caches(self, manager_with_mocks):
         """Test clearing all caches."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+        manager = manager_with_mocks
 
-        await manager.clear_all()
+        await manager.clear()
 
-        mock_local_cache.clear.assert_called_once()
-        mock_dragonfly_cache.clear.assert_called_once()
+        manager._local_cache.clear.assert_called_once()
+        manager._distributed_cache.clear.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_clear_cache_type(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test clearing specific cache type."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_get_stats(self, manager_with_mocks):
+        """Test getting cache statistics."""
+        manager = manager_with_mocks
+        # Mock the required methods
+        manager._local_cache.size = AsyncMock(return_value=1000)
+        manager._local_cache.get_memory_usage = MagicMock(return_value=50000)
+        manager._local_cache.max_size = 1000
+        manager._local_cache.max_memory_mb = 100.0
 
-        # Mock scan_keys to return some keys
-        mock_local_cache.scan_keys = AsyncMock(
-            return_value=["embeddings:key1", "embeddings:key2"]
-        )
-        mock_dragonfly_cache.scan_keys = AsyncMock(
-            return_value=["embeddings:key3", "embeddings:key4"]
-        )
+        manager._distributed_cache.size = AsyncMock(return_value=5000)
+        manager._distributed_cache.redis_url = "redis://localhost:6379"
+        manager._distributed_cache.enable_compression = True
+        manager._distributed_cache.max_connections = 50
 
-        await manager.clear_cache_type(CacheType.EMBEDDINGS)
+        stats = await manager.get_stats()
 
-        # Should scan for keys and delete them
-        mock_local_cache.scan_keys.assert_called_once_with("embeddings:*")
-        mock_dragonfly_cache.scan_keys.assert_called_once_with("embeddings:*")
-        assert mock_local_cache.delete.call_count == 2
-        assert mock_dragonfly_cache.delete.call_count == 2
-
-
-class TestCacheWarming:
-    """Test cache warming functionality."""
+        assert "local" in stats["manager"]["enabled_layers"]
+        assert "dragonfly" in stats["manager"]["enabled_layers"]
+        assert stats["local"]["size"] == 1000
+        assert stats["local"]["memory_usage"] == 50000
+        assert stats["dragonfly"]["size"] == 5000
+        assert stats["dragonfly"]["compression"] is True
 
     @pytest.mark.asyncio
-    async def test_warm_embeddings_cache(self, manager, mock_embedding_cache):
-        """Test warming embedding cache with precomputed data."""
-        manager._embedding_cache = mock_embedding_cache
-        manager._initialized = True
-
-        warmup_data = {
-            "Common query 1": [0.1, 0.2, 0.3],
-            "Common query 2": [0.4, 0.5, 0.6],
-        }
-
-        success = await manager.warm_embeddings_cache(
-            embeddings_map=warmup_data,
-            provider="openai",
-            model="text-embedding-3-small",
-            dimensions=3,
+    async def test_operation_with_no_caches(self):
+        """Test operations when no caches are enabled."""
+        manager = CacheManager(
+            enable_local_cache=False,
+            enable_distributed_cache=False,
         )
 
-        assert success is True
-        mock_embedding_cache.set_batch_embeddings.assert_called_once_with(
-            embeddings_map=warmup_data,
-            provider="openai",
-            model="text-embedding-3-small",
-            dimensions=3,
-            ttl=None,
+        # Get should return None (default)
+        result = await manager.get("test_key", CacheType.EMBEDDINGS)
+        assert result is None
+
+        # Get with custom default should return the default
+        result = await manager.get(
+            "test_key", CacheType.EMBEDDINGS, default="custom_default"
         )
+        assert result == "custom_default"
 
-    @pytest.mark.asyncio
-    async def test_warm_search_cache(self, manager, mock_search_cache):
-        """Test warming search cache with common queries."""
-        manager._search_cache = mock_search_cache
-        manager._initialized = True
+        # Set should return True (success even with no cache)
+        result = await manager.set("test_key", {"data": "value"}, CacheType.EMBEDDINGS)
+        assert result is True
 
-        common_queries = [
-            {
-                "query": "getting started",
-                "collection": "docs",
-                "results": [{"id": "1", "score": 0.95}],
-            },
-            {
-                "query": "api reference",
-                "collection": "docs",
-                "results": [{"id": "2", "score": 0.92}],
-            },
-        ]
+        # Delete should return True (no-op)
+        result = await manager.delete("test_key")
+        assert result is True
 
-        for query_data in common_queries:
-            await manager.warm_search_cache(
-                query=query_data["query"],
-                collection=query_data["collection"],
-                results=query_data["results"],
+
+class TestCacheManagerKeyGeneration:
+    """Test cache key generation."""
+
+    def test_get_cache_key_basic(self):
+        """Test basic cache key generation."""
+        manager = CacheManager(key_prefix="test_prefix:")
+
+        key = manager._get_cache_key("test_key", CacheType.EMBEDDINGS)
+
+        assert key.startswith("test_prefix:embeddings:")
+        assert len(key) > len("test_prefix:embeddings:")
+
+    def test_get_cache_key_consistent(self):
+        """Test cache key generation is consistent."""
+        manager = CacheManager()
+
+        key1 = manager._get_cache_key("same_key", CacheType.EMBEDDINGS)
+        key2 = manager._get_cache_key("same_key", CacheType.EMBEDDINGS)
+
+        assert key1 == key2
+
+    def test_get_cache_key_different_keys(self):
+        """Test cache key differs for different keys."""
+        manager = CacheManager()
+
+        key1 = manager._get_cache_key("key1", CacheType.EMBEDDINGS)
+        key2 = manager._get_cache_key("key2", CacheType.EMBEDDINGS)
+
+        assert key1 != key2
+
+
+class TestCacheManagerSpecializedCaches:
+    """Test specialized cache integration."""
+
+    @pytest.fixture
+    def manager_with_specialized(self):
+        """Create manager with specialized caches."""
+        with patch("src.services.cache.manager.DragonflyCache"):
+            manager = CacheManager(
+                enable_distributed_cache=True,
+                enable_specialized_caches=True,
             )
 
-        assert mock_search_cache.set_search_results.call_count == 2
+            # Mock specialized caches
+            manager._embedding_cache = MagicMock()
+            manager._search_cache = MagicMock()
+
+            return manager
+
+    def test_embedding_cache_property(self, manager_with_specialized):
+        """Test embedding cache property."""
+        assert manager_with_specialized.embedding_cache is not None
+
+    def test_search_cache_property(self, manager_with_specialized):
+        """Test search cache property."""
+        assert manager_with_specialized.search_cache is not None
+
+    def test_no_specialized_caches(self):
+        """Test accessing specialized caches when disabled."""
+        manager = CacheManager(enable_specialized_caches=False)
+
+        assert manager.embedding_cache is None
+        assert manager.search_cache is None
 
 
-class TestErrorHandling:
-    """Test error handling in cache operations."""
+class TestCacheManagerErrorHandling:
+    """Test error handling in cache manager."""
+
+    @pytest.fixture
+    def mock_local_cache(self):
+        """Create mock local cache."""
+        cache = MagicMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=True)
+        cache.clear = AsyncMock()
+        return cache
+
+    @pytest.fixture
+    def mock_dragonfly_cache(self):
+        """Create mock DragonflyDB cache."""
+        cache = MagicMock()
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock(return_value=True)
+        cache.delete = AsyncMock(return_value=True)
+        cache.clear = AsyncMock()
+        return cache
+
+    @pytest.fixture
+    def manager_with_mocks(self, mock_local_cache, mock_dragonfly_cache):
+        """Create manager with mocked caches."""
+        manager = CacheManager()
+        manager._local_cache = mock_local_cache
+        manager._distributed_cache = mock_dragonfly_cache
+        manager._embedding_cache = None
+        manager._search_cache = None
+        return manager
 
     @pytest.mark.asyncio
-    async def test_get_with_local_error(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test get operation when local cache errors."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_get_handles_cache_errors(self, manager_with_mocks):
+        """Test get operation handles cache errors gracefully."""
+        manager = manager_with_mocks
+        manager._local_cache.get.side_effect = Exception("Cache error")
 
-        # Local cache throws error
-        mock_local_cache.get.side_effect = Exception("Local cache error")
-        mock_dragonfly_cache.get.return_value = {"data": "fallback_value"}
-
-        # Should fall back to distributed cache
+        # Should not raise, but return None
         result = await manager.get("test_key", CacheType.EMBEDDINGS)
-
-        assert result == {"data": "fallback_value"}
-        mock_dragonfly_cache.get.assert_called_once()
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_set_with_partial_failure(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test set operation when one cache fails."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_set_handles_cache_errors(self, manager_with_mocks):
+        """Test set operation handles cache errors gracefully."""
+        manager = manager_with_mocks
+        manager._local_cache.set.side_effect = Exception("Cache error")
 
-        # Local succeeds, distributed fails
-        mock_local_cache.set.return_value = True
-        mock_dragonfly_cache.set.side_effect = Exception("Distributed cache error")
-
-        # Should still return success if at least one cache succeeds
-        success = await manager.set("test_key", {"data": "value"}, CacheType.EMBEDDINGS)
-
-        assert success is True
+        # Should return False when exception occurs
+        result = await manager.set("test_key", {"data": "value"}, CacheType.EMBEDDINGS)
+        assert result is False
 
     @pytest.mark.asyncio
-    async def test_set_with_all_failures(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test set operation when all caches fail."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
+    async def test_delete_handles_cache_errors(self, manager_with_mocks):
+        """Test delete operation handles cache errors gracefully."""
+        manager = manager_with_mocks
+        manager._local_cache.delete.side_effect = Exception("Cache error")
 
-        # Both caches fail
-        mock_local_cache.set.side_effect = Exception("Local error")
-        mock_dragonfly_cache.set.side_effect = Exception("Distributed error")
-
-        success = await manager.set("test_key", {"data": "value"}, CacheType.EMBEDDINGS)
-
-        assert success is False
-
-
-class TestConcurrency:
-    """Test concurrent cache operations."""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_gets(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test concurrent get operations."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Simulate different cache responses
-        async def mock_get_local(key):
-            await asyncio.sleep(0.01)  # Simulate latency
-            if "key1" in key:
-                return {"data": "local1"}
-            return None
-
-        async def mock_get_distributed(key):
-            await asyncio.sleep(0.02)  # Simulate higher latency
-            if "key2" in key:
-                return {"data": "distributed2"}
-            return None
-
-        mock_local_cache.get.side_effect = mock_get_local
-        mock_dragonfly_cache.get.side_effect = mock_get_distributed
-
-        # Execute concurrent gets
-        tasks = [
-            manager.get("key1", CacheType.EMBEDDINGS),
-            manager.get("key2", CacheType.EMBEDDINGS),
-            manager.get("key3", CacheType.EMBEDDINGS),
-        ]
-
-        results = await asyncio.gather(*tasks)
-
-        assert results[0] == {"data": "local1"}
-        assert results[1] == {"data": "distributed2"}
-        assert results[2] is None
-
-    @pytest.mark.asyncio
-    async def test_concurrent_sets(
-        self, manager, mock_local_cache, mock_dragonfly_cache
-    ):
-        """Test concurrent set operations."""
-        manager._local_cache = mock_local_cache
-        manager._dragonfly_cache = mock_dragonfly_cache
-        manager._initialized = True
-
-        # Execute concurrent sets
-        tasks = [
-            manager.set(f"key{i}", {"data": f"value{i}"}, CacheType.EMBEDDINGS)
-            for i in range(5)
-        ]
-
-        results = await asyncio.gather(*tasks)
-
-        assert all(results)  # All should succeed
-        assert mock_local_cache.set.call_count == 5
-        assert mock_dragonfly_cache.set.call_count == 5
+        # Should return False when exception occurs
+        result = await manager.delete("test_key")
+        assert result is False

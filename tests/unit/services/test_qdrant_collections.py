@@ -229,4 +229,3 @@ class TestQdrantCollections:
         """Test service cleanup."""
         await collections_service.cleanup()
         assert collections_service._initialized is False
-

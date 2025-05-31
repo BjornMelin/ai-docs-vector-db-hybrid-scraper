@@ -9,9 +9,9 @@ from src.config.enums import EmbeddingProvider
 from src.config.enums import SearchStrategy
 from src.services.cache.manager import CacheManager
 from src.services.core.project_storage import ProjectStorage
-from src.services.core.qdrant_service import QdrantService
 from src.services.crawling.manager import CrawlManager
 from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 
 class APIConfig(UnifiedConfig):

@@ -85,7 +85,7 @@ class TestServiceLayerIntegration:
     @pytest.mark.asyncio
     async def test_qdrant_service_with_client_manager(self):
         """Test QdrantService works with ClientManager."""
-        from src.services.core.qdrant_service import QdrantService
+        from src.services.vector_db.service import QdrantService
 
         # Create mock client manager
         cm = Mock(spec=ClientManager)

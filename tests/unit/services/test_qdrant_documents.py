@@ -1,6 +1,7 @@
 """Tests for QdrantDocuments service."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from qdrant_client import models
@@ -173,9 +174,7 @@ class TestQdrantDocuments:
     async def test_delete_points_validation(self, documents_service):
         """Test delete points input validation."""
         with pytest.raises(ValueError, match="Either point_ids or filter_condition"):
-            await documents_service.delete_points(
-                collection_name="test_collection"
-            )
+            await documents_service.delete_points(collection_name="test_collection")
 
     async def test_update_point_payload_merge(self, documents_service, mock_client):
         """Test point payload update with merge."""
@@ -373,11 +372,15 @@ class TestQdrantDocuments:
     async def test_build_filter_validation(self, documents_service):
         """Test filter building validation."""
         # Invalid keyword field type
-        with pytest.raises(ValueError, match="Filter value for .* must be a simple type"):
+        with pytest.raises(
+            ValueError, match="Filter value for .* must be a simple type"
+        ):
             documents_service._build_filter({"doc_type": ["invalid", "list"]})
 
         # Invalid text field type
-        with pytest.raises(ValueError, match="Text filter value for .* must be a string"):
+        with pytest.raises(
+            ValueError, match="Text filter value for .* must be a string"
+        ):
             documents_service._build_filter({"title": 123})
 
     async def test_build_filter_empty(self, documents_service):
@@ -412,7 +415,13 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Payload too large"):
             await documents_service.upsert_points(
                 "test_collection",
-                [{"id": "test", "vector": [0.1] * 1536, "payload": {"large": "x" * 10000}}],
+                [
+                    {
+                        "id": "test",
+                        "vector": [0.1] * 1536,
+                        "payload": {"large": "x" * 10000},
+                    }
+                ],
             )
 
     async def test_error_handling_generic(self, documents_service, mock_client):

@@ -1,6 +1,7 @@
 """Tests for QdrantIndexing service."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from qdrant_client import models
@@ -46,12 +47,21 @@ class TestQdrantIndexing:
         # Verify specific expected fields
         field_names = {call.kwargs["field_name"] for call in calls}
         expected_keyword_fields = {
-            "doc_type", "language", "framework", "version", "crawl_source",
-            "site_name", "embedding_model", "embedding_provider"
+            "doc_type",
+            "language",
+            "framework",
+            "version",
+            "crawl_source",
+            "site_name",
+            "embedding_model",
+            "embedding_provider",
         }
         expected_text_fields = {"title", "content_preview"}
         expected_integer_fields = {
-            "created_at", "last_updated", "word_count", "char_count"
+            "created_at",
+            "last_updated",
+            "word_count",
+            "char_count",
         }
 
         # Check that core fields are present
@@ -163,15 +173,23 @@ class TestQdrantIndexing:
 
         # Create payload schema with all expected core fields
         expected_fields = [
-            "doc_type", "language", "framework", "version", "crawl_source",
-            "site_name", "embedding_model", "embedding_provider",
-            "title", "content_preview",
-            "created_at", "last_updated", "word_count", "char_count",
+            "doc_type",
+            "language",
+            "framework",
+            "version",
+            "crawl_source",
+            "site_name",
+            "embedding_model",
+            "embedding_provider",
+            "title",
+            "content_preview",
+            "created_at",
+            "last_updated",
+            "word_count",
+            "char_count",
         ]
-        
-        mock_info.payload_schema = {
-            field: mock_field_info for field in expected_fields
-        }
+
+        mock_info.payload_schema = dict.fromkeys(expected_fields, mock_field_info)
         mock_client.get_collection.return_value = mock_info
 
         health_report = await indexing_service.validate_index_health("test_collection")
@@ -206,15 +224,13 @@ class TestQdrantIndexing:
 
         # Only include some core fields
         partial_fields = ["doc_type", "language", "title", "created_at"]
-        mock_info.payload_schema = {
-            field: mock_field_info for field in partial_fields
-        }
+        mock_info.payload_schema = dict.fromkeys(partial_fields, mock_field_info)
         mock_client.get_collection.return_value = mock_info
 
         health_report = await indexing_service.validate_index_health("test_collection")
 
         assert health_report["status"] in ["warning", "critical"]
-        assert 0 < len(health_report["payload_indexes"]["missing_indexes"])
+        assert len(health_report["payload_indexes"]["missing_indexes"]) > 0
 
     async def test_get_index_usage_stats_success(self, indexing_service, mock_client):
         """Test successful index usage stats retrieval."""
@@ -227,8 +243,8 @@ class TestQdrantIndexing:
 
         mock_info.payload_schema = {
             "doc_type": mock_field_info,  # Keyword
-            "title": mock_field_info,     # Text
-            "created_at": mock_field_info, # Integer
+            "title": mock_field_info,  # Text
+            "created_at": mock_field_info,  # Integer
         }
         mock_client.get_collection.return_value = mock_info
 
@@ -243,7 +259,9 @@ class TestQdrantIndexing:
         assert stats["index_details"]["text_indexes"]["count"] >= 1
         assert stats["index_details"]["integer_indexes"]["count"] >= 1
 
-    async def test_get_index_usage_stats_large_collection(self, indexing_service, mock_client):
+    async def test_get_index_usage_stats_large_collection(
+        self, indexing_service, mock_client
+    ):
         """Test index usage stats for large collection."""
         mock_info = MagicMock()
         mock_info.points_count = 150000  # Large collection
@@ -254,9 +272,13 @@ class TestQdrantIndexing:
 
         # Should include optimization suggestion for large collection
         suggestions = stats["optimization_suggestions"]
-        assert any("Large collection detected" in suggestion for suggestion in suggestions)
+        assert any(
+            "Large collection detected" in suggestion for suggestion in suggestions
+        )
 
-    async def test_get_index_usage_stats_many_indexes(self, indexing_service, mock_client):
+    async def test_get_index_usage_stats_many_indexes(
+        self, indexing_service, mock_client
+    ):
         """Test index usage stats with many indexes."""
         mock_info = MagicMock()
         mock_info.points_count = 1000
@@ -327,7 +349,9 @@ class TestQdrantIndexing:
 
     async def test_error_handling_create_indexes(self, indexing_service, mock_client):
         """Test error handling in index creation."""
-        mock_client.create_payload_index.side_effect = Exception("Index creation failed")
+        mock_client.create_payload_index.side_effect = Exception(
+            "Index creation failed"
+        )
 
         with pytest.raises(QdrantServiceError):
             await indexing_service.create_payload_indexes("test_collection")
@@ -344,7 +368,9 @@ class TestQdrantIndexing:
         mock_client.delete_payload_index.side_effect = Exception("Index not found")
 
         with pytest.raises(QdrantServiceError):
-            await indexing_service.drop_payload_index("test_collection", "nonexistent_field")
+            await indexing_service.drop_payload_index(
+                "test_collection", "nonexistent_field"
+            )
 
     async def test_error_handling_reindex(self, indexing_service, mock_client):
         """Test error handling in reindexing."""
@@ -360,7 +386,9 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError):
             await indexing_service.get_payload_index_stats("test_collection")
 
-    async def test_error_handling_health_validation(self, indexing_service, mock_client):
+    async def test_error_handling_health_validation(
+        self, indexing_service, mock_client
+    ):
         """Test error handling in health validation."""
         mock_client.get_collection.side_effect = Exception("Health check failed")
 

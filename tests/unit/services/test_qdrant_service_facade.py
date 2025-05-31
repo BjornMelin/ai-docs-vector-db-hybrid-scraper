@@ -1,6 +1,8 @@
 """Tests for QdrantService facade integration."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from src.config import UnifiedConfig
@@ -39,11 +41,18 @@ class TestQdrantServiceFacade:
         service._client_manager = mock_client_manager
 
         # Mock all module classes to return mock instances
-        with patch('src.services.vector_db.collections.QdrantCollections') as mock_collections_class, \
-             patch('src.services.vector_db.search.QdrantSearch') as mock_search_class, \
-             patch('src.services.vector_db.indexing.QdrantIndexing') as mock_indexing_class, \
-             patch('src.services.vector_db.documents.QdrantDocuments') as mock_documents_class:
-
+        with (
+            patch(
+                "src.services.vector_db.collections.QdrantCollections"
+            ) as mock_collections_class,
+            patch("src.services.vector_db.search.QdrantSearch") as mock_search_class,
+            patch(
+                "src.services.vector_db.indexing.QdrantIndexing"
+            ) as mock_indexing_class,
+            patch(
+                "src.services.vector_db.documents.QdrantDocuments"
+            ) as mock_documents_class,
+        ):
             # Create mock instances that will be returned by the classes
             mock_collections = AsyncMock()
             mock_search = MagicMock()
@@ -77,7 +86,7 @@ class TestQdrantServiceFacade:
         # Mock initialized modules
         mock_collections = AsyncMock()
         mock_client_manager = AsyncMock()
-        
+
         service._collections = mock_collections
         service._client_manager = mock_client_manager
         service._search = MagicMock()
@@ -138,16 +147,16 @@ class TestQdrantServiceFacade:
         # Test hybrid_search delegation
         query_vector = [0.1] * 1536
         sparse_vector = {1: 0.5, 2: 0.3}
-        
+
         mock_search.hybrid_search.return_value = [{"id": "test-1", "score": 0.95}]
-        
+
         result = await service.hybrid_search(
             collection_name="test_collection",
             query_vector=query_vector,
             sparse_vector=sparse_vector,
             limit=10,
         )
-        
+
         assert result == [{"id": "test-1", "score": 0.95}]
         mock_search.hybrid_search.assert_called_once_with(
             collection_name="test_collection",
@@ -202,7 +211,7 @@ class TestQdrantServiceFacade:
         # Test upsert_points delegation
         points = [{"id": "doc-1", "vector": [0.1] * 1536, "payload": {"title": "Test"}}]
         mock_documents.upsert_points.return_value = True
-        
+
         result = await service.upsert_points("test_collection", points, 100)
         assert result is True
         mock_documents.upsert_points.assert_called_once_with(
@@ -214,7 +223,7 @@ class TestQdrantServiceFacade:
         # Test get_points delegation
         point_ids = ["doc-1", "doc-2"]
         mock_documents.get_points.return_value = [{"id": "doc-1", "payload": {}}]
-        
+
         result = await service.get_points("test_collection", point_ids)
         assert result == [{"id": "doc-1", "payload": {}}]
         mock_documents.get_points.assert_called_once_with(
@@ -256,10 +265,12 @@ class TestQdrantServiceFacade:
         # Test get_hnsw_configuration_info delegation (non-async method)
         config_info = {"hnsw_parameters": {"m": 32, "ef_construct": 400}}
         mock_collections.get_hnsw_configuration_info.return_value = config_info
-        
+
         result = service.get_hnsw_configuration_info("api_reference")
         assert result == config_info
-        mock_collections.get_hnsw_configuration_info.assert_called_once_with("api_reference")
+        mock_collections.get_hnsw_configuration_info.assert_called_once_with(
+            "api_reference"
+        )
 
     async def test_compatibility_methods(self, service):
         """Test compatibility methods for legacy API."""
@@ -272,23 +283,23 @@ class TestQdrantServiceFacade:
         # Test search_with_adaptive_ef (compatibility method)
         query_vector = [0.1] * 1536
         mock_search.filtered_search.return_value = [{"id": "test-1", "score": 0.95}]
-        
+
         result = await service.search_with_adaptive_ef(
             "test_collection", query_vector, limit=10, score_threshold=0.8
         )
-        
+
         assert "results" in result
         assert "adaptive_ef_used" in result
         assert "time_budget_ms" in result
-        
+
         # Test optimize_collection_hnsw_parameters (compatibility method)
         config_info = {"hnsw_parameters": {"m": 32, "ef_construct": 400}}
         mock_collections.get_hnsw_configuration_info.return_value = config_info
-        
+
         result = await service.optimize_collection_hnsw_parameters(
             "test_collection", "api_reference"
         )
-        
+
         assert "collection_name" in result
         assert "optimization_results" in result
         assert result["collection_name"] == "test_collection"
@@ -309,29 +320,34 @@ class TestQdrantServiceFacade:
 
     async def test_initialization_error_handling(self, service):
         """Test error handling during initialization."""
-        with patch('src.services.vector_db.client.QdrantClient') as mock_client_class:
+        with patch("src.services.vector_db.client.QdrantClient") as mock_client_class:
             mock_client_manager = AsyncMock()
             mock_client_manager.initialize.side_effect = Exception("Connection failed")
             service._client_manager = mock_client_manager
 
-            with pytest.raises(QdrantServiceError, match="Failed to initialize QdrantService"):
+            with pytest.raises(
+                QdrantServiceError, match="Failed to initialize QdrantService"
+            ):
                 await service.initialize()
 
             assert service._initialized is False
 
     async def test_double_initialization(self, service):
         """Test that double initialization is handled gracefully."""
-        with patch('src.services.vector_db.client.QdrantClient'):
+        with patch("src.services.vector_db.client.QdrantClient"):
             mock_client_manager = AsyncMock()
             mock_client = AsyncMock()
             mock_client_manager.get_client.return_value = mock_client
             service._client_manager = mock_client_manager
 
-            with patch('src.services.vector_db.collections.QdrantCollections') as mock_collections_class, \
-                 patch('src.services.vector_db.search.QdrantSearch'), \
-                 patch('src.services.vector_db.indexing.QdrantIndexing'), \
-                 patch('src.services.vector_db.documents.QdrantDocuments'):
-
+            with (
+                patch(
+                    "src.services.vector_db.collections.QdrantCollections"
+                ) as mock_collections_class,
+                patch("src.services.vector_db.search.QdrantSearch"),
+                patch("src.services.vector_db.indexing.QdrantIndexing"),
+                patch("src.services.vector_db.documents.QdrantDocuments"),
+            ):
                 mock_collections = AsyncMock()
                 mock_collections_class.return_value = mock_collections
 
@@ -341,39 +357,39 @@ class TestQdrantServiceFacade:
 
                 # Second initialization should return early
                 await service.initialize()
-                
+
                 # Should only be called once
                 mock_collections_class.assert_called_once()
 
     async def test_api_coverage(self, service):
         """Test that facade covers all expected API methods."""
         # Collection management methods
-        assert hasattr(service, 'create_collection')
-        assert hasattr(service, 'delete_collection')
-        assert hasattr(service, 'list_collections')
-        assert hasattr(service, 'get_collection_info')
+        assert hasattr(service, "create_collection")
+        assert hasattr(service, "delete_collection")
+        assert hasattr(service, "list_collections")
+        assert hasattr(service, "get_collection_info")
 
         # Search methods
-        assert hasattr(service, 'hybrid_search')
-        assert hasattr(service, 'multi_stage_search')
-        assert hasattr(service, 'hyde_search')
-        assert hasattr(service, 'filtered_search')
+        assert hasattr(service, "hybrid_search")
+        assert hasattr(service, "multi_stage_search")
+        assert hasattr(service, "hyde_search")
+        assert hasattr(service, "filtered_search")
 
         # Indexing methods
-        assert hasattr(service, 'create_payload_indexes')
-        assert hasattr(service, 'list_payload_indexes')
-        assert hasattr(service, 'validate_index_health')
+        assert hasattr(service, "create_payload_indexes")
+        assert hasattr(service, "list_payload_indexes")
+        assert hasattr(service, "validate_index_health")
 
         # Document methods
-        assert hasattr(service, 'upsert_points')
-        assert hasattr(service, 'get_points')
-        assert hasattr(service, 'delete_points')
-        assert hasattr(service, 'count_points')
+        assert hasattr(service, "upsert_points")
+        assert hasattr(service, "get_points")
+        assert hasattr(service, "delete_points")
+        assert hasattr(service, "count_points")
 
         # HNSW optimization methods
-        assert hasattr(service, 'create_collection_with_hnsw_optimization')
-        assert hasattr(service, 'get_hnsw_configuration_info')
+        assert hasattr(service, "create_collection_with_hnsw_optimization")
+        assert hasattr(service, "get_hnsw_configuration_info")
 
         # Compatibility methods
-        assert hasattr(service, 'search_with_adaptive_ef')
-        assert hasattr(service, 'optimize_collection_hnsw_parameters')
+        assert hasattr(service, "search_with_adaptive_ef")
+        assert hasattr(service, "optimize_collection_hnsw_parameters")

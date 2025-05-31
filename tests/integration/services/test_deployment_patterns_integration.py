@@ -7,12 +7,12 @@ from uuid import uuid4
 import pytest
 from src.config import get_config
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
-from src.services.core.qdrant_service import QdrantService
 from src.services.deployment import ABTestingManager
 from src.services.deployment import BlueGreenDeployment
 from src.services.deployment import CanaryDeployment
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import ServiceError
+from src.services.vector_db.service import QdrantService
 
 
 class TestDeploymentPatternsIntegration:

@@ -58,12 +58,12 @@ from src.config.models import DocumentationSite
 
 # Import shared response models
 from src.mcp.models.responses import CrawlResult
-from src.services.core.qdrant_service import QdrantService
 from src.services.crawling.manager import CrawlManager
 
 # Import service layer
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.utilities.rate_limiter import RateLimitManager
+from src.services.vector_db.service import QdrantService
 
 # Import enhanced chunking module
 from .chunking import EnhancedChunker

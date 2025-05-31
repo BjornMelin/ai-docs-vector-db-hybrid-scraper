@@ -7,10 +7,10 @@ import pytest
 from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
 from src.config.models import UnifiedConfig
-from src.services.core.qdrant_service import QdrantService
 from src.services.crawling.manager import CrawlManager
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.embeddings.manager import QualityTier
+from src.services.vector_db.service import QdrantService
 
 
 @pytest.fixture

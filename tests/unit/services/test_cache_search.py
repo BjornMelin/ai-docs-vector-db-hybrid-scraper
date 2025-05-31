@@ -66,7 +66,7 @@ class TestCacheKeyGeneration:
             query="test query",
             collection_name="documents",
             limit=10,
-            search_type="hybrid"
+            search_type="hybrid",
         )
 
         assert key.startswith("search:")
@@ -82,7 +82,7 @@ class TestCacheKeyGeneration:
             collection_name="documents",
             filters=filters,
             limit=10,
-            search_type="vector"
+            search_type="vector",
         )
 
         assert key.startswith("search:")
@@ -96,7 +96,7 @@ class TestCacheKeyGeneration:
             "collection_name": "docs",
             "filters": {"type": "api"},
             "limit": 20,
-            "search_type": "hybrid"
+            "search_type": "hybrid",
         }
 
         key1 = search_cache._generate_cache_key(**params)
@@ -110,7 +110,7 @@ class TestCacheKeyGeneration:
             "query": "test query",
             "collection_name": "docs",
             "limit": 10,
-            "search_type": "hybrid"
+            "search_type": "hybrid",
         }
 
         key1 = search_cache._generate_cache_key(**base_params)
@@ -159,32 +159,32 @@ class TestGetSearchResults:
         mock_dragonfly_cache.get.return_value = None
 
         result = await search_cache.get_search_results(
-            query="test query",
-            collection_name="docs"
+            query="test query", collection_name="docs"
         )
 
         assert result is None
         mock_dragonfly_cache.get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_cache_hit(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_get_cache_hit(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test cache hit returns results."""
         cached_data = {
             "results": [
                 {"id": "1", "score": 0.9, "content": "Result 1"},
-                {"id": "2", "score": 0.8, "content": "Result 2"}
+                {"id": "2", "score": 0.8, "content": "Result 2"},
             ],
             "metadata": {
                 "total": 2,
                 "query": "test query",
-                "cached_at": datetime.now(UTC).isoformat()
-            }
+                "cached_at": datetime.now(UTC).isoformat(),
+            },
         }
         mock_dragonfly_cache.get.return_value = cached_data
 
         result = await search_cache.get_search_results(
-            query="test query",
-            collection_name="docs"
+            query="test query", collection_name="docs"
         )
 
         assert result == cached_data["results"]
@@ -202,7 +202,7 @@ class TestGetSearchResults:
             filters=filters,
             limit=50,
             search_type="semantic",
-            **params
+            **params,
         )
 
         # Verify cache key was generated with all params
@@ -213,16 +213,17 @@ class TestGetSearchResults:
         assert "semantic" in cache_key
 
     @pytest.mark.asyncio
-    async def test_get_increments_popularity(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_get_increments_popularity(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test that cache hit increments popularity."""
         mock_dragonfly_cache.get.return_value = {
             "results": [{"id": "1"}],
-            "metadata": {}
+            "metadata": {},
         }
 
         await search_cache.get_search_results(
-            query="popular query",
-            collection_name="docs"
+            query="popular query", collection_name="docs"
         )
 
         mock_patterns.increment_popularity.assert_called_once()
@@ -238,13 +239,11 @@ class TestSetSearchResults:
         """Test basic result caching."""
         results = [
             {"id": "1", "score": 0.95, "content": "First result"},
-            {"id": "2", "score": 0.90, "content": "Second result"}
+            {"id": "2", "score": 0.90, "content": "Second result"},
         ]
 
         success = await search_cache.set_search_results(
-            query="test query",
-            collection_name="docs",
-            results=results
+            query="test query", collection_name="docs", results=results
         )
 
         assert success is True
@@ -271,7 +270,7 @@ class TestSetSearchResults:
             query="test",
             collection_name="docs",
             results=results,
-            ttl=7200  # 2 hours
+            ttl=7200,  # 2 hours
         )
 
         call_args = mock_dragonfly_cache.set.call_args
@@ -284,14 +283,11 @@ class TestSetSearchResults:
         metadata = {
             "total_found": 100,
             "processing_time_ms": 50,
-            "reranker_used": "cohere"
+            "reranker_used": "cohere",
         }
 
         await search_cache.set_search_results(
-            query="test",
-            collection_name="docs",
-            results=results,
-            metadata=metadata
+            query="test", collection_name="docs", results=results, metadata=metadata
         )
 
         call_args = mock_dragonfly_cache.set.call_args
@@ -308,9 +304,7 @@ class TestSetSearchResults:
         results = []
 
         success = await search_cache.set_search_results(
-            query="no results query",
-            collection_name="docs",
-            results=results
+            query="no results query", collection_name="docs", results=results
         )
 
         assert success is True
@@ -321,7 +315,9 @@ class TestSetSearchResults:
         assert stored_data["results"] == []
 
     @pytest.mark.asyncio
-    async def test_set_popular_query_extended_ttl(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_set_popular_query_extended_ttl(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test that popular queries get extended TTL."""
         # Mock query as popular
         mock_patterns.get_popular_queries.return_value = [
@@ -331,9 +327,7 @@ class TestSetSearchResults:
         results = [{"id": "1", "score": 0.9}]
 
         await search_cache.set_search_results(
-            query="popular query",
-            collection_name="docs",
-            results=results
+            query="popular query", collection_name="docs", results=results
         )
 
         # Should check if query is popular
@@ -425,7 +419,7 @@ class TestBatchOperations:
         queries = [
             {"query": "query1", "collection_name": "docs"},
             {"query": "query2", "collection_name": "docs"},
-            {"query": "query3", "collection_name": "articles"}
+            {"query": "query3", "collection_name": "articles"},
         ]
 
         # Mock batch get results
@@ -446,7 +440,9 @@ class TestBatchOperations:
         mock_dragonfly_cache.mget.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_warm_cache_popular_queries(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_warm_cache_popular_queries(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test warming cache with popular queries."""
         popular_queries = [
             {"query": "getting started", "count": 150},
@@ -460,9 +456,7 @@ class TestBatchOperations:
             return [{"id": f"{query}-1", "score": 0.9}]
 
         success = await search_cache.warm_popular_queries(
-            collection_name="docs",
-            search_func=mock_search,
-            top_n=2
+            collection_name="docs", search_func=mock_search, top_n=2
         )
 
         assert success is True
@@ -505,12 +499,12 @@ class TestAnalytics:
             "hit_rate": 0.75,
             "popular_queries": [
                 {"query": "api docs", "count": 50},
-                {"query": "tutorial", "count": 45}
+                {"query": "tutorial", "count": 45},
             ],
             "collections": {
                 "docs": {"queries": 600, "hit_rate": 0.8},
-                "articles": {"queries": 400, "hit_rate": 0.7}
-            }
+                "articles": {"queries": 400, "hit_rate": 0.7},
+            },
         }
         mock_patterns.get_cache_analytics.return_value = mock_analytics
 
@@ -528,26 +522,26 @@ class TestAnalytics:
             "metadata": {
                 "cached_at": datetime.now(UTC).isoformat(),
                 "processing_time_ms": 45,
-                "total_found": 100
-            }
+                "total_found": 100,
+            },
         }
 
         result = await search_cache.get_search_results(
-            query="test",
-            collection_name="docs"
+            query="test", collection_name="docs"
         )
 
         assert result is not None
         # Performance data should be available in metadata
 
     @pytest.mark.asyncio
-    async def test_track_cache_misses(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_track_cache_misses(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test tracking cache misses for analysis."""
         mock_dragonfly_cache.get.return_value = None
 
         result = await search_cache.get_search_results(
-            query="rare query",
-            collection_name="docs"
+            query="rare query", collection_name="docs"
         )
 
         assert result is None
@@ -565,23 +559,19 @@ class TestConcurrency:
 
         async def get_results():
             return await search_cache.get_search_results(
-                query="concurrent test",
-                collection_name="docs"
+                query="concurrent test", collection_name="docs"
             )
 
         async def set_results():
             return await search_cache.set_search_results(
                 query="concurrent test",
                 collection_name="docs",
-                results=[{"id": "1", "score": 0.9}]
+                results=[{"id": "1", "score": 0.9}],
             )
 
         # Run operations concurrently
         results = await asyncio.gather(
-            get_results(),
-            set_results(),
-            get_results(),
-            return_exceptions=True
+            get_results(), set_results(), get_results(), return_exceptions=True
         )
 
         # All operations should complete without errors
@@ -600,7 +590,7 @@ class TestConcurrency:
         tasks = [
             search_cache.invalidate_by_collection("docs"),
             search_cache.invalidate_by_query("test"),
-            search_cache.invalidate_by_pattern("search:*:vector:*")
+            search_cache.invalidate_by_pattern("search:*:vector:*"),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -616,8 +606,7 @@ class TestEdgeCases:
     async def test_get_with_none_query(self, search_cache):
         """Test get with None query."""
         result = await search_cache.get_search_results(
-            query=None,
-            collection_name="docs"
+            query=None, collection_name="docs"
         )
         # Should handle gracefully
         assert result is None
@@ -627,13 +616,10 @@ class TestEdgeCases:
         """Test get with empty query."""
         mock_dragonfly_cache.get.return_value = {
             "results": [],
-            "metadata": {"query": ""}
+            "metadata": {"query": ""},
         }
 
-        result = await search_cache.get_search_results(
-            query="",
-            collection_name="docs"
-        )
+        result = await search_cache.get_search_results(query="", collection_name="docs")
 
         # Empty queries are valid
         assert result == []
@@ -645,20 +631,21 @@ class TestEdgeCases:
         await search_cache.set_search_results(
             query="test",
             collection_name="docs",
-            results="invalid"  # Not a list
+            results="invalid",  # Not a list
         )
 
         # Should handle gracefully or validate
         # Implementation dependent
 
     @pytest.mark.asyncio
-    async def test_special_characters_in_query(self, search_cache, mock_dragonfly_cache):
+    async def test_special_characters_in_query(
+        self, search_cache, mock_dragonfly_cache
+    ):
         """Test handling special characters in query."""
         special_query = "test & query | with <special> chars!"
 
         await search_cache.get_search_results(
-            query=special_query,
-            collection_name="docs"
+            query=special_query, collection_name="docs"
         )
 
         # Should handle special characters in cache key
@@ -671,10 +658,7 @@ class TestEdgeCases:
         """Test handling very long queries."""
         long_query = "test " * 1000  # Very long query
 
-        await search_cache.get_search_results(
-            query=long_query,
-            collection_name="docs"
-        )
+        await search_cache.get_search_results(query=long_query, collection_name="docs")
 
         # Should handle long queries (possibly truncate for key)
         call_args = mock_dragonfly_cache.get.call_args
@@ -687,8 +671,7 @@ class TestEdgeCases:
         unicode_query = "测试 query with émojis 🔍"
 
         await search_cache.get_search_results(
-            query=unicode_query,
-            collection_name="docs"
+            query=unicode_query, collection_name="docs"
         )
 
         # Should handle unicode properly
@@ -701,15 +684,11 @@ class TestEdgeCases:
         filters2 = {"type": "article", "status": "active", "category": "tech"}
 
         key1 = search_cache._generate_cache_key(
-            query="test",
-            collection_name="docs",
-            filters=filters1
+            query="test", collection_name="docs", filters=filters1
         )
 
         key2 = search_cache._generate_cache_key(
-            query="test",
-            collection_name="docs",
-            filters=filters2
+            query="test", collection_name="docs", filters=filters2
         )
 
         # Keys should be the same regardless of filter order
@@ -725,17 +704,13 @@ class TestCachePatterns:
         # Few results might get shorter TTL
         few_results = [{"id": "1"}]
         await search_cache.set_search_results(
-            query="rare query",
-            collection_name="docs",
-            results=few_results
+            query="rare query", collection_name="docs", results=few_results
         )
 
         # Many results might get longer TTL
         many_results = [{"id": str(i)} for i in range(100)]
         await search_cache.set_search_results(
-            query="common query",
-            collection_name="docs",
-            results=many_results
+            query="common query", collection_name="docs", results=many_results
         )
 
         # Implementation dependent - verify TTL logic if implemented
@@ -744,16 +719,13 @@ class TestCachePatterns:
     async def test_conditional_caching(self, search_cache, mock_dragonfly_cache):
         """Test conditional caching based on result quality."""
         # Poor results (low scores) might not be cached
-        poor_results = [
-            {"id": "1", "score": 0.1},
-            {"id": "2", "score": 0.15}
-        ]
+        poor_results = [{"id": "1", "score": 0.1}, {"id": "2", "score": 0.15}]
 
         await search_cache.set_search_results(
             query="test",
             collection_name="docs",
             results=poor_results,
-            min_score_to_cache=0.5  # If implemented
+            min_score_to_cache=0.5,  # If implemented
         )
 
         # Implementation dependent
@@ -770,7 +742,7 @@ class TestCachePatterns:
             query="test",
             collection_name="docs",
             results=results,
-            version="v2"  # If implemented
+            version="v2",  # If implemented
         )
 
         # Implementation dependent
@@ -780,7 +752,9 @@ class TestMetrics:
     """Test metrics and monitoring."""
 
     @pytest.mark.asyncio
-    async def test_cache_hit_metrics(self, search_cache, mock_dragonfly_cache, mock_patterns):
+    async def test_cache_hit_metrics(
+        self, search_cache, mock_dragonfly_cache, mock_patterns
+    ):
         """Test cache hit metric tracking."""
         # Simulate hits and misses
         mock_dragonfly_cache.get.side_effect = [
@@ -790,10 +764,7 @@ class TestMetrics:
         ]
 
         for _ in range(3):
-            await search_cache.get_search_results(
-                query="test",
-                collection_name="docs"
-            )
+            await search_cache.get_search_results(query="test", collection_name="docs")
 
         # Patterns should track metrics
         assert mock_patterns.increment_popularity.call_count == 2  # 2 hits
@@ -807,12 +778,9 @@ class TestMetrics:
 
         start = time.time()
         await search_cache.set_search_results(
-            query="test",
-            collection_name="docs",
-            results=results
+            query="test", collection_name="docs", results=results
         )
         _ = time.time() - start
 
         # Could track set operation performance
         # Implementation dependent
-

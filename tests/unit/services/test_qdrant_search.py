@@ -1,11 +1,12 @@
 """Tests for QdrantSearch service."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
-from qdrant_client import models
 from src.config import UnifiedConfig
-from src.config.enums import SearchAccuracy, VectorType
+from src.config.enums import SearchAccuracy
+from src.config.enums import VectorType
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.search import QdrantSearch
 
