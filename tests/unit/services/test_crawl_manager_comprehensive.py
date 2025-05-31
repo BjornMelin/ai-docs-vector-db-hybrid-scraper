@@ -16,11 +16,11 @@ def mock_config():
     """Create mock unified configuration."""
     config = MagicMock(spec=UnifiedConfig)
     config.crawl_provider = "crawl4ai"
-    
+
     # Mock firecrawl config
     config.firecrawl = MagicMock()
     config.firecrawl.api_key = "fc-test-key"
-    
+
     # Mock performance config
     config.performance = MagicMock()
     config.performance.default_rate_limits = {

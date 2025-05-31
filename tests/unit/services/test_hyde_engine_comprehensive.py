@@ -19,13 +19,13 @@ def mock_config():
     return HyDEConfig(
         enable_hyde=True,
         enable_fallback=True,
-        enable_ab_testing=True,
-        ab_testing_ratio=0.5,
-        cache_hypothetical_docs=True,
-        cache_search_results=True,
-        enable_query_api=True,
-        max_concurrent_searches=5,
-        search_timeout_seconds=30,
+        enable_reranking=True,
+        enable_caching=True,
+        num_generations=3,
+        generation_temperature=0.7,
+        max_generation_tokens=200,
+        generation_model="gpt-3.5-turbo",
+        generation_timeout_seconds=10,
     )
 
 
@@ -48,15 +48,12 @@ def mock_prompt_config():
 def mock_metrics_config():
     """Create mock metrics configuration."""
     return HyDEMetricsConfig(
-        track_performance=True,
-        track_cache_stats=True,
-        track_generation_metrics=True,
-        metrics_window_minutes=60,
-        alert_thresholds={
-            "search_latency_p95": 1000,
-            "cache_hit_rate": 0.5,
-            "generation_failure_rate": 0.1,
-        },
+        track_generation_time=True,
+        track_cache_hits=True,
+        track_search_quality=True,
+        ab_testing_enabled=False,  # Disable A/B testing for predictable tests
+        control_group_percentage=0.5,
+        detailed_logging=False,
     )
 
 
@@ -70,6 +67,13 @@ def mock_embedding_manager():
     manager.get_batch_embeddings = AsyncMock(
         return_value=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
     )
+    manager.generate_embeddings = AsyncMock(
+        return_value={"embeddings": [[0.1, 0.2, 0.3]]}
+    )
+    # Mock rerank_results to return the input results unchanged
+    async def mock_rerank(query, results):
+        return results
+    manager.rerank_results = AsyncMock(side_effect=mock_rerank)
     return manager
 
 
@@ -91,6 +95,18 @@ def mock_qdrant_service():
             {"id": "doc2", "score": 0.87},
         ]
     )
+    service.hyde_search = AsyncMock(
+        return_value=[
+            {"id": "doc1", "score": 0.95, "payload": {"content": "Result 1"}},
+            {"id": "doc2", "score": 0.87, "payload": {"content": "Result 2"}},
+        ]
+    )
+    service.filtered_search = AsyncMock(
+        return_value=[
+            {"id": "doc1", "score": 0.95},
+            {"id": "doc2", "score": 0.87},
+        ]
+    )
     return service
 
 
@@ -102,6 +118,15 @@ def mock_cache_manager():
     manager.cleanup = AsyncMock()
     manager.get = AsyncMock(return_value=None)
     manager.set = AsyncMock(return_value=True)
+    manager.delete = AsyncMock(return_value=True)
+
+    # For cache test in HyDE cache initialization
+    async def mock_get_test_value(key):
+        if "test" in key:
+            return "test_value"
+        return None
+
+    manager.get.side_effect = mock_get_test_value
     return manager
 
 
@@ -126,15 +151,41 @@ def hyde_engine(
     mock_llm_client,
 ):
     """Create HyDE query engine for testing."""
-    return HyDEQueryEngine(
-        config=mock_config,
-        prompt_config=mock_prompt_config,
-        metrics_config=mock_metrics_config,
-        embedding_manager=mock_embedding_manager,
-        qdrant_service=mock_qdrant_service,
-        cache_manager=mock_cache_manager,
-        llm_client=mock_llm_client,
-    )
+    with patch("src.services.hyde.engine.HypotheticalDocumentGenerator") as mock_gen_class, \
+         patch("src.services.hyde.engine.HyDECache") as mock_cache_class:
+
+        # Create mock instances
+        mock_generator = AsyncMock()
+        mock_generator.initialize = AsyncMock()
+        mock_generator.cleanup = AsyncMock()
+        mock_generator.generate_hypothetical_documents = AsyncMock(return_value=["doc1", "doc2"])
+        mock_generator.generate_documents = AsyncMock()
+        mock_gen_class.return_value = mock_generator
+
+        mock_cache = AsyncMock()
+        mock_cache.initialize = AsyncMock()
+        mock_cache.cleanup = AsyncMock()
+        mock_cache.get_cached_search_results = AsyncMock(return_value=None)
+        mock_cache.cache_search_results = AsyncMock(return_value=True)
+        mock_cache.get_search_results = AsyncMock(return_value=None)
+        mock_cache.set_search_results = AsyncMock(return_value=True)
+        mock_cache_class.return_value = mock_cache
+
+        engine = HyDEQueryEngine(
+            config=mock_config,
+            prompt_config=mock_prompt_config,
+            metrics_config=mock_metrics_config,
+            embedding_manager=mock_embedding_manager,
+            qdrant_service=mock_qdrant_service,
+            cache_manager=mock_cache_manager,
+            llm_client=mock_llm_client,
+        )
+
+        # Manually assign the mocked components
+        engine.generator = mock_generator
+        engine.cache = mock_cache
+
+        return engine
 
 
 class TestHyDEEngineInitialization:
@@ -228,8 +279,8 @@ class TestHyDESearch:
         cached_results = [
             {"id": "cached1", "score": 0.9, "payload": {"content": "Cached result"}}
         ]
-        hyde_engine.cache.get_cached_search_results = AsyncMock(
-            return_value={"results": cached_results, "metadata": {"cached": True}}
+        hyde_engine.cache.get_search_results = AsyncMock(
+            return_value=cached_results
         )
 
         query = "machine learning algorithms"
@@ -253,16 +304,23 @@ class TestHyDESearch:
         hyde_engine._initialized = True
 
         # Mock cache miss
-        hyde_engine.cache.get_cached_search_results = AsyncMock(return_value=None)
+        hyde_engine.cache.get_search_results = AsyncMock(return_value=None)
 
         # Mock hypothetical document generation
-        hypothetical_docs = [
-            "Machine learning is a subset of AI...",
-            "Algorithms in ML include supervised learning...",
-            "Neural networks are fundamental to deep learning...",
-        ]
-        hyde_engine.generator.generate_hypothetical_documents = AsyncMock(
-            return_value=hypothetical_docs
+        from src.services.hyde.generator import GenerationResult
+        generation_result = GenerationResult(
+            documents=[
+                "Machine learning is a subset of AI...",
+                "Algorithms in ML include supervised learning...",
+                "Neural networks are fundamental to deep learning...",
+            ],
+            generation_time=1.2,
+            tokens_used=150,
+            cost_estimate=0.01,
+            diversity_score=0.75,
+        )
+        hyde_engine.generator.generate_documents = AsyncMock(
+            return_value=generation_result
         )
 
         # Mock embedding generation
@@ -275,12 +333,12 @@ class TestHyDESearch:
             {"id": "doc1", "score": 0.95, "payload": {"content": "ML tutorial"}},
             {"id": "doc2", "score": 0.87, "payload": {"content": "Algorithm guide"}},
         ]
-        hyde_engine.qdrant_service.hybrid_search = AsyncMock(
+        hyde_engine.qdrant_service.hyde_search = AsyncMock(
             return_value=search_results
         )
 
         # Mock cache set
-        hyde_engine.cache.cache_search_results = AsyncMock(return_value=True)
+        hyde_engine.cache.set_search_results = AsyncMock(return_value=True)
 
         query = "machine learning algorithms"
         collection = "documentation"
@@ -296,10 +354,10 @@ class TestHyDESearch:
         assert hyde_engine.generation_count == 1
 
         # Verify full pipeline was executed
-        hyde_engine.generator.generate_hypothetical_documents.assert_called_once()
-        hyde_engine.embedding_manager.get_embedding.assert_called()
-        hyde_engine.qdrant_service.hybrid_search.assert_called_once()
-        hyde_engine.cache.cache_search_results.assert_called_once()
+        hyde_engine.generator.generate_documents.assert_called_once()
+        hyde_engine.embedding_manager.generate_embeddings.assert_called()
+        hyde_engine.qdrant_service.hyde_search.assert_called_once()
+        hyde_engine.cache.set_search_results.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_with_domain_specific_generation(self, hyde_engine):
