@@ -10,8 +10,8 @@ from typing import Any
 from ...config import UnifiedConfig
 from ..base import BaseService
 from ..core.qdrant_alias_manager import QdrantAliasManager
-from ..core.qdrant_service import QdrantService
 from ..errors import ServiceError
+from ..vector_db.service import QdrantService
 
 logger = logging.getLogger(__name__)
 
