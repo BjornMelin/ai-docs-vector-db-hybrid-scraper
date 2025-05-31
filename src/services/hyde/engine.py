@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 
 from ..base import BaseService
-from ..core.qdrant_service import QdrantService
+from ..vector_db.service import QdrantService
 from ..embeddings.manager import EmbeddingManager
 from ..errors import EmbeddingServiceError
 from ..errors import QdrantServiceError
