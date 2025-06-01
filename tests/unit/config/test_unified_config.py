@@ -118,7 +118,7 @@ class TestUnifiedConfig:
                 if provider == EmbeddingProvider.OPENAI:
                     config = UnifiedConfig(
                         embedding_provider=provider,
-                        openai=OpenAIConfig(api_key="sk-test123456789012345")
+                        openai=OpenAIConfig(api_key="sk-test123456789012345"),
                     )
                 else:
                     config = UnifiedConfig(embedding_provider=provider)
@@ -130,7 +130,7 @@ class TestUnifiedConfig:
                 if provider == CrawlProvider.FIRECRAWL:
                     config = UnifiedConfig(
                         crawl_provider=provider,
-                        firecrawl=FirecrawlConfig(api_key="fc-test123456")
+                        firecrawl=FirecrawlConfig(api_key="fc-test123456"),
                     )
                 else:
                     config = UnifiedConfig(crawl_provider=provider)

@@ -202,7 +202,9 @@ class TestSecurityConfig:
 
         # Test boolean field with wrong type
         with pytest.raises(ValidationError) as exc_info:
-            SecurityConfig(require_api_keys={"value": True})  # Dict can't coerce to bool
+            SecurityConfig(
+                require_api_keys={"value": True}
+            )  # Dict can't coerce to bool
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
