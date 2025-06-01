@@ -12,8 +12,8 @@ import sys
 from datetime import datetime
 
 from src.config import UnifiedConfig
-from src.services.core.qdrant_service import QdrantService
 from src.services.errors import QdrantServiceError
+from src.services.vector_db.service import QdrantService
 
 # Configure logging
 logging.basicConfig(

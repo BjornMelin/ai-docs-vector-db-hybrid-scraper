@@ -10,7 +10,7 @@ import asyncio
 
 from src.config import get_config
 from src.config.enums import FusionAlgorithm
-from src.services.core.qdrant_service import QdrantService
+from src.services.vector_db.service import QdrantService
 
 
 async def benchmark_search_methods():

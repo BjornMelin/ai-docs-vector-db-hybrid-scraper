@@ -2,6 +2,5 @@
 
 from .project_storage import ProjectStorage
 from .qdrant_alias_manager import QdrantAliasManager
-from .qdrant_service import QdrantService
 
-__all__ = ["ProjectStorage", "QdrantAliasManager", "QdrantService"]
+__all__ = ["ProjectStorage", "QdrantAliasManager"]

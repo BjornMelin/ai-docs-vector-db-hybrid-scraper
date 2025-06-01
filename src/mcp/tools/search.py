@@ -8,8 +8,8 @@ from fastmcp import Context
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
 from ...services.cache.manager import CacheManager
-from ...services.core.qdrant_service import QdrantService
 from ...services.embeddings.manager import EmbeddingManager
+from ...services.vector_db.service import QdrantService
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult
 

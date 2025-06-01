@@ -105,7 +105,7 @@ class EmbeddingManager:
             )
 
         # Model benchmarks and smart selection config (loaded from configuration)
-        self._benchmarks: dict[str, ModelBenchmark] = {}
+        self._benchmarks: dict[str, ModelBenchmark] = config.embedding.model_benchmarks
         self._smart_config = config.embedding.smart_selection
 
         # Dynamic quality tier mappings
@@ -663,8 +663,20 @@ class EmbeddingManager:
                 requires_high_quality=False,
             )
 
-        total_length = sum(len(text) for text in texts)
-        avg_length = total_length // len(texts)
+        # Filter out None values and handle invalid inputs
+        valid_texts = [text for text in texts if text is not None]
+        if not valid_texts:
+            return TextAnalysis(
+                total_length=0,
+                avg_length=0,
+                complexity_score=0.0,
+                estimated_tokens=0,
+                text_type="empty",
+                requires_high_quality=False,
+            )
+
+        total_length = sum(len(text) for text in valid_texts)
+        avg_length = total_length // len(valid_texts)
         estimated_tokens = int(total_length / self._smart_config.chars_per_token)
 
         # Analyze complexity (vocabulary diversity)
@@ -672,7 +684,7 @@ class EmbeddingManager:
         total_words = 0
         code_indicators = 0
 
-        for text in texts:
+        for text in valid_texts:
             words = text.lower().split()
             all_words.update(words)
             total_words += len(words)

@@ -37,7 +37,7 @@ dependencies = [
     # Vector database & embeddings
     "qdrant-client[fastembed]>=1.14.2",
     "openai>=1.82.1",
-    "fastembed==0.6.1",
+    "fastembed>=0.6.1,<0.7.0",  # Pin to 0.6.x to avoid breaking changes
     "FlagEmbedding>=1.3.5",
     
     # Data processing & ML
@@ -56,12 +56,13 @@ dependencies = [
     
     # MCP server & API
     "fastmcp>=2.5.2",
+    "mcp>=1.9.1",
     "uvicorn>=0.34.2",
     
     # Browser automation
     "playwright>=1.52.0",
     "browser-use>=0.2.5",
-    "langchain-openai==0.3.11",
+    "langchain-openai>=0.3.11,<0.4.0",  # Allow minor updates
     "langchain-anthropic>=0.2.16",
     "langchain-google-genai>=1.0.1",
     
@@ -69,7 +70,7 @@ dependencies = [
     "redis[hiredis]>=6.2.0",
     
     # Configuration & validation
-    "pydantic>=2.10.4,<2.11.0",
+    "pydantic>=2.10.4,<2.11.0",  # Constrained by browser-use dependency
     "pydantic-settings>=2.8.0",
     "python-dotenv>=1.1.0",
     
@@ -82,6 +83,11 @@ dependencies = [
     # Additional dependencies
     "pyyaml>=6.0.2",
     "aiofiles>=24.1.0",
+    "python-multipart>=0.0.12",  # For FastAPI file uploads
+    "sentence-transformers>=3.3.1",  # For reranking models
+    "tomli-w>=1.0.0",  # For TOML writing
+    "onnx>=1.18.0",  # For FastEmbed
+    "onnxruntime>=1.20.1",  # For FastEmbed
 ]
 
 [project.optional-dependencies]
@@ -90,6 +96,7 @@ dev = [
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.14.1",
+    "fakeredis>=2.29.0",
     "black>=25.1.0",
     "ruff>=0.11.12",
 ]

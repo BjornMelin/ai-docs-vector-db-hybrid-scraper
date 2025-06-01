@@ -1044,7 +1044,8 @@ class UnifiedConfig(BaseSettings):
     def save_to_file(self, config_path: Path | str, format: str = "json") -> None:
         """Save configuration to a file."""
         config_path = Path(config_path)
-        data = self.model_dump(mode="json")
+        # Exclude None values for TOML format
+        data = self.model_dump(mode="json", exclude_none=(format == "toml"))
 
         if format == "json":
             import json

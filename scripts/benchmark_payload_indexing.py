@@ -14,8 +14,8 @@ from datetime import datetime
 from typing import Any
 
 from src.config import UnifiedConfig
-from src.services.core.qdrant_service import QdrantService
 from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 # Configure logging
 logging.basicConfig(
