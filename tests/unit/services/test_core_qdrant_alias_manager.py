@@ -187,7 +187,11 @@ class TestQdrantAliasManager:
         task2.cancel.assert_not_called()
 
         # Should wait for cancellations
-        mock_gather.assert_called_once_with(task1, task2, return_exceptions=True)
+        mock_gather.assert_called_once()
+        call_args = mock_gather.call_args[0]
+        assert task1 in call_args
+        assert task2 in call_args
+        assert mock_gather.call_args[1] == {"return_exceptions": True}
         assert len(alias_manager._deletion_tasks) == 0
 
     async def test_create_alias_success(self, alias_manager, mock_client):
