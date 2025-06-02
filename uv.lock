@@ -37,6 +37,7 @@ dependencies = [
     { name = "firecrawl-py" },
     { name = "flagembedding" },
     { name = "httpx" },
+    { name = "jsonschema2md" },
     { name = "langchain-anthropic" },
     { name = "langchain-google-genai" },
     { name = "langchain-openai" },
@@ -100,6 +101,7 @@ requires-dist = [
     { name = "firecrawl-py", specifier = ">=2.7.1" },
     { name = "flagembedding", specifier = ">=1.3.5" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "jsonschema2md", specifier = ">=1.5.2" },
     { name = "langchain-anthropic", specifier = ">=0.2.16" },
     { name = "langchain-google-genai", specifier = ">=1.0.1" },
     { name = "langchain-openai", specifier = ">=0.3.11,<0.4.0" },
@@ -1403,6 +1405,19 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonschema2md"
+version = "1.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1c/40/fa685991204a0ae72e486720add480b8f21088e4a62c238c50fba506b9d6/jsonschema2md-1.5.2.tar.gz", hash = "sha256:338cc3909a25d1424b6823b13e17782d40f0faed97be42ba8abb22b96a1d82f9", size = 11398 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/41/7a4b0ae6bff4ca1938f51943a0b77804acf459357f570f72d78567dc9570/jsonschema2md-1.5.2-py3-none-any.whl", hash = "sha256:50492b944514ceac69d979d410b1a8a865c6a05a9bbc65a6a277ce10a61a9cab", size = 12125 },
+]
+
+[[package]]
 name = "langchain"
 version = "0.3.22"
 source = { registry = "https://pypi.org/simple" }
@@ -1627,6 +1642,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/4c/c4/2a458039645fcc6324ece731d4d1361c5daf960b553d1fcb4261ba07d51c/lz4-4.4.4-cp313-cp313-win32.whl", hash = "sha256:e9ec5d45ea43684f87c316542af061ef5febc6a6b322928f059ce1fb289c298a", size = 88289 },
     { url = "https://files.pythonhosted.org/packages/00/96/b8e24ea7537ab418074c226279acfcaa470e1ea8271003e24909b6db942b/lz4-4.4.4-cp313-cp313-win_amd64.whl", hash = "sha256:a760a175b46325b2bb33b1f2bbfb8aa21b48e1b9653e29c10b6834f9bb44ead4", size = 99925 },
     { url = "https://files.pythonhosted.org/packages/a5/a5/f9838fe6aa132cfd22733ed2729d0592259fff074cefb80f19aa0607367b/lz4-4.4.4-cp313-cp313-win_arm64.whl", hash = "sha256:f4c21648d81e0dda38b4720dccc9006ae33b0e9e7ffe88af6bf7d4ec124e2fba", size = 89743 },
+]
+
+[[package]]
+name = "markdown"
+version = "3.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/28/3af612670f82f4c056911fbbbb42760255801b3068c48de792d354ff4472/markdown-3.7.tar.gz", hash = "sha256:2ae2471477cfd02dbbf038d5d9bc226d40def84b4fe2986e49b59b6b472bbed2", size = 357086 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/08/83871f3c50fc983b88547c196d11cf8c3340e37c32d2e9d6152abe2c61f7/Markdown-3.7-py3-none-any.whl", hash = "sha256:7eb6df5690b81a1d7942992c97fad2938e956e79df20cbc6186e9c3a77b1c803", size = 106349 },
 ]
 
 [[package]]
