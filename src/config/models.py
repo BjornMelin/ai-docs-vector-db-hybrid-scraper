@@ -1097,12 +1097,12 @@ class UnifiedConfig(BaseSettings):
         ):
             issues.append("Firecrawl API key is missing")
 
-        # Check Redis if caching enabled
-        if self.cache.enable_redis_cache:
+        # Check DragonflyDB/Redis if caching enabled
+        if self.cache.enable_dragonfly_cache:
             try:
                 import redis
 
-                r = redis.from_url(self.cache.redis_url)
+                r = redis.from_url(self.cache.dragonfly_url)
                 r.ping()
             except Exception as e:
                 issues.append(f"Redis connection failed: {e}")
