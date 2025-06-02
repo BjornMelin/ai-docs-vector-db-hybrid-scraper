@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import click
 import pytest
-from src.core.utils import async_command
-from src.core.utils import async_to_sync_click
+from src.utils import async_command
+from src.utils import async_to_sync_click
 
 
 class TestAsyncToSyncClick:
@@ -284,7 +284,7 @@ class TestModuleExports:
 
     def test_all_exports(self):
         """Test that __all__ contains expected functions."""
-        from src.core import utils
+        from src import utils
 
         assert hasattr(utils, "__all__")
         assert "async_command" in utils.__all__
@@ -292,7 +292,7 @@ class TestModuleExports:
 
     def test_exported_functions_exist(self):
         """Test that all exported functions exist."""
-        from src.core import utils
+        from src import utils
 
         for export in utils.__all__:
             assert hasattr(utils, export)
