@@ -1,10 +1,13 @@
 """A/B testing framework for vector search experiments."""
 
+import asyncio
 import hashlib
+import json
 import logging
 import random
 import time
 from collections import defaultdict
+from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
@@ -48,23 +51,33 @@ class ExperimentResults:
 class ABTestingManager(BaseService):
     """Manage A/B testing for vector search."""
 
-    def __init__(self, config: UnifiedConfig, qdrant_service: QdrantService):
+    def __init__(
+        self, config: UnifiedConfig, qdrant_service: QdrantService, client_manager=None
+    ):
         """Initialize A/B testing manager.
 
         Args:
             config: Unified configuration
             qdrant_service: Qdrant service instance
+            client_manager: Optional client manager for Redis access
         """
         super().__init__(config)
         self.qdrant = qdrant_service
+        self.client_manager = client_manager
         self.experiments: dict[str, tuple[ExperimentConfig, ExperimentResults]] = {}
+        self._state_file = self.config.data_dir / "ab_experiments.json"
+        self._lock = asyncio.Lock()
 
     async def initialize(self) -> None:
         """Initialize A/B testing service."""
+        # Load existing experiments from persistent storage
+        await self._load_experiments()
         self._initialized = True
 
     async def cleanup(self) -> None:
         """Cleanup A/B testing service."""
+        # Save current state before cleanup
+        await self._save_experiments()
         self._initialized = False
 
     async def create_experiment(
@@ -113,6 +126,9 @@ class ABTestingManager(BaseService):
 
         self.experiments[experiment_id] = (config, results)
 
+        # Persist to storage
+        await self._save_experiments()
+
         logger.info(f"Created experiment {experiment_id}")
         return experiment_id
 
@@ -160,6 +176,8 @@ class ABTestingManager(BaseService):
                     else "control"
                 )
                 results.assignments[user_id] = variant
+                # Persist assignment to storage
+                await self._save_experiments()
         else:
             # Random assignment
             variant = (
@@ -223,6 +241,10 @@ class ABTestingManager(BaseService):
             results.treatment[metric].append(value)
         else:
             logger.warning(f"Unknown variant {variant}")
+            return
+
+        # Persist metrics to storage
+        await self._save_experiments()
 
     def analyze_experiment(self, experiment_id: str) -> dict[str, Any]:
         """Analyze A/B test results.
@@ -383,6 +405,9 @@ class ABTestingManager(BaseService):
         config, results = self.experiments[experiment_id]
         config.end_time = time.time()
 
+        # Persist end time to storage
+        await self._save_experiments()
+
         # Perform final analysis
         analysis = self.analyze_experiment(experiment_id)
         analysis["duration_hours"] = (config.end_time - config.start_time) / 3600
@@ -414,3 +439,140 @@ class ABTestingManager(BaseService):
                 )
 
         return active
+
+    async def _load_experiments(self) -> None:
+        """Load experiments from persistent storage."""
+        try:
+            # First try Redis if available
+            if self.client_manager and await self._load_from_redis():
+                logger.info("Loaded experiments from Redis")
+                return
+
+            # Fall back to file storage
+            if await self._load_from_file():
+                logger.info("Loaded experiments from file")
+                return
+
+            logger.info("No existing experiments found")
+
+        except Exception as e:
+            logger.error(f"Failed to load experiments: {e}")
+            # Continue with empty experiments dict
+
+    async def _save_experiments(self) -> None:
+        """Save experiments to persistent storage."""
+        async with self._lock:
+            try:
+                # Try Redis first if available
+                if self.client_manager and await self._save_to_redis():
+                    logger.debug("Saved experiments to Redis")
+
+                # Always save to file as backup
+                await self._save_to_file()
+                logger.debug("Saved experiments to file")
+
+            except Exception as e:
+                logger.error(f"Failed to save experiments: {e}")
+
+    async def _load_from_redis(self) -> bool:
+        """Load experiments from Redis."""
+        try:
+            redis_client = await self.client_manager.get_redis_client()
+            data = await redis_client.get("ab_experiments")
+
+            if not data:
+                return False
+
+            experiments_data = json.loads(data)
+            self.experiments = self._deserialize_experiments(experiments_data)
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to load from Redis: {e}")
+            return False
+
+    async def _save_to_redis(self) -> bool:
+        """Save experiments to Redis."""
+        try:
+            redis_client = await self.client_manager.get_redis_client()
+            experiments_data = self._serialize_experiments()
+
+            # Save with TTL of 30 days
+            await redis_client.setex(
+                "ab_experiments", 30 * 24 * 3600, json.dumps(experiments_data)
+            )
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to save to Redis: {e}")
+            return False
+
+    async def _load_from_file(self) -> bool:
+        """Load experiments from file."""
+        try:
+            if not self._state_file.exists():
+                return False
+
+            with open(self._state_file) as f:
+                experiments_data = json.load(f)
+
+            self.experiments = self._deserialize_experiments(experiments_data)
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to load from file: {e}")
+            return False
+
+    async def _save_to_file(self) -> None:
+        """Save experiments to file."""
+        # Ensure parent directory exists
+        self._state_file.parent.mkdir(parents=True, exist_ok=True)
+
+        experiments_data = self._serialize_experiments()
+
+        # Atomic write using temporary file
+        temp_file = self._state_file.with_suffix(".tmp")
+        with open(temp_file, "w") as f:
+            json.dump(experiments_data, f, indent=2)
+
+        # Atomic move
+        temp_file.replace(self._state_file)
+
+    def _serialize_experiments(self) -> dict[str, Any]:
+        """Serialize experiments to JSON-compatible format."""
+        serialized = {}
+
+        for exp_id, (config, results) in self.experiments.items():
+            # Convert dataclasses to dicts
+            config_dict = asdict(config)
+
+            # Handle results separately since it has defaultdict
+            results_dict = {
+                "control": dict(results.control),
+                "treatment": dict(results.treatment),
+                "assignments": results.assignments,
+            }
+
+            serialized[exp_id] = {"config": config_dict, "results": results_dict}
+
+        return serialized
+
+    def _deserialize_experiments(
+        self, data: dict[str, Any]
+    ) -> dict[str, tuple[ExperimentConfig, ExperimentResults]]:
+        """Deserialize experiments from JSON format."""
+        experiments = {}
+
+        for exp_id, exp_data in data.items():
+            # Reconstruct config
+            config = ExperimentConfig(**exp_data["config"])
+
+            # Reconstruct results
+            results = ExperimentResults()
+            results.control = defaultdict(list, exp_data["results"]["control"])
+            results.treatment = defaultdict(list, exp_data["results"]["treatment"])
+            results.assignments = exp_data["results"]["assignments"]
+
+            experiments[exp_id] = (config, results)
+
+        return experiments

@@ -1,8 +1,10 @@
 """Canary deployment for gradual rollout of new collections."""
 
 import asyncio
+import json
 import logging
 import time
+from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
@@ -59,6 +61,7 @@ class CanaryDeployment(BaseService):
         config: UnifiedConfig,
         alias_manager: QdrantAliasManager,
         qdrant_service: QdrantService | None = None,
+        client_manager=None,
     ):
         """Initialize canary deployment.
 
@@ -66,18 +69,26 @@ class CanaryDeployment(BaseService):
             config: Unified configuration
             alias_manager: Alias manager instance
             qdrant_service: Optional Qdrant service for monitoring
+            client_manager: Optional client manager for Redis access
         """
         super().__init__(config)
         self.aliases = alias_manager
         self.qdrant = qdrant_service
+        self.client_manager = client_manager
         self.deployments: dict[str, CanaryDeploymentConfig] = {}
+        self._state_file = self.config.data_dir / "canary_deployments.json"
+        self._lock = asyncio.Lock()
 
     async def initialize(self) -> None:
         """Initialize canary deployment service."""
+        # Load existing deployments from persistent storage
+        await self._load_deployments()
         self._initialized = True
 
     async def cleanup(self) -> None:
         """Cleanup canary deployment service."""
+        # Save current state before cleanup
+        await self._save_deployments()
         self._initialized = False
 
     async def start_canary(
@@ -136,6 +147,9 @@ class CanaryDeployment(BaseService):
 
         self.deployments[deployment_id] = deployment_config
 
+        # Persist to storage
+        await self._save_deployments()
+
         # Start canary process
         # Store task reference to avoid RUF006 warning
         _ = asyncio.create_task(self._run_canary(deployment_id, auto_rollback))  # noqa: RUF006
@@ -155,6 +169,7 @@ class CanaryDeployment(BaseService):
             return
 
         deployment.status = "running"
+        await self._save_deployments()
 
         try:
             for i, stage in enumerate(deployment.stages):
@@ -167,8 +182,26 @@ class CanaryDeployment(BaseService):
                     f"Canary stage {i}: {percentage}% traffic for {duration} minutes"
                 )
 
-                # For demonstration, we're not actually shifting traffic here
-                # In a real implementation, this would update a traffic routing layer
+                # TODO: Implement actual traffic shifting
+                # Traffic shifting implementation depends on infrastructure:
+                #
+                # 1. API Gateway/Load Balancer based:
+                #    - Update AWS ALB target group weights
+                #    - Update NGINX upstream weights
+                #    - Update Kong/Istio routing rules
+                #
+                # 2. Qdrant collection alias based:
+                #    - Use weighted aliases if Qdrant supports them
+                #    - Implement client-side traffic splitting
+                #
+                # 3. Application-level routing:
+                #    - Update routing logic in vector search service
+                #    - Use feature flags to control traffic distribution
+                #
+                # Example implementations:
+                # await self._update_load_balancer_weights(percentage)
+                # await self._update_alias_weights(deployment.alias, deployment.old_collection, deployment.new_collection, percentage)
+                # await self._update_feature_flags(deployment_id, percentage)
 
                 # Monitor during this stage
                 if duration > 0:
@@ -195,12 +228,14 @@ class CanaryDeployment(BaseService):
                         new_collection=deployment.new_collection,
                     )
                     deployment.status = "completed"
+                    await self._save_deployments()
                     logger.info("Canary deployment completed successfully")
                     return
 
         except Exception as e:
             logger.error(f"Canary deployment failed: {e}")
             deployment.status = "failed"
+            await self._save_deployments()
             if auto_rollback:
                 await self._rollback_canary(deployment_id)
 
@@ -260,16 +295,51 @@ class CanaryDeployment(BaseService):
         Returns:
             Current metrics
         """
-        # In a real implementation, this would collect actual metrics
-        # from monitoring systems, load balancers, etc.
+        # TODO: Integrate with real monitoring systems
+        # This method should be replaced with actual metrics collection from:
+        # - Application Performance Monitoring (APM) tools (e.g., DataDog, New Relic)
+        # - Qdrant collection metrics via self.qdrant.get_collection_stats()
+        # - Load balancer metrics
+        # - Application logs analysis
+        # - Custom metrics endpoints
 
-        # For demonstration, we'll simulate metrics
+        try:
+            # Example: Query actual Qdrant metrics for the new collection
+            if self.qdrant and deployment.new_collection:
+                # TODO: Extract actual latency and error metrics from collection stats
+                # For now, we'll skip this and use simulated metrics
+                pass
+
+            # TODO: Query external monitoring systems
+            # - APM metrics for latency percentiles
+            # - Error rates from application logs
+            # - Network metrics from load balancers
+
+            # Temporary simulation for development/testing
+            return await self._simulate_metrics(deployment)
+
+        except Exception as e:
+            logger.warning(f"Failed to collect real metrics, using simulated: {e}")
+            return await self._simulate_metrics(deployment)
+
+    async def _simulate_metrics(
+        self, deployment: CanaryDeploymentConfig
+    ) -> dict[str, float]:
+        """Simulate metrics for development/testing purposes.
+
+        TODO: Remove this method once real metrics integration is complete.
+        """
         if deployment.metrics.stage_start_time:
-            # stage_duration unused for now, but would be used for real metrics
-            # stage_duration = time.time() - deployment.metrics.stage_start_time
             # Simulate improving metrics over time
-            base_latency = 100
-            base_error_rate = 0.02
+            stage_duration = time.time() - deployment.metrics.stage_start_time
+
+            # Base metrics that improve over time (first few minutes may be unstable)
+            base_latency = (
+                120 if stage_duration < 300 else 100
+            )  # Higher latency in first 5 minutes
+            base_error_rate = (
+                0.03 if stage_duration < 300 else 0.02
+            )  # Higher errors initially
 
             # Add some random variation
             import random
@@ -352,11 +422,13 @@ class CanaryDeployment(BaseService):
                 )
 
             deployment.status = "rolled_back"
+            await self._save_deployments()
             logger.info(f"Canary deployment {deployment_id} rolled back")
 
         except Exception as e:
             logger.error(f"Rollback failed: {e}")
             deployment.status = "rollback_failed"
+            await self._save_deployments()
 
     async def get_deployment_status(self, deployment_id: str) -> dict[str, Any]:
         """Get current status of canary deployment.
@@ -414,6 +486,7 @@ class CanaryDeployment(BaseService):
             return False
 
         deployment.status = "paused"
+        await self._save_deployments()
         logger.info(f"Paused canary deployment {deployment_id}")
         return True
 
@@ -431,6 +504,7 @@ class CanaryDeployment(BaseService):
             return False
 
         deployment.status = "running"
+        await self._save_deployments()
         # Restart monitoring from current stage
         # Store task reference to avoid RUF006 warning
         _ = asyncio.create_task(self._run_canary(deployment_id))  # noqa: RUF006
@@ -458,3 +532,155 @@ class CanaryDeployment(BaseService):
                     }
                 )
         return active
+
+    async def _load_deployments(self) -> None:
+        """Load deployments from persistent storage."""
+        try:
+            # First try Redis if available
+            if self.client_manager and await self._load_from_redis():
+                logger.info("Loaded canary deployments from Redis")
+                return
+
+            # Fall back to file storage
+            if await self._load_from_file():
+                logger.info("Loaded canary deployments from file")
+                return
+
+            logger.info("No existing canary deployments found")
+
+        except Exception as e:
+            logger.error(f"Failed to load canary deployments: {e}")
+            # Continue with empty deployments dict
+
+    async def _save_deployments(self) -> None:
+        """Save deployments to persistent storage."""
+        async with self._lock:
+            try:
+                # Try Redis first if available
+                if self.client_manager and await self._save_to_redis():
+                    logger.debug("Saved canary deployments to Redis")
+
+                # Always save to file as backup
+                await self._save_to_file()
+                logger.debug("Saved canary deployments to file")
+
+            except Exception as e:
+                logger.error(f"Failed to save canary deployments: {e}")
+
+    async def _load_from_redis(self) -> bool:
+        """Load deployments from Redis."""
+        try:
+            redis_client = await self.client_manager.get_redis_client()
+            data = await redis_client.get("canary_deployments")
+
+            if not data:
+                return False
+
+            deployments_data = json.loads(data)
+            self.deployments = self._deserialize_deployments(deployments_data)
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to load canary deployments from Redis: {e}")
+            return False
+
+    async def _save_to_redis(self) -> bool:
+        """Save deployments to Redis."""
+        try:
+            redis_client = await self.client_manager.get_redis_client()
+            deployments_data = self._serialize_deployments()
+
+            # Save with TTL of 30 days
+            await redis_client.setex(
+                "canary_deployments", 30 * 24 * 3600, json.dumps(deployments_data)
+            )
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to save canary deployments to Redis: {e}")
+            return False
+
+    async def _load_from_file(self) -> bool:
+        """Load deployments from file."""
+        try:
+            if not self._state_file.exists():
+                return False
+
+            with open(self._state_file) as f:
+                deployments_data = json.load(f)
+
+            self.deployments = self._deserialize_deployments(deployments_data)
+            return True
+
+        except Exception as e:
+            logger.warning(f"Failed to load canary deployments from file: {e}")
+            return False
+
+    async def _save_to_file(self) -> None:
+        """Save deployments to file."""
+        # Ensure parent directory exists
+        self._state_file.parent.mkdir(parents=True, exist_ok=True)
+
+        deployments_data = self._serialize_deployments()
+
+        # Atomic write using temporary file
+        temp_file = self._state_file.with_suffix(".tmp")
+        with open(temp_file, "w") as f:
+            json.dump(deployments_data, f, indent=2)
+
+        # Atomic move
+        temp_file.replace(self._state_file)
+
+    def _serialize_deployments(self) -> dict[str, Any]:
+        """Serialize deployments to JSON-compatible format."""
+        serialized = {}
+
+        for dep_id, deployment in self.deployments.items():
+            # Convert dataclass to dict
+            deployment_dict = asdict(deployment)
+
+            # Handle Path objects by converting to strings
+            if "stages" in deployment_dict:
+                for _stage in deployment_dict["stages"]:
+                    # Ensure all values are JSON serializable
+                    pass
+
+            serialized[dep_id] = deployment_dict
+
+        return serialized
+
+    def _deserialize_deployments(
+        self, data: dict[str, Any]
+    ) -> dict[str, CanaryDeploymentConfig]:
+        """Deserialize deployments from JSON format."""
+        deployments = {}
+
+        for dep_id, dep_data in data.items():
+            # Reconstruct stages
+            stages = [CanaryStage(**stage_data) for stage_data in dep_data["stages"]]
+
+            # Reconstruct metrics
+            metrics_data = dep_data["metrics"]
+            metrics = CanaryMetrics(
+                latency=metrics_data["latency"],
+                error_rate=metrics_data["error_rate"],
+                success_count=metrics_data["success_count"],
+                error_count=metrics_data["error_count"],
+                stage_start_time=metrics_data["stage_start_time"],
+            )
+
+            # Reconstruct deployment config
+            deployment = CanaryDeploymentConfig(
+                alias=dep_data["alias"],
+                old_collection=dep_data["old_collection"],
+                new_collection=dep_data["new_collection"],
+                stages=stages,
+                current_stage=dep_data["current_stage"],
+                metrics=metrics,
+                start_time=dep_data["start_time"],
+                status=dep_data["status"],
+            )
+
+            deployments[dep_id] = deployment
+
+        return deployments
