@@ -124,7 +124,7 @@ class TestQdrantService:
         collections_mock.cleanup.assert_called_once()
 
     async def test_create_collection_delegation(self, initialized_service):
-        """Test create_collection delegates to collections module."""
+        """Test create_collection delegates to collections module and creates indexes."""
         initialized_service._collections.create_collection.return_value = True
 
         result = await initialized_service.create_collection(
@@ -144,6 +144,29 @@ class TestQdrantService:
             sparse_vector_name="sparse",
             enable_quantization=True,
             collection_type="general",
+        )
+        # Should also create payload indexes
+        initialized_service._indexing.create_payload_indexes.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_create_collection_index_creation_failure(self, initialized_service):
+        """Test create_collection handles index creation failure gracefully."""
+        initialized_service._collections.create_collection.return_value = True
+        initialized_service._indexing.create_payload_indexes.side_effect = Exception(
+            "Index creation failed"
+        )
+
+        # Should still succeed even if index creation fails
+        result = await initialized_service.create_collection(
+            collection_name="test_collection",
+            vector_size=1536,
+        )
+
+        assert result is True
+        initialized_service._collections.create_collection.assert_called_once()
+        initialized_service._indexing.create_payload_indexes.assert_called_once_with(
+            "test_collection"
         )
 
     async def test_delete_collection_delegation(self, initialized_service):

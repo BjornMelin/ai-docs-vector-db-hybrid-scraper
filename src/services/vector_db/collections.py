@@ -1,7 +1,6 @@
 """Qdrant collection management service."""
 
 import logging
-import time
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
@@ -138,17 +137,7 @@ class QdrantCollections(BaseService):
 
             logger.info(f"Created collection: {collection_name}")
 
-            # Automatically create payload indexes for optimal performance
-            try:
-                await self.create_payload_indexes(collection_name)
-                logger.info(
-                    f"Payload indexes created for collection: {collection_name}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to create payload indexes for {collection_name}: {e}. "
-                    "Collection created successfully but filtering may be slower."
-                )
+            # Note: Payload indexes will be created by QdrantService after collection creation
 
             return True
 
@@ -293,283 +282,6 @@ class QdrantCollections(BaseService):
         except Exception as e:
             raise QdrantServiceError(f"Failed to optimize collection: {e}") from e
 
-    async def create_payload_indexes(self, collection_name: str) -> None:
-        """Create payload indexes on key metadata fields for 10-100x faster filtering.
-
-        Creates indexes on high-value fields for dramatic search performance improvements:
-        - Keyword indexes for exact matching (site_name, embedding_model, etc.)
-        - Text indexes for partial matching (title, content_preview)
-        - Integer indexes for range queries (scraped_at, word_count, etc.)
-
-        Args:
-            collection_name: Collection to index
-
-        Raises:
-            QdrantServiceError: If index creation fails
-        """
-        self._validate_initialized()
-
-        try:
-            logger.info(f"Creating payload indexes for collection: {collection_name}")
-
-            # Keyword indexes for exact matching (categorical data)
-            keyword_fields = [
-                # Core indexable fields per documentation
-                "doc_type",  # "api", "guide", "tutorial", "reference"
-                "language",  # "python", "typescript", "rust"
-                "framework",  # "fastapi", "nextjs", "react"
-                "version",  # "3.0", "14.2", "latest"
-                "crawl_source",  # "crawl4ai", "browser_use", "playwright"
-                # Additional system fields
-                "site_name",  # Documentation site name
-                "embedding_model",  # Embedding model used
-                "embedding_provider",  # Provider (openai, fastembed)
-                "search_strategy",  # Strategy (hybrid, dense, sparse)
-                "scraper_version",  # Scraper version
-            ]
-
-            for field in keyword_fields:
-                await self._client.create_payload_index(
-                    collection_name=collection_name,
-                    field_name=field,
-                    field_schema=models.PayloadSchemaType.KEYWORD,
-                    wait=True,
-                )
-                logger.debug(f"Created keyword index for field: {field}")
-
-            # Text indexes for partial matching (full-text search)
-            text_fields = [
-                "title",  # Document titles
-                "content_preview",  # Content previews
-            ]
-
-            for field in text_fields:
-                await self._client.create_payload_index(
-                    collection_name=collection_name,
-                    field_name=field,
-                    field_schema=models.PayloadSchemaType.TEXT,
-                    wait=True,
-                )
-                logger.debug(f"Created text index for field: {field}")
-
-            # Integer indexes for range queries
-            integer_fields = [
-                # Core timestamp fields per documentation
-                "created_at",  # Document creation timestamp
-                "last_updated",  # Last update timestamp
-                "scraped_at",  # Scraping timestamp (legacy compatibility)
-                # Content metrics
-                "word_count",  # Content length filtering
-                "char_count",  # Character count filtering
-                "quality_score",  # Content quality score
-                # Document structure
-                "chunk_index",  # Chunk position filtering
-                "total_chunks",  # Document size filtering
-                "depth",  # Crawl depth filtering
-                "links_count",  # Links count filtering
-            ]
-
-            for field in integer_fields:
-                await self._client.create_payload_index(
-                    collection_name=collection_name,
-                    field_name=field,
-                    field_schema=models.PayloadSchemaType.INTEGER,
-                    wait=True,
-                )
-                logger.debug(f"Created integer index for field: {field}")
-
-            logger.info(
-                f"Successfully created {len(keyword_fields) + len(text_fields) + len(integer_fields)} "
-                f"payload indexes for collection: {collection_name}"
-            )
-
-        except Exception as e:
-            logger.error(
-                f"Failed to create payload indexes for collection {collection_name}: {e}",
-                exc_info=True,
-            )
-            raise QdrantServiceError(f"Failed to create payload indexes: {e}") from e
-
-    async def list_payload_indexes(self, collection_name: str) -> list[str]:
-        """List all payload indexes in a collection.
-
-        Args:
-            collection_name: Collection to check
-
-        Returns:
-            List of indexed field names
-
-        Raises:
-            QdrantServiceError: If listing fails
-        """
-        self._validate_initialized()
-
-        try:
-            collection_info = await self._client.get_collection(collection_name)
-
-            # Extract indexed fields from payload schema
-            indexed_fields = []
-            if (
-                hasattr(collection_info, "payload_schema")
-                and collection_info.payload_schema
-            ):
-                for field_name, field_info in collection_info.payload_schema.items():
-                    # Check if field has index configuration
-                    if hasattr(field_info, "index") and field_info.index:
-                        indexed_fields.append(field_name)
-
-            logger.info(
-                f"Found {len(indexed_fields)} indexed fields in {collection_name}"
-            )
-            return indexed_fields
-
-        except Exception as e:
-            logger.error(
-                f"Failed to list payload indexes for collection {collection_name}: {e}",
-                exc_info=True,
-            )
-            raise QdrantServiceError(f"Failed to list payload indexes: {e}") from e
-
-    async def drop_payload_index(self, collection_name: str, field_name: str) -> None:
-        """Drop a specific payload index.
-
-        Args:
-            collection_name: Collection containing the index
-            field_name: Field to drop index for
-
-        Raises:
-            QdrantServiceError: If drop fails
-        """
-        self._validate_initialized()
-
-        try:
-            await self._client.delete_payload_index(
-                collection_name=collection_name, field_name=field_name, wait=True
-            )
-            logger.info(f"Dropped payload index for field: {field_name}")
-
-        except Exception as e:
-            logger.error(
-                f"Failed to drop payload index for field {field_name}: {e}",
-                exc_info=True,
-            )
-            raise QdrantServiceError(f"Failed to drop payload index: {e}") from e
-
-    async def validate_index_health(self, collection_name: str) -> dict[str, Any]:
-        """Validate the health and status of payload indexes and HNSW configuration for a collection.
-
-        Args:
-            collection_name: Collection to validate
-
-        Returns:
-            Health status report with validation results including HNSW optimization
-
-        Raises:
-            QdrantServiceError: If validation fails
-        """
-        self._validate_initialized()
-
-        try:
-            logger.info(f"Validating index health for collection: {collection_name}")
-
-            # Get collection information
-            collection_info = await self._client.get_collection(collection_name)
-            indexed_fields = await self.list_payload_indexes(collection_name)
-
-            # Define expected core indexes
-            expected_keyword_fields = [
-                "doc_type",
-                "language",
-                "framework",
-                "version",
-                "crawl_source",
-                "site_name",
-                "embedding_model",
-                "embedding_provider",
-            ]
-            expected_text_fields = ["title", "content_preview"]
-            expected_integer_fields = [
-                "created_at",
-                "last_updated",
-                "word_count",
-                "char_count",
-            ]
-
-            all_expected = (
-                expected_keyword_fields + expected_text_fields + expected_integer_fields
-            )
-
-            # Check payload index status
-            missing_indexes = [
-                field for field in all_expected if field not in indexed_fields
-            ]
-            extra_indexes = [
-                field for field in indexed_fields if field not in all_expected
-            ]
-
-            # Calculate payload index health score
-            expected_count = len(all_expected)
-            present_count = len([f for f in all_expected if f in indexed_fields])
-            payload_health_score = (
-                (present_count / expected_count) * 100 if expected_count > 0 else 0
-            )
-
-            # Validate HNSW configuration
-            hnsw_health = await self._validate_hnsw_configuration(
-                collection_name, collection_info
-            )
-
-            # Calculate overall health score (weighted: 60% payload indexes, 40% HNSW)
-            overall_health_score = (payload_health_score * 0.6) + (
-                hnsw_health["health_score"] * 0.4
-            )
-
-            # Determine overall health status
-            if overall_health_score >= 95:
-                status = "healthy"
-            elif overall_health_score >= 80:
-                status = "warning"
-            else:
-                status = "critical"
-
-            health_report = {
-                "collection_name": collection_name,
-                "status": status,
-                "health_score": round(overall_health_score, 2),
-                "total_points": collection_info.points_count or 0,
-                "index_summary": {
-                    "expected_indexes": expected_count,
-                    "present_indexes": present_count,
-                    "missing_indexes": len(missing_indexes),
-                    "extra_indexes": len(extra_indexes),
-                },
-                "payload_indexes": {
-                    "health_score": round(payload_health_score, 2),
-                    "missing_indexes": missing_indexes,
-                    "extra_indexes": extra_indexes,
-                },
-                "hnsw_configuration": hnsw_health,
-                "recommendations": self._generate_comprehensive_recommendations(
-                    missing_indexes, extra_indexes, status, hnsw_health
-                ),
-                "validation_timestamp": int(time.time()),
-            }
-
-            logger.info(
-                f"Index health validation completed for {collection_name}: "
-                f"Status={status}, Score={overall_health_score:.1f}% "
-                f"(Payload: {payload_health_score:.1f}%, HNSW: {hnsw_health['health_score']:.1f}%)"
-            )
-
-            return health_report
-
-        except Exception as e:
-            logger.error(
-                f"Failed to validate index health for collection {collection_name}: {e}",
-                exc_info=True,
-            )
-            raise QdrantServiceError(f"Failed to validate index health: {e}") from e
-
     def _get_hnsw_config_for_collection_type(self, collection_type: str):
         """Get HNSW configuration for a specific collection type.
 
@@ -591,6 +303,29 @@ class QdrantCollections(BaseService):
         }
 
         return config_mapping.get(collection_type, collection_configs.general)
+
+    def get_hnsw_configuration_info(self, collection_type: str) -> dict[str, Any]:
+        """Get HNSW configuration information for a collection type.
+
+        Args:
+            collection_type: Type of collection
+
+        Returns:
+            HNSW configuration information
+        """
+        hnsw_config = self._get_hnsw_config_for_collection_type(collection_type)
+
+        return {
+            "collection_type": collection_type,
+            "hnsw_parameters": {
+                "m": hnsw_config.m,
+                "ef_construct": hnsw_config.ef_construct,
+                "full_scan_threshold": hnsw_config.full_scan_threshold,
+                "max_indexing_threads": hnsw_config.max_indexing_threads,
+                "on_disk": hnsw_config.on_disk,
+            },
+            "description": f"Optimized HNSW configuration for {collection_type} collections",
+        }
 
     async def _validate_hnsw_configuration(
         self, collection_name: str, collection_info: Any
@@ -743,55 +478,3 @@ class QdrantCollections(BaseService):
             score -= 10  # 10 point penalty for suboptimal disk usage
 
         return max(0.0, score)
-
-    def _generate_comprehensive_recommendations(
-        self,
-        missing_indexes: list[str],
-        extra_indexes: list[str],
-        status: str,
-        hnsw_health: dict[str, Any],
-    ) -> list[str]:
-        """Generate comprehensive recommendations including both payload indexes and HNSW.
-
-        Args:
-            missing_indexes: Missing payload indexes
-            extra_indexes: Extra payload indexes
-            status: Overall health status
-            hnsw_health: HNSW health assessment
-
-        Returns:
-            Combined recommendations list
-        """
-        recommendations = []
-
-        # Add payload index recommendations
-        if missing_indexes:
-            recommendations.append(
-                f"Create missing indexes for optimal performance: {', '.join(missing_indexes)}"
-            )
-
-        if extra_indexes:
-            recommendations.append(
-                f"Consider removing unused indexes to reduce overhead: {', '.join(extra_indexes)}"
-            )
-
-        # Add HNSW recommendations
-        if hnsw_health.get("recommendations"):
-            recommendations.extend(hnsw_health["recommendations"])
-
-        # Add status-based recommendations
-        if status == "critical":
-            recommendations.append(
-                "Critical: Run optimization scripts to improve both index and HNSW configuration"
-            )
-        elif status == "warning":
-            recommendations.append(
-                "Warning: Some optimizations available for better performance"
-            )
-
-        if not recommendations:
-            recommendations.append(
-                "All indexes and HNSW configuration are optimally configured"
-            )
-
-        return recommendations
