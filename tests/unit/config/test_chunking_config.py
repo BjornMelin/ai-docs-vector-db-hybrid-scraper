@@ -16,13 +16,13 @@ class TestChunkingConfig:
 
         assert config.strategy == ChunkingStrategy.ENHANCED
         assert config.chunk_size == 1600
-        assert config.chunk_overlap == 200
+        assert config.chunk_overlap == 320
 
         # Code-aware chunking
         assert config.enable_ast_chunking is True
         assert config.preserve_function_boundaries is True
         assert config.preserve_code_blocks is True
-        assert config.supported_languages == ["python", "javascript", "typescript"]
+        assert config.supported_languages == ["python", "javascript", "typescript", "markdown"]
 
         # Advanced options
         assert config.min_chunk_size == 100
@@ -41,6 +41,7 @@ class TestChunkingConfig:
             supported_languages=["python", "go", "rust"],
             min_chunk_size=200,
             max_chunk_size=4000,
+            max_function_chunk_size=4500,  # Must be >= max_chunk_size
             detect_language=False,
         )
 
@@ -79,7 +80,7 @@ class TestChunkingConfig:
     def test_min_max_chunk_size_constraints(self):
         """Test min and max chunk size constraints."""
         # Valid values
-        config = ChunkingConfig(min_chunk_size=50, max_chunk_size=5000)
+        config = ChunkingConfig(min_chunk_size=50, max_chunk_size=5000, max_function_chunk_size=5500)
         assert config.min_chunk_size == 50
         assert config.max_chunk_size == 5000
 
