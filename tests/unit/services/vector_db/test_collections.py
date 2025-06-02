@@ -1,6 +1,5 @@
 """Tests for QdrantCollections service."""
 
-import logging
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -82,21 +81,17 @@ class TestQdrantCollections:
         mock_collections.collections = []
         mock_client.get_collections.return_value = mock_collections
 
-        with patch.object(
-            collections_service, "create_payload_indexes"
-        ) as mock_create_indexes:
-            result = await collections_service.create_collection(
-                collection_name="test_collection",
-                vector_size=1536,
-                distance="Cosine",
-                sparse_vector_name="sparse",
-                enable_quantization=True,
-                collection_type="general",
-            )
+        result = await collections_service.create_collection(
+            collection_name="test_collection",
+            vector_size=1536,
+            distance="Cosine",
+            sparse_vector_name="sparse",
+            enable_quantization=True,
+            collection_type="general",
+        )
 
         assert result is True
         mock_client.create_collection.assert_called_once()
-        mock_create_indexes.assert_called_once_with("test_collection")
 
     async def test_create_collection_already_exists(
         self, collections_service, mock_client
@@ -123,12 +118,11 @@ class TestQdrantCollections:
         mock_collections.collections = []
         mock_client.get_collections.return_value = mock_collections
 
-        with patch.object(collections_service, "create_payload_indexes"):
-            await collections_service.create_collection(
-                collection_name="test_collection",
-                vector_size=1536,
-                sparse_vector_name="sparse_field",
-            )
+        await collections_service.create_collection(
+            collection_name="test_collection",
+            vector_size=1536,
+            sparse_vector_name="sparse_field",
+        )
 
         # Verify sparse vectors config was passed
         call_args = mock_client.create_collection.call_args
@@ -142,12 +136,11 @@ class TestQdrantCollections:
         mock_collections.collections = []
         mock_client.get_collections.return_value = mock_collections
 
-        with patch.object(collections_service, "create_payload_indexes"):
-            await collections_service.create_collection(
-                collection_name="test_collection",
-                vector_size=1536,
-                enable_quantization=False,
-            )
+        await collections_service.create_collection(
+            collection_name="test_collection",
+            vector_size=1536,
+            enable_quantization=False,
+        )
 
         # Verify quantization config is None
         call_args = mock_client.create_collection.call_args
@@ -212,18 +205,12 @@ class TestQdrantCollections:
         mock_collections.collections = []
         mock_client.get_collections.return_value = mock_collections
 
-        with patch.object(
-            collections_service,
-            "create_payload_indexes",
-            side_effect=Exception("Index failed"),
-        ):
-            with caplog.at_level(logging.WARNING):
-                result = await collections_service.create_collection(
-                    collection_name="test_collection", vector_size=1536
-                )
+        # Note: Payload index creation is now handled by QdrantService
+        result = await collections_service.create_collection(
+            collection_name="test_collection", vector_size=1536
+        )
 
         assert result is True  # Collection creation should succeed
-        assert "Failed to create payload indexes" in caplog.text
 
     async def test_delete_collection_success(self, collections_service, mock_client):
         """Test successful collection deletion."""
@@ -395,179 +382,15 @@ class TestQdrantCollections:
                     "test_collection"
                 )
 
-    async def test_create_payload_indexes_success(
-        self, collections_service, mock_client
-    ):
-        """Test successful payload index creation."""
-        await collections_service.create_payload_indexes("test_collection")
+    def test_get_hnsw_configuration_info(self, collections_service):
+        """Test HNSW configuration info retrieval."""
+        config_info = collections_service.get_hnsw_configuration_info("api_reference")
 
-        # Should create multiple indexes
-        assert mock_client.create_payload_index.call_count > 0
-
-    async def test_create_payload_indexes_error(self, collections_service, mock_client):
-        """Test payload index creation error."""
-        mock_client.create_payload_index.side_effect = Exception("Index failed")
-
-        with pytest.raises(
-            QdrantServiceError, match="Failed to create payload indexes"
-        ):
-            await collections_service.create_payload_indexes("test_collection")
-
-    async def test_list_payload_indexes_success(self, collections_service, mock_client):
-        """Test successful payload index listing."""
-        mock_collection_info = MagicMock()
-        mock_field_info = MagicMock()
-        mock_field_info.index = True
-        mock_collection_info.payload_schema = {
-            "field1": mock_field_info,
-            "field2": MagicMock(index=False),
-        }
-        mock_client.get_collection.return_value = mock_collection_info
-
-        result = await collections_service.list_payload_indexes("test_collection")
-
-        assert "field1" in result
-        assert "field2" not in result
-
-    async def test_list_payload_indexes_no_schema(
-        self, collections_service, mock_client
-    ):
-        """Test payload index listing with no schema."""
-        mock_collection_info = MagicMock()
-        mock_collection_info.payload_schema = None
-        mock_client.get_collection.return_value = mock_collection_info
-
-        result = await collections_service.list_payload_indexes("test_collection")
-
-        assert result == []
-
-    async def test_list_payload_indexes_error(self, collections_service, mock_client):
-        """Test payload index listing error."""
-        mock_client.get_collection.side_effect = Exception("List failed")
-
-        with pytest.raises(QdrantServiceError, match="Failed to list payload indexes"):
-            await collections_service.list_payload_indexes("test_collection")
-
-    async def test_drop_payload_index_success(self, collections_service, mock_client):
-        """Test successful payload index drop."""
-        await collections_service.drop_payload_index("test_collection", "test_field")
-
-        mock_client.delete_payload_index.assert_called_once_with(
-            collection_name="test_collection", field_name="test_field", wait=True
-        )
-
-    async def test_drop_payload_index_error(self, collections_service, mock_client):
-        """Test payload index drop error."""
-        mock_client.delete_payload_index.side_effect = Exception("Drop failed")
-
-        with pytest.raises(QdrantServiceError, match="Failed to drop payload index"):
-            await collections_service.drop_payload_index(
-                "test_collection", "test_field"
-            )
-
-    async def test_validate_index_health_healthy(
-        self, collections_service, mock_client
-    ):
-        """Test index health validation with healthy status."""
-        mock_collection_info = MagicMock()
-        mock_collection_info.points_count = 1000
-        mock_client.get_collection.return_value = mock_collection_info
-
-        # Mock all expected indexes are present
-        expected_indexes = [
-            "doc_type",
-            "language",
-            "framework",
-            "version",
-            "crawl_source",
-            "site_name",
-            "embedding_model",
-            "embedding_provider",
-            "title",
-            "content_preview",
-            "created_at",
-            "last_updated",
-            "word_count",
-            "char_count",
-        ]
-
-        with (
-            patch.object(
-                collections_service,
-                "list_payload_indexes",
-                return_value=expected_indexes,
-            ),
-            patch.object(
-                collections_service,
-                "_validate_hnsw_configuration",
-                return_value={"health_score": 95.0, "recommendations": []},
-            ),
-        ):
-            result = await collections_service.validate_index_health("test_collection")
-
-        assert result["status"] == "healthy"
-        assert result["health_score"] >= 95
-
-    async def test_validate_index_health_missing_indexes(
-        self, collections_service, mock_client
-    ):
-        """Test index health validation with missing indexes."""
-        mock_collection_info = MagicMock()
-        mock_collection_info.points_count = 1000
-        mock_client.get_collection.return_value = mock_collection_info
-
-        # Mock missing some indexes
-        partial_indexes = ["doc_type", "language"]
-
-        with patch.object(
-            collections_service, "list_payload_indexes", return_value=partial_indexes
-        ):
-            result = await collections_service.validate_index_health("test_collection")
-
-        assert result["status"] in ["warning", "critical"]
-        assert len(result["payload_indexes"]["missing_indexes"]) > 0
-
-    async def test_validate_index_health_extra_indexes(
-        self, collections_service, mock_client
-    ):
-        """Test index health validation with extra indexes."""
-        mock_collection_info = MagicMock()
-        mock_collection_info.points_count = 1000
-        mock_client.get_collection.return_value = mock_collection_info
-
-        # Mock having extra indexes
-        indexes_with_extra = [
-            "doc_type",
-            "language",
-            "framework",
-            "version",
-            "crawl_source",
-            "site_name",
-            "embedding_model",
-            "embedding_provider",
-            "title",
-            "content_preview",
-            "created_at",
-            "last_updated",
-            "word_count",
-            "char_count",
-            "extra_field1",
-            "extra_field2",
-        ]
-
-        with patch.object(
-            collections_service, "list_payload_indexes", return_value=indexes_with_extra
-        ):
-            result = await collections_service.validate_index_health("test_collection")
-
-        assert len(result["payload_indexes"]["extra_indexes"]) == 2
-
-    async def test_validate_index_health_error(self, collections_service, mock_client):
-        """Test index health validation error."""
-        mock_client.get_collection.side_effect = Exception("Health check failed")
-
-        with pytest.raises(QdrantServiceError, match="Failed to validate index health"):
-            await collections_service.validate_index_health("test_collection")
+        assert config_info["collection_type"] == "api_reference"
+        assert "hnsw_parameters" in config_info
+        assert "m" in config_info["hnsw_parameters"]
+        assert "ef_construct" in config_info["hnsw_parameters"]
+        assert "description" in config_info
 
     async def test_get_hnsw_config_for_collection_type(self, collections_service):
         """Test HNSW config retrieval for different collection types."""
@@ -672,50 +495,6 @@ class TestQdrantCollections:
             current_config, optimal_config
         )
         assert score < 100.0
-
-    async def test_generate_comprehensive_recommendations_healthy(
-        self, collections_service
-    ):
-        """Test recommendation generation for healthy state."""
-        hnsw_health = {"recommendations": []}
-        recommendations = collections_service._generate_comprehensive_recommendations(
-            [], [], "healthy", hnsw_health
-        )
-
-        assert any("optimally configured" in rec for rec in recommendations)
-
-    async def test_generate_comprehensive_recommendations_missing(
-        self, collections_service
-    ):
-        """Test recommendation generation with missing indexes."""
-        hnsw_health = {"recommendations": []}
-        recommendations = collections_service._generate_comprehensive_recommendations(
-            ["missing_field"], [], "warning", hnsw_health
-        )
-
-        assert any("Create missing indexes" in rec for rec in recommendations)
-
-    async def test_generate_comprehensive_recommendations_extra(
-        self, collections_service
-    ):
-        """Test recommendation generation with extra indexes."""
-        hnsw_health = {"recommendations": []}
-        recommendations = collections_service._generate_comprehensive_recommendations(
-            [], ["extra_field"], "warning", hnsw_health
-        )
-
-        assert any("removing unused indexes" in rec for rec in recommendations)
-
-    async def test_generate_comprehensive_recommendations_critical(
-        self, collections_service
-    ):
-        """Test recommendation generation for critical state."""
-        hnsw_health = {"recommendations": []}
-        recommendations = collections_service._generate_comprehensive_recommendations(
-            ["missing"], ["extra"], "critical", hnsw_health
-        )
-
-        assert any("Critical:" in rec for rec in recommendations)
 
     async def test_inheritance_from_base_service(self, collections_service):
         """Test that QdrantCollections inherits from BaseService."""

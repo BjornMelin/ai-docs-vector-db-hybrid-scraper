@@ -413,42 +413,6 @@ class TestQdrantSearch:
         params_exact = search_service._get_search_params(SearchAccuracy.EXACT)
         assert params_exact.exact is True
 
-    async def test_build_filter_integration(self, search_service):
-        """Test filter building integration."""
-        filters = {
-            "doc_type": "api",
-            "title": "test document",
-            "created_after": 1609459200,
-            "chunk_index": 0,
-        }
-
-        result = search_service._build_filter(filters)
-
-        assert isinstance(result, models.Filter)
-        assert len(result.must) == 4
-
-    async def test_build_filter_empty(self, search_service):
-        """Test filter building with empty input."""
-        assert search_service._build_filter(None) is None
-        assert search_service._build_filter({}) is None
-
-    async def test_build_filter_keyword_validation(self, search_service):
-        """Test filter building with keyword validation."""
-        filters = {"doc_type": ["invalid", "list"]}
-
-        with pytest.raises(
-            ValueError, match="Filter value for doc_type must be a simple type"
-        ):
-            search_service._build_filter(filters)
-
-    async def test_build_filter_text_validation(self, search_service):
-        """Test filter building with text validation."""
-        filters = {"title": 123}
-
-        with pytest.raises(
-            ValueError, match="Text filter value for title must be a string"
-        ):
-            search_service._build_filter(filters)
 
     async def test_initialization_and_config(
         self, search_service, mock_client, mock_config

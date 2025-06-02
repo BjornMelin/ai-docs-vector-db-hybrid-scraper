@@ -100,7 +100,9 @@ class QdrantService(BaseService):
     ) -> bool:
         """Create vector collection with optional quantization and sparse vectors."""
         self._validate_initialized()
-        return await self._collections.create_collection(
+
+        # Create the collection first
+        result = await self._collections.create_collection(
             collection_name=collection_name,
             vector_size=vector_size,
             distance=distance,
@@ -108,6 +110,21 @@ class QdrantService(BaseService):
             enable_quantization=enable_quantization,
             collection_type=collection_type,
         )
+
+        # Create payload indexes for optimal performance
+        if result:
+            try:
+                await self._indexing.create_payload_indexes(collection_name)
+                logger.info(
+                    f"Payload indexes created for collection: {collection_name}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to create payload indexes for {collection_name}: {e}. "
+                    "Collection created successfully but filtering may be slower."
+                )
+
+        return result
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection."""
