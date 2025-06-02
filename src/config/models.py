@@ -15,6 +15,7 @@ from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+
 # Import validators conditionally to avoid circular imports
 try:
     from src.models.validators import validate_api_key_common
@@ -45,12 +46,12 @@ except ImportError:
         if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
             raise ValueError(f"{service_name} API key contains invalid characters")
         return value
-    
+
     def validate_url_format(value):
         if not value.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
         return value.rstrip("/")
-    
+
     def validate_chunk_sizes(chunk_size, chunk_overlap, min_chunk_size, max_chunk_size):
         if chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be less than chunk_size")
@@ -58,7 +59,7 @@ except ImportError:
             raise ValueError("min_chunk_size must be less than max_chunk_size")
         if chunk_size > max_chunk_size:
             raise ValueError("chunk_size cannot exceed max_chunk_size")
-    
+
     def validate_rate_limit_config(value):
         for provider, limits in value.items():
             if not isinstance(limits, dict):
@@ -71,12 +72,12 @@ except ImportError:
             if limits["time_window"] <= 0:
                 raise ValueError(f"time_window for provider '{provider}' must be positive")
         return value
-    
+
     def validate_scoring_weights(quality_weight, speed_weight, cost_weight):
         total = quality_weight + speed_weight + cost_weight
         if abs(total - 1.0) > 0.01:
             raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
-    
+
     def validate_model_benchmark_consistency(key, model_name):
         if key != model_name:
             raise ValueError(f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification.")

@@ -34,13 +34,13 @@ def register_tools(mcp, client_manager: ClientManager):
             collections = [request.collection]
         else:
             # Get collections using service method
-            collections = await client_manager.qdrant_service.list_collections()
+            qdrant_service = await client_manager.get_qdrant_service()
+            collections = await qdrant_service.list_collections()
 
+        qdrant_service = await client_manager.get_qdrant_service()
         for collection in collections:
             try:
-                info = await client_manager.qdrant_service.get_collection_info(
-                    collection
-                )
+                info = await qdrant_service.get_collection_info(collection)
                 analytics["collections"][collection] = {
                     "vector_count": info.get("vectors_count", 0),
                     "indexed_count": info.get("points_count", 0),
@@ -51,7 +51,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         # Get cache metrics
         if request.include_performance:
-            cache_stats = await client_manager.cache_manager.get_stats()
+            cache_manager = await client_manager.get_cache_manager()
+            cache_stats = await cache_manager.get_stats()
             analytics["cache_metrics"] = cache_stats
 
         # Estimate costs
@@ -87,7 +88,8 @@ def register_tools(mcp, client_manager: ClientManager):
         # Check Qdrant
         try:
             # Get collections using service method
-            collections = await client_manager.qdrant_service.list_collections()
+            qdrant_service = await client_manager.get_qdrant_service()
+            collections = await qdrant_service.list_collections()
             health["services"]["qdrant"] = {
                 "status": "healthy",
                 "collections": len(collections),
@@ -101,7 +103,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         # Check embedding service
         try:
-            provider_info = client_manager.embedding_manager.get_current_provider_info()
+            embedding_manager = await client_manager.get_embedding_manager()
+            provider_info = embedding_manager.get_current_provider_info()
             health["services"]["embeddings"] = {
                 "status": "healthy",
                 "provider": provider_info.get("name", "unknown"),
@@ -115,7 +118,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         # Check cache
         try:
-            cache_stats = await client_manager.cache_manager.get_stats()
+            cache_manager = await client_manager.get_cache_manager()
+            cache_stats = await cache_manager.get_stats()
             health["services"]["cache"] = {
                 "status": "healthy",
                 "hit_rate": cache_stats.get("hit_rate", 0),

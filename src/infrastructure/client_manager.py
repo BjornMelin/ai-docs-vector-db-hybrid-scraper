@@ -230,6 +230,8 @@ class ClientManager:
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._initialized = False
         self._health_check_task: asyncio.Task | None = None
+        # Legacy support - in-memory project store (should be replaced by persistent storage)
+        self.projects: dict[str, Any] = {}
 
     async def initialize(self) -> None:
         """Initialize client manager and start health checks."""
@@ -248,6 +250,23 @@ class ClientManager:
             self._health_check_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
+
+        # Clean up service instances
+        service_names = [
+            "_qdrant_service", "_embedding_manager", "_cache_manager", "_crawl_manager",
+            "_hyde_engine", "_project_storage", "_alias_manager", "_blue_green",
+            "_ab_testing", "_canary"
+        ]
+        for service_name in service_names:
+            if hasattr(self, service_name):
+                service = getattr(self, service_name)
+                if service and hasattr(service, "cleanup"):
+                    try:
+                        await service.cleanup()
+                        logger.info(f"Cleaned up {service_name}")
+                    except Exception as e:
+                        logger.error(f"Error cleaning up {service_name}: {e}")
+                setattr(self, service_name, None)
 
         # Close all clients
         for name, client in self._clients.items():
@@ -704,3 +723,85 @@ class ClientManager:
         """Async context manager exit."""
         await self.cleanup()
         return False
+
+    # Service-level getters for centralized access
+    async def get_qdrant_service(self):
+        """Get or create QdrantService instance."""
+        if not hasattr(self, "_qdrant_service") or self._qdrant_service is None:
+            from src.services.vector_db.service import QdrantService
+
+            self._qdrant_service = QdrantService(self.unified_config)
+            await self._qdrant_service.initialize()
+        return self._qdrant_service
+
+    async def get_embedding_manager(self):
+        """Get or create EmbeddingManager instance."""
+        if not hasattr(self, "_embedding_manager") or self._embedding_manager is None:
+            from src.services.embeddings.manager import EmbeddingManager
+
+            self._embedding_manager = EmbeddingManager(self.unified_config)
+        return self._embedding_manager
+
+    async def get_cache_manager(self):
+        """Get or create CacheManager instance."""
+        if not hasattr(self, "_cache_manager") or self._cache_manager is None:
+            from src.services.cache.manager import CacheManager
+
+            self._cache_manager = CacheManager(self)
+        return self._cache_manager
+
+    async def get_crawl_manager(self):
+        """Get or create CrawlManager instance."""
+        if not hasattr(self, "_crawl_manager") or self._crawl_manager is None:
+            from src.services.crawling.manager import CrawlManager
+
+            self._crawl_manager = CrawlManager(self.unified_config)
+        return self._crawl_manager
+
+    async def get_hyde_engine(self):
+        """Get or create HyDE engine instance."""
+        if not hasattr(self, "_hyde_engine") or self._hyde_engine is None:
+            from src.services.hyde.engine import HyDEEngine
+
+            self._hyde_engine = HyDEEngine(self.unified_config)
+        return self._hyde_engine
+
+    async def get_project_storage(self):
+        """Get or create ProjectStorage instance."""
+        if not hasattr(self, "_project_storage") or self._project_storage is None:
+            from src.services.core.project_storage import ProjectStorage
+
+            self._project_storage = ProjectStorage(self.unified_config)
+        return self._project_storage
+
+    async def get_alias_manager(self):
+        """Get or create QdrantAliasManager instance."""
+        if not hasattr(self, "_alias_manager") or self._alias_manager is None:
+            from src.services.core.qdrant_alias_manager import QdrantAliasManager
+
+            self._alias_manager = QdrantAliasManager(self.unified_config)
+        return self._alias_manager
+
+    async def get_blue_green_deployment(self):
+        """Get or create BlueGreenDeployment instance."""
+        if not hasattr(self, "_blue_green") or self._blue_green is None:
+            from src.services.deployment.blue_green import BlueGreenDeployment
+
+            self._blue_green = BlueGreenDeployment(self.unified_config)
+        return self._blue_green
+
+    async def get_ab_testing(self):
+        """Get or create ABTesting instance."""
+        if not hasattr(self, "_ab_testing") or self._ab_testing is None:
+            from src.services.deployment.ab_testing import ABTesting
+
+            self._ab_testing = ABTesting(self.unified_config)
+        return self._ab_testing
+
+    async def get_canary_deployment(self):
+        """Get or create CanaryDeployment instance."""
+        if not hasattr(self, "_canary") or self._canary is None:
+            from src.services.deployment.canary import CanaryDeployment
+
+            self._canary = CanaryDeployment(self.unified_config)
+        return self._canary

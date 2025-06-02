@@ -16,19 +16,8 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register deployment and alias management tools with the MCP server."""
 
-    # Import search tools to get search_documents
-    from .search import register_tools as register_search_tools
-
-    search_tools_registry = {}
-    register_search_tools(
-        type(
-            "MockMCP",
-            (),
-            {"tool": lambda f: search_tools_registry.update({f.__name__: f}) or f},
-        )(),
-        client_manager,
-    )
-    search_documents = search_tools_registry["search_documents"]
+    # Import search utility
+    from ._search_utils import search_documents_core
 
     @mcp.tool()
     async def search_with_alias(
@@ -46,7 +35,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         affecting search availability.
         """
         # Get actual collection from alias
-        collection = await client_manager.alias_manager.get_collection_for_alias(alias)
+        alias_manager = await client_manager.get_alias_manager()
+        collection = await alias_manager.get_collection_for_alias(alias)
         if not collection:
             raise ValueError(f"Alias {alias} not found")
 
@@ -59,7 +49,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             enable_reranking=enable_reranking,
         )
 
-        return await search_documents(request, ctx)
+        return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
     async def list_aliases() -> dict[str, str]:
@@ -68,7 +58,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
 
         Returns a mapping of alias names to collection names.
         """
-        return await client_manager.alias_manager.list_aliases()
+        alias_manager = await client_manager.get_alias_manager()
+        return await alias_manager.list_aliases()
 
     @mcp.tool()
     async def create_alias(
@@ -87,7 +78,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status information
         """
-        success = await client_manager.alias_manager.create_alias(
+        alias_manager = await client_manager.get_alias_manager()
+        success = await alias_manager.create_alias(
             alias_name=alias_name,
             collection_name=collection_name,
             force=force,
@@ -103,7 +95,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     async def deploy_new_index(
         alias: str,
         source: str,
-        validation_queries: list[str] | None = None,
+        validation_queries: "list[str] | None" = None,
         rollback_on_failure: bool = True,
         ctx: Context = None,
     ) -> dict[str, Any]:
@@ -133,7 +125,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 "fastapi authentication",
             ]
 
-        result = await client_manager.blue_green.deploy_new_version(
+        blue_green = await client_manager.get_blue_green_deployment()
+        result = await blue_green.deploy_new_version(
             alias_name=alias,
             data_source=source,
             validation_queries=validation_queries,
@@ -154,7 +147,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         control_collection: str,
         treatment_collection: str,
         traffic_split: float = 0.5,
-        metrics: list[str] | None = None,
+        metrics: "list[str] | None" = None,
     ) -> dict[str, str]:
         """
         Start A/B test between two collections.
@@ -172,7 +165,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Experiment ID and status
         """
-        experiment_id = await client_manager.ab_testing.create_experiment(
+        ab_testing = await client_manager.get_ab_testing()
+        experiment_id = await ab_testing.create_experiment(
             experiment_name=experiment_name,
             control_collection=control_collection,
             treatment_collection=treatment_collection,
@@ -202,13 +196,14 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Detailed analysis results
         """
-        return client_manager.ab_testing.analyze_experiment(experiment_id)
+        ab_testing = await client_manager.get_ab_testing()
+        return await ab_testing.analyze_experiment(experiment_id)
 
     @mcp.tool()
     async def start_canary_deployment(
         alias: str,
         new_collection: str,
-        stages: list[dict] | None = None,
+        stages: "list[dict] | None" = None,
         auto_rollback: bool = True,
         ctx: Context = None,
     ) -> dict[str, Any]:
@@ -254,7 +249,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 if not isinstance(duration, int | float) or duration <= 0:
                     raise ValueError(f"Stage {i} duration_minutes must be positive")
 
-        deployment_id = await client_manager.canary.start_canary(
+        canary = await client_manager.get_canary_deployment()
+        deployment_id = await canary.start_canary(
             alias_name=alias,
             new_collection=new_collection,
             stages=stages,
@@ -284,7 +280,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Current deployment status
         """
-        return await client_manager.canary.get_deployment_status(deployment_id)
+        canary = await client_manager.get_canary_deployment()
+        return await canary.get_deployment_status(deployment_id)
 
     @mcp.tool()
     async def pause_canary(deployment_id: str) -> dict[str, str]:
@@ -299,7 +296,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status message
         """
-        success = await client_manager.canary.pause_deployment(deployment_id)
+        canary = await client_manager.get_canary_deployment()
+        success = await canary.pause_deployment(deployment_id)
 
         return {
             "status": "paused" if success else "failed",
@@ -319,7 +317,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status message
         """
-        success = await client_manager.canary.resume_deployment(deployment_id)
+        canary = await client_manager.get_canary_deployment()
+        success = await canary.resume_deployment(deployment_id)
 
         return {
             "status": "resumed" if success else "failed",

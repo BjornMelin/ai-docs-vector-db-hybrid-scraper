@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.embeddings.manager import EmbeddingManager
 from ..models.requests import EmbeddingRequest
 
 logger = logging.getLogger(__name__)
@@ -22,8 +21,8 @@ def register_tools(mcp, client_manager: ClientManager):
         performance, and availability.
         """
         try:
-            # Initialize embedding manager on-demand
-            embedding_manager = EmbeddingManager(client_manager.unified_config)
+            # Get embedding manager from client manager
+            embedding_manager = await client_manager.get_embedding_manager()
 
             # Generate embeddings
             result = await embedding_manager.generate_embeddings(
@@ -61,8 +60,8 @@ def register_tools(mcp, client_manager: ClientManager):
         Returns information about supported models, costs, and current status.
         """
         try:
-            # Initialize embedding manager
-            embedding_manager = EmbeddingManager(client_manager.unified_config)
+            # Get embedding manager from client manager
+            embedding_manager = await client_manager.get_embedding_manager()
 
             # Get available providers
             providers = []
