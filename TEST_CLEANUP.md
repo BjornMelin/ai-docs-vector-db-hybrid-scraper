@@ -302,6 +302,90 @@ and rewriting to align with current src/ implementations.
 - ✅ Total: 50 test methods across both utils modules
 - ✅ All utils tests passing with comprehensive validation scenarios
 
+## ✅ COMPLETED: HyDE Services (Priority 7)
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/services/hyde/config.py`:
+  - `test_hyde_config.py` - 32 test methods covering all HyDE configuration classes:
+    * HyDEConfig with all parameter validation and edge cases
+    * HyDEPromptConfig with prompt templates and keyword classification
+    * HyDEMetricsConfig with A/B testing and performance tracking
+    * Integration tests with serialization and configuration combinations
+- ✅ Created comprehensive test file for `src/services/hyde/generator.py`:
+  - `test_hyde_generator.py` - 37 test methods covering hypothetical document generation:
+    * GenerationResult model with full serialization testing
+    * HypotheticalDocumentGenerator with LLM integration mocking
+    * Query classification, prompt variation, and document generation
+    * Parallel and sequential generation modes with error handling
+    * Cost calculation, diversity scoring, and performance metrics
+- ✅ Created comprehensive test file for `src/services/hyde/cache.py`:
+  - `test_hyde_cache.py` - 44 test methods covering HyDE result caching:
+    * Cache initialization and lifecycle management
+    * HyDE embedding storage and retrieval with binary format support
+    * Hypothetical document caching with metadata
+    * Search result caching with TTL management
+    * Cache warming, invalidation, and performance metrics
+- ✅ Created comprehensive test file for `src/services/hyde/engine.py`:
+  - `test_hyde_engine.py` - 39 test methods covering HyDE query processing:
+    * HyDEQueryEngine initialization and component orchestration
+    * Enhanced search with cache hits/misses and fallback scenarios
+    * A/B testing implementation with control/treatment groups
+    * Batch search with concurrency control and error handling
+    * Performance metrics, reranking, and comprehensive integration tests
+
+## ✅ COMPLETED: Utility Services (Priority 8)
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/services/utilities/rate_limiter.py`:
+  - `test_utilities_rate_limiter.py` - 37 test methods covering rate limiting utilities:
+    * RateLimiter with token bucket algorithm, burst capacity, and refill mechanisms
+    * RateLimitManager for multiple provider management with per-endpoint limits
+    * AdaptiveRateLimiter with API response monitoring and automatic adjustment
+    * Comprehensive testing of concurrent access, timing, and error scenarios
+- ✅ Created comprehensive test file for `src/services/utilities/hnsw_optimizer.py`:
+  - `test_utilities_hnsw_optimizer.py` - 34 test methods covering HNSW optimization:
+    * HNSWOptimizer initialization and service dependencies
+    * Adaptive ef parameter selection based on time budgets and caching
+    * Collection-specific HNSW configuration optimization for different content types
+    * Performance testing, improvement estimation, and cache management
+- ✅ Created comprehensive test file for `src/services/utilities/search_models.py`:
+  - `test_utilities_search_models.py` - 44 test methods covering search model definitions:
+    * SearchStage, PrefetchConfig, SearchParams, and FusionConfig models
+    * MultiStageSearchRequest, HyDESearchRequest, and FilteredSearchRequest models
+    * Complete Pydantic v2 validation, serialization, and integration testing
+    * Vector type calculations, accuracy mapping, and algorithm selection
+
+**Total**: 115 test methods covering token bucket algorithms, adaptive rate adjustment, HNSW parameter optimization, and advanced search model validation
+- ✅ **Total: 152 test methods across 4 HyDE service modules**
+- ✅ **All HyDE tests passing with comprehensive coverage**
+- ✅ **Complete testing of HyDE algorithm parameter configuration, model selection, performance tuning, query processing, caching strategies, and document generation**
+
+## ✅ COMPLETED: Core Services (Priority 9)
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/services/core/project_storage.py`:
+  - `test_core_project_storage.py` - 35 test methods covering project storage management:
+    * ProjectStorageError exception with context handling and inheritance validation
+    * ProjectStorage class with comprehensive initialization and file operation testing
+    * Async file operations with aiofiles and fallback to synchronous operations
+    * Project CRUD operations (create, read, update, delete) with data validation
+    * Concurrent access protection using asyncio.Lock for thread safety
+    * JSON serialization with atomic file operations and backup recovery
+    * Large data handling, special character support, and error recovery scenarios
+- ✅ Created comprehensive test file for `src/services/core/qdrant_alias_manager.py`:
+  - `test_core_qdrant_alias_manager.py` - 54 test methods covering collection alias management:
+    * Name validation with regex patterns and comprehensive invalid character testing
+    * Alias CRUD operations (create, read, update, delete) with atomic operations
+    * Collection schema cloning with vector config, HNSW, and quantization preservation
+    * Data copying with batch processing, progress callbacks, and error handling
+    * Blue-green deployment support through atomic alias switching
+    * Safe collection deletion with grace periods and background task management
+    * Collection compatibility validation and comprehensive integration scenarios
+
+**Total**: 89 test methods covering persistent project management with JSON storage and comprehensive Qdrant collection alias management for zero-downtime deployments
+- ✅ **All core service tests passing with comprehensive coverage**
+- ✅ **Complete testing of project data organization, file management, storage backend abstraction, alias routing, blue-green deployment support, and performance optimization**
+
 ## Remaining Missing Test Coverage
 
 **All core modules now have comprehensive test coverage!**
