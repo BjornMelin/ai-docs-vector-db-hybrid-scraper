@@ -3,15 +3,13 @@
 import asyncio
 import time
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
+from src.config import UnifiedConfig
 from src.infrastructure.client_manager import CircuitBreaker
 from src.infrastructure.client_manager import ClientHealth
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.client_manager import ClientManagerConfig
 from src.infrastructure.client_manager import ClientState
 from src.services.errors import APIError
 
@@ -58,118 +56,6 @@ class TestClientHealth:
         assert health.last_check == 1234567.0
         assert health.last_error is None
         assert health.consecutive_failures == 0
-
-
-class TestClientManagerConfig:
-    """Test cases for ClientManagerConfig."""
-
-    def test_config_default_values(self):
-        """Test default configuration values."""
-        config = ClientManagerConfig()
-
-        # Qdrant defaults
-        assert config.qdrant_url == "http://localhost:6333"
-        assert config.qdrant_api_key is None
-        assert config.qdrant_timeout == 30.0
-        assert config.qdrant_prefer_grpc is False
-
-        # OpenAI defaults
-        assert config.openai_api_key is None
-        assert config.openai_timeout == 30.0
-        assert config.openai_max_retries == 3
-
-        # Firecrawl defaults
-        assert config.firecrawl_api_key is None
-        assert config.firecrawl_timeout == 60.0
-
-        # Redis defaults
-        assert config.redis_url == "redis://localhost:6379"
-        assert config.redis_max_connections == 10
-        assert config.redis_decode_responses is True
-
-        # Health check defaults
-        assert config.health_check_interval == 30.0
-        assert config.health_check_timeout == 5.0
-        assert config.max_consecutive_failures == 3
-
-        # Circuit breaker defaults
-        assert config.circuit_breaker_failure_threshold == 5
-        assert config.circuit_breaker_recovery_timeout == 60.0
-        assert config.circuit_breaker_half_open_requests == 1
-
-    def test_config_custom_values(self):
-        """Test configuration with custom values."""
-        config = ClientManagerConfig(
-            qdrant_url="https://custom-qdrant:6333",
-            qdrant_timeout=45.0,
-            openai_timeout=60.0,
-            redis_max_connections=20,
-            health_check_interval=60.0,
-        )
-
-        assert config.qdrant_url == "https://custom-qdrant:6333"
-        assert config.qdrant_timeout == 45.0
-        assert config.openai_timeout == 60.0
-        assert config.redis_max_connections == 20
-        assert config.health_check_interval == 60.0
-
-    def test_qdrant_url_validation_valid(self):
-        """Test valid Qdrant URL validation."""
-        # HTTP URL
-        config = ClientManagerConfig(qdrant_url="http://localhost:6333")
-        assert config.qdrant_url == "http://localhost:6333"
-
-        # HTTPS URL
-        config = ClientManagerConfig(qdrant_url="https://qdrant.example.com")
-        assert config.qdrant_url == "https://qdrant.example.com"
-
-    def test_qdrant_url_validation_invalid(self):
-        """Test invalid Qdrant URL validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            ClientManagerConfig(qdrant_url="ftp://invalid.com")
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert "Qdrant URL must start with http:// or https://" in str(errors[0])
-
-    def test_redis_url_validation_valid(self):
-        """Test valid Redis URL validation."""
-        # Redis URL
-        config = ClientManagerConfig(redis_url="redis://localhost:6379")
-        assert config.redis_url == "redis://localhost:6379"
-
-        # Secure Redis URL
-        config = ClientManagerConfig(redis_url="rediss://secure.redis.com:6380")
-        assert config.redis_url == "rediss://secure.redis.com:6380"
-
-    def test_redis_url_validation_invalid(self):
-        """Test invalid Redis URL validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            ClientManagerConfig(redis_url="http://invalid.com")
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert "Redis URL must start with redis:// or rediss://" in str(errors[0])
-
-    def test_positive_number_validations(self):
-        """Test positive number field validations."""
-        # Test that positive values work
-        config = ClientManagerConfig(
-            qdrant_timeout=1.0,
-            health_check_interval=1.0,
-            circuit_breaker_failure_threshold=1,
-        )
-        assert config.qdrant_timeout == 1.0
-
-        # Test that zero/negative values fail
-        with pytest.raises(ValidationError):
-            ClientManagerConfig(qdrant_timeout=0.0)
-
-        with pytest.raises(ValidationError):
-            ClientManagerConfig(health_check_interval=-1.0)
-
-        with pytest.raises(ValidationError):
-            ClientManagerConfig(circuit_breaker_failure_threshold=0)
 
 
 class TestCircuitBreaker:
@@ -333,7 +219,7 @@ class TestClientManagerSingleton:
         # Clear any existing instance
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager1 = ClientManager(config)
         manager2 = ClientManager()
 
@@ -345,8 +231,10 @@ class TestClientManagerSingleton:
         # Clear any existing instance
         ClientManager._instance = None
 
-        config1 = ClientManagerConfig(qdrant_timeout=30.0)
-        config2 = ClientManagerConfig(qdrant_timeout=60.0)
+        config1 = UnifiedConfig()
+        config1.qdrant.timeout = 30.0
+        config2 = UnifiedConfig()
+        config2.qdrant.timeout = 60.0
 
         manager1 = ClientManager(config1)
         manager1._initialized = True  # Mark as initialized
@@ -363,7 +251,7 @@ class TestClientManagerSingleton:
         # Clear any existing instance
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
         await manager.initialize()
 
@@ -381,47 +269,18 @@ class TestClientManagerFactoryMethod:
     """Test cases for ClientManager factory method."""
 
     @patch("src.config.loader.ConfigLoader")
-    @patch.dict(
-        "os.environ",
-        {
-            "QDRANT_URL": "http://test-qdrant:6333",
-            "OPENAI_API_KEY": "test-openai-key",
-            "FIRECRAWL_API_KEY": "test-firecrawl-key",
-            "REDIS_URL": "redis://test-redis:6379",
-        },
-    )
     def test_from_unified_config(self, mock_config_loader):
         """Test ClientManager creation from unified config."""
         # Clear singleton
         ClientManager._instance = None
 
-        mock_unified_config = MagicMock()
+        mock_unified_config = UnifiedConfig()
         mock_config_loader.load_config.return_value = mock_unified_config
 
         manager = ClientManager.from_unified_config()
 
-        assert manager.config.qdrant_url == "http://test-qdrant:6333"
-        assert manager.config.openai_api_key == "test-openai-key"
-        assert manager.config.firecrawl_api_key == "test-firecrawl-key"
-        assert manager.config.redis_url == "redis://test-redis:6379"
-        assert manager.unified_config is mock_unified_config
+        assert manager.config is mock_unified_config
         mock_config_loader.load_config.assert_called_once()
-
-    @patch("src.config.loader.ConfigLoader")
-    def test_from_unified_config_defaults(self, mock_config_loader):
-        """Test ClientManager creation with default environment values."""
-        # Clear singleton
-        ClientManager._instance = None
-
-        mock_unified_config = MagicMock()
-        mock_config_loader.load_config.return_value = mock_unified_config
-
-        with patch.dict("os.environ", {}, clear=True):
-            manager = ClientManager.from_unified_config()
-
-        assert manager.config.qdrant_url == "http://localhost:6333"
-        assert manager.config.openai_api_key is None
-        assert manager.config.redis_url == "redis://localhost:6379"
 
 
 class TestClientManagerInitialization:
@@ -433,7 +292,7 @@ class TestClientManagerInitialization:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         assert manager._initialized is False
@@ -453,7 +312,7 @@ class TestClientManagerInitialization:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         await manager.initialize()
@@ -471,7 +330,7 @@ class TestClientManagerInitialization:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
         await manager.initialize()
 
@@ -498,7 +357,7 @@ class TestClientManagerInitialization:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         # Add mock client that raises error on close
@@ -520,7 +379,7 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_qdrant_client") as mock_create:
@@ -541,7 +400,8 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(openai_api_key="test-key")
+        config = UnifiedConfig()
+        config.openai.api_key = "test-key"
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_openai_client") as mock_create:
@@ -559,7 +419,8 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(openai_api_key=None)
+        config = UnifiedConfig()
+        config.openai.api_key = None
         manager = ClientManager(config)
 
         client = await manager.get_openai_client()
@@ -571,7 +432,8 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(firecrawl_api_key="test-key")
+        config = UnifiedConfig()
+        config.firecrawl.api_key = "test-key"
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_firecrawl_client") as mock_create:
@@ -589,7 +451,8 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(firecrawl_api_key=None)
+        config = UnifiedConfig()
+        config.firecrawl.api_key = None
         manager = ClientManager(config)
 
         client = await manager.get_firecrawl_client()
@@ -601,7 +464,7 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_redis_client") as mock_create:
@@ -619,7 +482,7 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_qdrant_client") as mock_create:
@@ -636,7 +499,7 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "_create_qdrant_client") as mock_create:
@@ -655,7 +518,7 @@ class TestClientManagerClientCreation:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(max_consecutive_failures=2)
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         # Create client first
@@ -676,6 +539,97 @@ class TestClientManagerClientCreation:
             await manager.get_qdrant_client()
 
 
+class TestClientManagerServiceGetters:
+    """Test cases for service getter methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_qdrant_service(self):
+        """Test QdrantService getter."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        with patch(
+            "src.services.vector_db.service.QdrantService"
+        ) as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service_class.return_value = mock_service
+
+            service = await manager.get_qdrant_service()
+
+            assert service is mock_service
+            mock_service_class.assert_called_once_with(config, client_manager=manager)
+            mock_service.initialize.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_embedding_manager(self):
+        """Test EmbeddingManager getter."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        with patch(
+            "src.services.embeddings.manager.EmbeddingManager"
+        ) as mock_manager_class:
+            mock_manager = AsyncMock()
+            mock_manager_class.return_value = mock_manager
+
+            service = await manager.get_embedding_manager()
+
+            assert service is mock_manager
+            mock_manager_class.assert_called_once_with(
+                config=config,
+                client_manager=manager,
+            )
+            mock_manager.initialize.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_cache_manager(self):
+        """Test CacheManager getter."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        with patch("src.services.cache.manager.CacheManager") as mock_manager_class:
+            mock_manager = AsyncMock()
+            mock_manager_class.return_value = mock_manager
+
+            service = await manager.get_cache_manager()
+
+            assert service is mock_manager
+            mock_manager_class.assert_called_once()
+            mock_manager.initialize.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_service_singleton_behavior(self):
+        """Test that services are singletons within ClientManager."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        with patch(
+            "src.services.vector_db.service.QdrantService"
+        ) as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service_class.return_value = mock_service
+
+            service1 = await manager.get_qdrant_service()
+            service2 = await manager.get_qdrant_service()
+
+            assert service1 is service2
+            # Should only be created once
+            mock_service_class.assert_called_once()
+            mock_service.initialize.assert_called_once()
+
+
 class TestClientManagerHealthChecks:
     """Test cases for health check functionality."""
 
@@ -685,7 +639,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         mock_client = AsyncMock()
@@ -703,7 +657,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         mock_client = AsyncMock()
@@ -722,7 +676,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         mock_client = AsyncMock()
@@ -741,7 +695,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         mock_client = AsyncMock()
@@ -759,7 +713,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         mock_client = AsyncMock()
@@ -779,7 +733,7 @@ class TestClientManagerHealthChecks:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         # Add mock health data
@@ -810,7 +764,7 @@ class TestClientManagerManagedClient:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "get_qdrant_client") as mock_get:
@@ -828,7 +782,7 @@ class TestClientManagerManagedClient:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with pytest.raises(ValueError, match="Unknown client type: invalid"):
@@ -841,7 +795,7 @@ class TestClientManagerManagedClient:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         with patch.object(manager, "get_qdrant_client") as mock_get:
@@ -861,7 +815,7 @@ class TestClientManagerAsyncContextManager:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
 
         async with ClientManager(config) as manager:
             assert manager._initialized is True
@@ -874,7 +828,7 @@ class TestClientManagerAsyncContextManager:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
 
         try:
             async with ClientManager(config) as manager:
@@ -895,7 +849,7 @@ class TestClientManagerConcurrency:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         create_call_count = 0
@@ -928,10 +882,7 @@ class TestClientManagerIntegration:
         # Clear singleton
         ClientManager._instance = None
 
-        config = ClientManagerConfig(
-            health_check_interval=0.1,  # Fast for testing
-            max_consecutive_failures=2,
-        )
+        config = UnifiedConfig()
         manager = ClientManager(config)
 
         try:
@@ -956,3 +907,303 @@ class TestClientManagerIntegration:
 
         finally:
             await manager.cleanup()
+
+
+class TestClientManagerErrorHandling:
+    """Test error handling and edge cases in ClientManager."""
+
+    @pytest.mark.asyncio
+    async def test_client_creation_with_invalid_config(self):
+        """Test client creation with invalid configuration."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        # Create config with invalid Qdrant URL
+        config = UnifiedConfig()
+        config.qdrant.url = "invalid-url"
+        manager = ClientManager(config)
+
+        with pytest.raises(APIError, match="Failed to create qdrant client"):
+            await manager.get_qdrant_client()
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_opens_after_failures(self):
+        """Test that circuit breaker opens after consecutive failures."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Mock client that always fails
+        with patch.object(manager, "_create_qdrant_client") as mock_create:
+            mock_create.side_effect = Exception("Connection failed")
+
+            # Try to get client multiple times to trigger circuit breaker
+            for _ in range(6):  # More than failure_threshold (5)
+                with pytest.raises(APIError):
+                    await manager.get_qdrant_client()
+
+            # Circuit breaker should now be open
+            with pytest.raises(APIError, match="circuit breaker is open"):
+                await manager.get_qdrant_client()
+
+    @pytest.mark.asyncio
+    async def test_health_check_with_missing_client(self):
+        """Test health check when client doesn't exist."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Test Qdrant health check without client
+        result = await manager._check_qdrant_health()
+        assert result is False
+
+        # Test OpenAI health check without client
+        result = await manager._check_openai_health()
+        assert result is False
+
+        # Test Redis health check without client
+        result = await manager._check_redis_health()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_service_initialization_failure(self):
+        """Test service initialization failure handling."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Mock service class import to fail during service creation
+        with patch("src.services.vector_db.service.QdrantService") as mock_service:
+            mock_service.side_effect = Exception("Service init failed")
+
+            with pytest.raises(Exception, match="Service init failed"):
+                await manager.get_qdrant_service()
+
+    @pytest.mark.asyncio
+    async def test_client_creation_with_none_config_values(self):
+        """Test client creation with None configuration values."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        config.openai.api_key = None
+        config.firecrawl.api_key = None
+        manager = ClientManager(config)
+
+        # OpenAI client should return None without API key
+        openai_client = await manager.get_openai_client()
+        assert openai_client is None
+
+        # Firecrawl client should return None without API key
+        firecrawl_client = await manager.get_firecrawl_client()
+        assert firecrawl_client is None
+
+    @pytest.mark.asyncio
+    async def test_redis_connection_failure(self):
+        """Test Redis connection failure handling."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        config.cache.enable_dragonfly_cache = True
+        config.cache.dragonfly_url = "redis://invalid:6379"
+        manager = ClientManager(config)
+
+        # Mock redis connection to fail
+        with patch("redis.asyncio.from_url") as mock_redis:
+            mock_redis.side_effect = Exception("Connection failed")
+            
+            with pytest.raises(APIError, match="Failed to create redis client"):
+                await manager.get_redis_client()
+
+    @pytest.mark.asyncio
+    async def test_health_monitoring_lifecycle(self):
+        """Test health monitoring during initialization and cleanup."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Initialize manager (starts health monitoring)
+        await manager.initialize()
+        assert manager._health_check_task is not None
+        assert not manager._health_check_task.done()
+
+        # Cleanup manager (stops health monitoring)
+        await manager.cleanup()
+        # Task should be cancelled, not None
+        assert manager._health_check_task.cancelled()
+
+    @pytest.mark.asyncio
+    async def test_concurrent_service_access(self):
+        """Test concurrent access to the same service."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        async def get_service():
+            return await manager.get_qdrant_service()
+
+        # Create multiple concurrent requests for the same service
+        tasks = [get_service() for _ in range(10)]
+        services = await asyncio.gather(*tasks)
+
+        # All should return the same instance (singleton)
+        for service in services[1:]:
+            assert service is services[0]
+
+    @pytest.mark.asyncio
+    async def test_client_cleanup_with_errors(self):
+        """Test cleanup when client.close() raises an error."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Create mock client that raises error on close
+        mock_client = AsyncMock()
+        mock_client.close = AsyncMock(side_effect=Exception("Close failed"))
+        manager._clients["test_client"] = mock_client
+
+        # Cleanup should handle the error gracefully
+        await manager.cleanup()
+
+        # Client should still be removed from the clients dict
+        assert "test_client" not in manager._clients
+
+    @pytest.mark.asyncio
+    async def test_get_health_status_comprehensive(self):
+        """Test comprehensive health status reporting."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        config.openai.api_key = "test-key"
+        config.cache.enable_dragonfly_cache = True
+        manager = ClientManager(config)
+        
+        # Create some clients to populate health status
+        await manager.get_qdrant_client()  # This will create qdrant client
+        
+        # Check that health status reflects created clients
+        status = await manager.get_health_status()
+
+        # Should have health status for available services
+        assert isinstance(status, dict)
+        if status:  # Health status may be empty initially
+            for service_name, service_status in status.items():
+                assert "state" in service_status
+                assert "last_check" in service_status
+        
+        await manager.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_firecrawl_health_check_edge_cases(self):
+        """Test Firecrawl health check edge cases."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Test with None client (returns False when no client exists)
+        result = await manager._check_firecrawl_health()
+        assert result is False  # Returns False when no client exists
+
+        # Test with existing client (should return True)
+        mock_client = AsyncMock()
+        manager._clients["firecrawl"] = mock_client
+
+        result = await manager._check_firecrawl_health()
+        assert result is True  # Returns True when client exists
+
+
+class TestClientManagerConfiguration:
+    """Test ClientManager configuration handling."""
+
+    @pytest.mark.asyncio
+    async def test_from_unified_config_class_method(self):
+        """Test creating ClientManager from UnifiedConfig."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        # Mock the config loader to return a known config
+        with patch("src.config.loader.ConfigLoader.load_config") as mock_loader:
+            config = UnifiedConfig()
+            mock_loader.return_value = config
+            
+            manager = ClientManager.from_unified_config()
+
+            assert isinstance(manager, ClientManager)
+            assert manager.config is config
+            mock_loader.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invalid_client_type_in_managed_client(self):
+        """Test managed_client with invalid client type."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        with pytest.raises(ValueError, match="Unknown client type"):
+            async with manager.managed_client("invalid_type"):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_qdrant_client_recreation_after_failure(self):
+        """Test that Qdrant client is recreated after circuit breaker recovery."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        manager = ClientManager(config)
+
+        # Initialize health status by creating a client first
+        await manager.get_qdrant_client()
+        
+        # Now simulate circuit breaker opening
+        manager._health["qdrant"].state = ClientState.FAILED
+        manager._circuit_breakers["qdrant"]._state = "open"
+        manager._circuit_breakers["qdrant"]._last_failure_time = time.time() - 61  # Past recovery timeout
+
+        # Remove the existing client to force recreation
+        del manager._clients["qdrant"]
+
+        # Mock successful client creation on retry
+        with patch.object(manager, "_create_qdrant_client") as mock_create:
+            mock_client = AsyncMock()
+            mock_create.return_value = mock_client
+
+            client = await manager.get_qdrant_client()
+            assert client is mock_client
+            mock_create.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_embedding_manager_with_different_configs(self):
+        """Test EmbeddingManager creation with different configurations."""
+        # Clear singleton
+        ClientManager._instance = None
+
+        config = UnifiedConfig()
+        config.openai.api_key = "test-key"
+        config.openai.model = "text-embedding-3-large"
+        manager = ClientManager(config)
+
+        embedding_manager = await manager.get_embedding_manager()
+        assert embedding_manager is not None
+
+        # Should return same instance on second call
+        embedding_manager2 = await manager.get_embedding_manager()
+        assert embedding_manager is embedding_manager2

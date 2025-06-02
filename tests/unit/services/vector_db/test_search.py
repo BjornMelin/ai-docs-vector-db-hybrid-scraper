@@ -413,7 +413,6 @@ class TestQdrantSearch:
         params_exact = search_service._get_search_params(SearchAccuracy.EXACT)
         assert params_exact.exact is True
 
-
     async def test_initialization_and_config(
         self, search_service, mock_client, mock_config
     ):

@@ -1,20 +1,23 @@
 """Unified QdrantService facade that delegates to focused modules.
 
 This module provides a clean facade over the modularized Qdrant functionality,
-maintaining backward compatibility while providing improved organization.
+using the centralized ClientManager for all client operations.
 """
 
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 
 from ...config import UnifiedConfig
 from ..base import BaseService
 from ..errors import QdrantServiceError
-from .client import QdrantClient
 from .collections import QdrantCollections
 from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
+
+if TYPE_CHECKING:
+    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +25,16 @@ logger = logging.getLogger(__name__)
 class QdrantService(BaseService):
     """Unified Qdrant service facade delegating to focused modules."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: UnifiedConfig, client_manager: "ClientManager"):
         """Initialize Qdrant service with modular components.
 
         Args:
             config: Unified configuration
+            client_manager: ClientManager instance for dependency injection
         """
         super().__init__(config)
         self.config: UnifiedConfig = config
-
-        # Initialize client manager
-        self._client_manager = QdrantClient(config)
+        self._client_manager = client_manager
 
         # Initialize focused modules (will be set after client initialization)
         self._collections: QdrantCollections | None = None
@@ -50,11 +52,8 @@ class QdrantService(BaseService):
             return
 
         try:
-            # Initialize client manager first
-            await self._client_manager.initialize()
-
-            # Get the initialized client
-            client = self._client_manager.get_client()
+            # Get the Qdrant client from ClientManager
+            client = await self._client_manager.get_qdrant_client()
 
             # Initialize all focused modules with the shared client
             self._collections = QdrantCollections(self.config, client)
@@ -73,13 +72,11 @@ class QdrantService(BaseService):
             raise QdrantServiceError(f"Failed to initialize QdrantService: {e}") from e
 
     async def cleanup(self) -> None:
-        """Cleanup all Qdrant modules."""
+        """Cleanup all Qdrant modules (delegated to ClientManager)."""
         if self._collections:
             await self._collections.cleanup()
 
-        if self._client_manager:
-            await self._client_manager.cleanup()
-
+        # Note: ClientManager handles client cleanup, we just reset our references
         self._collections = None
         self._search = None
         self._indexing = None
@@ -397,74 +394,6 @@ class QdrantService(BaseService):
         """Get HNSW configuration information for a collection type."""
         self._validate_initialized()
         return self._collections.get_hnsw_configuration_info(collection_type)
-
-    # Compatibility methods for legacy API
-
-    async def search_with_adaptive_ef(
-        self,
-        collection_name: str,
-        query_vector: list[float],
-        limit: int = 10,
-        time_budget_ms: int = 100,
-        score_threshold: float = 0.0,
-    ) -> dict[str, Any]:
-        """Search using adaptive ef parameter optimization.
-
-        Note: This is a compatibility method that delegates to filtered_search
-        with basic configuration until HNSW optimizer integration is complete.
-        """
-        self._validate_initialized()
-
-        # For now, delegate to filtered search with optimal params
-        results = await self._search.filtered_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            filters={},
-            limit=limit,
-            search_accuracy="balanced",
-        )
-
-        # Filter by score threshold
-        if score_threshold > 0.0:
-            results = [r for r in results if r["score"] >= score_threshold]
-
-        # Return in expected format
-        return {
-            "results": results,
-            "adaptive_ef_used": 100,  # Default ef value
-            "time_budget_ms": time_budget_ms,
-            "actual_time_ms": 50,  # Estimated time
-            "filtered_count": len(results),
-        }
-
-    async def optimize_collection_hnsw_parameters(
-        self,
-        collection_name: str,
-        collection_type: str,
-        test_queries: list[list[float]] | None = None,
-    ) -> dict[str, Any]:
-        """Optimize HNSW parameters for an existing collection.
-
-        Note: This is a compatibility method that returns configuration info
-        until HNSW optimizer integration is complete.
-        """
-        self._validate_initialized()
-
-        # Return basic optimization info for compatibility
-        config = self._collections.get_hnsw_configuration_info(collection_type)
-
-        return {
-            "collection_name": collection_name,
-            "collection_type": collection_type,
-            "current_configuration": config["hnsw_parameters"],
-            "optimization_results": {
-                "status": "analyzed",
-                "recommendations": [
-                    "Configuration appears optimal for collection type"
-                ],
-            },
-            "test_queries_processed": len(test_queries) if test_queries else 0,
-        }
 
     def _validate_initialized(self) -> None:
         """Validate that the service is properly initialized."""

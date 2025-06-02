@@ -391,8 +391,6 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to clear collection"):
             await documents_service.clear_collection("test_collection")
 
-
-
     async def test_initialization_and_config(
         self, documents_service, mock_client, mock_config
     ):

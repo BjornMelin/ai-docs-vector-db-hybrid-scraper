@@ -16,10 +16,8 @@ from rich.table import Table
 
 # Import unified configuration and service layer
 from src.config import get_config
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.utilities.rate_limiter import RateLimitManager
-from src.services.vector_db.service import QdrantService
-from src.utils import async_to_sync_click
+from src.infrastructure.client_manager import ClientManager
+from src.utils import async_command
 
 console = Console()
 
@@ -64,68 +62,64 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using service layer"""
+    """Comprehensive vector database management using ClientManager"""
 
     def __init__(
         self,
-        qdrant_service: QdrantService | None = None,
-        embedding_manager: EmbeddingManager | None = None,
+        client_manager: ClientManager,
         qdrant_url: str | None = None,
     ) -> None:
-        """Initialize with service layer components.
+        """Initialize with ClientManager.
 
         Args:
-            qdrant_service: QdrantService instance for database operations
-            embedding_manager: EmbeddingManager for generating embeddings
+            client_manager: ClientManager instance for all services
             qdrant_url: Optional Qdrant URL override
         """
-        self.qdrant_service = qdrant_service
-        self.embedding_manager = embedding_manager
+        self.client_manager = client_manager
         self.qdrant_url = qdrant_url
         self._initialized = False
 
     async def initialize(self) -> None:
-        """Initialize services if not already initialized"""
+        """Initialize services using ClientManager"""
         if self._initialized:
             return
 
-        # If services not provided, create them from unified config
-        if not self.qdrant_service or not self.embedding_manager:
-            config = get_config()
+        # Override Qdrant URL if provided
+        if self.qdrant_url:
+            # Get the current config and override URL
+            config = self.client_manager.config
+            config.qdrant.url = self.qdrant_url
 
-            # Override Qdrant URL if provided
-            if self.qdrant_url:
-                config.qdrant.url = self.qdrant_url
+        # Ensure ClientManager is initialized
+        if not self.client_manager._initialized:
+            await self.client_manager.initialize()
 
-            # Initialize rate limiter
-            rate_limiter = RateLimitManager(config)
-
-            if not self.qdrant_service:
-                self.qdrant_service = QdrantService(config)
-
-            if not self.embedding_manager:
-                self.embedding_manager = EmbeddingManager(
-                    config, rate_limiter=rate_limiter
-                )
-
-        # Initialize services
-        await self.qdrant_service.initialize()
-        await self.embedding_manager.initialize()
         self._initialized = True
 
+    async def get_qdrant_service(self):
+        """Get QdrantService from ClientManager"""
+        if not self._initialized:
+            await self.initialize()
+        return await self.client_manager.get_qdrant_service()
+
+    async def get_embedding_manager(self):
+        """Get EmbeddingManager from ClientManager"""
+        if not self._initialized:
+            await self.initialize()
+        return await self.client_manager.get_embedding_manager()
+
     async def cleanup(self) -> None:
-        """Cleanup services"""
-        if self.qdrant_service:
-            await self.qdrant_service.cleanup()
-        if self.embedding_manager:
-            await self.embedding_manager.cleanup()
+        """Cleanup services (delegated to ClientManager)"""
+        if self.client_manager:
+            await self.client_manager.cleanup()
         self._initialized = False
 
     async def list_collections(self) -> list[str]:
         """List all collections"""
         try:
             await self.initialize()
-            return await self.qdrant_service.list_collections()
+            qdrant_service = await self.get_qdrant_service()
+            return await qdrant_service.list_collections()
         except Exception as e:
             console.print(f"❌ Error listing collections: {e}", style="red")
             return []
@@ -136,7 +130,8 @@ class VectorDBManager:
         """Create a new collection"""
         try:
             await self.initialize()
-            await self.qdrant_service.create_collection(
+            qdrant_service = await self.get_qdrant_service()
+            await qdrant_service.create_collection(
                 collection_name=collection_name,
                 vector_size=vector_size,
                 distance="Cosine",
@@ -155,7 +150,8 @@ class VectorDBManager:
         """Delete a collection"""
         try:
             await self.initialize()
-            await self.qdrant_service.delete_collection(collection_name)
+            qdrant_service = await self.get_qdrant_service()
+            await qdrant_service.delete_collection(collection_name)
             console.print(
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
@@ -170,7 +166,8 @@ class VectorDBManager:
         """Get information about a specific collection"""
         try:
             await self.initialize()
-            collection_info = await self.qdrant_service.get_collection_info(
+            qdrant_service = await self.get_qdrant_service()
+            collection_info = await qdrant_service.get_collection_info(
                 collection_name
             )
 
@@ -199,7 +196,8 @@ class VectorDBManager:
         """Search for similar vectors"""
         try:
             await self.initialize()
-            search_results = await self.qdrant_service.search_vectors(
+            qdrant_service = await self.get_qdrant_service()
+            search_results = await qdrant_service.search_vectors(
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
@@ -229,12 +227,13 @@ class VectorDBManager:
         """Get comprehensive database statistics"""
         try:
             await self.initialize()
-            collection_names = await self.qdrant_service.list_collections()
+            qdrant_service = await self.get_qdrant_service()
+            collection_names = await qdrant_service.list_collections()
             collections = []
             total_vectors = 0
 
             for collection_name in collection_names:
-                collection_info = await self.qdrant_service.get_collection_info(
+                collection_info = await qdrant_service.get_collection_info(
                     collection_name
                 )
                 if collection_info:
@@ -262,7 +261,8 @@ class VectorDBManager:
             await self.initialize()
 
             # Get vector size before deletion
-            collection_info = await self.qdrant_service.get_collection_info(
+            qdrant_service = await self.get_qdrant_service()
+            collection_info = await qdrant_service.get_collection_info(
                 collection_name
             )
             if not collection_info:
@@ -272,8 +272,8 @@ class VectorDBManager:
             vector_size = collection_info.vector_size
 
             # Delete and recreate collection
-            await self.qdrant_service.delete_collection(collection_name)
-            await self.qdrant_service.create_collection(
+            await qdrant_service.delete_collection(collection_name)
+            await qdrant_service.create_collection(
                 collection_name=collection_name,
                 vector_size=vector_size,
                 distance="Cosine",
@@ -294,9 +294,7 @@ class VectorDBManager:
         return await self.get_database_stats()
 
 
-async def create_embeddings(
-    text: str, embedding_manager: EmbeddingManager
-) -> list[float]:
+async def create_embeddings(text: str, embedding_manager) -> list[float]:
     """Create embeddings for text using EmbeddingManager"""
     try:
         embeddings = await embedding_manager.generate_embeddings([text])
@@ -304,6 +302,16 @@ async def create_embeddings(
     except Exception as e:
         console.print(f"❌ Error creating embeddings: {e}", style="red")
         return []
+
+
+def _create_manager_from_context(ctx) -> VectorDBManager:
+    """Create VectorDBManager with ClientManager from CLI context."""
+    config = get_config()
+    if ctx.obj.get("url"):
+        config.qdrant.url = ctx.obj.get("url")
+
+    client_manager = ClientManager(config)
+    return VectorDBManager(client_manager=client_manager)
 
 
 # CLI Commands
@@ -327,9 +335,10 @@ def cli(ctx, url, log_level):
 
 @cli.command()
 @click.pass_context
+@async_command
 async def list(ctx):
     """List all collections"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         collections = await manager.list_collections()
         if collections:
@@ -346,9 +355,10 @@ async def list(ctx):
 @click.argument("collection_name")
 @click.option("--vector-size", default=1536, help="Vector size")
 @click.pass_context
+@async_command
 async def create(ctx, collection_name, vector_size):
     """Create a new collection"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         await manager.create_collection(collection_name, vector_size)
     finally:
@@ -358,9 +368,10 @@ async def create(ctx, collection_name, vector_size):
 @cli.command()
 @click.argument("collection_name")
 @click.pass_context
+@async_command
 async def delete(ctx, collection_name):
     """Delete a collection"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         await manager.delete_collection(collection_name)
     finally:
@@ -369,9 +380,10 @@ async def delete(ctx, collection_name):
 
 @cli.command()
 @click.pass_context
+@async_command
 async def stats(ctx):
     """Show database statistics"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         stats = await manager.get_database_stats()
         if stats:
@@ -402,9 +414,10 @@ async def stats(ctx):
 @cli.command()
 @click.argument("collection_name")
 @click.pass_context
+@async_command
 async def info(ctx, collection_name):
     """Show collection information"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         info = await manager.get_collection_info(collection_name)
         if info:
@@ -420,9 +433,10 @@ async def info(ctx, collection_name):
 @cli.command()
 @click.argument("collection_name")
 @click.pass_context
+@async_command
 async def clear(ctx, collection_name):
     """Clear all vectors from a collection"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         await manager.clear_collection(collection_name)
     finally:
@@ -434,9 +448,10 @@ async def clear(ctx, collection_name):
 @click.argument("query")
 @click.option("--limit", default=5, help="Number of results")
 @click.pass_context
+@async_command
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents"""
-    manager = VectorDBManager(qdrant_url=ctx.obj.get("url"))
+    manager = _create_manager_from_context(ctx)
     try:
         # Initialize manager to ensure embedding_manager is available
         await manager.initialize()
@@ -470,7 +485,6 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point"""
-    async_to_sync_click(cli)
     cli()
 
 

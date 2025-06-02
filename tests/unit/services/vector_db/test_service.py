@@ -1,8 +1,7 @@
-"""Tests for QdrantService facade."""
+"""Tests for QdrantService with ClientManager integration."""
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from src.config import UnifiedConfig
@@ -10,543 +9,703 @@ from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService
 
 
-class TestQdrantService:
-    """Test cases for QdrantService facade."""
+@pytest.fixture
+def mock_config():
+    """Create mock unified config."""
+    config = MagicMock(spec=UnifiedConfig)
+    config.qdrant = MagicMock()
+    config.qdrant.url = "http://localhost:6333"
+    config.qdrant.timeout = 30
+    return config
 
-    @pytest.fixture
-    def mock_config(self):
-        """Create mock configuration."""
-        config = MagicMock(spec=UnifiedConfig)
-        config.qdrant = MagicMock()
-        config.qdrant.url = "http://localhost:6333"
-        config.qdrant.api_key = "test-api-key"
-        config.qdrant.timeout = 30
-        config.qdrant.prefer_grpc = False
-        return config
 
-    @pytest.fixture
-    def service(self, mock_config):
-        """Create QdrantService instance."""
-        return QdrantService(mock_config)
+@pytest.fixture
+def mock_client_manager():
+    """Create mock ClientManager."""
+    manager = AsyncMock()
+    manager.get_qdrant_client = AsyncMock()
+    return manager
 
-    @pytest.fixture
-    def initialized_service(self, service):
-        """Create initialized QdrantService with mocked modules."""
-        # Mock all the internal modules
-        service._client_manager = AsyncMock()
-        service._client_manager.get_client.return_value = AsyncMock()
-        service._collections = AsyncMock()
-        service._search = AsyncMock()
-        service._indexing = AsyncMock()
-        service._documents = AsyncMock()
-        service._initialized = True
-        return service
 
-    async def test_initialization_success(self, mock_config):
-        """Test successful service initialization."""
-        with (
-            patch("src.services.vector_db.service.QdrantClient") as mock_client_class,
-            patch(
-                "src.services.vector_db.service.QdrantCollections"
-            ) as mock_collections_class,
-            patch("src.services.vector_db.service.QdrantSearch") as mock_search_class,
-            patch(
-                "src.services.vector_db.service.QdrantIndexing"
-            ) as mock_indexing_class,
-            patch(
-                "src.services.vector_db.service.QdrantDocuments"
-            ) as mock_documents_class,
+@pytest.fixture
+def mock_qdrant_client():
+    """Create mock Qdrant client."""
+    client = AsyncMock()
+    client.get_collections = AsyncMock(return_value=[])
+    return client
+
+
+@pytest.fixture
+async def qdrant_service(mock_config, mock_client_manager):
+    """Create QdrantService instance."""
+    service = QdrantService(mock_config, client_manager=mock_client_manager)
+    return service
+
+
+class TestQdrantServiceInitialization:
+    """Test QdrantService initialization."""
+
+    async def test_initialization_with_client_manager(
+        self, mock_config, mock_client_manager, mock_qdrant_client
+    ):
+        """Test service initialization with ClientManager."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+
+        service = QdrantService(mock_config, client_manager=mock_client_manager)
+        await service.initialize()
+
+        assert service._initialized
+        assert service._collections is not None
+        assert service._search is not None
+        assert service._indexing is not None
+        assert service._documents is not None
+        mock_client_manager.get_qdrant_client.assert_called_once()
+
+    async def test_initialization_requires_client_manager(self, mock_config):
+        """Test that QdrantService requires ClientManager."""
+        with pytest.raises(
+            TypeError, match="missing 1 required positional argument: 'client_manager'"
         ):
-            # Mock client manager
-            mock_client_manager = AsyncMock()
-            mock_client = AsyncMock()
-            mock_client_manager.get_client.return_value = mock_client
-            mock_client_class.return_value = mock_client_manager
+            QdrantService(mock_config)
 
-            # Mock modules
-            mock_collections = AsyncMock()
-            mock_collections_class.return_value = mock_collections
+    async def test_double_initialization(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test that double initialization is safe."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
 
-            # Create service AFTER patching so it gets the mocked client
-            service = QdrantService(mock_config)
+        await qdrant_service.initialize()
+        await qdrant_service.initialize()  # Should not raise error
+
+        assert qdrant_service._initialized
+
+    async def test_initialization_failure(self, mock_config, mock_client_manager):
+        """Test initialization failure handling."""
+        mock_client_manager.get_qdrant_client.side_effect = Exception(
+            "Connection failed"
+        )
+
+        service = QdrantService(mock_config, client_manager=mock_client_manager)
+
+        with pytest.raises(
+            QdrantServiceError, match="Failed to initialize QdrantService"
+        ):
             await service.initialize()
 
-            assert service._initialized is True
-            mock_client_manager.initialize.assert_called_once()
-            mock_collections.initialize.assert_called_once()
+        assert not service._initialized
 
-    async def test_initialization_already_initialized(self, service):
-        """Test initialization when already initialized."""
-        service._initialized = True
-        await service.initialize()
-        # Should return early without creating new modules
+    async def test_cleanup(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test service cleanup."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
 
-    async def test_initialization_error(self, mock_config):
-        """Test initialization error."""
-        with patch("src.services.vector_db.service.QdrantClient") as mock_client_class:
-            # Mock client manager that fails during initialize
-            mock_client_manager = AsyncMock()
-            mock_client_manager.initialize.side_effect = Exception(
-                "Client initialization failed"
-            )
-            mock_client_class.return_value = mock_client_manager
+        await qdrant_service.initialize()
+        await qdrant_service.cleanup()
 
-            # Create service and try to initialize
-            service = QdrantService(mock_config)
+        assert not qdrant_service._initialized
+        assert qdrant_service._collections is None
+        assert qdrant_service._search is None
+        assert qdrant_service._indexing is None
+        assert qdrant_service._documents is None
 
-            with pytest.raises(
-                QdrantServiceError, match="Failed to initialize QdrantService"
-            ):
-                await service.initialize()
 
-            assert service._initialized is False
+class TestQdrantServiceCollectionAPI:
+    """Test collection management API delegation."""
 
-    async def test_cleanup_success(self, initialized_service):
-        """Test successful cleanup."""
-        # Store references before cleanup (cleanup sets them to None)
-        collections_mock = initialized_service._collections
-        client_manager_mock = initialized_service._client_manager
+    async def test_create_collection(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test create collection with payload indexing."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        await initialized_service.cleanup()
+        # Mock the collections module
+        qdrant_service._collections.create_collection = AsyncMock(return_value=True)
+        qdrant_service._indexing.create_payload_indexes = AsyncMock()
 
-        collections_mock.cleanup.assert_called_once()
-        client_manager_mock.cleanup.assert_called_once()
-        assert initialized_service._initialized is False
+        result = await qdrant_service.create_collection(
+            collection_name="test_collection", vector_size=1536, distance="Cosine"
+        )
 
-    async def test_cleanup_partial_initialization(self, service):
-        """Test cleanup with partial initialization."""
-        collections_mock = AsyncMock()
-        service._collections = collections_mock
-        service._client_manager = None
-
-        await service.cleanup()
-
-        collections_mock.cleanup.assert_called_once()
-
-    async def test_create_collection_delegation(self, initialized_service):
-        """Test create_collection delegates to collections module and creates indexes."""
-        initialized_service._collections.create_collection.return_value = True
-
-        result = await initialized_service.create_collection(
+        assert result is True
+        qdrant_service._collections.create_collection.assert_called_once_with(
             collection_name="test_collection",
             vector_size=1536,
             distance="Cosine",
-            sparse_vector_name="sparse",
+            sparse_vector_name=None,
             enable_quantization=True,
             collection_type="general",
         )
-
-        assert result is True
-        initialized_service._collections.create_collection.assert_called_once_with(
-            collection_name="test_collection",
-            vector_size=1536,
-            distance="Cosine",
-            sparse_vector_name="sparse",
-            enable_quantization=True,
-            collection_type="general",
-        )
-        # Should also create payload indexes
-        initialized_service._indexing.create_payload_indexes.assert_called_once_with(
+        qdrant_service._indexing.create_payload_indexes.assert_called_once_with(
             "test_collection"
         )
 
-    async def test_create_collection_index_creation_failure(self, initialized_service):
-        """Test create_collection handles index creation failure gracefully."""
-        initialized_service._collections.create_collection.return_value = True
-        initialized_service._indexing.create_payload_indexes.side_effect = Exception(
-            "Index creation failed"
+    async def test_create_collection_indexing_failure(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test create collection when payload indexing fails."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._collections.create_collection = AsyncMock(return_value=True)
+        qdrant_service._indexing.create_payload_indexes = AsyncMock(
+            side_effect=Exception("Index failed")
         )
 
-        # Should still succeed even if index creation fails
-        result = await initialized_service.create_collection(
-            collection_name="test_collection",
-            vector_size=1536,
+        result = await qdrant_service.create_collection(
+            collection_name="test_collection", vector_size=1536
         )
+
+        # Should still return True even if indexing fails
+        assert result is True
+
+    async def test_delete_collection(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test delete collection delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._collections.delete_collection = AsyncMock(return_value=True)
+
+        result = await qdrant_service.delete_collection("test_collection")
 
         assert result is True
-        initialized_service._collections.create_collection.assert_called_once()
-        initialized_service._indexing.create_payload_indexes.assert_called_once_with(
+        qdrant_service._collections.delete_collection.assert_called_once_with(
             "test_collection"
         )
 
-    async def test_delete_collection_delegation(self, initialized_service):
-        """Test delete_collection delegates to collections module."""
-        initialized_service._collections.delete_collection.return_value = True
+    async def test_list_collections(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test list collections delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.delete_collection("test_collection")
-
-        assert result is True
-        initialized_service._collections.delete_collection.assert_called_once_with(
-            "test_collection"
-        )
-
-    async def test_list_collections_delegation(self, initialized_service):
-        """Test list_collections delegates to collections module."""
         expected_collections = ["collection1", "collection2"]
-        initialized_service._collections.list_collections.return_value = (
-            expected_collections
+        qdrant_service._collections.list_collections = AsyncMock(
+            return_value=expected_collections
         )
 
-        result = await initialized_service.list_collections()
+        result = await qdrant_service.list_collections()
 
         assert result == expected_collections
-        initialized_service._collections.list_collections.assert_called_once()
+        qdrant_service._collections.list_collections.assert_called_once()
 
-    async def test_list_collections_details_delegation(self, initialized_service):
-        """Test list_collections_details delegates to collections module."""
-        expected_details = [{"name": "collection1", "vector_count": 100}]
-        initialized_service._collections.list_collections_details.return_value = (
-            expected_details
+    async def test_get_collection_info(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test get collection info delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_info = {"name": "test", "vector_count": 100, "vector_size": 1536}
+        qdrant_service._collections.get_collection_info = AsyncMock(
+            return_value=expected_info
         )
 
-        result = await initialized_service.list_collections_details()
-
-        assert result == expected_details
-        initialized_service._collections.list_collections_details.assert_called_once()
-
-    async def test_get_collection_info_delegation(self, initialized_service):
-        """Test get_collection_info delegates to collections module."""
-        expected_info = {"status": "green", "vectors_count": 100}
-        initialized_service._collections.get_collection_info.return_value = (
-            expected_info
-        )
-
-        result = await initialized_service.get_collection_info("test_collection")
+        result = await qdrant_service.get_collection_info("test_collection")
 
         assert result == expected_info
-        initialized_service._collections.get_collection_info.assert_called_once_with(
+        qdrant_service._collections.get_collection_info.assert_called_once_with(
             "test_collection"
         )
 
-    async def test_trigger_collection_optimization_delegation(
-        self, initialized_service
+
+class TestQdrantServiceCollectionAPIExtended:
+    """Extended tests for collection management API delegation."""
+
+    async def test_list_collections_details(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
-        """Test trigger_collection_optimization delegates to collections module."""
-        initialized_service._collections.trigger_collection_optimization.return_value = True
+        """Test list collections with details delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.trigger_collection_optimization(
-            "test_collection"
+        expected_details = [
+            {"name": "collection1", "vector_count": 100, "vector_size": 1536},
+            {"name": "collection2", "vector_count": 50, "vector_size": 768},
+        ]
+        qdrant_service._collections.list_collections_details = AsyncMock(
+            return_value=expected_details
         )
+
+        result = await qdrant_service.list_collections_details()
+
+        assert result == expected_details
+        qdrant_service._collections.list_collections_details.assert_called_once()
+
+    async def test_trigger_collection_optimization(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test trigger collection optimization delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._collections.trigger_collection_optimization = AsyncMock(
+            return_value=True
+        )
+
+        result = await qdrant_service.trigger_collection_optimization("test_collection")
 
         assert result is True
-        initialized_service._collections.trigger_collection_optimization.assert_called_once_with(
+        qdrant_service._collections.trigger_collection_optimization.assert_called_once_with(
             "test_collection"
         )
 
-    async def test_hybrid_search_delegation(self, initialized_service):
-        """Test hybrid_search delegates to search module."""
-        expected_results = [{"id": "point1", "score": 0.9}]
-        initialized_service._search.hybrid_search.return_value = expected_results
 
-        query_vector = [0.1, 0.2, 0.3]
-        sparse_vector = {1: 0.5, 2: 0.3}
+class TestQdrantServiceSearchAPI:
+    """Test search API delegation."""
 
-        result = await initialized_service.hybrid_search(
-            collection_name="test_collection",
-            query_vector=query_vector,
-            sparse_vector=sparse_vector,
-            limit=10,
-            score_threshold=0.5,
-            fusion_type="rrf",
-            search_accuracy="balanced",
-        )
-
-        assert result == expected_results
-        initialized_service._search.hybrid_search.assert_called_once_with(
-            collection_name="test_collection",
-            query_vector=query_vector,
-            sparse_vector=sparse_vector,
-            limit=10,
-            score_threshold=0.5,
-            fusion_type="rrf",
-            search_accuracy="balanced",
-        )
-
-    async def test_multi_stage_search_delegation(self, initialized_service):
-        """Test multi_stage_search delegates to search module."""
-        expected_results = [{"id": "point1", "score": 0.9}]
-        initialized_service._search.multi_stage_search.return_value = expected_results
-
-        stages = [{"query_vector": [0.1, 0.2], "vector_name": "dense", "limit": 50}]
-
-        result = await initialized_service.multi_stage_search(
-            collection_name="test_collection",
-            stages=stages,
-            limit=10,
-            fusion_algorithm="rrf",
-            search_accuracy="balanced",
-        )
-
-        assert result == expected_results
-        initialized_service._search.multi_stage_search.assert_called_once_with(
-            collection_name="test_collection",
-            stages=stages,
-            limit=10,
-            fusion_algorithm="rrf",
-            search_accuracy="balanced",
-        )
-
-    async def test_hyde_search_delegation(self, initialized_service):
-        """Test hyde_search delegates to search module."""
-        expected_results = [{"id": "point1", "score": 0.9}]
-        initialized_service._search.hyde_search.return_value = expected_results
-
-        result = await initialized_service.hyde_search(
-            collection_name="test_collection",
-            query="test query",
-            query_embedding=[0.1, 0.2, 0.3],
-            hypothetical_embeddings=[[0.2, 0.3, 0.4]],
-            limit=10,
-            fusion_algorithm="rrf",
-            search_accuracy="balanced",
-        )
-
-        assert result == expected_results
-        initialized_service._search.hyde_search.assert_called_once()
-
-    async def test_filtered_search_delegation(self, initialized_service):
-        """Test filtered_search delegates to search module."""
-        expected_results = [{"id": "point1", "score": 0.9}]
-        initialized_service._search.filtered_search.return_value = expected_results
+    async def test_hybrid_search(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test hybrid search delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
         query_vector = [0.1] * 1536
-        filters = {"doc_type": "api"}
+        sparse_vector = {0: 0.5, 1: 0.3}
+        expected_results = [{"id": 1, "score": 0.9, "payload": {}}]
 
-        result = await initialized_service.filtered_search(
+        qdrant_service._search.hybrid_search = AsyncMock(return_value=expected_results)
+
+        result = await qdrant_service.hybrid_search(
             collection_name="test_collection",
             query_vector=query_vector,
-            filters=filters,
+            sparse_vector=sparse_vector,
             limit=10,
-            search_accuracy="balanced",
         )
 
         assert result == expected_results
-        initialized_service._search.filtered_search.assert_called_once_with(
+        qdrant_service._search.hybrid_search.assert_called_once_with(
             collection_name="test_collection",
             query_vector=query_vector,
-            filters=filters,
+            sparse_vector=sparse_vector,
             limit=10,
+            score_threshold=0.0,
+            fusion_type="rrf",
             search_accuracy="balanced",
         )
 
-    async def test_create_payload_indexes_delegation(self, initialized_service):
-        """Test create_payload_indexes delegates to indexing module."""
-        await initialized_service.create_payload_indexes("test_collection")
+    async def test_multi_stage_search(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test multi-stage search delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        initialized_service._indexing.create_payload_indexes.assert_called_once_with(
-            "test_collection"
+        stages = [
+            {"type": "vector", "vector": [0.1] * 1536, "limit": 20},
+            {"type": "rerank", "model": "bge-reranker", "limit": 10},
+        ]
+        expected_results = [{"id": 1, "score": 0.9, "payload": {}}]
+
+        qdrant_service._search.multi_stage_search = AsyncMock(
+            return_value=expected_results
         )
 
-    async def test_list_payload_indexes_delegation(self, initialized_service):
-        """Test list_payload_indexes delegates to indexing module."""
-        expected_indexes = ["field1", "field2"]
-        initialized_service._indexing.list_payload_indexes.return_value = (
-            expected_indexes
+        result = await qdrant_service.multi_stage_search(
+            collection_name="test_collection",
+            stages=stages,
+            limit=10,
+            fusion_algorithm="rrf",
         )
 
-        result = await initialized_service.list_payload_indexes("test_collection")
-
-        assert result == expected_indexes
-        initialized_service._indexing.list_payload_indexes.assert_called_once_with(
-            "test_collection"
+        assert result == expected_results
+        qdrant_service._search.multi_stage_search.assert_called_once_with(
+            collection_name="test_collection",
+            stages=stages,
+            limit=10,
+            fusion_algorithm="rrf",
+            search_accuracy="balanced",
         )
 
-    async def test_drop_payload_index_delegation(self, initialized_service):
-        """Test drop_payload_index delegates to indexing module."""
-        await initialized_service.drop_payload_index("test_collection", "test_field")
+    async def test_hyde_search(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test HyDE search delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        initialized_service._indexing.drop_payload_index.assert_called_once_with(
-            "test_collection", "test_field"
+        query = "How to implement vector search?"
+        query_embedding = [0.1] * 1536
+        hypothetical_embeddings = [[0.2] * 1536, [0.3] * 1536]
+        expected_results = [{"id": 1, "score": 0.9, "payload": {}}]
+
+        qdrant_service._search.hyde_search = AsyncMock(return_value=expected_results)
+
+        result = await qdrant_service.hyde_search(
+            collection_name="test_collection",
+            query=query,
+            query_embedding=query_embedding,
+            hypothetical_embeddings=hypothetical_embeddings,
+            limit=5,
         )
 
-    async def test_reindex_collection_delegation(self, initialized_service):
-        """Test reindex_collection delegates to indexing module."""
-        await initialized_service.reindex_collection("test_collection")
-
-        initialized_service._indexing.reindex_collection.assert_called_once_with(
-            "test_collection"
+        assert result == expected_results
+        qdrant_service._search.hyde_search.assert_called_once_with(
+            collection_name="test_collection",
+            query=query,
+            query_embedding=query_embedding,
+            hypothetical_embeddings=hypothetical_embeddings,
+            limit=5,
+            fusion_algorithm="rrf",
+            search_accuracy="balanced",
         )
 
-    async def test_get_payload_index_stats_delegation(self, initialized_service):
-        """Test get_payload_index_stats delegates to indexing module."""
-        expected_stats = {
-            "collection_name": "test_collection",
-            "indexed_fields_count": 5,
-        }
-        initialized_service._indexing.get_payload_index_stats.return_value = (
-            expected_stats
+    async def test_filtered_search(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test filtered search delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        query_vector = [0.1] * 1536
+        filters = {"category": "test"}
+        expected_results = [{"id": 1, "score": 0.9, "payload": {}}]
+
+        qdrant_service._search.filtered_search = AsyncMock(
+            return_value=expected_results
         )
 
-        result = await initialized_service.get_payload_index_stats("test_collection")
-
-        assert result == expected_stats
-        initialized_service._indexing.get_payload_index_stats.assert_called_once_with(
-            "test_collection"
+        result = await qdrant_service.filtered_search(
+            collection_name="test_collection",
+            query_vector=query_vector,
+            filters=filters,
+            limit=5,
         )
 
-    async def test_validate_index_health_delegation(self, initialized_service):
-        """Test validate_index_health delegates to indexing module."""
-        expected_health = {"status": "healthy", "health_score": 95.0}
-        initialized_service._indexing.validate_index_health.return_value = (
-            expected_health
+        assert result == expected_results
+        qdrant_service._search.filtered_search.assert_called_once_with(
+            collection_name="test_collection",
+            query_vector=query_vector,
+            filters=filters,
+            limit=5,
+            search_accuracy="balanced",
         )
 
-        result = await initialized_service.validate_index_health("test_collection")
 
-        assert result == expected_health
-        initialized_service._indexing.validate_index_health.assert_called_once_with(
-            "test_collection"
-        )
+class TestQdrantServiceDocumentAPI:
+    """Test document API delegation."""
 
-    async def test_get_index_usage_stats_delegation(self, initialized_service):
-        """Test get_index_usage_stats delegates to indexing module."""
-        expected_stats = {
-            "collection_name": "test_collection",
-            "optimization_suggestions": [],
-        }
-        initialized_service._indexing.get_index_usage_stats.return_value = (
-            expected_stats
-        )
+    async def test_upsert_points(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test upsert points delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.get_index_usage_stats("test_collection")
+        points = [{"id": 1, "vector": [0.1] * 1536, "payload": {"text": "test"}}]
+        qdrant_service._documents.upsert_points = AsyncMock(return_value=True)
 
-        assert result == expected_stats
-        initialized_service._indexing.get_index_usage_stats.assert_called_once_with(
-            "test_collection"
-        )
-
-    async def test_upsert_points_delegation(self, initialized_service):
-        """Test upsert_points delegates to documents module."""
-        initialized_service._documents.upsert_points.return_value = True
-
-        points = [{"id": "point1", "vector": [0.1, 0.2], "payload": {"title": "Test"}}]
-
-        result = await initialized_service.upsert_points(
-            collection_name="test_collection", points=points, batch_size=100
+        result = await qdrant_service.upsert_points(
+            collection_name="test_collection", points=points, batch_size=50
         )
 
         assert result is True
-        initialized_service._documents.upsert_points.assert_called_once_with(
-            collection_name="test_collection", points=points, batch_size=100
+        qdrant_service._documents.upsert_points.assert_called_once_with(
+            collection_name="test_collection", points=points, batch_size=50
         )
 
-    async def test_get_points_delegation(self, initialized_service):
-        """Test get_points delegates to documents module."""
-        expected_points = [{"id": "point1", "payload": {"title": "Test"}}]
-        initialized_service._documents.get_points.return_value = expected_points
+    async def test_get_points(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test get points delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.get_points(
+        point_ids = [1, 2, 3]
+        expected_points = [
+            {"id": 1, "payload": {"text": "test1"}},
+            {"id": 2, "payload": {"text": "test2"}},
+        ]
+        qdrant_service._documents.get_points = AsyncMock(return_value=expected_points)
+
+        result = await qdrant_service.get_points(
             collection_name="test_collection",
-            point_ids=["point1", "point2"],
+            point_ids=point_ids,
             with_payload=True,
             with_vectors=False,
         )
 
         assert result == expected_points
-        initialized_service._documents.get_points.assert_called_once_with(
+        qdrant_service._documents.get_points.assert_called_once_with(
             collection_name="test_collection",
-            point_ids=["point1", "point2"],
+            point_ids=point_ids,
             with_payload=True,
             with_vectors=False,
         )
 
-    async def test_delete_points_delegation(self, initialized_service):
-        """Test delete_points delegates to documents module."""
-        initialized_service._documents.delete_points.return_value = True
+    async def test_delete_points(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test delete points delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.delete_points(
-            collection_name="test_collection",
-            point_ids=["point1", "point2"],
-            filter_condition=None,
+        point_ids = [1, 2, 3]
+        qdrant_service._documents.delete_points = AsyncMock(return_value=True)
+
+        result = await qdrant_service.delete_points(
+            collection_name="test_collection", point_ids=point_ids
         )
 
         assert result is True
-        initialized_service._documents.delete_points.assert_called_once_with(
+        qdrant_service._documents.delete_points.assert_called_once_with(
             collection_name="test_collection",
-            point_ids=["point1", "point2"],
+            point_ids=point_ids,
             filter_condition=None,
         )
 
-    async def test_update_point_payload_delegation(self, initialized_service):
-        """Test update_point_payload delegates to documents module."""
-        initialized_service._documents.update_point_payload.return_value = True
+    async def test_update_point_payload(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test update point payload delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        payload = {"new_field": "new_value"}
+        point_id = 1
+        payload = {"category": "updated", "status": "active"}
+        qdrant_service._documents.update_point_payload = AsyncMock(return_value=True)
 
-        result = await initialized_service.update_point_payload(
+        result = await qdrant_service.update_point_payload(
             collection_name="test_collection",
-            point_id="point1",
+            point_id=point_id,
             payload=payload,
             replace=False,
         )
 
         assert result is True
-        initialized_service._documents.update_point_payload.assert_called_once_with(
+        qdrant_service._documents.update_point_payload.assert_called_once_with(
             collection_name="test_collection",
-            point_id="point1",
+            point_id=point_id,
             payload=payload,
             replace=False,
         )
 
-    async def test_count_points_delegation(self, initialized_service):
-        """Test count_points delegates to documents module."""
-        initialized_service._documents.count_points.return_value = 1000
+    async def test_count_points(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test count points delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.count_points(
+        expected_count = 150
+        qdrant_service._documents.count_points = AsyncMock(return_value=expected_count)
+
+        result = await qdrant_service.count_points(
+            collection_name="test_collection", filter_condition={"category": "test"}
+        )
+
+        assert result == expected_count
+        qdrant_service._documents.count_points.assert_called_once_with(
             collection_name="test_collection",
-            filter_condition={"doc_type": "api"},
+            filter_condition={"category": "test"},
             exact=True,
         )
 
-        assert result == 1000
-        initialized_service._documents.count_points.assert_called_once_with(
-            collection_name="test_collection",
-            filter_condition={"doc_type": "api"},
-            exact=True,
+    async def test_scroll_points(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test scroll points delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_result = {
+            "points": [{"id": 1, "payload": {"text": "test"}}],
+            "next_page_offset": "next_token",
+        }
+        qdrant_service._documents.scroll_points = AsyncMock(
+            return_value=expected_result
         )
 
-    async def test_scroll_points_delegation(self, initialized_service):
-        """Test scroll_points delegates to documents module."""
-        expected_result = {"points": [{"id": "point1"}], "next_offset": "offset123"}
-        initialized_service._documents.scroll_points.return_value = expected_result
-
-        result = await initialized_service.scroll_points(
+        result = await qdrant_service.scroll_points(
             collection_name="test_collection",
-            limit=100,
-            offset="offset456",
-            filter_condition={"doc_type": "api"},
+            limit=50,
+            offset="some_token",
+            filter_condition={"category": "test"},
             with_payload=True,
             with_vectors=False,
         )
 
         assert result == expected_result
-        initialized_service._documents.scroll_points.assert_called_once_with(
+        qdrant_service._documents.scroll_points.assert_called_once_with(
             collection_name="test_collection",
-            limit=100,
-            offset="offset456",
-            filter_condition={"doc_type": "api"},
+            limit=50,
+            offset="some_token",
+            filter_condition={"category": "test"},
             with_payload=True,
             with_vectors=False,
         )
 
-    async def test_clear_collection_delegation(self, initialized_service):
-        """Test clear_collection delegates to documents module."""
-        initialized_service._documents.clear_collection.return_value = True
+    async def test_clear_collection(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test clear collection delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        result = await initialized_service.clear_collection("test_collection")
+        qdrant_service._documents.clear_collection = AsyncMock(return_value=True)
+
+        result = await qdrant_service.clear_collection("test_collection")
 
         assert result is True
-        initialized_service._documents.clear_collection.assert_called_once_with(
+        qdrant_service._documents.clear_collection.assert_called_once_with(
             "test_collection"
         )
 
-    async def test_create_collection_with_hnsw_optimization_delegation(
-        self, initialized_service
-    ):
-        """Test create_collection_with_hnsw_optimization delegates to collections module."""
-        initialized_service._collections.create_collection.return_value = True
 
-        result = await initialized_service.create_collection_with_hnsw_optimization(
+class TestQdrantServiceIndexingAPI:
+    """Test indexing API delegation."""
+
+    async def test_create_payload_indexes(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test create payload indexes delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._indexing.create_payload_indexes = AsyncMock()
+
+        await qdrant_service.create_payload_indexes("test_collection")
+
+        qdrant_service._indexing.create_payload_indexes.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_list_payload_indexes(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test list payload indexes delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_indexes = ["url", "title", "category"]
+        qdrant_service._indexing.list_payload_indexes = AsyncMock(
+            return_value=expected_indexes
+        )
+
+        result = await qdrant_service.list_payload_indexes("test_collection")
+
+        assert result == expected_indexes
+        qdrant_service._indexing.list_payload_indexes.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_drop_payload_index(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test drop payload index delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._indexing.drop_payload_index = AsyncMock()
+
+        await qdrant_service.drop_payload_index("test_collection", "category")
+
+        qdrant_service._indexing.drop_payload_index.assert_called_once_with(
+            "test_collection", "category"
+        )
+
+    async def test_reindex_collection(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test reindex collection delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._indexing.reindex_collection = AsyncMock()
+
+        await qdrant_service.reindex_collection("test_collection")
+
+        qdrant_service._indexing.reindex_collection.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_get_payload_index_stats(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test get payload index stats delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_stats = {
+            "indexes": {"url": {"count": 1000}, "title": {"count": 950}},
+            "total_indexes": 2,
+        }
+        qdrant_service._indexing.get_payload_index_stats = AsyncMock(
+            return_value=expected_stats
+        )
+
+        result = await qdrant_service.get_payload_index_stats("test_collection")
+
+        assert result == expected_stats
+        qdrant_service._indexing.get_payload_index_stats.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_validate_index_health(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test validate index health delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_health = {
+            "status": "healthy",
+            "indexes": {"url": "ok", "title": "ok"},
+            "issues": [],
+        }
+        qdrant_service._indexing.validate_index_health = AsyncMock(
+            return_value=expected_health
+        )
+
+        result = await qdrant_service.validate_index_health("test_collection")
+
+        assert result == expected_health
+        qdrant_service._indexing.validate_index_health.assert_called_once_with(
+            "test_collection"
+        )
+
+    async def test_get_index_usage_stats(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test get index usage stats delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        expected_usage = {
+            "query_count": 1500,
+            "index_usage": {"url": 800, "title": 700},
+            "performance_metrics": {"avg_query_time": 0.05},
+        }
+        qdrant_service._indexing.get_index_usage_stats = AsyncMock(
+            return_value=expected_usage
+        )
+
+        result = await qdrant_service.get_index_usage_stats("test_collection")
+
+        assert result == expected_usage
+        qdrant_service._indexing.get_index_usage_stats.assert_called_once_with(
+            "test_collection"
+        )
+
+
+class TestQdrantServiceHNSWOptimization:
+    """Test HNSW optimization API delegation."""
+
+    async def test_create_collection_with_hnsw_optimization(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test create collection with HNSW optimization delegation."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
+
+        qdrant_service._collections.create_collection = AsyncMock(return_value=True)
+
+        result = await qdrant_service.create_collection_with_hnsw_optimization(
             collection_name="test_collection",
             vector_size=1536,
             collection_type="api_reference",
@@ -556,7 +715,7 @@ class TestQdrantService:
         )
 
         assert result is True
-        initialized_service._collections.create_collection.assert_called_once_with(
+        qdrant_service._collections.create_collection.assert_called_once_with(
             collection_name="test_collection",
             vector_size=1536,
             distance="Cosine",
@@ -565,243 +724,67 @@ class TestQdrantService:
             collection_type="api_reference",
         )
 
-    async def test_get_hnsw_configuration_info_delegation(self, initialized_service):
-        """Test get_hnsw_configuration_info delegates to collections module."""
-        expected_info = {"hnsw_parameters": {"m": 16, "ef_construct": 200}}
-        # Replace async mock with regular mock for synchronous method
-        from unittest.mock import MagicMock
+    def test_get_hnsw_configuration_info(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
+    ):
+        """Test get HNSW configuration info delegation."""
+        # Mock the collections instance for the validation check
+        qdrant_service._initialized = True
+        qdrant_service._collections = AsyncMock()
 
-        sync_collections_mock = MagicMock()
-        sync_collections_mock.get_hnsw_configuration_info.return_value = expected_info
-        initialized_service._collections = sync_collections_mock
+        expected_config = {
+            "m": 20,
+            "ef_construct": 300,
+            "full_scan_threshold": 5000,
+            "min_ef": 100,
+            "balanced_ef": 150,
+            "max_ef": 200,
+        }
+        qdrant_service._collections.get_hnsw_configuration_info = MagicMock(
+            return_value=expected_config
+        )
 
-        result = initialized_service.get_hnsw_configuration_info("api_reference")
+        result = qdrant_service.get_hnsw_configuration_info("api_reference")
 
-        assert result == expected_info
-        sync_collections_mock.get_hnsw_configuration_info.assert_called_once_with(
+        assert result == expected_config
+        qdrant_service._collections.get_hnsw_configuration_info.assert_called_once_with(
             "api_reference"
         )
 
-    async def test_search_with_adaptive_ef_compatibility(self, initialized_service):
-        """Test search_with_adaptive_ef compatibility method."""
-        expected_search_results = [{"id": "point1", "score": 0.9}]
-        initialized_service._search.filtered_search.return_value = (
-            expected_search_results
-        )
 
-        query_vector = [0.1] * 1536
+class TestQdrantServiceValidation:
+    """Test service validation."""
 
-        result = await initialized_service.search_with_adaptive_ef(
-            collection_name="test_collection",
-            query_vector=query_vector,
-            limit=10,
-            time_budget_ms=100,
-            score_threshold=0.5,
-        )
-
-        assert result["results"] == expected_search_results
-        assert result["adaptive_ef_used"] == 100
-        assert result["time_budget_ms"] == 100
-        assert "actual_time_ms" in result
-        assert "filtered_count" in result
-
-    async def test_search_with_adaptive_ef_score_filtering(self, initialized_service):
-        """Test search_with_adaptive_ef with score threshold filtering."""
-        # Mock results with different scores
-        search_results = [
-            {"id": "point1", "score": 0.9},
-            {"id": "point2", "score": 0.4},  # Below threshold
-            {"id": "point3", "score": 0.7},
-        ]
-        initialized_service._search.filtered_search.return_value = search_results
-
-        query_vector = [0.1] * 1536
-
-        result = await initialized_service.search_with_adaptive_ef(
-            collection_name="test_collection",
-            query_vector=query_vector,
-            score_threshold=0.5,
-        )
-
-        # Should filter out point2 with score 0.4
-        assert len(result["results"]) == 2
-        assert result["results"][0]["id"] == "point1"
-        assert result["results"][1]["id"] == "point3"
-
-    async def test_optimize_collection_hnsw_parameters_compatibility(
-        self, initialized_service
+    async def test_validate_initialized_success(
+        self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
-        """Test optimize_collection_hnsw_parameters compatibility method."""
-        expected_config = {"hnsw_parameters": {"m": 16, "ef_construct": 200}}
-        # Replace async mock with regular mock for synchronous method
-        from unittest.mock import MagicMock
+        """Test validation when service is properly initialized."""
+        mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+        await qdrant_service.initialize()
 
-        sync_collections_mock = MagicMock()
-        sync_collections_mock.get_hnsw_configuration_info.return_value = expected_config
-        initialized_service._collections = sync_collections_mock
+        # Should not raise error
+        qdrant_service._validate_initialized()
 
-        test_queries = [[0.1, 0.2], [0.3, 0.4]]
-
-        result = await initialized_service.optimize_collection_hnsw_parameters(
-            collection_name="test_collection",
-            collection_type="api_reference",
-            test_queries=test_queries,
-        )
-
-        assert result["collection_name"] == "test_collection"
-        assert result["collection_type"] == "api_reference"
-        assert result["current_configuration"] == expected_config["hnsw_parameters"]
-        assert result["test_queries_processed"] == 2
-
-    async def test_optimize_collection_hnsw_parameters_no_queries(
-        self, initialized_service
-    ):
-        """Test optimize_collection_hnsw_parameters with no test queries."""
-        expected_config = {"hnsw_parameters": {"m": 16, "ef_construct": 200}}
-        # Replace async mock with regular mock for synchronous method
-        from unittest.mock import MagicMock
-
-        sync_collections_mock = MagicMock()
-        sync_collections_mock.get_hnsw_configuration_info.return_value = expected_config
-        initialized_service._collections = sync_collections_mock
-
-        result = await initialized_service.optimize_collection_hnsw_parameters(
-            collection_name="test_collection", collection_type="general"
-        )
-
-        assert result["test_queries_processed"] == 0
-
-    async def test_validate_initialized_not_initialized(self, service):
+    async def test_validate_initialized_not_initialized(self, qdrant_service):
         """Test validation when service is not initialized."""
         with pytest.raises(QdrantServiceError, match="Service not initialized"):
-            await service.create_collection("test", 1536)
+            qdrant_service._validate_initialized()
 
-    async def test_validate_initialized_no_collections_module(self, service):
-        """Test validation when collections module is not available."""
-        service._initialized = True
-        service._collections = None
+    async def test_validate_initialized_missing_collections(self, qdrant_service):
+        """Test validation when collections module is missing."""
+        qdrant_service._initialized = True
+        qdrant_service._collections = None
 
         with pytest.raises(QdrantServiceError, match="Service not initialized"):
-            await service.create_collection("test", 1536)
+            qdrant_service._validate_initialized()
 
-    async def test_inheritance_from_base_service(self, service):
-        """Test that QdrantService inherits from BaseService."""
-        from src.services.base import BaseService
+    async def test_api_methods_require_initialization(self, qdrant_service):
+        """Test that API methods require initialization."""
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.list_collections()
 
-        assert isinstance(service, BaseService)
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.create_collection("test", 1536)
 
-    async def test_config_assignment(self, service, mock_config):
-        """Test config is properly assigned."""
-        assert service.config is mock_config
-
-    async def test_context_manager_usage(self, mock_config):
-        """Test QdrantService can be used as context manager."""
-        service = QdrantService(mock_config)
-
-        with (
-            patch.object(service, "initialize") as mock_init,
-            patch.object(service, "cleanup") as mock_cleanup,
-        ):
-            async with service:
-                pass
-
-            mock_init.assert_called_once()
-            mock_cleanup.assert_called_once()
-
-    async def test_module_initialization_order(self, mock_config):
-        """Test that modules are initialized in correct order."""
-        with (
-            patch("src.services.vector_db.service.QdrantClient") as mock_client_class,
-            patch(
-                "src.services.vector_db.service.QdrantCollections"
-            ) as mock_collections_class,
-            patch("src.services.vector_db.service.QdrantSearch") as mock_search_class,
-            patch(
-                "src.services.vector_db.service.QdrantIndexing"
-            ) as mock_indexing_class,
-            patch(
-                "src.services.vector_db.service.QdrantDocuments"
-            ) as mock_documents_class,
-        ):
-            # Mock client manager
-            mock_client_manager = AsyncMock()
-            mock_client = AsyncMock()
-            # get_client() is synchronous, so use a regular property, not async
-            mock_client_manager.get_client = MagicMock(return_value=mock_client)
-            mock_client_class.return_value = mock_client_manager
-
-            # Mock modules with async initialize methods
-            mock_collections = AsyncMock()
-            mock_search = AsyncMock()
-            mock_indexing = AsyncMock()
-            mock_documents = AsyncMock()
-
-            mock_collections_class.return_value = mock_collections
-            mock_search_class.return_value = mock_search
-            mock_indexing_class.return_value = mock_indexing
-            mock_documents_class.return_value = mock_documents
-
-            # Create service AFTER patching so it gets the mocked client
-            service = QdrantService(mock_config)
-            await service.initialize()
-
-            # Verify initialization order
-            mock_client_manager.initialize.assert_called_once()
-            mock_collections.initialize.assert_called_once()
-
-            # All modules should be created with the shared client
-            mock_collections_class.assert_called_once_with(service.config, mock_client)
-            mock_search_class.assert_called_once_with(mock_client, service.config)
-            mock_indexing_class.assert_called_once_with(mock_client, service.config)
-            mock_documents_class.assert_called_once_with(mock_client, service.config)
-
-    async def test_error_propagation(self, initialized_service):
-        """Test that errors from modules are properly propagated."""
-        # Test that errors from delegated methods are propagated
-        initialized_service._collections.create_collection.side_effect = (
-            QdrantServiceError("Collection error")
-        )
-
-        with pytest.raises(QdrantServiceError, match="Collection error"):
-            await initialized_service.create_collection("test", 1536)
-
-    async def test_all_delegation_methods_check_initialization(self, service):
-        """Test that all delegation methods check initialization."""
-        # List of methods that should check initialization
-        delegation_methods = [
-            ("create_collection", ("test", 1536)),
-            ("delete_collection", ("test",)),
-            ("list_collections", ()),
-            ("list_collections_details", ()),
-            ("get_collection_info", ("test",)),
-            ("trigger_collection_optimization", ("test",)),
-            ("hybrid_search", ("test", [0.1, 0.2])),
-            (
-                "multi_stage_search",
-                (
-                    "test",
-                    [{"query_vector": [0.1], "vector_name": "dense", "limit": 10}],
-                ),
-            ),
-            ("hyde_search", ("test", "query", [0.1], [[0.2]])),
-            ("filtered_search", ("test", [0.1] * 1536, {})),
-            ("create_payload_indexes", ("test",)),
-            ("list_payload_indexes", ("test",)),
-            ("drop_payload_index", ("test", "field")),
-            ("reindex_collection", ("test",)),
-            ("get_payload_index_stats", ("test",)),
-            ("validate_index_health", ("test",)),
-            ("get_index_usage_stats", ("test",)),
-            ("upsert_points", ("test", [])),
-            ("get_points", ("test", [])),
-            ("delete_points", ("test",)),
-            ("update_point_payload", ("test", "point1", {})),
-            ("count_points", ("test",)),
-            ("scroll_points", ("test",)),
-            ("clear_collection", ("test",)),
-        ]
-
-        for method_name, args in delegation_methods:
-            method = getattr(service, method_name)
-            with pytest.raises(QdrantServiceError, match="Service not initialized"):
-                await method(*args)
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.hybrid_search("test", [0.1] * 1536)

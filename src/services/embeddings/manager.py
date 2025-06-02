@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 from typing import Any
 
 try:
@@ -19,6 +20,9 @@ from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
 from .openai_provider import OpenAIEmbeddingProvider
+
+if TYPE_CHECKING:
+    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,7 @@ class EmbeddingManager:
     def __init__(
         self,
         config: UnifiedConfig,
+        client_manager: "ClientManager",
         budget_limit: float | None = None,
         rate_limiter: Any = None,
     ):
@@ -75,6 +80,7 @@ class EmbeddingManager:
 
         Args:
             config: Unified configuration
+            client_manager: ClientManager instance for dependency injection
             budget_limit: Optional daily budget limit in USD
             rate_limiter: Optional RateLimitManager instance
         """
@@ -84,6 +90,7 @@ class EmbeddingManager:
         self.budget_limit = budget_limit
         self.usage_stats = UsageStats()
         self.rate_limiter = rate_limiter
+        self._client_manager = client_manager
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: Any | None = None
@@ -138,6 +145,7 @@ class EmbeddingManager:
                     model_name=self.config.openai.model,
                     dimensions=self.config.openai.dimensions,
                     rate_limiter=self.rate_limiter,
+                    client_manager=self._client_manager,
                 )
                 await provider.initialize()
                 self.providers["openai"] = provider

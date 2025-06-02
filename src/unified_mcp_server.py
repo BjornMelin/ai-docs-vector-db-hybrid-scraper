@@ -134,9 +134,12 @@ async def lifespan():
         # Validate configuration first
         validate_configuration()
 
-        # Initialize client manager
+        # Initialize client manager with unified config
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
-        lifespan.client_manager = ClientManager.from_unified_config()
+        from src.config import get_config
+
+        config = get_config()
+        lifespan.client_manager = ClientManager(config)
         await lifespan.client_manager.initialize()
 
         # Register all tools

@@ -1,5 +1,6 @@
 """Services package for direct API/SDK integration."""
 
+from . import vector_db
 from .base import BaseService
 from .errors import APIError
 from .errors import CrawlServiceError
@@ -12,4 +13,5 @@ __all__ = [
     "CrawlServiceError",
     "EmbeddingServiceError",
     "QdrantServiceError",
+    "vector_db",
 ]
