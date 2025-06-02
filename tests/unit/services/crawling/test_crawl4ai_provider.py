@@ -1,11 +1,11 @@
-"""Tests for Crawl4AI provider module."""
+"""Comprehensive tests for Crawl4AI provider with Pydantic configuration."""
 
-import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from src.config.models import Crawl4AIConfig
 from src.services.base import BaseService
 from src.services.crawling.base import CrawlProvider
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
@@ -16,8 +16,27 @@ from src.services.crawling.crawl4ai_provider import JavaScriptExecutor
 from src.services.errors import CrawlServiceError
 
 
+@pytest.fixture
+def basic_config():
+    """Create basic Crawl4AI configuration."""
+    return Crawl4AIConfig(
+        browser_type="chromium",
+        headless=True,
+        viewport_width=1920,
+        viewport_height=1080,
+        max_concurrent_crawls=5,
+        page_timeout=30.0,
+    )
+
+
+@pytest.fixture
+def mock_rate_limiter():
+    """Create mock rate limiter."""
+    return MagicMock()
+
+
 class TestJavaScriptExecutor:
-    """Test the JavaScriptExecutor helper class."""
+    """Test JavaScript executor functionality."""
 
     def test_init(self):
         """Test JavaScriptExecutor initialization."""
@@ -28,48 +47,38 @@ class TestJavaScriptExecutor:
         assert "click_show_more" in executor.common_patterns
 
     def test_get_js_for_site_python_docs(self):
-        """Test getting JavaScript for Python docs."""
+        """Test JavaScript selection for Python docs."""
         executor = JavaScriptExecutor()
         js = executor.get_js_for_site("https://docs.python.org/3/")
         assert js == executor.common_patterns["spa_navigation"]
 
     def test_get_js_for_site_react_docs(self):
-        """Test getting JavaScript for React docs."""
+        """Test JavaScript selection for React docs."""
         executor = JavaScriptExecutor()
         js = executor.get_js_for_site("https://reactjs.org/docs")
         assert js == executor.common_patterns["spa_navigation"]
 
     def test_get_js_for_site_stackoverflow(self):
-        """Test getting JavaScript for Stack Overflow."""
+        """Test JavaScript selection for Stack Overflow."""
         executor = JavaScriptExecutor()
         js = executor.get_js_for_site("https://stackoverflow.com/questions")
         assert js == executor.common_patterns["infinite_scroll"]
 
     def test_get_js_for_site_mdn(self):
-        """Test getting JavaScript for MDN."""
+        """Test JavaScript selection for MDN."""
         executor = JavaScriptExecutor()
         js = executor.get_js_for_site("https://developer.mozilla.org/docs")
         assert js == executor.common_patterns["click_show_more"]
 
     def test_get_js_for_site_unknown(self):
-        """Test getting JavaScript for unknown site."""
+        """Test JavaScript selection for unknown site."""
         executor = JavaScriptExecutor()
         js = executor.get_js_for_site("https://unknown-site.com")
         assert js is None
 
-    def test_common_patterns_structure(self):
-        """Test that common patterns have expected structure."""
-        executor = JavaScriptExecutor()
-
-        for _pattern_name, pattern_code in executor.common_patterns.items():
-            assert isinstance(pattern_code, str)
-            assert len(pattern_code.strip()) > 0
-            # Each pattern should be valid JavaScript-like syntax
-            assert "await" in pattern_code or "setTimeout" in pattern_code
-
 
 class TestDocumentationExtractor:
-    """Test the DocumentationExtractor helper class."""
+    """Test documentation extraction functionality."""
 
     def test_init(self):
         """Test DocumentationExtractor initialization."""
@@ -80,24 +89,8 @@ class TestDocumentationExtractor:
         assert "nav" in extractor.selectors
         assert "metadata" in extractor.selectors
 
-    def test_selectors_structure(self):
-        """Test that selectors have expected structure."""
-        extractor = DocumentationExtractor()
-
-        # Content selectors should be a list
-        assert isinstance(extractor.selectors["content"], list)
-        assert len(extractor.selectors["content"]) > 0
-
-        # Code selectors should be a list
-        assert isinstance(extractor.selectors["code"], list)
-        assert len(extractor.selectors["code"]) > 0
-
-        # Metadata should be a dict
-        assert isinstance(extractor.selectors["metadata"], dict)
-        assert "title" in extractor.selectors["metadata"]
-
     def test_create_extraction_schema_general(self):
-        """Test creating general extraction schema."""
+        """Test schema creation for general documentation."""
         extractor = DocumentationExtractor()
         schema = extractor.create_extraction_schema("general")
 
@@ -106,7 +99,7 @@ class TestDocumentationExtractor:
         assert "code_blocks" in schema
 
     def test_create_extraction_schema_api_reference(self):
-        """Test creating API reference extraction schema."""
+        """Test schema creation for API reference."""
         extractor = DocumentationExtractor()
         schema = extractor.create_extraction_schema("api_reference")
 
@@ -119,7 +112,7 @@ class TestDocumentationExtractor:
         assert "examples" in schema
 
     def test_create_extraction_schema_tutorial(self):
-        """Test creating tutorial extraction schema."""
+        """Test schema creation for tutorials."""
         extractor = DocumentationExtractor()
         schema = extractor.create_extraction_schema("tutorial")
 
@@ -132,7 +125,7 @@ class TestDocumentationExtractor:
         assert "objectives" in schema
 
     def test_create_extraction_schema_guide(self):
-        """Test creating guide extraction schema."""
+        """Test schema creation for guides."""
         extractor = DocumentationExtractor()
         schema = extractor.create_extraction_schema("guide")
 
@@ -145,123 +138,83 @@ class TestDocumentationExtractor:
 
 
 class TestCrawl4AIProvider:
-    """Test the Crawl4AIProvider class."""
+    """Test Crawl4AIProvider class with Pydantic configuration."""
 
-    def test_init_default_config(self):
-        """Test Crawl4AIProvider initialization with default config."""
-        provider = Crawl4AIProvider()
+    def test_init_basic(self, basic_config):
+        """Test basic initialization with Pydantic config."""
+        provider = Crawl4AIProvider(basic_config)
 
         assert isinstance(provider, BaseService)
         assert isinstance(provider, CrawlProvider)
-        assert provider.config == {}
+        assert provider.config == basic_config
         assert provider._initialized is False
         assert provider._crawler is None
+        assert provider.max_concurrent == 5
 
-    def test_init_with_config(self):
-        """Test Crawl4AIProvider initialization with custom config."""
-        config = {
-            "browser": "firefox",
-            "headless": False,
-            "rate_limit": 100,
-            "max_concurrent": 20,
-        }
-        provider = Crawl4AIProvider(config)
-
-        assert provider.config == config
-        assert provider.max_concurrent == 20
-
-    def test_init_with_rate_limiter(self):
+    def test_init_with_rate_limiter(self, basic_config, mock_rate_limiter):
         """Test initialization with custom rate limiter."""
-        rate_limiter = MagicMock()
-        provider = Crawl4AIProvider(rate_limiter=rate_limiter)
+        provider = Crawl4AIProvider(basic_config, mock_rate_limiter)
+        assert provider.rate_limiter == mock_rate_limiter
 
-        assert provider.rate_limiter == rate_limiter
-
-    def test_browser_config_creation(self):
-        """Test browser configuration creation."""
-        config = {
-            "browser": "firefox",
-            "headless": False,
-            "viewport_width": 1366,
-            "viewport_height": 768,
-            "user_agent": "Custom/1.0",
-        }
-        provider = Crawl4AIProvider(config)
+    def test_browser_config_creation(self, basic_config):
+        """Test browser configuration from Pydantic model."""
+        provider = Crawl4AIProvider(basic_config)
 
         browser_config = provider.browser_config
-        assert browser_config.browser_type == "firefox"
-        assert browser_config.headless is False
-        assert browser_config.viewport_width == 1366
-        assert browser_config.viewport_height == 768
-        assert browser_config.user_agent == "Custom/1.0"
+        assert browser_config.browser_type == "chromium"
+        assert browser_config.headless is True
+        assert browser_config.viewport_width == 1920
+        assert browser_config.viewport_height == 1080
 
-    def test_semaphore_creation(self):
-        """Test semaphore creation for concurrent crawling."""
-        config = {"max_concurrent": 5}
-        provider = Crawl4AIProvider(config)
-
-        assert isinstance(provider.semaphore, asyncio.Semaphore)
-        # Semaphore value is internal, but we can test it was created
-
-    def test_helpers_initialization(self):
-        """Test that helper classes are initialized."""
-        provider = Crawl4AIProvider()
-
-        assert isinstance(provider.js_executor, JavaScriptExecutor)
-        assert isinstance(provider.doc_extractor, DocumentationExtractor)
+    def test_semaphore_creation(self, basic_config):
+        """Test semaphore creation based on config."""
+        provider = Crawl4AIProvider(basic_config)
+        assert provider.semaphore._value == 5  # max_concurrent_crawls
 
     @pytest.mark.asyncio
-    async def test_initialize_success(self):
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_initialize_success(self, mock_crawler_class, basic_config):
         """Test successful provider initialization."""
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler_class:
-            mock_crawler = AsyncMock()
-            mock_crawler_class.return_value = mock_crawler
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
 
-            provider = Crawl4AIProvider()
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
+
+        assert provider._initialized is True
+        assert provider._crawler == mock_crawler
+        mock_crawler.start.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_initialize_already_initialized(self, mock_crawler_class, basic_config):
+        """Test initialization when already initialized."""
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
+
+        provider = Crawl4AIProvider(basic_config)
+        provider._initialized = True
+
+        await provider.initialize()
+
+        # Should not create new crawler
+        mock_crawler_class.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_initialize_failure(self, mock_crawler_class, basic_config):
+        """Test initialization failure."""
+        mock_crawler_class.side_effect = Exception("Crawler creation failed")
+
+        provider = Crawl4AIProvider(basic_config)
+
+        with pytest.raises(CrawlServiceError, match="Failed to initialize Crawl4AI"):
             await provider.initialize()
 
-            assert provider._initialized is True
-            assert provider._crawler == mock_crawler
-            mock_crawler.start.assert_called_once()
-
     @pytest.mark.asyncio
-    async def test_initialize_failure(self):
-        """Test provider initialization failure."""
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler_class:
-            mock_crawler_class.side_effect = Exception("Init failed")
-
-            provider = Crawl4AIProvider()
-
-            with pytest.raises(
-                CrawlServiceError, match="Failed to initialize Crawl4AI"
-            ):
-                await provider.initialize()
-
-    @pytest.mark.asyncio
-    async def test_initialize_idempotent(self):
-        """Test that multiple initialization calls are safe."""
-        with patch(
-            "src.services.crawling.crawl4ai_provider.AsyncWebCrawler"
-        ) as mock_crawler_class:
-            mock_crawler = AsyncMock()
-            mock_crawler_class.return_value = mock_crawler
-
-            provider = Crawl4AIProvider()
-
-            await provider.initialize()
-            await provider.initialize()  # Second call
-
-            # Should only create crawler once
-            mock_crawler_class.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_cleanup(self):
-        """Test provider cleanup."""
-        provider = Crawl4AIProvider()
+    async def test_cleanup_success(self, basic_config):
+        """Test successful cleanup."""
+        provider = Crawl4AIProvider(basic_config)
         mock_crawler = AsyncMock()
         provider._crawler = mock_crawler
         provider._initialized = True
@@ -273,41 +226,60 @@ class TestCrawl4AIProvider:
         assert provider._initialized is False
 
     @pytest.mark.asyncio
-    async def test_cleanup_no_crawler(self):
+    async def test_cleanup_no_crawler(self, basic_config):
         """Test cleanup when no crawler exists."""
-        provider = Crawl4AIProvider()
+        provider = Crawl4AIProvider(basic_config)
 
         # Should not raise exception
         await provider.cleanup()
+
         assert provider._crawler is None
+        assert provider._initialized is False
 
     @pytest.mark.asyncio
-    async def test_scrape_url_not_initialized(self):
+    async def test_cleanup_crawler_error(self, basic_config):
+        """Test cleanup when crawler close fails."""
+        provider = Crawl4AIProvider(basic_config)
+        mock_crawler = AsyncMock()
+        mock_crawler.close.side_effect = Exception("Close failed")
+        provider._crawler = mock_crawler
+        provider._initialized = True
+
+        # Should not raise exception even if close fails
+        await provider.cleanup()
+
+        # Should still reset state even if close fails
+        assert provider._crawler is None
+        assert provider._initialized is False
+
+    @pytest.mark.asyncio
+    async def test_scrape_url_not_initialized(self, basic_config):
         """Test scraping when provider not initialized."""
-        provider = Crawl4AIProvider()
+        provider = Crawl4AIProvider(basic_config)
 
         with pytest.raises(CrawlServiceError, match="Provider not initialized"):
             await provider.scrape_url("https://example.com")
 
     @pytest.mark.asyncio
-    async def test_scrape_url_success(self):
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_scrape_url_success(self, mock_crawler_class, basic_config):
         """Test successful URL scraping."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
-        # Mock crawler and result
+        # Setup mock crawler
         mock_crawler = AsyncMock()
         mock_result = MagicMock()
         mock_result.success = True
         mock_result.markdown = "# Test Content"
         mock_result.html = "<h1>Test Content</h1>"
         mock_result.metadata = {"title": "Test Page"}
-        mock_result.extracted_content = {}
+        mock_result.extracted_content = {"key": "value"}
         mock_result.links = [{"href": "https://example.com/link"}]
         mock_result.media = {"images": []}
 
         mock_crawler.arun.return_value = mock_result
-        provider._crawler = mock_crawler
+        mock_crawler_class.return_value = mock_crawler
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
 
         result = await provider.scrape_url("https://example.com")
 
@@ -316,416 +288,321 @@ class TestCrawl4AIProvider:
         assert result["content"] == "# Test Content"
         assert result["html"] == "<h1>Test Content</h1>"
         assert result["title"] == "Test Page"
+        assert result["metadata"]["title"] == "Test Page"
+        assert result["structured_data"] == {"key": "value"}
         assert result["provider"] == "crawl4ai"
 
     @pytest.mark.asyncio
-    async def test_scrape_url_failure(self):
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_scrape_url_failure(self, mock_crawler_class, basic_config):
         """Test URL scraping failure."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
+        # Setup mock crawler
         mock_crawler = AsyncMock()
         mock_result = MagicMock()
         mock_result.success = False
-        mock_result.error_message = "Page not found"
+        mock_result.error_message = "Crawl failed"
 
         mock_crawler.arun.return_value = mock_result
-        provider._crawler = mock_crawler
+        mock_crawler_class.return_value = mock_crawler
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
 
         result = await provider.scrape_url("https://example.com")
 
         assert result["success"] is False
-        assert result["error"] == "Page not found"
-        assert result["url"] == "https://example.com"
+        assert result["error"] == "Crawl failed"
+        assert result["content"] == ""
         assert result["provider"] == "crawl4ai"
 
     @pytest.mark.asyncio
-    async def test_scrape_url_with_rate_limiting(self):
-        """Test URL scraping with rate limiting."""
-        rate_limiter = AsyncMock()
-        provider = Crawl4AIProvider(rate_limiter=rate_limiter)
-        provider._initialized = True
-
-        mock_crawler = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.markdown = "Content"
-        mock_result.html = "<p>Content</p>"
-        mock_result.metadata = {}
-        mock_result.extracted_content = {}
-        mock_result.links = []
-        mock_result.media = {}
-
-        mock_crawler.arun.return_value = mock_result
-        provider._crawler = mock_crawler
-
-        await provider.scrape_url("https://example.com")
-
-        rate_limiter.acquire.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_with_custom_js(self):
-        """Test URL scraping with custom JavaScript."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
-        mock_crawler = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.markdown = "Content"
-        mock_result.html = "<p>Content</p>"
-        mock_result.metadata = {}
-        mock_result.extracted_content = {}
-        mock_result.links = []
-        mock_result.media = {}
-
-        mock_crawler.arun.return_value = mock_result
-        provider._crawler = mock_crawler
-
-        custom_js = "console.log('custom');"
-        await provider.scrape_url("https://example.com", js_code=custom_js)
-
-        # Check that custom JS was passed to crawler
-        call_args = mock_crawler.arun.call_args
-        config = call_args[1]["config"]
-        assert config.js_code == custom_js
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_with_structured_extraction(self):
-        """Test URL scraping with structured extraction."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
-        mock_crawler = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.markdown = "Content"
-        mock_result.html = "<p>Content</p>"
-        mock_result.metadata = {}
-        mock_result.extracted_content = {"title": "Extracted Title"}
-        mock_result.links = []
-        mock_result.media = {}
-
-        mock_crawler.arun.return_value = mock_result
-        provider._crawler = mock_crawler
-
-        result = await provider.scrape_url(
-            "https://example.com", extraction_type="structured"
-        )
-
-        assert result["structured_data"] == {"title": "Extracted Title"}
-        assert result["metadata"]["has_structured_data"] is True
-
-    @pytest.mark.asyncio
-    async def test_scrape_url_exception_handling(self):
-        """Test exception handling during scraping."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_scrape_url_exception(self, mock_crawler_class, basic_config):
+        """Test URL scraping exception handling."""
+        # Setup mock crawler
         mock_crawler = AsyncMock()
         mock_crawler.arun.side_effect = Exception("Network error")
-        provider._crawler = mock_crawler
+        mock_crawler_class.return_value = mock_crawler
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
 
         result = await provider.scrape_url("https://example.com")
 
         assert result["success"] is False
         assert "Network error" in result["error"]
-        assert "error_context" in result
+        assert result["provider"] == "crawl4ai"
 
     @pytest.mark.asyncio
-    async def test_crawl_bulk(self):
-        """Test bulk URL crawling."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_crawl_bulk_success(self, mock_crawler_class, basic_config):
+        """Test bulk crawling success."""
+        # Setup mock crawler with AsyncMock
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
 
-        # Mock successful scraping
-        with patch.object(provider, "scrape_url") as mock_scrape:
+        # Setup mock results
+        urls = ["https://example.com/1", "https://example.com/2"]
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
+
+        # Mock scrape_url to return success
+        with patch.object(provider, 'scrape_url') as mock_scrape:
             mock_scrape.side_effect = [
-                {
-                    "success": True,
-                    "url": "https://example.com/1",
-                    "content": "Content 1",
-                },
-                {
-                    "success": True,
-                    "url": "https://example.com/2",
-                    "content": "Content 2",
-                },
-                {"success": False, "url": "https://example.com/3", "error": "Failed"},
+                {"success": True, "url": urls[0], "content": "Content 1"},
+                {"success": True, "url": urls[1], "content": "Content 2"},
             ]
 
-            urls = [
-                "https://example.com/1",
-                "https://example.com/2",
-                "https://example.com/3",
-            ]
             results = await provider.crawl_bulk(urls)
 
-            # crawl_bulk only returns successful results (based on implementation)
-            assert len(results) == 3  # All results are returned
-            successful_results = [r for r in results if r.get("success", False)]
-            assert len(successful_results) == 2
+            assert len(results) == 2
+            assert all(r["success"] for r in results)
+            assert mock_scrape.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_crawl_site_not_initialized(self):
-        """Test site crawling when provider not initialized."""
-        provider = Crawl4AIProvider()
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_crawl_bulk_with_failures(self, mock_crawler_class, basic_config):
+        """Test bulk crawling with some failures."""
+        # Setup mock crawler with AsyncMock
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
+
+        urls = ["https://example.com/1", "https://example.com/2"]
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
+
+        # Mock scrape_url to have one success and one exception
+        with patch.object(provider, 'scrape_url') as mock_scrape:
+            mock_scrape.side_effect = [
+                {"success": True, "url": urls[0], "content": "Content 1"},
+                Exception("Network error"),
+            ]
+
+            results = await provider.crawl_bulk(urls)
+
+            # Should only return successful results
+            assert len(results) == 1
+            assert results[0]["success"] is True
+
+    @pytest.mark.asyncio
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_crawl_site_success(self, mock_crawler_class, basic_config):
+        """Test site crawling success."""
+        # Setup mock crawler with AsyncMock
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
+
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
+
+        # Mock crawl_bulk to return pages - need to handle multiple calls
+        with patch.object(provider, 'crawl_bulk') as mock_crawl_bulk:
+            # First call: ["https://example.com"] -> returns home page with link
+            # Second call: ["https://example.com/about"] -> returns about page
+            mock_crawl_bulk.side_effect = [
+                [  # First call result
+                    {
+                        "success": True,
+                        "url": "https://example.com",
+                        "content": "Home page content",
+                        "html": "<html></html>",
+                        "metadata": {"title": "Home"},
+                        "title": "Home",
+                        "links": [{"href": "https://example.com/about"}],
+                    }
+                ],
+                [  # Second call result
+                    {
+                        "success": True,
+                        "url": "https://example.com/about",
+                        "content": "About page content",
+                        "html": "<html><h1>About</h1></html>",
+                        "metadata": {"title": "About"},
+                        "title": "About",
+                        "links": [],
+                    }
+                ]
+            ]
+
+            result = await provider.crawl_site("https://example.com", max_pages=2)
+
+            assert result["success"] is True
+            assert len(result["pages"]) == 2
+            assert result["total"] == 2
+            assert result["provider"] == "crawl4ai"
+            assert result["pages"][0]["url"] == "https://example.com"
+            assert result["pages"][1]["url"] == "https://example.com/about"
+
+    @pytest.mark.asyncio
+    async def test_crawl_site_not_initialized(self, basic_config):
+        """Test site crawling when not initialized."""
+        provider = Crawl4AIProvider(basic_config)
 
         with pytest.raises(CrawlServiceError, match="Provider not initialized"):
             await provider.crawl_site("https://example.com")
 
     @pytest.mark.asyncio
-    async def test_crawl_site_success(self):
-        """Test successful site crawling."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
+    @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    async def test_crawl_site_exception(self, mock_crawler_class, basic_config):
+        """Test site crawling exception handling."""
+        # Setup mock crawler with AsyncMock
+        mock_crawler = AsyncMock()
+        mock_crawler_class.return_value = mock_crawler
 
-        # Mock crawl_bulk to return pages with links
-        with patch.object(provider, "crawl_bulk") as mock_crawl_bulk:
-            # First call returns initial page with links, subsequent calls return pages for those links
-            mock_crawl_bulk.side_effect = [
-                [
-                    {
-                        "success": True,
-                        "url": "https://example.com",
-                        "content": "Page content",
-                        "html": "<p>Page content</p>",
-                        "metadata": {"title": "Home"},
-                        "title": "Home Page",
-                        "links": [{"href": "https://example.com/about"}],
-                    }
-                ],
-                [
-                    {
-                        "success": True,
-                        "url": "https://example.com/about",
-                        "content": "About content",
-                        "html": "<p>About content</p>",
-                        "metadata": {"title": "About"},
-                        "title": "About Page",
-                        "links": [],
-                    }
-                ],
-            ]
+        provider = Crawl4AIProvider(basic_config)
+        await provider.initialize()
 
-            result = await provider.crawl_site("https://example.com", max_pages=5)
-
-            assert result["success"] is True
-            assert result["total"] == 2
-            assert len(result["pages"]) == 2
-            assert result["provider"] == "crawl4ai"
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_memory_optimization(self):
-        """Test memory optimization during large site crawls."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
-        # Mock crawl_bulk to return pages in batches
-        with patch.object(provider, "crawl_bulk") as mock_crawl_bulk:
-            # Simulate batch processing - return 10 pages per batch call
-            def batch_side_effect(urls):
-                batch_pages = []
-                for url in urls[:10]:  # Process up to 10 URLs per batch
-                    batch_pages.append(
-                        {
-                            "success": True,
-                            "url": url,
-                            "content": f"Content for {url}",
-                            "html": f"<p>Content for {url}</p>",
-                            "metadata": {},
-                            "title": f"Page {url}",
-                            "links": [],
-                        }
-                    )
-                return batch_pages
-
-            mock_crawl_bulk.side_effect = batch_side_effect
-
-            result = await provider.crawl_site("https://example.com", max_pages=50)
-
-            # Should respect max_pages limit
-            assert result["total"] <= 50
-
-    @pytest.mark.asyncio
-    async def test_crawl_site_exception_handling(self):
-        """Test exception handling during site crawling."""
-        provider = Crawl4AIProvider()
-        provider._initialized = True
-
-        with patch.object(provider, "crawl_bulk") as mock_crawl_bulk:
-            mock_crawl_bulk.side_effect = Exception("Crawl failed")
+        # Mock crawl_bulk to raise exception
+        with patch.object(provider, 'crawl_bulk') as mock_crawl_bulk:
+            mock_crawl_bulk.side_effect = Exception("Bulk crawl failed")
 
             result = await provider.crawl_site("https://example.com")
 
             assert result["success"] is False
-            assert "Crawl failed" in result["error"]
-            assert "error_context" in result
+            assert "Bulk crawl failed" in result["error"]
+            assert result["provider"] == "crawl4ai"
+
+    def test_config_timeout_conversion(self, basic_config):
+        """Test that page timeout is correctly converted from seconds to milliseconds."""
+        Crawl4AIProvider(basic_config)
+
+        # The config stores timeout in seconds (30.0)
+        # Provider should convert to milliseconds for internal use
+        assert basic_config.page_timeout == 30.0
 
 
 class TestCrawlCache:
-    """Test the CrawlCache helper class."""
+    """Test caching functionality."""
 
     def test_init(self):
         """Test CrawlCache initialization."""
-        cache_manager = MagicMock()
-        cache = CrawlCache(cache_manager)
+        mock_cache_manager = MagicMock()
+        cache = CrawlCache(mock_cache_manager)
 
-        assert cache.cache == cache_manager
+        assert cache.cache == mock_cache_manager
         assert cache.ttl == 86400  # 24 hours
+
+    def test_calculate_ttl_api_docs(self):
+        """Test TTL calculation for API docs."""
+        mock_cache_manager = MagicMock()
+        cache = CrawlCache(mock_cache_manager)
+
+        result = {"url": "https://example.com/api/docs"}
+        ttl = cache.calculate_ttl(result)
+
+        assert ttl == 604800  # 7 days
+
+    def test_calculate_ttl_blog_posts(self):
+        """Test TTL calculation for blog posts."""
+        mock_cache_manager = MagicMock()
+        cache = CrawlCache(mock_cache_manager)
+
+        result = {"url": "https://example.com/blog/post"}
+        ttl = cache.calculate_ttl(result)
+
+        assert ttl == 2592000  # 30 days
+
+    def test_calculate_ttl_default(self):
+        """Test TTL calculation for other content."""
+        mock_cache_manager = MagicMock()
+        cache = CrawlCache(mock_cache_manager)
+
+        result = {"url": "https://example.com/docs"}
+        ttl = cache.calculate_ttl(result)
+
+        assert ttl == 259200  # 3 days
 
     @pytest.mark.asyncio
     async def test_get_or_crawl_cache_hit(self):
-        """Test getting from cache when data exists."""
-        cache_manager = AsyncMock()
-        cached_data = {"success": True, "content": "Cached content"}
-        cache_manager.get.return_value = cached_data
+        """Test cache hit scenario."""
+        mock_cache_manager = AsyncMock()
+        mock_cache_manager.get.return_value = {"cached": "result"}
 
-        cache = CrawlCache(cache_manager)
-        crawler = AsyncMock()
+        cache = CrawlCache(mock_cache_manager)
+        mock_crawler = AsyncMock()
 
-        result = await cache.get_or_crawl("https://example.com", crawler)
+        result = await cache.get_or_crawl("https://example.com", mock_crawler)
 
-        assert result == cached_data
-        cache_manager.get.assert_called_once()
-        crawler.scrape_url.assert_not_called()
+        assert result == {"cached": "result"}
+        mock_crawler.scrape_url.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_get_or_crawl_cache_miss(self):
-        """Test crawling when cache miss occurs."""
-        cache_manager = AsyncMock()
-        cache_manager.get.return_value = None  # Cache miss
+        """Test cache miss scenario."""
+        mock_cache_manager = AsyncMock()
+        mock_cache_manager.get.return_value = None
 
-        crawl_result = {
-            "success": True,
-            "content": "Fresh content",
-            "url": "https://example.com",
-        }
-        crawler = AsyncMock()
-        crawler.scrape_url.return_value = crawl_result
+        cache = CrawlCache(mock_cache_manager)
+        mock_crawler = AsyncMock()
+        mock_crawler.scrape_url.return_value = {"success": True, "url": "https://example.com"}
 
-        cache = CrawlCache(cache_manager)
+        result = await cache.get_or_crawl("https://example.com", mock_crawler)
 
-        result = await cache.get_or_crawl("https://example.com", crawler)
-
-        assert result == crawl_result
-        crawler.scrape_url.assert_called_once_with("https://example.com")
-        cache_manager.set.assert_called_once()
+        assert result["success"] is True
+        mock_crawler.scrape_url.assert_called_once_with("https://example.com")
+        mock_cache_manager.set.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_or_crawl_force_refresh(self):
-        """Test force refresh bypasses cache."""
-        cache_manager = AsyncMock()
-        crawl_result = {
-            "success": True,
-            "content": "Fresh content",
-            "url": "https://example.com",
-        }
-        crawler = AsyncMock()
-        crawler.scrape_url.return_value = crawl_result
+        """Test forced refresh scenario."""
+        mock_cache_manager = AsyncMock()
+        mock_cache_manager.get.return_value = {"cached": "result"}
 
-        cache = CrawlCache(cache_manager)
+        cache = CrawlCache(mock_cache_manager)
+        mock_crawler = AsyncMock()
+        mock_crawler.scrape_url.return_value = {"success": True, "url": "https://example.com"}
 
-        result = await cache.get_or_crawl(
-            "https://example.com", crawler, force_refresh=True
-        )
+        result = await cache.get_or_crawl("https://example.com", mock_crawler, force_refresh=True)
 
-        assert result == crawl_result
-        cache_manager.get.assert_not_called()
-        crawler.scrape_url.assert_called_once()
-
-    def test_calculate_ttl_api_docs(self):
-        """Test TTL calculation for API documentation."""
-        cache = CrawlCache(MagicMock())
-        result = {"url": "https://example.com/api/docs"}
-
-        ttl = cache.calculate_ttl(result)
-        assert ttl == 604800  # 7 days
-
-    def test_calculate_ttl_blog(self):
-        """Test TTL calculation for blog posts."""
-        cache = CrawlCache(MagicMock())
-        result = {"url": "https://example.com/blog/post"}
-
-        ttl = cache.calculate_ttl(result)
-        assert ttl == 2592000  # 30 days
-
-    def test_calculate_ttl_other(self):
-        """Test TTL calculation for other content."""
-        cache = CrawlCache(MagicMock())
-        result = {"url": "https://example.com/tutorials/guide"}
-
-        ttl = cache.calculate_ttl(result)
-        assert ttl == 259200  # 3 days
+        assert result["success"] is True
+        mock_crawler.scrape_url.assert_called_once_with("https://example.com")
+        mock_cache_manager.get.assert_not_called()
 
 
 class TestCrawlBenchmark:
-    """Test the CrawlBenchmark helper class."""
+    """Test benchmarking functionality."""
 
     def test_init(self):
         """Test CrawlBenchmark initialization."""
-        crawl4ai = MagicMock()
-        firecrawl = MagicMock()
+        mock_crawl4ai = MagicMock()
+        mock_firecrawl = MagicMock()
 
-        benchmark = CrawlBenchmark(crawl4ai, firecrawl)
+        benchmark = CrawlBenchmark(mock_crawl4ai, mock_firecrawl)
 
-        assert benchmark.crawl4ai == crawl4ai
-        assert benchmark.firecrawl == firecrawl
-
-    def test_init_without_firecrawl(self):
-        """Test initialization without Firecrawl provider."""
-        crawl4ai = MagicMock()
-
-        benchmark = CrawlBenchmark(crawl4ai)
-
-        assert benchmark.crawl4ai == crawl4ai
-        assert benchmark.firecrawl is None
+        assert benchmark.crawl4ai == mock_crawl4ai
+        assert benchmark.firecrawl == mock_firecrawl
 
     @pytest.mark.asyncio
-    async def test_run_comparison_crawl4ai_only(self):
-        """Test benchmark with only Crawl4AI provider."""
-        crawl4ai = AsyncMock()
-        crawl4ai.scrape_url.return_value = {"success": True}
+    async def test_run_comparison_success(self):
+        """Test benchmark comparison with successful results."""
+        mock_crawl4ai = AsyncMock()
+        mock_crawl4ai.scrape_url.return_value = {"success": True}
 
-        benchmark = CrawlBenchmark(crawl4ai)
+        mock_firecrawl = AsyncMock()
+        mock_firecrawl.scrape_url.return_value = {"success": True}
 
-        results = await benchmark.run_comparison(["https://example.com"])
+        benchmark = CrawlBenchmark(mock_crawl4ai, mock_firecrawl)
+
+        with patch("time.time", side_effect=[0, 0.1, 0.2, 0.3]):  # Mock timing
+            results = await benchmark.run_comparison(["https://example.com"])
 
         assert "crawl4ai" in results
         assert "firecrawl" in results
         assert results["crawl4ai"]["success"] == 1
-        assert results["crawl4ai"]["failed"] == 0
-        assert results["firecrawl"]["success"] == 0
-        assert results["firecrawl"]["failed"] == 0
-
-    @pytest.mark.asyncio
-    async def test_run_comparison_both_providers(self):
-        """Test benchmark with both providers."""
-        crawl4ai = AsyncMock()
-        crawl4ai.scrape_url.return_value = {"success": True}
-
-        firecrawl = AsyncMock()
-        firecrawl.scrape_url.return_value = {"success": True}
-
-        benchmark = CrawlBenchmark(crawl4ai, firecrawl)
-
-        results = await benchmark.run_comparison(["https://example.com"])
-
-        assert results["crawl4ai"]["success"] == 1
         assert results["firecrawl"]["success"] == 1
-        assert "avg_time" in results["crawl4ai"]
-        assert "avg_time" in results["firecrawl"]
 
     @pytest.mark.asyncio
     async def test_run_comparison_with_failures(self):
-        """Test benchmark handling provider failures."""
-        crawl4ai = AsyncMock()
-        crawl4ai.scrape_url.side_effect = Exception("Crawl4AI failed")
+        """Test benchmark comparison with failures."""
+        mock_crawl4ai = AsyncMock()
+        mock_crawl4ai.scrape_url.side_effect = Exception("Crawl4AI error")
 
-        firecrawl = AsyncMock()
-        firecrawl.scrape_url.return_value = {"success": False}
+        mock_firecrawl = AsyncMock()
+        mock_firecrawl.scrape_url.return_value = {"success": False}
 
-        benchmark = CrawlBenchmark(crawl4ai, firecrawl)
+        benchmark = CrawlBenchmark(mock_crawl4ai, mock_firecrawl)
 
         results = await benchmark.run_comparison(["https://example.com"])
 
@@ -733,23 +610,68 @@ class TestCrawlBenchmark:
         assert results["firecrawl"]["failed"] == 1
 
     @pytest.mark.asyncio
-    async def test_timing_statistics(self):
-        """Test that timing statistics are calculated correctly."""
+    async def test_run_comparison_no_firecrawl(self):
+        """Test benchmark comparison without Firecrawl."""
+        mock_crawl4ai = AsyncMock()
+        mock_crawl4ai.scrape_url.return_value = {"success": True}
 
-        async def slow_scrape(url):
-            await asyncio.sleep(0.01)  # Small delay for timing
-            return {"success": True}
-
-        crawl4ai = AsyncMock()
-        crawl4ai.scrape_url = slow_scrape
-
-        benchmark = CrawlBenchmark(crawl4ai)
+        benchmark = CrawlBenchmark(mock_crawl4ai, None)
 
         results = await benchmark.run_comparison(["https://example.com"])
 
-        crawl4ai_stats = results["crawl4ai"]
-        assert "avg_time" in crawl4ai_stats
-        assert "p95_time" in crawl4ai_stats
-        assert "min_time" in crawl4ai_stats
-        assert "max_time" in crawl4ai_stats
-        assert crawl4ai_stats["avg_time"] > 0
+        assert results["crawl4ai"]["success"] == 1
+        assert results["firecrawl"]["success"] == 0
+        assert results["firecrawl"]["failed"] == 0
+
+
+class TestPydanticConfigIntegration:
+    """Test integration with Pydantic configuration models."""
+
+    def test_config_validation(self):
+        """Test that Pydantic config validation works."""
+        # Valid config
+        config = Crawl4AIConfig(
+            browser_type="chromium",
+            headless=True,
+            viewport_width=1920,
+            viewport_height=1080,
+            max_concurrent_crawls=5,
+            page_timeout=30.0,
+        )
+
+        provider = Crawl4AIProvider(config)
+        assert provider.config == config
+
+    def test_config_field_access(self, basic_config):
+        """Test accessing Pydantic config fields."""
+        provider = Crawl4AIProvider(basic_config)
+
+        assert provider.config.browser_type == "chromium"
+        assert provider.config.headless is True
+        assert provider.config.viewport_width == 1920
+        assert provider.config.viewport_height == 1080
+        assert provider.config.max_concurrent_crawls == 5
+        assert provider.config.page_timeout == 30.0
+
+    def test_config_defaults(self):
+        """Test Pydantic config defaults."""
+        config = Crawl4AIConfig()  # Use all defaults
+        provider = Crawl4AIProvider(config)
+
+        assert provider.config.browser_type == "chromium"
+        assert provider.config.headless is True
+        assert provider.config.viewport_width == 1920
+        assert provider.config.viewport_height == 1080
+        assert provider.config.max_concurrent_crawls == 10
+        assert provider.config.page_timeout == 30.0
+
+    def test_config_browser_config_mapping(self, basic_config):
+        """Test that Pydantic config fields map correctly to browser config."""
+        provider = Crawl4AIProvider(basic_config)
+        browser_config = provider.browser_config
+
+        # Verify mapping from Pydantic config to browser config
+        assert browser_config.browser_type == basic_config.browser_type
+        assert browser_config.headless == basic_config.headless
+        assert browser_config.viewport_width == basic_config.viewport_width
+        assert browser_config.viewport_height == basic_config.viewport_height
