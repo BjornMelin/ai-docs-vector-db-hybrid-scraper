@@ -10,6 +10,18 @@
 
 **Dependencies Update:** ✅ **ALL DEPENDENCIES UPDATED AND VERIFIED 2025-05-30**
 
+**Asynchronous Task Management Improvements:** 🚧 **IN PROGRESS 2025-06-02**
+
+- ✅ **Background Task Analysis**: Identified all asyncio.create_task usage across codebase
+- ✅ **Critical Task Identification**: Identified 5 critical tasks requiring production-grade reliability
+- ✅ **TODO Comments Added**: Added detailed production task queue TODOs for critical tasks
+- [ ] **Production Task Queue Integration** (Future): Implement persistent task queue (Celery/ARQ) for:
+  - [ ] QdrantAliasManager.safe_delete_collection - Delayed collection deletion
+  - [ ] CachePatterns._delayed_persist - Write-behind cache persistence 
+  - [ ] CanaryDeployment._run_canary - Canary deployment orchestration
+  - [ ] CanaryDeployment.resume_deployment - Resuming paused deployments
+  - [ ] BlueGreenDeployment cleanup tasks - Old collection cleanup
+
 - ✅ Updated all packages to latest compatible versions
 - ✅ Added missing dependencies: `pydantic-settings`, `pyyaml`, `aiofiles`, `mcp`
 - ✅ Fixed version conflicts (pydantic pinned to 2.10.4 for browser-use compatibility)

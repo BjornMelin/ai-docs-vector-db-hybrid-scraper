@@ -291,6 +291,13 @@ class CachePatterns:
         success = await self.cache.set(key, value, ttl=ttl)
 
         if success:
+            # TODO: For production, offload this delayed persistence to a persistent task queue
+            # (e.g., Celery, ARQ) to ensure execution even if the server restarts.
+            # Current asyncio.create_task is suitable for simpler deployments but lacks persistence.
+            # This is critical as write-behind caching could lose data if the server crashes before persistence.
+            # Example with Celery:
+            # persist_task_id = persist_to_db.apply_async(args=[key, value], countdown=delay)
+            
             # Schedule async persistence
             persist_task = asyncio.create_task(
                 self._delayed_persist(key, value, persist_func, delay)

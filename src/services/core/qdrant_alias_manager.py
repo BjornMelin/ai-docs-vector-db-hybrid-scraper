@@ -307,6 +307,13 @@ class QdrantAliasManager(BaseService):
                 except Exception as e:
                     logger.error(f"Failed to delete collection {collection_name}: {e}")
 
+        # TODO: For production, offload this delayed deletion to a persistent task queue
+        # (e.g., Celery, ARQ) to ensure execution even if the server restarts.
+        # Current asyncio.create_task is suitable for simpler deployments but lacks persistence.
+        # This is critical as it manages collection deletion which affects data retention policies.
+        # Example with ARQ:
+        # await redis_queue.enqueue('delete_collection', collection_name, _delay=grace_period_minutes * 60)
+        
         # Schedule as background task - returns immediately
         task = asyncio.create_task(_delayed_delete())
         # Store task reference to prevent garbage collection
