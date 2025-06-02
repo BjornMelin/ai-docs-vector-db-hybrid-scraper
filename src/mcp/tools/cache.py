@@ -19,10 +19,11 @@ def register_tools(mcp, client_manager: ClientManager):
         Clears all cache entries or those matching a specific pattern.
         """
         try:
+            cache_manager = await client_manager.get_cache_manager()
             if pattern:
-                cleared = await client_manager.cache_manager.clear_pattern(pattern)
+                cleared = await cache_manager.clear_pattern(pattern)
             else:
-                cleared = await client_manager.cache_manager.clear_all()
+                cleared = await cache_manager.clear_all()
 
             return {
                 "status": "success",
@@ -41,4 +42,5 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns hit rate, size, and performance metrics for the cache.
         """
-        return await client_manager.cache_manager.get_stats()
+        cache_manager = await client_manager.get_cache_manager()
+        return await cache_manager.get_stats()

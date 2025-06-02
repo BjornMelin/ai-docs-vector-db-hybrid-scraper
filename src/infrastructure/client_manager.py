@@ -165,6 +165,8 @@ class ClientManager:
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._initialized = False
         self._health_check_task: asyncio.Task | None = None
+        # Legacy support - in-memory project store (should be replaced by persistent storage)
+        self.projects: dict[str, Any] = {}
 
         # Service instances (lazy-initialized)
         self._qdrant_service: Any = None
@@ -196,27 +198,29 @@ class ClientManager:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
 
-        # Cleanup services
-        for service_name, service in [
-            ("qdrant_service", self._qdrant_service),
-            ("embedding_manager", self._embedding_manager),
-            ("cache_manager", self._cache_manager),
-            ("crawl_manager", self._crawl_manager),
-            ("hyde_engine", self._hyde_engine),
-            ("blue_green_deployment", self._blue_green_deployment),
-            ("ab_testing_manager", self._ab_testing_manager),
-            ("canary_deployment", self._canary_deployment),
-            ("browser_automation_router", self._browser_automation_router),
-        ]:
-            if service:
-                try:
-                    if hasattr(service, "cleanup"):
+        # Clean up service instances
+        service_names = [
+            "_qdrant_service",
+            "_embedding_manager",
+            "_cache_manager",
+            "_crawl_manager",
+            "_hyde_engine",
+            "_project_storage",
+            "_alias_manager",
+            "_blue_green",
+            "_ab_testing",
+            "_canary",
+        ]
+        for service_name in service_names:
+            if hasattr(self, service_name):
+                service = getattr(self, service_name)
+                if service and hasattr(service, "cleanup"):
+                    try:
                         await service.cleanup()
-                    elif hasattr(service, "close"):
-                        await service.close()
-                    logger.info(f"Cleaned up {service_name}")
-                except Exception as e:
-                    logger.error(f"Error cleaning up {service_name}: {e}")
+                        logger.info(f"Cleaned up {service_name}")
+                    except Exception as e:
+                        logger.error(f"Error cleaning up {service_name}: {e}")
+                setattr(self, service_name, None)
 
         # Close all clients
         for name, client in self._clients.items():

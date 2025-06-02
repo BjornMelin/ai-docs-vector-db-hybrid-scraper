@@ -14,6 +14,7 @@ from crawl4ai import CrawlerRunConfig
 from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
+from ...config.models import Crawl4AIConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter
@@ -151,28 +152,27 @@ class DocumentationExtractor:
 class Crawl4AIProvider(BaseService, CrawlProvider):
     """High-performance web crawling with Crawl4AI."""
 
-    def __init__(self, config: dict[str, Any] | None = None, rate_limiter: Any = None):
+    def __init__(self, config: Crawl4AIConfig, rate_limiter: Any = None):
         """Initialize Crawl4AI provider with advanced configuration."""
-        super().__init__(config or {})
+        super().__init__(config)
+        self.config = config
         self.logger = logger
         self.rate_limiter = rate_limiter or RateLimiter(
-            max_calls=self.config.get("rate_limit", 60), time_window=60
+            max_calls=50,
+            time_window=60,  # Default rate limit for Crawl4AI
         )
 
-        # Browser configuration
+        # Browser configuration from Pydantic model
         self.browser_config = BrowserConfig(
-            browser_type=self.config.get("browser", "chromium"),
-            headless=self.config.get("headless", True),
-            viewport_width=self.config.get("viewport_width", 1920),
-            viewport_height=self.config.get("viewport_height", 1080),
-            user_agent=self.config.get(
-                "user_agent",
-                "Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
-            ),
+            browser_type=self.config.browser_type,
+            headless=self.config.headless,
+            viewport_width=self.config.viewport_width,
+            viewport_height=self.config.viewport_height,
+            user_agent="Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
         )
 
         # Concurrent crawling settings
-        self.max_concurrent = self.config.get("max_concurrent", 10)
+        self.max_concurrent = self.config.max_concurrent_crawls
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
         # Initialize helpers
@@ -198,10 +198,15 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     async def cleanup(self) -> None:
         """Cleanup Crawl4AI resources."""
         if self._crawler:
-            await self._crawler.close()
-            self._crawler = None
-            self._initialized = False
-            self.logger.info("Crawl4AI resources cleaned up")
+            try:
+                await self._crawler.close()
+            except Exception as e:
+                self.logger.error(f"Error closing crawler: {e}")
+            finally:
+                # Always reset state even if close() fails
+                self._crawler = None
+                self._initialized = False
+                self.logger.info("Crawl4AI resources cleaned up")
 
     async def scrape_url(
         self,
@@ -244,7 +249,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 elif extraction_type == "llm":
                     extraction_strategy = LLMExtractionStrategy(
                         provider="ollama/llama2",
-                        api_token=self.config.get("llm_api_token"),
+                        api_token=None,  # Use environment variable or provider defaults
                         instruction="Extract technical documentation with code examples",
                     )
 
@@ -264,7 +269,9 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     js_code=js_code,
                     extraction_strategy=extraction_strategy,
                     cache_mode="enabled",
-                    page_timeout=self.config.get("page_timeout", 30000),
+                    page_timeout=int(
+                        self.config.page_timeout * 1000
+                    ),  # Convert seconds to milliseconds
                     wait_until="networkidle",
                 )
 

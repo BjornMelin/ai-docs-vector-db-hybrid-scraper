@@ -7,109 +7,58 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from src.config.models import Crawl4AIConfig
 from src.services.browser.crawl4ai_adapter import Crawl4AIAdapter
 from src.services.errors import CrawlServiceError
 
 
 @pytest.fixture
-def basic_config():
-    """Basic configuration for Crawl4AI adapter."""
-    return {
-        "max_concurrent": 5,
-        "headless": True,
-        "browser": "chromium",
-        "page_timeout": 30000,
-    }
-
-
-@pytest.fixture
-def mock_config_with_crawl4ai():
-    """Mock configuration object with crawl4ai section."""
-    config = MagicMock()
-    config.crawl4ai = {
-        "browser": "chromium",
-        "headless": True,
-        "timeout": 30000,
-    }
-    return config
-
-
-@pytest.fixture
-def mock_config_dict_crawl4ai():
-    """Mock configuration with dict-like crawl4ai."""
-    config = MagicMock()
-    config.crawl4ai = MagicMock()
-    config.crawl4ai.get = MagicMock(
-        side_effect=lambda key, default=None: {
-            "browser": "chromium",
-            "headless": True,
-            "timeout": 30000,
-        }.get(key, default)
+def basic_crawl4ai_config():
+    """Basic Crawl4AI configuration."""
+    return Crawl4AIConfig(
+        max_concurrent_crawls=5,
+        headless=True,
+        browser_type="chromium",
+        page_timeout=30.0,
     )
-    return config
+
+
+@pytest.fixture
+def mock_crawl4ai_config():
+    """Mock Crawl4AI configuration."""
+    return MagicMock(spec=Crawl4AIConfig)
 
 
 class TestCrawl4AIAdapterInit:
     """Test Crawl4AIAdapter initialization."""
 
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    def test_init_with_basic_config(self, mock_provider_class, basic_config):
+    def test_init_with_basic_crawl4ai_config(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test initialization with basic configuration."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         assert adapter._provider == mock_provider
         assert adapter._initialized is False
-        mock_provider_class.assert_called_once_with(config={}, rate_limiter=None)
-
-    @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    def test_init_with_crawl4ai_config(
-        self, mock_provider_class, mock_config_with_crawl4ai
-    ):
-        """Test initialization with crawl4ai-specific config."""
-        mock_provider = AsyncMock()
-        mock_provider_class.return_value = mock_provider
-
-        adapter = Crawl4AIAdapter(mock_config_with_crawl4ai)
-
-        expected_config = {
-            "browser": "chromium",
-            "headless": True,
-            "timeout": 30000,
-        }
         mock_provider_class.assert_called_once_with(
-            config=expected_config, rate_limiter=None
+            config=basic_crawl4ai_config, rate_limiter=None
         )
 
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    def test_init_with_dict_like_crawl4ai_config(
-        self, mock_provider_class, mock_config_dict_crawl4ai
-    ):
-        """Test initialization with dict-like crawl4ai config."""
+    def test_init_with_crawl4ai_config(self, mock_provider_class, mock_crawl4ai_config):
+        """Test initialization with mock configuration."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(mock_config_dict_crawl4ai)
+        Crawl4AIAdapter(mock_crawl4ai_config)
 
-        # Should use the mock config directly since it has get method
         mock_provider_class.assert_called_once_with(
-            config=mock_config_dict_crawl4ai.crawl4ai, rate_limiter=None
+            config=mock_crawl4ai_config, rate_limiter=None
         )
-
-    @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    def test_init_without_crawl4ai_config(self, mock_provider_class):
-        """Test initialization without crawl4ai-specific config."""
-        mock_provider = AsyncMock()
-        mock_provider_class.return_value = mock_provider
-
-        config = MagicMock()
-        config.crawl4ai = None
-
-        adapter = Crawl4AIAdapter(config)
-
-        mock_provider_class.assert_called_once_with(config={}, rate_limiter=None)
 
 
 class TestCrawl4AIAdapterInitialization:
@@ -117,13 +66,13 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_initialize_success(self, mock_provider_class, basic_config):
+    async def test_initialize_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful initialization."""
         mock_provider = AsyncMock()
         mock_provider.initialize = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         await adapter.initialize()
 
@@ -133,13 +82,13 @@ class TestCrawl4AIAdapterInitialization:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_initialize_already_initialized(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test that re-initialization is skipped."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         await adapter.initialize()
@@ -149,13 +98,15 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_initialize_provider_failure(self, mock_provider_class, basic_config):
+    async def test_initialize_provider_failure(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test initialization failure from provider."""
         mock_provider = AsyncMock()
         mock_provider.initialize.side_effect = Exception("Provider init failed")
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         with pytest.raises(
             CrawlServiceError, match="Failed to initialize Crawl4AI adapter"
@@ -166,13 +117,13 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_cleanup_success(self, mock_provider_class, basic_config):
+    async def test_cleanup_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful cleanup."""
         mock_provider = AsyncMock()
         mock_provider.cleanup = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         await adapter.cleanup()
@@ -182,13 +133,13 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_cleanup_with_error(self, mock_provider_class, basic_config):
+    async def test_cleanup_with_error(self, mock_provider_class, basic_crawl4ai_config):
         """Test cleanup continues even if provider cleanup fails."""
         mock_provider = AsyncMock()
         mock_provider.cleanup.side_effect = Exception("Cleanup failed")
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Should not raise exception
@@ -198,9 +149,11 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_cleanup_no_provider(self, mock_provider_class, basic_config):
+    async def test_cleanup_no_provider(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test cleanup when provider is None."""
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._provider = None
 
         # Should not raise exception
@@ -212,19 +165,23 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_not_initialized(self, mock_provider_class, basic_config):
+    async def test_scrape_not_initialized(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping when adapter is not initialized."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
             await adapter.scrape("https://example.com")
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_success_basic(self, mock_provider_class, basic_config):
+    async def test_scrape_success_basic(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test successful basic scraping."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {
@@ -238,7 +195,7 @@ class TestCrawl4AIAdapterScraping:
         }
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("https://example.com")
@@ -264,13 +221,15 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_with_wait_selector(self, mock_provider_class, basic_config):
+    async def test_scrape_with_wait_selector(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping with wait selector."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {"success": True, "content": "Content"}
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         await adapter.scrape(
@@ -288,13 +247,15 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_with_js_code(self, mock_provider_class, basic_config):
+    async def test_scrape_with_js_code(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping with JavaScript code."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {"success": True, "content": "Content"}
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         js_code = "document.querySelector('.more-button').click();"
@@ -314,13 +275,15 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_with_timeout(self, mock_provider_class, basic_config):
+    async def test_scrape_with_timeout(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping with custom timeout."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {"success": True, "content": "Content"}
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         await adapter.scrape(
@@ -333,7 +296,9 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_provider_failure(self, mock_provider_class, basic_config):
+    async def test_scrape_provider_failure(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping when provider returns failure."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {
@@ -343,7 +308,7 @@ class TestCrawl4AIAdapterScraping:
         }
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("https://example.com")
@@ -355,13 +320,15 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_provider_exception(self, mock_provider_class, basic_config):
+    async def test_scrape_provider_exception(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test scraping when provider raises exception."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.side_effect = Exception("Provider exception")
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("https://example.com")
@@ -374,7 +341,7 @@ class TestCrawl4AIAdapterScraping:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_scrape_partial_provider_response(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test scraping with partial provider response."""
         mock_provider = AsyncMock()
@@ -385,7 +352,7 @@ class TestCrawl4AIAdapterScraping:
         }
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("https://example.com")
@@ -399,7 +366,9 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_metadata_enrichment(self, mock_provider_class, basic_config):
+    async def test_scrape_metadata_enrichment(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test that adapter enriches metadata properly."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {
@@ -409,7 +378,7 @@ class TestCrawl4AIAdapterScraping:
         }
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape(
@@ -431,19 +400,21 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_crawl_bulk_not_initialized(self, mock_provider_class, basic_config):
+    async def test_crawl_bulk_not_initialized(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test bulk crawling when adapter is not initialized."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
             await adapter.crawl_bulk(["https://example.com"])
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_crawl_bulk_success(self, mock_provider_class, basic_config):
+    async def test_crawl_bulk_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful bulk crawling."""
         mock_provider = AsyncMock()
         mock_provider.crawl_bulk.return_value = [
@@ -470,7 +441,7 @@ class TestCrawl4AIAdapterBulkCrawling:
         ]
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         urls = ["https://example.com/1", "https://example.com/2"]
@@ -488,7 +459,9 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_crawl_bulk_with_failures(self, mock_provider_class, basic_config):
+    async def test_crawl_bulk_with_failures(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test bulk crawling with some failures."""
         mock_provider = AsyncMock()
         mock_provider.crawl_bulk.return_value = [
@@ -506,7 +479,7 @@ class TestCrawl4AIAdapterBulkCrawling:
         ]
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         urls = ["https://example.com/1", "https://example.com/2"]
@@ -521,14 +494,14 @@ class TestCrawl4AIAdapterBulkCrawling:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_crawl_bulk_custom_extraction_type(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test bulk crawling with custom extraction type."""
         mock_provider = AsyncMock()
         mock_provider.crawl_bulk.return_value = []
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         await adapter.crawl_bulk(["https://example.com"], extraction_type="html")
@@ -542,12 +515,12 @@ class TestCrawl4AIAdapterCapabilities:
     """Test capabilities and metadata functionality."""
 
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    def test_get_capabilities(self, mock_provider_class, basic_config):
+    def test_get_capabilities(self, mock_provider_class, basic_crawl4ai_config):
         """Test getting adapter capabilities."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         capabilities = adapter.get_capabilities()
 
@@ -564,13 +537,13 @@ class TestCrawl4AIAdapterCapabilities:
 
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     def test_capabilities_advantages_and_limitations(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test that capabilities include expected advantages and limitations."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         capabilities = adapter.get_capabilities()
 
         # Check advantages
@@ -597,13 +570,13 @@ class TestCrawl4AIAdapterHealthCheck:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_health_check_not_initialized(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test health check when adapter is not initialized."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         health = await adapter.health_check()
 
@@ -613,12 +586,14 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_health_check_success(self, mock_provider_class, basic_config):
+    async def test_health_check_success(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test successful health check."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Mock successful scrape
@@ -636,12 +611,14 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_health_check_failure(self, mock_provider_class, basic_config):
+    async def test_health_check_failure(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test health check when scraping fails."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Mock failed scrape
@@ -656,12 +633,14 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_health_check_timeout(self, mock_provider_class, basic_config):
+    async def test_health_check_timeout(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test health check timeout."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Mock timeout
@@ -677,12 +656,14 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_health_check_exception(self, mock_provider_class, basic_config):
+    async def test_health_check_exception(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test health check exception handling."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Mock exception
@@ -700,7 +681,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_get_performance_metrics_with_provider_metrics(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test getting performance metrics when provider has metrics."""
         mock_provider = AsyncMock()
@@ -714,7 +695,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
         }
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         metrics = await adapter.get_performance_metrics()
 
@@ -726,14 +707,14 @@ class TestCrawl4AIAdapterPerformanceMetrics:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_get_performance_metrics_without_provider_metrics(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test getting performance metrics when provider doesn't have metrics."""
         mock_provider = AsyncMock()
         # Provider doesn't have metrics attribute
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         metrics = await adapter.get_performance_metrics()
 
@@ -754,7 +735,9 @@ class TestCrawl4AIAdapterTimeTracking:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_time_tracking(self, mock_provider_class, basic_config):
+    async def test_scrape_time_tracking(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test that scraping properly tracks processing time."""
         mock_provider = AsyncMock()
 
@@ -766,7 +749,7 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider.scrape_url = delayed_scrape
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         start_time = time.time()
@@ -786,7 +769,7 @@ class TestCrawl4AIAdapterTimeTracking:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_scrape_time_tracking_on_error(
-        self, mock_provider_class, basic_config
+        self, mock_provider_class, basic_crawl4ai_config
     ):
         """Test time tracking when scraping fails."""
         mock_provider = AsyncMock()
@@ -799,7 +782,7 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider.scrape_url = delayed_failure
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("https://example.com")
@@ -814,13 +797,13 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_empty_url(self, mock_provider_class, basic_config):
+    async def test_scrape_empty_url(self, mock_provider_class, basic_crawl4ai_config):
         """Test scraping with empty URL."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {"success": True, "content": ""}
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape("")
@@ -830,13 +813,13 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_scrape_none_values(self, mock_provider_class, basic_config):
+    async def test_scrape_none_values(self, mock_provider_class, basic_crawl4ai_config):
         """Test scraping with None values for optional parameters."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = {"success": True, "content": "test"}
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         result = await adapter.scrape(
@@ -854,13 +837,15 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_crawl_bulk_empty_urls(self, mock_provider_class, basic_config):
+    async def test_crawl_bulk_empty_urls(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test bulk crawling with empty URL list."""
         mock_provider = AsyncMock()
         mock_provider.crawl_bulk.return_value = []
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         results = await adapter.crawl_bulk([])
@@ -870,13 +855,15 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_provider_returns_none(self, mock_provider_class, basic_config):
+    async def test_provider_returns_none(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test handling when provider returns None."""
         mock_provider = AsyncMock()
         mock_provider.scrape_url.return_value = None
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Should handle None response gracefully
@@ -891,7 +878,7 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_full_workflow(self, mock_provider_class, basic_config):
+    async def test_full_workflow(self, mock_provider_class, basic_crawl4ai_config):
         """Test complete workflow from initialization to cleanup."""
         mock_provider = AsyncMock()
         mock_provider.initialize = AsyncMock()
@@ -909,7 +896,7 @@ class TestCrawl4AIAdapterIntegration:
         ]
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
 
         # Initialize
         await adapter.initialize()
@@ -952,12 +939,14 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_error_recovery_scenarios(self, mock_provider_class, basic_config):
+    async def test_error_recovery_scenarios(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test adapter behavior under various error conditions."""
         mock_provider = AsyncMock()
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Test scenario 1: Provider returns malformed response
@@ -982,7 +971,9 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
-    async def test_concurrent_operations(self, mock_provider_class, basic_config):
+    async def test_concurrent_operations(
+        self, mock_provider_class, basic_crawl4ai_config
+    ):
         """Test adapter behavior with concurrent operations."""
         mock_provider = AsyncMock()
 
@@ -995,7 +986,7 @@ class TestCrawl4AIAdapterIntegration:
         mock_provider.scrape_url = variable_response
         mock_provider_class.return_value = mock_provider
 
-        adapter = Crawl4AIAdapter(basic_config)
+        adapter = Crawl4AIAdapter(basic_crawl4ai_config)
         adapter._initialized = True
 
         # Run multiple scrapes concurrently

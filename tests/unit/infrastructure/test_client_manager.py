@@ -1018,7 +1018,7 @@ class TestClientManagerErrorHandling:
         # Mock redis connection to fail
         with patch("redis.asyncio.from_url") as mock_redis:
             mock_redis.side_effect = Exception("Connection failed")
-            
+
             with pytest.raises(APIError, match="Failed to create redis client"):
                 await manager.get_redis_client()
 
@@ -1091,10 +1091,10 @@ class TestClientManagerErrorHandling:
         config.openai.api_key = "test-key"
         config.cache.enable_dragonfly_cache = True
         manager = ClientManager(config)
-        
+
         # Create some clients to populate health status
         await manager.get_qdrant_client()  # This will create qdrant client
-        
+
         # Check that health status reflects created clients
         status = await manager.get_health_status()
 
@@ -1104,7 +1104,7 @@ class TestClientManagerErrorHandling:
             for service_name, service_status in status.items():
                 assert "state" in service_status
                 assert "last_check" in service_status
-        
+
         await manager.cleanup()
 
     @pytest.mark.asyncio
@@ -1141,7 +1141,7 @@ class TestClientManagerConfiguration:
         with patch("src.config.loader.ConfigLoader.load_config") as mock_loader:
             config = UnifiedConfig()
             mock_loader.return_value = config
-            
+
             manager = ClientManager.from_unified_config()
 
             assert isinstance(manager, ClientManager)
@@ -1172,11 +1172,13 @@ class TestClientManagerConfiguration:
 
         # Initialize health status by creating a client first
         await manager.get_qdrant_client()
-        
+
         # Now simulate circuit breaker opening
         manager._health["qdrant"].state = ClientState.FAILED
         manager._circuit_breakers["qdrant"]._state = "open"
-        manager._circuit_breakers["qdrant"]._last_failure_time = time.time() - 61  # Past recovery timeout
+        manager._circuit_breakers["qdrant"]._last_failure_time = (
+            time.time() - 61
+        )  # Past recovery timeout
 
         # Remove the existing client to force recreation
         del manager._clients["qdrant"]

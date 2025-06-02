@@ -95,12 +95,7 @@ class TestCrawlManager:
     async def test_initialize_success(self):
         """Test successful initialization with both providers."""
         config = MagicMock(spec=UnifiedConfig)
-        config.performance = MagicMock()
-        config.performance.default_rate_limits = {
-            "crawl4ai": {"max_calls": 50, "time_window": 1}
-        }
-        config.performance.max_concurrent_requests = 10
-        config.performance.request_timeout = 30
+        config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_key"
 
@@ -129,12 +124,7 @@ class TestCrawlManager:
     async def test_initialize_crawl4ai_only(self):
         """Test initialization with only Crawl4AI (no Firecrawl API key)."""
         config = MagicMock(spec=UnifiedConfig)
-        config.performance = MagicMock()
-        config.performance.default_rate_limits = {
-            "crawl4ai": {"max_calls": 50, "time_window": 1}
-        }
-        config.performance.max_concurrent_requests = 10
-        config.performance.request_timeout = 30
+        config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = None
 
@@ -154,12 +144,7 @@ class TestCrawlManager:
     async def test_initialize_failure_both_providers(self):
         """Test initialization failure when both providers fail."""
         config = MagicMock(spec=UnifiedConfig)
-        config.performance = MagicMock()
-        config.performance.default_rate_limits = {
-            "crawl4ai": {"max_calls": 50, "time_window": 1}
-        }
-        config.performance.max_concurrent_requests = 10
-        config.performance.request_timeout = 30
+        config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_key"
 
@@ -181,12 +166,7 @@ class TestCrawlManager:
     async def test_initialize_idempotent(self):
         """Test that multiple initialization calls are safe."""
         config = MagicMock(spec=UnifiedConfig)
-        config.performance = MagicMock()
-        config.performance.default_rate_limits = {
-            "crawl4ai": {"max_calls": 50, "time_window": 1}
-        }
-        config.performance.max_concurrent_requests = 10
-        config.performance.request_timeout = 30
+        config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = None
 
@@ -517,12 +497,7 @@ class TestCrawlManager:
     async def test_provider_initialization_config(self):
         """Test provider initialization with correct configuration."""
         config = MagicMock(spec=UnifiedConfig)
-        config.performance = MagicMock()
-        config.performance.default_rate_limits = {
-            "crawl4ai": {"max_calls": 100, "time_window": 1}
-        }
-        config.performance.max_concurrent_requests = 20
-        config.performance.request_timeout = 45
+        config.crawl4ai = MagicMock()  # Mock Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_api_key"
 
@@ -541,18 +516,14 @@ class TestCrawlManager:
             manager = CrawlManager(config, rate_limiter)
             await manager.initialize()
 
-            # Check Crawl4AI configuration
+            # Check that providers are called with Pydantic configs
             crawl4ai_call_args = mock_crawl4ai.call_args
-            assert crawl4ai_call_args[1]["config"]["max_concurrent"] == 20
-            assert crawl4ai_call_args[1]["config"]["rate_limit"] == 100
-            assert (
-                crawl4ai_call_args[1]["config"]["page_timeout"] == 45000
-            )  # converted to ms
+            assert crawl4ai_call_args[1]["config"] == config.crawl4ai
             assert crawl4ai_call_args[1]["rate_limiter"] == rate_limiter
 
             # Check Firecrawl configuration
             firecrawl_call_args = mock_firecrawl.call_args
-            assert firecrawl_call_args[1]["api_key"] == "test_api_key"
+            assert firecrawl_call_args[1]["config"] == config.firecrawl
             assert firecrawl_call_args[1]["rate_limiter"] == rate_limiter
 
     @pytest.mark.asyncio

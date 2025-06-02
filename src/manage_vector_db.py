@@ -167,9 +167,7 @@ class VectorDBManager:
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
-            collection_info = await qdrant_service.get_collection_info(
-                collection_name
-            )
+            collection_info = await qdrant_service.get_collection_info(collection_name)
 
             if not collection_info:
                 return None
@@ -262,9 +260,7 @@ class VectorDBManager:
 
             # Get vector size before deletion
             qdrant_service = await self.get_qdrant_service()
-            collection_info = await qdrant_service.get_collection_info(
-                collection_name
-            )
+            collection_info = await qdrant_service.get_collection_info(collection_name)
             if not collection_info:
                 console.print(f"❌ Collection {collection_name} not found", style="red")
                 return False

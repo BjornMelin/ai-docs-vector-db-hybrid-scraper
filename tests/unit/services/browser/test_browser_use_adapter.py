@@ -198,34 +198,40 @@ class TestBrowserUseAdapterLLMSetup:
         """Test LLM setup fails when OpenAI API key is missing."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(
                 CrawlServiceError, match="OPENAI_API_KEY environment variable required"
-            ):
-                adapter._setup_llm_config()
+            ),
+        ):
+            adapter._setup_llm_config()
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_setup_llm_config_missing_anthropic_key(self, anthropic_config):
         """Test LLM setup fails when Anthropic API key is missing."""
         adapter = BrowserUseAdapter(anthropic_config)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(
                 CrawlServiceError,
                 match="ANTHROPIC_API_KEY environment variable required",
-            ):
-                adapter._setup_llm_config()
+            ),
+        ):
+            adapter._setup_llm_config()
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_setup_llm_config_missing_google_key(self, gemini_config):
         """Test LLM setup fails when Google API key is missing."""
         adapter = BrowserUseAdapter(gemini_config)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(
                 CrawlServiceError, match="GOOGLE_API_KEY environment variable required"
-            ):
-                adapter._setup_llm_config()
+            ),
+        ):
+            adapter._setup_llm_config()
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_setup_llm_config_unsupported_provider(self, basic_config):
@@ -307,14 +313,14 @@ class TestBrowserUseAdapterInitialization:
         """Test initialization failure during LLM setup."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with patch(
-            "src.services.browser.browser_use_adapter.ChatOpenAI",
-            side_effect=Exception("LLM setup failed"),
+        with (
+            patch(
+                "src.services.browser.browser_use_adapter.ChatOpenAI",
+                side_effect=Exception("LLM setup failed"),
+            ),
+            pytest.raises(CrawlServiceError, match="Failed to initialize browser-use"),
         ):
-            with pytest.raises(
-                CrawlServiceError, match="Failed to initialize browser-use"
-            ):
-                await adapter.initialize()
+            await adapter.initialize()
 
     @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
@@ -329,11 +335,9 @@ class TestBrowserUseAdapterInitialization:
                 "src.services.browser.browser_use_adapter.Browser",
                 side_effect=Exception("Browser setup failed"),
             ),
+            pytest.raises(CrawlServiceError, match="Failed to initialize browser-use"),
         ):
-            with pytest.raises(
-                CrawlServiceError, match="Failed to initialize browser-use"
-            ):
-                await adapter.initialize()
+            await adapter.initialize()
 
 
 class TestBrowserUseAdapterCleanup:
@@ -511,7 +515,7 @@ class TestBrowserUseAdapterScraping:
                         TimeoutError(),
                         "Success on retry",
                     ],
-                ) as mock_wait_for,
+                ),
                 patch("asyncio.sleep") as mock_sleep,
             ):
                 result = await adapter.scrape("https://example.com", "Extract")

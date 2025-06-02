@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
@@ -36,9 +35,9 @@ class TestOpenAIProviderInitialization:
     def test_provider_creation_valid_model(self, mock_client_manager):
         """Test creating provider with valid model."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
+            api_key="test-key",
             model_name="text-embedding-3-small",
-            client_manager=mock_client_manager
+            client_manager=mock_client_manager,
         )
 
         assert provider.api_key == "test-key"
@@ -50,18 +49,18 @@ class TestOpenAIProviderInitialization:
         """Test creating provider with invalid model."""
         with pytest.raises(EmbeddingServiceError, match="Unsupported model"):
             OpenAIEmbeddingProvider(
-                api_key="test-key", 
+                api_key="test-key",
                 model_name="invalid-model",
-                client_manager=mock_client_manager
+                client_manager=mock_client_manager,
             )
 
     def test_provider_creation_custom_dimensions(self, mock_client_manager):
         """Test creating provider with custom dimensions."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
-            model_name="text-embedding-3-large", 
+            api_key="test-key",
+            model_name="text-embedding-3-large",
             dimensions=2048,
-            client_manager=mock_client_manager
+            client_manager=mock_client_manager,
         )
 
         assert provider.dimensions == 2048
@@ -73,7 +72,7 @@ class TestOpenAIProviderInitialization:
                 api_key="test-key",
                 model_name="text-embedding-3-small",
                 dimensions=2000,  # Exceeds 1536 limit
-                client_manager=mock_client_manager
+                client_manager=mock_client_manager,
             )
 
     async def test_initialization_with_client_manager(
@@ -96,13 +95,14 @@ class TestOpenAIProviderInitialization:
         """Test initialization when ClientManager returns None (fallback to direct client)."""
         # ClientManager returns None, so provider should fail since it requires ClientManager
         mock_client_manager.get_openai_client.return_value = None
-        
+
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
-            client_manager=mock_client_manager
+            api_key="test-key", client_manager=mock_client_manager
         )
-        
-        with pytest.raises(EmbeddingServiceError, match="OpenAI API key not configured"):
+
+        with pytest.raises(
+            EmbeddingServiceError, match="OpenAI API key not configured"
+        ):
             await provider.initialize()
 
     async def test_initialization_no_api_key_with_client_manager(
@@ -169,8 +169,7 @@ class TestOpenAIProviderEmbeddingGeneration:
     async def test_generate_embeddings_not_initialized(self, mock_client_manager):
         """Test embedding generation when not initialized."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
-            client_manager=mock_client_manager
+            api_key="test-key", client_manager=mock_client_manager
         )
 
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
@@ -239,18 +238,19 @@ class TestOpenAIProviderEmbeddingGeneration:
         self, mock_client_manager, mock_openai_client
     ):
         """Test embedding generation with large batch requiring multiple API calls."""
+
         # Mock responses for each batch - need to return the correct number of embeddings
         def mock_create_embeddings(*args, **kwargs):
             # Get the input text count from the request
-            input_texts = kwargs.get('input', [])
+            input_texts = kwargs.get("input", [])
             batch_size = len(input_texts)
-            
+
             embedding_response = MagicMock()
             embedding_response.data = [
                 MagicMock(embedding=[0.1, 0.2, 0.3]) for _ in range(batch_size)
             ]
             return embedding_response
-        
+
         mock_openai_client.embeddings.create.side_effect = mock_create_embeddings
         mock_client_manager.get_openai_client.return_value = mock_openai_client
 
@@ -414,9 +414,9 @@ class TestOpenAIProviderProperties:
     def test_cost_per_token_small_model(self, mock_client_manager):
         """Test cost per token for small model."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
+            api_key="test-key",
             model_name="text-embedding-3-small",
-            client_manager=mock_client_manager
+            client_manager=mock_client_manager,
         )
 
         expected_cost = 0.02 / 1_000_000  # $0.02 per 1M tokens
@@ -425,9 +425,9 @@ class TestOpenAIProviderProperties:
     def test_cost_per_token_large_model(self, mock_client_manager):
         """Test cost per token for large model."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
+            api_key="test-key",
             model_name="text-embedding-3-large",
-            client_manager=mock_client_manager
+            client_manager=mock_client_manager,
         )
 
         expected_cost = 0.13 / 1_000_000  # $0.13 per 1M tokens
@@ -436,9 +436,9 @@ class TestOpenAIProviderProperties:
     def test_max_tokens_per_request(self, mock_client_manager):
         """Test maximum tokens per request."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
+            api_key="test-key",
             model_name="text-embedding-3-small",
-            client_manager=mock_client_manager
+            client_manager=mock_client_manager,
         )
 
         assert provider.max_tokens_per_request == 8191
@@ -447,11 +447,12 @@ class TestOpenAIProviderProperties:
 class TestOpenAIProviderBatchAPI:
     """Test batch API functionality."""
 
-    async def test_generate_embeddings_batch_api_not_initialized(self, mock_client_manager):
+    async def test_generate_embeddings_batch_api_not_initialized(
+        self, mock_client_manager
+    ):
         """Test batch API when not initialized."""
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", 
-            client_manager=mock_client_manager
+            api_key="test-key", client_manager=mock_client_manager
         )
 
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):

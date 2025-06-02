@@ -155,10 +155,16 @@ class TestEmbeddingManagerInitialization:
         mock_openai_provider.initialize = AsyncMock()
         mock_fastembed_provider = AsyncMock()
         mock_fastembed_provider.initialize = AsyncMock()
-        
+
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider", return_value=mock_openai_provider),
-            patch("src.services.embeddings.manager.FastEmbedProvider", return_value=mock_fastembed_provider),
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider",
+                return_value=mock_openai_provider,
+            ),
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider",
+                return_value=mock_fastembed_provider,
+            ),
         ):
             await embedding_manager.initialize()
             await embedding_manager.initialize()  # Should not raise error
@@ -172,10 +178,16 @@ class TestEmbeddingManagerInitialization:
         mock_openai_provider.initialize = AsyncMock()
         mock_fastembed_provider = AsyncMock()
         mock_fastembed_provider.initialize = AsyncMock()
-        
+
         with (
-            patch("src.services.embeddings.manager.OpenAIEmbeddingProvider", return_value=mock_openai_provider),
-            patch("src.services.embeddings.manager.FastEmbedProvider", return_value=mock_fastembed_provider),
+            patch(
+                "src.services.embeddings.manager.OpenAIEmbeddingProvider",
+                return_value=mock_openai_provider,
+            ),
+            patch(
+                "src.services.embeddings.manager.FastEmbedProvider",
+                return_value=mock_fastembed_provider,
+            ),
         ):
             await embedding_manager.initialize()
 
@@ -443,15 +455,20 @@ class TestEmbeddingManagerProviderInfo:
         embedding_manager._initialized = True
 
         mock_expensive = AsyncMock()
-        mock_expensive.cost_per_token = 1.0  # Very expensive - 1000/4 * 1.0 = 250.0 cost
+        mock_expensive.cost_per_token = (
+            1.0  # Very expensive - 1000/4 * 1.0 = 250.0 cost
+        )
         mock_cheap = AsyncMock()
-        mock_cheap.cost_per_token = 0.00001  # Very cheap - 1000/4 * 0.00001 = 0.0025 cost
+        mock_cheap.cost_per_token = (
+            0.00001  # Very cheap - 1000/4 * 0.00001 = 0.0025 cost
+        )
 
         embedding_manager.providers["expensive"] = mock_expensive
         embedding_manager.providers["cheap"] = mock_cheap
 
         result = await embedding_manager.get_optimal_provider(
-            text_length=1000, budget_limit=0.01  # Budget allows 0.01, cheap costs 0.0025
+            text_length=1000,
+            budget_limit=0.01,  # Budget allows 0.01, cheap costs 0.0025
         )
 
         assert result == "cheap"
@@ -555,10 +572,12 @@ class TestEmbeddingManagerSmartSelection:
     def test_get_smart_provider_recommendation(self, embedding_manager):
         """Test smart provider recommendation."""
         embedding_manager._initialized = True
-        
+
         # Create mock text analysis
-        text_analysis = embedding_manager.analyze_text_characteristics(["test text for embedding"])
-        
+        text_analysis = embedding_manager.analyze_text_characteristics(
+            ["test text for embedding"]
+        )
+
         # Mock benchmarks for providers
         embedding_manager._benchmarks = {
             "text-embedding-3-small": MagicMock(
@@ -571,7 +590,7 @@ class TestEmbeddingManagerSmartSelection:
                 max_context_length=8191,
             ),
             "BAAI/bge-small-en-v1.5": MagicMock(
-                model_name="BAAI/bge-small-en-v1.5", 
+                model_name="BAAI/bge-small-en-v1.5",
                 provider="fastembed",
                 avg_latency_ms=45,
                 quality_score=78,
@@ -580,13 +599,13 @@ class TestEmbeddingManagerSmartSelection:
                 max_context_length=512,
             ),
         }
-        
+
         # Mock providers
         mock_openai = AsyncMock()
         mock_openai.model_name = "text-embedding-3-small"
         mock_fastembed = AsyncMock()
         mock_fastembed.model_name = "BAAI/bge-small-en-v1.5"
-        
+
         embedding_manager.providers = {
             "openai": mock_openai,
             "fastembed": mock_fastembed,
@@ -608,31 +627,31 @@ class TestEmbeddingManagerSmartSelection:
     def test_calculate_model_score(self, embedding_manager):
         """Test model scoring calculation."""
         embedding_manager._initialized = True
-        
+
         # Create mock benchmark
         benchmark = MagicMock(
             quality_score=85,
             avg_latency_ms=78,
             cost_per_million_tokens=20.0,
         )
-        
+
         # Create text analysis
         text_analysis = embedding_manager.analyze_text_characteristics(["test text"])
-        
+
         score = embedding_manager._calculate_model_score(
             benchmark=benchmark,
             text_analysis=text_analysis,
             quality_tier=QualityTier.BALANCED,
             speed_priority=False,
         )
-        
+
         assert isinstance(score, float)
         assert 0 <= score <= 100
 
     def test_generate_selection_reasoning(self, embedding_manager):
         """Test selection reasoning generation."""
         embedding_manager._initialized = True
-        
+
         # Mock selection data
         selection = {
             "provider": "fastembed",
@@ -644,16 +663,18 @@ class TestEmbeddingManagerSmartSelection:
                 cost_per_million_tokens=0.0,
             ),
         }
-        
-        text_analysis = embedding_manager.analyze_text_characteristics(["def hello(): pass"])
-        
+
+        text_analysis = embedding_manager.analyze_text_characteristics(
+            ["def hello(): pass"]
+        )
+
         reasoning = embedding_manager._generate_selection_reasoning(
             selection=selection,
             text_analysis=text_analysis,
             quality_tier=QualityTier.FAST,
             speed_priority=True,
         )
-        
+
         assert isinstance(reasoning, str)
         assert len(reasoning) > 0
 
@@ -664,15 +685,15 @@ class TestEmbeddingManagerReranking:
     async def test_rerank_results_no_reranker(self, embedding_manager):
         """Test reranking when no reranker is available."""
         embedding_manager._reranker = None
-        
+
         query = "test query"
         results = [
             {"id": 1, "content": "first result", "score": 0.8},
             {"id": 2, "content": "second result", "score": 0.7},
         ]
-        
+
         reranked = await embedding_manager.rerank_results(query, results)
-        
+
         # Should return original results unchanged
         assert reranked == results
 
@@ -680,35 +701,38 @@ class TestEmbeddingManagerReranking:
         """Test reranking with empty results."""
         query = "test query"
         results = []
-        
+
         reranked = await embedding_manager.rerank_results(query, results)
-        
+
         assert reranked == []
 
     async def test_rerank_results_single_result(self, embedding_manager):
         """Test reranking with single result."""
         query = "test query"
         results = [{"id": 1, "content": "single result", "score": 0.8}]
-        
+
         reranked = await embedding_manager.rerank_results(query, results)
-        
+
         assert reranked == results
 
     async def test_rerank_results_success(self, embedding_manager):
         """Test successful reranking."""
         # Mock reranker
         mock_reranker = MagicMock()
-        mock_reranker.compute_score.return_value = [0.9, 0.95]  # Higher scores for reranking
+        mock_reranker.compute_score.return_value = [
+            0.9,
+            0.95,
+        ]  # Higher scores for reranking
         embedding_manager._reranker = mock_reranker
-        
+
         query = "test query"
         results = [
             {"id": 1, "content": "first result", "score": 0.8},
             {"id": 2, "content": "second result", "score": 0.7},
         ]
-        
+
         reranked = await embedding_manager.rerank_results(query, results)
-        
+
         # Should be reordered by reranker scores
         assert len(reranked) == 2
         assert reranked[0]["id"] == 2  # Higher reranker score (0.95)
@@ -720,12 +744,12 @@ class TestEmbeddingManagerReranking:
         mock_reranker = MagicMock()
         mock_reranker.compute_score.side_effect = Exception("Reranker failed")
         embedding_manager._reranker = mock_reranker
-        
+
         query = "test query"
         results = [{"id": 1, "content": "result", "score": 0.8}]
-        
+
         reranked = await embedding_manager.rerank_results(query, results)
-        
+
         # Should return original results on error
         assert reranked == results
 
@@ -736,25 +760,25 @@ class TestEmbeddingManagerAdvancedFeatures:
     async def test_generate_embeddings_with_caching(self, embedding_manager):
         """Test embedding generation with caching enabled."""
         embedding_manager._initialized = True
-        
+
         # Mock cache manager
         mock_cache_manager = AsyncMock()
         mock_embedding_cache = AsyncMock()
         mock_embedding_cache.get_embedding.return_value = [0.1] * 1536  # Cache hit
         mock_cache_manager._embedding_cache = mock_embedding_cache
         embedding_manager.cache_manager = mock_cache_manager
-        
+
         # Mock provider
         mock_provider = AsyncMock()
         mock_provider.generate_embeddings.return_value = [[0.2] * 1536]
         embedding_manager.providers = {"test": mock_provider}
-        
+
         result = await embedding_manager.generate_embeddings(
             texts=["test text"],
             provider_name="test",
             auto_select=False,
         )
-        
+
         # Should return cached result
         assert result["cache_hit"] is True
         assert result["embeddings"] == [[0.1] * 1536]
@@ -763,23 +787,32 @@ class TestEmbeddingManagerAdvancedFeatures:
     async def test_generate_embeddings_with_sparse_vectors(self, embedding_manager):
         """Test embedding generation with sparse vectors."""
         embedding_manager._initialized = True
-        
+
         # Mock provider with sparse embedding support
         mock_provider = AsyncMock()
         mock_provider.generate_embeddings.return_value = [[0.1] * 1536]
-        mock_provider.generate_sparse_embeddings = AsyncMock(return_value=[{0: 0.5, 1: 0.3}])
+        mock_provider.generate_sparse_embeddings = AsyncMock(
+            return_value=[{0: 0.5, 1: 0.3}]
+        )
         embedding_manager.providers = {"test": mock_provider}
-        
+
         # Mock text analysis and selection
-        with patch.object(embedding_manager, '_select_provider_and_model') as mock_select:
-            mock_select.return_value = (mock_provider, "test-model", 0.01, "test reasoning")
-            
+        with patch.object(
+            embedding_manager, "_select_provider_and_model"
+        ) as mock_select:
+            mock_select.return_value = (
+                mock_provider,
+                "test-model",
+                0.01,
+                "test reasoning",
+            )
+
             result = await embedding_manager.generate_embeddings(
                 texts=["test text"],
                 generate_sparse=True,
                 auto_select=False,
             )
-        
+
         assert "sparse_embeddings" in result
         assert result["sparse_embeddings"] == [{0: 0.5, 1: 0.3}]
 
@@ -788,16 +821,25 @@ class TestEmbeddingManagerAdvancedFeatures:
         embedding_manager._initialized = True
         embedding_manager.budget_limit = 0.01
         embedding_manager.usage_stats.daily_cost = 0.009
-        
+
         # Mock provider and analysis
         mock_provider = AsyncMock()
         embedding_manager.providers = {"test": mock_provider}
-        
-        with patch.object(embedding_manager, '_select_provider_and_model') as mock_select:
+
+        with patch.object(
+            embedding_manager, "_select_provider_and_model"
+        ) as mock_select:
             # Return high cost that exceeds budget
-            mock_select.return_value = (mock_provider, "test-model", 0.01, "test reasoning")
-            
-            with pytest.raises(EmbeddingServiceError, match="Budget constraint violated"):
+            mock_select.return_value = (
+                mock_provider,
+                "test-model",
+                0.01,
+                "test reasoning",
+            )
+
+            with pytest.raises(
+                EmbeddingServiceError, match="Budget constraint violated"
+            ):
                 await embedding_manager.generate_embeddings(
                     texts=["test text"],
                     auto_select=False,
@@ -806,15 +848,22 @@ class TestEmbeddingManagerAdvancedFeatures:
     async def test_generate_embeddings_provider_failure(self, embedding_manager):
         """Test handling of provider failures during embedding generation."""
         embedding_manager._initialized = True
-        
+
         # Mock provider that fails
         mock_provider = AsyncMock()
         mock_provider.generate_embeddings.side_effect = Exception("Provider failed")
         embedding_manager.providers = {"test": mock_provider}
-        
-        with patch.object(embedding_manager, '_select_provider_and_model') as mock_select:
-            mock_select.return_value = (mock_provider, "test-model", 0.01, "test reasoning")
-            
+
+        with patch.object(
+            embedding_manager, "_select_provider_and_model"
+        ) as mock_select:
+            mock_select.return_value = (
+                mock_provider,
+                "test-model",
+                0.01,
+                "test reasoning",
+            )
+
             with pytest.raises(Exception, match="Provider failed"):
                 await embedding_manager.generate_embeddings(
                     texts=["test text"],
