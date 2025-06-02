@@ -7,9 +7,9 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from ...chunking import ChunkingConfig
 from ...chunking import EnhancedChunker
 from ...config.enums import ChunkingStrategy
+from ...config.models import ChunkingConfig
 from ...infrastructure.client_manager import ClientManager
 from ...security import SecurityValidator
 from ..models.requests import BatchRequest

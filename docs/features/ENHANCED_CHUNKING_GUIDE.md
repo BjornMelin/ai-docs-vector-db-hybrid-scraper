@@ -114,7 +114,8 @@ classes = extract_classes(tree.root_node)
 ### Basic Configuration
 
 ```python
-from src.chunking import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.config.enums import ChunkingStrategy
 
 # For general documentation
 basic_config = ChunkingConfig(

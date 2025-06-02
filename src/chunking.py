@@ -6,18 +6,16 @@ Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST p
 
 import logging
 import re
-from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 from typing import ClassVar
 
-from pydantic import BaseModel
-from pydantic import Field
-
 # Handle both module and script imports
 from src.config.enums import ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.models.document_processing import Chunk
+from src.models.document_processing import CodeBlock
+from src.models.document_processing import CodeLanguage
 
-# Tree-sitter imports (will be available after adding to requirements)
 try:
     import tree_sitter_python as tspython
     from tree_sitter import Language
@@ -31,99 +29,8 @@ except ImportError:
     Node = None  # type: ignore
 
 
-class CodeLanguage(str, Enum):
-    """Supported programming languages for AST parsing"""
-
-    PYTHON = "python"
-    JAVASCRIPT = "javascript"
-    TYPESCRIPT = "typescript"
-    MARKDOWN = "markdown"
-    UNKNOWN = "unknown"
-
-
-class ChunkingConfig(BaseModel):
-    """Advanced chunking configuration"""
-
-    # Basic parameters (existing)
-    chunk_size: int = Field(
-        default=1600,
-        description="Target chunk size in characters (research-optimal)",
-    )
-    chunk_overlap: int = Field(
-        default=320, description="Overlap between chunks (20% of chunk_size)"
-    )
-
-    # Enhanced chunking parameters
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED,
-        description="Chunking strategy to use",
-    )
-    enable_ast_chunking: bool = Field(
-        default=True, description="Enable AST-based chunking when available"
-    )
-    preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact across chunks"
-    )
-    preserve_code_blocks: bool = Field(
-        default=True, description="Keep code blocks intact when possible"
-    )
-    max_function_chunk_size: int = Field(
-        default=3200, description="Maximum size for a single function chunk"
-    )
-
-    # Language detection
-    supported_languages: list[str] = Field(
-        default_factory=lambda: [
-            "python",
-            "javascript",
-            "typescript",
-            "markdown",
-        ],
-        description="Languages supported for AST parsing",
-    )
-    fallback_to_text_chunking: bool = Field(
-        default=True, description="Fall back to text chunking if AST fails"
-    )
-
-    # Advanced options
-    detect_language: bool = Field(
-        default=True, description="Auto-detect programming language"
-    )
-    include_function_context: bool = Field(
-        default=True, description="Include function signatures in adjacent chunks"
-    )
-
-
-@dataclass
-class CodeBlock:
-    """Represents a code block found in content"""
-
-    language: str
-    content: str
-    start_pos: int
-    end_pos: int
-    fence_type: str = "```"  # Could be ``` or ~~~
-
-
-@dataclass
-class Chunk:
-    """Enhanced chunk with metadata"""
-
-    content: str
-    start_pos: int
-    end_pos: int
-    chunk_index: int
-    total_chunks: int = 0  # Updated after all chunks created
-    char_count: int = 0
-    token_estimate: int = 0  # Rough estimate: chars / 4
-    chunk_type: str = "text"  # text, code, mixed
-    language: str | None = None
-    has_code: bool = False
-    metadata: dict[str, Any] | None = None
-
-
 class EnhancedChunker:
-    """SOTA 2025 Enhanced Chunking Implementation"""
+    """Enhanced Chunking Implementation"""
 
     # Regex patterns for code detection
     CODE_FENCE_PATTERN = re.compile(

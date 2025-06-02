@@ -15,12 +15,72 @@ from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
-from src.models.validators import validate_api_key_common
-from src.models.validators import validate_chunk_sizes
-from src.models.validators import validate_model_benchmark_consistency
-from src.models.validators import validate_rate_limit_config
-from src.models.validators import validate_scoring_weights
-from src.models.validators import validate_url_format
+# Import validators conditionally to avoid circular imports
+try:
+    from src.models.validators import validate_api_key_common
+    from src.models.validators import validate_chunk_sizes
+    from src.models.validators import validate_model_benchmark_consistency
+    from src.models.validators import validate_rate_limit_config
+    from src.models.validators import validate_scoring_weights
+    from src.models.validators import validate_url_format
+except ImportError:
+    # Fallback for circular import situations - define minimal validators locally
+    def validate_api_key_common(value, prefix, service_name, min_length=10, max_length=200, allowed_chars=r"[A-Za-z0-9-]+"):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            value.encode("ascii")
+        except UnicodeEncodeError as err:
+            raise ValueError(f"{service_name} API key contains non-ASCII characters") from err
+        if not value.startswith(prefix):
+            raise ValueError(f"{service_name} API key must start with '{prefix}'")
+        if len(value) < min_length:
+            raise ValueError(f"{service_name} API key appears to be too short")
+        if len(value) > max_length:
+            raise ValueError(f"{service_name} API key appears to be too long")
+        import re
+        if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
+            raise ValueError(f"{service_name} API key contains invalid characters")
+        return value
+    
+    def validate_url_format(value):
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return value.rstrip("/")
+    
+    def validate_chunk_sizes(chunk_size, chunk_overlap, min_chunk_size, max_chunk_size):
+        if chunk_overlap >= chunk_size:
+            raise ValueError("chunk_overlap must be less than chunk_size")
+        if min_chunk_size >= max_chunk_size:
+            raise ValueError("min_chunk_size must be less than max_chunk_size")
+        if chunk_size > max_chunk_size:
+            raise ValueError("chunk_size cannot exceed max_chunk_size")
+    
+    def validate_rate_limit_config(value):
+        for provider, limits in value.items():
+            if not isinstance(limits, dict):
+                raise ValueError(f"Rate limits for provider '{provider}' must be a dictionary")
+            required_keys = {"max_calls", "time_window"}
+            if not required_keys.issubset(limits.keys()):
+                raise ValueError(f"Rate limits for provider '{provider}' must contain keys: {required_keys}, got: {set(limits.keys())}")
+            if limits["max_calls"] <= 0:
+                raise ValueError(f"max_calls for provider '{provider}' must be positive")
+            if limits["time_window"] <= 0:
+                raise ValueError(f"time_window for provider '{provider}' must be positive")
+        return value
+    
+    def validate_scoring_weights(quality_weight, speed_weight, cost_weight):
+        total = quality_weight + speed_weight + cost_weight
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+    
+    def validate_model_benchmark_consistency(key, model_name):
+        if key != model_name:
+            raise ValueError(f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification.")
+        return key
 
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
@@ -371,36 +431,54 @@ class Crawl4AIConfig(BaseModel):
 
 
 class ChunkingConfig(BaseModel):
-    """Text chunking configuration."""
+    """Advanced chunking configuration for optimal RAG performance."""
 
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
-    )
+    # Basic parameters
     chunk_size: int = Field(
         default=1600, gt=0, description="Target chunk size in characters"
     )
-    chunk_overlap: int = Field(default=200, ge=0, description="Overlap between chunks")
+    chunk_overlap: int = Field(
+        default=320, ge=0, description="Overlap between chunks (characters)"
+    )
 
-    # Code-aware chunking
+    # Strategy settings
+    strategy: ChunkingStrategy = Field(
+        default=ChunkingStrategy.ENHANCED, description="Chunking strategy to use"
+    )
     enable_ast_chunking: bool = Field(
         default=True, description="Enable AST-based chunking when available"
     )
     preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact"
+        default=True, description="Keep functions intact across chunks"
     )
     preserve_code_blocks: bool = Field(
         default=True, description="Keep code blocks intact when possible"
     )
-    supported_languages: list[str] = Field(
-        default=["python", "javascript", "typescript"],
-        description="Languages for AST parsing",
+    max_function_chunk_size: int = Field(
+        default=3200, gt=0, description="Maximum size for a single function chunk"
     )
 
-    # Advanced options
-    min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
-    max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
+    # Language detection and support
+    supported_languages: list[str] = Field(
+        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
+        description="Languages supported for AST parsing",
+    )
+    fallback_to_text_chunking: bool = Field(
+        default=True, description="Fall back to text chunking if AST fails"
+    )
     detect_language: bool = Field(
         default=True, description="Auto-detect programming language"
+    )
+    include_function_context: bool = Field(
+        default=True, description="Include function signatures in adjacent chunks"
+    )
+
+    # Size constraints
+    min_chunk_size: int = Field(
+        default=100, gt=0, description="Minimum chunk size in characters"
+    )
+    max_chunk_size: int = Field(
+        default=3000, gt=0, description="Maximum chunk size in characters"
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -408,12 +486,16 @@ class ChunkingConfig(BaseModel):
     @model_validator(mode="after")
     def validate_chunk_sizes_relationships(self) -> "ChunkingConfig":
         """Validate chunk size relationships."""
+        # Use centralized validation for common chunk size relationships
         validate_chunk_sizes(
             self.chunk_size,
             self.chunk_overlap,
             self.min_chunk_size,
             self.max_chunk_size,
         )
+        # Additional validation for function chunk size specific to this model
+        if self.max_function_chunk_size < self.max_chunk_size:
+            raise ValueError("max_function_chunk_size should be >= max_chunk_size")
         return self
 
 
