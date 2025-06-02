@@ -277,8 +277,9 @@ class TestConfigLoader:
             environment="production",
             debug=False,
             log_level="INFO",
-            openai={"api_key": "sk-real-api-key-here"},
+            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
             security={"require_api_keys": True},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -292,8 +293,9 @@ class TestConfigLoader:
             environment="production",
             debug=True,  # Should be False in production
             log_level="DEBUG",  # Should not be DEBUG in production
-            openai={"api_key": "your-openai-api-key"},  # Placeholder
+            openai={"api_key": "sk-your-openai-api-key-placeholder"},  # Placeholder
             security={"require_api_keys": False},  # Should be True in production
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -309,8 +311,9 @@ class TestConfigLoader:
         """Test validation of placeholder API keys."""
         config = UnifiedConfig(
             environment="development",
-            openai={"api_key": "your-openai-api-key"},
-            firecrawl={"api_key": "your-firecrawl-key"},
+            openai={"api_key": "sk-your-openai-api-key-placeholder"},
+            firecrawl={"api_key": "fc-your-firecrawl-key-placeholder"},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -326,8 +329,9 @@ class TestConfigLoader:
             environment="development",
             debug=True,
             log_level="DEBUG",
-            openai={"api_key": "sk-test-key"},
+            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
             security={"require_api_keys": False},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -337,18 +341,36 @@ class TestConfigLoader:
 
     def test_merge_env_config_preserves_existing(self):
         """Test that environment merging preserves existing config values."""
-        with patch.dict(os.environ, {"AI_DOCS__DEBUG": "true"}, clear=False):
-            base_config = {
-                "environment": "testing",
-                "log_level": "WARNING",
-                "existing": {"nested": "value"},
-            }
-            result = ConfigLoader.merge_env_config(base_config)
+        # Create env_vars dict with only the variables we want to set
+        env_vars_to_set = {"AI_DOCS__DEBUG": "true"}
 
-            assert result["environment"] == "testing"  # Preserved
-            assert result["log_level"] == "WARNING"  # Preserved
-            assert result["existing"]["nested"] == "value"  # Preserved
-            assert result["debug"] is True  # Added from env
+        # Create a list of variables to delete if they exist
+        env_vars_to_delete = []
+        if "AI_DOCS__LOG_LEVEL" in os.environ:
+            env_vars_to_delete.append("AI_DOCS__LOG_LEVEL")
+
+        with patch.dict(os.environ, env_vars_to_set, clear=False):
+            # Temporarily delete the log level var if it exists
+            saved_log_level = None
+            if env_vars_to_delete:
+                saved_log_level = os.environ.pop("AI_DOCS__LOG_LEVEL", None)
+
+            try:
+                base_config = {
+                    "environment": "testing",
+                    "log_level": "WARNING",
+                    "existing": {"nested": "value"},
+                }
+                result = ConfigLoader.merge_env_config(base_config)
+
+                assert result["environment"] == "testing"  # Preserved
+                assert result["log_level"] == "WARNING"  # Preserved
+                assert result["existing"]["nested"] == "value"  # Preserved
+                assert result["debug"] is True  # Added from env
+            finally:
+                # Restore the log level var if it was there originally
+                if saved_log_level is not None:
+                    os.environ["AI_DOCS__LOG_LEVEL"] = saved_log_level
 
     def test_merge_env_config_invalid_json(self):
         """Test merging environment variables with invalid JSON."""
