@@ -4,8 +4,6 @@ import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import pytest
-
 from src.config.models import UnifiedConfig
 from src.config.validator import ConfigValidator
 
@@ -24,9 +22,11 @@ class TestConfigValidator:
             "A",
             "ABC_DEF_GHI",
         ]
-        
+
         for name in valid_names:
-            assert ConfigValidator.validate_env_var_format(name), f"Should be valid: {name}"
+            assert ConfigValidator.validate_env_var_format(name), (
+                f"Should be valid: {name}"
+            )
 
     def test_validate_env_var_format_invalid(self):
         """Test validation of invalid environment variable formats."""
@@ -40,18 +40,22 @@ class TestConfigValidator:
             "",  # empty
             "_STARTS_WITH_UNDERSCORE",
         ]
-        
+
         for name in invalid_names:
-            assert not ConfigValidator.validate_env_var_format(name), f"Should be invalid: {name}"
+            assert not ConfigValidator.validate_env_var_format(name), (
+                f"Should be invalid: {name}"
+            )
 
     def test_validate_env_var_format_with_pattern(self):
         """Test validation with expected pattern."""
         # Test pattern matching
         pattern = r"^AI_DOCS__.*"
-        
+
         assert ConfigValidator.validate_env_var_format("AI_DOCS__TEST", pattern)
         assert not ConfigValidator.validate_env_var_format("OTHER__TEST", pattern)
-        assert not ConfigValidator.validate_env_var_format("AI_DOCS_TEST", pattern)  # Missing double underscore
+        assert not ConfigValidator.validate_env_var_format(
+            "AI_DOCS_TEST", pattern
+        )  # Missing double underscore
 
     def test_validate_url_valid_http(self):
         """Test validation of valid HTTP URLs."""
@@ -62,7 +66,7 @@ class TestConfigValidator:
             "https://api.example.com/v1",
             "http://test.local",
         ]
-        
+
         for url in valid_urls:
             is_valid, error = ConfigValidator.validate_url(url)
             assert is_valid, f"Should be valid: {url} - Error: {error}"
@@ -76,7 +80,7 @@ class TestConfigValidator:
             "file:///path/to/file",
             "javascript:alert('xss')",
         ]
-        
+
         for url in invalid_urls:
             is_valid, error = ConfigValidator.validate_url(url)
             assert not is_valid, f"Should be invalid: {url}"
@@ -89,7 +93,7 @@ class TestConfigValidator:
             "https://",
             "http:///path",
         ]
-        
+
         for url in invalid_urls:
             is_valid, error = ConfigValidator.validate_url(url)
             assert not is_valid, f"Should be invalid: {url}"
@@ -101,9 +105,11 @@ class TestConfigValidator:
             "redis://localhost:6379",
             "rediss://secure.redis.com:6380",
         ]
-        
+
         for url in redis_urls:
-            is_valid, error = ConfigValidator.validate_url(url, schemes=["redis", "rediss"])
+            is_valid, error = ConfigValidator.validate_url(
+                url, schemes=["redis", "rediss"]
+            )
             assert is_valid, f"Should be valid with custom schemes: {url}"
 
     def test_validate_url_malformed(self):
@@ -113,7 +119,7 @@ class TestConfigValidator:
             "://missing-scheme",
             "http:missing-slashes",
         ]
-        
+
         for url in malformed_urls:
             is_valid, error = ConfigValidator.validate_url(url)
             assert not is_valid, f"Should be invalid: {url}"
@@ -126,7 +132,7 @@ class TestConfigValidator:
             "sk-proj-abcdefghijklmnopqrstuvwxyz1234567890",
             "sk-" + "a" * 40,  # Minimum length
         ]
-        
+
         for key in valid_keys:
             is_valid, error = ConfigValidator.validate_api_key(key, "openai")
             assert is_valid, f"Should be valid OpenAI key: {key} - Error: {error}"
@@ -141,7 +147,7 @@ class TestConfigValidator:
             "not-sk-prefix",  # Wrong prefix
             "api-key-123456789",  # Wrong prefix
         ]
-        
+
         for key in invalid_keys:
             is_valid, error = ConfigValidator.validate_api_key(key, "openai")
             assert not is_valid, f"Should be invalid OpenAI key: {key}"
@@ -154,7 +160,7 @@ class TestConfigValidator:
             "firecrawl-" + "x" * 30,
             "a" * 25,  # Minimum length
         ]
-        
+
         for key in valid_keys:
             is_valid, error = ConfigValidator.validate_api_key(key, "firecrawl")
             assert is_valid, f"Should be valid Firecrawl key: {key} - Error: {error}"
@@ -167,7 +173,7 @@ class TestConfigValidator:
             "short",  # Too short
             "a" * 10,  # Too short
         ]
-        
+
         for key in invalid_keys:
             is_valid, error = ConfigValidator.validate_api_key(key, "firecrawl")
             assert not is_valid, f"Should be invalid Firecrawl key: {key}"
@@ -179,16 +185,18 @@ class TestConfigValidator:
         is_valid, error = ConfigValidator.validate_api_key("", "qdrant")
         assert not is_valid
         assert "API key is empty" in error
-        
+
         is_valid, error = ConfigValidator.validate_api_key(None, "qdrant")
         assert not is_valid
         assert "API key is empty" in error
-        
+
         # Valid key (longer than 10 chars)
-        is_valid, error = ConfigValidator.validate_api_key("qdrant-key-123456", "qdrant")
+        is_valid, error = ConfigValidator.validate_api_key(
+            "qdrant-key-123456", "qdrant"
+        )
         assert is_valid
         assert error == ""
-        
+
         # Too short (if provided)
         is_valid, error = ConfigValidator.validate_api_key("short", "qdrant")
         assert not is_valid
@@ -198,7 +206,7 @@ class TestConfigValidator:
         """Test validation and conversion of boolean environment variables."""
         true_values = ["true", "1", "yes", "on", "TRUE", "Yes", "ON"]
         false_values = ["false", "0", "no", "off", "FALSE", "No", "OFF"]
-        
+
         for value in true_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, bool
@@ -206,7 +214,7 @@ class TestConfigValidator:
             assert is_valid, f"Should be valid boolean: {value}"
             assert converted is True
             assert error == ""
-        
+
         for value in false_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, bool
@@ -218,7 +226,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_boolean_invalid(self):
         """Test validation of invalid boolean values."""
         invalid_values = ["maybe", "2", "true1", "false0", ""]
-        
+
         for value in invalid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, bool
@@ -230,7 +238,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_integer(self):
         """Test validation and conversion of integer environment variables."""
         valid_values = ["0", "123", "-456", "1000000"]
-        
+
         for value in valid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, int
@@ -242,7 +250,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_integer_invalid(self):
         """Test validation of invalid integer values."""
         invalid_values = ["abc", "123.45", "1e10", ""]
-        
+
         for value in invalid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, int
@@ -254,7 +262,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_float(self):
         """Test validation and conversion of float environment variables."""
         valid_values = ["0.0", "123.45", "-456.78", "1e10", "1.0e-5"]
-        
+
         for value in valid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, float
@@ -266,7 +274,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_float_invalid(self):
         """Test validation of invalid float values."""
         invalid_values = ["abc", "123.45.67", ""]
-        
+
         for value in invalid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, float
@@ -279,10 +287,10 @@ class TestConfigValidator:
         """Test validation and conversion of list environment variables."""
         valid_values = [
             ('["a", "b", "c"]', ["a", "b", "c"]),
-            ('[1, 2, 3]', [1, 2, 3]),
-            ('[]', []),
+            ("[1, 2, 3]", [1, 2, 3]),
+            ("[]", []),
         ]
-        
+
         for value, expected in valid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, list
@@ -296,10 +304,10 @@ class TestConfigValidator:
         invalid_values = [
             '{"key": "value"}',  # Dict instead of list
             '"string"',  # String instead of list
-            'invalid json',
-            '',
+            "invalid json",
+            "",
         ]
-        
+
         for value in invalid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, list
@@ -312,9 +320,9 @@ class TestConfigValidator:
         valid_values = [
             ('{"key": "value"}', {"key": "value"}),
             ('{"num": 123}', {"num": 123}),
-            ('{}', {}),
+            ("{}", {}),
         ]
-        
+
         for value, expected in valid_values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, dict
@@ -326,7 +334,7 @@ class TestConfigValidator:
     def test_validate_env_var_value_string(self):
         """Test validation of string environment variables."""
         values = ["simple", "with spaces", "123", "true", ""]
-        
+
         for value in values:
             is_valid, converted, error = ConfigValidator.validate_env_var_value(
                 "TEST_VAR", value, str
@@ -338,20 +346,24 @@ class TestConfigValidator:
     def test_check_env_vars_with_prefix(self):
         """Test checking environment variables with specific prefix."""
         # Clear any existing AI_DOCS__ variables first, then set our test ones
-        test_env = {k: v for k, v in os.environ.items() if not k.startswith("AI_DOCS__")}
-        test_env.update({
-            "AI_DOCS__DEBUG": "true",
-            "AI_DOCS__API_KEY": "sk-test",
-            "AI_DOCS__PLACEHOLDER": "your-api-key",
-            "AI_DOCS__EMPTY": "",
-            "AI_DOCS__WHITESPACE": " value ",
-            "OTHER_VAR": "ignored",
-            "invalid_format": "also ignored",
-        })
-        
+        test_env = {
+            k: v for k, v in os.environ.items() if not k.startswith("AI_DOCS__")
+        }
+        test_env.update(
+            {
+                "AI_DOCS__DEBUG": "true",
+                "AI_DOCS__API_KEY": "sk-test",
+                "AI_DOCS__PLACEHOLDER": "your-api-key",
+                "AI_DOCS__EMPTY": "",
+                "AI_DOCS__WHITESPACE": " value ",
+                "OTHER_VAR": "ignored",
+                "invalid_format": "also ignored",
+            }
+        )
+
         with patch.dict(os.environ, test_env, clear=True):
             results = ConfigValidator.check_env_vars("AI_DOCS__")
-            
+
             # Should only include AI_DOCS__ prefixed variables
             assert len(results) == 5
             assert "AI_DOCS__DEBUG" in results
@@ -374,14 +386,14 @@ class TestConfigValidator:
             clear=False,
         ):
             results = ConfigValidator.check_env_vars("AI_DOCS__")
-            
+
             # Check specific issues
             assert len(results["AI_DOCS__VALID"]["issues"]) == 0
             assert "Empty value" in results["AI_DOCS__EMPTY"]["issues"]
             assert "placeholder" in results["AI_DOCS__PLACEHOLDER"]["issues"][0]
             assert "whitespace" in results["AI_DOCS__WHITESPACE"]["issues"][0]
             assert "placeholder" in results["AI_DOCS__XXX"]["issues"][0]
-            
+
             # Invalid format should not be included
             assert "invalid_name" not in results
 
@@ -391,11 +403,11 @@ class TestConfigValidator:
         mock_client = MagicMock()
         mock_client.get_collections.return_value = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         config = UnifiedConfig(qdrant={"url": "http://localhost:6333", "api_key": None})
-        
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         assert "qdrant" in results
         assert results["qdrant"]["connected"] is True
         assert results["qdrant"]["error"] is None
@@ -404,20 +416,22 @@ class TestConfigValidator:
     def test_validate_config_connections_qdrant_auth_failure(self, mock_client_class):
         """Test Qdrant authentication failure."""
         from qdrant_client.http.exceptions import UnexpectedResponse
-        
+
         mock_client = MagicMock()
         mock_client.get_collections.side_effect = UnexpectedResponse(
-            status_code=401, 
+            status_code=401,
             reason_phrase="Unauthorized",
             content=b"Unauthorized",
-            headers={}
+            headers={},
         )
         mock_client_class.return_value = mock_client
-        
-        config = UnifiedConfig(qdrant={"url": "http://localhost:6333", "api_key": "wrong"})
-        
+
+        config = UnifiedConfig(
+            qdrant={"url": "http://localhost:6333", "api_key": "wrong"}
+        )
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         assert results["qdrant"]["connected"] is False
         assert "Authentication failed" in results["qdrant"]["error"]
 
@@ -426,13 +440,16 @@ class TestConfigValidator:
         """Test successful Redis connection validation."""
         mock_redis_client = MagicMock()
         mock_redis.return_value = mock_redis_client
-        
+
         config = UnifiedConfig(
-            cache={"enable_dragonfly_cache": True, "dragonfly_url": "redis://localhost:6379"}
+            cache={
+                "enable_dragonfly_cache": True,
+                "dragonfly_url": "redis://localhost:6379",
+            }
         )
-        
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         assert "redis" in results
         assert results["redis"]["connected"] is True
         assert results["redis"]["error"] is None
@@ -441,15 +458,18 @@ class TestConfigValidator:
     def test_validate_config_connections_redis_failure(self, mock_redis):
         """Test Redis connection failure."""
         import redis
-        
+
         mock_redis.side_effect = redis.ConnectionError("Connection refused")
-        
+
         config = UnifiedConfig(
-            cache={"enable_dragonfly_cache": True, "dragonfly_url": "redis://localhost:6379"}
+            cache={
+                "enable_dragonfly_cache": True,
+                "dragonfly_url": "redis://localhost:6379",
+            }
         )
-        
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         assert results["redis"]["connected"] is False
         assert "Connection refused" in results["redis"]["error"]
 
@@ -460,14 +480,14 @@ class TestConfigValidator:
         mock_models = MagicMock()
         mock_client.models.list.return_value = mock_models
         mock_openai_class.return_value = mock_client
-        
+
         config = UnifiedConfig(
             embedding_provider="openai",
             openai={"api_key": "sk-test"},
         )
-        
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         assert "openai" in results
         assert results["openai"]["connected"] is True
         assert results["openai"]["error"] is None
@@ -479,9 +499,9 @@ class TestConfigValidator:
             cache={"enable_dragonfly_cache": False},  # DragonflyDB disabled
             openai={"api_key": None},  # No API key
         )
-        
+
         results = ConfigValidator.validate_config_connections(config)
-        
+
         # Should only check Qdrant (always checked)
         assert "qdrant" in results
         assert "redis" not in results
@@ -490,11 +510,13 @@ class TestConfigValidator:
     def test_generate_validation_report_basic(self):
         """Test basic validation report generation."""
         config = UnifiedConfig(environment="development", debug=True)
-        
+
         with patch.object(ConfigValidator, "check_env_vars", return_value={}):
-            with patch.object(ConfigValidator, "validate_config_connections", return_value={}):
+            with patch.object(
+                ConfigValidator, "validate_config_connections", return_value={}
+            ):
                 report = ConfigValidator.generate_validation_report(config)
-        
+
         assert isinstance(report, str)
         assert "Configuration Validation Report" in report
         assert "Environment: development" in report
@@ -508,26 +530,33 @@ class TestConfigValidator:
             debug=True,  # Invalid for production
             openai={"api_key": ""},  # Empty API key
         )
-        
+
         with patch.object(ConfigValidator, "check_env_vars", return_value={}):
-            with patch.object(ConfigValidator, "validate_config_connections", return_value={}):
+            with patch.object(
+                ConfigValidator, "validate_config_connections", return_value={}
+            ):
                 report = ConfigValidator.generate_validation_report(config)
-        
-        assert "⚠️  Configuration issues found:" in report or "❌ Validation failed:" in report
+
+        assert (
+            "⚠️  Configuration issues found:" in report
+            or "❌ Validation failed:" in report
+        )
 
     def test_generate_validation_report_with_env_vars(self):
         """Test validation report with environment variables."""
         config = UnifiedConfig()
-        
+
         env_vars = {
             "AI_DOCS__DEBUG": {"value": "true", "issues": []},
             "AI_DOCS__INVALID": {"value": "bad", "issues": ["Invalid value"]},
         }
-        
+
         with patch.object(ConfigValidator, "check_env_vars", return_value=env_vars):
-            with patch.object(ConfigValidator, "validate_config_connections", return_value={}):
+            with patch.object(
+                ConfigValidator, "validate_config_connections", return_value={}
+            ):
                 report = ConfigValidator.generate_validation_report(config)
-        
+
         assert "Environment Variables:" in report
         assert "AI_DOCS__DEBUG" in report
         assert "AI_DOCS__INVALID" in report
@@ -535,16 +564,18 @@ class TestConfigValidator:
     def test_generate_validation_report_with_connections(self):
         """Test validation report with service connections."""
         config = UnifiedConfig()
-        
+
         connections = {
             "qdrant": {"connected": True, "error": None},
             "redis": {"connected": False, "error": "Connection refused"},
         }
-        
+
         with patch.object(ConfigValidator, "check_env_vars", return_value={}):
-            with patch.object(ConfigValidator, "validate_config_connections", return_value=connections):
+            with patch.object(
+                ConfigValidator, "validate_config_connections", return_value=connections
+            ):
                 report = ConfigValidator.generate_validation_report(config)
-        
+
         assert "Service Connections:" in report
         assert "✅ Qdrant" in report
         assert "❌ Redis" in report

@@ -177,6 +177,10 @@ class LocalCache(CacheInterface[Any]):
             "memory_mb": self._current_memory / (1024 * 1024),
         }
 
+    def get_memory_usage(self) -> float:
+        """Get current memory usage in MB."""
+        return self._current_memory / (1024 * 1024)
+
     async def _evict_if_needed(self, new_value_size: int) -> None:
         """Evict entries if cache is full or memory limit exceeded."""
         # Evict by size limit
