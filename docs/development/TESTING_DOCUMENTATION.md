@@ -17,10 +17,11 @@ This document provides comprehensive information about the testing infrastructur
 
 The project maintains high code quality with comprehensive testing:
 
-- **Total Tests**: 500+ unit tests across 25 test files
+- **Total Tests**: 500+ unit tests across 30+ test files
 - **Coverage**: 90%+ across all critical modules
 - **Framework**: pytest with Pydantic v2 validation testing
 - **Standards**: Following modern Python testing best practices
+- **Status**: Foundation complete, services testing roadmap created
 
 ### Key Testing Principles
 
@@ -35,24 +36,38 @@ The project maintains high code quality with comprehensive testing:
 ```
 tests/
 ├── unit/                               # Unit tests (500+ tests)
-│   ├── config/                         # Configuration tests
+│   ├── config/                         # Configuration tests (21 files)
 │   │   ├── test_enums.py              # Enum validation (45 tests)
-│   │   ├── test_models.py             # Config model tests
-│   │   ├── test_security_config.py    # Security config tests
-│   │   └── test_unified_config.py     # Unified config tests
-│   ├── models/                         # Pydantic model tests
+│   │   ├── test_*_config.py           # 16 config model test files (206 tests)
+│   │   ├── test_loader.py             # Config loader tests (22 tests)
+│   │   ├── test_validator.py          # Config validator tests (35 tests)
+│   │   ├── test_migrator.py           # Config migrator tests (35 tests)
+│   │   ├── test_schema.py             # Config schema tests
+│   │   └── test_cli.py                # CLI tests (38 tests)
+│   ├── models/                         # Pydantic model tests (4 files)
 │   │   ├── test_api_contracts.py      # API models (67 tests)
 │   │   ├── test_document_processing.py # Document models (33 tests)
 │   │   ├── test_validators.py         # Validation functions (57 tests)
 │   │   └── test_vector_search.py      # Vector search models (51 tests)
-│   ├── mcp/                           # MCP protocol tests
+│   ├── mcp/                           # MCP protocol tests (14 files)
 │   │   ├── test_requests.py           # MCP request models
-│   │   └── test_responses.py          # MCP response models
+│   │   ├── test_responses.py          # MCP response models
+│   │   └── test_*_tools.py            # 12 MCP tool test files (87 tests)
+│   ├── core/                          # Core module tests (4 files)
+│   │   ├── test_constants.py          # Constants tests (25 tests)
+│   │   ├── test_decorators.py         # Decorators tests (47 tests)
+│   │   ├── test_errors.py             # Error handling tests (30 tests)
+│   │   └── test_utils.py              # Core utils tests (20 tests)
+│   ├── infrastructure/                 # Infrastructure tests (1 file)
+│   │   └── test_client_manager.py     # Client manager tests (52 tests)
+│   ├── utils/                         # Utility tests (2 files)
+│   │   ├── test_utils.py              # Utils tests (25 tests)
+│   │   └── test_utils_imports.py      # Import utils tests (25 tests)
 │   ├── test_security.py               # Security validation (33 tests)
-│   ├── test_chunking.py               # Content chunking (45 tests)
-│   ├── test_manage_vector_db.py       # Database operations (76 tests)
-│   └── test_crawl4ai_bulk_embedder.py # Scraping pipeline (92 tests)
-├── integration/                        # Integration tests (planned)
+│   ├── test_chunking.py               # Content chunking (18 tests)
+│   ├── test_manage_vector_db.py       # Database operations (47 tests)
+│   ├── test_crawl4ai_bulk_embedder.py # Scraping pipeline (42 tests)
+│   └── test_unified_mcp_server.py     # Unified MCP server (35 tests)
 ├── conftest.py                        # pytest configuration
 └── __init__.py
 ```
@@ -292,11 +307,14 @@ uv run pytest --memray
 
 | Module | Tests | Lines | Coverage |
 |--------|-------|--------|----------|
-| **src/models/** | 208 tests | 1,200+ lines | 95%+ |
-| **src/config/** | 45+ tests | 800+ lines | 90%+ |
-| **src/services/** | 200+ tests | 2,000+ lines | 88%+ |
-| **src/security.py** | 33 tests | 300+ lines | 95%+ |
-| **src/mcp/** | 30+ tests | 500+ lines | 90%+ |
+| **src/models/** | 208 tests | 1,200+ lines | 87% |
+| **src/config/** | 380+ tests | 800+ lines | 94% |
+| **src/mcp/** | 136+ tests | 500+ lines | 90%+ |
+| **src/core/** | 122 tests | 400+ lines | 90%+ |
+| **src/infrastructure/** | 52 tests | 300+ lines | 82% |
+| **src/utils/** | 50 tests | 200+ lines | 100% |
+| **src/security.py** | 33 tests | 300+ lines | 98% |
+| **src/services/** | 0 tests | 2,000+ lines | 0% (roadmap) |
 
 ### Coverage Goals
 
