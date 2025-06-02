@@ -297,7 +297,7 @@ class CachePatterns:
             # This is critical as write-behind caching could lose data if the server crashes before persistence.
             # Example with Celery:
             # persist_task_id = persist_to_db.apply_async(args=[key, value], countdown=delay)
-            
+
             # Schedule async persistence
             persist_task = asyncio.create_task(
                 self._delayed_persist(key, value, persist_func, delay)

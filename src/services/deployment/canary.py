@@ -157,7 +157,7 @@ class CanaryDeployment(BaseService):
         # Example with Celery:
         # canary_task_id = run_canary_deployment.apply_async(args=[deployment_id, auto_rollback])
         # self.deployments[deployment_id].task_id = canary_task_id
-        
+
         # Start canary process
         # Store task reference to avoid RUF006 warning
         _ = asyncio.create_task(self._run_canary(deployment_id, auto_rollback))  # noqa: RUF006
@@ -513,10 +513,10 @@ class CanaryDeployment(BaseService):
 
         deployment.status = "running"
         await self._save_deployments()
-        
+
         # TODO: For production, use persistent task queue to resume deployment monitoring
         # Same concerns as start_canary - deployments should survive server restarts
-        
+
         # Restart monitoring from current stage
         # Store task reference to avoid RUF006 warning
         _ = asyncio.create_task(self._run_canary(deployment_id))  # noqa: RUF006

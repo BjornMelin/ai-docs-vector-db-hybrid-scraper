@@ -21,7 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 class ClientState(Enum):
-    """Client connection state."""
+    """Client connection state enumeration.
+
+    Values:
+        UNINITIALIZED: Client not yet initialized or connected
+        HEALTHY: Client is connected and operating normally
+        DEGRADED: Client is experiencing issues but partially functional
+        FAILED: Client has failed and is not operational
+    """
 
     UNINITIALIZED = "uninitialized"
     HEALTHY = "healthy"
@@ -31,7 +38,14 @@ class ClientState(Enum):
 
 @dataclass
 class ClientHealth:
-    """Client health status."""
+    """Client health status tracking.
+
+    Attributes:
+        state: Current connection state of the client
+        last_check: Unix timestamp of last health check
+        last_error: Description of the last error encountered, if any
+        consecutive_failures: Number of consecutive failures for this client
+    """
 
     state: ClientState
     last_check: float
@@ -67,7 +81,14 @@ class CircuitBreaker:
 
     @property
     def state(self) -> ClientState:
-        """Get current circuit state."""
+        """Get current circuit state.
+
+        Returns:
+            ClientState: Current state of the circuit breaker:
+                - HEALTHY: Normal operation
+                - DEGRADED: Half-open state, testing recovery
+                - FAILED: Circuit open, rejecting requests
+        """
         if (
             self._state == ClientState.FAILED
             and self._last_failure_time
@@ -77,7 +98,20 @@ class CircuitBreaker:
         return self._state
 
     async def call(self, func, *args, **kwargs):
-        """Execute function with circuit breaker protection."""
+        """Execute function with circuit breaker protection.
+
+        Args:
+            func: Async function to execute
+            *args: Positional arguments to pass to func
+            **kwargs: Keyword arguments to pass to func
+
+        Returns:
+            Any: Result from the executed function
+
+        Raises:
+            APIError: If circuit breaker is open or half-open test fails
+            Exception: Any exception raised by the executed function
+        """
         async with self._lock:
             current_state = self.state
 

@@ -4,19 +4,15 @@ This tool provides commands for creating, validating, and converting
 configuration files.
 """
 
-import json
 from pathlib import Path
 from typing import Any
 
 import click
-import yaml
 from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
 from .loader import ConfigLoader
-from .migrator import ConfigMigrator
-from .models import UnifiedConfig
 from .schema import ConfigSchemaGenerator
 
 console = Console()
@@ -272,47 +268,6 @@ def show_providers(config_file: str | None, output_format: str):
 
 @cli.command()
 @click.option(
-    "--source",
-    type=click.Path(exists=True),
-    default="config/documentation-sites.json",
-    help="Source documentation sites file",
-)
-@click.option(
-    "--config-file",
-    "-c",
-    type=click.Path(exists=True),
-    help="Target configuration file",
-)
-def migrate_sites(source: str, config_file: str | None):
-    """Migrate documentation sites from old format to unified config."""
-    try:
-        # Load documentation sites
-        sites = ConfigLoader.load_documentation_sites(source)
-
-        # Load or create configuration using standard loader
-        if config_file:
-            config = ConfigLoader.load_config(config_file=config_file, include_env=True)
-        else:
-            config = UnifiedConfig()
-
-        # Update sites
-        config.documentation_sites = sites
-
-        # Save
-        output_path = Path(config_file) if config_file else Path("config.json")
-        config.save_to_file(output_path, format="json")
-
-        rprint(
-            f"[green]✓[/green] Migrated {len(sites)} documentation sites to {output_path}"
-        )
-
-    except Exception as e:
-        rprint(f"[red]Error migrating sites:[/red] {e}")
-        raise click.Exit(1) from e
-
-
-@cli.command()
-@click.option(
     "--config-file",
     "-c",
     type=click.Path(exists=True),
@@ -405,102 +360,6 @@ def show_schema(output_format: str):
     except Exception as e:
         rprint(f"[red]Error displaying schema:[/red] {e}")
         raise click.Exit(1) from e
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-@click.option(
-    "--target-version", "-v", default="0.3.0", help="Target version to migrate to"
-)
-@click.option("--no-backup", is_flag=True, help="Skip creating backup file")
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be migrated without making changes"
-)
-def migrate(config_file: str, target_version: str, no_backup: bool, dry_run: bool):
-    """Migrate a configuration file to the latest version."""
-    config_path = Path(config_file)
-
-    try:
-        # Load configuration
-        with open(config_path) as f:
-            if config_path.suffix == ".json":
-                config_data = json.load(f)
-            elif config_path.suffix in [".yaml", ".yml"]:
-                config_data = yaml.safe_load(f)
-            else:
-                rprint(f"[red]Unsupported file format: {config_path.suffix}[/red]")
-                raise click.Exit(1)
-
-        # Detect current version
-        from_version = ConfigMigrator.detect_config_version(config_data)
-        if from_version is None:
-            rprint("[red]Could not detect configuration version[/red]")
-            raise click.Exit(1)
-
-        rprint(f"Current version: [cyan]{from_version}[/cyan]")
-        rprint(f"Target version: [cyan]{target_version}[/cyan]")
-
-        if from_version == target_version:
-            rprint("[green]Configuration already at target version[/green]")
-            return
-
-        # Perform migration (in memory for dry run)
-        if from_version == "legacy":
-            migrated = ConfigMigrator.migrate_legacy_to_unified(config_data)
-        else:
-            migrated = ConfigMigrator.migrate_between_versions(
-                config_data, from_version, target_version
-            )
-
-        # Generate report
-        report = ConfigMigrator.create_migration_report(
-            config_data, migrated, from_version, target_version
-        )
-
-        rprint("\n[bold]Migration Report:[/bold]")
-        rprint(report)
-
-        if dry_run:
-            rprint("\n[yellow]Dry run complete - no changes made[/yellow]")
-        else:
-            # Apply migration
-            success, message = ConfigMigrator.auto_migrate(
-                config_path, target_version, backup=not no_backup
-            )
-            if success:
-                rprint(f"\n[green]✓[/green] {message}")
-            else:
-                rprint(f"\n[red]✗[/red] {message}")
-                raise click.Exit(1)
-
-    except Exception as e:
-        rprint(f"[red]Error during migration:[/red] {e}")
-        raise click.Exit(1) from e
-
-
-@cli.command()
-@click.option("--from-version", "-f", help="Source version")
-@click.option("--to-version", "-t", help="Target version")
-def show_migration_path(from_version: str | None, to_version: str | None):
-    """Show available migration paths between versions."""
-    table = Table(title="Configuration Version History")
-    table.add_column("Version", style="cyan")
-    table.add_column("Description", style="yellow")
-
-    for version, description in ConfigMigrator.VERSIONS.items():
-        table.add_row(version, description)
-
-    console.print(table)
-
-    if from_version and to_version:
-        rprint(f"\nMigration path from {from_version} to {to_version}:")
-        if from_version == "legacy":
-            rprint("  1. Convert legacy format to unified configuration")
-            rprint(f"  2. Apply migrations to reach version {to_version}")
-        else:
-            rprint(
-                f"  1. Apply incremental migrations from {from_version} to {to_version}"
-            )
 
 
 if __name__ == "__main__":

@@ -4,8 +4,8 @@ import asyncio
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any
 
 from src.config import UnifiedConfig
 
@@ -24,7 +24,7 @@ class BaseService(ABC):
             config: Unified configuration
         """
         self.config = config
-        self._client: Any | None = None
+        self._client: object | None = None
         self._initialized = False
 
     @abstractmethod
@@ -48,26 +48,26 @@ class BaseService(ABC):
 
     async def _retry_with_backoff(
         self,
-        func,
+        func: Callable,
         *args,
         max_retries: int = 3,
         base_delay: float = 1.0,
         **kwargs,
-    ):
+    ) -> object:
         """Execute function with exponential backoff retry.
 
         Args:
-            func: Function to execute
+            func: Async function to execute
             max_retries: Maximum number of retries
-            base_delay: Base delay in seconds
-            *args: Function arguments
-            **kwargs: Function keyword arguments
+            base_delay: Base delay in seconds between retries
+            *args: Positional arguments to pass to function
+            **kwargs: Keyword arguments to pass to function
 
         Returns:
-            Function result
+            object: Return value from the function
 
         Raises:
-            APIError: If all retries fail
+            APIError: If all retries fail with the last error
         """
         last_error = None
 

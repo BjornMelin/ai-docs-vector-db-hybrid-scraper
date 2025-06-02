@@ -7,9 +7,7 @@ including environment variables, files, and documentation sites.
 import json
 import os
 from pathlib import Path
-from typing import Any
 
-from .models import DocumentationSite
 from .models import UnifiedConfig
 
 
@@ -17,31 +15,24 @@ class ConfigLoader:
     """Utility class for loading and managing configuration."""
 
     @staticmethod
-    def load_documentation_sites(config_path: Path | str) -> list[DocumentationSite]:
-        """Load documentation sites from JSON configuration file."""
-        config_path = Path(config_path)
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"Documentation sites config not found: {config_path}"
-            )
-
-        with open(config_path) as f:
-            data = json.load(f)
-
-        sites = []
-        for site_data in data.get("sites", []):
-            # Convert URL string to HttpUrl
-            site = DocumentationSite(**site_data)
-            sites.append(site)
-
-        return sites
-
-    @staticmethod
-    def merge_env_config(base_config: dict[str, Any]) -> dict[str, Any]:
+    def merge_env_config(base_config: dict[str, object]) -> dict[str, object]:
         """Merge environment variables into base configuration.
 
         Supports nested configuration using double underscore delimiter.
         Example: AI_DOCS__QDRANT__URL -> config.qdrant.url
+
+        Args:
+            base_config: Base configuration dictionary to merge into
+
+        Returns:
+            dict[str, object]: Merged configuration with environment overrides
+
+        Note:
+            Environment values are parsed as:
+            - JSON for complex types (lists, dicts)
+            - Booleans for "true"/"false" strings
+            - Numbers for numeric strings
+            - Strings for everything else
         """
         env_prefix = "AI_DOCS__"
 
@@ -85,7 +76,6 @@ class ConfigLoader:
         config_file: Path | str | None = None,
         env_file: Path | str | None = None,
         include_env: bool = True,
-        documentation_sites_file: Path | str | None = None,
     ) -> UnifiedConfig:
         """Load configuration from multiple sources with priority.
 
@@ -99,7 +89,6 @@ class ConfigLoader:
             config_file: Path to configuration file (JSON, YAML, or TOML)
             env_file: Path to .env file (defaults to .env in current directory)
             include_env: Whether to include environment variables
-            documentation_sites_file: Path to documentation sites JSON file
 
         Returns:
             Loaded configuration instance
@@ -119,11 +108,6 @@ class ConfigLoader:
         # Create configuration instance
         config = UnifiedConfig(**config_data)
 
-        # Load documentation sites if file provided
-        if documentation_sites_file:
-            sites = ConfigLoader.load_documentation_sites(documentation_sites_file)
-            config.documentation_sites = sites
-
         return config
 
     @staticmethod
@@ -138,24 +122,7 @@ class ConfigLoader:
             crawl_provider="crawl4ai",
         )
 
-        # Add example documentation sites
-        example_config.documentation_sites = [
-            DocumentationSite(
-                name="Example Documentation",
-                url="https://docs.example.com",
-                max_pages=100,
-                priority="high",
-                description="Example documentation site",
-            ),
-            DocumentationSite(
-                name="Another Example",
-                url="https://docs.another-example.com",
-                max_pages=50,
-                priority="medium",
-                description="Another example site",
-                exclude_patterns=["*/api/*", "*/internal/*"],
-            ),
-        ]
+        # Example configuration is ready with default values
 
         # Save to file
         example_config.save_to_file(output_path, format=format)
@@ -235,14 +202,18 @@ AI_DOCS__SECURITY__RATE_LIMIT_REQUESTS=100
         return len(issues) == 0, issues
 
     @staticmethod
-    def get_provider_display_data(config: UnifiedConfig) -> dict[str, dict[str, Any]]:
+    def get_provider_display_data(
+        config: UnifiedConfig,
+    ) -> dict[str, dict[str, object]]:
         """Get formatted provider data for display purposes.
 
         Args:
             config: Unified configuration object
 
         Returns:
-            Dictionary with provider data organized for display
+            dict[str, dict[str, object]]: Provider data organized for display with:
+                - provider_name: Human-readable provider name
+                - configuration: Dict of configuration values for display
         """
         providers = config.get_active_providers()
         display_data = {}

@@ -313,7 +313,7 @@ class QdrantAliasManager(BaseService):
         # This is critical as it manages collection deletion which affects data retention policies.
         # Example with ARQ:
         # await redis_queue.enqueue('delete_collection', collection_name, _delay=grace_period_minutes * 60)
-        
+
         # Schedule as background task - returns immediately
         task = asyncio.create_task(_delayed_delete())
         # Store task reference to prevent garbage collection

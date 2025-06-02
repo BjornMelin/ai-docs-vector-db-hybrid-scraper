@@ -6,73 +6,11 @@ from unittest.mock import patch
 
 import pytest
 from src.config.loader import ConfigLoader
-from src.config.models import DocumentationSite
 from src.config.models import UnifiedConfig
 
 
 class TestConfigLoader:
     """Test cases for ConfigLoader class."""
-
-    def test_load_documentation_sites_success(self, tmp_path):
-        """Test successful loading of documentation sites."""
-        # Create test data
-        sites_data = {
-            "sites": [
-                {
-                    "name": "Test Site",
-                    "url": "https://docs.example.com",
-                    "max_pages": 100,
-                    "priority": "high",
-                    "description": "Test documentation site",
-                },
-                {
-                    "name": "Another Site",
-                    "url": "https://docs.another.com",
-                    "max_pages": 50,
-                    "priority": "medium",
-                    "description": "Another test site",
-                    "exclude_patterns": ["*/internal/*"],
-                },
-            ]
-        }
-
-        # Create config file
-        config_file = tmp_path / "sites.json"
-        config_file.write_text(json.dumps(sites_data))
-
-        # Load sites
-        sites = ConfigLoader.load_documentation_sites(config_file)
-
-        # Verify results
-        assert len(sites) == 2
-        assert all(isinstance(site, DocumentationSite) for site in sites)
-        assert sites[0].name == "Test Site"
-        assert (
-            str(sites[0].url) == "https://docs.example.com/"
-        )  # HttpUrl adds trailing slash
-        assert sites[1].exclude_patterns == ["*/internal/*"]
-
-    def test_load_documentation_sites_file_not_found(self):
-        """Test loading from non-existent file raises error."""
-        with pytest.raises(FileNotFoundError) as exc_info:
-            ConfigLoader.load_documentation_sites("nonexistent.json")
-        assert "Documentation sites config not found" in str(exc_info.value)
-
-    def test_load_documentation_sites_empty_sites(self, tmp_path):
-        """Test loading with empty sites array."""
-        config_file = tmp_path / "empty.json"
-        config_file.write_text(json.dumps({"sites": []}))
-
-        sites = ConfigLoader.load_documentation_sites(config_file)
-        assert sites == []
-
-    def test_load_documentation_sites_no_sites_key(self, tmp_path):
-        """Test loading with missing sites key."""
-        config_file = tmp_path / "no_sites.json"
-        config_file.write_text(json.dumps({"other": []}))
-
-        sites = ConfigLoader.load_documentation_sites(config_file)
-        assert sites == []
 
     def test_merge_env_config_simple_values(self):
         """Test merging simple environment variables."""
@@ -115,7 +53,10 @@ class TestConfigLoader:
             assert result["qdrant"]["url"] == "http://localhost:6333"
             assert result["qdrant"]["api_key"] == "test-key"
             assert result["cache"]["dragonfly_url"] == "redis://localhost:6379"
-            assert result["cache"]["cache_ttl_seconds"] == {"embeddings": 86400, "crawl": 3600}
+            assert result["cache"]["cache_ttl_seconds"] == {
+                "embeddings": 86400,
+                "crawl": 3600,
+            }
 
     def test_merge_env_config_json_values(self):
         """Test merging JSON environment variables."""
@@ -217,30 +158,6 @@ class TestConfigLoader:
             assert config.debug is True  # From env
             assert config.log_level == "DEBUG"  # From env
 
-    def test_load_config_with_documentation_sites(self, tmp_path):
-        """Test loading configuration with documentation sites."""
-        sites_data = {
-            "sites": [
-                {
-                    "name": "Test Site",
-                    "url": "https://docs.example.com",
-                    "max_pages": 100,
-                    "priority": "high",
-                    "description": "Test site",
-                }
-            ]
-        }
-
-        sites_file = tmp_path / "sites.json"
-        sites_file.write_text(json.dumps(sites_data))
-
-        config = ConfigLoader.load_config(
-            documentation_sites_file=sites_file, include_env=False
-        )
-
-        assert len(config.documentation_sites) == 1
-        assert config.documentation_sites[0].name == "Test Site"
-
     def test_create_example_config(self, tmp_path):
         """Test creating example configuration."""
         output_file = tmp_path / "example.json"
@@ -256,7 +173,6 @@ class TestConfigLoader:
         assert config_data["environment"] == "development"
         assert config_data["debug"] is True
         assert config_data["embedding_provider"] == "fastembed"
-        assert len(config_data["documentation_sites"]) == 2
 
     def test_create_env_template(self, tmp_path):
         """Test creating .env template."""

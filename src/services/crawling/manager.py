@@ -1,7 +1,6 @@
 """Crawl manager with provider abstraction and fallback."""
 
 import logging
-from typing import Any
 
 from ...config import UnifiedConfig
 from ..errors import CrawlServiceError
@@ -15,12 +14,12 @@ logger = logging.getLogger(__name__)
 class CrawlManager:
     """Manager for crawling with multiple providers."""
 
-    def __init__(self, config: UnifiedConfig, rate_limiter: Any = None):
+    def __init__(self, config: UnifiedConfig, rate_limiter: object = None):
         """Initialize crawl manager.
 
         Args:
-            config: Unified configuration
-            rate_limiter: Optional RateLimitManager instance
+            config: Unified configuration with crawl provider settings
+            rate_limiter: Optional RateLimitManager instance for rate limiting
         """
         self.config = config
         self.providers: dict[str, CrawlProvider] = {}
@@ -28,7 +27,15 @@ class CrawlManager:
         self.rate_limiter = rate_limiter
 
     async def initialize(self) -> None:
-        """Initialize available providers."""
+        """Initialize available providers.
+
+        Initializes Crawl4AI as primary provider and Firecrawl as fallback
+        if API key is available. At least one provider must initialize
+        successfully.
+
+        Raises:
+            CrawlServiceError: If no providers can be initialized
+        """
         if self._initialized:
             return
 
@@ -82,7 +89,7 @@ class CrawlManager:
         url: str,
         formats: list[str] | None = None,
         preferred_provider: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Scrape URL with automatic provider fallback.
 
         Args:
@@ -91,7 +98,12 @@ class CrawlManager:
             preferred_provider: Provider to try first ("firecrawl" or "crawl4ai")
 
         Returns:
-            Scraping result with success status, content, metadata, and provider
+            dict[str, object]: Scraping result with:
+                - success: Whether scraping succeeded
+                - content: Scraped content in requested formats
+                - metadata: Additional information (title, description, etc.)
+                - provider: Name of provider that succeeded
+                - error: Error message if all providers failed
 
         Raises:
             CrawlServiceError: If manager not initialized
@@ -152,17 +164,22 @@ class CrawlManager:
         max_pages: int = 50,
         formats: list[str] | None = None,
         preferred_provider: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Crawl entire website from starting URL.
 
         Args:
             url: Starting URL for crawl
             max_pages: Maximum pages to crawl (default: 50)
             formats: Output formats for each page
-            preferred_provider: Provider to use (prefers Firecrawl for sites)
+            preferred_provider: Provider to use (prefers Crawl4AI for sites)
 
         Returns:
-            Crawl results with pages list, total count, and provider used
+            dict[str, object]: Crawl results with:
+                - success: Whether crawl succeeded
+                - pages: List of crawled page data
+                - total_pages: Number of pages crawled
+                - provider: Name of provider used
+                - error: Error message if crawl failed
 
         Raises:
             CrawlServiceError: If manager not initialized
@@ -234,17 +251,21 @@ class CrawlManager:
 
     async def map_url(
         self, url: str, include_subdomains: bool = False
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Map a website to get list of URLs.
 
         Note: Only Firecrawl supports this feature.
 
         Args:
             url: URL to map
-            include_subdomains: Include subdomains
+            include_subdomains: Include subdomains in the mapping
 
         Returns:
-            Map result with URLs
+            dict[str, object]: Map result with:
+                - success: Whether mapping succeeded
+                - urls: List of discovered URLs
+                - total: Total number of URLs found
+                - error: Error message if mapping failed
         """
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")

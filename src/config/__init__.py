@@ -14,8 +14,7 @@ from .enums import Environment
 from .enums import LogLevel
 from .loader import ConfigLoader
 
-# Configuration migration
-from .migrator import ConfigMigrator
+# Configuration models
 from .models import CacheConfig
 from .models import ChunkingConfig
 from .models import CollectionHNSWConfigs
@@ -51,7 +50,6 @@ __all__ = [
     "CollectionHNSWConfigs",
     # Utilities
     "ConfigLoader",
-    "ConfigMigrator",
     "ConfigSchemaGenerator",
     "ConfigValidator",
     "Crawl4AIConfig",

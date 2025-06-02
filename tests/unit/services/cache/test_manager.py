@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from src.config.enums import CacheType
 from src.services.cache.manager import CacheManager
-from src.services.cache.manager import CacheType
 
 
 class TestCacheType:
@@ -15,15 +15,17 @@ class TestCacheType:
     def test_cache_type_values(self):
         """Test CacheType enum values."""
         assert CacheType.EMBEDDINGS.value == "embeddings"
-        assert CacheType.CRAWL_RESULTS.value == "crawl_results"
-        assert CacheType.QUERY_RESULTS.value == "query_results"
+        assert CacheType.CRAWL.value == "crawl"
+        assert CacheType.SEARCH.value == "search"
+        assert CacheType.HYDE.value == "hyde"
 
     def test_cache_type_members(self):
         """Test CacheType enum members."""
-        assert len(CacheType) == 3
+        assert len(CacheType) == 4
         assert CacheType.EMBEDDINGS in CacheType
-        assert CacheType.CRAWL_RESULTS in CacheType
-        assert CacheType.QUERY_RESULTS in CacheType
+        assert CacheType.CRAWL in CacheType
+        assert CacheType.SEARCH in CacheType
+        assert CacheType.HYDE in CacheType
 
 
 class TestCacheManager:
@@ -132,8 +134,9 @@ class TestCacheManager:
 
         expected_ttls = {
             CacheType.EMBEDDINGS: 86400 * 7,  # 7 days
-            CacheType.CRAWL_RESULTS: 3600,  # 1 hour
-            CacheType.QUERY_RESULTS: 3600,  # 1 hour
+            CacheType.CRAWL: 3600,  # 1 hour
+            CacheType.SEARCH: 3600,  # 1 hour
+            CacheType.HYDE: 3600,  # 1 hour
         }
 
         assert manager.distributed_ttl_seconds == expected_ttls
@@ -142,8 +145,9 @@ class TestCacheManager:
         """Test custom TTL configuration."""
         custom_ttls = {
             CacheType.EMBEDDINGS: 43200,  # 12 hours
-            CacheType.CRAWL_RESULTS: 1800,  # 30 minutes
-            CacheType.QUERY_RESULTS: 900,  # 15 minutes
+            CacheType.CRAWL: 1800,  # 30 minutes
+            CacheType.SEARCH: 900,  # 15 minutes
+            CacheType.HYDE: 1200,  # 20 minutes
         }
 
         manager = CacheManager(
@@ -192,7 +196,7 @@ class TestCacheManager:
             )
 
             # Test get operation
-            result = await manager.get("test_key", CacheType.CRAWL_RESULTS)
+            result = await manager.get("test_key", CacheType.CRAWL)
 
             assert result == "cached_value"
             mock_local_cache.get.assert_called_once()
@@ -223,7 +227,7 @@ class TestCacheManager:
             manager = CacheManager(enable_specialized_caches=False)
 
             # Test get operation
-            result = await manager.get("test_key", CacheType.CRAWL_RESULTS)
+            result = await manager.get("test_key", CacheType.CRAWL)
 
             assert result == "distributed_value"
             mock_local_cache.get.assert_called_once()
@@ -256,9 +260,7 @@ class TestCacheManager:
             manager = CacheManager(enable_specialized_caches=False)
 
             # Test get operation with default
-            result = await manager.get(
-                "test_key", CacheType.CRAWL_RESULTS, "default_value"
-            )
+            result = await manager.get("test_key", CacheType.CRAWL, "default_value")
 
             assert result == "default_value"
             mock_metrics.record_miss.assert_called_once()
@@ -283,7 +285,7 @@ class TestCacheManager:
             )
 
             # Test get operation
-            result = await manager.get("test_key", CacheType.CRAWL_RESULTS, "default")
+            result = await manager.get("test_key", CacheType.CRAWL, "default")
 
             assert result == "default"
             mock_metrics.record_miss.assert_called_once()
@@ -374,7 +376,7 @@ class TestCacheManager:
 
             assert result is False
             mock_metrics.record_set.assert_called_once_with(
-                CacheType.CRAWL_RESULTS, pytest.approx(0, abs=100), False
+                CacheType.CRAWL, pytest.approx(0, abs=100), False
             )
 
     @pytest.mark.asyncio

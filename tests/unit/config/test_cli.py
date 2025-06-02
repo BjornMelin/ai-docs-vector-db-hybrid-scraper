@@ -164,7 +164,7 @@ class TestConfigCLI:
             with open("source.json", "w") as f:
                 json.dump(config_data, f)
 
-            with patch("src.config.models.UnifiedConfig.load_from_file") as mock_load:
+            with patch("src.config.cli.ConfigLoader.load_config") as mock_load:
                 mock_config = MagicMock()
                 mock_load.return_value = mock_config
 
@@ -195,7 +195,7 @@ class TestConfigCLI:
             with open("source.yml", "w") as f:
                 f.write("environment: testing\n")
 
-            with patch("src.config.models.UnifiedConfig.load_from_file") as mock_load:
+            with patch("src.config.cli.ConfigLoader.load_config") as mock_load:
                 mock_config = MagicMock()
                 mock_load.return_value = mock_config
 
@@ -228,9 +228,9 @@ class TestConfigCLI:
             with open(".env.test", "w") as f:
                 f.write("AI_DOCS__DEBUG=true\n")
 
-            with patch("src.config.cli.UnifiedConfig") as mock_config_class:
+            with patch("src.config.cli.ConfigLoader.load_config") as mock_load:
                 mock_config = MagicMock()
-                mock_config_class.return_value = mock_config
+                mock_load.return_value = mock_config
 
                 result = self.runner.invoke(
                     cli,
@@ -379,76 +379,6 @@ class TestConfigCLI:
         assert result.exit_code == 1
         assert "Error loading configuration:" in result.output
 
-    @patch("src.config.cli.ConfigLoader.load_documentation_sites")
-    @patch("src.config.models.UnifiedConfig.load_from_file")
-    def test_migrate_sites(self, mock_load_config, mock_load_sites):
-        """Test migrating documentation sites."""
-        with self.runner.isolated_filesystem():
-            # Create sites file
-            with open("sites.json", "w") as f:
-                json.dump(
-                    {"sites": [{"name": "Test", "url": "https://example.com"}]}, f
-                )
-
-            # Create config file
-            with open("config.json", "w") as f:
-                json.dump({"environment": "development"}, f)
-
-            mock_sites = [MagicMock(name="Test Site")]
-            mock_load_sites.return_value = mock_sites
-            mock_config = MagicMock()
-            mock_load_config.return_value = mock_config
-
-            result = self.runner.invoke(
-                cli,
-                [
-                    "migrate-sites",
-                    "--source",
-                    "sites.json",
-                    "--config-file",
-                    "config.json",
-                ],
-            )
-
-            assert result.exit_code == 0
-            assert "Migrated 1 documentation sites" in result.output
-            mock_config.save_to_file.assert_called_once()
-
-    @patch("src.config.cli.ConfigLoader.load_documentation_sites")
-    def test_migrate_sites_no_config(self, mock_load_sites):
-        """Test migrating sites without existing config file."""
-        with self.runner.isolated_filesystem():
-            with open("sites.json", "w") as f:
-                json.dump({"sites": []}, f)
-
-            mock_load_sites.return_value = []
-
-            with patch("src.config.cli.UnifiedConfig") as mock_config_class:
-                mock_config = MagicMock()
-                mock_config_class.return_value = mock_config
-
-                result = self.runner.invoke(
-                    cli, ["migrate-sites", "--source", "sites.json"]
-                )
-
-                assert result.exit_code == 0
-                assert "Migrated 0 documentation sites" in result.output
-                mock_config.save_to_file.assert_called_once()
-
-    @patch("src.config.cli.ConfigLoader.load_documentation_sites")
-    def test_migrate_sites_error(self, mock_load_sites):
-        """Test migrate sites with loading error."""
-        mock_load_sites.side_effect = FileNotFoundError("Sites file not found")
-
-        result = self.runner.invoke(cli, ["migrate-sites", "--source", "missing.json"])
-
-        # Click returns exit code 2 for file not found, which is expected
-        assert result.exit_code in [1, 2]  # Accept both application and CLI errors
-        # Check if it's either our error message or click's file error
-        assert (
-            "Error migrating sites:" in result.output or "missing.json" in result.output
-        )
-
     @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
     @patch("src.config.cli.ConfigLoader.load_config")
     def test_check_connections_success(self, mock_load, mock_health_checks):
@@ -590,147 +520,3 @@ class TestConfigCLI:
 
         assert result.exit_code == 1
         assert "Error displaying schema:" in result.output
-
-    def test_migrate_config_success(self):
-        """Test successful configuration migration."""
-        with self.runner.isolated_filesystem():
-            # Create config file
-            config_data = {"version": "0.1.0", "environment": "development"}
-            with open("config.json", "w") as f:
-                json.dump(config_data, f)
-
-            with patch("src.config.cli.ConfigMigrator") as mock_migrator:
-                mock_migrator.detect_config_version.return_value = "0.1.0"
-                mock_migrator.migrate_between_versions.return_value = {
-                    "version": "0.2.0",
-                    "environment": "development",
-                }
-                mock_migrator.create_migration_report.return_value = (
-                    "Migration successful"
-                )
-                mock_migrator.auto_migrate.return_value = (True, "Migration completed")
-
-                result = self.runner.invoke(
-                    cli, ["migrate", "config.json", "--target-version", "0.2.0"]
-                )
-
-                assert result.exit_code == 0
-                assert "Current version: 0.1.0" in result.output
-                assert "Target version: 0.2.0" in result.output
-
-    def test_migrate_config_dry_run(self):
-        """Test configuration migration dry run."""
-        with self.runner.isolated_filesystem():
-            config_data = {"version": "0.1.0", "environment": "development"}
-            with open("config.json", "w") as f:
-                json.dump(config_data, f)
-
-            with patch("src.config.cli.ConfigMigrator") as mock_migrator:
-                mock_migrator.detect_config_version.return_value = "0.1.0"
-                mock_migrator.migrate_between_versions.return_value = {
-                    "version": "0.2.0",
-                    "environment": "development",
-                }
-                mock_migrator.create_migration_report.return_value = "Migration report"
-
-                result = self.runner.invoke(
-                    cli, ["migrate", "config.json", "--dry-run"]
-                )
-
-                assert result.exit_code == 0
-                assert "Dry run complete - no changes made" in result.output
-
-    def test_migrate_config_same_version(self):
-        """Test migration when already at target version."""
-        with self.runner.isolated_filesystem():
-            config_data = {"version": "0.2.0", "environment": "development"}
-            with open("config.json", "w") as f:
-                json.dump(config_data, f)
-
-            with patch("src.config.cli.ConfigMigrator") as mock_migrator:
-                mock_migrator.detect_config_version.return_value = "0.2.0"
-
-                result = self.runner.invoke(
-                    cli, ["migrate", "config.json", "--target-version", "0.2.0"]
-                )
-
-                assert result.exit_code == 0
-                assert "Configuration already at target version" in result.output
-
-    def test_migrate_config_unknown_version(self):
-        """Test migration with unknown version."""
-        with self.runner.isolated_filesystem():
-            config_data = {"unknown": "config"}
-            with open("config.json", "w") as f:
-                json.dump(config_data, f)
-
-            with patch("src.config.cli.ConfigMigrator") as mock_migrator:
-                mock_migrator.detect_config_version.return_value = None
-
-                result = self.runner.invoke(cli, ["migrate", "config.json"])
-
-                assert result.exit_code == 1
-                assert "Could not detect configuration version" in result.output
-
-    def test_migrate_config_unsupported_format(self):
-        """Test migration with unsupported file format."""
-        with self.runner.isolated_filesystem():
-            with open("config.xml", "w") as f:
-                f.write("<config></config>")
-
-            result = self.runner.invoke(cli, ["migrate", "config.xml"])
-
-            assert result.exit_code == 1
-            assert "Unsupported file format" in result.output
-
-    @patch("src.config.cli.ConfigMigrator")
-    def test_show_migration_path(self, mock_migrator):
-        """Test showing migration paths."""
-        mock_migrator.VERSIONS = {
-            "0.1.0": "Initial version",
-            "0.2.0": "Cache improvements",
-            "0.3.0": "Security features",
-        }
-
-        result = self.runner.invoke(cli, ["show-migration-path"])
-
-        assert result.exit_code == 0
-        assert "Configuration Version History" in result.output
-
-    @patch("src.config.cli.ConfigMigrator")
-    def test_show_migration_path_specific(self, mock_migrator):
-        """Test showing specific migration path."""
-        mock_migrator.VERSIONS = {"0.1.0": "Initial", "0.2.0": "Updated"}
-
-        result = self.runner.invoke(
-            cli,
-            [
-                "show-migration-path",
-                "--from-version",
-                "0.1.0",
-                "--to-version",
-                "0.2.0",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Migration path from 0.1.0 to 0.2.0:" in result.output
-
-    @patch("src.config.cli.ConfigMigrator")
-    def test_show_migration_path_legacy(self, mock_migrator):
-        """Test showing legacy migration path."""
-        mock_migrator.VERSIONS = {"0.3.0": "Current"}
-
-        result = self.runner.invoke(
-            cli,
-            [
-                "show-migration-path",
-                "--from-version",
-                "legacy",
-                "--to-version",
-                "0.3.0",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Convert legacy format to unified configuration" in result.output

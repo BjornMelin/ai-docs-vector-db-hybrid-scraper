@@ -4,8 +4,6 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
-from typing import Any
-
 from ..config.models import UnifiedConfig
 
 
@@ -13,14 +11,18 @@ class ServiceHealthChecker:
     """Centralized service health checking utility."""
 
     @staticmethod
-    def check_qdrant_connection(config: UnifiedConfig) -> dict[str, Any]:
+    def check_qdrant_connection(config: UnifiedConfig) -> dict[str, object]:
         """Check Qdrant connection status.
 
         Args:
-            config: Unified configuration object
+            config: Unified configuration object containing Qdrant settings
 
         Returns:
-            Dictionary with connection status and details
+            dict[str, object]: Connection status with:
+                - service: Service name ("qdrant")
+                - connected: Whether connection was successful
+                - error: Error message if connection failed
+                - details: Additional information (collections count, URL)
         """
         result = {"service": "qdrant", "connected": False, "error": None, "details": {}}
 
@@ -46,9 +48,8 @@ class ServiceHealthChecker:
 
         return result
 
-
     @staticmethod
-    def check_dragonfly_connection(config: UnifiedConfig) -> dict[str, Any]:
+    def check_dragonfly_connection(config: UnifiedConfig) -> dict[str, object]:
         """Check DragonflyDB connection status.
 
         Args:
@@ -84,14 +85,18 @@ class ServiceHealthChecker:
         return result
 
     @staticmethod
-    def check_openai_connection(config: UnifiedConfig) -> dict[str, Any]:
+    def check_openai_connection(config: UnifiedConfig) -> dict[str, object]:
         """Check OpenAI API connection status.
 
         Args:
-            config: Unified configuration object
+            config: Unified configuration object containing OpenAI settings
 
         Returns:
-            Dictionary with connection status and details
+            dict[str, object]: Connection status with:
+                - service: Service name ("openai")
+                - connected: Whether connection was successful
+                - error: Error message if connection failed or not configured
+                - details: Model info and available models count
         """
         result = {"service": "openai", "connected": False, "error": None, "details": {}}
 
@@ -117,14 +122,18 @@ class ServiceHealthChecker:
         return result
 
     @staticmethod
-    def check_firecrawl_connection(config: UnifiedConfig) -> dict[str, Any]:
+    def check_firecrawl_connection(config: UnifiedConfig) -> dict[str, object]:
         """Check Firecrawl API connection status.
 
         Args:
-            config: Unified configuration object
+            config: Unified configuration object containing Firecrawl settings
 
         Returns:
-            Dictionary with connection status and details
+            dict[str, object]: Connection status with:
+                - service: Service name ("firecrawl")
+                - connected: Whether connection was successful
+                - error: Error message if connection failed or not configured
+                - details: API URL and credits remaining (if available)
         """
         result = {
             "service": "firecrawl",
@@ -162,14 +171,15 @@ class ServiceHealthChecker:
     @classmethod
     def perform_all_health_checks(
         cls, config: UnifiedConfig
-    ) -> dict[str, dict[str, Any]]:
+    ) -> dict[str, dict[str, object]]:
         """Perform health checks for all configured services.
 
         Args:
             config: Unified configuration object
 
         Returns:
-            Dictionary mapping service names to their health check results
+            dict[str, dict[str, object]]: Service names mapped to health check results.
+                Each result contains service, connected, error, and details fields.
         """
         results = {}
 
@@ -191,7 +201,7 @@ class ServiceHealthChecker:
         return results
 
     @classmethod
-    def get_connection_summary(cls, config: UnifiedConfig) -> dict[str, Any]:
+    def get_connection_summary(cls, config: UnifiedConfig) -> dict[str, object]:
         """Get a summary of all service connection statuses.
 
         Args:

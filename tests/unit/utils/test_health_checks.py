@@ -57,7 +57,7 @@ class TestServiceHealthChecker:
                 status_code=401,
                 reason_phrase="Unauthorized",
                 content=b'{"error": "Unauthorized"}',
-                headers={}
+                headers={},
             )
             mock_client.get_collections.side_effect = auth_error
             mock_client_class.return_value = mock_client
@@ -80,7 +80,6 @@ class TestServiceHealthChecker:
             assert result["service"] == "qdrant"
             assert result["connected"] is False
             assert result["error"] == "Connection failed"
-
 
     def test_check_dragonfly_connection_success(self, sample_config):
         """Test successful DragonflyDB connection check."""
