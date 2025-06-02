@@ -1135,14 +1135,18 @@ class TestRerankerInitialization:
 
     def test_reranker_initialization_with_flag_embedding(self, mock_config):
         """Test reranker initialization when FlagEmbedding is available."""
-        with patch("src.services.embeddings.manager.FlagReranker") as mock_reranker_class:
+        with patch(
+            "src.services.embeddings.manager.FlagReranker"
+        ) as mock_reranker_class:
             mock_reranker = Mock()
             mock_reranker_class.return_value = mock_reranker
-            
+
             manager = EmbeddingManager(mock_config)
-            
+
             assert manager._reranker is mock_reranker
-            mock_reranker_class.assert_called_once_with("BAAI/bge-reranker-v2-m3", use_fp16=True)
+            mock_reranker_class.assert_called_once_with(
+                "BAAI/bge-reranker-v2-m3", use_fp16=True
+            )
 
     def test_reranker_initialization_without_flag_embedding(self, mock_config):
         """Test reranker initialization when FlagEmbedding is not available."""
@@ -1152,15 +1156,20 @@ class TestRerankerInitialization:
 
     def test_reranker_initialization_error(self, mock_config):
         """Test reranker initialization error handling."""
-        with patch("src.services.embeddings.manager.FlagReranker") as mock_reranker_class:
+        with patch(
+            "src.services.embeddings.manager.FlagReranker"
+        ) as mock_reranker_class:
             mock_reranker_class.side_effect = Exception("Reranker init failed")
-            
+
             with patch("src.services.embeddings.manager.logger") as mock_logger:
                 manager = EmbeddingManager(mock_config)
-                
+
                 assert manager._reranker is None
                 mock_logger.warning.assert_called_once()
-                assert "Failed to initialize reranker" in mock_logger.warning.call_args[0][0]
+                assert (
+                    "Failed to initialize reranker"
+                    in mock_logger.warning.call_args[0][0]
+                )
 
 
 class TestCacheIntegration:
@@ -1213,16 +1222,25 @@ class TestCacheIntegration:
             patch.object(manager, "analyze_text_characteristics") as mock_analyze,
             patch.object(manager, "_select_provider_and_model") as mock_select,
             patch.object(manager, "_validate_budget_constraints"),
-            patch.object(manager, "_calculate_metrics_and_update_stats") as mock_metrics,
+            patch.object(
+                manager, "_calculate_metrics_and_update_stats"
+            ) as mock_metrics,
         ):
             mock_analyze.return_value = TextAnalysis(
-                total_length=10, avg_length=10, complexity_score=0.5,
-                estimated_tokens=3, text_type="docs", requires_high_quality=False
+                total_length=10,
+                avg_length=10,
+                complexity_score=0.5,
+                estimated_tokens=3,
+                text_type="docs",
+                requires_high_quality=False,
             )
             mock_select.return_value = (provider, "test-model", 0.0, "test reasoning")
             mock_metrics.return_value = {
-                "latency_ms": 50.0, "tokens": 3, "cost": 0.0,
-                "tier_name": "fast", "provider_key": "test"
+                "latency_ms": 50.0,
+                "tokens": 3,
+                "cost": 0.0,
+                "tier_name": "fast",
+                "provider_key": "test",
             }
 
             result = await manager.generate_embeddings(["test text"])
@@ -1244,24 +1262,24 @@ class TestImportScenarios:
     def test_manager_initialization_with_cache_system(self, mock_config):
         """Test manager initialization with complex cache configuration."""
         mock_config.cache.enable_caching = True
-        
+
         with patch("src.services.cache.CacheManager") as mock_cache_cls:
             mock_cache_manager = Mock()
             mock_cache_cls.return_value = mock_cache_manager
-            
+
             manager = EmbeddingManager(mock_config)
-            
+
             assert manager.cache_manager is mock_cache_manager
 
     def test_tier_providers_mapping_configuration(self, mock_config):
         """Test tier providers mapping gets properly configured."""
         manager = EmbeddingManager(mock_config)
-        
+
         # Verify the tier mapping is set up correctly
         assert QualityTier.FAST in manager._tier_providers
         assert QualityTier.BALANCED in manager._tier_providers
         assert QualityTier.BEST in manager._tier_providers
-        
+
         # Test the default mapping based on configuration
         assert manager._tier_providers[QualityTier.BEST] == "openai"
         assert manager._tier_providers[QualityTier.FAST] == "fastembed"

@@ -762,7 +762,9 @@ class TestLoggingIntegration:
             with LogContext(operation="inner", request_id="456"):
                 # Create record inside nested context
                 factory = logging.getLogRecordFactory()
-                inner_record = factory("test", logging.INFO, "test.py", 1, "Inner", (), None)
+                inner_record = factory(
+                    "test", logging.INFO, "test.py", 1, "Inner", (), None
+                )
 
                 # Inner record should have all contexts
                 assert inner_record.service == "OuterService"
@@ -772,7 +774,9 @@ class TestLoggingIntegration:
 
             # Create record in outer context only
             factory = logging.getLogRecordFactory()
-            outer_record = factory("test", logging.INFO, "test.py", 1, "Outer", (), None)
+            outer_record = factory(
+                "test", logging.INFO, "test.py", 1, "Outer", (), None
+            )
 
             # Outer record should only have outer context
             assert outer_record.service == "OuterService"

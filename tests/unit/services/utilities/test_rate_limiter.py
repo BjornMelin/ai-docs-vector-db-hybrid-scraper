@@ -40,7 +40,7 @@ class TestRateLimiter:
         assert limiter.burst_multiplier == 2.0
         assert limiter.max_tokens == 200  # 100 * 2.0
         assert limiter.tokens == 200
-        assert abs(limiter.refill_rate - (100/30)) < 0.0001  # 100/30
+        assert abs(limiter.refill_rate - (100 / 30)) < 0.0001  # 100/30
 
     async def test_acquire_single_token_success(self):
         """Test acquiring a single token successfully."""
@@ -483,11 +483,11 @@ class TestAdaptiveRateLimiter:
         limiter = AdaptiveRateLimiter()
 
         # Should have all RateLimiter attributes
-        assert hasattr(limiter, 'max_calls')
-        assert hasattr(limiter, 'time_window')
-        assert hasattr(limiter, 'tokens')
-        assert hasattr(limiter, 'refill_rate')
-        assert hasattr(limiter, '_lock')
+        assert hasattr(limiter, "max_calls")
+        assert hasattr(limiter, "time_window")
+        assert hasattr(limiter, "tokens")
+        assert hasattr(limiter, "refill_rate")
+        assert hasattr(limiter, "_lock")
 
         # Should be able to call parent methods
         assert callable(limiter.acquire)

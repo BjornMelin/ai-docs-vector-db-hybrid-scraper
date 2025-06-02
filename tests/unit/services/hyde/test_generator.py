@@ -365,9 +365,7 @@ class TestHypotheticalDocumentGenerator:
         generator._initialized = True
 
         mock_llm_client = MagicMock()
-        mock_llm_client.chat.completions.create = AsyncMock(
-            side_effect=TimeoutError()
-        )
+        mock_llm_client.chat.completions.create = AsyncMock(side_effect=TimeoutError())
         generator._llm_client = mock_llm_client
 
         prompt = "Generate a document about test query"

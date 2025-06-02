@@ -462,9 +462,9 @@ class TestServiceIntegration:
     def test_base_service_abstract_methods_defined(self):
         """Test that abstract methods are properly defined in base class."""
         # Test that the abstract methods exist and are decorated correctly
-        assert hasattr(BaseService, 'initialize')
-        assert hasattr(BaseService, 'cleanup')
+        assert hasattr(BaseService, "initialize")
+        assert hasattr(BaseService, "cleanup")
 
         # Verify they are abstract methods
-        assert getattr(BaseService.initialize, '__isabstractmethod__', False)
-        assert getattr(BaseService.cleanup, '__isabstractmethod__', False)
+        assert getattr(BaseService.initialize, "__isabstractmethod__", False)
+        assert getattr(BaseService.cleanup, "__isabstractmethod__", False)
