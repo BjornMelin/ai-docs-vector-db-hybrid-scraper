@@ -89,7 +89,11 @@ class ConfigMigrator:
             # Embedding settings
             if "embedding_model" in settings:
                 model = settings["embedding_model"]
-                if "openai" in model or "ada" in model:
+                if (
+                    "openai" in model
+                    or "ada" in model
+                    or model.startswith("text-embedding-")
+                ):
                     unified["embedding_provider"] = "openai"
                     unified["openai"] = {"model": model}
                 else:
@@ -255,7 +259,12 @@ class ConfigMigrator:
         for key, value in migrated.items():
             full_key = f"{prefix}{key}" if prefix else key
             if key not in original:
-                added.append(full_key)
+                if isinstance(value, dict):
+                    # If a whole dict is added, show its nested fields
+                    for nested_key in value:
+                        added.append(f"{full_key}.{nested_key}")
+                else:
+                    added.append(full_key)
             elif isinstance(value, dict) and isinstance(original.get(key), dict):
                 added.extend(
                     ConfigMigrator._find_added_fields(

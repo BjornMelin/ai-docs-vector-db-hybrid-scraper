@@ -1,7 +1,8 @@
 """Advanced search tools for MCP server."""
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from typing import Any
 from uuid import uuid4
 
 if TYPE_CHECKING:

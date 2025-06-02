@@ -253,9 +253,16 @@ class ClientManager:
 
         # Clean up service instances
         service_names = [
-            "_qdrant_service", "_embedding_manager", "_cache_manager", "_crawl_manager",
-            "_hyde_engine", "_project_storage", "_alias_manager", "_blue_green",
-            "_ab_testing", "_canary"
+            "_qdrant_service",
+            "_embedding_manager",
+            "_cache_manager",
+            "_crawl_manager",
+            "_hyde_engine",
+            "_project_storage",
+            "_alias_manager",
+            "_blue_green",
+            "_ab_testing",
+            "_canary",
         ]
         for service_name in service_names:
             if hasattr(self, service_name):
@@ -761,9 +768,9 @@ class ClientManager:
     async def get_hyde_engine(self):
         """Get or create HyDE engine instance."""
         if not hasattr(self, "_hyde_engine") or self._hyde_engine is None:
-            from src.services.hyde.engine import HyDEEngine
+            from src.services.hyde.engine import HyDEQueryEngine
 
-            self._hyde_engine = HyDEEngine(self.unified_config)
+            self._hyde_engine = HyDEQueryEngine(self.unified_config)
         return self._hyde_engine
 
     async def get_project_storage(self):
@@ -793,9 +800,9 @@ class ClientManager:
     async def get_ab_testing(self):
         """Get or create ABTesting instance."""
         if not hasattr(self, "_ab_testing") or self._ab_testing is None:
-            from src.services.deployment.ab_testing import ABTesting
+            from src.services.deployment.ab_testing import ABTestingManager
 
-            self._ab_testing = ABTesting(self.unified_config)
+            self._ab_testing = ABTestingManager(self.unified_config)
         return self._ab_testing
 
     async def get_canary_deployment(self):

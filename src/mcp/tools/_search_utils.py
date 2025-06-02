@@ -130,4 +130,3 @@ async def search_documents_core(  # noqa: PLR0912
         if ctx:
             await ctx.error(f"Search failed: {e!s}")
         raise
-

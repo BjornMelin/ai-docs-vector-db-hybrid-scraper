@@ -633,7 +633,7 @@ class TestAdapterMethods:
         mock_adapter.scrape.return_value = {"success": True, "content": "test"}
         router._adapters = {"crawl4ai": mock_adapter}
 
-        result = await router._try_crawl4ai("https://example.com")
+        await router._try_crawl4ai("https://example.com")
 
         mock_adapter.scrape.assert_called_once()
         call_args = mock_adapter.scrape.call_args
@@ -648,7 +648,7 @@ class TestAdapterMethods:
         mock_adapter.scrape.return_value = {"success": True, "content": "test"}
         router._adapters = {"browser_use": mock_adapter}
 
-        result = await router._try_browser_use("https://example.com")
+        await router._try_browser_use("https://example.com")
 
         mock_adapter.scrape.assert_called_once()
         call_args = mock_adapter.scrape.call_args
@@ -663,7 +663,7 @@ class TestAdapterMethods:
         router._adapters = {"playwright": mock_adapter}
 
         actions = [{"type": "click", "selector": "button"}]
-        result = await router._try_playwright("https://example.com", actions)
+        await router._try_playwright("https://example.com", actions)
 
         mock_adapter.scrape.assert_called_once()
         call_args = mock_adapter.scrape.call_args

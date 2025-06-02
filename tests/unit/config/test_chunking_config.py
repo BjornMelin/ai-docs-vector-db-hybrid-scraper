@@ -22,7 +22,12 @@ class TestChunkingConfig:
         assert config.enable_ast_chunking is True
         assert config.preserve_function_boundaries is True
         assert config.preserve_code_blocks is True
-        assert config.supported_languages == ["python", "javascript", "typescript", "markdown"]
+        assert config.supported_languages == [
+            "python",
+            "javascript",
+            "typescript",
+            "markdown",
+        ]
 
         # Advanced options
         assert config.min_chunk_size == 100
@@ -80,7 +85,9 @@ class TestChunkingConfig:
     def test_min_max_chunk_size_constraints(self):
         """Test min and max chunk size constraints."""
         # Valid values
-        config = ChunkingConfig(min_chunk_size=50, max_chunk_size=5000, max_function_chunk_size=5500)
+        config = ChunkingConfig(
+            min_chunk_size=50, max_chunk_size=5000, max_function_chunk_size=5500
+        )
         assert config.min_chunk_size == 50
         assert config.max_chunk_size == 5000
 
