@@ -1,10 +1,10 @@
 """Unit tests for chunking module."""
 
-from src.chunking import Chunk
-from src.chunking import ChunkingConfig
-from src.chunking import ChunkingStrategy
-from src.chunking import CodeBlock
 from src.chunking import EnhancedChunker
+from src.config.enums import ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.models.document_processing import Chunk
+from src.models.document_processing import CodeBlock
 
 
 class TestChunkingConfig:

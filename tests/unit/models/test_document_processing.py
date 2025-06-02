@@ -6,8 +6,8 @@ import pytest
 from pydantic import ValidationError
 from src.config.enums import ChunkingStrategy
 from src.config.enums import DocumentStatus
+from src.config.models import ChunkingConfig
 from src.models.document_processing import Chunk
-from src.models.document_processing import ChunkingConfiguration
 from src.models.document_processing import ChunkType
 from src.models.document_processing import CodeBlock
 from src.models.document_processing import CodeLanguage
@@ -279,12 +279,12 @@ class TestProcessedDocument:
         assert doc.error_message == "Failed to crawl URL"
 
 
-class TestChunkingConfiguration:
-    """Test ChunkingConfiguration model."""
+class TestChunkingConfig:
+    """Test ChunkingConfig model."""
 
     def test_default_values(self):
         """Test default field values."""
-        config = ChunkingConfiguration()
+        config = ChunkingConfig()
         assert config.chunk_size == 1600
         assert config.chunk_overlap == 320
         assert config.strategy == ChunkingStrategy.ENHANCED
@@ -306,52 +306,72 @@ class TestChunkingConfiguration:
 
     def test_chunk_size_constraints(self):
         """Test chunk_size constraints."""
-        # Valid sizes
-        ChunkingConfiguration(chunk_size=1)
-        ChunkingConfiguration(chunk_size=10000)
+        # Valid sizes (must be > chunk_overlap and <= max_chunk_size)
+        ChunkingConfig(chunk_size=500, chunk_overlap=100)
+        ChunkingConfig(
+            chunk_size=2000, max_chunk_size=5000, max_function_chunk_size=5000
+        )
 
         # Invalid size
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(chunk_size=0)
+            ChunkingConfig(chunk_size=0)
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(chunk_size=-1)
+            ChunkingConfig(chunk_size=-1)
+
+        # chunk_size must be > chunk_overlap
+        with pytest.raises(ValidationError):
+            ChunkingConfig(chunk_size=100, chunk_overlap=200)
+
+        # chunk_size cannot exceed max_chunk_size
+        with pytest.raises(ValidationError):
+            ChunkingConfig(chunk_size=5000, max_chunk_size=3000)
 
     def test_chunk_overlap_constraints(self):
         """Test chunk_overlap constraints."""
         # Valid overlaps
-        ChunkingConfiguration(chunk_overlap=0)
-        ChunkingConfiguration(chunk_overlap=500)
+        ChunkingConfig(chunk_overlap=0)
+        ChunkingConfig(chunk_overlap=500)
 
         # Invalid overlap
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(chunk_overlap=-1)
+            ChunkingConfig(chunk_overlap=-1)
 
     def test_max_function_chunk_size_constraints(self):
         """Test max_function_chunk_size constraints."""
-        # Valid sizes
-        ChunkingConfiguration(max_function_chunk_size=1)
-        ChunkingConfiguration(max_function_chunk_size=10000)
+        # Valid sizes (must be >= max_chunk_size which defaults to 3000)
+        ChunkingConfig(max_function_chunk_size=3000)
+        ChunkingConfig(max_function_chunk_size=10000)
 
         # Invalid size
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(max_function_chunk_size=0)
+            ChunkingConfig(max_function_chunk_size=0)
+
+        # max_function_chunk_size must be >= max_chunk_size
+        with pytest.raises(ValidationError):
+            ChunkingConfig(max_function_chunk_size=1000, max_chunk_size=2000)
 
     def test_min_max_chunk_size_constraints(self):
         """Test min_chunk_size and max_chunk_size constraints."""
-        # Valid sizes
-        ChunkingConfiguration(min_chunk_size=1, max_chunk_size=5000)
+        # Valid sizes (max_function_chunk_size must be >= max_chunk_size)
+        ChunkingConfig(
+            min_chunk_size=1, max_chunk_size=5000, max_function_chunk_size=5000
+        )
 
         # Invalid min size
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(min_chunk_size=0)
+            ChunkingConfig(min_chunk_size=0)
 
         # Invalid max size
         with pytest.raises(ValidationError):
-            ChunkingConfiguration(max_chunk_size=0)
+            ChunkingConfig(max_chunk_size=0)
+
+        # min_chunk_size must be < max_chunk_size
+        with pytest.raises(ValidationError):
+            ChunkingConfig(min_chunk_size=2000, max_chunk_size=1000)
 
     def test_custom_configuration(self):
         """Test custom configuration values."""
-        config = ChunkingConfiguration(
+        config = ChunkingConfig(
             chunk_size=2000,
             chunk_overlap=400,
             strategy=ChunkingStrategy.BASIC,

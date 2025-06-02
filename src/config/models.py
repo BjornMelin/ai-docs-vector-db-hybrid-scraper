@@ -410,36 +410,54 @@ class Crawl4AIConfig(BaseModel):
 
 
 class ChunkingConfig(BaseModel):
-    """Text chunking configuration."""
+    """Advanced chunking configuration for optimal RAG performance."""
 
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
-    )
+    # Basic parameters
     chunk_size: int = Field(
         default=1600, gt=0, description="Target chunk size in characters"
     )
-    chunk_overlap: int = Field(default=200, ge=0, description="Overlap between chunks")
+    chunk_overlap: int = Field(
+        default=320, ge=0, description="Overlap between chunks (characters)"
+    )
 
-    # Code-aware chunking
+    # Strategy settings
+    strategy: ChunkingStrategy = Field(
+        default=ChunkingStrategy.ENHANCED, description="Chunking strategy to use"
+    )
     enable_ast_chunking: bool = Field(
         default=True, description="Enable AST-based chunking when available"
     )
     preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact"
+        default=True, description="Keep functions intact across chunks"
     )
     preserve_code_blocks: bool = Field(
         default=True, description="Keep code blocks intact when possible"
     )
-    supported_languages: list[str] = Field(
-        default=["python", "javascript", "typescript"],
-        description="Languages for AST parsing",
+    max_function_chunk_size: int = Field(
+        default=3200, gt=0, description="Maximum size for a single function chunk"
     )
 
-    # Advanced options
-    min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
-    max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
+    # Language detection and support
+    supported_languages: list[str] = Field(
+        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
+        description="Languages supported for AST parsing",
+    )
+    fallback_to_text_chunking: bool = Field(
+        default=True, description="Fall back to text chunking if AST fails"
+    )
     detect_language: bool = Field(
         default=True, description="Auto-detect programming language"
+    )
+    include_function_context: bool = Field(
+        default=True, description="Include function signatures in adjacent chunks"
+    )
+
+    # Size constraints
+    min_chunk_size: int = Field(
+        default=100, gt=0, description="Minimum chunk size in characters"
+    )
+    max_chunk_size: int = Field(
+        default=3000, gt=0, description="Maximum chunk size in characters"
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -453,6 +471,8 @@ class ChunkingConfig(BaseModel):
             raise ValueError("min_chunk_size must be less than max_chunk_size")
         if self.chunk_size > self.max_chunk_size:
             raise ValueError("chunk_size cannot exceed max_chunk_size")
+        if self.max_function_chunk_size < self.max_chunk_size:
+            raise ValueError("max_function_chunk_size should be >= max_chunk_size")
         return self
 
 

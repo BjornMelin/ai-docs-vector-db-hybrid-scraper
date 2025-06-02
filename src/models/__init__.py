@@ -56,7 +56,6 @@ from .configuration import set_config
 
 # Document processing models
 from .document_processing import Chunk
-from .document_processing import ChunkingConfiguration
 from .document_processing import ChunkType
 from .document_processing import CodeBlock
 from .document_processing import CodeLanguage
@@ -125,7 +124,6 @@ __all__ = [
     "Chunk",
     "ChunkType",
     "ChunkingConfig",
-    "ChunkingConfiguration",
     "CodeBlock",
     "CodeLanguage",
     "CollectionHNSWConfigs",

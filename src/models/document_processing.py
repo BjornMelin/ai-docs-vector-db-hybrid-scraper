@@ -129,60 +129,6 @@ class ProcessedDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ChunkingConfiguration(BaseModel):
-    """Advanced chunking configuration model."""
-
-    # Basic parameters
-    chunk_size: int = Field(
-        default=1600, gt=0, description="Target chunk size in characters"
-    )
-    chunk_overlap: int = Field(
-        default=320, ge=0, description="Overlap between chunks (characters)"
-    )
-
-    # Strategy settings
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy to use"
-    )
-    enable_ast_chunking: bool = Field(
-        default=True, description="Enable AST-based chunking when available"
-    )
-    preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact across chunks"
-    )
-    preserve_code_blocks: bool = Field(
-        default=True, description="Keep code blocks intact when possible"
-    )
-    max_function_chunk_size: int = Field(
-        default=3200, gt=0, description="Maximum size for a single function chunk"
-    )
-
-    # Language detection
-    supported_languages: list[str] = Field(
-        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
-        description="Languages supported for AST parsing",
-    )
-    fallback_to_text_chunking: bool = Field(
-        default=True, description="Fall back to text chunking if AST fails"
-    )
-
-    # Advanced options
-    detect_language: bool = Field(
-        default=True, description="Auto-detect programming language"
-    )
-    include_function_context: bool = Field(
-        default=True, description="Include function signatures in adjacent chunks"
-    )
-    min_chunk_size: int = Field(
-        default=100, gt=0, description="Minimum chunk size in characters"
-    )
-    max_chunk_size: int = Field(
-        default=3000, gt=0, description="Maximum chunk size in characters"
-    )
-
-    model_config = ConfigDict(extra="forbid")
-
-
 class VectorMetrics(BaseModel):
     """Vector processing metrics."""
 
@@ -282,7 +228,6 @@ class DocumentBatch(BaseModel):
 __all__ = [
     "Chunk",
     "ChunkType",
-    "ChunkingConfiguration",
     "CodeBlock",
     "CodeLanguage",
     "ContentFilter",

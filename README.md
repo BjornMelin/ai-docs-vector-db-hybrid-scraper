@@ -696,7 +696,8 @@ ai-docs-vector-db-hybrid-scraper/
 #### Configuration Options
 
 ```python
-from src.chunking import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.config.enums import ChunkingStrategy
 
 config = ChunkingConfig(
     strategy=ChunkingStrategy.ENHANCED,  # or AST_BASED
