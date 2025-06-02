@@ -17,7 +17,7 @@
 - ✅ Cleaned up excessive comments per user request
 - ✅ Aligned pyproject.toml and requirements.txt for consistency
 
-**Test Suite Enhancement:** ✅ **COMPREHENSIVE TEST COVERAGE COMPLETED 2025-06-01**
+**Test Suite Enhancement:** ✅ **COMPREHENSIVE TEST INFRASTRUCTURE COMPLETED 2025-06-01**
 
 - ✅ Fixed all embedding provider tests (61/61 tests passing, 84% coverage)
 - ✅ Fixed all HNSW optimizer tests (12/12 tests passing, 74% coverage)  
@@ -27,7 +27,14 @@
 - ✅ **NEW**: Created 30+ comprehensive test files with 500+ passing tests
 - ✅ **Foundation Complete**: >90% coverage on all core modules (config, models, MCP, infrastructure, utils)
 - ✅ **Quality Standards**: Pydantic v2 best practices implemented throughout
-- ✅ **Services Roadmap**: Comprehensive testing plan created for remaining 42 service modules (800-1000 tests estimated)
+- ✅ **Test Directory Reorganization**: ✅ **COMPLETED 2025-06-01**
+  - ✅ Reorganized tests/unit/services/ into 9 logical subdirectories (browser, cache, core, crawling, deployment, embeddings, hyde, utilities, vector_db)
+  - ✅ Reorganized tests/unit/mcp/ into models/ and tools/ subdirectories
+  - ✅ Added proper __init__.py files for Python package structure
+  - ✅ Moved 45 service test files using git mv to preserve history
+  - ✅ Fixed all import errors and circular dependencies
+  - ✅ Verified 2700+ tests are discoverable and passing
+- ✅ **Services Testing Foundation**: Comprehensive testing infrastructure ready for remaining 42 service modules (800-1000 tests estimated)
 
 **V1 Foundation Status - FULLY VERIFIED ✅**
 
@@ -97,6 +104,117 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
   - ✅ Comprehensive performance documentation with benchmarks and optimization guidelines
   - ✅ Test organization refactor with hierarchical structure (unit/integration/performance/fixtures)
   - ✅ Quality improvements: All linting issues resolved, test output optimized, 15+ test fixes implemented
+
+---
+
+## V1 PRODUCTION READINESS SPRINT (IMMEDIATE PRIORITY)
+
+### 🔒 Security & Production Hardening (HIGH PRIORITY)
+
+- [ ] **Comprehensive Security Assessment** `feat/security-assessment-v1` [NEW PRIORITY - Based on OWASP ML Security Top 10 2023]
+  - [ ] **ML-Specific Security Threats**:
+    - [ ] Input manipulation attack protection for vector queries and embeddings
+    - [ ] Data poisoning detection for crawled content and user inputs  
+    - [ ] Model theft protection through API rate limiting and access control
+    - [ ] Supply chain vulnerability scanning for AI/ML dependencies (addressing critical RCE risks)
+  - [ ] **API Security Hardening**:
+    - [ ] API key management with proper secrets rotation and vault integration
+    - [ ] JWT token validation and role-based access control for vector operations and MCP tools
+    - [ ] Enhanced rate limiting with IP-based throttling, abuse detection, and adaptive thresholds
+    - [ ] Input sanitization and validation using strengthened Pydantic models with custom validators
+  - [ ] **Infrastructure Security**:
+    - [ ] Security headers implementation (CORS, CSP, HSTS, X-Frame-Options) for FastAPI endpoints
+    - [ ] TLS/SSL enforcement for all database and external API communications
+    - [ ] Container security scanning and hardening for Docker deployments
+  - [ ] **Monitoring & Compliance**:
+    - [ ] Vulnerability scanning integration with automated dependency checks (addressing MLFlow-style RCE risks)
+    - [ ] Security audit logging and monitoring for suspicious activities
+    - [ ] GDPR/SOC2 compliance documentation and data handling procedures
+  - [ ] **Timeline**: 4-5 days for comprehensive ML security implementation
+  - [ ] **Target**: Zero high-severity vulnerabilities, <100ms security validation overhead
+
+- [ ] **Basic Observability & Monitoring** `feat/basic-monitoring-v1` [NEW PRIORITY - Based on 2025 ML Monitoring Patterns]
+  - [ ] **Prometheus Metrics Integration**:
+    - [ ] FastAPI instrumentation using prometheus-fastapi-instrumentator
+    - [ ] Vector search latency percentiles (p50, p95, p99) with automated alerting
+    - [ ] Embedding generation throughput, queue depth, and cost tracking
+    - [ ] Qdrant collection health, memory usage, and connection pool utilization
+    - [ ] Cache hit rates across all services (embedding, search, HyDE) with performance analysis
+    - [ ] Model performance metrics (accuracy, drift detection, prediction latency)
+  - [ ] **Grafana Dashboards & Visualization**:
+    - [ ] Real-time system performance dashboard with ML-specific visualizations
+    - [ ] Application metrics dashboard (request volume, error rates, response times)
+    - [ ] Infrastructure monitoring dashboard (CPU, memory, disk, network)
+    - [ ] Business metrics dashboard (API usage, cost analysis, user patterns)
+  - [ ] **Health & Alerting Infrastructure**:
+    - [ ] Health check endpoints for all services with dependency validation and circuit breakers
+    - [ ] Structured logging enhancement with correlation IDs, distributed tracing preparation
+    - [ ] Basic alerting rules for critical thresholds (latency >100ms, error rate >1%, resource usage >80%)
+    - [ ] Integration with notification systems (Slack, email, PagerDuty)
+  - [ ] **Timeline**: 3-4 days for comprehensive basic monitoring setup
+  - [ ] **Target**: <50ms 95th percentile search latency, >95% cache hit rate, <1% error rate
+
+- [ ] **FastAPI Production Enhancements** `feat/fastapi-production-v1` [NEW PRIORITY - Based on 2025 FastAPI Best Practices]
+  - [ ] **Advanced Middleware Stack**:
+    - [ ] Request/response compression middleware with intelligent size thresholds (>1KB)
+    - [ ] CORS optimization with environment-specific origins and caching headers
+    - [ ] Request timeout handling with graceful degradation and circuit breakers
+    - [ ] Request ID tracking and distributed tracing preparation (OpenTelemetry-ready)
+    - [ ] Security middleware integration (rate limiting, IP filtering, DDoS protection)
+  - [ ] **Production Dependency Injection**:
+    - [ ] Service container implementation for loose coupling using FastAPI's `Depends()`
+    - [ ] Provider factories for database connections, external APIs, and caching layers
+    - [ ] Configuration injection with environment-specific overrides and validation
+    - [ ] Async context managers for resource lifecycle management
+    - [ ] Database session management with automatic cleanup and rollback
+  - [ ] **Background Task Architecture**:
+    - [ ] Async embedding generation queue with progress tracking and error recovery
+    - [ ] Bulk indexing operations with job status API and partial failure handling
+    - [ ] Cache warming tasks with intelligent scheduling and load balancing
+    - [ ] Periodic maintenance tasks (metrics aggregation, cleanup, health checks)
+  - [ ] **Enterprise Caching Strategies**:
+    - [ ] Multi-layer response caching (Redis, CDN, application-level)
+    - [ ] Intelligent cache invalidation patterns with TTL optimization
+    - [ ] Cache-aside pattern implementation for expensive vector operations
+    - [ ] Cache versioning and rolling updates for zero-downtime deployments
+  - [ ] **Deployment & Scaling Patterns**:
+    - [ ] Multi-worker deployment configuration with Gunicorn + Uvicorn
+    - [ ] Container optimization for production (multi-stage builds, resource limits)
+    - [ ] Load balancing and health check configuration
+    - [ ] Graceful shutdown handling and connection draining
+  - [ ] **Timeline**: 5-6 days for comprehensive FastAPI production implementation
+  - [ ] **Target**: <100ms API response time, 99.9% uptime, horizontal scaling ready
+
+### 🔧 Performance & Scalability (MEDIUM PRIORITY)
+
+- [ ] **Database Connection Pool Optimization** `feat/db-pool-optimization-v1` [ENHANCED - Based on 2025 SQLAlchemy Async Patterns]
+  - [ ] **Advanced SQLAlchemy Async Engine Configuration**:
+    - [ ] Dynamic connection pool sizing based on concurrent load analysis (min: 5, max: 50)
+    - [ ] Connection health checks with pre-ping validation and automatic reconnection strategies
+    - [ ] Query performance monitoring with slow query detection (>100ms threshold)
+    - [ ] Connection leakage prevention with timeout enforcement and resource cleanup
+    - [ ] Connection recycling every 30 minutes for long-lived applications
+    - [ ] Lazy initialization and context manager patterns for resource efficiency
+  - [ ] **Qdrant Connection Optimization**:
+    - [ ] Connection pooling with configurable pool sizes per collection type
+    - [ ] Request multiplexing for improved throughput and reduced latency
+    - [ ] Circuit breaker pattern for resilient failover and fault tolerance
+    - [ ] Connection warming strategies with predictive preloading
+    - [ ] Async connection leasing with short-duration patterns
+    - [ ] Load balancing across multiple Qdrant instances in sharded architectures
+  - [ ] **Performance Monitoring & Analytics**:
+    - [ ] Connection pool utilization metrics with Prometheus integration
+    - [ ] Query performance histograms with latency percentile tracking
+    - [ ] Database health monitoring with automated alerts and recovery
+    - [ ] Resource usage optimization with memory and CPU monitoring
+    - [ ] Connection lifecycle analytics and optimization recommendations
+  - [ ] **Production Resilience Features**:
+    - [ ] Automatic retry logic with exponential backoff for transient failures
+    - [ ] Connection pool overflow handling with graceful degradation
+    - [ ] Connection validation hooks for monitoring and metric collection
+    - [ ] Error isolation and cascade failure prevention
+  - [ ] **Timeline**: 3-4 days for comprehensive connection optimization
+  - [ ] **Target**: <30ms database query latency, zero connection errors, 99.9% connection success rate
 
 ---
 
@@ -757,15 +875,17 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 
 ### Monitoring & Observability
 
-- [ ] **Comprehensive Metrics** `feat/comprehensive-metrics` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)
-  - [ ] Implement Prometheus-compatible metrics 📖 [Prometheus Python](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
-  - [ ] Add embedding operation counters 📖 [Performance Profiling](https://docs.python.org/3/howto/perf_profiling.html)
-  - [ ] Create search latency histograms 📖 [psutil Documentation](https://psutil.readthedocs.io/)
-  - [ ] Implement cache hit rate tracking
-  - [ ] Add cost tracking per operation
-  - [ ] Create performance dashboards
-  - [ ] Implement alerting rules
-  - [ ] Add distributed tracing support
+- [ ] **Advanced Metrics & Analytics** `feat/advanced-metrics-v2` 📋 [Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md) [V2 FEATURE]
+  - [ ] Advanced Prometheus metrics with ML-specific patterns 📖 [Prometheus Python](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
+  - [ ] Embedding operation analytics with cost prediction 📖 [Performance Profiling](https://docs.python.org/3/howto/perf_profiling.html)
+  - [ ] Advanced search latency analysis with percentile tracking 📖 [psutil Documentation](https://psutil.readthedocs.io/)
+  - [ ] Intelligent cost tracking with budget optimization recommendations
+  - [ ] Advanced performance dashboards with predictive analytics
+  - [ ] Machine learning-powered alerting with anomaly detection
+  - [ ] Distributed tracing with OpenTelemetry integration
+  - [ ] Usage pattern analysis and optimization suggestions
+
+  **Note:** Basic monitoring is implemented in V1 Production Readiness Sprint above
 
 ---
 
