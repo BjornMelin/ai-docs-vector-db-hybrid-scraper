@@ -6,6 +6,7 @@ import os
 import time
 from typing import Any
 
+from ...config.models import BrowserUseConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 
@@ -40,13 +41,14 @@ class BrowserUseAdapter(BaseService):
     and dynamic content with self-correcting behavior.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: BrowserUseConfig):
         """Initialize BrowserUse adapter.
 
         Args:
-            config: Adapter configuration with LLM provider settings
+            config: BrowserUse configuration model with LLM provider settings
         """
         super().__init__(config)
+        self.config = config
         self.logger = logger
 
         if not BROWSER_USE_AVAILABLE:
@@ -55,16 +57,6 @@ class BrowserUseAdapter(BaseService):
             return
 
         self._available = True
-
-        # Browser-use configuration
-        self.llm_provider = config.get("llm_provider", "openai")
-        self.model = config.get("model", "gpt-4o-mini")  # Cost-optimized default
-        self.headless = config.get("headless", True)
-        self.timeout = config.get("timeout", 30000)
-        self.max_retries = config.get("max_retries", 3)
-        self.max_steps = config.get("max_steps", 20)
-        self.disable_security = config.get("disable_security", False)
-        self.generate_gif = config.get("generate_gif", False)
 
         # LLM configuration (lazy initialization)
         self.llm_config: Any | None = None
@@ -77,37 +69,39 @@ class BrowserUseAdapter(BaseService):
         Returns:
             Configured LLM instance
         """
-        if self.llm_provider == "openai":
+        if self.config.llm_provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise CrawlServiceError("OPENAI_API_KEY environment variable required")
             return ChatOpenAI(
-                model=self.model,
+                model=self.config.model,
                 temperature=0.1,
                 api_key=api_key,
             )
-        elif self.llm_provider == "anthropic":
+        elif self.config.llm_provider == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise CrawlServiceError(
                     "ANTHROPIC_API_KEY environment variable required"
                 )
             return ChatAnthropic(
-                model=self.model,
+                model=self.config.model,
                 temperature=0.1,
                 api_key=api_key,
             )
-        elif self.llm_provider == "gemini":
+        elif self.config.llm_provider == "gemini":
             api_key = os.getenv("GOOGLE_API_KEY")
             if not api_key:
                 raise CrawlServiceError("GOOGLE_API_KEY environment variable required")
             return ChatGoogleGenerativeAI(
-                model=self.model,
+                model=self.config.model,
                 temperature=0.1,
                 google_api_key=api_key,
             )
         else:
-            raise CrawlServiceError(f"Unsupported LLM provider: {self.llm_provider}")
+            raise CrawlServiceError(
+                f"Unsupported LLM provider: {self.config.llm_provider}"
+            )
 
     async def initialize(self) -> None:
         """Initialize browser-use instance."""
@@ -125,14 +119,14 @@ class BrowserUseAdapter(BaseService):
 
             # Configure browser settings
             browser_config = BrowserConfig(
-                headless=self.headless,
-                disable_security=self.disable_security,
+                headless=self.config.headless,
+                disable_security=self.config.disable_security,
             )
 
             self._browser = Browser(config=browser_config)
             self._initialized = True
             self.logger.info(
-                f"BrowserUse adapter initialized with {self.llm_provider}/{self.model}"
+                f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
             )
         except Exception as e:
             raise CrawlServiceError(f"Failed to initialize browser-use: {e}") from e
@@ -172,11 +166,11 @@ class BrowserUseAdapter(BaseService):
         if not self._initialized:
             raise CrawlServiceError("Adapter not initialized")
 
-        timeout = timeout or self.timeout
+        timeout = timeout or self.config.timeout
         start_time = time.time()
         retry_count = 0
 
-        while retry_count < self.max_retries:
+        while retry_count < self.config.max_retries:
             try:
                 self.logger.info(f"Executing browser-use task: {task[:100]}...")
 
@@ -201,8 +195,8 @@ class BrowserUseAdapter(BaseService):
                     task=full_task,
                     llm=self.llm_config,
                     browser=self._browser,
-                    generate_gif=self.generate_gif,
-                    max_steps=self.max_steps,
+                    generate_gif=self.config.generate_gif,
+                    max_steps=self.config.max_steps,
                 )
 
                 # Execute with browser-use
@@ -221,7 +215,7 @@ class BrowserUseAdapter(BaseService):
                 error_msg = f"browser-use timeout after {timeout}ms"
                 self.logger.warning(f"{error_msg} (attempt {retry_count})")
 
-                if retry_count >= self.max_retries:
+                if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
 
                 # Exponential backoff
@@ -232,14 +226,14 @@ class BrowserUseAdapter(BaseService):
                 error_msg = f"browser-use execution error: {e}"
                 self.logger.warning(f"{error_msg} (attempt {retry_count})")
 
-                if retry_count >= self.max_retries:
+                if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
 
                 # Exponential backoff
                 await asyncio.sleep(2**retry_count)
 
         return self._build_error_result(
-            url, start_time, f"Failed after {self.max_retries} retries", task
+            url, start_time, f"Failed after {self.config.max_retries} retries", task
         )
 
     async def scrape_with_instructions(
@@ -323,9 +317,9 @@ class BrowserUseAdapter(BaseService):
         # browser-use doesn't return HTML directly, but we can note the extraction method
         metadata = {
             "extraction_method": "browser_use_ai",
-            "llm_provider": self.llm_provider,
-            "model_used": self.model,
-            "max_steps": self.max_steps,
+            "llm_provider": self.config.llm_provider,
+            "model_used": self.config.model,
+            "max_steps": self.config.max_steps,
             "processing_time_ms": processing_time,
             "retries_used": retry_count,
             "task_description": task[:100] + "..." if len(task) > 100 else task,
@@ -370,8 +364,8 @@ class BrowserUseAdapter(BaseService):
             "content": "",
             "metadata": {
                 "extraction_method": "browser_use_ai",
-                "llm_provider": self.llm_provider,
-                "model_used": self.model,
+                "llm_provider": self.config.llm_provider,
+                "model_used": self.config.model,
                 "processing_time_ms": processing_time,
                 "task_description": task[:100] + "..." if len(task) > 100 else task,
             },
@@ -419,8 +413,8 @@ class BrowserUseAdapter(BaseService):
             "cost": "api_usage_based",
             "ai_powered": True,
             "available": self._available,
-            "llm_provider": self.llm_provider,
-            "model": self.model,
+            "llm_provider": self.config.llm_provider,
+            "model": self.config.model,
         }
 
     async def health_check(self) -> dict[str, Any]:

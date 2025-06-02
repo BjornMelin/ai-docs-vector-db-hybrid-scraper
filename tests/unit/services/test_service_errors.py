@@ -396,9 +396,8 @@ class TestRetryAsync:
         async def failing_func():
             raise ValueError("Error")
 
-        with patch("asyncio.sleep") as mock_sleep:
-            with pytest.raises(ValueError):
-                await failing_func()
+        with patch("asyncio.sleep") as mock_sleep, pytest.raises(ValueError):
+            await failing_func()
 
         # Should have 3 sleep calls (for 4 attempts)
         assert mock_sleep.call_count == 3
@@ -415,9 +414,8 @@ class TestRetryAsync:
         async def failing_func():
             raise ValueError("Error")
 
-        with patch("asyncio.sleep") as mock_sleep:
-            with pytest.raises(ValueError):
-                await failing_func()
+        with patch("asyncio.sleep") as mock_sleep, pytest.raises(ValueError):
+            await failing_func()
 
         delays = [call.args[0] for call in mock_sleep.call_args_list]
         # 10.0, min(20.0, 15.0), min(40.0, 15.0) = 10.0, 15.0, 15.0
@@ -435,9 +433,8 @@ class TestRetryAsync:
                 raise TypeError("Non-retryable error")
 
         # Should retry ValueError
-        with patch("asyncio.sleep"):
-            with pytest.raises(ValueError):
-                await selective_func(True)
+        with patch("asyncio.sleep"), pytest.raises(ValueError):
+            await selective_func(True)
 
         # Should not retry TypeError
         with pytest.raises(TypeError):

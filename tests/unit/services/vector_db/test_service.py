@@ -49,13 +49,9 @@ class TestQdrantService:
             patch(
                 "src.services.vector_db.service.QdrantCollections"
             ) as mock_collections_class,
-            patch("src.services.vector_db.service.QdrantSearch") as mock_search_class,
-            patch(
-                "src.services.vector_db.service.QdrantIndexing"
-            ) as mock_indexing_class,
-            patch(
-                "src.services.vector_db.service.QdrantDocuments"
-            ) as mock_documents_class,
+            patch("src.services.vector_db.service.QdrantSearch"),
+            patch("src.services.vector_db.service.QdrantIndexing"),
+            patch("src.services.vector_db.service.QdrantDocuments"),
         ):
             # Mock client manager
             mock_client_manager = AsyncMock()

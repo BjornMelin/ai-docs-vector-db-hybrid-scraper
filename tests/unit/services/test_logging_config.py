@@ -331,7 +331,7 @@ class TestConfigureLogging:
                 root_logger.handlers[0].stream = original_stream
 
         # Should contain configuration details
-        log_output = log_stream.getvalue()
+        log_stream.getvalue()
         # The actual configuration log happens during configure_logging
         # We can verify the logger is properly configured at INFO level
 

@@ -235,11 +235,8 @@ class TestRetryWithBackoff:
         service = ConcreteService()
         mock_func = AsyncMock(side_effect=ValueError("error"))
 
-        with patch("asyncio.sleep") as mock_sleep:
-            with pytest.raises(APIError):
-                await service._retry_with_backoff(
-                    mock_func, max_retries=4, base_delay=1.0
-                )
+        with patch("asyncio.sleep") as mock_sleep, pytest.raises(APIError):
+            await service._retry_with_backoff(mock_func, max_retries=4, base_delay=1.0)
 
         expected_delays = [1.0, 2.0, 4.0]  # 1.0 * 2^0, 1.0 * 2^1, 1.0 * 2^2
         actual_delays = [call.args[0] for call in mock_sleep.call_args_list]
@@ -251,11 +248,10 @@ class TestRetryWithBackoff:
         service = ConcreteService()
         mock_func = AsyncMock(side_effect=ValueError("error"))
 
-        with patch("asyncio.sleep") as mock_sleep:
-            with pytest.raises(APIError):
-                await service._retry_with_backoff(
-                    mock_func, max_retries=2, base_delay=0.5, custom_arg="test"
-                )
+        with patch("asyncio.sleep") as mock_sleep, pytest.raises(APIError):
+            await service._retry_with_backoff(
+                mock_func, max_retries=2, base_delay=0.5, custom_arg="test"
+            )
 
         assert mock_func.call_count == 2
         mock_func.assert_called_with(custom_arg="test")
@@ -281,9 +277,8 @@ class TestRetryWithBackoff:
         service = ConcreteService()
         mock_func = AsyncMock(side_effect=ValueError("test error"))
 
-        with patch("asyncio.sleep"):
-            with pytest.raises(APIError):
-                await service._retry_with_backoff(mock_func, max_retries=2)
+        with patch("asyncio.sleep"), pytest.raises(APIError):
+            await service._retry_with_backoff(mock_func, max_retries=2)
 
         # Check warning logs for retry attempts
         assert mock_logger.warning.call_count == 1

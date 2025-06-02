@@ -372,15 +372,15 @@ class TestQdrantCollections:
             "Optimization failed"
         )
 
-        with patch.object(
-            collections_service, "get_collection_info", return_value={"status": "green"}
+        with (
+            patch.object(
+                collections_service,
+                "get_collection_info",
+                return_value={"status": "green"},
+            ),
+            pytest.raises(QdrantServiceError, match="Failed to optimize collection"),
         ):
-            with pytest.raises(
-                QdrantServiceError, match="Failed to optimize collection"
-            ):
-                await collections_service.trigger_collection_optimization(
-                    "test_collection"
-                )
+            await collections_service.trigger_collection_optimization("test_collection")
 
     def test_get_hnsw_configuration_info(self, collections_service):
         """Test HNSW configuration info retrieval."""

@@ -67,8 +67,7 @@ class TestFirecrawlProvider:
         assert provider._initialized is True
         assert provider._client == mock_app
         mock_app_class.assert_called_once_with(
-            api_key=basic_config.api_key,
-            api_url=basic_config.api_url
+            api_key=basic_config.api_key, api_url=basic_config.api_url
         )
 
     @pytest.mark.asyncio
@@ -130,7 +129,7 @@ class TestFirecrawlProvider:
             "metadata": {"title": "Test Page"},
         }
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.return_value = mock_firecrawl_result
 
             result = await provider.scrape_url("https://example.com")
@@ -151,12 +150,16 @@ class TestFirecrawlProvider:
 
         mock_firecrawl_result = {"success": True, "markdown": "Content"}
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.return_value = mock_firecrawl_result
 
-            await provider.scrape_url("https://example.com", formats=["markdown", "html"])
+            await provider.scrape_url(
+                "https://example.com", formats=["markdown", "html"]
+            )
 
-            mock_scrape.assert_called_once_with("https://example.com", ["markdown", "html"])
+            mock_scrape.assert_called_once_with(
+                "https://example.com", ["markdown", "html"]
+            )
 
     @pytest.mark.asyncio
     async def test_scrape_url_failure_response(self, basic_config):
@@ -172,7 +175,7 @@ class TestFirecrawlProvider:
             "error": "Page not found",
         }
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.return_value = mock_firecrawl_result
 
             result = await provider.scrape_url("https://example.com")
@@ -190,7 +193,7 @@ class TestFirecrawlProvider:
         provider._client = mock_client
         provider._initialized = True
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.side_effect = Exception("Rate limit exceeded")
 
             result = await provider.scrape_url("https://example.com")
@@ -207,7 +210,7 @@ class TestFirecrawlProvider:
         provider._client = mock_client
         provider._initialized = True
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.side_effect = Exception("Invalid API key")
 
             result = await provider.scrape_url("https://example.com")
@@ -223,7 +226,7 @@ class TestFirecrawlProvider:
         provider._client = mock_client
         provider._initialized = True
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.side_effect = Exception("Request timeout")
 
             result = await provider.scrape_url("https://example.com")
@@ -239,7 +242,7 @@ class TestFirecrawlProvider:
         provider._client = mock_client
         provider._initialized = True
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.side_effect = Exception("404 not found")
 
             result = await provider.scrape_url("https://example.com")
@@ -264,26 +267,29 @@ class TestFirecrawlProvider:
         provider._initialized = True
 
         # Mock crawl start
-        with patch.object(provider, '_async_crawl_url_with_rate_limit') as mock_start:
+        with patch.object(provider, "_async_crawl_url_with_rate_limit") as mock_start:
             mock_start.return_value = {"id": "crawl-123"}
 
             # Mock status checks
             mock_client.check_crawl_status.side_effect = [
                 {"status": "running"},
-                {"status": "completed", "data": [
-                    {
-                        "url": "https://example.com",
-                        "markdown": "Home content",
-                        "html": "<h1>Home</h1>",
-                        "metadata": {"title": "Home"},
-                    },
-                    {
-                        "url": "https://example.com/about",
-                        "markdown": "About content",
-                        "html": "<h1>About</h1>",
-                        "metadata": {"title": "About"},
-                    },
-                ]},
+                {
+                    "status": "completed",
+                    "data": [
+                        {
+                            "url": "https://example.com",
+                            "markdown": "Home content",
+                            "html": "<h1>Home</h1>",
+                            "metadata": {"title": "Home"},
+                        },
+                        {
+                            "url": "https://example.com/about",
+                            "markdown": "About content",
+                            "html": "<h1>About</h1>",
+                            "metadata": {"title": "About"},
+                        },
+                    ],
+                },
             ]
 
             result = await provider.crawl_site("https://example.com", max_pages=10)
@@ -304,7 +310,7 @@ class TestFirecrawlProvider:
         provider._initialized = True
 
         # Mock crawl start
-        with patch.object(provider, '_async_crawl_url_with_rate_limit') as mock_start:
+        with patch.object(provider, "_async_crawl_url_with_rate_limit") as mock_start:
             mock_start.return_value = {"id": "crawl-123"}
 
             # Mock status check showing failure
@@ -329,7 +335,7 @@ class TestFirecrawlProvider:
         provider._initialized = True
 
         # Mock crawl start
-        with patch.object(provider, '_async_crawl_url_with_rate_limit') as mock_start:
+        with patch.object(provider, "_async_crawl_url_with_rate_limit") as mock_start:
             mock_start.return_value = {"id": "crawl-123"}
 
             # Mock status check always showing running (simulating timeout)
@@ -351,7 +357,7 @@ class TestFirecrawlProvider:
         provider._initialized = True
 
         # Mock crawl start with no ID
-        with patch.object(provider, '_async_crawl_url_with_rate_limit') as mock_start:
+        with patch.object(provider, "_async_crawl_url_with_rate_limit") as mock_start:
             mock_start.return_value = {}  # No ID returned
 
             result = await provider.crawl_site("https://example.com")
@@ -368,7 +374,7 @@ class TestFirecrawlProvider:
         provider._initialized = True
 
         # Mock crawl start exception
-        with patch.object(provider, '_async_crawl_url_with_rate_limit') as mock_start:
+        with patch.object(provider, "_async_crawl_url_with_rate_limit") as mock_start:
             mock_start.side_effect = Exception("Network error")
 
             result = await provider.crawl_site("https://example.com")
@@ -443,7 +449,7 @@ class TestFirecrawlProvider:
                 "https://example.com",
                 "https://example.com/about",
                 "https://example.com/contact",
-            ]
+            ],
         }
         provider._client = mock_client
         provider._initialized = True
@@ -454,8 +460,7 @@ class TestFirecrawlProvider:
         assert len(result["urls"]) == 3
         assert result["total"] == 3
         mock_client.map_url.assert_called_once_with(
-            url="https://example.com",
-            params={"includeSubdomains": True}
+            url="https://example.com", params={"includeSubdomains": True}
         )
 
     @pytest.mark.asyncio
@@ -463,10 +468,7 @@ class TestFirecrawlProvider:
         """Test URL mapping failure."""
         provider = FirecrawlProvider(basic_config)
         mock_client = MagicMock()
-        mock_client.map_url.return_value = {
-            "success": False,
-            "error": "Mapping failed"
-        }
+        mock_client.map_url.return_value = {"success": False, "error": "Mapping failed"}
         provider._client = mock_client
         provider._initialized = True
 
@@ -504,13 +506,17 @@ class TestFirecrawlProvider:
             mock_executor.return_value = {"success": True}
             mock_loop.return_value.run_in_executor = mock_executor
 
-            result = await provider._scrape_url_with_rate_limit("https://example.com", ["markdown"])
+            result = await provider._scrape_url_with_rate_limit(
+                "https://example.com", ["markdown"]
+            )
 
             assert result["success"] is True
             mock_rate_limiter.acquire.assert_called_once_with("firecrawl")
 
     @pytest.mark.asyncio
-    async def test_async_crawl_url_with_rate_limit(self, basic_config, mock_rate_limiter):
+    async def test_async_crawl_url_with_rate_limit(
+        self, basic_config, mock_rate_limiter
+    ):
         """Test rate-limited async crawl."""
         provider = FirecrawlProvider(basic_config, mock_rate_limiter)
         mock_client = MagicMock()
@@ -522,7 +528,9 @@ class TestFirecrawlProvider:
             mock_executor.return_value = {"id": "crawl-123"}
             mock_loop.return_value.run_in_executor = mock_executor
 
-            result = await provider._async_crawl_url_with_rate_limit("https://example.com", 10, ["markdown"])
+            result = await provider._async_crawl_url_with_rate_limit(
+                "https://example.com", 10, ["markdown"]
+            )
 
             assert result["id"] == "crawl-123"
             mock_rate_limiter.acquire.assert_called_once_with("firecrawl")
@@ -563,7 +571,9 @@ class TestPydanticConfigIntegration:
     @pytest.mark.asyncio
     async def test_config_used_in_initialization(self, basic_config):
         """Test that Pydantic config is used in client initialization."""
-        with patch("src.services.crawling.firecrawl_provider.FirecrawlApp") as mock_app_class:
+        with patch(
+            "src.services.crawling.firecrawl_provider.FirecrawlApp"
+        ) as mock_app_class:
             mock_app = MagicMock()
             mock_app_class.return_value = mock_app
 
@@ -572,8 +582,7 @@ class TestPydanticConfigIntegration:
 
             # Verify config fields are passed to client
             mock_app_class.assert_called_once_with(
-                api_key=basic_config.api_key,
-                api_url=basic_config.api_url
+                api_key=basic_config.api_key, api_url=basic_config.api_url
             )
 
     def test_config_validation_api_key_format(self):
@@ -590,7 +599,7 @@ class TestPydanticConfigIntegration:
         # Should inherit from BaseService
         assert isinstance(provider, BaseService)
         # Config should be passed to parent
-        assert hasattr(provider, 'config')
+        assert hasattr(provider, "config")
         assert provider.config == basic_config
 
 
@@ -612,7 +621,7 @@ class TestErrorHandling:
         ]
 
         for error_msg, expected_detail in error_scenarios:
-            with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+            with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
                 mock_scrape.side_effect = Exception(error_msg)
 
                 result = await provider.scrape_url("https://example.com")
@@ -632,7 +641,7 @@ class TestConcurrency:
 
         urls = [f"https://example.com/{i}" for i in range(3)]
 
-        with patch.object(provider, '_scrape_url_with_rate_limit') as mock_scrape:
+        with patch.object(provider, "_scrape_url_with_rate_limit") as mock_scrape:
             mock_scrape.return_value = {"success": True, "content": "test"}
 
             # Run concurrent scrapes

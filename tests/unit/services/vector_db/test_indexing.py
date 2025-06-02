@@ -190,15 +190,15 @@ class TestQdrantIndexing:
 
     async def test_reindex_collection_error(self, indexing_service, mock_client):
         """Test collection reindexing error."""
-        with patch.object(
-            indexing_service,
-            "list_payload_indexes",
-            side_effect=Exception("List failed"),
+        with (
+            patch.object(
+                indexing_service,
+                "list_payload_indexes",
+                side_effect=Exception("List failed"),
+            ),
+            pytest.raises(QdrantServiceError, match="Failed to reindex collection"),
         ):
-            with pytest.raises(
-                QdrantServiceError, match="Failed to reindex collection"
-            ):
-                await indexing_service.reindex_collection("test_collection")
+            await indexing_service.reindex_collection("test_collection")
 
     async def test_get_payload_index_stats_success(self, indexing_service, mock_client):
         """Test successful payload index stats retrieval."""

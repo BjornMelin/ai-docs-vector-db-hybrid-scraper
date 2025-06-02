@@ -187,7 +187,9 @@ class TestCrawl4AIProvider:
 
     @pytest.mark.asyncio
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
-    async def test_initialize_already_initialized(self, mock_crawler_class, basic_config):
+    async def test_initialize_already_initialized(
+        self, mock_crawler_class, basic_config
+    ):
         """Test initialization when already initialized."""
         mock_crawler = AsyncMock()
         mock_crawler_class.return_value = mock_crawler
@@ -348,7 +350,7 @@ class TestCrawl4AIProvider:
         await provider.initialize()
 
         # Mock scrape_url to return success
-        with patch.object(provider, 'scrape_url') as mock_scrape:
+        with patch.object(provider, "scrape_url") as mock_scrape:
             mock_scrape.side_effect = [
                 {"success": True, "url": urls[0], "content": "Content 1"},
                 {"success": True, "url": urls[1], "content": "Content 2"},
@@ -374,7 +376,7 @@ class TestCrawl4AIProvider:
         await provider.initialize()
 
         # Mock scrape_url to have one success and one exception
-        with patch.object(provider, 'scrape_url') as mock_scrape:
+        with patch.object(provider, "scrape_url") as mock_scrape:
             mock_scrape.side_effect = [
                 {"success": True, "url": urls[0], "content": "Content 1"},
                 Exception("Network error"),
@@ -398,7 +400,7 @@ class TestCrawl4AIProvider:
         await provider.initialize()
 
         # Mock crawl_bulk to return pages - need to handle multiple calls
-        with patch.object(provider, 'crawl_bulk') as mock_crawl_bulk:
+        with patch.object(provider, "crawl_bulk") as mock_crawl_bulk:
             # First call: ["https://example.com"] -> returns home page with link
             # Second call: ["https://example.com/about"] -> returns about page
             mock_crawl_bulk.side_effect = [
@@ -423,7 +425,7 @@ class TestCrawl4AIProvider:
                         "title": "About",
                         "links": [],
                     }
-                ]
+                ],
             ]
 
             result = await provider.crawl_site("https://example.com", max_pages=2)
@@ -455,7 +457,7 @@ class TestCrawl4AIProvider:
         await provider.initialize()
 
         # Mock crawl_bulk to raise exception
-        with patch.object(provider, 'crawl_bulk') as mock_crawl_bulk:
+        with patch.object(provider, "crawl_bulk") as mock_crawl_bulk:
             mock_crawl_bulk.side_effect = Exception("Bulk crawl failed")
 
             result = await provider.crawl_site("https://example.com")
@@ -536,7 +538,10 @@ class TestCrawlCache:
 
         cache = CrawlCache(mock_cache_manager)
         mock_crawler = AsyncMock()
-        mock_crawler.scrape_url.return_value = {"success": True, "url": "https://example.com"}
+        mock_crawler.scrape_url.return_value = {
+            "success": True,
+            "url": "https://example.com",
+        }
 
         result = await cache.get_or_crawl("https://example.com", mock_crawler)
 
@@ -552,9 +557,14 @@ class TestCrawlCache:
 
         cache = CrawlCache(mock_cache_manager)
         mock_crawler = AsyncMock()
-        mock_crawler.scrape_url.return_value = {"success": True, "url": "https://example.com"}
+        mock_crawler.scrape_url.return_value = {
+            "success": True,
+            "url": "https://example.com",
+        }
 
-        result = await cache.get_or_crawl("https://example.com", mock_crawler, force_refresh=True)
+        result = await cache.get_or_crawl(
+            "https://example.com", mock_crawler, force_refresh=True
+        )
 
         assert result["success"] is True
         mock_crawler.scrape_url.assert_called_once_with("https://example.com")

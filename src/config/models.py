@@ -15,6 +15,7 @@ from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+
 # Import validators conditionally to avoid circular imports
 try:
     from src.models.validators import validate_api_key_common
@@ -25,7 +26,14 @@ try:
     from src.models.validators import validate_url_format
 except ImportError:
     # Fallback for circular import situations - define minimal validators locally
-    def validate_api_key_common(value, prefix, service_name, min_length=10, max_length=200, allowed_chars=r"[A-Za-z0-9-]+"):
+    def validate_api_key_common(
+        value,
+        prefix,
+        service_name,
+        min_length=10,
+        max_length=200,
+        allowed_chars=r"[A-Za-z0-9-]+",
+    ):
         if value is None:
             return value
         value = value.strip()
@@ -34,7 +42,9 @@ except ImportError:
         try:
             value.encode("ascii")
         except UnicodeEncodeError as err:
-            raise ValueError(f"{service_name} API key contains non-ASCII characters") from err
+            raise ValueError(
+                f"{service_name} API key contains non-ASCII characters"
+            ) from err
         if not value.startswith(prefix):
             raise ValueError(f"{service_name} API key must start with '{prefix}'")
         if len(value) < min_length:
@@ -42,15 +52,16 @@ except ImportError:
         if len(value) > max_length:
             raise ValueError(f"{service_name} API key appears to be too long")
         import re
+
         if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
             raise ValueError(f"{service_name} API key contains invalid characters")
         return value
-    
+
     def validate_url_format(value):
         if not value.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
         return value.rstrip("/")
-    
+
     def validate_chunk_sizes(chunk_size, chunk_overlap, min_chunk_size, max_chunk_size):
         if chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be less than chunk_size")
@@ -58,29 +69,40 @@ except ImportError:
             raise ValueError("min_chunk_size must be less than max_chunk_size")
         if chunk_size > max_chunk_size:
             raise ValueError("chunk_size cannot exceed max_chunk_size")
-    
+
     def validate_rate_limit_config(value):
         for provider, limits in value.items():
             if not isinstance(limits, dict):
-                raise ValueError(f"Rate limits for provider '{provider}' must be a dictionary")
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must be a dictionary"
+                )
             required_keys = {"max_calls", "time_window"}
             if not required_keys.issubset(limits.keys()):
-                raise ValueError(f"Rate limits for provider '{provider}' must contain keys: {required_keys}, got: {set(limits.keys())}")
+                raise ValueError(
+                    f"Rate limits for provider '{provider}' must contain keys: {required_keys}, got: {set(limits.keys())}"
+                )
             if limits["max_calls"] <= 0:
-                raise ValueError(f"max_calls for provider '{provider}' must be positive")
+                raise ValueError(
+                    f"max_calls for provider '{provider}' must be positive"
+                )
             if limits["time_window"] <= 0:
-                raise ValueError(f"time_window for provider '{provider}' must be positive")
+                raise ValueError(
+                    f"time_window for provider '{provider}' must be positive"
+                )
         return value
-    
+
     def validate_scoring_weights(quality_weight, speed_weight, cost_weight):
         total = quality_weight + speed_weight + cost_weight
         if abs(total - 1.0) > 0.01:
             raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
-    
+
     def validate_model_benchmark_consistency(key, model_name):
         if key != model_name:
-            raise ValueError(f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification.")
+            raise ValueError(
+                f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification."
+            )
         return key
+
 
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
@@ -426,6 +448,69 @@ class Crawl4AIConfig(BaseModel):
     remove_scripts: bool = Field(default=True, description="Remove script tags")
     remove_styles: bool = Field(default=True, description="Remove style tags")
     extract_links: bool = Field(default=True, description="Extract links from pages")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class BrowserUseConfig(BaseModel):
+    """Configuration for BrowserUse adapter with AI-powered automation."""
+
+    # LLM provider settings
+    llm_provider: str = Field(
+        default="openai", description="LLM provider (openai, anthropic, gemini)"
+    )
+    model: str = Field(
+        default="gpt-4o-mini", description="LLM model to use for automation"
+    )
+
+    # Browser settings
+    headless: bool = Field(default=True, description="Run browser in headless mode")
+    disable_security: bool = Field(
+        default=False, description="Disable browser security features"
+    )
+    generate_gif: bool = Field(
+        default=False, description="Generate GIFs of automation process"
+    )
+
+    # Performance settings
+    timeout: int = Field(
+        default=30000, gt=0, description="Default timeout in milliseconds"
+    )
+    max_retries: int = Field(
+        default=3, ge=0, le=10, description="Maximum retry attempts"
+    )
+    max_steps: int = Field(
+        default=20, gt=0, le=100, description="Maximum steps for automation"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PlaywrightConfig(BaseModel):
+    """Configuration for Playwright adapter with direct browser control."""
+
+    # Browser settings
+    browser: str = Field(
+        default="chromium", description="Browser type (chromium, firefox, webkit)"
+    )
+    headless: bool = Field(default=True, description="Run browser in headless mode")
+
+    # Viewport settings
+    viewport: dict[str, int] = Field(
+        default_factory=lambda: {"width": 1920, "height": 1080},
+        description="Browser viewport dimensions",
+    )
+
+    # User agent
+    user_agent: str = Field(
+        default="Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
+        description="User agent string for browser",
+    )
+
+    # Timeout settings
+    timeout: int = Field(
+        default=30000, gt=0, description="Default timeout in milliseconds"
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -962,6 +1047,14 @@ class UnifiedConfig(BaseSettings):
     )
     crawl4ai: Crawl4AIConfig = Field(
         default_factory=Crawl4AIConfig, description="Crawl4AI settings"
+    )
+    browser_use: BrowserUseConfig = Field(
+        default_factory=BrowserUseConfig,
+        description="BrowserUse AI automation settings",
+    )
+    playwright: PlaywrightConfig = Field(
+        default_factory=PlaywrightConfig,
+        description="Playwright browser control settings",
     )
     chunking: ChunkingConfig = Field(
         default_factory=ChunkingConfig, description="Chunking settings"

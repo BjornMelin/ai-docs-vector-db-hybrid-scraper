@@ -84,7 +84,7 @@ class TestToolRegistry:
         sig = inspect.signature(register_all_tools)
 
         # Check that parameters have type annotations (if available)
-        for param_name, param in sig.parameters.items():
+        for _param_name, param in sig.parameters.items():
             # Type annotations might be strings due to TYPE_CHECKING
             if param.annotation != inspect.Parameter.empty:
                 assert param.annotation is not None

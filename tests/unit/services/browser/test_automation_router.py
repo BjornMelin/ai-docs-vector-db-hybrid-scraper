@@ -80,7 +80,9 @@ class TestAutomationRouterInit:
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("pathlib.Path.exists", return_value=True)
-    def test_load_routing_rules_from_file(self, mock_exists, mock_file, sample_routing_rules):
+    def test_load_routing_rules_from_file(
+        self, mock_exists, mock_file, sample_routing_rules
+    ):
         """Test loading routing rules from file."""
         mock_file.return_value.read.return_value = json.dumps(sample_routing_rules)
 
@@ -170,10 +172,15 @@ class TestAutomationRouterInitialization:
     @pytest.mark.asyncio
     async def test_initialize_crawl4ai_failure(self, router):
         """Test Crawl4AI adapter initialization failure."""
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai, \
-             patch("src.services.browser.browser_use_adapter.BrowserUseAdapter") as mock_bu, \
-             patch("src.services.browser.playwright_adapter.PlaywrightAdapter") as mock_pw:
-
+        with (
+            patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai,
+            patch(
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_bu,
+            patch(
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
+            ) as mock_pw,
+        ):
             # Crawl4AI fails, others succeed
             mock_c4ai.side_effect = Exception("Crawl4AI init failed")
 
@@ -193,10 +200,15 @@ class TestAutomationRouterInitialization:
     @pytest.mark.asyncio
     async def test_initialize_browser_use_failure(self, router):
         """Test BrowserUse adapter initialization failure."""
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai, \
-             patch("src.services.browser.browser_use_adapter.BrowserUseAdapter") as mock_bu, \
-             patch("src.services.browser.playwright_adapter.PlaywrightAdapter") as mock_pw:
-
+        with (
+            patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai,
+            patch(
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_bu,
+            patch(
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
+            ) as mock_pw,
+        ):
             # BrowserUse fails, others succeed
             mock_bu.side_effect = Exception("BrowserUse init failed")
 
@@ -216,10 +228,15 @@ class TestAutomationRouterInitialization:
     @pytest.mark.asyncio
     async def test_initialize_playwright_failure(self, router):
         """Test Playwright adapter initialization failure."""
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai, \
-             patch("src.services.browser.browser_use_adapter.BrowserUseAdapter") as mock_bu, \
-             patch("src.services.browser.playwright_adapter.PlaywrightAdapter") as mock_pw:
-
+        with (
+            patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai,
+            patch(
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_bu,
+            patch(
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
+            ) as mock_pw,
+        ):
             # Playwright fails, others succeed
             mock_pw.side_effect = Exception("Playwright init failed")
 
@@ -239,15 +256,22 @@ class TestAutomationRouterInitialization:
     @pytest.mark.asyncio
     async def test_initialize_all_adapters_fail(self, router):
         """Test initialization when all adapters fail."""
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai, \
-             patch("src.services.browser.browser_use_adapter.BrowserUseAdapter") as mock_bu, \
-             patch("src.services.browser.playwright_adapter.PlaywrightAdapter") as mock_pw:
-
+        with (
+            patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai,
+            patch(
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_bu,
+            patch(
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
+            ) as mock_pw,
+        ):
             mock_c4ai.side_effect = Exception("Crawl4AI failed")
             mock_bu.side_effect = Exception("BrowserUse failed")
             mock_pw.side_effect = Exception("Playwright failed")
 
-            with pytest.raises(CrawlServiceError, match="No automation adapters available"):
+            with pytest.raises(
+                CrawlServiceError, match="No automation adapters available"
+            ):
                 await router.initialize()
 
     @pytest.mark.asyncio
@@ -255,7 +279,9 @@ class TestAutomationRouterInitialization:
         """Test initialization when already initialized."""
         router._initialized = True
 
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_adapter:
+        with patch(
+            "src.services.browser.crawl4ai_adapter.Crawl4AIAdapter"
+        ) as mock_adapter:
             await router.initialize()
 
             # Should not create new adapters
@@ -346,7 +372,9 @@ class TestAutomationRouterScraping:
         """Test scraping with unavailable forced tool."""
         router._initialized = True
 
-        with pytest.raises(CrawlServiceError, match="Forced tool 'crawl4ai' not available"):
+        with pytest.raises(
+            CrawlServiceError, match="Forced tool 'crawl4ai' not available"
+        ):
             await router.scrape("https://example.com", force_tool="crawl4ai")
 
     @pytest.mark.asyncio
@@ -364,7 +392,7 @@ class TestAutomationRouterScraping:
         router._initialized = True
 
         # Mock tool selection to return crawl4ai
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             result = await router.scrape("https://example.com")
 
             assert result["success"] is True
@@ -383,7 +411,7 @@ class TestAutomationRouterScraping:
         router._initialized = True
 
         # Mock tool selection to return browser_use
-        with patch.object(router, '_select_tool', return_value='browser_use'):
+        with patch.object(router, "_select_tool", return_value="browser_use"):
             result = await router.scrape("https://example.com")
 
             assert result["success"] is True
@@ -402,7 +430,7 @@ class TestAutomationRouterScraping:
         router._initialized = True
 
         # Mock tool selection to return playwright
-        with patch.object(router, '_select_tool', return_value='playwright'):
+        with patch.object(router, "_select_tool", return_value="playwright"):
             result = await router.scrape("https://example.com")
 
             assert result["success"] is True
@@ -418,7 +446,7 @@ class TestAutomationRouterScraping:
 
         custom_actions = [{"type": "click", "selector": ".button"}]
 
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             await router.scrape("https://example.com", custom_actions=custom_actions)
 
             # Should pass the actions to the try_crawl4ai method
@@ -442,7 +470,7 @@ class TestAutomationRouterScraping:
         router._adapters["playwright"] = mock_playwright
         router._initialized = True
 
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             result = await router.scrape("https://example.com")
 
             assert result["success"] is True
@@ -460,7 +488,7 @@ class TestAutomationRouterScraping:
 
         router._initialized = True
 
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             result = await router.scrape("https://example.com")
 
             assert result["success"] is False
@@ -641,7 +669,7 @@ class TestMetrics:
         router._adapters = {"crawl4ai": MagicMock(), "playwright": MagicMock()}
 
         # Not enough data, should use base recommendation
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             tool = router.get_recommended_tool("https://example.com")
             assert tool == "crawl4ai"
 
@@ -650,7 +678,7 @@ class TestMetrics:
             router._update_metrics("crawl4ai", False, 1.0)
 
         # Should recommend different tool due to low success rate
-        with patch.object(router, '_select_tool', return_value='crawl4ai'):
+        with patch.object(router, "_select_tool", return_value="crawl4ai"):
             # Add better metrics for playwright
             for _ in range(5):
                 router._update_metrics("playwright", True, 1.0)
@@ -676,10 +704,15 @@ class TestConfigIntegration:
         """Test that adapters are initialized with correct Pydantic configs."""
         router = AutomationRouter(mock_unified_config)
 
-        with patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai, \
-             patch("src.services.browser.browser_use_adapter.BrowserUseAdapter") as mock_bu, \
-             patch("src.services.browser.playwright_adapter.PlaywrightAdapter") as mock_pw:
-
+        with (
+            patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter") as mock_c4ai,
+            patch(
+                "src.services.browser.browser_use_adapter.BrowserUseAdapter"
+            ) as mock_bu,
+            patch(
+                "src.services.browser.playwright_adapter.PlaywrightAdapter"
+            ) as mock_pw,
+        ):
             # Setup mocks
             for mock_class in [mock_c4ai, mock_bu, mock_pw]:
                 mock_adapter = AsyncMock()
