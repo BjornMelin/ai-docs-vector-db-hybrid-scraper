@@ -93,10 +93,17 @@ class QdrantCollections(BaseService):
             )
 
             # Configure vectors with HNSW settings
+            try:
+                distance_enum = getattr(models.Distance, distance.upper())
+            except AttributeError:
+                raise QdrantServiceError(
+                    f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                ) from None
+
             vectors_config = {
                 "dense": models.VectorParams(
                     size=vector_size,
-                    distance=getattr(models.Distance, distance.upper()),
+                    distance=distance_enum,
                     hnsw_config=hnsw_config_obj,
                 )
             }

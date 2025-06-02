@@ -2,13 +2,9 @@
 
 import json
 import os
-import tempfile
-from pathlib import Path
-from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
-
 from src.config.loader import ConfigLoader
 from src.config.models import DocumentationSite
 from src.config.models import UnifiedConfig
@@ -51,7 +47,9 @@ class TestConfigLoader:
         assert len(sites) == 2
         assert all(isinstance(site, DocumentationSite) for site in sites)
         assert sites[0].name == "Test Site"
-        assert str(sites[0].url) == "https://docs.example.com/"  # HttpUrl adds trailing slash
+        assert (
+            str(sites[0].url) == "https://docs.example.com/"
+        )  # HttpUrl adds trailing slash
         assert sites[1].exclude_patterns == ["*/internal/*"]
 
     def test_load_documentation_sites_file_not_found(self):
@@ -88,7 +86,9 @@ class TestConfigLoader:
             },
             clear=False,
         ):
-            base_config = {"environment": "testing"}  # Use different env to test preservation
+            base_config = {
+                "environment": "testing"
+            }  # Use different env to test preservation
             result = ConfigLoader.merge_env_config(base_config)
 
             assert result["debug"] is True
@@ -337,9 +337,7 @@ class TestConfigLoader:
 
     def test_merge_env_config_preserves_existing(self):
         """Test that environment merging preserves existing config values."""
-        with patch.dict(
-            os.environ, {"AI_DOCS__DEBUG": "true"}, clear=False
-        ):
+        with patch.dict(os.environ, {"AI_DOCS__DEBUG": "true"}, clear=False):
             base_config = {
                 "environment": "testing",
                 "log_level": "WARNING",
