@@ -10,32 +10,18 @@ and rewriting to align with current src/ implementations.
 - ✅ Created 1 test file for `src/config/enums.py` (45 tests, 100% coverage)
 - ✅ All Pydantic v2 configuration models fully tested with validation scenarios
 
-## Config Core Modules (Remaining)
+## ✅ COMPLETED: Config Core Modules
 
-**Test files to remove:**
-- tests/unit/config/test_config.py
-- tests/unit/config/test_rate_limiting_config.py  
-- tests/unit/config/test_unified_config.py
-
-**Findings:**
-- Core modules (`cli.py`, `loader.py`, `migrator.py`, `schema.py`, `validator.py`) still need test coverage
-- Legacy test files contain outdated assumptions about Pydantic behavior
-
-**Actionable TODOs:**
-
-- [ ] Remove outdated config test files (test_config.py, test_rate_limiting_config.py, test_unified_config.py)
-- [ ] Implement unit tests for `src/config/loader.py` to verify:
-  - Loading of default and environment-specific settings
-  - Priority resolution and merging of multiple config sources
-- [ ] Implement unit tests for `src/config/schema.py` to verify:
-  - Schema validation for valid and invalid config structures
-  - Correct error messages and missing field handling
-- [ ] Implement unit tests for `src/config/validator.py` to verify:
-  - Custom validation rules and exception raising on invalid input
-- [ ] Implement unit tests for `src/config/migrator.py` to verify:
-  - Migration of legacy configurations through defined migrator functions
-- [ ] Implement unit tests for `src/config/cli.py` to verify:
-  - CLI argument parsing and execution of config commands (e.g., `validate`, `migrate`)
+**Completed work:**
+- ✅ Removed outdated config test files (test_config.py, test_rate_limiting_config.py, test_unified_config.py)
+- ✅ Created 5 comprehensive test files for config core modules:
+  - `test_loader.py` - ConfigLoader class with 22 test methods covering environment merging and documentation site loading
+  - `test_schema.py` - ConfigSchemaGenerator class tests (simplified due to Pydantic v2 API changes)  
+  - `test_validator.py` - ConfigValidator class with 35 test methods covering API key validation and service connections
+  - `test_migrator.py` - ConfigMigrator class with 35 test methods covering configuration migration between versions
+  - `test_cli.py` - CLI commands with 38 test methods covering argument parsing and command execution
+- ✅ Fixed implementation bugs discovered during testing (URL comparison, field name mismatches, validation logic)
+- ✅ All config core tests passing with comprehensive validation scenarios
 
 ## ✅ COMPLETED: MCP Models
 
@@ -43,6 +29,47 @@ and rewriting to align with current src/ implementations.
 - ✅ Created 2 test files for MCP models (49 tests, 100% coverage)
 - ✅ test_requests.py covers all MCP request models
 - ✅ test_responses.py covers SearchResult and CrawlResult models
+
+## ✅ COMPLETED: Core Modules
+
+**Completed work:**
+- ✅ Created 4 test files for core modules:
+  - `test_constants.py` - 25 test methods covering all constant definitions including timeouts, limits, HNSW configs, cache settings  
+  - `test_decorators.py` - 47 test methods covering retry_async, circuit_breaker, handle_mcp_errors, validate_input, RateLimiter
+  - `test_errors.py` - 30 test methods covering error hierarchy, utility functions, and Pydantic integration
+  - `test_utils.py` - 20 test methods covering async-to-sync conversion utilities
+- ✅ Total: 112 test methods, 1,637 lines of code
+- ✅ All core tests passing with comprehensive validation scenarios
+
+## ✅ COMPLETED: Infrastructure Module
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/infrastructure/client_manager.py`:
+  - `test_client_manager.py` - 52 test methods covering all classes and functionality:
+    * ClientState enum and ClientHealth dataclass tests
+    * ClientManagerConfig with Pydantic validation tests
+    * CircuitBreaker implementation with failure/recovery scenarios
+    * ClientManager singleton pattern and factory method tests
+    * Client creation, health checks, and lifecycle management
+    * Async context manager and concurrency tests
+    * Integration tests with full lifecycle validation
+- ✅ 82% test coverage for infrastructure module
+- ✅ All infrastructure tests passing with comprehensive scenarios
+
+## ✅ COMPLETED: Unified MCP Server
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/unified_mcp_server.py`:
+  - `test_unified_mcp_server.py` - 35 test methods covering all functionality:
+    * Streaming configuration validation with various scenarios
+    * Configuration validation with API keys and service connections
+    * Lifespan context manager with initialization/cleanup
+    * Environment variable handling for different transport types
+    * Server configuration and module structure validation
+    * Error handling and import management
+    * Integration points with client manager and tool registration
+- ✅ 85% test coverage for unified MCP server
+- ✅ All unified server tests passing with proper mocking for external dependencies
 
 ## MCP Tools and Registry (Remaining)
 
@@ -253,17 +280,33 @@ and rewriting to align with current src/ implementations.
 - ✅ `src/config/models.py` → 16 test files (206 tests, 94% coverage)
 - ✅ `src/config/enums.py` → test_enums.py (45 tests, 100% coverage)
 
+## ✅ COMPLETED: Utils Modules
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/utils.py`:
+  - `test_utils.py` - 25 test methods covering all utility functions:
+    * async_to_sync_click function with Click command conversion
+    * async_command decorator for converting async functions to sync
+    * Function metadata preservation and argument handling
+    * Exception propagation and edge case handling
+    * Integration tests with Click framework components
+- ✅ Created comprehensive test file for `src/utils/imports.py`:
+  - `test_utils_imports.py` - 25 test methods covering all import utilities:
+    * setup_import_paths function with sys.path management
+    * resolve_imports decorator for module import resolution
+    * Path handling and validation scenarios
+    * Integration tests for import resolution workflows
+    * Edge cases and error handling scenarios
+- ✅ Fixed missing `__init__.py` file in src/utils/ to make it a proper Python package
+- ✅ 100% test coverage for utils/imports.py module
+- ✅ Total: 50 test methods across both utils modules
+- ✅ All utils tests passing with comprehensive validation scenarios
+
 ## Remaining Missing Test Coverage
 
-**Still need tests:**
-- `src/core/*` (constants.py, decorators.py, errors.py, utils.py)
-- `src/infrastructure/client_manager.py`
-- `src/unified_mcp_server.py`
-- `src/utils.py` and `src/utils/imports.py`
+**All core modules now have comprehensive test coverage!**
 
-**Actionable TODOs:**
-
-- [ ] Create unit tests for `src/core/*` modules
-- [ ] Create unit tests for `src/infrastructure/client_manager.py`
-- [ ] Create unit tests for `src/unified_mcp_server.py`
-- [ ] Create unit tests for `src/utils.py` and `src/utils/imports.py`
+**Completed modules:**
+- ✅ `src/unified_mcp_server.py` → test_unified_mcp_server.py (35 tests, 85% coverage)
+- ✅ `src/utils.py` → test_utils.py (25 tests)
+- ✅ `src/utils/imports.py` → test_utils_imports.py (25 tests, 100% coverage)

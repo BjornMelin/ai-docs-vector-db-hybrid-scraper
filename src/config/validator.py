@@ -223,13 +223,13 @@ class ConfigValidator:
         except Exception as e:
             results["qdrant"]["error"] = str(e)
 
-        # Check Redis if enabled
-        if config.cache.enable_redis_cache:
+        # Check DragonflyDB/Redis if enabled
+        if config.cache.enable_dragonfly_cache:
             results["redis"] = {"connected": False, "error": None}
             try:
                 import redis
 
-                r = redis.from_url(config.cache.redis_url, socket_connect_timeout=5)
+                r = redis.from_url(config.cache.dragonfly_url, socket_connect_timeout=5)
                 r.ping()
                 results["redis"]["connected"] = True
             except redis.ConnectionError:
