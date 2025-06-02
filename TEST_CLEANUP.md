@@ -431,12 +431,44 @@ and rewriting to align with current src/ implementations.
 - ✅ **All core service tests passing with comprehensive coverage**
 - ✅ **Complete testing of project data organization, file management, storage backend abstraction, alias routing, blue-green deployment support, and performance optimization**
 
+## ✅ COMPLETED: Deployment Services (Priority 10)
+
+**Completed work:**
+- ✅ Created comprehensive test file for `src/services/deployment/ab_testing.py`:
+  - `test_deployment_ab_testing.py` - 30 test methods covering A/B testing framework:
+    * ExperimentConfig and ExperimentResults dataclass validation with default values
+    * ABTestingManager lifecycle management with initialization and cleanup
+    * Experiment creation with traffic splitting and metrics tracking configuration
+    * Query routing with deterministic hash-based and random assignment strategies
+    * Feedback tracking and statistical analysis with significance testing and confidence intervals
+    * Active experiment management and ending with final analysis and duration tracking
+
+- ✅ Created comprehensive test file for `src/services/deployment/blue_green.py`:
+  - `test_deployment_blue_green.py` - 30 test methods covering blue-green deployment:
+    * Zero-downtime deployment with validation and rollback mechanisms
+    * Collection schema cloning and data population from multiple sources (collection, backup, crawl)
+    * Health monitoring and failure detection with configurable thresholds
+    * Integration with alias manager and embedding validation for quality assurance
+    * Comprehensive error handling and edge cases with concurrent deployment operations
+
+- ✅ Created comprehensive test file for `src/services/deployment/canary.py`:
+  - `test_deployment_canary.py` - 45 test methods covering canary deployment strategies:
+    * Multi-stage gradual rollout with configurable percentage thresholds and duration
+    * Real-time metrics monitoring and health checks with error rate and latency limits
+    * Automatic rollback on failure detection with manual pause and resume capabilities
+    * Deployment status tracking and active deployment management workflows
+    * Comprehensive staging workflows including zero-duration stage handling
+
+**Total**: 105 test methods covering complete deployment strategy implementations for production vector database operations
+- ✅ **All deployment service tests passing with comprehensive coverage**
+- ✅ **Complete testing of A/B testing framework, blue-green deployment patterns, and canary deployment strategies with full lifecycle management**
+
 ## 🏗️ HIGH PRIORITY: Test Directory Reorganization
 
 **Status**: Planned | **Effort**: 5-6 hours | **Impact**: High Developer Experience Improvement
 
 ### Problem
-The current `tests/unit/services/` directory contains 42 test files in a flat structure, making navigation and maintenance difficult. This violates best practices for test organization and creates developer friction.
+The current `tests/unit/services/` directory contains 45 test files in a flat structure (42 original + 3 deployment), making navigation and maintenance difficult. This violates best practices for test organization and creates developer friction.
 
 ### Actionable Tasks
 
@@ -444,8 +476,8 @@ The current `tests/unit/services/` directory contains 42 test files in a flat st
 
 - [ ] **Create new subdirectory structure**:
   ```bash
-  mkdir -p tests/unit/services/{browser,cache,core,crawling,embeddings,hyde,utilities,vector_db}
-  touch tests/unit/services/{browser,cache,core,crawling,embeddings,hyde,utilities,vector_db}/__init__.py
+  mkdir -p tests/unit/services/{browser,cache,core,crawling,deployment,embeddings,hyde,utilities,vector_db}
+  touch tests/unit/services/{browser,cache,core,crawling,deployment,embeddings,hyde,utilities,vector_db}/__init__.py
   ```
 
 - [ ] **Move and rename test files** using git mv to preserve history:
@@ -487,6 +519,13 @@ The current `tests/unit/services/` directory contains 42 test files in a flat st
   git mv tests/unit/services/test_crawling_crawl4ai_provider.py tests/unit/services/crawling/test_crawl4ai_provider.py
   git mv tests/unit/services/test_crawling_firecrawl_provider.py tests/unit/services/crawling/test_firecrawl_provider.py
   git mv tests/unit/services/test_crawling_manager.py tests/unit/services/crawling/test_manager.py
+  ```
+
+  **Deployment subdirectory (3 files):**
+  ```bash
+  git mv tests/unit/services/test_deployment_ab_testing.py tests/unit/services/deployment/test_ab_testing.py
+  git mv tests/unit/services/test_deployment_blue_green.py tests/unit/services/deployment/test_blue_green.py
+  git mv tests/unit/services/test_deployment_canary.py tests/unit/services/deployment/test_canary.py
   ```
 
   **Embeddings subdirectory (4 files):**
@@ -556,7 +595,7 @@ The current `tests/unit/services/` directory contains 42 test files in a flat st
 - [ ] Update any CI/CD configurations that reference specific test paths
 
 ### Success Criteria
-- [ ] All 42 service test files properly organized into logical subdirectories
+- [ ] All 45 service test files properly organized into logical subdirectories
 - [ ] Test discovery and execution works correctly (`uv run pytest` passes)
 - [ ] Test coverage maintained at current levels
 - [ ] No broken imports or test failures introduced
