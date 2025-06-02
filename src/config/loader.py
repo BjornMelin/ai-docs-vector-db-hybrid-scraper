@@ -233,3 +233,58 @@ AI_DOCS__SECURITY__RATE_LIMIT_REQUESTS=100
             issues.append("Firecrawl API key appears to be a placeholder")
 
         return len(issues) == 0, issues
+
+    @staticmethod
+    def get_provider_display_data(config: UnifiedConfig) -> dict[str, dict[str, Any]]:
+        """Get formatted provider data for display purposes.
+
+        Args:
+            config: Unified configuration object
+
+        Returns:
+            Dictionary with provider data organized for display
+        """
+        providers = config.get_active_providers()
+        display_data = {}
+
+        # Embedding provider
+        embedding_config = providers["embedding"]
+        if config.embedding_provider == "openai":
+            display_data["embedding"] = {
+                "provider_name": "OpenAI",
+                "configuration": {
+                    "Model": embedding_config.model,
+                    "Dimensions": str(embedding_config.dimensions),
+                    "API Key": "Set" if embedding_config.api_key else "Not Set",
+                },
+            }
+        else:  # fastembed
+            display_data["embedding"] = {
+                "provider_name": "FastEmbed",
+                "configuration": {
+                    "Model": embedding_config.model,
+                    "Max Length": str(embedding_config.max_length),
+                },
+            }
+
+        # Crawl provider
+        crawl_config = providers["crawl"]
+        if config.crawl_provider == "firecrawl":
+            display_data["crawl"] = {
+                "provider_name": "Firecrawl",
+                "configuration": {
+                    "API URL": crawl_config.api_url,
+                    "API Key": "Set" if crawl_config.api_key else "Not Set",
+                },
+            }
+        else:  # crawl4ai
+            display_data["crawl"] = {
+                "provider_name": "Crawl4AI",
+                "configuration": {
+                    "Browser": crawl_config.browser_type,
+                    "Headless": str(crawl_config.headless),
+                    "Max Concurrent": str(crawl_config.max_concurrent_crawls),
+                },
+            }
+
+        return display_data
