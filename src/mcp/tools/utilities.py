@@ -62,15 +62,15 @@ def register_tools(mcp, client_manager: ClientManager):
         }
 
         # Check Qdrant
-        config_status["config"]["qdrant_url"] = client_manager.config.qdrant_url
+        config_status["config"]["qdrant_url"] = client_manager.unified_config.qdrant.url
 
         # Check API keys
-        if not client_manager.config.openai_api_key:
+        if not client_manager.unified_config.openai.api_key:
             config_status["warnings"].append("OpenAI API key not configured")
         else:
             config_status["config"]["openai"] = "configured"
 
-        if not client_manager.config.firecrawl_api_key:
+        if not client_manager.unified_config.firecrawl.api_key:
             config_status["warnings"].append("Firecrawl API key not configured")
         else:
             config_status["config"]["firecrawl"] = "configured"
@@ -78,8 +78,8 @@ def register_tools(mcp, client_manager: ClientManager):
         # Check cache configuration
         config_status["config"]["cache"] = {
             "l1_enabled": True,
-            "l1_max_items": client_manager.config.cache_config.max_items,
-            "l2_enabled": client_manager.config.redis_url is not None,
+            "l1_max_items": client_manager.unified_config.cache.max_items,
+            "l2_enabled": client_manager.unified_config.cache.redis_url is not None,
         }
 
         # Determine overall validity

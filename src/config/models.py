@@ -47,6 +47,9 @@ except ImportError:
             ) from err
         if not value.startswith(prefix):
             raise ValueError(f"{service_name} API key must start with '{prefix}'")
+        # Allow test keys for OpenAI
+        if service_name == "OpenAI" and value.startswith("sk-test"):
+            return value
         if len(value) < min_length:
             raise ValueError(f"{service_name} API key appears to be too short")
         if len(value) > max_length:

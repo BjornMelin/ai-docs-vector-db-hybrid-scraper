@@ -1,10 +1,14 @@
 """Advanced search tools for MCP server."""
 
 import logging
+from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
-from fastmcp import Context
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    from fastmcp import Context
 
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
@@ -22,16 +26,20 @@ async def _perform_ab_test_search(
     query: str,
     collection: str,
     limit: int,
-    domain: str | None,
+    domain: "str | None",
     use_cache: bool,
     client_manager: ClientManager,
-    ctx: Context | None,
+    ctx: "Context | None",
 ) -> tuple[list, dict]:
     """Perform A/B test comparing HyDE vs regular search."""
     import asyncio
 
+    # Get services
+    hyde_engine = await client_manager.get_hyde_engine()
+    qdrant_service = await client_manager.get_qdrant_service()
+
     # HyDE search
-    hyde_task = client_manager.hyde_engine.enhanced_search(
+    hyde_task = hyde_engine.enhanced_search(
         query=query,
         collection_name=collection,
         limit=limit * 2,  # Get more for comparison
@@ -41,7 +49,7 @@ async def _perform_ab_test_search(
     )
 
     # Regular search for comparison
-    regular_task = client_manager.qdrant_service.hybrid_search(
+    regular_task = qdrant_service.hybrid_search(
         collection_name=collection,
         query_vector=None,  # Will be generated inside
         sparse_vector=None,
@@ -91,19 +99,13 @@ async def _perform_ab_test_search(
 def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register advanced search tools with the MCP server."""
 
-    # Import search_documents from search module to use as fallback
-    from .search import register_tools as register_search_tools
+    async def _search_documents_direct(
+        request: SearchRequest, ctx: Context
+    ) -> list[SearchResult]:
+        """Direct access to search_documents functionality without mock MCP."""
+        from ._search_utils import search_documents_core
 
-    search_tools_registry = {}
-    register_search_tools(
-        type(
-            "MockMCP",
-            (),
-            {"tool": lambda f: search_tools_registry.update({f.__name__: f}) or f},
-        )(),
-        client_manager,
-    )
-    search_documents = search_tools_registry["search_documents"]
+        return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
     async def multi_stage_search(
@@ -128,6 +130,9 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 request.collection
             )
 
+            # Get services
+            qdrant_service = await client_manager.get_qdrant_service()
+
             # Convert SearchStageRequest objects to dictionaries for QdrantService
             stages = []
             for stage_req in request.stages:
@@ -141,7 +146,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 stages.append(stage)
 
             # Perform multi-stage search
-            results = await client_manager.qdrant_service.multi_stage_search(
+            results = await qdrant_service.multi_stage_search(
                 collection_name=request.collection,
                 stages=stages,
                 limit=request.limit,
@@ -196,11 +201,10 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
             request.query = security_validator.validate_query_string(request.query)
 
-            # Check if HyDE engine is available
-            if (
-                not hasattr(client_manager, "hyde_engine")
-                or client_manager.hyde_engine is None
-            ):
+            # Get services
+            try:
+                hyde_engine = await client_manager.get_hyde_engine()
+            except Exception:
                 await ctx.warning(
                     "HyDE engine not available, falling back to regular search"
                 )
@@ -214,7 +218,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     fusion_algorithm=request.fusion_algorithm,
                     search_accuracy=request.search_accuracy,
                 )
-                return await search_documents(fallback_request, ctx)
+                return await _search_documents_direct(fallback_request, ctx)
 
             # Use HyDE engine for enhanced search
             await ctx.debug(
@@ -228,8 +232,11 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 else request.search_accuracy
             )
 
+            # Get embedding manager for reranking
+            embedding_manager = await client_manager.get_embedding_manager()
+
             # Perform HyDE search with all optimizations
-            results = await client_manager.hyde_engine.enhanced_search(
+            results = await hyde_engine.enhanced_search(
                 query=request.query,
                 collection_name=request.collection,
                 limit=request.limit * 3
@@ -281,7 +288,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 ]
 
                 # Rerank results
-                reranked = await client_manager.embedding_manager.rerank_results(
+                reranked = await embedding_manager.rerank_results(
                     query=request.query, results=results_for_reranking
                 )
 
@@ -314,7 +321,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     strategy=SearchStrategy.HYBRID,
                     enable_reranking=request.enable_reranking,
                 )
-                return await search_documents(fallback_request, ctx)
+                return await _search_documents_direct(fallback_request, ctx)
             except Exception as fallback_error:
                 await ctx.error(f"Fallback search also failed: {fallback_error}")
                 raise e from fallback_error
@@ -323,14 +330,14 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     async def hyde_search_advanced(  # noqa: PLR0912, PLR0915
         query: str,
         collection: str = "documentation",
-        domain: str | None = None,
+        domain: "str | None" = None,
         num_generations: int = 5,
         generation_temperature: float = 0.7,
         limit: int = 10,
         enable_reranking: bool = True,
         enable_ab_testing: bool = False,
         use_cache: bool = True,
-        ctx: Context = None,
+        ctx: "Context | None" = None,
     ) -> dict[str, Any]:
         """
         Advanced HyDE search with full configuration control and A/B testing.
@@ -351,14 +358,14 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             collection = security_validator.validate_collection_name(collection)
             query = security_validator.validate_query_string(query)
 
-            # Check if HyDE engine is available
-            if (
-                not hasattr(client_manager, "hyde_engine")
-                or client_manager.hyde_engine is None
-            ):
+            # Get services
+            try:
+                hyde_engine = await client_manager.get_hyde_engine()
+                embedding_manager = await client_manager.get_embedding_manager()
+            except Exception as e:
                 if ctx:
                     await ctx.error("HyDE engine not available")
-                raise ValueError("HyDE engine not initialized")
+                raise ValueError("HyDE engine not initialized") from e
 
             result = {
                 "request_id": request_id,
@@ -394,7 +401,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     if ctx:
                         await ctx.warning(f"A/B testing failed: {ab_error}")
                     # Fallback to regular HyDE search
-                    search_results = await client_manager.hyde_engine.enhanced_search(
+                    search_results = await hyde_engine.enhanced_search(
                         query=query,
                         collection_name=collection,
                         limit=limit,
@@ -404,7 +411,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     )
             else:
                 # Regular HyDE search
-                search_results = await client_manager.hyde_engine.enhanced_search(
+                search_results = await hyde_engine.enhanced_search(
                     query=query,
                     collection_name=collection,
                     limit=limit * 3 if enable_reranking else limit,
@@ -452,7 +459,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 ]
 
                 # Rerank results
-                reranked = await client_manager.embedding_manager.rerank_results(
+                reranked = await embedding_manager.rerank_results(
                     query=query, results=results_for_reranking
                 )
 
@@ -515,18 +522,20 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
             request.query = security_validator.validate_query_string(request.query)
 
+            # Get services
+            embedding_manager = await client_manager.get_embedding_manager()
+            qdrant_service = await client_manager.get_qdrant_service()
+
             # Generate embedding for query
-            embedding_result = (
-                await client_manager.embedding_manager.generate_embeddings(
-                    [request.query], generate_sparse=False
-                )
+            embedding_result = await embedding_manager.generate_embeddings(
+                [request.query], generate_sparse=False
             )
-            query_vector = embedding_result["embeddings"][0]
+            query_vector = embedding_result.embeddings[0]
 
             await ctx.debug(f"Generated embedding with dimension {len(query_vector)}")
 
             # Perform filtered search
-            results = await client_manager.qdrant_service.filtered_search(
+            results = await qdrant_service.filtered_search(
                 collection_name=request.collection,
                 query_vector=query_vector,
                 filters=request.filters,

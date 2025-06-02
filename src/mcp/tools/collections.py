@@ -18,14 +18,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns information about each collection including size and status.
         """
-        collections = await client_manager.qdrant_service.list_collections()
+        qdrant_service = await client_manager.get_qdrant_service()
+        collections = await qdrant_service.list_collections()
         collection_info = []
 
         for collection_name in collections:
             try:
-                info = await client_manager.qdrant_service.get_collection_info(
-                    collection_name
-                )
+                info = await qdrant_service.get_collection_info(collection_name)
                 collection_info.append(
                     {
                         "name": collection_name,
@@ -53,10 +52,13 @@ def register_tools(mcp, client_manager: ClientManager):
         Permanently removes the collection and all its data.
         """
         try:
-            await client_manager.qdrant_service.delete_collection(collection_name)
+            qdrant_service = await client_manager.get_qdrant_service()
+            cache_manager = await client_manager.get_cache_manager()
+
+            await qdrant_service.delete_collection(collection_name)
 
             # Clear cache entries for this collection
-            await client_manager.cache_manager.clear(pattern=f"*:{collection_name}:*")
+            await cache_manager.clear(pattern=f"*:{collection_name}:*")
 
             return {"status": "deleted", "collection": collection_name}
         except Exception as e:
@@ -71,10 +73,9 @@ def register_tools(mcp, client_manager: ClientManager):
         Rebuilds indexes and optimizes storage.
         """
         try:
+            qdrant_service = await client_manager.get_qdrant_service()
             # Get current collection info
-            info = await client_manager.qdrant_service.get_collection_info(
-                collection_name
-            )
+            info = await qdrant_service.get_collection_info(collection_name)
 
             # Trigger optimization
             # Note: Qdrant automatically optimizes, but we can force index rebuild

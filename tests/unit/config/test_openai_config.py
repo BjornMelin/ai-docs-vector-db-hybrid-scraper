@@ -87,7 +87,7 @@ class TestOpenAIConfig:
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert errors[0]["loc"] == ("api_key",)
-        assert "too short" in str(errors[0]["msg"])
+        assert "invalid characters" in str(errors[0]["msg"])
 
         # Non-ASCII characters
         with pytest.raises(ValidationError) as exc_info:

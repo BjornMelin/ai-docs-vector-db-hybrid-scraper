@@ -37,16 +37,22 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             security_validator = SecurityValidator.from_unified_config()
             validated_url = security_validator.validate_url(request.url)
             request.url = validated_url
+            # Get services from client manager
+            cache_manager = await client_manager.get_cache_manager()
+            crawl_manager = await client_manager.get_crawl_manager()
+            embedding_manager = await client_manager.get_embedding_manager()
+            qdrant_service = await client_manager.get_qdrant_service()
+
             # Check cache for existing document
             cache_key = f"doc:{request.url}"
-            cached = await client_manager.cache_manager.get(cache_key)
+            cached = await cache_manager.get(cache_key)
             if cached:
                 await ctx.debug(f"Document {doc_id} found in cache")
                 return cached
 
             # Crawl the URL
             await ctx.debug(f"Crawling URL for document {doc_id}")
-            crawl_result = await client_manager.crawl_manager.crawl_single(request.url)
+            crawl_result = await crawl_manager.crawl_single(request.url)
             if not crawl_result or not crawl_result.markdown:
                 await ctx.error(f"Failed to crawl {request.url}")
                 raise ValueError(f"Failed to crawl {request.url}")
@@ -73,9 +79,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             # Generate embeddings for chunks
             texts = [chunk["content"] for chunk in chunks]
             await ctx.debug(f"Generating embeddings for {len(texts)} chunks")
-            embeddings = await client_manager.embedding_manager.generate_embeddings(
-                texts
-            )
+            embeddings_result = await embedding_manager.generate_embeddings(texts)
+            embeddings = embeddings_result.embeddings
 
             # Prepare points for insertion
             points = []
@@ -97,7 +102,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 points.append(point)
 
             # Ensure collection exists
-            await client_manager.qdrant_service.create_collection(
+            await qdrant_service.create_collection(
                 collection_name=request.collection,
                 vector_size=len(embeddings[0]),
                 distance="Cosine",
@@ -108,7 +113,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
 
             # Insert points
-            await client_manager.qdrant_service.upsert_points(
+            await qdrant_service.upsert_points(
                 collection_name=request.collection,
                 points=points,
             )
@@ -124,7 +129,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             }
 
             # Cache result
-            await client_manager.cache_manager.set(cache_key, result, ttl=86400)
+            await cache_manager.set(cache_key, result, ttl=86400)
 
             await ctx.info(
                 f"Document {doc_id} processed successfully: "
