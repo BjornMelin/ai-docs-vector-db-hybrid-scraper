@@ -11,6 +11,26 @@ Usage:
 
 # Configuration models
 # API contract models
+from ..config.models import CacheConfig
+from ..config.models import ChunkingConfig
+from ..config.models import CollectionHNSWConfigs
+from ..config.models import Crawl4AIConfig
+from ..config.models import DocumentationSite
+from ..config.models import EmbeddingConfig
+from ..config.models import FastEmbedConfig
+from ..config.models import FirecrawlConfig
+from ..config.models import HNSWConfig
+from ..config.models import HyDEConfig
+from ..config.models import ModelBenchmark
+from ..config.models import OpenAIConfig
+from ..config.models import PerformanceConfig
+from ..config.models import QdrantConfig
+from ..config.models import SecurityConfig
+from ..config.models import SmartSelectionConfig
+from ..config.models import UnifiedConfig
+from ..config.models import get_config
+from ..config.models import reset_config
+from ..config.models import set_config
 from .api_contracts import AdvancedSearchRequest
 from .api_contracts import AnalyticsRequest
 from .api_contracts import AnalyticsResponse
@@ -33,26 +53,6 @@ from .api_contracts import SearchRequest
 from .api_contracts import SearchResultItem
 from .api_contracts import ValidationRequest
 from .api_contracts import ValidationResponse
-from .configuration import CacheConfig
-from .configuration import ChunkingConfig
-from .configuration import CollectionHNSWConfigs
-from .configuration import Crawl4AIConfig
-from .configuration import DocumentationSite
-from .configuration import EmbeddingConfig
-from .configuration import FastEmbedConfig
-from .configuration import FirecrawlConfig
-from .configuration import HNSWConfig
-from .configuration import HyDEConfig
-from .configuration import ModelBenchmark
-from .configuration import OpenAIConfig
-from .configuration import PerformanceConfig
-from .configuration import QdrantConfig
-from .configuration import SecurityConfig
-from .configuration import SmartSelectionConfig
-from .configuration import UnifiedConfig
-from .configuration import get_config
-from .configuration import reset_config
-from .configuration import set_config
 
 # Document processing models
 from .document_processing import Chunk
