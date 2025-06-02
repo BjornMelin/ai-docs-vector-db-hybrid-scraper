@@ -29,77 +29,18 @@ MAX_CONCURRENT_REQUESTS = 10
 MAX_MEMORY_USAGE_MB = 1000.0
 GC_THRESHOLD = 0.8  # 80%
 
-# Rate limiting defaults (calls per minute)
-RATE_LIMITS = {
-    "openai": {"max_calls": 500, "time_window": 60},
-    "firecrawl": {"max_calls": 100, "time_window": 60},
-    "crawl4ai": {"max_calls": 50, "time_window": 1},  # per second
-    "qdrant": {"max_calls": 100, "time_window": 1},  # per second
-}
+# NOTE: Rate limiting configuration has been moved to PerformanceConfig.default_rate_limits
+# in src/config/models.py for better organization and configuration management.
 
-# Cache configuration
-CACHE_KEYS = {
-    "embeddings": "embeddings:{model}:{hash}",
-    "crawl": "crawl:{url_hash}",
-    "search": "search:{query_hash}",
-    "hyde": "hyde:{query_hash}",
-}
+# NOTE: Cache configuration has been moved to CacheConfig.cache_key_patterns
+# and CacheConfig.cache_ttl_seconds in src/config/models.py
 
-CACHE_TTL_SECONDS = {
-    "embeddings": 86400,  # 24 hours
-    "crawl": 3600,  # 1 hour
-    "search": 7200,  # 2 hours
-    "hyde": 3600,  # 1 hour
-}
+# NOTE: HNSW and vector search configuration has been moved to:
+# - HNSWConfig and CollectionHNSWConfigs in src/config/models.py for HNSW settings
+# - VectorSearchConfig.search_accuracy_params for search accuracy parameters
+# - VectorSearchConfig.prefetch_multipliers and max_prefetch_limits for prefetch settings
 
-# HNSW index configuration
-HNSW_DEFAULTS = {
-    "m": 16,  # Number of bi-directional links created for every new element
-    "ef_construct": 200,  # Size of the dynamic candidate list
-    "ef": 100,  # Size of the dynamic candidate list for search
-    "max_m": 64,  # Maximum number of connections per element
-    "max_m0": 32,  # Maximum number of connections for layer 0
-}
-
-# Collection-specific HNSW configurations
-COLLECTION_HNSW_CONFIGS = {
-    "api_reference": {"m": 20, "ef_construct": 300, "ef": 150},
-    "tutorials": {"m": 16, "ef_construct": 200, "ef": 100},
-    "blog_posts": {"m": 12, "ef_construct": 150, "ef": 75},
-    "code_examples": {"m": 18, "ef_construct": 250, "ef": 125},
-    "general": {"m": 16, "ef_construct": 200, "ef": 100},
-}
-
-# Search accuracy levels and corresponding HNSW parameters
-SEARCH_ACCURACY_PARAMS = {
-    "fast": {"ef": 50, "exact": False},
-    "balanced": {"ef": 100, "exact": False},
-    "accurate": {"ef": 200, "exact": False},
-    "exact": {"exact": True},
-}
-
-# Prefetch multipliers by vector type
-PREFETCH_MULTIPLIERS = {
-    "dense": 2.0,
-    "sparse": 5.0,
-    "hyde": 3.0,
-}
-
-# Maximum prefetch limits to prevent performance degradation
-MAX_PREFETCH_LIMITS = {
-    "dense": 200,
-    "sparse": 500,
-    "hyde": 150,
-}
-
-# Chunking configuration
-CHUNKING_DEFAULTS = {
-    "chunk_size": 1600,
-    "chunk_overlap": 320,
-    "min_chunk_size": 100,
-    "max_chunk_size": 3000,
-    "max_function_chunk_size": 3200,
-}
+# NOTE: Chunking configuration has been moved to ChunkingConfig in src/config/models.py
 
 # Language detection patterns
 PROGRAMMING_LANGUAGES = [
@@ -228,48 +169,23 @@ MAX_VECTOR_DIMENSIONS = 10000
 # Common vector dimensions for validation
 COMMON_VECTOR_DIMENSIONS = [128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096]
 
-# HTTP status codes
-HTTP_STATUS = {
-    "OK": 200,
-    "CREATED": 201,
-    "BAD_REQUEST": 400,
-    "UNAUTHORIZED": 401,
-    "FORBIDDEN": 403,
-    "NOT_FOUND": 404,
-    "TOO_MANY_REQUESTS": 429,
-    "INTERNAL_SERVER_ERROR": 500,
-    "SERVICE_UNAVAILABLE": 503,
-}
-
-# Logging levels
-LOG_LEVELS = {
-    "DEBUG": 10,
-    "INFO": 20,
-    "WARNING": 30,
-    "ERROR": 40,
-    "CRITICAL": 50,
-}
-
-# Environment types
-ENVIRONMENTS = ["development", "testing", "staging", "production"]
-
-# Collection status types
-COLLECTION_STATUSES = ["green", "yellow", "red"]
-
-# Document status types
-DOCUMENT_STATUSES = ["pending", "processing", "completed", "failed"]
+# NOTE: Status codes, logging levels, environments, and status types have been moved to enums:
+# - HttpStatus enum in src/config/enums.py for HTTP status codes
+# - LogLevel enum in src/config/enums.py for logging levels
+# - Environment enum in src/config/enums.py for environment types
+# - CollectionStatus enum in src/config/enums.py for collection statuses
+# - DocumentStatus enum in src/config/enums.py for document statuses
 
 __all__ = [
+    # Budget and performance thresholds
     "BUDGET_CRITICAL_THRESHOLD",
     "BUDGET_WARNING_THRESHOLD",
-    "CACHE_KEYS",
-    "CACHE_TTL_SECONDS",
-    "CHUNKING_DEFAULTS",
+    # Content validation and processing
     "CODE_KEYWORDS",
-    "COLLECTION_HNSW_CONFIGS",
-    "COLLECTION_STATUSES",
     "COMMON_VECTOR_DIMENSIONS",
+    # Quality and cost thresholds
     "COST_THRESHOLDS",
+    # Basic request and resource limits
     "DEFAULT_CACHE_TTL",
     "DEFAULT_CHUNK_OVERLAP",
     "DEFAULT_CHUNK_SIZE",
@@ -278,19 +194,13 @@ __all__ = [
     "DEFAULT_SEARCH_LIMIT",
     "DEFAULT_URLS",
     "DEFAULT_VECTOR_DIMENSIONS",
-    "DOCUMENT_STATUSES",
     "EMBEDDING_BATCH_SIZE",
-    "ENVIRONMENTS",
     "GC_THRESHOLD",
-    "HNSW_DEFAULTS",
-    "HTTP_STATUS",
-    "LOG_LEVELS",
     "LONG_TEXT_THRESHOLD",
     "MAX_CONCURRENT_REQUESTS",
     "MAX_CONTENT_LENGTH",
     "MAX_DUPLICATE_RATIO",
     "MAX_MEMORY_USAGE_MB",
-    "MAX_PREFETCH_LIMITS",
     "MAX_RETRIES",
     "MAX_RETRY_DELAY",
     "MAX_SEARCH_LIMIT",
@@ -298,11 +208,8 @@ __all__ = [
     "MIN_CONTENT_LENGTH",
     "MIN_VECTOR_DIMENSIONS",
     "MIN_WORD_COUNT",
-    "PREFETCH_MULTIPLIERS",
     "PROGRAMMING_LANGUAGES",
     "QUALITY_THRESHOLDS",
-    "RATE_LIMITS",
-    "SEARCH_ACCURACY_PARAMS",
     "SHORT_TEXT_THRESHOLD",
     "SPEED_THRESHOLDS",
     "SUPPORTED_EXTENSIONS",

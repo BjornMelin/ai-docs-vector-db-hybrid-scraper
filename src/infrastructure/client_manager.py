@@ -373,9 +373,8 @@ class ClientManager:
                         local_max_size=self.config.cache.local_max_size,
                         local_max_memory_mb=self.config.cache.local_max_memory_mb,
                         distributed_ttl_seconds={
-                            "embeddings": self.config.cache.ttl_embeddings,
-                            "crawl_results": self.config.cache.ttl_crawl,
-                            "query_results": self.config.cache.ttl_queries,
+                            cache_type.value: ttl
+                            for cache_type, ttl in self.config.cache.cache_ttl_seconds.items()
                         },
                     )
                     await self._cache_manager.initialize()

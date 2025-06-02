@@ -9,8 +9,7 @@
         "rate_limit": 60,
         "browser": "chromium",
         "headless": true,
-        "viewport_width": 1920,
-        "viewport_height": 1080,
+        "viewport": {"width": 1920, "height": 1080},
         "page_timeout": 30000
       },
       "extraction": {
@@ -247,7 +246,7 @@
         "browser": "chromium",
         "headless": false,
         "page_timeout": 45000,
-        "viewport_height": 2000
+        "viewport": {"width": 1920, "height": 2000}
       },
       "extraction": {
         "wait_for": ".swagger-ui",

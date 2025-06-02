@@ -1,10 +1,28 @@
-"""Unit tests for core constants module."""
+"""Unit tests for core constants module and migrated configurations.
 
+This test file validates both the remaining core constants and the migrated
+configuration settings that have been moved to Pydantic models and enums.
+"""
+
+from src.config.enums import CacheType
+from src.config.enums import CollectionStatus
+from src.config.enums import DocumentStatus
+from src.config.enums import Environment
+from src.config.enums import HttpStatus
+from src.config.enums import LogLevel
+from src.config.enums import SearchAccuracy
+from src.config.enums import VectorType
+from src.config.models import CacheConfig
+from src.config.models import ChunkingConfig
+from src.config.models import CollectionHNSWConfigs
+from src.config.models import HNSWConfig
+from src.config.models import PerformanceConfig
+from src.config.models import VectorSearchConfig
 from src.core import constants
 
 
-class TestConstants:
-    """Test cases for constants module."""
+class TestRemainingConstants:
+    """Test cases for constants that remain in core.constants."""
 
     def test_default_timeouts_and_limits(self):
         """Test default timeout and limit constants."""
@@ -27,106 +45,12 @@ class TestConstants:
         assert constants.DEFAULT_VECTOR_DIMENSIONS == 1536
         assert constants.DEFAULT_SEARCH_LIMIT == 10
         assert constants.MAX_SEARCH_LIMIT == 100
-        # MAX_VECTOR_DIMENSIONS is defined separately in vector dimension bounds
 
     def test_performance_and_memory_limits(self):
         """Test performance and memory limit constants."""
         assert constants.MAX_CONCURRENT_REQUESTS == 10
         assert constants.MAX_MEMORY_USAGE_MB == 1000.0
         assert constants.GC_THRESHOLD == 0.8
-
-    def test_rate_limits_structure(self):
-        """Test rate limits dictionary structure."""
-        assert isinstance(constants.RATE_LIMITS, dict)
-
-        # Test expected services
-        expected_services = ["openai", "firecrawl", "crawl4ai", "qdrant"]
-        for service in expected_services:
-            assert service in constants.RATE_LIMITS
-            assert "max_calls" in constants.RATE_LIMITS[service]
-            assert "time_window" in constants.RATE_LIMITS[service]
-            assert isinstance(constants.RATE_LIMITS[service]["max_calls"], int)
-            assert isinstance(constants.RATE_LIMITS[service]["time_window"], int)
-
-    def test_cache_configuration(self):
-        """Test cache configuration constants."""
-        # Test cache keys structure
-        assert isinstance(constants.CACHE_KEYS, dict)
-        expected_cache_types = ["embeddings", "crawl", "search", "hyde"]
-        for cache_type in expected_cache_types:
-            assert cache_type in constants.CACHE_KEYS
-            assert isinstance(constants.CACHE_KEYS[cache_type], str)
-            assert "{" in constants.CACHE_KEYS[cache_type]  # Contains placeholders
-
-        # Test cache TTL values
-        assert isinstance(constants.CACHE_TTL_SECONDS, dict)
-        for cache_type in expected_cache_types:
-            assert cache_type in constants.CACHE_TTL_SECONDS
-            assert isinstance(constants.CACHE_TTL_SECONDS[cache_type], int)
-            assert constants.CACHE_TTL_SECONDS[cache_type] > 0
-
-    def test_hnsw_configuration(self):
-        """Test HNSW index configuration constants."""
-        # Test HNSW defaults
-        assert isinstance(constants.HNSW_DEFAULTS, dict)
-        expected_hnsw_keys = ["m", "ef_construct", "ef", "max_m", "max_m0"]
-        for key in expected_hnsw_keys:
-            assert key in constants.HNSW_DEFAULTS
-            assert isinstance(constants.HNSW_DEFAULTS[key], int)
-
-        # Test collection-specific HNSW configs
-        assert isinstance(constants.COLLECTION_HNSW_CONFIGS, dict)
-        for _collection_name, config in constants.COLLECTION_HNSW_CONFIGS.items():
-            assert isinstance(config, dict)
-            assert "m" in config
-            assert "ef_construct" in config
-            assert "ef" in config
-
-        # Test search accuracy parameters
-        assert isinstance(constants.SEARCH_ACCURACY_PARAMS, dict)
-        expected_accuracy_levels = ["fast", "balanced", "accurate", "exact"]
-        for level in expected_accuracy_levels:
-            assert level in constants.SEARCH_ACCURACY_PARAMS
-            assert isinstance(constants.SEARCH_ACCURACY_PARAMS[level], dict)
-
-    def test_prefetch_configuration(self):
-        """Test prefetch configuration constants."""
-        # Test prefetch multipliers
-        assert isinstance(constants.PREFETCH_MULTIPLIERS, dict)
-        expected_vector_types = ["dense", "sparse", "hyde"]
-        for vector_type in expected_vector_types:
-            assert vector_type in constants.PREFETCH_MULTIPLIERS
-            assert isinstance(constants.PREFETCH_MULTIPLIERS[vector_type], float)
-
-        # Test max prefetch limits
-        assert isinstance(constants.MAX_PREFETCH_LIMITS, dict)
-        for vector_type in expected_vector_types:
-            assert vector_type in constants.MAX_PREFETCH_LIMITS
-            assert isinstance(constants.MAX_PREFETCH_LIMITS[vector_type], int)
-
-    def test_chunking_configuration(self):
-        """Test chunking configuration constants."""
-        assert isinstance(constants.CHUNKING_DEFAULTS, dict)
-        expected_chunking_keys = [
-            "chunk_size",
-            "chunk_overlap",
-            "min_chunk_size",
-            "max_chunk_size",
-            "max_function_chunk_size",
-        ]
-        for key in expected_chunking_keys:
-            assert key in constants.CHUNKING_DEFAULTS
-            assert isinstance(constants.CHUNKING_DEFAULTS[key], int)
-
-        # Validate logical relationships
-        assert (
-            constants.CHUNKING_DEFAULTS["chunk_overlap"]
-            < constants.CHUNKING_DEFAULTS["chunk_size"]
-        )
-        assert (
-            constants.CHUNKING_DEFAULTS["min_chunk_size"]
-            < constants.CHUNKING_DEFAULTS["max_chunk_size"]
-        )
 
     def test_programming_languages(self):
         """Test programming languages list."""
@@ -233,90 +157,285 @@ class TestConstants:
                 <= constants.MAX_VECTOR_DIMENSIONS
             )
 
-    def test_http_status_codes(self):
-        """Test HTTP status code constants."""
-        assert isinstance(constants.HTTP_STATUS, dict)
-        expected_statuses = [
-            "OK",
-            "CREATED",
-            "BAD_REQUEST",
-            "NOT_FOUND",
-            "INTERNAL_SERVER_ERROR",
-        ]
-        for status in expected_statuses:
-            assert status in constants.HTTP_STATUS
-            assert isinstance(constants.HTTP_STATUS[status], int)
-            assert 100 <= constants.HTTP_STATUS[status] <= 599
 
-    def test_log_levels(self):
-        """Test logging level constants."""
-        assert isinstance(constants.LOG_LEVELS, dict)
-        expected_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        for level in expected_levels:
-            assert level in constants.LOG_LEVELS
-            assert isinstance(constants.LOG_LEVELS[level], int)
+class TestMigratedEnums:
+    """Test cases for enums that replaced old string constants."""
 
-    def test_environment_types(self):
-        """Test environment type constants."""
-        assert isinstance(constants.ENVIRONMENTS, list)
-        expected_envs = ["development", "testing", "staging", "production"]
-        for env in expected_envs:
-            assert env in constants.ENVIRONMENTS
+    def test_http_status_enum(self):
+        """Test HTTP status enum (migrated from HTTP_STATUS)."""
+        # Test that enum has expected values
+        assert HttpStatus.OK == 200
+        assert HttpStatus.CREATED == 201
+        assert HttpStatus.BAD_REQUEST == 400
+        assert HttpStatus.UNAUTHORIZED == 401
+        assert HttpStatus.FORBIDDEN == 403
+        assert HttpStatus.NOT_FOUND == 404
+        assert HttpStatus.TOO_MANY_REQUESTS == 429
+        assert HttpStatus.INTERNAL_SERVER_ERROR == 500
+        assert HttpStatus.SERVICE_UNAVAILABLE == 503
 
-    def test_status_types(self):
-        """Test status type constants."""
-        # Collection statuses
-        assert isinstance(constants.COLLECTION_STATUSES, list)
-        expected_collection_statuses = ["green", "yellow", "red"]
-        for status in expected_collection_statuses:
-            assert status in constants.COLLECTION_STATUSES
+        # Test enum properties
+        assert isinstance(HttpStatus.OK, int)
+        assert HttpStatus.OK.value == 200
 
-        # Document statuses
-        assert isinstance(constants.DOCUMENT_STATUSES, list)
-        expected_document_statuses = ["pending", "processing", "completed", "failed"]
-        for status in expected_document_statuses:
-            assert status in constants.DOCUMENT_STATUSES
+    def test_log_level_enum(self):
+        """Test log level enum (migrated from LOG_LEVELS)."""
+        # Test that enum has expected values
+        assert LogLevel.DEBUG == "DEBUG"
+        assert LogLevel.INFO == "INFO"
+        assert LogLevel.WARNING == "WARNING"
+        assert LogLevel.ERROR == "ERROR"
+        assert LogLevel.CRITICAL == "CRITICAL"
 
-    def test_all_exports(self):
-        """Test that __all__ contains expected exports."""
-        assert hasattr(constants, "__all__")
-        assert isinstance(constants.__all__, list)
-        assert len(constants.__all__) > 0
+        # Test enum properties
+        assert isinstance(LogLevel.INFO, str)
+        assert LogLevel.INFO.value == "INFO"
 
-        # Test that all exported items exist in the module
-        for export in constants.__all__:
-            assert hasattr(constants, export)
+    def test_environment_enum(self):
+        """Test environment enum (migrated from ENVIRONMENTS)."""
+        # Test that enum has expected values
+        assert Environment.DEVELOPMENT == "development"
+        assert Environment.TESTING == "testing"
+        assert Environment.PRODUCTION == "production"
 
-    def test_constant_types_are_immutable(self):
-        """Test that constant collections are appropriate types."""
-        # Lists and sets should be used appropriately
-        assert isinstance(constants.PROGRAMMING_LANGUAGES, list)
-        assert isinstance(constants.CODE_KEYWORDS, set)
-        assert isinstance(constants.ENVIRONMENTS, list)
+        # Test enum properties
+        assert isinstance(Environment.DEVELOPMENT, str)
 
-        # Dictionaries should be used for mappings
-        dict_constants = [
-            "RATE_LIMITS",
-            "CACHE_KEYS",
-            "CACHE_TTL_SECONDS",
-            "HNSW_DEFAULTS",
-            "DEFAULT_URLS",
-            "HTTP_STATUS",
-        ]
-        for const_name in dict_constants:
-            assert isinstance(getattr(constants, const_name), dict)
+    def test_collection_status_enum(self):
+        """Test collection status enum (migrated from COLLECTION_STATUSES)."""
+        # Test that enum has expected values
+        assert CollectionStatus.GREEN == "green"
+        assert CollectionStatus.YELLOW == "yellow"
+        assert CollectionStatus.RED == "red"
 
-    def test_numerical_constants_are_positive(self):
-        """Test that numerical constants have positive values where expected."""
-        positive_constants = [
-            "DEFAULT_REQUEST_TIMEOUT",
-            "DEFAULT_CACHE_TTL",
-            "DEFAULT_CHUNK_SIZE",
-            "MAX_RETRIES",
-            "EMBEDDING_BATCH_SIZE",
-            "DEFAULT_SEARCH_LIMIT",
-        ]
-        for const_name in positive_constants:
-            value = getattr(constants, const_name)
-            assert isinstance(value, int | float)
-            assert value > 0
+        # Test enum properties
+        assert isinstance(CollectionStatus.GREEN, str)
+
+    def test_document_status_enum(self):
+        """Test document status enum (migrated from DOCUMENT_STATUSES)."""
+        # Test that enum has expected values
+        assert DocumentStatus.PENDING == "pending"
+        assert DocumentStatus.PROCESSING == "processing"
+        assert DocumentStatus.COMPLETED == "completed"
+        assert DocumentStatus.FAILED == "failed"
+
+        # Test enum properties
+        assert isinstance(DocumentStatus.PENDING, str)
+
+    def test_cache_type_enum(self):
+        """Test cache type enum (migrated from CACHE_KEYS)."""
+        # Test that enum has expected values
+        assert CacheType.EMBEDDINGS == "embeddings"
+        assert CacheType.CRAWL == "crawl"
+        assert CacheType.SEARCH == "search"
+        assert CacheType.HYDE == "hyde"
+
+        # Test enum properties
+        assert isinstance(CacheType.EMBEDDINGS, str)
+
+    def test_search_accuracy_enum(self):
+        """Test search accuracy enum (migrated from SEARCH_ACCURACY_PARAMS)."""
+        # Test that enum has expected values
+        assert SearchAccuracy.FAST == "fast"
+        assert SearchAccuracy.BALANCED == "balanced"
+        assert SearchAccuracy.ACCURATE == "accurate"
+        assert SearchAccuracy.EXACT == "exact"
+
+        # Test enum properties
+        assert isinstance(SearchAccuracy.FAST, str)
+
+    def test_vector_type_enum(self):
+        """Test vector type enum (migrated from PREFETCH_MULTIPLIERS)."""
+        # Test that enum has expected values
+        assert VectorType.DENSE == "dense"
+        assert VectorType.SPARSE == "sparse"
+        assert VectorType.HYDE == "hyde"
+
+        # Test enum properties
+        assert isinstance(VectorType.DENSE, str)
+
+
+class TestMigratedConfigModels:
+    """Test cases for Pydantic models that replaced old constant dictionaries."""
+
+    def test_cache_config_migration(self):
+        """Test cache configuration (migrated from CACHE_KEYS and CACHE_TTL_SECONDS)."""
+        config = CacheConfig()
+
+        # Test cache key patterns (migrated from CACHE_KEYS)
+        assert isinstance(config.cache_key_patterns, dict)
+        assert len(config.cache_key_patterns) == 4
+        assert CacheType.EMBEDDINGS in config.cache_key_patterns
+        assert CacheType.CRAWL in config.cache_key_patterns
+        assert CacheType.SEARCH in config.cache_key_patterns
+        assert CacheType.HYDE in config.cache_key_patterns
+
+        # Verify patterns have placeholders
+        for pattern in config.cache_key_patterns.values():
+            assert "{" in pattern and "}" in pattern
+
+        # Test TTL settings (migrated from CACHE_TTL_SECONDS)
+        assert isinstance(config.cache_ttl_seconds, dict)
+        assert len(config.cache_ttl_seconds) == 4
+        for cache_type in CacheType:
+            assert cache_type in config.cache_ttl_seconds
+            assert config.cache_ttl_seconds[cache_type] > 0
+
+    def test_chunking_config_migration(self):
+        """Test chunking configuration (migrated from CHUNKING_DEFAULTS)."""
+        config = ChunkingConfig()
+
+        # Test that defaults match old CHUNKING_DEFAULTS
+        assert config.chunk_size == 1600
+        assert config.chunk_overlap == 320
+        assert config.min_chunk_size == 100
+        assert config.max_chunk_size == 3000
+        assert config.max_function_chunk_size == 3200
+
+        # Test logical relationships
+        assert config.chunk_overlap < config.chunk_size
+        assert config.min_chunk_size < config.max_chunk_size
+        assert config.max_function_chunk_size >= config.max_chunk_size
+
+    def test_hnsw_config_migration(self):
+        """Test HNSW configuration (migrated from HNSW_DEFAULTS)."""
+        config = HNSWConfig()
+
+        # Test that defaults match old HNSW_DEFAULTS structure
+        assert config.m == 16
+        assert config.ef_construct == 200
+        assert config.min_ef == 50
+        assert config.balanced_ef == 100
+        assert config.max_ef == 200
+
+        # Test new adaptive features
+        assert config.enable_adaptive_ef is True
+        assert config.default_time_budget_ms > 0
+
+    def test_collection_hnsw_configs_migration(self):
+        """Test collection HNSW configs (migrated from COLLECTION_HNSW_CONFIGS)."""
+        configs = CollectionHNSWConfigs()
+
+        # Test that all expected collections are configured
+        assert hasattr(configs, "api_reference")
+        assert hasattr(configs, "tutorials")
+        assert hasattr(configs, "blog_posts")
+        assert hasattr(configs, "code_examples")
+        assert hasattr(configs, "general")
+
+        # Test that each config is properly configured
+        for config_name in [
+            "api_reference",
+            "tutorials",
+            "blog_posts",
+            "code_examples",
+            "general",
+        ]:
+            config = getattr(configs, config_name)
+            assert isinstance(config, HNSWConfig)
+            assert config.m > 0
+            assert config.ef_construct > 0
+            assert config.min_ef > 0
+
+    def test_vector_search_config_migration(self):
+        """Test vector search config (migrated from SEARCH_ACCURACY_PARAMS, PREFETCH_*)."""
+        config = VectorSearchConfig()
+
+        # Test search accuracy params (migrated from SEARCH_ACCURACY_PARAMS)
+        assert isinstance(config.search_accuracy_params, dict)
+        assert len(config.search_accuracy_params) == 4
+        for accuracy in SearchAccuracy:
+            assert accuracy in config.search_accuracy_params
+            params = config.search_accuracy_params[accuracy]
+            assert isinstance(params, dict)
+            # All except EXACT should have 'ef' parameter
+            if accuracy != SearchAccuracy.EXACT:
+                assert "ef" in params
+                assert params["exact"] is False
+            else:
+                assert params["exact"] is True
+
+        # Test prefetch multipliers (migrated from PREFETCH_MULTIPLIERS)
+        assert isinstance(config.prefetch_multipliers, dict)
+        assert len(config.prefetch_multipliers) == 3
+        for vector_type in VectorType:
+            assert vector_type in config.prefetch_multipliers
+            assert config.prefetch_multipliers[vector_type] > 0
+
+        # Test max prefetch limits (migrated from MAX_PREFETCH_LIMITS)
+        assert isinstance(config.max_prefetch_limits, dict)
+        assert len(config.max_prefetch_limits) == 3
+        for vector_type in VectorType:
+            assert vector_type in config.max_prefetch_limits
+            assert config.max_prefetch_limits[vector_type] > 0
+
+        # Test search limits
+        assert config.default_search_limit == 10
+        assert config.max_search_limit == 100
+
+    def test_performance_config_migration(self):
+        """Test performance configuration (migrated from RATE_LIMITS)."""
+        config = PerformanceConfig()
+
+        # Test rate limits (migrated from RATE_LIMITS)
+        assert isinstance(config.default_rate_limits, dict)
+        expected_providers = ["openai", "firecrawl", "crawl4ai", "qdrant"]
+
+        for provider in expected_providers:
+            assert provider in config.default_rate_limits
+            limits = config.default_rate_limits[provider]
+            assert "max_calls" in limits
+            assert "time_window" in limits
+            assert limits["max_calls"] > 0
+            assert limits["time_window"] > 0
+
+        # Test other performance settings
+        assert config.max_concurrent_requests > 0
+        assert config.request_timeout > 0
+        assert config.max_retries >= 0
+
+
+class TestConfigurationIntegrity:
+    """Test that configuration models maintain data integrity."""
+
+    def test_enum_value_consistency(self):
+        """Test that enum values are consistent with expected string values."""
+        # Test that enum values match what was previously in string constants
+        assert CollectionStatus.GREEN.value == "green"
+        assert DocumentStatus.COMPLETED.value == "completed"
+        assert HttpStatus.OK.value == 200
+        assert LogLevel.INFO.value == "INFO"
+
+    def test_model_validation(self):
+        """Test that Pydantic models properly validate their data."""
+        # Test that invalid data is rejected
+        try:
+            ChunkingConfig(chunk_overlap=2000, chunk_size=1000)  # overlap > size
+            raise AssertionError("Should have raised validation error")
+        except ValueError:
+            pass  # Expected
+
+        # Test that valid data is accepted
+        config = ChunkingConfig(chunk_size=1600, chunk_overlap=320)
+        assert config.chunk_size == 1600
+        assert config.chunk_overlap == 320
+
+    def test_backwards_compatibility_values(self):
+        """Test that new config values match old constant values."""
+        # Cache configuration
+        cache_config = CacheConfig()
+        assert cache_config.cache_ttl_seconds[CacheType.EMBEDDINGS] == 86400
+        assert cache_config.cache_ttl_seconds[CacheType.CRAWL] == 3600
+        assert cache_config.cache_ttl_seconds[CacheType.SEARCH] == 7200
+        assert cache_config.cache_ttl_seconds[CacheType.HYDE] == 3600
+
+        # Performance configuration
+        perf_config = PerformanceConfig()
+        assert perf_config.default_rate_limits["openai"]["max_calls"] == 500
+        assert perf_config.default_rate_limits["firecrawl"]["max_calls"] == 100
+
+        # Vector search configuration
+        search_config = VectorSearchConfig()
+        assert search_config.prefetch_multipliers[VectorType.DENSE] == 2.0
+        assert search_config.prefetch_multipliers[VectorType.SPARSE] == 5.0
+        assert search_config.prefetch_multipliers[VectorType.HYDE] == 3.0

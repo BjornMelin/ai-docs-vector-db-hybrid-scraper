@@ -104,8 +104,8 @@ class TestConfigLoader:
             {
                 "AI_DOCS__QDRANT__URL": "http://localhost:6333",
                 "AI_DOCS__QDRANT__API_KEY": "test-key",
-                "AI_DOCS__CACHE__REDIS_URL": "redis://localhost:6379",
-                "AI_DOCS__CACHE__TTL_EMBEDDINGS": "86400",
+                "AI_DOCS__CACHE__DRAGONFLY_URL": "redis://localhost:6379",
+                "AI_DOCS__CACHE__CACHE_TTL_SECONDS": '{"embeddings": 86400, "crawl": 3600}',
             },
             clear=False,
         ):
@@ -114,8 +114,8 @@ class TestConfigLoader:
 
             assert result["qdrant"]["url"] == "http://localhost:6333"
             assert result["qdrant"]["api_key"] == "test-key"
-            assert result["cache"]["redis_url"] == "redis://localhost:6379"
-            assert result["cache"]["ttl_embeddings"] == 86400
+            assert result["cache"]["dragonfly_url"] == "redis://localhost:6379"
+            assert result["cache"]["cache_ttl_seconds"] == {"embeddings": 86400, "crawl": 3600}
 
     def test_merge_env_config_json_values(self):
         """Test merging JSON environment variables."""

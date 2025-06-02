@@ -11,7 +11,7 @@ import pytest
 from src.infrastructure.client_manager import CircuitBreaker
 from src.infrastructure.client_manager import ClientHealth
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.client_manager import ClientManagerConfig
+from src.config.models import UnifiedConfig
 from src.infrastructure.client_manager import ClientState
 from src.services.errors import APIError
 
@@ -22,7 +22,7 @@ class TestClientManagerServiceGetters:
     @pytest.fixture
     async def client_manager(self):
         """Create a ClientManager instance for testing."""
-        config = ClientManagerConfig()
+        config = UnifiedConfig()
         manager = ClientManager(config)
         manager.unified_config = Mock()  # Mock unified config
         await manager.initialize()

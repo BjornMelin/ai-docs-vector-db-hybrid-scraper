@@ -14,6 +14,7 @@ except ImportError:
     FlagReranker = None
 
 from src.config import UnifiedConfig
+from src.config.enums import CacheType
 from src.config.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
@@ -105,9 +106,8 @@ class EmbeddingManager:
                 local_max_size=config.cache.local_max_size,
                 local_max_memory_mb=config.cache.local_max_memory_mb,
                 distributed_ttl_seconds={
-                    CacheType.EMBEDDINGS: config.cache.ttl_embeddings,
-                    CacheType.CRAWL_RESULTS: config.cache.ttl_crawl,
-                    CacheType.QUERY_RESULTS: config.cache.ttl_queries,
+                    cache_type.value: ttl
+                    for cache_type, ttl in config.cache.cache_ttl_seconds.items()
                 },
             )
 

@@ -107,13 +107,16 @@ except ImportError:
         return key
 
 
+from .enums import CacheType
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
 from .enums import EmbeddingModel
 from .enums import EmbeddingProvider
 from .enums import Environment
 from .enums import LogLevel
+from .enums import SearchAccuracy
 from .enums import SearchStrategy
+from .enums import VectorType
 
 
 class ModelBenchmark(BaseModel):
@@ -154,13 +157,26 @@ class CacheConfig(BaseModel):
         description="DragonflyDB connection URL (Redis-compatible)",
     )
 
-    # TTL settings (in seconds)
-    ttl_embeddings: int = Field(
-        default=86400, ge=0, description="Embeddings cache TTL (24 hours)"
+    # Cache key patterns for different data types
+    cache_key_patterns: dict[CacheType, str] = Field(
+        default_factory=lambda: {
+            CacheType.EMBEDDINGS: "embeddings:{model}:{hash}",
+            CacheType.CRAWL: "crawl:{url_hash}",
+            CacheType.SEARCH: "search:{query_hash}",
+            CacheType.HYDE: "hyde:{query_hash}",
+        },
+        description="Cache key patterns for different data types",
     )
-    ttl_crawl: int = Field(default=3600, ge=0, description="Crawl cache TTL (1 hour)")
-    ttl_queries: int = Field(
-        default=7200, ge=0, description="Query cache TTL (2 hours)"
+
+    # TTL settings (in seconds) by cache type
+    cache_ttl_seconds: dict[CacheType, int] = Field(
+        default_factory=lambda: {
+            CacheType.EMBEDDINGS: 86400,  # 24 hours
+            CacheType.CRAWL: 3600,  # 1 hour
+            CacheType.SEARCH: 7200,  # 2 hours
+            CacheType.HYDE: 3600,  # 1 hour
+        },
+        description="TTL settings by cache type",
     )
 
     # Local cache limits
@@ -279,6 +295,49 @@ class CollectionHNSWConfigs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class VectorSearchConfig(BaseModel):
+    """Vector search configuration with accuracy parameters and prefetch settings."""
+
+    # Search accuracy level defaults mapped to HNSW parameters
+    search_accuracy_params: dict[SearchAccuracy, dict[str, int | bool]] = Field(
+        default_factory=lambda: {
+            SearchAccuracy.FAST: {"ef": 50, "exact": False},
+            SearchAccuracy.BALANCED: {"ef": 100, "exact": False},
+            SearchAccuracy.ACCURATE: {"ef": 200, "exact": False},
+            SearchAccuracy.EXACT: {"exact": True},
+        },
+        description="HNSW parameters for different accuracy levels",
+    )
+
+    # Prefetch multipliers by vector type for optimal performance
+    prefetch_multipliers: dict[VectorType, float] = Field(
+        default_factory=lambda: {
+            VectorType.DENSE: 2.0,
+            VectorType.SPARSE: 5.0,
+            VectorType.HYDE: 3.0,
+        },
+        description="Multipliers for prefetch calculations by vector type",
+    )
+
+    # Maximum prefetch limits to prevent performance degradation
+    max_prefetch_limits: dict[VectorType, int] = Field(
+        default_factory=lambda: {
+            VectorType.DENSE: 200,
+            VectorType.SPARSE: 500,
+            VectorType.HYDE: 150,
+        },
+        description="Maximum prefetch limits by vector type",
+    )
+
+    # Default search settings
+    default_search_limit: int = Field(
+        default=10, gt=0, description="Default search limit"
+    )
+    max_search_limit: int = Field(default=100, gt=0, description="Maximum search limit")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
 
@@ -296,11 +355,7 @@ class QdrantConfig(BaseModel):
     )
     max_retries: int = Field(default=3, ge=0, le=10, description="Max retry attempts")
 
-    # HNSW settings (legacy - use collection_hnsw_configs for new collections)
-    hnsw_ef_construct: int = Field(
-        default=200, gt=0, description="HNSW ef_construct parameter (legacy)"
-    )
-    hnsw_m: int = Field(default=16, gt=0, description="HNSW M parameter (legacy)")
+    # Vector quantization settings
     quantization_enabled: bool = Field(
         default=True, description="Enable vector quantization"
     )
@@ -314,6 +369,12 @@ class QdrantConfig(BaseModel):
     # Enable HNSW optimization features
     enable_hnsw_optimization: bool = Field(
         default=True, description="Enable HNSW parameter optimization"
+    )
+
+    # Vector search configuration
+    vector_search: VectorSearchConfig = Field(
+        default_factory=VectorSearchConfig,
+        description="Vector search accuracy and prefetch configuration",
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -429,11 +490,11 @@ class Crawl4AIConfig(BaseModel):
         default="chromium", description="Browser type (chromium, firefox, webkit)"
     )
     headless: bool = Field(default=True, description="Run browser in headless mode")
-    viewport_width: int = Field(
-        default=1920, gt=0, description="Browser viewport width"
-    )
-    viewport_height: int = Field(
-        default=1080, gt=0, description="Browser viewport height"
+
+    # Viewport settings
+    viewport: dict[str, int] = Field(
+        default_factory=lambda: {"width": 1920, "height": 1080},
+        description="Browser viewport dimensions",
     )
 
     # Performance settings
