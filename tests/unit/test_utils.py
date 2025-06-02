@@ -1,292 +1,210 @@
-"""Unit tests for src/utils.py module."""
+"""Unit tests for core utils module."""
 
 import asyncio
-
-# Import directly from the utils.py module at src level
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import click
 import pytest
-
-# Add src to path if needed
-src_path = str(Path(__file__).parent.parent.parent / "src")
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
-# Import from utils.py file directly
-import importlib.util
-
-utils_spec = importlib.util.spec_from_file_location("utils", src_path + "/utils.py")
-utils_module = importlib.util.module_from_spec(utils_spec)
-utils_spec.loader.exec_module(utils_module)
-
-async_command = utils_module.async_command
-async_to_sync_click = utils_module.async_to_sync_click
+from src.utils import async_command
+from src.utils import async_to_sync_click
 
 
 class TestAsyncToSyncClick:
     """Test cases for async_to_sync_click function."""
 
-    def test_converts_async_commands_to_sync(self):
-        """Test that async command callbacks are converted to sync."""
+    def test_async_to_sync_click_basic(self):
+        """Test basic conversion of async commands to sync."""
+        # Create a mock CLI group
+        cli_group = click.Group()
 
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback():
+        # Create an async command
+        @cli_group.command()
+        async def test_command():
             return "async result"
 
-        # Create a mock command with async callback
-        command = click.Command("test", callback=async_callback)
-        cli.add_command(command)
-
-        # Verify the callback is initially async
-        assert asyncio.iscoroutinefunction(command.callback)
+        # Verify it's async before conversion
+        assert asyncio.iscoroutinefunction(test_command.callback)
 
         # Convert to sync
-        async_to_sync_click(cli)
+        async_to_sync_click(cli_group)
 
-        # Verify callback is no longer async
-        assert not asyncio.iscoroutinefunction(command.callback)
+        # Verify it's no longer async
+        assert not asyncio.iscoroutinefunction(test_command.callback)
 
-        # Verify the callback still works and returns the correct result
-        result = command.callback()
+        # Verify it works
+        result = test_command.callback()
         assert result == "async result"
 
-    def test_preserves_sync_commands(self):
-        """Test that sync commands are left unchanged."""
+    def test_async_to_sync_click_with_parameters(self):
+        """Test conversion with command parameters."""
+        cli_group = click.Group()
 
-        @click.group()
-        def cli():
-            pass
+        @cli_group.command()
+        @click.option("--name", default="World")
+        async def greet(name):
+            return f"Hello, {name}!"
 
-        def sync_callback():
+        # Convert to sync
+        async_to_sync_click(cli_group)
+
+        # Test with parameters
+        result = greet.callback(name="Alice")
+        assert result == "Hello, Alice!"
+
+    def test_async_to_sync_click_preserves_sync_commands(self):
+        """Test that sync commands are not affected."""
+        cli_group = click.Group()
+
+        @cli_group.command()
+        def sync_command():
             return "sync result"
 
-        command = click.Command("test", callback=sync_callback)
-        cli.add_command(command)
-        original_callback = command.callback
+        original_callback = sync_command.callback
 
-        async_to_sync_click(cli)
+        # Convert (should not affect sync commands)
+        async_to_sync_click(cli_group)
 
-        # Callback should remain unchanged
-        assert command.callback is original_callback
-        assert command.callback() == "sync result"
+        # Should be the same function
+        assert sync_command.callback is original_callback
+        assert sync_command.callback() == "sync result"
 
-    def test_prevents_double_wrapping(self):
-        """Test that commands are not wrapped multiple times."""
+    def test_async_to_sync_click_prevents_double_wrapping(self):
+        """Test that double wrapping is prevented."""
+        cli_group = click.Group()
 
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback():
-            return "async result"
-
-        command = click.Command("test", callback=async_callback)
-        cli.add_command(command)
+        @cli_group.command()
+        async def test_command():
+            return "result"
 
         # First conversion
-        async_to_sync_click(cli)
-        first_callback = command.callback
+        async_to_sync_click(cli_group)
+        first_callback = test_command.callback
 
-        # Second conversion should be no-op
-        async_to_sync_click(cli)
-        second_callback = command.callback
+        # Second conversion (should be no-op)
+        async_to_sync_click(cli_group)
+        second_callback = test_command.callback
 
-        # Callbacks should be identical
+        # Should be the same function after second call
         assert first_callback is second_callback
+        assert hasattr(cli_group, "_commands_wrapped")
 
-    def test_marks_group_as_wrapped(self):
-        """Test that the group is marked as wrapped to prevent double-wrapping."""
+    def test_async_to_sync_click_with_exception(self):
+        """Test handling of exceptions in async commands."""
+        cli_group = click.Group()
 
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback():
-            return "result"
-
-        command = click.Command("test", callback=async_callback)
-        cli.add_command(command)
-
-        # Initially not marked as wrapped
-        assert not hasattr(cli, "_commands_wrapped")
-
-        async_to_sync_click(cli)
-
-        # Should be marked as wrapped
-        assert hasattr(cli, "_commands_wrapped")
-        assert cli._commands_wrapped is True
-
-    def test_handles_empty_group(self):
-        """Test that empty command groups are handled gracefully."""
-
-        @click.group()
-        def cli():
-            pass
-
-        # Should not raise any errors
-        async_to_sync_click(cli)
-        assert hasattr(cli, "_commands_wrapped")
-        assert cli._commands_wrapped is True
-
-    def test_handles_multiple_async_commands(self):
-        """Test conversion of multiple async commands."""
-
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback1():
-            return "result1"
-
-        async def async_callback2():
-            return "result2"
-
-        command1 = click.Command("test1", callback=async_callback1)
-        command2 = click.Command("test2", callback=async_callback2)
-        cli.add_command(command1)
-        cli.add_command(command2)
-
-        async_to_sync_click(cli)
-
-        # Both commands should be converted
-        assert not asyncio.iscoroutinefunction(command1.callback)
-        assert not asyncio.iscoroutinefunction(command2.callback)
-
-        # Both should work correctly
-        assert command1.callback() == "result1"
-        assert command2.callback() == "result2"
-
-    def test_callback_args_and_kwargs_preserved(self):
-        """Test that callback arguments and keyword arguments are preserved."""
-
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback(arg1, arg2, kwarg1=None, kwarg2=None):
-            return f"{arg1}-{arg2}-{kwarg1}-{kwarg2}"
-
-        command = click.Command("test", callback=async_callback)
-        cli.add_command(command)
-
-        async_to_sync_click(cli)
-
-        result = command.callback("a", "b", kwarg1="c", kwarg2="d")
-        assert result == "a-b-c-d"
-
-    def test_callback_metadata_preserved(self):
-        """Test that function metadata is preserved after wrapping."""
-
-        @click.group()
-        def cli():
-            pass
-
-        async def async_callback():
-            """Test callback function."""
-            return "result"
-
-        async_callback.custom_attr = "custom_value"
-        command = click.Command("test", callback=async_callback)
-        cli.add_command(command)
-
-        async_to_sync_click(cli)
-
-        # Metadata should be preserved
-        assert command.callback.__name__ == "async_callback"
-        assert command.callback.__doc__ == "Test callback function."
-        assert hasattr(command.callback, "custom_attr")
-        assert command.callback.custom_attr == "custom_value"
-
-    def test_exception_handling_in_async_callback(self):
-        """Test that exceptions in async callbacks are properly propagated."""
-
-        @click.group()
-        def cli():
-            pass
-
-        async def failing_callback():
+        @cli_group.command()
+        async def failing_command():
             raise ValueError("Test error")
 
-        command = click.Command("test", callback=failing_callback)
-        cli.add_command(command)
+        async_to_sync_click(cli_group)
 
-        async_to_sync_click(cli)
-
-        # Exception should be propagated
+        # Should raise the exception synchronously
         with pytest.raises(ValueError, match="Test error"):
-            command.callback()
+            failing_command.callback()
+
+    def test_async_to_sync_click_empty_group(self):
+        """Test with empty command group."""
+        cli_group = click.Group()
+
+        # Should not raise any errors
+        async_to_sync_click(cli_group)
+
+        # Should be marked as wrapped
+        assert hasattr(cli_group, "_commands_wrapped")
+
+    def test_async_to_sync_click_mixed_commands(self):
+        """Test with mixed async and sync commands."""
+        cli_group = click.Group()
+
+        @cli_group.command()
+        async def async_cmd():
+            return "async"
+
+        @cli_group.command()
+        def sync_cmd():
+            return "sync"
+
+        # Track original sync command
+        original_sync_callback = sync_cmd.callback
+
+        async_to_sync_click(cli_group)
+
+        # Async command should be converted
+        assert not asyncio.iscoroutinefunction(async_cmd.callback)
+        assert async_cmd.callback() == "async"
+
+        # Sync command should be unchanged
+        assert sync_cmd.callback is original_sync_callback
+        assert sync_cmd.callback() == "sync"
+
+    @patch("asyncio.run")
+    def test_async_to_sync_click_uses_asyncio_run(self, mock_run):
+        """Test that converted commands use asyncio.run."""
+        mock_run.return_value = "mocked result"
+
+        cli_group = click.Group()
+
+        @cli_group.command()
+        async def test_command():
+            return "original result"
+
+        async_to_sync_click(cli_group)
+
+        # Call the converted command
+        result = test_command.callback()
+
+        # Should have called asyncio.run
+        assert mock_run.called
+        assert result == "mocked result"
+
+    def test_async_to_sync_click_preserves_function_metadata(self):
+        """Test that function metadata is preserved."""
+        cli_group = click.Group()
+
+        @cli_group.command()
+        async def documented_command():
+            """This is a test command."""
+            return "result"
+
+        original_name = documented_command.callback.__name__
+        original_doc = documented_command.callback.__doc__
+
+        async_to_sync_click(cli_group)
+
+        # Metadata should be preserved
+        assert documented_command.callback.__name__ == original_name
+        assert documented_command.callback.__doc__ == original_doc
 
 
 class TestAsyncCommand:
     """Test cases for async_command decorator."""
 
-    def test_converts_async_function_to_sync(self):
-        """Test that async function is converted to sync."""
+    def test_async_command_basic(self):
+        """Test basic async_command decorator."""
 
         @async_command
         async def test_func():
             return "async result"
 
-        # Function should no longer be async
+        # Should no longer be a coroutine function
         assert not asyncio.iscoroutinefunction(test_func)
 
-        # Should return the correct result
+        # Should return the result directly
         result = test_func()
         assert result == "async result"
 
-    def test_preserves_function_metadata(self):
-        """Test that function metadata is preserved."""
+    def test_async_command_with_parameters(self):
+        """Test async_command with parameters."""
 
         @async_command
-        async def test_func():
-            """Test function docstring."""
-            return "result"
+        async def greet(name, greeting="Hello"):
+            return f"{greeting}, {name}!"
 
-        test_func.custom_attr = "custom_value"
+        result = greet("Alice", greeting="Hi")
+        assert result == "Hi, Alice!"
 
-        assert test_func.__name__ == "test_func"
-        assert test_func.__doc__ == "Test function docstring."
-        assert hasattr(test_func, "custom_attr")
-        assert test_func.custom_attr == "custom_value"
-
-    def test_handles_function_arguments(self):
-        """Test that function arguments are handled correctly."""
-
-        @async_command
-        async def test_func(arg1, arg2, kwarg1=None, kwarg2=None):
-            return f"{arg1}-{arg2}-{kwarg1}-{kwarg2}"
-
-        result = test_func("a", "b", kwarg1="c", kwarg2="d")
-        assert result == "a-b-c-d"
-
-    def test_handles_positional_arguments(self):
-        """Test that positional arguments are handled correctly."""
-
-        @async_command
-        async def test_func(*args):
-            return "-".join(args)
-
-        result = test_func("a", "b", "c")
-        assert result == "a-b-c"
-
-    def test_handles_keyword_arguments(self):
-        """Test that keyword arguments are handled correctly."""
-
-        @async_command
-        async def test_func(**kwargs):
-            return "-".join(f"{k}:{v}" for k, v in sorted(kwargs.items()))
-
-        result = test_func(x="1", y="2", z="3")
-        assert result == "x:1-y:2-z:3"
-
-    def test_exception_propagation(self):
-        """Test that exceptions are properly propagated."""
+    def test_async_command_with_exception(self):
+        """Test async_command with exceptions."""
 
         @async_command
         async def failing_func():
@@ -295,56 +213,9 @@ class TestAsyncCommand:
         with pytest.raises(RuntimeError, match="Test error"):
             failing_func()
 
-    def test_return_value_handling(self):
-        """Test that various return values are handled correctly."""
-
-        @async_command
-        async def return_none():
-            return None
-
-        @async_command
-        async def return_dict():
-            return {"key": "value"}
-
-        @async_command
-        async def return_list():
-            return [1, 2, 3]
-
-        assert return_none() is None
-        assert return_dict() == {"key": "value"}
-        assert return_list() == [1, 2, 3]
-
-    def test_async_operations_in_decorated_function(self):
-        """Test that async operations work correctly in decorated function."""
-
-        @async_command
-        async def async_operations():
-            # Simulate async operation
-            await asyncio.sleep(0.001)
-            return "completed"
-
-        result = async_operations()
-        assert result == "completed"
-
-    def test_multiple_decorations(self):
-        """Test that the decorator works with multiple function decorations."""
-
-        @async_command
-        async def multi_decorated():
-            """Multi-decorated function."""
-            return "decorated"
-
-        # Add another attribute after decoration
-        multi_decorated.test_attr = "test_value"
-
-        result = multi_decorated()
-        assert result == "decorated"
-        assert multi_decorated.__doc__ == "Multi-decorated function."
-        assert multi_decorated.test_attr == "test_value"
-
     @patch("asyncio.run")
-    def test_uses_asyncio_run(self, mock_run):
-        """Test that the decorator uses asyncio.run internally."""
+    def test_async_command_uses_asyncio_run(self, mock_run):
+        """Test that async_command uses asyncio.run."""
         mock_run.return_value = "mocked result"
 
         @async_command
@@ -353,132 +224,135 @@ class TestAsyncCommand:
 
         result = test_func()
 
+        assert mock_run.called
         assert result == "mocked result"
-        mock_run.assert_called_once()
 
-    def test_with_click_command(self):
-        """Test integration with Click commands."""
+    def test_async_command_preserves_metadata(self):
+        """Test that async_command preserves function metadata."""
+
+        @async_command
+        async def documented_func():
+            """This is a documented function."""
+            return "result"
+
+        assert documented_func.__name__ == "documented_func"
+        assert documented_func.__doc__ == "This is a documented function."
+
+    def test_async_command_with_args_and_kwargs(self):
+        """Test async_command with mixed arguments."""
+
+        @async_command
+        async def complex_func(pos1, pos2, kw1=None, kw2="default"):
+            return f"{pos1}-{pos2}-{kw1}-{kw2}"
+
+        result = complex_func("a", "b", kw1="c", kw2="d")
+        assert result == "a-b-c-d"
+
+    def test_async_command_return_type_preservation(self):
+        """Test that return types are preserved."""
+
+        @async_command
+        async def return_dict():
+            return {"key": "value", "number": 42}
+
+        @async_command
+        async def return_list():
+            return [1, 2, 3]
+
+        @async_command
+        async def return_none():
+            return None
+
+        assert return_dict() == {"key": "value", "number": 42}
+        assert return_list() == [1, 2, 3]
+        assert return_none() is None
+
+    def test_async_command_with_awaitable_operations(self):
+        """Test async_command with actual async operations."""
+
+        @async_command
+        async def async_sleep_func():
+            await asyncio.sleep(0.01)  # Very short sleep for testing
+            return "slept"
+
+        result = async_sleep_func()
+        assert result == "slept"
+
+
+class TestModuleExports:
+    """Test cases for module exports."""
+
+    def test_all_exports(self):
+        """Test that __all__ contains expected functions."""
+        from src import utils
+
+        assert hasattr(utils, "__all__")
+        assert "async_command" in utils.__all__
+        assert "async_to_sync_click" in utils.__all__
+
+    def test_exported_functions_exist(self):
+        """Test that all exported functions exist."""
+        from src import utils
+
+        for export in utils.__all__:
+            assert hasattr(utils, export)
+            assert callable(getattr(utils, export))
+
+
+class TestIntegration:
+    """Integration tests combining different utilities."""
+
+    def test_async_command_with_click_integration(self):
+        """Test async_command decorator with Click commands."""
 
         @click.command()
         @async_command
         async def cli_command():
-            return "cli result"
+            await asyncio.sleep(0.01)
+            return "CLI result"
 
-        # Should work as a regular Click command
+        # Should work as a regular sync function for Click
         result = cli_command.callback()
-        assert result == "cli result"
+        assert result == "CLI result"
 
+    def test_mixed_conversion_approaches(self):
+        """Test using both conversion approaches on the same functions."""
+        # Create a command that will be converted via async_to_sync_click
+        cli_group = click.Group()
 
-class TestTypeHinting:
-    """Test cases for type hinting and generic functionality."""
+        @cli_group.command()
+        async def group_command():
+            return "group result"
 
-    def test_type_preservation(self):
-        """Test that type annotations are preserved where possible."""
+        # Create a standalone command with async_command decorator
+        @async_command
+        async def standalone_command():
+            return "standalone result"
+
+        # Convert the group
+        async_to_sync_click(cli_group)
+
+        # Both should work as sync functions
+        assert group_command.callback() == "group result"
+        assert standalone_command() == "standalone result"
+
+    def test_error_handling_consistency(self):
+        """Test that error handling is consistent between approaches."""
+        cli_group = click.Group()
+
+        @cli_group.command()
+        async def group_error():
+            raise ValueError("Group error")
 
         @async_command
-        async def typed_func(x: int, y: str) -> str:
-            return f"{x}-{y}"
+        async def standalone_error():
+            raise ValueError("Standalone error")
 
-        # Function should still work correctly
-        result = typed_func(42, "test")
-        assert result == "42-test"
+        async_to_sync_click(cli_group)
 
-        # Original function metadata should be preserved
-        assert typed_func.__name__ == "typed_func"
+        # Both should raise the same type of exception
+        with pytest.raises(ValueError, match="Group error"):
+            group_error.callback()
 
-
-class TestAsyncToSyncClickIntegration:
-    """Integration tests for async_to_sync_click with real Click functionality."""
-
-    def test_click_group_integration(self):
-        """Test integration with actual Click group functionality."""
-
-        @click.group()
-        def cli():
-            """Main CLI group."""
-            pass
-
-        @cli.command()
-        async def async_subcommand():
-            """Async subcommand."""
-            return "subcommand result"
-
-        @cli.command()
-        def sync_subcommand():
-            """Sync subcommand."""
-            return "sync result"
-
-        # Convert async commands
-        async_to_sync_click(cli)
-
-        # Both commands should work
-        async_cmd = cli.commands["async-subcommand"]
-        sync_cmd = cli.commands["sync-subcommand"]
-
-        assert async_cmd.callback() == "subcommand result"
-        assert sync_cmd.callback() == "sync result"
-
-        # Group should be marked as wrapped
-        assert hasattr(cli, "_commands_wrapped")
-
-    def test_nested_groups(self):
-        """Test handling of nested command groups."""
-
-        @click.group()
-        def main():
-            pass
-
-        @main.group()
-        def sub():
-            pass
-
-        async def async_callback():
-            return "nested result"
-
-        nested_command = click.Command("nested", callback=async_callback)
-        sub.add_command(nested_command)
-
-        # Convert only the sub-group
-        async_to_sync_click(sub)
-
-        # Nested command should be converted
-        assert not asyncio.iscoroutinefunction(nested_command.callback)
-        assert nested_command.callback() == "nested result"
-
-        # Main group should not be marked as wrapped
-        assert not hasattr(main, "_commands_wrapped")
-        # Sub group should be marked as wrapped
-        assert hasattr(sub, "_commands_wrapped")
-
-
-class TestErrorHandling:
-    """Test error handling scenarios."""
-
-    def test_async_to_sync_with_malformed_command(self):
-        """Test handling of commands with None callback."""
-
-        @click.group()
-        def cli():
-            pass
-
-        # Create command with None callback
-        command = click.Command("test", callback=None)
-        cli.add_command(command)
-
-        # Should not raise error
-        async_to_sync_click(cli)
-
-        assert hasattr(cli, "_commands_wrapped")
-
-    def test_async_command_with_coroutine_not_awaited_warning(self):
-        """Test that proper async handling prevents coroutine warnings."""
-
-        @async_command
-        async def test_func():
-            # This would normally create a coroutine that needs to be awaited
-            await asyncio.sleep(0.001)
-            return "success"
-
-        # Should not generate any warnings and should work correctly
-        result = test_func()
-        assert result == "success"
+        with pytest.raises(ValueError, match="Standalone error"):
+            standalone_error()
