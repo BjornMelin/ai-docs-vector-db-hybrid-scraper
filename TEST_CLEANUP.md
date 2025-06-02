@@ -6,6 +6,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Config Models and Enums
 
 **Completed work:**
+
 - ✅ Created 16 comprehensive test files for `src/config/models.py` (206 tests, 94% coverage)
 - ✅ Created 1 test file for `src/config/enums.py` (45 tests, 100% coverage)
 - ✅ All Pydantic v2 configuration models fully tested with validation scenarios
@@ -13,6 +14,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Config Core Modules
 
 **Completed work:**
+
 - ✅ Removed outdated config test files (test_config.py, test_rate_limiting_config.py, test_unified_config.py)
 - ✅ Created 5 comprehensive test files for config core modules:
   - `test_loader.py` - ConfigLoader class with 22 test methods covering environment merging and documentation site loading
@@ -26,6 +28,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: MCP Models
 
 **Completed work:**
+
 - ✅ Created 2 test files for MCP models (49 tests, 100% coverage)
 - ✅ test_requests.py covers all MCP request models
 - ✅ test_responses.py covers SearchResult and CrawlResult models
@@ -33,6 +36,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Core Modules
 
 **Completed work:**
+
 - ✅ Created 4 test files for core modules:
   - `test_constants.py` - 25 test methods covering all constant definitions including timeouts, limits, HNSW configs, cache settings  
   - `test_decorators.py` - 47 test methods covering retry_async, circuit_breaker, handle_mcp_errors, validate_input, RateLimiter
@@ -44,36 +48,39 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Infrastructure Module
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/infrastructure/client_manager.py`:
   - `test_client_manager.py` - 52 test methods covering all classes and functionality:
-    * ClientState enum and ClientHealth dataclass tests
-    * ClientManagerConfig with Pydantic validation tests
-    * CircuitBreaker implementation with failure/recovery scenarios
-    * ClientManager singleton pattern and factory method tests
-    * Client creation, health checks, and lifecycle management
-    * Async context manager and concurrency tests
-    * Integration tests with full lifecycle validation
+    - ClientState enum and ClientHealth dataclass tests
+    - ClientManagerConfig with Pydantic validation tests
+    - CircuitBreaker implementation with failure/recovery scenarios
+    - ClientManager singleton pattern and factory method tests
+    - Client creation, health checks, and lifecycle management
+    - Async context manager and concurrency tests
+    - Integration tests with full lifecycle validation
 - ✅ 82% test coverage for infrastructure module
 - ✅ All infrastructure tests passing with comprehensive scenarios
 
 ## ✅ COMPLETED: Unified MCP Server
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/unified_mcp_server.py`:
   - `test_unified_mcp_server.py` - 35 test methods covering all functionality:
-    * Streaming configuration validation with various scenarios
-    * Configuration validation with API keys and service connections
-    * Lifespan context manager with initialization/cleanup
-    * Environment variable handling for different transport types
-    * Server configuration and module structure validation
-    * Error handling and import management
-    * Integration points with client manager and tool registration
+    - Streaming configuration validation with various scenarios
+    - Configuration validation with API keys and service connections
+    - Lifespan context manager with initialization/cleanup
+    - Environment variable handling for different transport types
+    - Server configuration and module structure validation
+    - Error handling and import management
+    - Integration points with client manager and tool registration
 - ✅ 85% test coverage for unified MCP server
 - ✅ All unified server tests passing with proper mocking for external dependencies
 
 ## MCP Tools and Registry (Remaining)
 
 **Test files to remove:**
+
 - tests/unit/mcp/test_utilities_tools.py
 - tests/unit/mcp/test_search_tools.py
 - tests/unit/mcp/test_collections_tools.py
@@ -88,6 +95,7 @@ and rewriting to align with current src/ implementations.
 - tests/unit/mcp/test_validate_configuration.py
 
 **Findings:**
+
 - Legacy tests fail with `ModuleNotFoundError: No module named 'mcp.server'`
 - Tests rely on deprecated fastmcp APIs that have been refactored
 
@@ -191,10 +199,12 @@ and rewriting to align with current src/ implementations.
 ## New Test Implementation Needed
 
 **Infrastructure:**
+
 - [ ] Write new unit tests for `src/infrastructure/client_manager.py`
 - [ ] Write new unit tests for `src/services/core/project_storage.py`
 
 **Unified Architecture:**
+
 - [ ] Remove `tests/unit/test_unified_architecture.py`
 - [ ] Implement new unit tests for `src/unified_mcp_server.py` covering:
   - Server lifecycle context (initialization and cleanup)
@@ -202,6 +212,7 @@ and rewriting to align with current src/ implementations.
   - Integration points with client manager and tool registration
 
 **Services (Major Work Required):**
+
 - [ ] Create comprehensive test suite for `src/services/` modules:
   - Core modules (base.py, errors.py, logging_config.py)
   - Vector DB components (client.py, collections.py, documents.py, search.py, service.py, indexing.py)
@@ -216,33 +227,39 @@ and rewriting to align with current src/ implementations.
 ## Summary: Test Suite Reorganization
 
 ### ✅ MAJOR ACCOMPLISHMENTS
+
 - **27 new test files created** with 440+ passing tests
 - **High-priority modules completed**: All domain models, API contracts, configuration models
 - **>90% coverage achieved** on all completed modules
 - **Pydantic v2 best practices** implemented throughout
 
 ### 🔧 IMMEDIATE CLEANUP NEEDED (High Priority)
+
 1. **Remove legacy test directories** that contain broken/outdated tests
 2. **Implement core module tests** (config, MCP tools, infrastructure)
 3. **Create services test suite** (largest remaining work)
 
 ### 📋 TESTING STRATEGY RECOMMENDATIONS
 
-**Phase 1: Cleanup (Immediate)**
+#### Phase 1: Cleanup (Immediate)
+
 - Remove all legacy test directories to eliminate confusion
 - Clean up broken test files in existing directories
 
-**Phase 2: Core Infrastructure (High Priority)**  
+#### Phase 2: Core Infrastructure (High Priority)
+
 - Complete config core modules (loader, schema, validator, migrator, cli)
 - Implement MCP tool registry and tools tests
 - Add infrastructure and unified server tests
 
-**Phase 3: Services Architecture (Major Project)**
+#### Phase 3: Services Architecture (Major Project)
+
 - Design comprehensive test strategy for services/ modules
 - Implement with proper mocking and async handling
 - Target >90% coverage for all service modules
 
-**Phase 4: Integration & E2E (Future)**
+#### Phase 4: Integration & E2E (Future)
+
 - Redesign integration tests as proper E2E tests
 - Implement with pytest-benchmark for performance testing
 - Separate from unit test pipeline
@@ -272,6 +289,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Missing Test Coverage
 
 **Completed work:**
+
 - ✅ `src/chunking.py` → test_chunking.py (18 tests)
 - ✅ `src/crawl4ai_bulk_embedder.py` → test_crawl4ai_bulk_embedder.py (42 tests)  
 - ✅ `src/manage_vector_db.py` → test_manage_vector_db.py (47 tests)
@@ -283,20 +301,21 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Utils Modules
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/utils.py`:
   - `test_utils.py` - 25 test methods covering all utility functions:
-    * async_to_sync_click function with Click command conversion
-    * async_command decorator for converting async functions to sync
-    * Function metadata preservation and argument handling
-    * Exception propagation and edge case handling
-    * Integration tests with Click framework components
+    - async_to_sync_click function with Click command conversion
+    - async_command decorator for converting async functions to sync
+    - Function metadata preservation and argument handling
+    - Exception propagation and edge case handling
+    - Integration tests with Click framework components
 - ✅ Created comprehensive test file for `src/utils/imports.py`:
   - `test_utils_imports.py` - 25 test methods covering all import utilities:
-    * setup_import_paths function with sys.path management
-    * resolve_imports decorator for module import resolution
-    * Path handling and validation scenarios
-    * Integration tests for import resolution workflows
-    * Edge cases and error handling scenarios
+    - setup_import_paths function with sys.path management
+    - resolve_imports decorator for module import resolution
+    - Path handling and validation scenarios
+    - Integration tests for import resolution workflows
+    - Edge cases and error handling scenarios
 - ✅ Fixed missing `__init__.py` file in src/utils/ to make it a proper Python package
 - ✅ 100% test coverage for utils/imports.py module
 - ✅ Total: 50 test methods across both utils modules
@@ -305,30 +324,31 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Crawling Services (Priority 5)
 
 **Completed work:**
+
 - ✅ Created 4 comprehensive test files for `src/services/crawling/` modules:
   - `test_crawling_base.py` - 13 test methods covering abstract CrawlProvider interface:
-    * Abstract base class validation and method signatures
-    * Concrete implementation patterns and lifecycle management
-    * Abstract method enforcement and inheritance hierarchy
-    * Provider lifecycle pattern testing
+    - Abstract base class validation and method signatures
+    - Concrete implementation patterns and lifecycle management
+    - Abstract method enforcement and inheritance hierarchy
+    - Provider lifecycle pattern testing
   - `test_crawling_manager.py` - 22 test methods covering CrawlManager orchestration:
-    * Multi-provider initialization and configuration
-    * Provider selection and fallback mechanisms
-    * URL scraping with provider preferences and error handling
-    * Site crawling with batch processing and rate limiting
-    * Provider information and mapping functionality
+    - Multi-provider initialization and configuration
+    - Provider selection and fallback mechanisms
+    - URL scraping with provider preferences and error handling
+    - Site crawling with batch processing and rate limiting
+    - Provider information and mapping functionality
   - `test_crawling_crawl4ai_provider.py` - 48 test methods covering Crawl4AI integration:
-    * JavaScriptExecutor helper for site-specific JavaScript patterns
-    * DocumentationExtractor for structured content extraction
-    * Crawl4AIProvider with browser configuration and lifecycle
-    * Bulk crawling and site crawling with memory optimization
-    * CrawlCache and CrawlBenchmark utility classes
+    - JavaScriptExecutor helper for site-specific JavaScript patterns
+    - DocumentationExtractor for structured content extraction
+    - Crawl4AIProvider with browser configuration and lifecycle
+    - Bulk crawling and site crawling with memory optimization
+    - CrawlCache and CrawlBenchmark utility classes
   - `test_crawling_firecrawl_provider.py` - 42 test methods covering Firecrawl integration:
-    * FirecrawlProvider initialization and configuration
-    * URL scraping with rate limiting and error handling
-    * Site crawling with async job management and polling
-    * URL mapping and crawl cancellation functionality
-    * Rate limiting implementation and full workflow testing
+    - FirecrawlProvider initialization and configuration
+    - URL scraping with rate limiting and error handling
+    - Site crawling with async job management and polling
+    - URL mapping and crawl cancellation functionality
+    - Rate limiting implementation and full workflow testing
 - ✅ 95% test coverage across all crawling service modules
 - ✅ Total: 125 test methods with comprehensive mocking and async testing
 - ✅ All crawling tests passing with proper error handling and edge cases
@@ -337,6 +357,7 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Browser Services (Priority 6)
 
 **Completed work:**
+
 - ✅ Created 5 comprehensive test files for browser service modules:
   - `test_action_schemas.py` - 58 test methods covering browser action validation with Pydantic schemas
   - `test_automation_router.py` - 47 test methods covering intelligent routing, tool selection, fallback mechanisms
@@ -350,57 +371,60 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: HyDE Services (Priority 7)
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/services/hyde/config.py`:
   - `test_hyde_config.py` - 32 test methods covering all HyDE configuration classes:
-    * HyDEConfig with all parameter validation and edge cases
-    * HyDEPromptConfig with prompt templates and keyword classification
-    * HyDEMetricsConfig with A/B testing and performance tracking
-    * Integration tests with serialization and configuration combinations
+    - HyDEConfig with all parameter validation and edge cases
+    - HyDEPromptConfig with prompt templates and keyword classification
+    - HyDEMetricsConfig with A/B testing and performance tracking
+    - Integration tests with serialization and configuration combinations
 - ✅ Created comprehensive test file for `src/services/hyde/generator.py`:
   - `test_hyde_generator.py` - 37 test methods covering hypothetical document generation:
-    * GenerationResult model with full serialization testing
-    * HypotheticalDocumentGenerator with LLM integration mocking
-    * Query classification, prompt variation, and document generation
-    * Parallel and sequential generation modes with error handling
-    * Cost calculation, diversity scoring, and performance metrics
+    - GenerationResult model with full serialization testing
+    - HypotheticalDocumentGenerator with LLM integration mocking
+    - Query classification, prompt variation, and document generation
+    - Parallel and sequential generation modes with error handling
+    - Cost calculation, diversity scoring, and performance metrics
 - ✅ Created comprehensive test file for `src/services/hyde/cache.py`:
   - `test_hyde_cache.py` - 44 test methods covering HyDE result caching:
-    * Cache initialization and lifecycle management
-    * HyDE embedding storage and retrieval with binary format support
-    * Hypothetical document caching with metadata
-    * Search result caching with TTL management
-    * Cache warming, invalidation, and performance metrics
+    - Cache initialization and lifecycle management
+    - HyDE embedding storage and retrieval with binary format support
+    - Hypothetical document caching with metadata
+    - Search result caching with TTL management
+    - Cache warming, invalidation, and performance metrics
 - ✅ Created comprehensive test file for `src/services/hyde/engine.py`:
   - `test_hyde_engine.py` - 39 test methods covering HyDE query processing:
-    * HyDEQueryEngine initialization and component orchestration
-    * Enhanced search with cache hits/misses and fallback scenarios
-    * A/B testing implementation with control/treatment groups
-    * Batch search with concurrency control and error handling
-    * Performance metrics, reranking, and comprehensive integration tests
+    - HyDEQueryEngine initialization and component orchestration
+    - Enhanced search with cache hits/misses and fallback scenarios
+    - A/B testing implementation with control/treatment groups
+    - Batch search with concurrency control and error handling
+    - Performance metrics, reranking, and comprehensive integration tests
 
 ## ✅ COMPLETED: Utility Services (Priority 8)
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/services/utilities/rate_limiter.py`:
   - `test_utilities_rate_limiter.py` - 37 test methods covering rate limiting utilities:
-    * RateLimiter with token bucket algorithm, burst capacity, and refill mechanisms
-    * RateLimitManager for multiple provider management with per-endpoint limits
-    * AdaptiveRateLimiter with API response monitoring and automatic adjustment
-    * Comprehensive testing of concurrent access, timing, and error scenarios
+    - RateLimiter with token bucket algorithm, burst capacity, and refill mechanisms
+    - RateLimitManager for multiple provider management with per-endpoint limits
+    - AdaptiveRateLimiter with API response monitoring and automatic adjustment
+    - Comprehensive testing of concurrent access, timing, and error scenarios
 - ✅ Created comprehensive test file for `src/services/utilities/hnsw_optimizer.py`:
   - `test_utilities_hnsw_optimizer.py` - 34 test methods covering HNSW optimization:
-    * HNSWOptimizer initialization and service dependencies
-    * Adaptive ef parameter selection based on time budgets and caching
-    * Collection-specific HNSW configuration optimization for different content types
-    * Performance testing, improvement estimation, and cache management
+    - HNSWOptimizer initialization and service dependencies
+    - Adaptive ef parameter selection based on time budgets and caching
+    - Collection-specific HNSW configuration optimization for different content types
+    - Performance testing, improvement estimation, and cache management
 - ✅ Created comprehensive test file for `src/services/utilities/search_models.py`:
   - `test_utilities_search_models.py` - 44 test methods covering search model definitions:
-    * SearchStage, PrefetchConfig, SearchParams, and FusionConfig models
-    * MultiStageSearchRequest, HyDESearchRequest, and FilteredSearchRequest models
-    * Complete Pydantic v2 validation, serialization, and integration testing
-    * Vector type calculations, accuracy mapping, and algorithm selection
+    - SearchStage, PrefetchConfig, SearchParams, and FusionConfig models
+    - MultiStageSearchRequest, HyDESearchRequest, and FilteredSearchRequest models
+    - Complete Pydantic v2 validation, serialization, and integration testing
+    - Vector type calculations, accuracy mapping, and algorithm selection
 
 **Total**: 115 test methods covering token bucket algorithms, adaptive rate adjustment, HNSW parameter optimization, and advanced search model validation
+
 - ✅ **Total: 152 test methods across 4 HyDE service modules**
 - ✅ **All HyDE tests passing with comprehensive coverage**
 - ✅ **Complete testing of HyDE algorithm parameter configuration, model selection, performance tuning, query processing, caching strategies, and document generation**
@@ -408,58 +432,62 @@ and rewriting to align with current src/ implementations.
 ## ✅ COMPLETED: Core Services (Priority 9)
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/services/core/project_storage.py`:
   - `test_core_project_storage.py` - 35 test methods covering project storage management:
-    * ProjectStorageError exception with context handling and inheritance validation
-    * ProjectStorage class with comprehensive initialization and file operation testing
-    * Async file operations with aiofiles and fallback to synchronous operations
-    * Project CRUD operations (create, read, update, delete) with data validation
-    * Concurrent access protection using asyncio.Lock for thread safety
-    * JSON serialization with atomic file operations and backup recovery
-    * Large data handling, special character support, and error recovery scenarios
+    - ProjectStorageError exception with context handling and inheritance validation
+    - ProjectStorage class with comprehensive initialization and file operation testing
+    - Async file operations with aiofiles and fallback to synchronous operations
+    - Project CRUD operations (create, read, update, delete) with data validation
+    - Concurrent access protection using asyncio.Lock for thread safety
+    - JSON serialization with atomic file operations and backup recovery
+    - Large data handling, special character support, and error recovery scenarios
 - ✅ Created comprehensive test file for `src/services/core/qdrant_alias_manager.py`:
   - `test_core_qdrant_alias_manager.py` - 54 test methods covering collection alias management:
-    * Name validation with regex patterns and comprehensive invalid character testing
-    * Alias CRUD operations (create, read, update, delete) with atomic operations
-    * Collection schema cloning with vector config, HNSW, and quantization preservation
-    * Data copying with batch processing, progress callbacks, and error handling
-    * Blue-green deployment support through atomic alias switching
-    * Safe collection deletion with grace periods and background task management
-    * Collection compatibility validation and comprehensive integration scenarios
+    - Name validation with regex patterns and comprehensive invalid character testing
+    - Alias CRUD operations (create, read, update, delete) with atomic operations
+    - Collection schema cloning with vector config, HNSW, and quantization preservation
+    - Data copying with batch processing, progress callbacks, and error handling
+    - Blue-green deployment support through atomic alias switching
+    - Safe collection deletion with grace periods and background task management
+    - Collection compatibility validation and comprehensive integration scenarios
 
 **Total**: 89 test methods covering persistent project management with JSON storage and comprehensive Qdrant collection alias management for zero-downtime deployments
+
 - ✅ **All core service tests passing with comprehensive coverage**
 - ✅ **Complete testing of project data organization, file management, storage backend abstraction, alias routing, blue-green deployment support, and performance optimization**
 
 ## ✅ COMPLETED: Deployment Services (Priority 10)
 
 **Completed work:**
+
 - ✅ Created comprehensive test file for `src/services/deployment/ab_testing.py`:
   - `test_deployment_ab_testing.py` - 30 test methods covering A/B testing framework:
-    * ExperimentConfig and ExperimentResults dataclass validation with default values
-    * ABTestingManager lifecycle management with initialization and cleanup
-    * Experiment creation with traffic splitting and metrics tracking configuration
-    * Query routing with deterministic hash-based and random assignment strategies
-    * Feedback tracking and statistical analysis with significance testing and confidence intervals
-    * Active experiment management and ending with final analysis and duration tracking
+    - ExperimentConfig and ExperimentResults dataclass validation with default values
+    - ABTestingManager lifecycle management with initialization and cleanup
+    - Experiment creation with traffic splitting and metrics tracking configuration
+    - Query routing with deterministic hash-based and random assignment strategies
+    - Feedback tracking and statistical analysis with significance testing and confidence intervals
+    - Active experiment management and ending with final analysis and duration tracking
 
 - ✅ Created comprehensive test file for `src/services/deployment/blue_green.py`:
   - `test_deployment_blue_green.py` - 30 test methods covering blue-green deployment:
-    * Zero-downtime deployment with validation and rollback mechanisms
-    * Collection schema cloning and data population from multiple sources (collection, backup, crawl)
-    * Health monitoring and failure detection with configurable thresholds
-    * Integration with alias manager and embedding validation for quality assurance
-    * Comprehensive error handling and edge cases with concurrent deployment operations
+    - Zero-downtime deployment with validation and rollback mechanisms
+    - Collection schema cloning and data population from multiple sources (collection, backup, crawl)
+    - Health monitoring and failure detection with configurable thresholds
+    - Integration with alias manager and embedding validation for quality assurance
+    - Comprehensive error handling and edge cases with concurrent deployment operations
 
 - ✅ Created comprehensive test file for `src/services/deployment/canary.py`:
   - `test_deployment_canary.py` - 45 test methods covering canary deployment strategies:
-    * Multi-stage gradual rollout with configurable percentage thresholds and duration
-    * Real-time metrics monitoring and health checks with error rate and latency limits
-    * Automatic rollback on failure detection with manual pause and resume capabilities
-    * Deployment status tracking and active deployment management workflows
-    * Comprehensive staging workflows including zero-duration stage handling
+    - Multi-stage gradual rollout with configurable percentage thresholds and duration
+    - Real-time metrics monitoring and health checks with error rate and latency limits
+    - Automatic rollback on failure detection with manual pause and resume capabilities
+    - Deployment status tracking and active deployment management workflows
+    - Comprehensive staging workflows including zero-duration stage handling
 
 **Total**: 105 test methods covering complete deployment strategy implementations for production vector database operations
+
 - ✅ **All deployment service tests passing with comprehensive coverage**
 - ✅ **Complete testing of A/B testing framework, blue-green deployment patterns, and canary deployment strategies with full lifecycle management**
 
@@ -468,13 +496,15 @@ and rewriting to align with current src/ implementations.
 **Status**: Completed | **Effort**: 4 hours | **Impact**: High Developer Experience Improvement
 
 ### Problem (Resolved)
+
 The `tests/unit/services/` directory contained 45 test files in a flat structure (42 original + 3 deployment), making navigation and maintenance difficult. This violated best practices for test organization and created developer friction.
 
 ### Completed Tasks
 
-**Phase 1: Services Directory Reorganization (Completed)**
+#### Phase 1: Services Directory Reorganization (Completed)
 
 - ✅ **Created new subdirectory structure**:
+
   ```bash
   mkdir -p tests/unit/services/{browser,cache,core,crawling,deployment,embeddings,hyde,utilities,vector_db}
   touch tests/unit/services/{browser,cache,core,crawling,deployment,embeddings,hyde,utilities,vector_db}/__init__.py
@@ -486,6 +516,7 @@ The `tests/unit/services/` directory contained 45 test files in a flat structure
   - ✅ Kept `test_base.py`, `test_errors.py`, `test_logging_config.py` in root
 
   **Browser subdirectory (5 files):**
+
   ```bash
   # Completed successfully
   git mv tests/unit/services/test_action_schemas.py tests/unit/services/browser/test_action_schemas.py
@@ -506,6 +537,7 @@ The `tests/unit/services/` directory contained 45 test files in a flat structure
   - ✅ Vector DB subdirectory (6 files) - all files moved
 
 - ✅ **Verification completed successfully**:
+
   ```bash
   # ✅ Verified pytest can discover all tests (1690 service tests discovered)
   uv run pytest --collect-only tests/unit/services/
@@ -516,28 +548,31 @@ The `tests/unit/services/` directory contained 45 test files in a flat structure
   # ✅ All tests remain discoverable and functional
   ```
 
-**Phase 2: MCP Directory Reorganization (Completed)**
+#### Phase 2: MCP Directory Reorganization (Completed)
 
 - ✅ **Created MCP subdirectories**:
+
   ```bash
   mkdir -p tests/unit/mcp/{models,tools}
   touch tests/unit/mcp/{models,tools}/__init__.py
   ```
 
 - ✅ **Moved MCP test files**:
+
   ```bash
   git mv tests/unit/mcp/test_requests.py tests/unit/mcp/models/test_requests.py
   git mv tests/unit/mcp/test_responses.py tests/unit/mcp/models/test_responses.py
   git mv tests/unit/mcp/test_tools_*.py tests/unit/mcp/tools/
   ```
 
-**Phase 3: Documentation Updates (In Progress)**
+#### Phase 3: Documentation Updates (In Progress)
 
 - 🚧 Update `TEST_CLEANUP.md` to reflect completed reorganization
 - 🚧 Update `TESTING_ROADMAP.md` to reflect completed reorganization
 - [ ] Update any CI/CD configurations that reference specific test paths
 
 ### Success Criteria (All Met)
+
 - ✅ All 45 service test files properly organized into logical subdirectories
 - ✅ All 11 MCP test files reorganized into models/ and tools/ subdirectories
 - ✅ Test discovery and execution works correctly (1690 tests discoverable)
@@ -546,6 +581,7 @@ The `tests/unit/services/` directory contained 45 test files in a flat structure
 - 🚧 Developer documentation updated to reflect new structure
 
 ### Benefits
+
 - **Improved Navigation**: Easy to find tests for specific service areas
 - **Logical Grouping**: Related tests grouped together for subset execution  
 - **Scalability**: Clear placement guidelines for future tests
@@ -557,6 +593,7 @@ The `tests/unit/services/` directory contained 45 test files in a flat structure
 **All core modules now have comprehensive test coverage!**
 
 **Completed modules:**
+
 - ✅ `src/unified_mcp_server.py` → test_unified_mcp_server.py (35 tests, 85% coverage)
 - ✅ `src/utils.py` → test_utils.py (25 tests)
 - ✅ `src/utils/imports.py` → test_utils_imports.py (25 tests, 100% coverage)
