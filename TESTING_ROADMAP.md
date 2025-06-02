@@ -267,12 +267,121 @@
 - ✅ Comprehensive error handling validation
 - ✅ Documentation of complex test scenarios
 
+## 🏗️ STRUCTURAL IMPROVEMENT: Test Directory Reorganization (High Priority)
+**Estimated effort**: 5-6 hours | **Impact**: High | **Developer Experience Improvement**
+
+### Problem
+The `tests/unit/services/` directory currently contains 42 test files in a flat structure, making it difficult to:
+- Find tests related to specific service areas
+- Navigate and understand test organization  
+- Maintain logical grouping of related functionality
+- Onboard new developers efficiently
+
+### Solution: Mirror Source Code Structure
+Reorganize tests to mirror the `src/services/` directory structure for improved navigation and maintainability.
+
+**Current Flat Structure:**
+```
+tests/unit/services/
+├── test_action_schemas.py
+├── test_automation_router.py
+├── test_cache_base.py
+├── test_cache_dragonfly_cache.py
+├── [... 38 more files in flat structure]
+```
+
+**Proposed Organized Structure:**
+```
+tests/unit/services/
+├── test_base.py
+├── test_errors.py  
+├── test_logging_config.py
+├── browser/
+│   ├── test_action_schemas.py
+│   ├── test_automation_router.py
+│   ├── test_browser_use_adapter.py
+│   ├── test_crawl4ai_adapter.py
+│   └── test_playwright_adapter.py
+├── cache/
+│   ├── test_base.py
+│   ├── test_dragonfly_cache.py
+│   ├── test_embedding_cache.py
+│   ├── test_local_cache.py
+│   ├── test_manager.py
+│   ├── test_metrics.py
+│   ├── test_patterns.py
+│   ├── test_search_cache.py
+│   └── test_warming.py
+├── core/
+│   ├── test_project_storage.py
+│   └── test_qdrant_alias_manager.py
+├── crawling/
+│   ├── test_base.py
+│   ├── test_crawl4ai_provider.py
+│   ├── test_firecrawl_provider.py
+│   └── test_manager.py
+├── embeddings/
+│   ├── test_base.py
+│   ├── test_fastembed_provider.py
+│   ├── test_manager.py
+│   └── test_openai_provider.py
+├── hyde/
+│   ├── test_cache.py
+│   ├── test_config.py  
+│   ├── test_engine.py
+│   └── test_generator.py
+├── utilities/
+│   ├── test_hnsw_optimizer.py
+│   ├── test_rate_limiter.py
+│   └── test_search_models.py
+└── vector_db/
+    ├── test_client.py
+    ├── test_collections.py
+    ├── test_documents.py
+    ├── test_indexing.py
+    ├── test_search.py
+    └── test_service.py
+```
+
+### Implementation Steps
+1. **Create subdirectory structure** with proper `__init__.py` files
+2. **Move and rename test files** to match source code naming conventions
+3. **Update internal imports** between test files if any exist
+4. **Verify pytest discovery** and test execution works correctly
+5. **Update CI/CD configurations** that reference specific test paths
+6. **Document new structure** in testing guidelines
+
+### Benefits
+- **Improved Navigation**: Developers can easily find tests for specific service areas
+- **Logical Grouping**: Related tests are grouped together for easier subset execution
+- **1:1 Source Mapping**: Direct correspondence between `src/` and `tests/` structure
+- **Scalability**: Clear placement guidelines for future tests
+- **Developer Experience**: Faster onboarding and code comprehension
+- **CI/CD Efficiency**: Ability to run tests for specific service areas independently
+
+### Secondary Reorganization: MCP Directory
+**Estimated effort**: 1 hour | **Files**: 11 | **Priority**: Medium
+
+Reorganize `tests/unit/mcp/` to mirror `src/mcp/` structure:
+```
+tests/unit/mcp/
+├── models/
+│   ├── test_requests.py
+│   └── test_responses.py  
+├── tools/
+│   ├── test_advanced_search.py
+│   ├── test_analytics.py
+│   ├── [... 9 more tool test files]
+└── test_tool_registry.py
+```
+
 ## 🚀 NEXT STEPS
 
-1. **Remove existing services test directory** (already done)
-2. **Start with Priority 1 foundation services**
-3. **Work through priorities systematically**
-4. **Update TEST_CLEANUP.md as progress is made**
-5. **Commit progress regularly with detailed messages**
+1. **Complete test directory reorganization** (new high-priority task)
+2. **Remove existing services test directory** (already done)
+3. **Start with Priority 1 foundation services**
+4. **Work through priorities systematically**
+5. **Update TEST_CLEANUP.md as progress is made**
+6. **Commit progress regularly with detailed messages**
 
-The services module testing represents the largest remaining effort but will provide comprehensive validation of the entire system's core functionality.
+The test directory reorganization will significantly improve developer experience and should be completed alongside or before the remaining services module testing work.

@@ -431,6 +431,144 @@ and rewriting to align with current src/ implementations.
 - ✅ **All core service tests passing with comprehensive coverage**
 - ✅ **Complete testing of project data organization, file management, storage backend abstraction, alias routing, blue-green deployment support, and performance optimization**
 
+## 🏗️ HIGH PRIORITY: Test Directory Reorganization
+
+**Status**: Planned | **Effort**: 5-6 hours | **Impact**: High Developer Experience Improvement
+
+### Problem
+The current `tests/unit/services/` directory contains 42 test files in a flat structure, making navigation and maintenance difficult. This violates best practices for test organization and creates developer friction.
+
+### Actionable Tasks
+
+**Phase 1: Services Directory Reorganization (Priority 1)**
+
+- [ ] **Create new subdirectory structure**:
+  ```bash
+  mkdir -p tests/unit/services/{browser,cache,core,crawling,embeddings,hyde,utilities,vector_db}
+  touch tests/unit/services/{browser,cache,core,crawling,embeddings,hyde,utilities,vector_db}/__init__.py
+  ```
+
+- [ ] **Move and rename test files** using git mv to preserve history:
+
+  **Root level files (3 files):**
+  - Keep `test_base.py`, `test_errors.py`, `test_logging_config.py` in root
+
+  **Browser subdirectory (5 files):**
+  ```bash
+  git mv tests/unit/services/test_action_schemas.py tests/unit/services/browser/test_action_schemas.py
+  git mv tests/unit/services/test_automation_router.py tests/unit/services/browser/test_automation_router.py
+  git mv tests/unit/services/test_browser_use_adapter.py tests/unit/services/browser/test_browser_use_adapter.py
+  git mv tests/unit/services/test_crawl4ai_adapter.py tests/unit/services/browser/test_crawl4ai_adapter.py
+  git mv tests/unit/services/test_playwright_adapter.py tests/unit/services/browser/test_playwright_adapter.py
+  ```
+
+  **Cache subdirectory (9 files):**
+  ```bash
+  git mv tests/unit/services/test_cache_base.py tests/unit/services/cache/test_base.py
+  git mv tests/unit/services/test_cache_dragonfly_cache.py tests/unit/services/cache/test_dragonfly_cache.py
+  git mv tests/unit/services/test_cache_embedding_cache.py tests/unit/services/cache/test_embedding_cache.py
+  git mv tests/unit/services/test_cache_local_cache.py tests/unit/services/cache/test_local_cache.py
+  git mv tests/unit/services/test_cache_manager.py tests/unit/services/cache/test_manager.py
+  git mv tests/unit/services/test_cache_metrics.py tests/unit/services/cache/test_metrics.py
+  git mv tests/unit/services/test_cache_patterns.py tests/unit/services/cache/test_patterns.py
+  git mv tests/unit/services/test_cache_search_cache.py tests/unit/services/cache/test_search_cache.py
+  git mv tests/unit/services/test_cache_warming.py tests/unit/services/cache/test_warming.py
+  ```
+
+  **Core subdirectory (2 files):**
+  ```bash
+  git mv tests/unit/services/test_core_project_storage.py tests/unit/services/core/test_project_storage.py
+  git mv tests/unit/services/test_core_qdrant_alias_manager.py tests/unit/services/core/test_qdrant_alias_manager.py
+  ```
+
+  **Crawling subdirectory (4 files):**
+  ```bash
+  git mv tests/unit/services/test_crawling_base.py tests/unit/services/crawling/test_base.py
+  git mv tests/unit/services/test_crawling_crawl4ai_provider.py tests/unit/services/crawling/test_crawl4ai_provider.py
+  git mv tests/unit/services/test_crawling_firecrawl_provider.py tests/unit/services/crawling/test_firecrawl_provider.py
+  git mv tests/unit/services/test_crawling_manager.py tests/unit/services/crawling/test_manager.py
+  ```
+
+  **Embeddings subdirectory (4 files):**
+  ```bash
+  git mv tests/unit/services/test_embeddings_base.py tests/unit/services/embeddings/test_base.py
+  git mv tests/unit/services/test_embeddings_fastembed_provider.py tests/unit/services/embeddings/test_fastembed_provider.py
+  git mv tests/unit/services/test_embeddings_manager.py tests/unit/services/embeddings/test_manager.py
+  git mv tests/unit/services/test_embeddings_openai_provider.py tests/unit/services/embeddings/test_openai_provider.py
+  ```
+
+  **HyDE subdirectory (4 files):**
+  ```bash
+  git mv tests/unit/services/test_hyde_cache.py tests/unit/services/hyde/test_cache.py
+  git mv tests/unit/services/test_hyde_config.py tests/unit/services/hyde/test_config.py
+  git mv tests/unit/services/test_hyde_engine.py tests/unit/services/hyde/test_engine.py
+  git mv tests/unit/services/test_hyde_generator.py tests/unit/services/hyde/test_generator.py
+  ```
+
+  **Utilities subdirectory (3 files):**
+  ```bash
+  git mv tests/unit/services/test_utilities_hnsw_optimizer.py tests/unit/services/utilities/test_hnsw_optimizer.py
+  git mv tests/unit/services/test_utilities_rate_limiter.py tests/unit/services/utilities/test_rate_limiter.py
+  git mv tests/unit/services/test_utilities_search_models.py tests/unit/services/utilities/test_search_models.py
+  ```
+
+  **Vector DB subdirectory (6 files):**
+  ```bash
+  git mv tests/unit/services/test_vector_db_client.py tests/unit/services/vector_db/test_client.py
+  git mv tests/unit/services/test_vector_db_collections.py tests/unit/services/vector_db/test_collections.py
+  git mv tests/unit/services/test_vector_db_documents.py tests/unit/services/vector_db/test_documents.py
+  git mv tests/unit/services/test_vector_db_indexing.py tests/unit/services/vector_db/test_indexing.py
+  git mv tests/unit/services/test_vector_db_search.py tests/unit/services/vector_db/test_search.py
+  git mv tests/unit/services/test_vector_db_service.py tests/unit/services/vector_db/test_service.py
+  ```
+
+- [ ] **Verification steps**:
+  ```bash
+  # Verify pytest can discover all tests
+  uv run pytest --collect-only tests/unit/services/
+  
+  # Run all service tests to ensure nothing is broken
+  uv run pytest tests/unit/services/ -v
+  
+  # Check test coverage is maintained
+  uv run pytest --cov=src/services tests/unit/services/
+  ```
+
+**Phase 2: MCP Directory Reorganization (Priority 2)**
+
+- [ ] **Create MCP subdirectories**:
+  ```bash
+  mkdir -p tests/unit/mcp/{models,tools}
+  touch tests/unit/mcp/{models,tools}/__init__.py
+  ```
+
+- [ ] **Move MCP test files**:
+  ```bash
+  git mv tests/unit/mcp/test_requests.py tests/unit/mcp/models/test_requests.py
+  git mv tests/unit/mcp/test_responses.py tests/unit/mcp/models/test_responses.py
+  git mv tests/unit/mcp/test_tools_*.py tests/unit/mcp/tools/
+  ```
+
+**Phase 3: Documentation Updates**
+
+- [ ] Update `docs/development/TESTING_QUALITY_ENHANCEMENTS.md` with new structure
+- [ ] Create developer guidelines for test organization
+- [ ] Update any CI/CD configurations that reference specific test paths
+
+### Success Criteria
+- [ ] All 42 service test files properly organized into logical subdirectories
+- [ ] Test discovery and execution works correctly (`uv run pytest` passes)
+- [ ] Test coverage maintained at current levels
+- [ ] No broken imports or test failures introduced
+- [ ] Developer documentation updated to reflect new structure
+
+### Benefits
+- **Improved Navigation**: Easy to find tests for specific service areas
+- **Logical Grouping**: Related tests grouped together for subset execution  
+- **Scalability**: Clear placement guidelines for future tests
+- **Developer Experience**: Faster onboarding and code comprehension
+- **Maintenance**: Changes to service areas only affect related test subdirectories
+
 ## Remaining Missing Test Coverage
 
 **All core modules now have comprehensive test coverage!**
