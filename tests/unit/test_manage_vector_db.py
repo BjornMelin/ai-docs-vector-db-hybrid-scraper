@@ -10,11 +10,11 @@ from src.config import UnifiedConfig
 from src.manage_vector_db import CollectionInfo
 from src.manage_vector_db import DatabaseStats
 from src.manage_vector_db import VectorDBManager
-from src.manage_vector_db import create_embeddings
-from src.manage_vector_db import cli
 from src.manage_vector_db import _create_manager_from_context
-from src.manage_vector_db import setup_logging
+from src.manage_vector_db import cli
+from src.manage_vector_db import create_embeddings
 from src.manage_vector_db import main
+from src.manage_vector_db import setup_logging
 
 
 @pytest.fixture
@@ -609,10 +609,14 @@ class TestCLICommands:
         return mock_manager
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_list_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_list_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test list command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
-        mock_manager_context.list_collections = AsyncMock(return_value=["collection1", "collection2"])
+        mock_manager_context.list_collections = AsyncMock(
+            return_value=["collection1", "collection2"]
+        )
 
         result = runner.invoke(cli, ["list"])
 
@@ -623,7 +627,9 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_list_command_empty(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_list_command_empty(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test list command with no collections."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.list_collections = AsyncMock(return_value=[])
@@ -635,19 +641,27 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_create_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_create_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test create command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.create_collection = AsyncMock()
 
-        result = runner.invoke(cli, ["create", "test_collection", "--vector-size", "768"])
+        result = runner.invoke(
+            cli, ["create", "test_collection", "--vector-size", "768"]
+        )
 
         assert result.exit_code == 0
-        mock_manager_context.create_collection.assert_called_once_with("test_collection", 768)
+        mock_manager_context.create_collection.assert_called_once_with(
+            "test_collection", 768
+        )
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_create_command_default_vector_size(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_create_command_default_vector_size(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test create command with default vector size."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.create_collection = AsyncMock()
@@ -655,11 +669,15 @@ class TestCLICommands:
         result = runner.invoke(cli, ["create", "test_collection"])
 
         assert result.exit_code == 0
-        mock_manager_context.create_collection.assert_called_once_with("test_collection", 1536)
+        mock_manager_context.create_collection.assert_called_once_with(
+            "test_collection", 1536
+        )
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_delete_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_delete_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test delete command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.delete_collection = AsyncMock()
@@ -667,11 +685,15 @@ class TestCLICommands:
         result = runner.invoke(cli, ["delete", "test_collection"])
 
         assert result.exit_code == 0
-        mock_manager_context.delete_collection.assert_called_once_with("test_collection")
+        mock_manager_context.delete_collection.assert_called_once_with(
+            "test_collection"
+        )
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_stats_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_stats_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test stats command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
         mock_stats = DatabaseStats(
@@ -695,7 +717,9 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_stats_command_no_stats(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_stats_command_no_stats(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test stats command when no stats available."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.get_database_stats = AsyncMock(return_value=None)
@@ -707,10 +731,14 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_info_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_info_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test info command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
-        mock_info = CollectionInfo(name="test_collection", vector_count=100, vector_size=1536)
+        mock_info = CollectionInfo(
+            name="test_collection", vector_count=100, vector_size=1536
+        )
         mock_manager_context.get_collection_info = AsyncMock(return_value=mock_info)
 
         result = runner.invoke(cli, ["info", "test_collection"])
@@ -722,7 +750,9 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_info_command_not_found(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_info_command_not_found(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test info command when collection not found."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.get_collection_info = AsyncMock(return_value=None)
@@ -734,7 +764,9 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_clear_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_clear_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test clear command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.clear_collection = AsyncMock()
@@ -746,18 +778,21 @@ class TestCLICommands:
         mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_search_command_success(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_search_command_success(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test search command with successful execution."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.initialize = AsyncMock()
         mock_manager_context.embedding_manager = AsyncMock()
-        
+
         # Mock create_embeddings function
         with patch("src.manage_vector_db.create_embeddings") as mock_create_embeddings:
             mock_create_embeddings.return_value = [0.1, 0.2, 0.3]
-            
+
             # Create proper SearchResult objects
             from src.manage_vector_db import SearchResult
+
             mock_search_results = [
                 SearchResult(
                     id=1,
@@ -765,12 +800,16 @@ class TestCLICommands:
                     title="Test Document",
                     url="https://example.com",
                     content="This is test content",
-                    metadata={}
+                    metadata={},
                 )
             ]
-            mock_manager_context.search_vectors = AsyncMock(return_value=mock_search_results)
+            mock_manager_context.search_vectors = AsyncMock(
+                return_value=mock_search_results
+            )
 
-            result = runner.invoke(cli, ["search", "test_collection", "test query", "--limit", "3"])
+            result = runner.invoke(
+                cli, ["search", "test_collection", "test query", "--limit", "3"]
+            )
 
             assert result.exit_code == 0
             assert "Search Results for: 'test query'" in result.output
@@ -781,12 +820,14 @@ class TestCLICommands:
             mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_search_command_no_results(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_search_command_no_results(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test search command with no results."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.initialize = AsyncMock()
         mock_manager_context.embedding_manager = AsyncMock()
-        
+
         with patch("src.manage_vector_db.create_embeddings") as mock_create_embeddings:
             mock_create_embeddings.return_value = [0.1, 0.2, 0.3]
             mock_manager_context.search_vectors = AsyncMock(return_value=[])
@@ -798,12 +839,14 @@ class TestCLICommands:
             mock_manager_context.cleanup.assert_called_once()
 
     @patch("src.manage_vector_db._create_manager_from_context")
-    def test_cli_search_command_embedding_failure(self, mock_create_manager, runner, mock_manager_context):
+    def test_cli_search_command_embedding_failure(
+        self, mock_create_manager, runner, mock_manager_context
+    ):
         """Test search command when embedding creation fails."""
         mock_create_manager.return_value = mock_manager_context
         mock_manager_context.initialize = AsyncMock()
         mock_manager_context.embedding_manager = AsyncMock()
-        
+
         with patch("src.manage_vector_db.create_embeddings") as mock_create_embeddings:
             mock_create_embeddings.return_value = []
 
@@ -844,21 +887,21 @@ class TestUtilityFunctions:
     def test_setup_logging_default_level(self):
         """Test setup_logging with default level."""
         logger = setup_logging()
-        
+
         assert logger.level == 20  # INFO level
         assert logger.name == "src.manage_vector_db"
 
     def test_setup_logging_debug_level(self):
         """Test setup_logging with debug level."""
         logger = setup_logging("DEBUG")
-        
+
         assert logger.level == 10  # DEBUG level
         assert logger.name == "src.manage_vector_db"
 
     def test_setup_logging_error_level(self):
         """Test setup_logging with error level."""
         logger = setup_logging("ERROR")
-        
+
         assert logger.level == 40  # ERROR level
         assert logger.name == "src.manage_vector_db"
 
@@ -904,7 +947,7 @@ class TestUtilityFunctions:
     def test_main_function(self, mock_cli):
         """Test main entry point function."""
         main()
-        
+
         mock_cli.assert_called_once()
 
 
@@ -914,12 +957,16 @@ class TestCreateEmbeddingsUtility:
     async def test_create_embeddings_success(self):
         """Test successful embedding creation."""
         mock_embedding_manager = AsyncMock()
-        mock_embedding_manager.generate_embeddings = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+        mock_embedding_manager.generate_embeddings = AsyncMock(
+            return_value=[[0.1, 0.2, 0.3]]
+        )
 
         result = await create_embeddings("test text", mock_embedding_manager)
 
         assert result == [0.1, 0.2, 0.3]
-        mock_embedding_manager.generate_embeddings.assert_called_once_with(["test text"])
+        mock_embedding_manager.generate_embeddings.assert_called_once_with(
+            ["test text"]
+        )
 
     async def test_create_embeddings_empty_result(self):
         """Test embedding creation with empty result."""
