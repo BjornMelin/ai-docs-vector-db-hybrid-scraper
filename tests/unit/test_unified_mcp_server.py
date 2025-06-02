@@ -15,7 +15,7 @@ sys.modules["src.mcp.tool_registry"] = MagicMock()
 sys.modules["src.services.logging_config"] = MagicMock()
 sys.modules["src.config"] = MagicMock()
 
-# This is intentionally after mocks due to import dependencies  # noqa: E402
+# This is intentionally after mocks due to import dependencies
 from src import unified_mcp_server
 
 
