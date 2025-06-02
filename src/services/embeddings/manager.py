@@ -105,10 +105,7 @@ class EmbeddingManager:
                 enable_distributed_cache=config.cache.enable_dragonfly_cache,
                 local_max_size=config.cache.local_max_size,
                 local_max_memory_mb=config.cache.local_max_memory_mb,
-                distributed_ttl_seconds={
-                    cache_type.value: ttl
-                    for cache_type, ttl in config.cache.cache_ttl_seconds.items()
-                },
+                distributed_ttl_seconds=config.cache.cache_ttl_seconds,
             )
 
         # Model benchmarks and smart selection config (loaded from configuration)

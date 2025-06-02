@@ -3,9 +3,9 @@
 import asyncio
 import hashlib
 import logging
-from enum import Enum
 from typing import Any
 
+from src.config.enums import CacheType
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
 from .local_cache import LocalCache
@@ -13,14 +13,6 @@ from .metrics import CacheMetrics
 from .search_cache import SearchResultCache
 
 logger = logging.getLogger(__name__)
-
-
-class CacheType(Enum):
-    """Types of cacheable data."""
-
-    EMBEDDINGS = "embeddings"
-    CRAWL_RESULTS = "crawl_results"
-    QUERY_RESULTS = "query_results"
 
 
 class CacheManager:
@@ -61,8 +53,9 @@ class CacheManager:
         # Default distributed cache TTLs by cache type
         self.distributed_ttl_seconds = distributed_ttl_seconds or {
             CacheType.EMBEDDINGS: 86400 * 7,  # 7 days for embeddings
-            CacheType.CRAWL_RESULTS: 3600,  # 1 hour for crawl results
-            CacheType.QUERY_RESULTS: 3600,  # 1 hour for search results
+            CacheType.CRAWL: 3600,  # 1 hour for crawl results
+            CacheType.SEARCH: 3600,  # 1 hour for search results
+            CacheType.HYDE: 3600,  # 1 hour for HyDE results
         }
 
         # Initialize local cache (L1)
@@ -95,7 +88,7 @@ class CacheManager:
             )
             self._search_cache = SearchResultCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.QUERY_RESULTS],
+                default_ttl=self.distributed_ttl_seconds[CacheType.SEARCH],
             )
 
         # Initialize metrics
@@ -133,7 +126,7 @@ class CacheManager:
     async def get(
         self,
         key: str,
-        cache_type: CacheType = CacheType.CRAWL_RESULTS,
+        cache_type: CacheType = CacheType.CRAWL,
         default: Any = None,
     ) -> Any:
         """Get value from cache with L1 -> L2 fallback.
@@ -189,7 +182,7 @@ class CacheManager:
         self,
         key: str,
         value: Any,
-        cache_type: CacheType = CacheType.CRAWL_RESULTS,
+        cache_type: CacheType = CacheType.CRAWL,
         ttl: int | None = None,
     ) -> bool:
         """Set value in both cache layers.
@@ -235,7 +228,7 @@ class CacheManager:
             return False
 
     async def delete(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL_RESULTS
+        self, key: str, cache_type: CacheType = CacheType.CRAWL
     ) -> bool:
         """Delete value from both cache layers.
 
