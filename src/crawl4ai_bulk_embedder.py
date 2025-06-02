@@ -1,48 +1,49 @@
-"""crawl4ai_bulk_embedder.py - Modern Documentation Scraper using Crawl4AI.
+"""Modern Documentation Scraper with ClientManager Architecture.
 
-Balanced implementation with valuable features while following KISS principles
+Streamlined implementation using dependency injection through ClientManager,
+focused on maintainability and performance with comprehensive error handling.
 
-Based on latest Crawl4AI, Pydantic v2, and Python 3.13 best practices
+Features:
+- ClientManager-based service architecture
+- Hybrid dense+sparse search capabilities
+- Advanced reranking with BGE models
+- Robust point ID generation
+- Comprehensive error handling and logging
 """
 
 import asyncio
+import hashlib
 import logging
 import sys
 from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Any
 
-# Crawl4AI imports are now handled by CrawlManager
-# Only keep filter imports for backward compatibility
+# Filter imports - used directly for documentation site filtering
 from crawl4ai.deep_crawling.filters import ContentTypeFilter
 from crawl4ai.deep_crawling.filters import FilterChain
 from crawl4ai.deep_crawling.filters import URLPatternFilter
 
-# Advanced Embedding Integrations
+# Optional dependencies with graceful fallbacks
 try:
     from firecrawl import FirecrawlApp
 except ImportError:
     FirecrawlApp = None
 
 try:
-    from fastembed import SparseTextEmbedding
-    from fastembed import TextEmbedding
-except ImportError:
-    TextEmbedding = None
-    SparseTextEmbedding = None
-
-try:
     from FlagEmbedding import FlagReranker
 except ImportError:
     FlagReranker = None
 
-
-# OpenAI client now handled by EmbeddingManager
+# Pydantic models
 from pydantic import BaseModel
 from pydantic import Field
 
-# Qdrant client now handled by QdrantService
+# Qdrant models for point creation
 from qdrant_client.models import PointStruct
 from qdrant_client.models import SparseVector
+
+# Rich console for output
 from rich.console import Console
 from rich.progress import Progress
 from rich.progress import SpinnerColumn
@@ -58,15 +59,12 @@ from src.config.models import DocumentationSite
 
 # Import shared response models
 from src.mcp.models.responses import CrawlResult
-from src.services.crawling.manager import CrawlManager
-
-# Import service layer
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.utilities.rate_limiter import RateLimitManager
-from src.services.vector_db.service import QdrantService
 
 # Import enhanced chunking module
 from .chunking import EnhancedChunker
+
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
 
 console = Console()
 
@@ -106,22 +104,24 @@ class ModernDocumentationScraper:
     - Firecrawl premium integration
     """
 
-    # Embedding models now managed by EmbeddingManager service
+    # All embedding functionality managed by EmbeddingManager through ClientManager
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, client_manager: "ClientManager") -> None:
+        """Initialize scraper with ClientManager dependency injection.
+
+        Args:
+            config: Unified configuration
+            client_manager: ClientManager instance for service access
+        """
         self.config = config
+        self.client_manager = client_manager
         self.stats = ScrapingStats()
         self.processed_urls: set[str] = set()
 
-        # Initialize rate limiter
-        self.rate_limiter = RateLimitManager(self.config)
-
-        # Initialize service layer
-        self.embedding_manager = EmbeddingManager(
-            self.config, rate_limiter=self.rate_limiter
-        )
-        self.qdrant_service = QdrantService(self.config)
-        self.crawl_manager = CrawlManager(self.config, rate_limiter=self.rate_limiter)
+        # Service instances will be lazily retrieved through ClientManager
+        self.embedding_manager = None
+        self.qdrant_service = None
+        self.crawl_manager = None
 
         # Enhanced logging setup
         logging.basicConfig(
@@ -156,22 +156,22 @@ class ModernDocumentationScraper:
             self._initialize_reranker()
 
     async def initialize(self) -> None:
-        """Initialize async services"""
-        if self.rate_limiter:
-            await self.rate_limiter.initialize()
-            self.logger.info("Rate limiter initialized")
-        await self.embedding_manager.initialize()
-        await self.qdrant_service.initialize()
-        await self.crawl_manager.initialize()
-        self.logger.info("All services initialized successfully")
+        """Initialize async services through ClientManager"""
+        # Initialize ClientManager if not already done
+        await self.client_manager.initialize()
+
+        # Get service instances from ClientManager
+        self.embedding_manager = await self.client_manager.get_embedding_manager()
+        self.qdrant_service = await self.client_manager.get_qdrant_service()
+        self.crawl_manager = await self.client_manager.get_crawl_manager()
+
+        self.logger.info("All services initialized successfully through ClientManager")
 
     async def cleanup(self) -> None:
-        """Cleanup async services"""
-        await self.embedding_manager.cleanup()
-        await self.qdrant_service.cleanup()
-        await self.crawl_manager.cleanup()
-        # RateLimitManager doesn't need cleanup - it's stateless
-        self.logger.info("All services cleaned up successfully")
+        """Cleanup async services through ClientManager"""
+        # ClientManager handles cleanup of all services
+        await self.client_manager.cleanup()
+        self.logger.info("All services cleaned up successfully through ClientManager")
 
     # Embedding model initialization removed - now handled by EmbeddingManager service
 
@@ -256,22 +256,28 @@ class ModernDocumentationScraper:
             # Truncate to avoid API limits
             text_to_embed = text[:8000]
 
-            # Use embedding manager to handle all providers
-            embeddings = await self.embedding_manager.generate_embeddings(
-                [text_to_embed]
+            # Check if hybrid search is enabled to determine if sparse embeddings are needed
+            generate_sparse = (
+                self.config.embedding.search_strategy == SearchStrategy.HYBRID
             )
 
-            if not embeddings:
+            # Use embedding manager's structured response
+            result = await self.embedding_manager.generate_embeddings(
+                [text_to_embed], generate_sparse=generate_sparse
+            )
+
+            if not result["embeddings"]:
                 return [], None
 
-            # Check if sparse embeddings were generated (for hybrid search)
-            if hasattr(self.embedding_manager, "_last_sparse_embeddings"):
-                sparse_data = self.embedding_manager._last_sparse_embeddings
-                return embeddings[0], {
-                    "sparse": sparse_data[0] if sparse_data else None
-                }
+            # Extract dense embedding
+            dense_embedding = result["embeddings"][0]
 
-            return embeddings[0], None
+            # Extract sparse embeddings if available
+            sparse_data = None
+            if result.get("sparse_embeddings"):
+                sparse_data = {"sparse": result["sparse_embeddings"][0]}
+
+            return dense_embedding, sparse_data
 
         except Exception as e:
             self.logger.error(f"Embedding creation failed: {e}")
@@ -460,31 +466,15 @@ class ModernDocumentationScraper:
                                 ),
                             }
 
-                            # Create point based on search strategy
-                            if (
-                                self.config.embedding.search_strategy
-                                == SearchStrategy.HYBRID
-                                and sparse_data is not None
-                            ):
-                                # Hybrid point with both dense and sparse vectors
-                                point = PointStruct(
-                                    id=f"{hash(chunk_data['url'])}_{chunk_data['chunk_index']}",
-                                    vector={  # type: ignore
-                                        "dense": dense_embedding,
-                                        "sparse": SparseVector(
-                                            indices=sparse_data["indices"],
-                                            values=sparse_data["values"],
-                                        ),
-                                    },
-                                    payload=payload_data,
-                                )
-                            else:
-                                # Traditional dense-only point
-                                point = PointStruct(
-                                    id=f"{hash(chunk_data['url'])}_{chunk_data['chunk_index']}",
-                                    vector=dense_embedding,
-                                    payload=payload_data,
-                                )
+                            # Generate robust point ID
+                            point_id = self._generate_point_id(
+                                chunk_data["url"], chunk_data["chunk_index"]
+                            )
+
+                            # Create Qdrant point based on search strategy
+                            point = self._create_qdrant_point(
+                                point_id, dense_embedding, sparse_data, payload_data
+                            )
 
                             points_to_upsert.append(point)
                             self.stats.total_chunks += 1
@@ -671,6 +661,66 @@ class ModernDocumentationScraper:
         )
         return final_reranked_results
 
+    def _generate_point_id(self, url: str, chunk_index: int) -> str:
+        """Generate robust point ID using MD5 hash to avoid collisions.
+
+        Args:
+            url: Document URL
+            chunk_index: Chunk index within the document
+
+        Returns:
+            Robust point ID string
+        """
+        # Use MD5 hash for better collision resistance
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        return f"{url_hash}_{chunk_index}"
+
+    def _create_qdrant_point(
+        self,
+        point_id: str,
+        dense_embedding: list[float],
+        sparse_data: dict[str, Any] | None,
+        payload: dict[str, Any],
+    ) -> PointStruct:
+        """Create Qdrant point structure based on search strategy.
+
+        Args:
+            point_id: Unique point identifier
+            dense_embedding: Dense vector embedding
+            sparse_data: Optional sparse vector data
+            payload: Point payload data
+
+        Returns:
+            Configured PointStruct for Qdrant
+        """
+        if (
+            self.config.embedding.search_strategy == SearchStrategy.HYBRID
+            and sparse_data is not None
+            and "sparse" in sparse_data
+        ):
+            # Hybrid point with both dense and sparse vectors
+            sparse_vector_data = sparse_data["sparse"]
+            sparse_vector_name = self.config.qdrant.sparse_vector_name or "sparse"
+
+            return PointStruct(
+                id=point_id,
+                vector={  # type: ignore
+                    "dense": dense_embedding,
+                    sparse_vector_name: SparseVector(
+                        indices=sparse_vector_data["indices"],
+                        values=sparse_vector_data["values"],
+                    ),
+                },
+                payload=payload,
+            )
+        else:
+            # Traditional dense-only point
+            return PointStruct(
+                id=point_id,
+                vector=dense_embedding,
+                payload=payload,
+            )
+
 
 # Advanced documentation sites - optimized for hybrid embedding pipeline
 ESSENTIAL_SITES = [
@@ -745,36 +795,31 @@ def create_advanced_config():
         )
         sys.exit(1)
 
-    # Configure embedding settings based on provider
+    # Display configuration information without modifying the config
     if unified_config.embedding_provider == EmbeddingProvider.FASTEMBED:
         console.print(
             "🚀 FastEmbed provider configured - using advanced local models",
             style="green",
         )
-        # Update embedding configuration for FastEmbed
-        unified_config.embedding.provider = EmbeddingProvider.FASTEMBED
-        unified_config.embedding.dense_model = EmbeddingModel.BGE_SMALL_EN_V15
-        unified_config.embedding.search_strategy = SearchStrategy.DENSE
-        unified_config.embedding.enable_quantization = (
-            unified_config.qdrant.quantization_enabled
-        )
 
-        # Enable hybrid search if sparse models available
-        if SparseTextEmbedding is not None:
+        # Check if sparse models are available for hybrid search
+        try:
+            import importlib.util
+
+            if importlib.util.find_spec("fastembed.SparseTextEmbedding"):
+                console.print(
+                    "🎯 Hybrid search available (research: 8-15% improvement)",
+                    style="yellow",
+                )
+        except ImportError:
             console.print(
-                "🎯 Enabling hybrid search (research: 8-15% improvement)",
-                style="yellow",
+                "📊 Dense search only (FastEmbed sparse models not available)",
+                style="blue",
             )
-            unified_config.embedding.search_strategy = SearchStrategy.HYBRID
-            unified_config.embedding.sparse_model = EmbeddingModel.SPLADE_PP_EN_V1
     else:
         console.print(
             "📡 Using OpenAI API - cost-optimized configuration", style="blue"
         )
-        # Update embedding configuration for OpenAI
-        unified_config.embedding.provider = EmbeddingProvider.OPENAI
-        unified_config.embedding.dense_model = EmbeddingModel.TEXT_EMBEDDING_3_SMALL
-        unified_config.embedding.search_strategy = SearchStrategy.DENSE
 
     return unified_config
 
@@ -808,7 +853,11 @@ async def main() -> None:
     if current_config.firecrawl.api_key:
         console.print("  Firecrawl Premium: ✅ Enabled")
 
-    scraper_instance = ModernDocumentationScraper(current_config)
+    # Create ClientManager and scraper instance
+    from src.infrastructure.client_manager import ClientManager
+
+    client_manager = ClientManager(current_config)
+    scraper_instance = ModernDocumentationScraper(current_config, client_manager)
 
     try:
         # Initialize services
