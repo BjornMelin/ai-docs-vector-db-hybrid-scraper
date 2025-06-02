@@ -4,7 +4,6 @@ This module provides a comprehensive configuration system that consolidates all
 settings across the application into a single, well-structured configuration model.
 """
 
-import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +15,72 @@ from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+# Import validators conditionally to avoid circular imports
+try:
+    from src.models.validators import validate_api_key_common
+    from src.models.validators import validate_chunk_sizes
+    from src.models.validators import validate_model_benchmark_consistency
+    from src.models.validators import validate_rate_limit_config
+    from src.models.validators import validate_scoring_weights
+    from src.models.validators import validate_url_format
+except ImportError:
+    # Fallback for circular import situations - define minimal validators locally
+    def validate_api_key_common(value, prefix, service_name, min_length=10, max_length=200, allowed_chars=r"[A-Za-z0-9-]+"):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            value.encode("ascii")
+        except UnicodeEncodeError as err:
+            raise ValueError(f"{service_name} API key contains non-ASCII characters") from err
+        if not value.startswith(prefix):
+            raise ValueError(f"{service_name} API key must start with '{prefix}'")
+        if len(value) < min_length:
+            raise ValueError(f"{service_name} API key appears to be too short")
+        if len(value) > max_length:
+            raise ValueError(f"{service_name} API key appears to be too long")
+        import re
+        if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
+            raise ValueError(f"{service_name} API key contains invalid characters")
+        return value
+    
+    def validate_url_format(value):
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return value.rstrip("/")
+    
+    def validate_chunk_sizes(chunk_size, chunk_overlap, min_chunk_size, max_chunk_size):
+        if chunk_overlap >= chunk_size:
+            raise ValueError("chunk_overlap must be less than chunk_size")
+        if min_chunk_size >= max_chunk_size:
+            raise ValueError("min_chunk_size must be less than max_chunk_size")
+        if chunk_size > max_chunk_size:
+            raise ValueError("chunk_size cannot exceed max_chunk_size")
+    
+    def validate_rate_limit_config(value):
+        for provider, limits in value.items():
+            if not isinstance(limits, dict):
+                raise ValueError(f"Rate limits for provider '{provider}' must be a dictionary")
+            required_keys = {"max_calls", "time_window"}
+            if not required_keys.issubset(limits.keys()):
+                raise ValueError(f"Rate limits for provider '{provider}' must contain keys: {required_keys}, got: {set(limits.keys())}")
+            if limits["max_calls"] <= 0:
+                raise ValueError(f"max_calls for provider '{provider}' must be positive")
+            if limits["time_window"] <= 0:
+                raise ValueError(f"time_window for provider '{provider}' must be positive")
+        return value
+    
+    def validate_scoring_weights(quality_weight, speed_weight, cost_weight):
+        total = quality_weight + speed_weight + cost_weight
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+    
+    def validate_model_benchmark_consistency(key, model_name):
+        if key != model_name:
+            raise ValueError(f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification.")
+        return key
 
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
@@ -24,48 +89,6 @@ from .enums import EmbeddingProvider
 from .enums import Environment
 from .enums import LogLevel
 from .enums import SearchStrategy
-
-
-def _validate_api_key_common(
-    value: str | None,
-    prefix: str,
-    service_name: str,
-    min_length: int = 10,
-    max_length: int = 200,
-    allowed_chars: str = r"[A-Za-z0-9-]+",
-) -> str | None:
-    """Common API key validation logic."""
-    if value is None:
-        return value
-
-    value = value.strip()
-    if not value:
-        return None
-
-    # Check for ASCII-only characters (security requirement)
-    try:
-        value.encode("ascii")
-    except UnicodeEncodeError as err:
-        raise ValueError(
-            f"{service_name} API key contains non-ASCII characters"
-        ) from err
-
-    # Check required prefix
-    if not value.startswith(prefix):
-        raise ValueError(f"{service_name} API key must start with '{prefix}'")
-
-    # Length validation with DoS protection
-    if len(value) < min_length:
-        raise ValueError(f"{service_name} API key appears to be too short")
-
-    if len(value) > max_length:
-        raise ValueError(f"{service_name} API key appears to be too long")
-
-    # Character validation
-    if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
-        raise ValueError(f"{service_name} API key contains invalid characters")
-
-    return value
 
 
 class ModelBenchmark(BaseModel):
@@ -274,9 +297,7 @@ class QdrantConfig(BaseModel):
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate Qdrant URL format."""
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("Qdrant URL must start with http:// or https://")
-        return v.rstrip("/")
+        return validate_url_format(v)
 
 
 class OpenAIConfig(BaseModel):
@@ -315,7 +336,7 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate OpenAI API key format and structure."""
-        return _validate_api_key_common(
+        return validate_api_key_common(
             v,
             prefix="sk-",
             service_name="OpenAI",
@@ -366,7 +387,7 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate Firecrawl API key format and structure."""
-        return _validate_api_key_common(
+        return validate_api_key_common(
             v,
             prefix="fc-",
             service_name="Firecrawl",
@@ -463,14 +484,16 @@ class ChunkingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_chunk_sizes(self) -> "ChunkingConfig":
+    def validate_chunk_sizes_relationships(self) -> "ChunkingConfig":
         """Validate chunk size relationships."""
-        if self.chunk_overlap >= self.chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
-        if self.min_chunk_size >= self.max_chunk_size:
-            raise ValueError("min_chunk_size must be less than max_chunk_size")
-        if self.chunk_size > self.max_chunk_size:
-            raise ValueError("chunk_size cannot exceed max_chunk_size")
+        # Use centralized validation for common chunk size relationships
+        validate_chunk_sizes(
+            self.chunk_size,
+            self.chunk_overlap,
+            self.min_chunk_size,
+            self.max_chunk_size,
+        )
+        # Additional validation for function chunk size specific to this model
         if self.max_function_chunk_size < self.max_chunk_size:
             raise ValueError("max_function_chunk_size should be >= max_chunk_size")
         return self
@@ -554,30 +577,7 @@ class PerformanceConfig(BaseModel):
         cls, v: dict[str, dict[str, int]]
     ) -> dict[str, dict[str, int]]:
         """Validate rate limit configuration structure."""
-        for provider, limits in v.items():
-            if not isinstance(limits, dict):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must be a dictionary"
-                )
-
-            required_keys = {"max_calls", "time_window"}
-            if not required_keys.issubset(limits.keys()):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must contain "
-                    f"keys: {required_keys}, got: {set(limits.keys())}"
-                )
-
-            if limits["max_calls"] <= 0:
-                raise ValueError(
-                    f"max_calls for provider '{provider}' must be positive"
-                )
-
-            if limits["time_window"] <= 0:
-                raise ValueError(
-                    f"time_window for provider '{provider}' must be positive"
-                )
-
-        return v
+        return validate_rate_limit_config(v)
 
 
 class HyDEConfig(BaseModel):
@@ -778,9 +778,9 @@ class SmartSelectionConfig(BaseModel):
     @model_validator(mode="after")
     def validate_weights_sum_to_one(self) -> "SmartSelectionConfig":
         """Validate that scoring weights sum to approximately 1.0."""
-        total = self.quality_weight + self.speed_weight + self.cost_weight
-        if abs(total - 1.0) > 0.01:  # Allow small floating point errors
-            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        validate_scoring_weights(
+            self.quality_weight, self.speed_weight, self.cost_weight
+        )
         return self
 
 
@@ -887,12 +887,7 @@ class EmbeddingConfig(BaseModel):
     def validate_benchmark_keys(self) -> "EmbeddingConfig":
         """Ensure dict keys match ModelBenchmark.model_name for consistency."""
         for key, benchmark in self.model_benchmarks.items():
-            if key != benchmark.model_name:
-                raise ValueError(
-                    f"Dictionary key '{key}' does not match "
-                    f"ModelBenchmark.model_name '{benchmark.model_name}'. "
-                    f"Keys must be consistent for proper model identification."
-                )
+            validate_model_benchmark_consistency(key, benchmark.model_name)
         return self
 
 
