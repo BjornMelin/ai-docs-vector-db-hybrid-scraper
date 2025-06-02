@@ -6,6 +6,7 @@ configuration files.
 
 import json
 from pathlib import Path
+from typing import Any
 
 import click
 import yaml
@@ -19,6 +20,54 @@ from .models import UnifiedConfig
 from .schema import ConfigSchemaGenerator
 
 console = Console()
+
+
+def _get_service_icon(service_name: str) -> str:
+    """Get icon for service display."""
+    icons = {
+        "qdrant": "🗃️",
+        "redis": "🔄",
+        "dragonfly": "🔄",
+        "openai": "🤖",
+        "firecrawl": "🕷️",
+    }
+    return icons.get(service_name, "🔍")
+
+
+def _display_health_check_results(results: dict[str, dict[str, Any]]) -> None:
+    """Display health check results in table format."""
+    rprint("[bold]Checking Service Connections...[/bold]\n")
+
+    for service_name, result in results.items():
+        service_icon = _get_service_icon(service_name)
+        rprint(f"{service_icon} Checking {service_name.capitalize()}...")
+
+        if result["connected"]:
+            status_msg = f"[green]✓[/green] {service_name.capitalize()} connected"
+
+            # Add details if available
+            details = result.get("details", {})
+            if details:
+                detail_parts = []
+                if "collections_count" in details:
+                    detail_parts.append(f"{details['collections_count']} collections")
+                if "model" in details:
+                    detail_parts.append(f"model: {details['model']}")
+                if "available_models_count" in details:
+                    detail_parts.append(
+                        f"{details['available_models_count']} models available"
+                    )
+                if detail_parts:
+                    status_msg += f" ({', '.join(detail_parts)})"
+
+            rprint(status_msg)
+        else:
+            error_msg = result.get("error", "Unknown error")
+            rprint(
+                f"[red]✗[/red] {service_name.capitalize()} connection failed: {error_msg}"
+            )
+
+        rprint()  # Add spacing between services
 
 
 @click.group()
@@ -74,7 +123,16 @@ def create_env_template(output: str):
 )
 @click.option("--env-file", "-e", type=click.Path(exists=True), help=".env file path")
 @click.option("--show-config", is_flag=True, help="Show the loaded configuration")
-def validate(config_file: str | None, env_file: str | None, show_config: bool):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results (when --show-config is used)",
+)
+def validate(
+    config_file: str | None, env_file: str | None, show_config: bool, output_format: str
+):
     """Validate configuration from various sources."""
     try:
         # Load configuration
@@ -95,8 +153,11 @@ def validate(config_file: str | None, env_file: str | None, show_config: bool):
                 rprint(f"  [yellow]•[/yellow] {issue}")
 
         if show_config:
-            rprint("\n[bold]Loaded Configuration:[/bold]")
-            rprint(config.model_dump_json(indent=2))
+            if output_format == "json":
+                console.print_json(data=config.model_dump())
+            else:
+                rprint("\n[bold]Loaded Configuration:[/bold]")
+                rprint(config.model_dump_json(indent=2))
 
     except Exception as e:
         rprint(f"[red]Error loading configuration:[/red] {e}")
@@ -141,10 +202,10 @@ def convert(input_file: str, output_file: str, from_format: str | None, to_forma
     try:
         # Load configuration
         if from_format == "env":
-            # Special handling for .env files
-            config = UnifiedConfig()
+            # Special handling for .env files - load with env file support
+            config = ConfigLoader.load_config(env_file=input_path, include_env=True)
         else:
-            config = UnifiedConfig.load_from_file(input_path)
+            config = ConfigLoader.load_config(config_file=input_path, include_env=True)
 
         # Save in new format
         config.save_to_file(output_path, format=to_format)
@@ -164,58 +225,45 @@ def convert(input_file: str, output_file: str, from_format: str | None, to_forma
     type=click.Path(exists=True),
     help="Configuration file to load",
 )
-def show_providers(config_file: str | None):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results",
+)
+def show_providers(config_file: str | None, output_format: str):
     """Show active provider configuration."""
     try:
         # Load configuration
         config = ConfigLoader.load_config(config_file=config_file, include_env=True)
 
-        # Create table
-        table = Table(title="Active Provider Configuration")
-        table.add_column("Provider Type", style="cyan")
-        table.add_column("Selected Provider", style="green")
-        table.add_column("Configuration", style="yellow")
+        # Get provider display data
+        provider_data = ConfigLoader.get_provider_display_data(config)
 
-        # Add rows
-        providers = config.get_active_providers()
-
-        # Embedding provider
-        embedding_config = providers["embedding"]
-        if config.embedding_provider == "openai":
-            table.add_row(
-                "Embedding",
-                "OpenAI",
-                f"Model: {embedding_config.model}\n"
-                f"Dimensions: {embedding_config.dimensions}\n"
-                f"API Key: {'Set' if embedding_config.api_key else 'Not Set'}",
-            )
+        if output_format == "json":
+            # Output JSON format
+            console.print_json(data=provider_data)
         else:
-            table.add_row(
-                "Embedding",
-                "FastEmbed",
-                f"Model: {embedding_config.model}\n"
-                f"Max Length: {embedding_config.max_length}",
-            )
+            # Output table format
+            table = Table(title="Active Provider Configuration")
+            table.add_column("Provider Type", style="cyan")
+            table.add_column("Selected Provider", style="green")
+            table.add_column("Configuration", style="yellow")
 
-        # Crawl provider
-        crawl_config = providers["crawl"]
-        if config.crawl_provider == "firecrawl":
-            table.add_row(
-                "Crawl",
-                "Firecrawl",
-                f"API URL: {crawl_config.api_url}\n"
-                f"API Key: {'Set' if crawl_config.api_key else 'Not Set'}",
-            )
-        else:
-            table.add_row(
-                "Crawl",
-                "Crawl4AI",
-                f"Browser: {crawl_config.browser_type}\n"
-                f"Headless: {crawl_config.headless}\n"
-                f"Max Concurrent: {crawl_config.max_concurrent_crawls}",
-            )
+            # Add rows for each provider
+            for provider_type, provider_info in provider_data.items():
+                config_lines = []
+                for key, value in provider_info["configuration"].items():
+                    config_lines.append(f"{key}: {value}")
 
-        console.print(table)
+                table.add_row(
+                    provider_type.capitalize(),
+                    provider_info["provider_name"],
+                    "\n".join(config_lines),
+                )
+
+            console.print(table)
 
     except Exception as e:
         rprint(f"[red]Error loading configuration:[/red] {e}")
@@ -241,9 +289,9 @@ def migrate_sites(source: str, config_file: str | None):
         # Load documentation sites
         sites = ConfigLoader.load_documentation_sites(source)
 
-        # Load or create configuration
+        # Load or create configuration using standard loader
         if config_file:
-            config = UnifiedConfig.load_from_file(config_file)
+            config = ConfigLoader.load_config(config_file=config_file, include_env=True)
         else:
             config = UnifiedConfig()
 
@@ -270,69 +318,31 @@ def migrate_sites(source: str, config_file: str | None):
     type=click.Path(exists=True),
     help="Configuration file to check",
 )
-def check_connections(config_file: str | None):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results",
+)
+def check_connections(config_file: str | None, output_format: str):
     """Check connections to all configured services."""
     try:
         # Load configuration
         config = ConfigLoader.load_config(config_file=config_file, include_env=True)
 
-        rprint("[bold]Checking Service Connections...[/bold]\n")
+        # Import the centralized health checker
+        from ..utils.health_checks import ServiceHealthChecker
 
-        # Check Qdrant
-        rprint("🔍 Checking Qdrant...")
-        try:
-            from qdrant_client import QdrantClient
+        # Perform health checks
+        results = ServiceHealthChecker.perform_all_health_checks(config)
 
-            client = QdrantClient(url=config.qdrant.url, api_key=config.qdrant.api_key)
-            collections = client.get_collections()
-            rprint(
-                f"[green]✓[/green] Qdrant connected ({len(collections.collections)} collections)"
-            )
-        except Exception as e:
-            rprint(f"[red]✗[/red] Qdrant connection failed: {e}")
-
-        # Check Redis if enabled
-        if config.cache.enable_redis_cache:
-            rprint("\n🔍 Checking Redis...")
-            try:
-                import redis
-
-                r = redis.from_url(config.cache.redis_url)
-                r.ping()
-                rprint("[green]✓[/green] Redis connected")
-            except Exception as e:
-                rprint(f"[red]✗[/red] Redis connection failed: {e}")
-
-        # Check OpenAI if configured
-        if config.embedding_provider == "openai" and config.openai.api_key:
-            rprint("\n🔍 Checking OpenAI...")
-            try:
-                from openai import OpenAI
-
-                client = OpenAI(api_key=config.openai.api_key)
-                client.models.list()
-                rprint("[green]✓[/green] OpenAI connected")
-            except Exception as e:
-                rprint(f"[red]✗[/red] OpenAI connection failed: {e}")
-
-        # Check Firecrawl if configured
-        if config.crawl_provider == "firecrawl" and config.firecrawl.api_key:
-            rprint("\n🔍 Checking Firecrawl...")
-            try:
-                import httpx
-
-                headers = {"Authorization": f"Bearer {config.firecrawl.api_key}"}
-                response = httpx.get(
-                    f"{config.firecrawl.api_url}/health", headers=headers
-                )
-                if response.status_code == 200:
-                    rprint("[green]✓[/green] Firecrawl connected")
-                else:
-                    rprint(
-                        f"[red]✗[/red] Firecrawl returned status {response.status_code}"
-                    )
-            except Exception as e:
-                rprint(f"[red]✗[/red] Firecrawl connection failed: {e}")
+        if output_format == "json":
+            # Output JSON format
+            console.print_json(data=results)
+        else:
+            # Output table format
+            _display_health_check_results(results)
 
     except Exception as e:
         rprint(f"[red]Error checking connections:[/red] {e}")
@@ -371,13 +381,26 @@ def generate_schema(output_dir: str, format: tuple[str]):
 
 
 @cli.command()
-def show_schema():
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["json", "yaml"]),
+    default="json",
+    help="Output format for schema",
+)
+def show_schema(output_format: str):
     """Display configuration schema in the terminal."""
     try:
         schema = ConfigSchemaGenerator.generate_json_schema()
 
-        # Pretty print the schema
-        console.print_json(data=schema)
+        if output_format == "yaml":
+            import yaml
+
+            yaml_output = yaml.dump(schema, default_flow_style=False, indent=2)
+            rprint(yaml_output)
+        else:
+            # Pretty print the schema as JSON
+            console.print_json(data=schema)
 
     except Exception as e:
         rprint(f"[red]Error displaying schema:[/red] {e}")

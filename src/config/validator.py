@@ -203,53 +203,18 @@ class ConfigValidator:
         Returns:
             Dictionary mapping service names to their connection status
         """
+        from ..utils.health_checks import ServiceHealthChecker
+
+        # Use centralized health checker and convert format for backwards compatibility
+        health_results = ServiceHealthChecker.perform_all_health_checks(config)
+
+        # Convert to the expected format for validator
         results = {}
-
-        # Check Qdrant
-        results["qdrant"] = {"connected": False, "error": None}
-        try:
-            from qdrant_client import QdrantClient
-            from qdrant_client.http.exceptions import UnexpectedResponse
-
-            client = QdrantClient(
-                url=config.qdrant.url, api_key=config.qdrant.api_key, timeout=5.0
-            )
-            client.get_collections()
-            results["qdrant"]["connected"] = True
-        except UnexpectedResponse as e:
-            if e.status_code == 401:
-                results["qdrant"]["error"] = "Authentication failed - check API key"
-            else:
-                results["qdrant"]["error"] = f"HTTP {e.status_code}: {e.reason_phrase}"
-        except Exception as e:
-            results["qdrant"]["error"] = str(e)
-
-        # Check DragonflyDB/Redis if enabled
-        if config.cache.enable_dragonfly_cache:
-            results["redis"] = {"connected": False, "error": None}
-            try:
-                import redis
-
-                r = redis.from_url(config.cache.dragonfly_url, socket_connect_timeout=5)
-                r.ping()
-                results["redis"]["connected"] = True
-            except redis.ConnectionError:
-                results["redis"]["error"] = "Connection refused - is Redis running?"
-            except Exception as e:
-                results["redis"]["error"] = str(e)
-
-        # Check OpenAI if configured
-        if config.embedding_provider == "openai" and config.openai.api_key:
-            results["openai"] = {"connected": False, "error": None}
-            try:
-                from openai import OpenAI
-
-                client = OpenAI(api_key=config.openai.api_key, timeout=5.0)
-                # Just list models to test connection
-                list(client.models.list())
-                results["openai"]["connected"] = True
-            except Exception as e:
-                results["openai"]["error"] = str(e)
+        for service_name, health_result in health_results.items():
+            results[service_name] = {
+                "connected": health_result["connected"],
+                "error": health_result["error"],
+            }
 
         return results
 

@@ -260,19 +260,30 @@ class TestConfigCLI:
             assert result.exit_code == 1
             assert "Error converting configuration:" in result.output
 
+    @patch("src.config.cli.ConfigLoader.get_provider_display_data")
     @patch("src.config.cli.ConfigLoader.load_config")
-    def test_show_providers_openai(self, mock_load):
+    def test_show_providers_openai(self, mock_load, mock_display_data):
         """Test showing providers with OpenAI configuration."""
         mock_config = MagicMock()
-        mock_config.embedding_provider = "openai"
-        mock_config.crawl_provider = "firecrawl"
-        mock_config.get_active_providers.return_value = {
-            "embedding": MagicMock(
-                model="text-embedding-3-small", dimensions=1536, api_key="sk-test"
-            ),
-            "crawl": MagicMock(api_url="https://api.firecrawl.dev", api_key="fc-test"),
-        }
         mock_load.return_value = mock_config
+
+        mock_display_data.return_value = {
+            "embedding": {
+                "provider_name": "OpenAI",
+                "configuration": {
+                    "Model": "text-embedding-3-small",
+                    "Dimensions": "1536",
+                    "API Key": "Set",
+                },
+            },
+            "crawl": {
+                "provider_name": "Firecrawl",
+                "configuration": {
+                    "API URL": "https://api.firecrawl.dev",
+                    "API Key": "Set",
+                },
+            },
+        }
 
         result = self.runner.invoke(cli, ["show-providers"])
 
@@ -281,25 +292,82 @@ class TestConfigCLI:
         assert "OpenAI" in result.output
         assert "Firecrawl" in result.output
 
+    @patch("src.config.cli.ConfigLoader.get_provider_display_data")
     @patch("src.config.cli.ConfigLoader.load_config")
-    def test_show_providers_fastembed(self, mock_load):
+    def test_show_providers_fastembed(self, mock_load, mock_display_data):
         """Test showing providers with FastEmbed configuration."""
         mock_config = MagicMock()
-        mock_config.embedding_provider = "fastembed"
-        mock_config.crawl_provider = "crawl4ai"
-        mock_config.get_active_providers.return_value = {
-            "embedding": MagicMock(model="BAAI/bge-small-en-v1.5", max_length=512),
-            "crawl": MagicMock(
-                browser_type="chromium", headless=True, max_concurrent_crawls=3
-            ),
-        }
         mock_load.return_value = mock_config
+
+        mock_display_data.return_value = {
+            "embedding": {
+                "provider_name": "FastEmbed",
+                "configuration": {
+                    "Model": "BAAI/bge-small-en-v1.5",
+                    "Max Length": "512",
+                },
+            },
+            "crawl": {
+                "provider_name": "Crawl4AI",
+                "configuration": {
+                    "Browser": "chromium",
+                    "Headless": "True",
+                    "Max Concurrent": "3",
+                },
+            },
+        }
 
         result = self.runner.invoke(cli, ["show-providers"])
 
         assert result.exit_code == 0
         assert "FastEmbed" in result.output
         assert "Crawl4AI" in result.output
+
+    @patch("src.config.cli.ConfigLoader.get_provider_display_data")
+    @patch("src.config.cli.ConfigLoader.load_config")
+    def test_show_providers_json_output(self, mock_load, mock_display_data):
+        """Test showing providers with JSON output format."""
+        mock_config = MagicMock()
+        mock_load.return_value = mock_config
+
+        mock_display_data.return_value = {
+            "embedding": {
+                "provider_name": "OpenAI",
+                "configuration": {"Model": "text-embedding-3-small"},
+            }
+        }
+
+        result = self.runner.invoke(cli, ["show-providers", "--output-format", "json"])
+
+        assert result.exit_code == 0
+        # Should contain JSON output
+        assert '"embedding"' in result.output
+        assert '"OpenAI"' in result.output
+
+    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
+    @patch("src.config.cli.ConfigLoader.load_config")
+    def test_check_connections_json_output(self, mock_load, mock_health_checks):
+        """Test connection checking with JSON output format."""
+        mock_config = MagicMock()
+        mock_load.return_value = mock_config
+
+        mock_health_checks.return_value = {
+            "qdrant": {
+                "service": "qdrant",
+                "connected": True,
+                "error": None,
+                "details": {"collections_count": 2},
+            }
+        }
+
+        result = self.runner.invoke(
+            cli, ["check-connections", "--output-format", "json"]
+        )
+
+        assert result.exit_code == 0
+        # Should contain JSON output
+        assert '"qdrant"' in result.output
+        assert '"connected": true' in result.output
 
     @patch("src.config.cli.ConfigLoader.load_config")
     def test_show_providers_loading_error(self, mock_load):
@@ -381,75 +449,77 @@ class TestConfigCLI:
             "Error migrating sites:" in result.output or "missing.json" in result.output
         )
 
-    @patch("qdrant_client.QdrantClient")
+    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
     @patch("src.config.cli.ConfigLoader.load_config")
-    def test_check_connections_success(self, mock_load, mock_client_class):
+    def test_check_connections_success(self, mock_load, mock_health_checks):
         """Test successful connection checking."""
         mock_config = MagicMock()
-        mock_config.qdrant.url = "http://localhost:6333"
-        mock_config.qdrant.api_key = None
-        mock_config.cache.enable_dragonfly_cache = False
-        mock_config.embedding_provider = "fastembed"
-        mock_config.crawl_provider = "crawl4ai"
         mock_load.return_value = mock_config
 
-        mock_client = MagicMock()
-        mock_collections = MagicMock()
-        mock_collections.collections = [MagicMock(), MagicMock()]
-        mock_client.get_collections.return_value = mock_collections
-        mock_client_class.return_value = mock_client
+        mock_health_checks.return_value = {
+            "qdrant": {
+                "service": "qdrant",
+                "connected": True,
+                "error": None,
+                "details": {"collections_count": 2, "url": "http://localhost:6333"},
+            }
+        }
 
         result = self.runner.invoke(cli, ["check-connections"])
 
         assert result.exit_code == 0
         assert "Checking Service Connections" in result.output
-        assert "Qdrant connected (2 collections)" in result.output
+        assert "Qdrant connected" in result.output
+        assert "2 collections" in result.output
 
-    @patch("qdrant_client.QdrantClient")
+    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
     @patch("src.config.cli.ConfigLoader.load_config")
-    def test_check_connections_qdrant_failure(self, mock_load, mock_client_class):
+    def test_check_connections_qdrant_failure(self, mock_load, mock_health_checks):
         """Test connection checking with Qdrant failure."""
         mock_config = MagicMock()
-        mock_config.qdrant.url = "http://localhost:6333"
-        mock_config.qdrant.api_key = None
-        mock_config.cache.enable_dragonfly_cache = False
-        mock_config.embedding_provider = "fastembed"
-        mock_config.crawl_provider = "crawl4ai"
         mock_load.return_value = mock_config
 
-        mock_client_class.side_effect = Exception("Connection refused")
+        mock_health_checks.return_value = {
+            "qdrant": {
+                "service": "qdrant",
+                "connected": False,
+                "error": "Connection refused",
+                "details": {},
+            }
+        }
 
         result = self.runner.invoke(cli, ["check-connections"])
 
         assert result.exit_code == 0
         assert "Qdrant connection failed: Connection refused" in result.output
 
-    @patch("redis.from_url")
-    @patch("qdrant_client.QdrantClient")
+    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
     @patch("src.config.cli.ConfigLoader.load_config")
-    def test_check_connections_redis_enabled(self, mock_load, mock_qdrant, mock_redis):
+    def test_check_connections_redis_enabled(self, mock_load, mock_health_checks):
         """Test connection checking with Redis enabled."""
         mock_config = MagicMock()
-        mock_config.qdrant.url = "http://localhost:6333"
-        mock_config.cache.enable_dragonfly_cache = True
-        mock_config.cache.dragonfly_url = "redis://localhost:6379"
-        mock_config.embedding_provider = "fastembed"
-        mock_config.crawl_provider = "crawl4ai"
         mock_load.return_value = mock_config
 
-        # Mock Qdrant success
-        mock_qdrant_client = MagicMock()
-        mock_qdrant.return_value = mock_qdrant_client
-
-        # Mock Redis success
-        mock_redis_client = MagicMock()
-        mock_redis.return_value = mock_redis_client
+        mock_health_checks.return_value = {
+            "qdrant": {
+                "service": "qdrant",
+                "connected": True,
+                "error": None,
+                "details": {"collections_count": 0},
+            },
+            "dragonfly": {
+                "service": "dragonfly",
+                "connected": True,
+                "error": None,
+                "details": {"url": "redis://localhost:6379"},
+            },
+        }
 
         result = self.runner.invoke(cli, ["check-connections"])
 
         assert result.exit_code == 0
-        assert "Checking Redis" in result.output
-        assert "Redis connected" in result.output
+        assert "Checking Dragonfly" in result.output
+        assert "Dragonfly connected" in result.output
 
     @patch("src.config.cli.ConfigSchemaGenerator.save_schema")
     def test_generate_schema_all_formats(self, mock_save):
