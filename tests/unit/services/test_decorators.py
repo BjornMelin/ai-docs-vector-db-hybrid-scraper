@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from src.services.errors import ExternalServiceError
-from src.services.errors import RateLimiter
+from src.services.utilities.rate_limiter import RateLimiter
 from src.services.errors import RateLimitError
 from src.services.errors import ResourceError
 from src.services.errors import ToolError

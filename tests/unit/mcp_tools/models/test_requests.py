@@ -7,17 +7,17 @@ from src.config.enums import FusionAlgorithm
 from src.config.enums import SearchAccuracy
 from src.config.enums import SearchStrategy
 from src.config.enums import VectorType
-from src.mcp.models.requests import AnalyticsRequest
-from src.mcp.models.requests import BatchRequest
-from src.mcp.models.requests import CostEstimateRequest
-from src.mcp.models.requests import DocumentRequest
-from src.mcp.models.requests import EmbeddingRequest
-from src.mcp.models.requests import FilteredSearchRequest
-from src.mcp.models.requests import HyDESearchRequest
-from src.mcp.models.requests import MultiStageSearchRequest
-from src.mcp.models.requests import ProjectRequest
-from src.mcp.models.requests import SearchRequest
-from src.mcp.models.requests import SearchStageRequest
+from src.mcp_tools.models.requests import AnalyticsRequest
+from src.mcp_tools.models.requests import BatchRequest
+from src.mcp_tools.models.requests import CostEstimateRequest
+from src.mcp_tools.models.requests import DocumentRequest
+from src.mcp_tools.models.requests import EmbeddingRequest
+from src.mcp_tools.models.requests import FilteredSearchRequest
+from src.mcp_tools.models.requests import HyDESearchRequest
+from src.mcp_tools.models.requests import MultiStageSearchRequest
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.requests import SearchStageRequest
 
 
 class TestSearchRequest:

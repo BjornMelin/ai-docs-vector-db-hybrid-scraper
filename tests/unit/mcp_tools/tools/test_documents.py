@@ -7,10 +7,10 @@ from unittest.mock import patch
 
 import pytest
 from src.config.enums import ChunkingStrategy
-from src.mcp.models.requests import BatchRequest
-from src.mcp.models.requests import DocumentRequest
-from src.mcp.models.responses import AddDocumentResponse
-from src.mcp.models.responses import DocumentBatchResponse
+from src.mcp_tools.models.requests import BatchRequest
+from src.mcp_tools.models.requests import DocumentRequest
+from src.mcp_tools.models.responses import AddDocumentResponse
+from src.mcp_tools.models.responses import DocumentBatchResponse
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def mock_chunks():
 @pytest.mark.asyncio
 async def test_add_document_tool_registration(mock_client_manager, mock_context):
     """Test that document tools are properly registered."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -102,7 +102,7 @@ async def test_add_document_tool_registration(mock_client_manager, mock_context)
 @pytest.mark.asyncio
 async def test_add_document_success(mock_client_manager, mock_context, mock_crawl_result, mock_chunks):
     """Test successful document addition."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -126,13 +126,13 @@ async def test_add_document_success(mock_client_manager, mock_context, mock_craw
     embedding_manager.generate_embeddings.return_value = mock_embedding_result
 
     # Mock security validator
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/test"
         mock_security.from_unified_config.return_value = mock_validator
 
         # Mock enhanced chunker
-        with patch('src.mcp.tools.documents.EnhancedChunker') as mock_chunker_class:
+        with patch('src.mcp_tools.tools.documents.EnhancedChunker') as mock_chunker_class:
             mock_chunker = Mock()
             mock_chunker.chunk_content.return_value = mock_chunks
             mock_chunker_class.return_value = mock_chunker
@@ -190,7 +190,7 @@ async def test_add_document_success(mock_client_manager, mock_context, mock_craw
 @pytest.mark.asyncio
 async def test_add_document_cache_hit(mock_client_manager, mock_context):
     """Test document addition with cache hit."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -215,7 +215,7 @@ async def test_add_document_cache_hit(mock_client_manager, mock_context):
     cache_manager.get.return_value = cached_response
 
     # Mock security validator
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/cached"
         mock_security.from_unified_config.return_value = mock_validator
@@ -246,7 +246,7 @@ async def test_add_document_cache_hit(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_document_crawl_failure(mock_client_manager, mock_context):
     """Test document addition when crawling fails."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -262,7 +262,7 @@ async def test_add_document_crawl_failure(mock_client_manager, mock_context):
     crawl_manager.crawl_single.return_value = None
 
     # Mock security validator
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/fail"
         mock_security.from_unified_config.return_value = mock_validator
@@ -284,7 +284,7 @@ async def test_add_document_crawl_failure(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_document_basic_chunking_no_sparse_vector(mock_client_manager, mock_context, mock_crawl_result, mock_chunks):
     """Test document addition with basic chunking strategy (no sparse vector)."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -305,8 +305,8 @@ async def test_add_document_basic_chunking_no_sparse_vector(mock_client_manager,
     embedding_manager.generate_embeddings.return_value = mock_embedding_result
 
     # Mock security validator and chunker
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security, \
-         patch('src.mcp.tools.documents.EnhancedChunker') as mock_chunker_class:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security, \
+         patch('src.mcp_tools.tools.documents.EnhancedChunker') as mock_chunker_class:
 
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/test"
@@ -340,7 +340,7 @@ async def test_add_document_basic_chunking_no_sparse_vector(mock_client_manager,
 @pytest.mark.asyncio
 async def test_add_documents_batch_success(mock_client_manager, mock_context):
     """Test successful batch document addition."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -364,8 +364,8 @@ async def test_add_documents_batch_success(mock_client_manager, mock_context):
     embedding_manager.generate_embeddings.return_value = mock_embedding_result
 
     # Mock security validator and chunker
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security, \
-         patch('src.mcp.tools.documents.EnhancedChunker') as mock_chunker_class:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security, \
+         patch('src.mcp_tools.tools.documents.EnhancedChunker') as mock_chunker_class:
 
         mock_validator = Mock()
         mock_validator.validate_url.side_effect = lambda x: x  # Return input unchanged
@@ -395,7 +395,7 @@ async def test_add_documents_batch_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_documents_batch_with_failures(mock_client_manager, mock_context):
     """Test batch document addition with some failures."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -407,7 +407,7 @@ async def test_add_documents_batch_with_failures(mock_client_manager, mock_conte
     mock_mcp.tool.return_value = capture_tool
 
     # Mock security validator
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security:
         mock_validator = Mock()
 
         def validate_url_side_effect(url):
@@ -444,7 +444,7 @@ async def test_add_documents_batch_with_failures(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_add_document_error_handling(mock_client_manager, mock_context):
     """Test error handling in add_document."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -456,7 +456,7 @@ async def test_add_document_error_handling(mock_client_manager, mock_context):
     mock_mcp.tool.return_value = capture_tool
 
     # Mock security validator to raise exception
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_url.side_effect = Exception("Security validation failed")
         mock_security.from_unified_config.return_value = mock_validator
@@ -478,7 +478,7 @@ async def test_add_document_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_document_chunking_config(mock_client_manager, mock_context, mock_crawl_result, mock_chunks):
     """Test that chunking configuration is properly passed."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -499,9 +499,9 @@ async def test_add_document_chunking_config(mock_client_manager, mock_context, m
     embedding_manager.generate_embeddings.return_value = mock_embedding_result
 
     # Mock security validator and chunker
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security, \
-         patch('src.mcp.tools.documents.EnhancedChunker') as mock_chunker_class, \
-         patch('src.mcp.tools.documents.ChunkingConfig') as mock_config_class:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security, \
+         patch('src.mcp_tools.tools.documents.EnhancedChunker') as mock_chunker_class, \
+         patch('src.mcp_tools.tools.documents.ChunkingConfig') as mock_config_class:
 
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/test"
@@ -540,7 +540,7 @@ async def test_add_document_chunking_config(mock_client_manager, mock_context, m
 @pytest.mark.asyncio
 async def test_add_document_cache_set(mock_client_manager, mock_context, mock_crawl_result, mock_chunks):
     """Test that successful results are cached."""
-    from src.mcp.tools.documents import register_tools
+    from src.mcp_tools.tools.documents import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -563,8 +563,8 @@ async def test_add_document_cache_set(mock_client_manager, mock_context, mock_cr
     cache_manager = await mock_client_manager.get_cache_manager()
 
     # Mock security validator and chunker
-    with patch('src.mcp.tools.documents.SecurityValidator') as mock_security, \
-         patch('src.mcp.tools.documents.EnhancedChunker') as mock_chunker_class:
+    with patch('src.mcp_tools.tools.documents.SecurityValidator') as mock_security, \
+         patch('src.mcp_tools.tools.documents.EnhancedChunker') as mock_chunker_class:
 
         mock_validator = Mock()
         mock_validator.validate_url.return_value = "https://example.com/test"

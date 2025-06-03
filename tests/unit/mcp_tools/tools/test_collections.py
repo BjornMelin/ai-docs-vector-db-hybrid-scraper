@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
-from src.mcp.models.responses import CollectionInfo
-from src.mcp.models.responses import CollectionOperationResponse
+from src.mcp_tools.models.responses import CollectionInfo
+from src.mcp_tools.models.responses import CollectionOperationResponse
 
 
 class TestCollectionsTools:
@@ -51,7 +51,7 @@ class TestCollectionsTools:
     @pytest.mark.asyncio
     async def test_list_collections(self, mock_client_manager, mock_context):
         """Test listing collections."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -81,7 +81,7 @@ class TestCollectionsTools:
     @pytest.mark.asyncio
     async def test_optimize_collection(self, mock_client_manager, mock_context):
         """Test optimizing a collection."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -108,7 +108,7 @@ class TestCollectionsTools:
     @pytest.mark.asyncio
     async def test_delete_collection(self, mock_client_manager, mock_context):
         """Test deleting a collection."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -135,7 +135,7 @@ class TestCollectionsTools:
     @pytest.mark.asyncio
     async def test_collections_error_handling(self, mock_client_manager, mock_context):
         """Test collections error handling."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         # Make qdrant service raise an exception
         mock_qdrant = AsyncMock()
@@ -189,7 +189,7 @@ class TestCollectionsTools:
     @pytest.mark.asyncio
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
         """Test that context logging is properly integrated."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -221,7 +221,7 @@ class TestCollectionsTools:
 
     def test_tool_registration(self, mock_client_manager):
         """Test that collection tools are properly registered."""
-        from src.mcp.tools.collections import register_tools
+        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)

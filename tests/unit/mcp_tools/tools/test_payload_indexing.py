@@ -6,8 +6,8 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.mcp.models.responses import GenericDictResponse
-from src.mcp.models.responses import ReindexCollectionResponse
+from src.mcp_tools.models.responses import GenericDictResponse
+from src.mcp_tools.models.responses import ReindexCollectionResponse
 
 
 @pytest.fixture
@@ -57,7 +57,7 @@ def mock_index_stats():
 @pytest.mark.asyncio
 async def test_payload_indexing_tools_registration(mock_client_manager, mock_context):
     """Test that payload indexing tools are properly registered."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -79,7 +79,7 @@ async def test_payload_indexing_tools_registration(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_create_payload_indexes_success(mock_client_manager, mock_context, mock_index_stats):
     """Test successful payload index creation."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -95,7 +95,7 @@ async def test_create_payload_indexes_success(mock_client_manager, mock_context,
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = mock_index_stats
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -128,7 +128,7 @@ async def test_create_payload_indexes_success(mock_client_manager, mock_context,
 @pytest.mark.asyncio
 async def test_create_payload_indexes_collection_not_found(mock_client_manager, mock_context):
     """Test payload index creation when collection doesn't exist."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -143,7 +143,7 @@ async def test_create_payload_indexes_collection_not_found(mock_client_manager, 
     mock_client_manager.qdrant_service.list_collections.return_value = ["other_collection"]
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "missing_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -164,7 +164,7 @@ async def test_create_payload_indexes_collection_not_found(mock_client_manager, 
 @pytest.mark.asyncio
 async def test_list_payload_indexes_success(mock_client_manager, mock_context, mock_index_stats):
     """Test successful payload index listing."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -179,7 +179,7 @@ async def test_list_payload_indexes_success(mock_client_manager, mock_context, m
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = mock_index_stats
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -207,7 +207,7 @@ async def test_list_payload_indexes_success(mock_client_manager, mock_context, m
 @pytest.mark.asyncio
 async def test_reindex_collection_success(mock_client_manager, mock_context, mock_index_stats):
     """Test successful collection reindexing."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -230,7 +230,7 @@ async def test_reindex_collection_success(mock_client_manager, mock_context, moc
     mock_client_manager.qdrant_service.get_payload_index_stats.side_effect = [stats_before, stats_after]
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -267,7 +267,7 @@ async def test_reindex_collection_success(mock_client_manager, mock_context, moc
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_success(mock_client_manager, mock_context):
     """Test successful filtered search benchmarking."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -299,7 +299,7 @@ async def test_benchmark_filtered_search_success(mock_client_manager, mock_conte
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = mock_index_stats
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_validator.validate_query_string.return_value = "test query"
@@ -347,7 +347,7 @@ async def test_benchmark_filtered_search_success(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_no_indexes(mock_client_manager, mock_context):
     """Test filtered search benchmarking with no indexes."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -376,7 +376,7 @@ async def test_benchmark_filtered_search_no_indexes(mock_client_manager, mock_co
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = mock_index_stats
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_validator.validate_query_string.return_value = "test query"
@@ -401,7 +401,7 @@ async def test_benchmark_filtered_search_no_indexes(mock_client_manager, mock_co
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_default_query(mock_client_manager, mock_context):
     """Test filtered search benchmarking with default query."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -422,7 +422,7 @@ async def test_benchmark_filtered_search_default_query(mock_client_manager, mock
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = {"indexed_fields": ["title"]}
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_validator.validate_query_string.return_value = "documentation search test"
@@ -449,7 +449,7 @@ async def test_benchmark_filtered_search_default_query(mock_client_manager, mock
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_without_context(mock_client_manager):
     """Test filtered search benchmarking without context parameter."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -470,7 +470,7 @@ async def test_benchmark_filtered_search_without_context(mock_client_manager):
     mock_client_manager.qdrant_service.get_payload_index_stats.return_value = {"indexed_fields": ["title"]}
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_validator.validate_query_string.return_value = "test query"
@@ -493,7 +493,7 @@ async def test_benchmark_filtered_search_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_create_payload_indexes_error_handling(mock_client_manager, mock_context):
     """Test error handling in create_payload_indexes."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -505,7 +505,7 @@ async def test_create_payload_indexes_error_handling(mock_client_manager, mock_c
     mock_mcp.tool.return_value = capture_tool
 
     # Mock security validator to raise exception
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.side_effect = Exception("Validation error")
         mock_security.from_unified_config.return_value = mock_validator
@@ -526,7 +526,7 @@ async def test_create_payload_indexes_error_handling(mock_client_manager, mock_c
 @pytest.mark.asyncio
 async def test_list_payload_indexes_error_handling(mock_client_manager, mock_context):
     """Test error handling in list_payload_indexes."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -541,7 +541,7 @@ async def test_list_payload_indexes_error_handling(mock_client_manager, mock_con
     mock_client_manager.qdrant_service.get_payload_index_stats.side_effect = Exception("Service error")
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -562,7 +562,7 @@ async def test_list_payload_indexes_error_handling(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_reindex_collection_error_handling(mock_client_manager, mock_context):
     """Test error handling in reindex_collection."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -577,7 +577,7 @@ async def test_reindex_collection_error_handling(mock_client_manager, mock_conte
     mock_client_manager.qdrant_service.reindex_collection.side_effect = Exception("Reindex failed")
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_security.from_unified_config.return_value = mock_validator
@@ -598,7 +598,7 @@ async def test_reindex_collection_error_handling(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_error_handling(mock_client_manager, mock_context):
     """Test error handling in benchmark_filtered_search."""
-    from src.mcp.tools.payload_indexing import register_tools
+    from src.mcp_tools.tools.payload_indexing import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -613,7 +613,7 @@ async def test_benchmark_filtered_search_error_handling(mock_client_manager, moc
     mock_client_manager.embedding_manager.generate_embeddings.side_effect = Exception("Embedding failed")
 
     # Mock security validator
-    with patch('src.mcp.tools.payload_indexing.SecurityValidator') as mock_security:
+    with patch('src.mcp_tools.tools.payload_indexing.SecurityValidator') as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.return_value = "test_collection"
         mock_validator.validate_query_string.return_value = "test query"

@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from datetime import datetime, UTC
 
 from src.config.enums import SearchStrategy
-from src.mcp.models.requests import ProjectRequest
-from src.mcp.models.responses import OperationStatus, ProjectInfo, SearchResult
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def mock_client_manager():
 @pytest.mark.asyncio
 async def test_project_tools_registration(mock_client_manager, mock_context):
     """Test that project tools are properly registered."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -84,7 +84,7 @@ async def test_project_tools_registration(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_project_basic_success(mock_client_manager, mock_context):
     """Test successful basic project creation."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -143,7 +143,7 @@ async def test_create_project_basic_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_project_premium_tier(mock_client_manager, mock_context):
     """Test project creation with premium quality tier."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -178,7 +178,7 @@ async def test_create_project_premium_tier(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_project_basic_tier(mock_client_manager, mock_context):
     """Test project creation with basic quality tier."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -213,7 +213,7 @@ async def test_create_project_basic_tier(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_project_with_urls_success(mock_client_manager, mock_context):
     """Test project creation with initial URLs that process successfully."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -260,7 +260,7 @@ async def test_create_project_with_urls_success(mock_client_manager, mock_contex
 @pytest.mark.asyncio
 async def test_create_project_with_urls_partial_failure(mock_client_manager, mock_context):
     """Test project creation with URLs where some fail to process."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -306,7 +306,7 @@ async def test_create_project_with_urls_partial_failure(mock_client_manager, moc
 @pytest.mark.asyncio
 async def test_create_project_without_context(mock_client_manager):
     """Test project creation without context parameter."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -337,7 +337,7 @@ async def test_create_project_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_create_project_error_handling(mock_client_manager, mock_context):
     """Test error handling in project creation."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -370,7 +370,7 @@ async def test_create_project_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_projects_success(mock_client_manager, mock_context):
     """Test successful project listing."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -457,7 +457,7 @@ async def test_list_projects_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_projects_with_collection_errors(mock_client_manager, mock_context):
     """Test project listing when collection info retrieval fails."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -500,7 +500,7 @@ async def test_list_projects_with_collection_errors(mock_client_manager, mock_co
 @pytest.mark.asyncio
 async def test_list_projects_empty(mock_client_manager, mock_context):
     """Test listing projects when none exist."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -526,7 +526,7 @@ async def test_list_projects_empty(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_project_success(mock_client_manager, mock_context):
     """Test successful project search."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -609,7 +609,7 @@ async def test_search_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_project_vector_only_strategy(mock_client_manager, mock_context):
     """Test project search with VECTOR_ONLY strategy."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -656,7 +656,7 @@ async def test_search_project_vector_only_strategy(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_search_project_not_found(mock_client_manager, mock_context):
     """Test project search when project doesn't exist."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -686,7 +686,7 @@ async def test_search_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_success(mock_client_manager, mock_context):
     """Test successful project update."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -746,7 +746,7 @@ async def test_update_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_partial_update(mock_client_manager, mock_context):
     """Test partial project update (only name or description)."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -790,7 +790,7 @@ async def test_update_project_partial_update(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_no_changes(mock_client_manager, mock_context):
     """Test project update with no actual changes."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -830,7 +830,7 @@ async def test_update_project_no_changes(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_not_found(mock_client_manager, mock_context):
     """Test project update when project doesn't exist."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -860,7 +860,7 @@ async def test_update_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_delete_project_success_with_collection(mock_client_manager, mock_context):
     """Test successful project deletion including collection."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -911,7 +911,7 @@ async def test_delete_project_success_with_collection(mock_client_manager, mock_
 @pytest.mark.asyncio
 async def test_delete_project_without_collection(mock_client_manager, mock_context):
     """Test project deletion without deleting collection."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -954,7 +954,7 @@ async def test_delete_project_without_collection(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_delete_project_collection_deletion_fails(mock_client_manager, mock_context):
     """Test project deletion when collection deletion fails."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -999,7 +999,7 @@ async def test_delete_project_collection_deletion_fails(mock_client_manager, moc
 @pytest.mark.asyncio
 async def test_delete_project_not_found(mock_client_manager, mock_context):
     """Test project deletion when project doesn't exist."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -1028,7 +1028,7 @@ async def test_delete_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_projects_error_handling(mock_client_manager, mock_context):
     """Test error handling in list_projects."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -1055,7 +1055,7 @@ async def test_list_projects_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_project_error_handling(mock_client_manager, mock_context):
     """Test error handling in search_project."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -1089,7 +1089,7 @@ async def test_search_project_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_all_tools_without_context(mock_client_manager):
     """Test that all tools work without context parameter."""
-    from src.mcp.tools.projects import register_tools
+    from src.mcp_tools.tools.projects import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}

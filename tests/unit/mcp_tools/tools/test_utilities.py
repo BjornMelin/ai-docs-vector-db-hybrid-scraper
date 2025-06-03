@@ -6,8 +6,8 @@ from unittest.mock import Mock
 from unittest.mock import PropertyMock
 
 import pytest
-from src.mcp.models.responses import ConfigValidationResponse
-from src.mcp.models.responses import GenericDictResponse
+from src.mcp_tools.models.responses import ConfigValidationResponse
+from src.mcp_tools.models.responses import GenericDictResponse
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ def mock_client_manager():
 @pytest.mark.asyncio
 async def test_utility_tools_registration(mock_client_manager, mock_context):
     """Test that utility tools are properly registered."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -78,7 +78,7 @@ async def test_utility_tools_registration(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_estimate_costs_basic(mock_client_manager, mock_context):
     """Test basic cost estimation without storage."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -116,7 +116,7 @@ async def test_estimate_costs_basic(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_estimate_costs_with_storage(mock_client_manager, mock_context):
     """Test cost estimation including storage costs."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -159,7 +159,7 @@ async def test_estimate_costs_with_storage(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_estimate_costs_default_parameters(mock_client_manager, mock_context):
     """Test cost estimation with default parameters."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -191,7 +191,7 @@ async def test_estimate_costs_default_parameters(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_estimate_costs_without_context(mock_client_manager):
     """Test cost estimation without context parameter."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -220,7 +220,7 @@ async def test_estimate_costs_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_estimate_costs_error_handling(mock_client_manager, mock_context):
     """Test error handling in cost estimation."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -247,7 +247,7 @@ async def test_estimate_costs_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_validate_configuration_success(mock_client_manager, mock_context):
     """Test successful configuration validation."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -287,7 +287,7 @@ async def test_validate_configuration_success(mock_client_manager, mock_context)
 @pytest.mark.asyncio
 async def test_validate_configuration_missing_api_keys(mock_client_manager, mock_context):
     """Test configuration validation with missing API keys."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -330,7 +330,7 @@ async def test_validate_configuration_missing_api_keys(mock_client_manager, mock
 @pytest.mark.asyncio
 async def test_validate_configuration_no_redis(mock_client_manager, mock_context):
     """Test configuration validation without Redis cache."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -361,7 +361,7 @@ async def test_validate_configuration_no_redis(mock_client_manager, mock_context
 @pytest.mark.asyncio
 async def test_validate_configuration_without_context(mock_client_manager):
     """Test configuration validation without context parameter."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -385,7 +385,7 @@ async def test_validate_configuration_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_validate_configuration_error_handling(mock_client_manager, mock_context):
     """Test error handling in configuration validation."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -412,7 +412,7 @@ async def test_validate_configuration_error_handling(mock_client_manager, mock_c
 @pytest.mark.asyncio
 async def test_estimate_costs_large_numbers(mock_client_manager, mock_context):
     """Test cost estimation with large numbers."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -447,7 +447,7 @@ async def test_estimate_costs_large_numbers(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_validate_configuration_partial_config(mock_client_manager, mock_context):
     """Test configuration validation with partially configured system."""
-    from src.mcp.tools.utilities import register_tools
+    from src.mcp_tools.tools.utilities import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}

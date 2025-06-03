@@ -11,12 +11,9 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# Setup import paths
-sys.path.insert(0, str(Path(__file__).parent))
-
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
-from src.mcp.tool_registry import register_all_tools
+from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
 
 # Initialize logging
@@ -180,11 +177,6 @@ if __name__ == "__main__":
             transport="streamable-http",
             host=host,
             port=port,
-            # Additional streaming optimizations
-            response_buffer_size=os.getenv("FASTMCP_BUFFER_SIZE", "8192"),
-            max_response_size=os.getenv(
-                "FASTMCP_MAX_RESPONSE_SIZE", "10485760"
-            ),  # 10MB
         )
     elif transport == "stdio":
         # Fallback to stdio for Claude Desktop compatibility

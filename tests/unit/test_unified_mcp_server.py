@@ -11,7 +11,7 @@ import pytest
 # Mock problematic imports before importing the module
 sys.modules["fastmcp"] = MagicMock()
 sys.modules["src.infrastructure.client_manager"] = MagicMock()
-sys.modules["src.mcp.tool_registry"] = MagicMock()
+sys.modules["src.mcp_tools.tool_registry"] = MagicMock()
 sys.modules["src.services.logging_config"] = MagicMock()
 sys.modules["src.config"] = MagicMock()
 
@@ -516,7 +516,7 @@ class TestImportAndModuleStructure:
         """Test that all required modules can be imported."""
         # These imports should work without errors
         from src.infrastructure.client_manager import ClientManager
-        from src.mcp.tool_registry import register_all_tools
+        from src.mcp_tools.tool_registry import register_all_tools
         from src.services.logging_config import configure_logging
 
         assert ClientManager is not None

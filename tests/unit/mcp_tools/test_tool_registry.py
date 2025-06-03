@@ -4,7 +4,7 @@ import logging
 from unittest.mock import MagicMock
 
 import pytest
-from src.mcp.tool_registry import register_all_tools
+from src.mcp_tools.tool_registry import register_all_tools
 
 
 class TestToolRegistry:
@@ -59,17 +59,17 @@ class TestToolRegistry:
 
     def test_module_imports(self):
         """Test that the module can be imported without errors."""
-        from src.mcp import tool_registry
+        from src.mcp_tools import tool_registry
 
         assert hasattr(tool_registry, "register_all_tools")
         assert callable(tool_registry.register_all_tools)
 
     def test_logger_configuration(self):
         """Test that the logger is properly configured."""
-        from src.mcp.tool_registry import logger
+        from src.mcp_tools.tool_registry import logger
 
         assert isinstance(logger, logging.Logger)
-        assert logger.name == "src.mcp.tool_registry"
+        assert logger.name == "src.mcp_tools.tool_registry"
 
     def test_tool_registry_docstring(self):
         """Test that the function has proper documentation."""

@@ -38,9 +38,9 @@ langchain-anthropic>=0.2.16
 langchain-google-genai>=1.0.1
 
 # MCP server & API
-mcp>=1.9.1
+mcp>=1.9.2,<2.0.0
 uvicorn>=0.34.2
-mcp-server>=0.1.4
+fastmcp>=2.5.2
 
 # Configuration and validation
 pydantic>=2.10.4,<2.11.0

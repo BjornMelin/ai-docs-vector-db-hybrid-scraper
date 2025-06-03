@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 from pydantic import ValidationError
-from src.mcp.models.responses import CrawlResult
-from src.mcp.models.responses import SearchResult
+from src.mcp_tools.models.responses import CrawlResult
+from src.mcp_tools.models.responses import SearchResult
 
 
 class TestSearchResult:

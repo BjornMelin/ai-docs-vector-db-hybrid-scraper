@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from src.config.enums import SearchStrategy
-from src.mcp.models.requests import SearchRequest
-from src.mcp.models.responses import (
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.responses import (
     ABTestAnalysisResponse, 
     AliasesResponse, 
     CanaryStatusResponse, 
@@ -62,7 +62,7 @@ def mock_client_manager():
 @pytest.mark.asyncio
 async def test_deployment_tools_registration(mock_client_manager, mock_context):
     """Test that deployment tools are properly registered."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -88,7 +88,7 @@ async def test_deployment_tools_registration(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_with_alias_success(mock_client_manager, mock_context):
     """Test successful search with alias."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -114,7 +114,7 @@ async def test_search_with_alias_success(mock_client_manager, mock_context):
         )
     ]
     
-    with patch('src.mcp.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_search:
+    with patch('src.mcp_tools.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_search:
         mock_search.return_value = mock_search_results
         
         register_tools(mock_mcp, mock_client_manager)
@@ -150,7 +150,7 @@ async def test_search_with_alias_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_with_alias_not_found(mock_client_manager, mock_context):
     """Test search with alias when alias doesn't exist."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -179,7 +179,7 @@ async def test_search_with_alias_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_aliases_success(mock_client_manager, mock_context):
     """Test successful alias listing."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -218,7 +218,7 @@ async def test_list_aliases_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_aliases_without_context(mock_client_manager):
     """Test alias listing without context."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -245,7 +245,7 @@ async def test_list_aliases_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_create_alias_success(mock_client_manager, mock_context):
     """Test successful alias creation."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -289,7 +289,7 @@ async def test_create_alias_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_alias_failure(mock_client_manager, mock_context):
     """Test alias creation failure."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -326,7 +326,7 @@ async def test_create_alias_failure(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_deploy_new_index_success(mock_client_manager, mock_context):
     """Test successful blue-green deployment."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -378,7 +378,7 @@ async def test_deploy_new_index_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_deploy_new_index_default_validation(mock_client_manager, mock_context):
     """Test deployment with default validation queries."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -418,7 +418,7 @@ async def test_deploy_new_index_default_validation(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_start_ab_test_success(mock_client_manager, mock_context):
     """Test successful A/B test creation."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -468,7 +468,7 @@ async def test_start_ab_test_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_analyze_ab_test_success(mock_client_manager, mock_context):
     """Test successful A/B test analysis."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -516,7 +516,7 @@ async def test_analyze_ab_test_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_start_canary_deployment_success(mock_client_manager, mock_context):
     """Test successful canary deployment start."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -569,7 +569,7 @@ async def test_start_canary_deployment_success(mock_client_manager, mock_context
 @pytest.mark.asyncio
 async def test_start_canary_deployment_invalid_stages(mock_client_manager, mock_context):
     """Test canary deployment with invalid stage configuration."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -599,7 +599,7 @@ async def test_start_canary_deployment_invalid_stages(mock_client_manager, mock_
 @pytest.mark.asyncio
 async def test_start_canary_deployment_invalid_percentage(mock_client_manager, mock_context):
     """Test canary deployment with invalid percentage values."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -629,7 +629,7 @@ async def test_start_canary_deployment_invalid_percentage(mock_client_manager, m
 @pytest.mark.asyncio
 async def test_get_canary_status_success(mock_client_manager, mock_context):
     """Test successful canary status retrieval."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -673,7 +673,7 @@ async def test_get_canary_status_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_pause_canary_success(mock_client_manager, mock_context):
     """Test successful canary deployment pause."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -710,7 +710,7 @@ async def test_pause_canary_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_pause_canary_failure(mock_client_manager, mock_context):
     """Test canary deployment pause failure."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -744,7 +744,7 @@ async def test_pause_canary_failure(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_resume_canary_success(mock_client_manager, mock_context):
     """Test successful canary deployment resume."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -781,7 +781,7 @@ async def test_resume_canary_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_error_handling_list_aliases(mock_client_manager, mock_context):
     """Test error handling in list_aliases."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -809,7 +809,7 @@ async def test_error_handling_list_aliases(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_error_handling_create_alias(mock_client_manager, mock_context):
     """Test error handling in create_alias."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -841,7 +841,7 @@ async def test_error_handling_create_alias(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_error_handling_ab_test(mock_client_manager, mock_context):
     """Test error handling in A/B test operations."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -874,7 +874,7 @@ async def test_error_handling_ab_test(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_error_handling_canary(mock_client_manager, mock_context):
     """Test error handling in canary deployment operations."""
-    from src.mcp.tools.deployment import register_tools
+    from src.mcp_tools.tools.deployment import register_tools
     
     mock_mcp = MagicMock()
     registered_tools = {}
