@@ -112,17 +112,15 @@ class TestCanaryDeploymentWithTaskQueue:
         task_queue_manager.enqueue = AsyncMock(return_value=None)  # Queue failure
 
         # Execute and expect error
-        with pytest.raises(ServiceError, match="Failed to start canary deployment"):
+        with pytest.raises(ServiceError, match="Failed to queue canary deployment"):
             await canary.start_canary(
                 alias_name="test_alias",
                 new_collection="new_collection",
             )
 
     @pytest.mark.asyncio
-    async def test_start_canary_no_queue_fallback(
-        self, config, alias_manager, qdrant_service
-    ):
-        """Test start_canary without task queue falls back to direct execution."""
+    async def test_start_canary_no_queue_fallback(self, config, alias_manager, qdrant_service):
+        """Test start_canary without task queue raises error."""
         # Create canary without task queue
         canary = CanaryDeployment(
             config=config,
@@ -132,22 +130,17 @@ class TestCanaryDeploymentWithTaskQueue:
         )
         canary._save_deployments = AsyncMock()
         canary._load_deployments = AsyncMock()
-        canary._run_canary = AsyncMock()
 
         alias_manager.get_collection_for_alias = AsyncMock(
             return_value="old_collection"
         )
 
-        # Execute
-        with patch("asyncio.create_task") as mock_create_task:
-            deployment_id = await canary.start_canary(
+        # Execute and expect error
+        with pytest.raises(ServiceError, match="TaskQueueManager is required for canary deployments"):
+            await canary.start_canary(
                 alias_name="test_alias",
                 new_collection="new_collection",
             )
-
-        # Verify fallback to direct execution
-        mock_create_task.assert_called_once()
-        assert deployment_id.startswith("canary_")
 
     @pytest.mark.asyncio
     async def test_resume_deployment_with_queue(self, canary, task_queue_manager):
@@ -193,11 +186,11 @@ class TestCanaryDeploymentWithTaskQueue:
         canary.deployments[deployment_id] = deployment
         task_queue_manager.enqueue = AsyncMock(return_value=None)  # Queue failure
 
-        # Execute
-        result = await canary.resume_deployment(deployment_id)
+        # Execute and expect error
+        with pytest.raises(ServiceError, match="Failed to queue resumed canary deployment"):
+            await canary.resume_deployment(deployment_id)
 
-        # Verify
-        assert result is False
+        # Verify status was reverted before error
         assert deployment.status == "paused"  # Status reverted
 
     @pytest.mark.asyncio

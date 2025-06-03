@@ -148,16 +148,16 @@ class TestBlueGreenDeploymentWithTaskQueue:
         )
         alias_manager.clone_collection_schema = AsyncMock(return_value=True)
 
-        # Test backup source (not implemented)
-        with pytest.raises(NotImplementedError, match="Backup restore"):
+        # Test backup source (not implemented) - wrapped in ServiceError
+        with pytest.raises(ServiceError, match="Deployment failed.*Backup restore"):
             await blue_green.deploy_new_version(
                 alias_name="test_alias",
                 data_source="backup:/path/to/backup",
                 validation_queries=[],
             )
 
-        # Test crawl source (not implemented)
-        with pytest.raises(NotImplementedError, match="Fresh crawl"):
+        # Test crawl source (not implemented) - wrapped in ServiceError  
+        with pytest.raises(ServiceError, match="Deployment failed.*Fresh crawl"):
             await blue_green.deploy_new_version(
                 alias_name="test_alias",
                 data_source="crawl:config_name",
