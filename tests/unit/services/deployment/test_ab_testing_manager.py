@@ -225,7 +225,7 @@ class TestStatePersistence:
         )
         await manager.initialize()
 
-        exp_id = await manager.create_experiment("test", "control", "treatment")
+        await manager.create_experiment("test", "control", "treatment")
 
         # Verify Redis was called
         mock_client_manager.get_redis_client.assert_called()

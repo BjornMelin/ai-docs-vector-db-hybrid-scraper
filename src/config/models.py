@@ -16,97 +16,6 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
-# Import validators conditionally to avoid circular imports
-try:
-    from src.models.validators import validate_api_key_common
-    from src.models.validators import validate_chunk_sizes
-    from src.models.validators import validate_model_benchmark_consistency
-    from src.models.validators import validate_rate_limit_config
-    from src.models.validators import validate_scoring_weights
-    from src.models.validators import validate_url_format
-except ImportError:
-    # Fallback for circular import situations - define minimal validators locally
-    def validate_api_key_common(
-        value,
-        prefix,
-        service_name,
-        min_length=10,
-        max_length=200,
-        allowed_chars=r"[A-Za-z0-9-]+",
-    ):
-        if value is None:
-            return value
-        value = value.strip()
-        if not value:
-            return None
-        try:
-            value.encode("ascii")
-        except UnicodeEncodeError as err:
-            raise ValueError(
-                f"{service_name} API key contains non-ASCII characters"
-            ) from err
-        if not value.startswith(prefix):
-            raise ValueError(f"{service_name} API key must start with '{prefix}'")
-        # Allow test keys for OpenAI
-        if service_name == "OpenAI" and value.startswith("sk-test"):
-            return value
-        if len(value) < min_length:
-            raise ValueError(f"{service_name} API key appears to be too short")
-        if len(value) > max_length:
-            raise ValueError(f"{service_name} API key appears to be too long")
-        import re
-
-        if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
-            raise ValueError(f"{service_name} API key contains invalid characters")
-        return value
-
-    def validate_url_format(value):
-        if not value.startswith(("http://", "https://")):
-            raise ValueError("URL must start with http:// or https://")
-        return value.rstrip("/")
-
-    def validate_chunk_sizes(chunk_size, chunk_overlap, min_chunk_size, max_chunk_size):
-        if chunk_overlap >= chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
-        if min_chunk_size >= max_chunk_size:
-            raise ValueError("min_chunk_size must be less than max_chunk_size")
-        if chunk_size > max_chunk_size:
-            raise ValueError("chunk_size cannot exceed max_chunk_size")
-
-    def validate_rate_limit_config(value):
-        for provider, limits in value.items():
-            if not isinstance(limits, dict):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must be a dictionary"
-                )
-            required_keys = {"max_calls", "time_window"}
-            if not required_keys.issubset(limits.keys()):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must contain keys: {required_keys}, got: {set(limits.keys())}"
-                )
-            if limits["max_calls"] <= 0:
-                raise ValueError(
-                    f"max_calls for provider '{provider}' must be positive"
-                )
-            if limits["time_window"] <= 0:
-                raise ValueError(
-                    f"time_window for provider '{provider}' must be positive"
-                )
-        return value
-
-    def validate_scoring_weights(quality_weight, speed_weight, cost_weight):
-        total = quality_weight + speed_weight + cost_weight
-        if abs(total - 1.0) > 0.01:
-            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
-
-    def validate_model_benchmark_consistency(key, model_name):
-        if key != model_name:
-            raise ValueError(
-                f"Dictionary key '{key}' does not match ModelBenchmark.model_name '{model_name}'. Keys must be consistent for proper model identification."
-            )
-        return key
-
-
 from .enums import CacheType
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
@@ -117,6 +26,14 @@ from .enums import LogLevel
 from .enums import SearchAccuracy
 from .enums import SearchStrategy
 from .enums import VectorType
+
+# Import validators from config package (avoiding circular imports)
+from .validators import validate_api_key_common
+from .validators import validate_chunk_sizes
+from .validators import validate_model_benchmark_consistency
+from .validators import validate_rate_limit_config
+from .validators import validate_scoring_weights
+from .validators import validate_url_format
 
 
 class ModelBenchmark(BaseModel):

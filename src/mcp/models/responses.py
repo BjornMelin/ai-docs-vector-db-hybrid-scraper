@@ -28,7 +28,7 @@ class CrawlResult(BaseModel):
     success: bool = Field(default=False, description="Success status")
     site_name: str = Field(default="", description="Site name")
     depth: int = Field(default=0, description="Crawl depth")
-    scraped_at: str = Field(
+    crawl_timestamp: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="Crawl timestamp",
     )

@@ -1101,7 +1101,7 @@ class TestClientManagerErrorHandling:
         # Should have health status for available services
         assert isinstance(status, dict)
         if status:  # Health status may be empty initially
-            for service_name, service_status in status.items():
+            for _service_name, service_status in status.items():
                 assert "state" in service_status
                 assert "last_check" in service_status
 

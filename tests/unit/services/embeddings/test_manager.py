@@ -761,11 +761,9 @@ class TestEmbeddingManagerAdvancedFeatures:
         """Test embedding generation with caching enabled."""
         embedding_manager._initialized = True
 
-        # Mock cache manager
+        # Mock cache manager with public API
         mock_cache_manager = AsyncMock()
-        mock_embedding_cache = AsyncMock()
-        mock_embedding_cache.get_embedding.return_value = [0.1] * 1536  # Cache hit
-        mock_cache_manager._embedding_cache = mock_embedding_cache
+        mock_cache_manager.get_embedding.return_value = [0.1] * 1536  # Cache hit
         embedding_manager.cache_manager = mock_cache_manager
 
         # Mock provider

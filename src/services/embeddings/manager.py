@@ -241,17 +241,24 @@ class EmbeddingManager:
                 f"(${estimated_cost:.4f}) - {reasoning}"
             )
         else:
-            # Use legacy selection logic
-            reasoning = "Legacy selection"
-            estimated_cost = 0.0
-            selected_model = None
+            # Default to smart selection with quality_tier=BALANCED when auto_select=False
+            # This modernizes the legacy fallback behavior
+            if not quality_tier:
+                quality_tier = QualityTier.BALANCED
 
-            # If specific provider requested, estimate cost
-            if provider_name and provider_name in self.providers:
-                provider = self.providers[provider_name]
-                estimated_cost = (
-                    text_analysis.estimated_tokens * provider.cost_per_token
-                )
+            recommendation = self.get_smart_provider_recommendation(
+                text_analysis, quality_tier, max_cost, speed_priority
+            )
+
+            provider_name = recommendation["provider"]
+            selected_model = recommendation["model"]
+            estimated_cost = recommendation["estimated_cost"]
+            reasoning = f"Default smart selection: {recommendation['reasoning']}"
+
+            logger.info(
+                f"Default smart selection: {provider_name}/{selected_model} "
+                f"(${estimated_cost:.4f}) - {reasoning}"
+            )
 
         # Get the actual provider instance
         provider = self._get_provider_instance(provider_name, quality_tier)
@@ -425,20 +432,15 @@ class EmbeddingManager:
             # For now, only cache single text embeddings (V2 will handle batches)
             text = texts[0]
 
-            # Try to get from cache using embedding cache directly
-            if (
-                hasattr(self.cache_manager, "_embedding_cache")
-                and self.cache_manager._embedding_cache
-            ):
-                cached_embedding = (
-                    await self.cache_manager._embedding_cache.get_embedding(
-                        text=text,
-                        provider=provider_name or self.config.embedding_provider.value,
-                        model=self.config.openai.model
-                        if provider_name == "openai"
-                        else self.config.fastembed.model,
-                        dimensions=self.config.openai.dimensions,
-                    )
+            # Try to get from cache using public cache API
+            if hasattr(self.cache_manager, "get_embedding"):
+                cached_embedding = await self.cache_manager.get_embedding(
+                    text=text,
+                    provider=provider_name or self.config.embedding_provider.value,
+                    model=self.config.openai.model
+                    if provider_name == "openai"
+                    else self.config.fastembed.model,
+                    dimensions=self.config.openai.dimensions,
                 )
 
                 if cached_embedding is not None:
@@ -503,11 +505,8 @@ class EmbeddingManager:
             # Cache the embedding if enabled and single text
             if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
                 try:
-                    if (
-                        hasattr(self.cache_manager, "_embedding_cache")
-                        and self.cache_manager._embedding_cache
-                    ):
-                        await self.cache_manager._embedding_cache.set_embedding(
+                    if hasattr(self.cache_manager, "set_embedding"):
+                        await self.cache_manager.set_embedding(
                             text=texts[0],
                             model=selected_model,
                             embedding=embeddings[0],

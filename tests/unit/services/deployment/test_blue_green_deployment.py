@@ -630,7 +630,6 @@ class TestProductionMonitoringIntegration:
         mock_alias_manager.get_collection_for_alias.return_value = "test_collection"
 
         # Mock fast search
-        start_time = time.time()
         mock_qdrant_service.query.return_value = [
             {"id": "doc1", "score": 0.9, "payload": {"content": "test"}},
         ]

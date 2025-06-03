@@ -92,7 +92,7 @@ class QdrantIndexing:
                 # Core timestamp fields per documentation
                 "created_at",  # Document creation timestamp
                 "last_updated",  # Last update timestamp
-                "scraped_at",  # Scraping timestamp (legacy compatibility)
+                "crawl_timestamp",  # Modern crawling timestamp field
                 # Content metrics
                 "word_count",  # Content length filtering
                 "char_count",  # Character count filtering

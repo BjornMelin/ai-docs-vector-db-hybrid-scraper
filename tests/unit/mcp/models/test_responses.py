@@ -127,7 +127,7 @@ class TestCrawlResult:
         assert result.success is False
         assert result.site_name == ""
         assert result.depth == 0
-        assert isinstance(result.scraped_at, str)
+        assert isinstance(result.crawl_timestamp, str)
         assert result.links == []
         assert result.metadata == {}
         assert result.error is None
@@ -142,7 +142,7 @@ class TestCrawlResult:
             success=True,
             site_name="Example Docs",
             depth=2,
-            scraped_at="2024-01-15T10:30:00",
+            crawl_timestamp="2024-01-15T10:30:00",
             links=[
                 "https://docs.example.com/api/getting-started",
                 "https://docs.example.com/api/authentication",
@@ -177,23 +177,23 @@ class TestCrawlResult:
         assert result.content == ""
         assert result.word_count == 0
 
-    def test_default_scraped_at(self):
-        """Test that scraped_at is automatically set to current time."""
+    def test_default_crawl_timestamp(self):
+        """Test that crawl_timestamp is automatically set to current time."""
         before = datetime.now().isoformat()
         result = CrawlResult(url="https://example.com")
         after = datetime.now().isoformat()
 
-        # scraped_at should be between before and after
-        assert before <= result.scraped_at <= after
+        # crawl_timestamp should be between before and after
+        assert before <= result.crawl_timestamp <= after
 
-    def test_custom_scraped_at(self):
-        """Test setting custom scraped_at value."""
+    def test_custom_crawl_timestamp(self):
+        """Test setting custom crawl_timestamp value."""
         custom_time = "2024-01-01T00:00:00"
         result = CrawlResult(
             url="https://example.com",
-            scraped_at=custom_time,
+            crawl_timestamp=custom_time,
         )
-        assert result.scraped_at == custom_time
+        assert result.crawl_timestamp == custom_time
 
     def test_empty_lists_and_dicts(self):
         """Test that empty lists and dicts are properly initialized."""

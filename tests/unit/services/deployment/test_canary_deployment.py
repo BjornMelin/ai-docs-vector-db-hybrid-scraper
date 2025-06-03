@@ -353,7 +353,7 @@ class TestStatePersistence:
 
         mock_alias_manager.get_collection_for_alias.return_value = "old_collection"
 
-        deployment_id = await deployment.start_canary("test_alias", "new_collection")
+        await deployment.start_canary("test_alias", "new_collection")
 
         # Verify Redis was called
         mock_client_manager.get_redis_client.assert_called()

@@ -25,7 +25,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Create payload indexes on a collection for 10-100x faster filtering.
 
         Creates indexes on key metadata fields like site_name, embedding_model,
-        title, word_count, scraped_at, etc. for dramatic performance improvements.
+        title, word_count, crawl_timestamp, etc. for dramatic performance improvements.
         """
         # Generate request ID for tracking
         request_id = str(uuid4())
