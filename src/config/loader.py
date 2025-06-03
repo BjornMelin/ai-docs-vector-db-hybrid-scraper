@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 
+from .benchmark_models import BenchmarkConfiguration
 from .models import UnifiedConfig
 
 
@@ -259,3 +260,33 @@ AI_DOCS__SECURITY__RATE_LIMIT_REQUESTS=100
             }
 
         return display_data
+
+    @staticmethod
+    def load_benchmark_config(benchmark_file: Path | str) -> BenchmarkConfiguration:
+        """Load benchmark configuration from JSON file.
+
+        Loads and validates benchmark configuration from files like custom-benchmarks.json
+        using Pydantic models for type safety and validation.
+
+        Args:
+            benchmark_file: Path to benchmark configuration JSON file
+
+        Returns:
+            BenchmarkConfiguration: Validated benchmark configuration object
+
+        Raises:
+            FileNotFoundError: If benchmark file doesn't exist
+            json.JSONDecodeError: If file contains invalid JSON
+            pydantic.ValidationError: If data doesn't match expected schema
+        """
+        benchmark_path = Path(benchmark_file)
+
+        if not benchmark_path.exists():
+            raise FileNotFoundError(f"Benchmark file not found: {benchmark_path}")
+
+        # Load JSON data
+        with open(benchmark_path) as f:
+            data = json.load(f)
+
+        # Validate and parse using Pydantic model
+        return BenchmarkConfiguration(**data)

@@ -69,6 +69,14 @@ class QdrantService(BaseService):
             # Initialize search interceptor with canary routing if available
             try:
                 cache_manager = await self._client_manager.get_cache_manager()
+                redis_client = None
+
+                # Try to get Redis client for event publishing
+                try:
+                    redis_client = await self._client_manager.get_redis_client()
+                except Exception:
+                    logger.debug("Redis client not available for search interceptor")
+
                 if cache_manager and cache_manager.distributed_cache:
                     from ..deployment.canary_router import CanaryRouter
 
@@ -81,6 +89,7 @@ class QdrantService(BaseService):
                         search_service=self._search,
                         router=self._canary_router,
                         config=self.config,
+                        redis_client=redis_client,
                     )
                     logger.info("Search interceptor initialized with canary routing")
                 else:
@@ -89,6 +98,7 @@ class QdrantService(BaseService):
                         search_service=self._search,
                         router=None,
                         config=self.config,
+                        redis_client=redis_client,
                     )
                     logger.info("Search interceptor initialized without canary routing")
             except Exception as e:

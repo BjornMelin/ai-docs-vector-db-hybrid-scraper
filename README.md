@@ -37,6 +37,7 @@ This implementation combines **research-backed best practices** for production-g
 | **Caching**             | DragonflyDB + In-Memory LRU                                        | 4.5x faster than Redis, 38% less memory usage   |
 | **Security**            | SecurityValidator + UnifiedConfig                                  | URL validation, domain filtering, API key safety |
 | **Package Manager**     | [uv](https://github.com/astral-sh/uv)                              | 10-100x faster than pip                          |
+| **Task Queue**          | [ARQ](https://github.com/samuelcolvin/arq)                         | Persistent background jobs with Redis backend    |
 
 ## ✨ Key Features
 
@@ -57,6 +58,7 @@ This implementation combines **research-backed best practices** for production-g
 - **🚀 Zero-Downtime Deployments**: Collection aliases for instant switching
 - **🧪 A/B Testing**: Test new embeddings/configs on live traffic
 - **🎯 Canary Deployments**: Gradual rollout with automatic rollback
+- **📋 Persistent Task Queue**: ARQ-based background job processing for reliability
 
 ## 🚀 Quick Start
 
@@ -96,7 +98,7 @@ BROWSER_USE_MODEL="gpt-4o-mini"                  # Cost-optimized model
 EOF
 ```
 
-### 3. Start Services (Qdrant + DragonflyDB)
+### 3. Start Services (Qdrant + DragonflyDB + Task Worker)
 
 ```bash
 # Start optimized Qdrant + DragonflyDB with persistent storage
@@ -105,6 +107,12 @@ EOF
 # Verify services are running
 curl http://localhost:6333/health  # Qdrant
 curl http://localhost:6379/ping    # DragonflyDB
+
+# Start the task queue worker (in a separate terminal)
+./scripts/start-worker.sh
+
+# Or run with Docker for production
+docker-compose --profile worker up task-worker
 ```
 
 ### 4. Run Advanced Documentation Scraping

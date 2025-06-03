@@ -123,10 +123,7 @@ class BlueGreenDeployment(BaseService):
             )
 
             # 6. Schedule old collection cleanup
-            # Store task reference to avoid RUF006 warning
-            _ = asyncio.create_task(  # noqa: RUF006
-                self.aliases.safe_delete_collection(blue_collection)
-            )
+            await self.aliases.safe_delete_collection(blue_collection)
 
             return {
                 "success": True,

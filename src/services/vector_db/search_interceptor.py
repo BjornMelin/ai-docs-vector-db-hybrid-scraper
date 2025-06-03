@@ -23,6 +23,7 @@ class SearchInterceptor:
         search_service: QdrantSearch,
         router: CanaryRouter | None,
         config: UnifiedConfig,
+        redis_client=None,
     ):
         """Initialize search interceptor.
 
@@ -30,13 +31,65 @@ class SearchInterceptor:
             search_service: Underlying search service
             router: Canary router for traffic decisions
             config: Unified configuration
+            redis_client: Optional Redis client for event publishing
         """
         self._search = search_service
         self._router = router
         self._config = config
+        self._redis_client = redis_client
         self._metrics_enabled = getattr(
             config.performance, "enable_canary_metrics", True
         )
+        self._event_stream_key = "search:events"
+
+    async def _publish_search_event(
+        self,
+        event_type: str,
+        collection_name: str,
+        target_collection: str,
+        is_canary: bool,
+        deployment_id: str | None,
+        latency_ms: float | None = None,
+        is_error: bool = False,
+        error_message: str | None = None,
+    ) -> None:
+        """Publish search event to Redis Stream.
+
+        Args:
+            event_type: Type of event (e.g., "search_routed", "search_completed")
+            collection_name: Original collection/alias name
+            target_collection: Actual collection used for search
+            is_canary: Whether this was routed to canary
+            deployment_id: Canary deployment ID if applicable
+            latency_ms: Search latency in milliseconds
+            is_error: Whether search failed
+            error_message: Error message if applicable
+        """
+        if not self._redis_client:
+            return
+
+        try:
+            event_data = {
+                "type": event_type,
+                "collection_name": collection_name,
+                "target_collection": target_collection,
+                "is_canary": str(is_canary),
+                "timestamp": str(time.time()),
+            }
+
+            if deployment_id:
+                event_data["deployment_id"] = deployment_id
+            if latency_ms is not None:
+                event_data["latency_ms"] = str(latency_ms)
+            if is_error:
+                event_data["is_error"] = "true"
+            if error_message:
+                event_data["error_message"] = error_message
+
+            await self._redis_client.xadd(self._event_stream_key, event_data)
+
+        except Exception as e:
+            logger.warning(f"Failed to publish search event: {e}")
 
     async def hybrid_search(
         self,
@@ -89,6 +142,15 @@ class SearchInterceptor:
                         f"Canary routing decision: {collection_name} -> {target_collection} "
                         f"(canary={route_decision.is_canary}, percentage={route_decision.canary_percentage})"
                     )
+
+                    # Publish routing event
+                    await self._publish_search_event(
+                        event_type="search_routed",
+                        collection_name=collection_name,
+                        target_collection=target_collection,
+                        is_canary=route_decision.is_canary,
+                        deployment_id=route_decision.deployment_id,
+                    )
                 except Exception as e:
                     logger.warning(
                         f"Canary routing failed, using default collection: {e}"
@@ -109,6 +171,8 @@ class SearchInterceptor:
             )
 
             # Record successful metrics
+            latency_ms = (time.time() - start_time) * 1000
+
             if (
                 self._metrics_enabled
                 and self._router
@@ -116,7 +180,6 @@ class SearchInterceptor:
                 and route_decision.deployment_id
             ):
                 try:
-                    latency_ms = (time.time() - start_time) * 1000
                     await self._router.record_request_metrics(
                         deployment_id=route_decision.deployment_id,
                         collection_name=target_collection,
@@ -126,10 +189,24 @@ class SearchInterceptor:
                 except Exception as e:
                     logger.warning(f"Failed to record success metrics: {e}")
 
+            # Publish search completed event
+            if route_decision:
+                await self._publish_search_event(
+                    event_type="search_completed",
+                    collection_name=collection_name,
+                    target_collection=target_collection,
+                    is_canary=route_decision.is_canary,
+                    deployment_id=route_decision.deployment_id,
+                    latency_ms=latency_ms,
+                    is_error=False,
+                )
+
             return results
 
         except Exception as e:
             # Record error metrics
+            latency_ms = (time.time() - start_time) * 1000
+
             if (
                 self._metrics_enabled
                 and self._router
@@ -137,7 +214,6 @@ class SearchInterceptor:
                 and route_decision.deployment_id
             ):
                 try:
-                    latency_ms = (time.time() - start_time) * 1000
                     await self._router.record_request_metrics(
                         deployment_id=route_decision.deployment_id,
                         collection_name=target_collection,
@@ -146,6 +222,19 @@ class SearchInterceptor:
                     )
                 except Exception as metrics_error:
                     logger.warning(f"Failed to record error metrics: {metrics_error}")
+
+            # Publish search error event
+            if route_decision:
+                await self._publish_search_event(
+                    event_type="search_failed",
+                    collection_name=collection_name,
+                    target_collection=target_collection,
+                    is_canary=route_decision.is_canary,
+                    deployment_id=route_decision.deployment_id,
+                    latency_ms=latency_ms,
+                    is_error=True,
+                    error_message=str(e),
+                )
 
             raise e
 

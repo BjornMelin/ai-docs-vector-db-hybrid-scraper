@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 try:
@@ -13,6 +14,7 @@ except ImportError:
     FlagReranker = None
 
 from src.config import UnifiedConfig
+from src.config.loader import ConfigLoader
 from src.config.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
@@ -583,6 +585,34 @@ class EmbeddingManager:
             logger.error(f"Reranking failed: {e}")
             # Return original results on failure
             return results
+
+    def load_custom_benchmarks(self, benchmark_file: Path | str) -> None:
+        """Load custom benchmark configuration from file.
+
+        Dynamically loads benchmark configuration from JSON files like custom-benchmarks.json,
+        replacing the current benchmarks and smart selection config.
+
+        Args:
+            benchmark_file: Path to benchmark configuration JSON file
+
+        Raises:
+            FileNotFoundError: If benchmark file doesn't exist
+            json.JSONDecodeError: If file contains invalid JSON
+            pydantic.ValidationError: If data doesn't match expected schema
+        """
+        from pathlib import Path
+
+        # Load and validate benchmark configuration
+        benchmark_config = ConfigLoader.load_benchmark_config(benchmark_file)
+
+        # Update manager's benchmarks and smart selection config
+        self._benchmarks = benchmark_config.embedding.model_benchmarks
+        self._smart_config = benchmark_config.embedding.smart_selection
+
+        logger.info(
+            f"Loaded custom benchmarks from {Path(benchmark_file).name} "
+            f"with {len(self._benchmarks)} models"
+        )
 
     def estimate_cost(
         self,

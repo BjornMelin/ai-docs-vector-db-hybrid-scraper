@@ -635,6 +635,49 @@ class PerformanceConfig(BaseModel):
         description="Default rate limits by provider (max_calls per time_window seconds)",
     )
 
+    # Canary deployment settings (optimized for DragonflyDB)
+    canary_deployment_enabled: bool = Field(
+        default=True, description="Enable canary deployment features"
+    )
+    canary_health_check_interval: int = Field(
+        default=30, gt=0, le=300, description="Health check interval in seconds"
+    )
+    canary_metrics_window: int = Field(
+        default=300, gt=60, le=3600, description="Metrics collection window in seconds"
+    )
+    canary_max_error_rate: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Maximum acceptable error rate"
+    )
+    canary_min_success_count: int = Field(
+        default=10, gt=0, description="Minimum successful requests before promotion"
+    )
+    canary_rollback_threshold: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Error rate threshold for automatic rollback",
+    )
+    canary_deployment_timeout: int = Field(
+        default=3600, gt=0, description="Maximum deployment duration in seconds"
+    )
+
+    # DragonflyDB optimization settings
+    dragonfly_pipeline_size: int = Field(
+        default=100,
+        gt=0,
+        le=1000,
+        description="Pipeline batch size for DragonflyDB operations",
+    )
+    dragonfly_scan_count: int = Field(
+        default=1000,
+        gt=100,
+        le=10000,
+        description="SCAN count for DragonflyDB (higher for better performance)",
+    )
+    enable_dragonfly_compression: bool = Field(
+        default=True, description="Enable DragonflyDB native compression"
+    )
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("default_rate_limits")
@@ -982,6 +1025,52 @@ class SecurityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class TaskQueueConfig(BaseModel):
+    """Task queue configuration for ARQ with DragonflyDB optimization."""
+
+    # DragonflyDB connection settings (Redis-compatible)
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="DragonflyDB URL for task queue (Redis-compatible)",
+    )
+    redis_password: str | None = Field(default=None, description="Redis password")
+    redis_database: int = Field(
+        default=1, ge=0, le=15, description="Redis database number for task queue"
+    )
+
+    # Worker settings
+    max_jobs: int = Field(
+        default=10, gt=0, description="Maximum concurrent jobs per worker"
+    )
+    job_timeout: int = Field(
+        default=3600, gt=0, description="Default job timeout in seconds"
+    )
+    job_ttl: int = Field(
+        default=86400, gt=0, description="Job result TTL in seconds (24 hours)"
+    )
+
+    # Retry settings
+    max_tries: int = Field(
+        default=3, gt=0, le=10, description="Maximum retry attempts for failed jobs"
+    )
+    retry_delay: float = Field(
+        default=60.0, gt=0, description="Delay between retries in seconds"
+    )
+
+    # Queue settings
+    queue_name: str = Field(default="default", description="Default queue name")
+    health_check_interval: int = Field(
+        default=60, gt=0, description="Health check interval in seconds"
+    )
+
+    # Worker pool settings
+    worker_pool_size: int = Field(
+        default=4, gt=0, description="Number of worker processes"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class UnifiedConfig(BaseSettings):
     """Unified configuration for the AI Documentation Vector DB system.
 
@@ -1050,6 +1139,9 @@ class UnifiedConfig(BaseSettings):
         default_factory=SecurityConfig, description="Security settings"
     )
     hyde: HyDEConfig = Field(default_factory=HyDEConfig, description="HyDE settings")
+    task_queue: TaskQueueConfig = Field(
+        default_factory=TaskQueueConfig, description="Task queue (ARQ) settings"
+    )
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(
