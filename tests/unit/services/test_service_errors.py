@@ -380,9 +380,8 @@ class TestRetryAsync:
         async def failing_func():
             raise ValueError("Always fails")
 
-        with patch("asyncio.sleep"):
-            with pytest.raises(ValueError, match="Always fails"):
-                await failing_func()
+        with patch("asyncio.sleep"), pytest.raises(ValueError, match="Always fails"):
+            await failing_func()
 
     @pytest.mark.asyncio
     async def test_retry_async_exponential_backoff(self):

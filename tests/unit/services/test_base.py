@@ -220,11 +220,11 @@ class TestRetryWithBackoff:
         service = ConcreteService()
         mock_func = AsyncMock(side_effect=ValueError("persistent error"))
 
-        with patch("asyncio.sleep") as mock_sleep:
-            with pytest.raises(APIError, match="API call failed after 3 attempts"):
-                await service._retry_with_backoff(
-                    mock_func, max_retries=3, base_delay=0.1
-                )
+        with (
+            patch("asyncio.sleep") as mock_sleep,
+            pytest.raises(APIError, match="API call failed after 3 attempts"),
+        ):
+            await service._retry_with_backoff(mock_func, max_retries=3, base_delay=0.1)
 
         assert mock_func.call_count == 3
         assert mock_sleep.call_count == 2

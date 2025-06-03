@@ -16,7 +16,7 @@ sys.modules["src.services.logging_config"] = MagicMock()
 sys.modules["src.config"] = MagicMock()
 
 # This is intentionally after mocks due to import dependencies
-from src import unified_mcp_server
+from src import unified_mcp_server  # noqa: E402
 
 
 class TestValidateStreamingConfig:

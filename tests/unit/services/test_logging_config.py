@@ -132,10 +132,9 @@ class TestConfigureLogging:
         """Create a proper mock config without problematic attributes."""
         mock_config = Mock()
         mock_config.log_level.value = log_level
-        if not has_log_file:
+        if not has_log_file and hasattr(mock_config, "log_file"):
             # Ensure log_file attribute doesn't exist
-            if hasattr(mock_config, "log_file"):
-                del mock_config.log_file
+            del mock_config.log_file
         return mock_config
 
     def test_configure_logging_basic(self):
@@ -190,12 +189,14 @@ class TestConfigureLogging:
         """Test logging configuration when colorlog is not available."""
         mock_config = self._create_mock_config("INFO")
 
-        with patch("src.services.logging_config.get_config", return_value=mock_config):
-            with patch(
+        with (
+            patch("src.services.logging_config.get_config", return_value=mock_config),
+            patch(
                 "builtins.__import__",
                 side_effect=ImportError("No module named 'colorlog'"),
-            ):
-                configure_logging(enable_color=True)
+            ),
+        ):
+            configure_logging(enable_color=True)
 
         root_logger = logging.getLogger()
         handler = root_logger.handlers[0]
@@ -211,9 +212,11 @@ class TestConfigureLogging:
         mock_formatter = Mock()
         mock_colorlog.ColoredFormatter.return_value = mock_formatter
 
-        with patch("src.services.logging_config.get_config", return_value=mock_config):
-            with patch.dict("sys.modules", {"colorlog": mock_colorlog}):
-                configure_logging(enable_color=True)
+        with (
+            patch("src.services.logging_config.get_config", return_value=mock_config),
+            patch.dict("sys.modules", {"colorlog": mock_colorlog}),
+        ):
+            configure_logging(enable_color=True)
 
         # Should create ColoredFormatter
         mock_colorlog.ColoredFormatter.assert_called_once()
@@ -247,15 +250,17 @@ class TestConfigureLogging:
         mock_config = self._create_mock_config("INFO")
         mock_config.log_file = "/tmp/test.log"
 
-        with patch("src.services.logging_config.get_config", return_value=mock_config):
-            with patch("logging.FileHandler") as mock_file_handler:
-                # Create a proper mock file handler
-                mock_handler = Mock()
-                mock_handler.level = logging.INFO  # Set proper level as integer
-                mock_handler.setLevel = Mock()
-                mock_handler.setFormatter = Mock()
-                mock_file_handler.return_value = mock_handler
-                configure_logging()
+        with (
+            patch("src.services.logging_config.get_config", return_value=mock_config),
+            patch("logging.FileHandler") as mock_file_handler,
+        ):
+            # Create a proper mock file handler
+            mock_handler = Mock()
+            mock_handler.level = logging.INFO  # Set proper level as integer
+            mock_handler.setLevel = Mock()
+            mock_handler.setFormatter = Mock()
+            mock_file_handler.return_value = mock_handler
+            configure_logging()
 
         # Should create file handler with config log_file
         mock_file_handler.assert_called_once_with("/tmp/test.log")
@@ -548,29 +553,31 @@ class TestWithServiceContext:
         # Simulate the example from the docstring
         logger = logging.getLogger("test_logger")
 
-        with with_service_context("OpenAIProvider"):
+        with (
+            with_service_context("OpenAIProvider"),
+            patch.object(logger, "info") as mock_info,
+        ):
             # Capture log output
-            with patch.object(logger, "info") as mock_info:
-                logger.info("Generating embeddings")
+            logger.info("Generating embeddings")
 
-                # Get the log record that would be created
-                call_args = mock_info.call_args
-                if call_args:
-                    # The actual record creation happens in the logging system
-                    # We can verify the context would be applied by checking
-                    # that our factory is in place
-                    factory = logging.getLogRecordFactory()
-                    record = factory(
-                        "test_logger",
-                        logging.INFO,
-                        "test.py",
-                        1,
-                        "Generating embeddings",
-                        (),
-                        None,
-                    )
-                    assert hasattr(record, "service")
-                    assert record.service == "OpenAIProvider"
+            # Get the log record that would be created
+            call_args = mock_info.call_args
+            if call_args:
+                # The actual record creation happens in the logging system
+                # We can verify the context would be applied by checking
+                # that our factory is in place
+                factory = logging.getLogRecordFactory()
+                record = factory(
+                    "test_logger",
+                    logging.INFO,
+                    "test.py",
+                    1,
+                    "Generating embeddings",
+                    (),
+                    None,
+                )
+                assert hasattr(record, "service")
+                assert record.service == "OpenAIProvider"
 
     def test_with_service_context_different_services(self):
         """Test with_service_context with different service names."""
@@ -606,10 +613,9 @@ class TestLoggingIntegration:
         """Create a proper mock config without problematic attributes."""
         mock_config = Mock()
         mock_config.log_level.value = log_level
-        if not has_log_file:
+        if not has_log_file and hasattr(mock_config, "log_file"):
             # Ensure log_file attribute doesn't exist
-            if hasattr(mock_config, "log_file"):
-                del mock_config.log_file
+            del mock_config.log_file
         return mock_config
 
     def test_full_logging_setup_and_usage(self):
@@ -654,9 +660,11 @@ class TestLoggingIntegration:
         logger.setLevel(logging.INFO)
 
         # Test with contexts
-        with with_service_context("FormatterTestService"):
-            with LogContext(operation="format_test"):
-                logger.info("Test message")
+        with (
+            with_service_context("FormatterTestService"),
+            LogContext(operation="format_test"),
+        ):
+            logger.info("Test message")
 
         # Get the formatted output
         handler.stream.seek(0)
@@ -710,12 +718,14 @@ class TestLoggingIntegration:
         logger = logging.getLogger("error_test")
 
         # Keep the context active during the logging call
-        with with_service_context("ErrorService"):
-            with LogContext(operation="risky_operation"):
-                try:
-                    raise ValueError("Something went wrong")
-                except ValueError:
-                    logger.exception("Operation failed")
+        with (
+            with_service_context("ErrorService"),
+            LogContext(operation="risky_operation"),
+        ):
+            try:
+                raise ValueError("Something went wrong")
+            except ValueError:
+                logger.exception("Operation failed")
 
         log_output = log_stream.getvalue()
         assert "[ErrorService]" in log_output
