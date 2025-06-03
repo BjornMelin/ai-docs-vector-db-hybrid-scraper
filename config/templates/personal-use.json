@@ -1,0 +1,88 @@
+{
+  "environment": "personal-use",
+  "description": "Personal development configuration optimized for individual developers and small projects",
+
+  "cache": {
+    "enable_caching": true,
+    "enable_local_cache": true,
+    "enable_dragonfly_cache": true,
+    "dragonfly_url": "redis://localhost:6379",
+    "local_max_size": 200,
+    "local_max_memory_mb": 25.0,
+    "redis_pool_size": 3,
+    "cache_ttl_seconds": {
+      "embeddings": 86400,
+      "crawl": 7200,
+      "search": 14400,
+      "hyde": 7200
+    }
+  },
+
+  "performance": {
+    "max_concurrent_requests": 5,
+    "request_timeout": 30.0,
+    "max_retries": 2,
+    "retry_base_delay": 2.0,
+    "max_memory_usage_mb": 500.0,
+    "gc_threshold": 0.7,
+
+    "dragonfly_pipeline_size": 25,
+    "dragonfly_scan_count": 200,
+    "enable_dragonfly_compression": true,
+
+    "canary_deployment_enabled": true,
+    "canary_health_check_interval": 60,
+    "canary_metrics_window": 600,
+    "canary_max_error_rate": 0.15,
+    "canary_min_success_count": 5
+  },
+
+  "qdrant": {
+    "url": "http://localhost:6333",
+    "timeout": 20.0,
+    "batch_size": 25,
+    "max_retries": 2,
+    "quantization_enabled": true,
+    "enable_hnsw_optimization": true,
+
+    "collection_hnsw_configs": {
+      "general": {
+        "m": 12,
+        "ef_construct": 100,
+        "full_scan_threshold": 20000,
+        "min_ef": 50,
+        "balanced_ef": 75,
+        "max_ef": 100
+      }
+    }
+  },
+
+  "task_queue": {
+    "redis_url": "redis://localhost:6379",
+    "redis_database": 1,
+    "max_jobs": 3,
+    "job_timeout": 1800,
+    "job_ttl": 43200,
+    "max_tries": 2,
+    "retry_delay": 120.0,
+    "worker_pool_size": 1,
+    "health_check_interval": 120
+  },
+
+  "embedding": {
+    "provider": "fastembed",
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "search_strategy": "dense",
+    "enable_quantization": true,
+    "enable_reranking": false,
+    "rerank_top_k": 10
+  },
+
+  "chunking": {
+    "chunk_size": 1200,
+    "chunk_overlap": 200,
+    "strategy": "enhanced",
+    "enable_ast_chunking": true,
+    "max_chunk_size": 2000
+  }
+}

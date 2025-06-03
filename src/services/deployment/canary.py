@@ -86,6 +86,7 @@ class CanaryDeployment(BaseService):
         self._state_file = self.config.data_dir / "canary_deployments.json"
         self._lock = asyncio.Lock()
         self._router: CanaryRouter | None = None
+        self._state_manager = None
 
     async def initialize(self) -> None:
         """Initialize canary deployment service."""
@@ -99,6 +100,18 @@ class CanaryDeployment(BaseService):
                         config=self.config,
                     )
                     logger.info("Canary router initialized with DragonflyDB")
+
+                # Initialize state manager if Redis client is available
+                try:
+                    redis_client = await self.client_manager.get_redis_client()
+                    if redis_client:
+                        from .deployment_state import DeploymentStateManager
+
+                        self._state_manager = DeploymentStateManager(redis_client)
+                        logger.info("Deployment state manager initialized")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize state manager: {e}")
+
             except Exception as e:
                 logger.warning(f"Failed to initialize canary router: {e}")
                 self._router = None
@@ -148,6 +161,9 @@ class CanaryDeployment(BaseService):
         old_collection = await self.aliases.get_collection_for_alias(alias_name)
         if not old_collection:
             raise ServiceError(f"No collection found for alias {alias_name}")
+
+        # Check if new collection is ready
+        await self._check_collection_ready(new_collection)
 
         # Convert stage dicts to CanaryStage objects
         canary_stages = [
@@ -540,17 +556,34 @@ class CanaryDeployment(BaseService):
         }
 
         # Add metrics summary
-        if deployment.metrics.latency:
-            status["avg_latency"] = sum(deployment.metrics.latency) / len(
-                deployment.metrics.latency
-            )
-            status["last_latency"] = deployment.metrics.latency[-1]
-
-        if deployment.metrics.error_rate:
-            status["avg_error_rate"] = sum(deployment.metrics.error_rate) / len(
+        metrics_summary = {
+            "latency": {},
+            "error_rate": deployment.metrics.error_rate[-1]
+            if isinstance(deployment.metrics.error_rate, list)
+            and deployment.metrics.error_rate
+            else (
                 deployment.metrics.error_rate
+                if isinstance(deployment.metrics.error_rate, (int, float))
+                else 0.0
+            ),
+            "success_count": deployment.metrics.success_count,
+            "error_count": deployment.metrics.error_count,
+        }
+
+        if deployment.metrics.latency and isinstance(deployment.metrics.latency, list):
+            metrics_summary["latency"]["p50"] = (
+                deployment.metrics.latency[-1] if deployment.metrics.latency else 0.0
             )
-            status["last_error_rate"] = deployment.metrics.error_rate[-1]
+            metrics_summary["latency"]["p95"] = (
+                deployment.metrics.latency[-1] if deployment.metrics.latency else 0.0
+            )
+            metrics_summary["latency"]["p99"] = (
+                deployment.metrics.latency[-1] if deployment.metrics.latency else 0.0
+            )
+        elif isinstance(deployment.metrics.latency, dict):
+            metrics_summary["latency"] = deployment.metrics.latency
+
+        status["metrics"] = metrics_summary
 
         return status
 
@@ -791,3 +824,82 @@ class CanaryDeployment(BaseService):
             deployments[dep_id] = deployment
 
         return deployments
+
+    async def _check_collection_ready(self, collection_name: str) -> None:
+        """Check if collection is ready for deployment.
+
+        Args:
+            collection_name: Name of the collection to check
+
+        Raises:
+            ServiceError: If collection is not ready
+        """
+        if not self.qdrant:
+            logger.warning(
+                "No Qdrant service available - skipping collection readiness check"
+            )
+            return
+
+        try:
+            collection_info = await self.qdrant.get_collection_info(collection_name)
+            if collection_info.get("status") != "green":
+                raise ServiceError(
+                    f"Collection {collection_name} is not ready for deployment"
+                )
+
+            vectors_count = collection_info.get("vectors_count", 0)
+            if vectors_count == 0:
+                raise ServiceError(
+                    f"Collection {collection_name} is not ready (no vectors)"
+                )
+
+        except Exception as e:
+            if "not found" in str(e).lower():
+                raise ServiceError(f"Collection {collection_name} does not exist")
+            raise ServiceError(f"Failed to check collection {collection_name}: {e}")
+
+    async def rollback_deployment(self, deployment_id: str) -> bool:
+        """Rollback a canary deployment.
+
+        Args:
+            deployment_id: ID of the deployment to rollback
+
+        Returns:
+            True if rollback was successful
+        """
+        deployment = self.deployments.get(deployment_id)
+        if not deployment:
+            return False
+
+        try:
+            await self._rollback_canary(deployment_id)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to rollback deployment {deployment_id}: {e}")
+            return False
+
+    async def _cleanup_completed_deployments(self) -> None:
+        """Clean up old completed deployments."""
+        cutoff_time = time.time() - (7 * 24 * 3600)  # 7 days ago
+
+        to_remove = []
+        for deployment_id, deployment in self.deployments.items():
+            if (
+                deployment.status in ["completed", "failed", "rolled_back"]
+                and deployment.start_time < cutoff_time
+            ):
+                to_remove.append(deployment_id)
+
+        for deployment_id in to_remove:
+            # Clean up from state manager if available
+            if self._state_manager:
+                try:
+                    await self._state_manager.delete_state(deployment_id)
+                except Exception as e:
+                    logger.warning(f"Failed to delete state for {deployment_id}: {e}")
+
+            del self.deployments[deployment_id]
+            logger.info(f"Cleaned up old deployment {deployment_id}")
+
+        if to_remove:
+            await self._save_deployments()

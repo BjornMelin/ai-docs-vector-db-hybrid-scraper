@@ -1,0 +1,144 @@
+version: "3.8"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-vector-db-personal
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ~/.qdrant_data:/qdrant/storage:z
+    environment:
+      # Personal development optimizations
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=WARN
+      
+      # Storage optimizations for personal use
+      - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
+      - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=false
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=2
+      - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=4
+      
+      # Memory-optimized settings
+      - QDRANT__STORAGE__WRITE_CONSISTENCY_FACTOR=1
+      - QDRANT__STORAGE__REPLICATION_FACTOR=1
+      - QDRANT__STORAGE__SPARSE_VECTORS__ON_DISK=true
+      - QDRANT__STORAGE__QUANTIZATION__SCALAR__TYPE=int8
+      - QDRANT__STORAGE__HNSW__M=12
+      - QDRANT__STORAGE__HNSW__EF_CONSTRUCT=100
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 60s
+      timeout: 15s
+      retries: 2
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G      # Reduced from 4G
+          cpus: "0.5"     # Reduced from 2.0
+        reservations:
+          memory: 512M    # Reduced from 2G
+          cpus: "0.25"    # Reduced from 1.0
+    networks:
+      - personal-vector-network
+
+  # DragonflyDB: Optimized for personal development
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly-cache-personal
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ~/.dragonfly_data:/data:z
+    environment:
+      - DRAGONFLY_THREADS=2          # Reduced from 8
+      - DRAGONFLY_MEMORY_LIMIT=1gb   # Reduced from 4gb
+      - DRAGONFLY_SNAPSHOT_INTERVAL=7200  # Less frequent snapshots
+      - DRAGONFLY_SAVE_SCHEDULE="0 */6 * * *"  # Every 6 hours
+    command: >
+      --logtostderr
+      --cache_mode
+      --maxmemory_policy=allkeys-lru
+      --compression=zstd
+      --pipeline_squash=16     # Reduced for lower latency at low volume
+      --tcp_keepalive=600      # Longer keepalive for fewer connections
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 60s
+      timeout: 15s
+      retries: 2
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G    # Reduced from 4G
+          cpus: "0.5"     # Reduced from 2.0
+        reservations:
+          memory: 768M    # Reduced from 2G
+          cpus: "0.25"    # Reduced from 1.0
+    networks:
+      - personal-vector-network
+
+  # ARQ task queue worker - personal development
+  task-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: task-worker-personal
+    restart: unless-stopped
+    environment:
+      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://dragonfly:6379
+      - AI_DOCS_TASK_QUEUE__REDIS_DATABASE=1
+      - AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE=1  # Reduced from 4
+      - AI_DOCS_TASK_QUEUE__MAX_JOBS=3          # Reduced from 10
+      - AI_DOCS_LOG_LEVEL=WARN
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - ~/.qdrant_data:/qdrant/storage:z
+    depends_on:
+      - dragonfly
+      - qdrant
+    networks:
+      - personal-vector-network
+    command: arq src.services.task_queue.worker.WorkerSettings
+    deploy:
+      resources:
+        limits:
+          memory: 512M    # Reduced from 2G
+          cpus: "0.25"    # Reduced from 1.0
+        reservations:
+          memory: 256M    # Reduced from 1G
+          cpus: "0.125"   # Reduced from 0.5
+    profiles:
+      - worker
+      - personal-use
+
+networks:
+  personal-vector-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500
+
+# Personal development monitoring extension (optional)
+x-personal-monitoring: &personal-monitoring
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  labels:
+    - "environment=personal-use"
+    - "team=individual-dev"
+    - "component=vector-db"
