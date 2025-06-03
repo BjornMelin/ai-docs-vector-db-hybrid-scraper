@@ -23,7 +23,7 @@ class TestCacheTools:
         mock_cache.get_stats.return_value = {
             "hit_rate": 0.92,
             "size": 1500,
-            "total_requests": 25000
+            "total_requests": 25000,
         }
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
@@ -181,9 +181,7 @@ class TestCacheTools:
     def test_cache_clear_response_validation(self):
         """Test cache clear response model validation."""
         response = CacheClearResponse(
-            status="success",
-            cleared_count=25,
-            pattern="test:*"
+            status="success", cleared_count=25, pattern="test:*"
         )
 
         assert response.status == "success"
@@ -192,9 +190,7 @@ class TestCacheTools:
 
         # Test without pattern
         response_no_pattern = CacheClearResponse(
-            status="success",
-            cleared_count=100,
-            pattern=None
+            status="success", cleared_count=100, pattern=None
         )
 
         assert response_no_pattern.status == "success"
@@ -203,11 +199,7 @@ class TestCacheTools:
 
     def test_cache_stats_response_validation(self):
         """Test cache stats response model validation."""
-        response = CacheStatsResponse(
-            hit_rate=0.95,
-            size=2000,
-            total_requests=50000
-        )
+        response = CacheStatsResponse(hit_rate=0.95, size=2000, total_requests=50000)
 
         assert response.hit_rate == 0.95
         assert response.size == 2000

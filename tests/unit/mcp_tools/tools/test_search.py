@@ -78,7 +78,7 @@ async def test_search_documents_basic(mock_client_manager, mock_context):
             score=0.95,
             url="https://example.com/1",
             title="Test Document 1",
-            metadata={"type": "documentation"}
+            metadata={"type": "documentation"},
         ),
         SearchResult(
             id="doc2",
@@ -86,20 +86,21 @@ async def test_search_documents_basic(mock_client_manager, mock_context):
             score=0.85,
             url="https://example.com/2",
             title="Test Document 2",
-            metadata={"type": "guide"}
-        )
+            metadata={"type": "guide"},
+        ),
     ]
 
-    with patch('src.mcp_tools.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_core:
+    with patch(
+        "src.mcp_tools.tools._search_utils.search_documents_core",
+        new_callable=AsyncMock,
+    ) as mock_core:
         mock_core.return_value = mock_search_results
 
         register_tools(mock_mcp, mock_client_manager)
 
         # Test search_documents function
         request = SearchRequest(
-            query="test query",
-            collection="documentation",
-            limit=10
+            query="test query", collection="documentation", limit=10
         )
 
         result = await registered_tools["search_documents"](request, mock_context)
@@ -138,7 +139,10 @@ async def test_search_similar_success(mock_client_manager, mock_context):
         {
             "id": "source_doc",
             "score": 1.0,
-            "payload": {"content": "Source content", "url": "https://example.com/source"}
+            "payload": {
+                "content": "Source content",
+                "url": "https://example.com/source",
+            },
         },
         {
             "id": "similar_doc1",
@@ -146,8 +150,8 @@ async def test_search_similar_success(mock_client_manager, mock_context):
             "payload": {
                 "content": "Similar content 1",
                 "url": "https://example.com/similar1",
-                "title": "Similar Document 1"
-            }
+                "title": "Similar Document 1",
+            },
         },
         {
             "id": "similar_doc2",
@@ -155,9 +159,9 @@ async def test_search_similar_success(mock_client_manager, mock_context):
             "payload": {
                 "content": "Similar content 2",
                 "url": "https://example.com/similar2",
-                "title": "Similar Document 2"
-            }
-        }
+                "title": "Similar Document 2",
+            },
+        },
     ]
 
     # Setup mocks
@@ -173,7 +177,7 @@ async def test_search_similar_success(mock_client_manager, mock_context):
         collection="documentation",
         limit=2,
         score_threshold=0.7,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     # Should exclude source document and return 2 similar documents
@@ -188,7 +192,7 @@ async def test_search_similar_success(mock_client_manager, mock_context):
         collection_name="documentation",
         ids=["source_doc"],
         with_vectors=True,
-        with_payload=True
+        with_payload=True,
     )
 
     mock_qdrant.hybrid_search.assert_called_once_with(
@@ -198,7 +202,7 @@ async def test_search_similar_success(mock_client_manager, mock_context):
         limit=3,  # limit + 1 to exclude self
         score_threshold=0.7,
         fusion_type="rrf",
-        search_accuracy="balanced"
+        search_accuracy="balanced",
     )
 
     # Verify context logging
@@ -233,7 +237,7 @@ async def test_search_similar_document_not_found(mock_client_manager, mock_conte
             collection="documentation",
             limit=10,
             score_threshold=0.7,
-            ctx=mock_context
+            ctx=mock_context,
         )
 
     # Verify error logging
@@ -264,17 +268,14 @@ async def test_search_similar_vector_formats(mock_client_manager, mock_context):
         {
             "id": "similar_doc",
             "score": 0.8,
-            "payload": {"content": "Similar content", "url": "https://example.com"}
+            "payload": {"content": "Similar content", "url": "https://example.com"},
         }
     ]
 
     register_tools(mock_mcp, mock_client_manager)
 
     result = await registered_tools["search_similar"](
-        query_id="doc1",
-        collection="documentation",
-        limit=10,
-        ctx=mock_context
+        query_id="doc1", collection="documentation", limit=10, ctx=mock_context
     )
 
     assert len(result) == 1
@@ -285,7 +286,7 @@ async def test_search_similar_vector_formats(mock_client_manager, mock_context):
         limit=11,
         score_threshold=0.7,
         fusion_type="rrf",
-        search_accuracy="balanced"
+        search_accuracy="balanced",
     )
 
 
@@ -314,10 +315,7 @@ async def test_search_similar_dict_vector_format(mock_client_manager, mock_conte
     register_tools(mock_mcp, mock_client_manager)
 
     result = await registered_tools["search_similar"](
-        query_id="doc1",
-        collection="documentation",
-        limit=5,
-        ctx=mock_context
+        query_id="doc1", collection="documentation", limit=5, ctx=mock_context
     )
 
     assert len(result) == 0
@@ -328,7 +326,7 @@ async def test_search_similar_dict_vector_format(mock_client_manager, mock_conte
         limit=6,
         score_threshold=0.7,
         fusion_type="rrf",
-        search_accuracy="balanced"
+        search_accuracy="balanced",
     )
 
 
@@ -356,18 +354,18 @@ async def test_search_similar_exclude_self(mock_client_manager, mock_context):
         {
             "id": "source_doc",  # This should be excluded
             "score": 1.0,
-            "payload": {"content": "Source content"}
+            "payload": {"content": "Source content"},
         },
         {
             "id": "similar_doc1",
             "score": 0.9,
-            "payload": {"content": "Similar content 1", "title": "Similar 1"}
+            "payload": {"content": "Similar content 1", "title": "Similar 1"},
         },
         {
             "id": "similar_doc2",
             "score": 0.8,
-            "payload": {"content": "Similar content 2", "title": "Similar 2"}
-        }
+            "payload": {"content": "Similar content 2", "title": "Similar 2"},
+        },
     ]
 
     mock_qdrant = await mock_client_manager.get_qdrant_service()
@@ -377,10 +375,7 @@ async def test_search_similar_exclude_self(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     result = await registered_tools["search_similar"](
-        query_id="source_doc",
-        collection="documentation",
-        limit=5,
-        ctx=mock_context
+        query_id="source_doc", collection="documentation", limit=5, ctx=mock_context
     )
 
     # Should only return similar documents, not the source
@@ -415,10 +410,7 @@ async def test_search_similar_error_handling(mock_client_manager, mock_context):
     # Test that exception is properly handled and re-raised
     with pytest.raises(Exception, match="Qdrant connection error"):
         await registered_tools["search_similar"](
-            query_id="test_doc",
-            collection="documentation",
-            limit=10,
-            ctx=mock_context
+            query_id="test_doc", collection="documentation", limit=10, ctx=mock_context
         )
 
     # Verify error logging
@@ -449,7 +441,7 @@ async def test_search_similar_without_context(mock_client_manager):
         {
             "id": "similar_doc1",
             "score": 0.9,
-            "payload": {"content": "Similar content", "url": "https://example.com"}
+            "payload": {"content": "Similar content", "url": "https://example.com"},
         }
     ]
 
@@ -465,7 +457,7 @@ async def test_search_similar_without_context(mock_client_manager):
         collection="documentation",
         limit=5,
         score_threshold=0.8,
-        ctx=None
+        ctx=None,
     )
 
     assert len(result) == 1
@@ -499,8 +491,7 @@ async def test_search_similar_default_parameters(mock_client_manager, mock_conte
 
     # Test with only required parameter
     result = await registered_tools["search_similar"](
-        query_id="test_doc",
-        ctx=mock_context
+        query_id="test_doc", ctx=mock_context
     )
 
     assert len(result) == 0
@@ -513,5 +504,5 @@ async def test_search_similar_default_parameters(mock_client_manager, mock_conte
         limit=11,  # default 10 + 1
         score_threshold=0.7,  # default
         fusion_type="rrf",
-        search_accuracy="balanced"
+        search_accuracy="balanced",
     )

@@ -23,7 +23,7 @@ class TestAnalyticsTools:
         mock_qdrant.get_collection_info.return_value = {
             "vectors_count": 1000,
             "points_count": 1000,
-            "status": "green"
+            "status": "green",
         }
         mock_manager.get_qdrant_service = AsyncMock(return_value=mock_qdrant)
 
@@ -32,7 +32,7 @@ class TestAnalyticsTools:
         mock_cache.get_stats.return_value = {
             "hit_rate": 0.85,
             "size": 500,
-            "total_requests": 10000
+            "total_requests": 10000,
         }
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
@@ -40,7 +40,7 @@ class TestAnalyticsTools:
         mock_embedding = AsyncMock()
         mock_embedding.get_current_provider_info.return_value = {
             "name": "fastembed",
-            "model": "BAAI/bge-small-en-v1.5"
+            "model": "BAAI/bge-small-en-v1.5",
         }
         mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
 
@@ -79,9 +79,7 @@ class TestAnalyticsTools:
 
         # Test basic request
         request = AnalyticsRequest(
-            collection=None,
-            include_performance=False,
-            include_costs=False
+            collection=None, include_performance=False, include_costs=False
         )
 
         result = await get_analytics(request, mock_context)
@@ -96,7 +94,9 @@ class TestAnalyticsTools:
         mock_context.info.assert_called()
 
     @pytest.mark.asyncio
-    async def test_get_analytics_with_performance(self, mock_client_manager, mock_context):
+    async def test_get_analytics_with_performance(
+        self, mock_client_manager, mock_context
+    ):
         """Test analytics with performance metrics."""
         from src.mcp_tools.tools.analytics import register_tools
 
@@ -113,9 +113,7 @@ class TestAnalyticsTools:
         get_analytics = registered_tools["get_analytics"]
 
         request = AnalyticsRequest(
-            collection=None,
-            include_performance=True,
-            include_costs=False
+            collection=None, include_performance=True, include_costs=False
         )
 
         result = await get_analytics(request, mock_context)
@@ -145,9 +143,7 @@ class TestAnalyticsTools:
         get_analytics = registered_tools["get_analytics"]
 
         request = AnalyticsRequest(
-            collection=None,
-            include_performance=True,
-            include_costs=True
+            collection=None, include_performance=True, include_costs=True
         )
 
         result = await get_analytics(request, mock_context)
@@ -157,7 +153,9 @@ class TestAnalyticsTools:
         assert isinstance(result.costs, dict)
 
     @pytest.mark.asyncio
-    async def test_get_analytics_specific_collection(self, mock_client_manager, mock_context):
+    async def test_get_analytics_specific_collection(
+        self, mock_client_manager, mock_context
+    ):
         """Test analytics for a specific collection."""
         from src.mcp_tools.tools.analytics import register_tools
 
@@ -174,9 +172,7 @@ class TestAnalyticsTools:
         get_analytics = registered_tools["get_analytics"]
 
         request = AnalyticsRequest(
-            collection="docs",
-            include_performance=False,
-            include_costs=False
+            collection="docs", include_performance=False, include_costs=False
         )
 
         result = await get_analytics(request, mock_context)
@@ -232,9 +228,7 @@ class TestAnalyticsTools:
         get_analytics = registered_tools["get_analytics"]
 
         request = AnalyticsRequest(
-            collection=None,
-            include_performance=False,
-            include_costs=False
+            collection=None, include_performance=False, include_costs=False
         )
 
         # Should raise the exception after logging
@@ -248,9 +242,7 @@ class TestAnalyticsTools:
         """Test analytics request model validation."""
         # Test valid request
         request = AnalyticsRequest(
-            collection="test",
-            include_performance=True,
-            include_costs=True
+            collection="test", include_performance=True, include_costs=True
         )
         assert request.collection == "test"
         assert request.include_performance is True
@@ -269,7 +261,7 @@ class TestAnalyticsTools:
             collections={"test": {"vector_count": 100}},
             cache_metrics={"hit_rate": 0.85},
             performance={"avg_query_time": 45.2},
-            costs={"storage_gb": 2.5}
+            costs={"storage_gb": 2.5},
         )
 
         assert response.timestamp == "2024-01-01T00:00:00Z"
@@ -283,10 +275,7 @@ class TestAnalyticsTools:
         response = SystemHealthResponse(
             status="healthy",
             timestamp="2024-01-01T00:00:00Z",
-            services={
-                "qdrant": {"status": "healthy"},
-                "cache": {"status": "healthy"}
-            }
+            services={"qdrant": {"status": "healthy"}, "cache": {"status": "healthy"}},
         )
 
         assert response.status == "healthy"
