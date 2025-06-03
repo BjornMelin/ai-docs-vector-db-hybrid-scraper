@@ -20,7 +20,6 @@ from src.services.errors import ExternalServiceError
 from src.services.errors import MCPError  # MCP errors
 from src.services.errors import NetworkError
 from src.services.errors import QdrantServiceError  # Service-specific errors
-from src.services.errors import RateLimiter
 from src.services.errors import RateLimitError
 from src.services.errors import ResourceError
 from src.services.errors import ServiceError
@@ -28,10 +27,7 @@ from src.services.errors import ToolError
 from src.services.errors import ValidationError  # Validation errors
 from src.services.errors import circuit_breaker
 from src.services.errors import create_validation_error  # Pydantic utilities
-from src.services.errors import firecrawl_rate_limiter
 from src.services.errors import handle_mcp_errors
-from src.services.errors import openai_rate_limiter  # Global rate limiters
-from src.services.errors import qdrant_rate_limiter
 from src.services.errors import retry_async
 from src.services.errors import safe_response  # Utility functions and decorators
 from src.services.errors import validate_input
@@ -733,94 +729,10 @@ class TestValidateInput:
         assert result == "Processing 3 items for Alice"
 
 
-class TestRateLimiter:
-    """Test cases for RateLimiter class."""
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_within_limit(self):
-        """Test rate limiter allows calls within limit."""
-        limiter = RateLimiter(max_calls=3, window_seconds=1.0)
-
-        # Should allow first 3 calls
-        await limiter.acquire()
-        await limiter.acquire()
-        await limiter.acquire()
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_exceeds_limit(self):
-        """Test rate limiter blocks calls exceeding limit."""
-        limiter = RateLimiter(max_calls=2, window_seconds=1.0)
-
-        # First 2 calls should succeed
-        await limiter.acquire()
-        await limiter.acquire()
-
-        # Third call should fail
-        with pytest.raises(RateLimitError) as exc_info:
-            await limiter.acquire()
-
-        error = exc_info.value
-        assert "Rate limit exceeded: 2 calls per 1.0s" in error.message
-        assert error.retry_after is not None
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_window_expiration(self):
-        """Test rate limiter allows calls after window expires."""
-        limiter = RateLimiter(max_calls=1, window_seconds=0.01)
-
-        # First call
-        await limiter.acquire()
-
-        # Second call should fail immediately
-        with pytest.raises(RateLimitError):
-            await limiter.acquire()
-
-        # Wait for window to expire
-        await asyncio.sleep(0.02)
-
-        # Should allow another call
-        await limiter.acquire()
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_concurrent_access(self):
-        """Test rate limiter with concurrent access."""
-        limiter = RateLimiter(max_calls=2, window_seconds=1.0)
-
-        async def make_call(call_id):
-            try:
-                await limiter.acquire()
-                return f"success_{call_id}"
-            except RateLimitError:
-                return f"limited_{call_id}"
-
-        # Make 4 concurrent calls
-        results = await asyncio.gather(*[make_call(i) for i in range(4)])
-
-        # Should have 2 successes and 2 rate limited
-        successes = [r for r in results if r.startswith("success")]
-        limited = [r for r in results if r.startswith("limited")]
-
-        assert len(successes) == 2
-        assert len(limited) == 2
-
-
-class TestGlobalRateLimiters:
-    """Test cases for global rate limiter instances."""
-
-    def test_openai_rate_limiter_configuration(self):
-        """Test OpenAI rate limiter configuration."""
-        assert openai_rate_limiter.max_calls == 50
-        assert openai_rate_limiter.window_seconds == 60
-
-    def test_qdrant_rate_limiter_configuration(self):
-        """Test Qdrant rate limiter configuration."""
-        assert qdrant_rate_limiter.max_calls == 100
-        assert qdrant_rate_limiter.window_seconds == 60
-
-    def test_firecrawl_rate_limiter_configuration(self):
-        """Test Firecrawl rate limiter configuration."""
-        assert firecrawl_rate_limiter.max_calls == 20
-        assert firecrawl_rate_limiter.window_seconds == 60
+# NOTE: RateLimiter and global rate limiter tests have been removed.
+# Rate limiting functionality has been consolidated to use the advanced
+# RateLimitManager from src.services.utilities.rate_limiter.py.
+# See test_rate_limiter.py for comprehensive rate limiting tests.
 
 
 class TestCreateValidationError:

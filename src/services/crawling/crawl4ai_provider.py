@@ -1,12 +1,9 @@
 """Enhanced Crawl4AI provider with advanced features for high-performance web crawling."""
 
 import asyncio
-import hashlib
 import logging
-import time
 from urllib.parse import urlparse
 
-import numpy as np
 from crawl4ai import AsyncWebCrawler
 from crawl4ai import BrowserConfig
 from crawl4ai import CrawlerRunConfig
@@ -19,134 +16,10 @@ from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
+from .extractors import DocumentationExtractor
+from .extractors import JavaScriptExecutor
 
 logger = logging.getLogger(__name__)
-
-
-class JavaScriptExecutor:
-    """Handle complex JavaScript execution for dynamic content."""
-
-    def __init__(self):
-        self.common_patterns = {
-            "spa_navigation": """
-                // Wait for SPA navigation
-                await new Promise(resolve => {
-                    const observer = new MutationObserver(() => {
-                        if (document.querySelector('.content-loaded')) {
-                            observer.disconnect();
-                            resolve();
-                        }
-                    });
-                    observer.observe(document.body, {childList: true, subtree: true});
-                    setTimeout(resolve, 5000); // Timeout fallback
-                });
-            """,
-            "infinite_scroll": """
-                // Load all content via infinite scroll
-                let lastHeight = 0;
-                while (true) {
-                    window.scrollTo(0, document.body.scrollHeight);
-                    await new Promise(r => setTimeout(r, 1000));
-                    let newHeight = document.body.scrollHeight;
-                    if (newHeight === lastHeight) break;
-                    lastHeight = newHeight;
-                }
-            """,
-            "click_show_more": """
-                // Click all "show more" buttons
-                const buttons = document.querySelectorAll('[class*="show-more"], [class*="load-more"]');
-                for (const button of buttons) {
-                    button.click();
-                    await new Promise(r => setTimeout(r, 500));
-                }
-            """,
-        }
-
-    def get_js_for_site(self, url: str) -> str | None:
-        """Get custom JavaScript for specific documentation sites."""
-        domain = urlparse(url).netloc
-
-        # Site-specific JavaScript
-        site_js = {
-            "docs.python.org": self.common_patterns["spa_navigation"],
-            "reactjs.org": self.common_patterns["spa_navigation"],
-            "react.dev": self.common_patterns["spa_navigation"],
-            "developer.mozilla.org": self.common_patterns["click_show_more"],
-            "stackoverflow.com": self.common_patterns["infinite_scroll"],
-        }
-
-        return site_js.get(domain)
-
-
-class DocumentationExtractor:
-    """Optimized extraction for technical documentation."""
-
-    def __init__(self):
-        self.selectors = {
-            # Common documentation selectors
-            "content": [
-                "main",
-                "article",
-                ".content",
-                ".documentation",
-                "#main-content",
-                ".markdown-body",
-                ".doc-content",
-            ],
-            # Code blocks
-            "code": [
-                "pre code",
-                ".highlight",
-                ".code-block",
-                ".language-*",
-            ],
-            # Navigation (to extract structure)
-            "nav": [
-                ".sidebar",
-                ".toc",
-                "nav",
-                ".navigation",
-            ],
-            # Metadata
-            "metadata": {
-                "title": ["h1", ".title", "title"],
-                "description": ["meta[name='description']", ".description"],
-                "author": [".author", "meta[name='author']"],
-                "version": [".version", ".release"],
-                "last_updated": ["time", ".last-updated", ".modified"],
-            },
-        }
-
-    def create_extraction_schema(self, doc_type: str = "general") -> dict:
-        """Create extraction schema based on documentation type."""
-        schemas = {
-            "api_reference": {
-                "endpoints": "section.endpoint",
-                "parameters": ".parameter",
-                "responses": ".response",
-                "examples": ".example",
-            },
-            "tutorial": {
-                "steps": ".step, .tutorial-step",
-                "code_examples": "pre code",
-                "prerequisites": ".prerequisites",
-                "objectives": ".objectives",
-            },
-            "guide": {
-                "sections": "h2, h3",
-                "content": "p, ul, ol",
-                "callouts": ".note, .warning, .tip",
-                "related": ".related-links",
-            },
-        }
-
-        base_schema = {
-            "title": self.selectors["metadata"]["title"],
-            "content": self.selectors["content"],
-            "code_blocks": self.selectors["code"],
-        }
-
-        return {**base_schema, **schemas.get(doc_type, {})}
 
 
 class Crawl4AIProvider(BaseService, CrawlProvider):
@@ -547,122 +420,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             }
 
 
-class CrawlCache:
-    """Intelligent caching for crawled content."""
-
-    def __init__(self, cache_manager: object):
-        self.cache = cache_manager
-        self.ttl = 86400  # 24 hours default
-
-    async def get_or_crawl(
-        self,
-        url: str,
-        crawler: Crawl4AIProvider,
-        force_refresh: bool = False,
-    ) -> dict[str, object]:
-        """Get from cache or crawl if needed."""
-        # Generate cache key
-        cache_key = f"crawl:{hashlib.md5(url.encode()).hexdigest()}"
-
-        # Check cache unless forced refresh
-        if not force_refresh:
-            cached = await self.cache.get(cache_key)
-            if cached:
-                return cached
-
-        # Crawl and cache
-        result = await crawler.scrape_url(url)
-
-        # Determine TTL based on content
-        ttl = self.calculate_ttl(result)
-
-        await self.cache.set(cache_key, result, ttl=ttl)
-
-        return result
-
-    def calculate_ttl(self, result: dict[str, object]) -> int:
-        """Dynamic TTL based on content characteristics.
-
-        Args:
-            result: Crawl result dictionary containing URL and content
-
-        Returns:
-            TTL in seconds based on content type:
-            - API docs: 7 days (604800s)
-            - Blog posts: 30 days (2592000s)
-            - Other content: 3 days (259200s)
-        """
-        url = result.get("url", "").lower()
-
-        # API docs change less frequently
-        if "api" in url:
-            return 604800  # 7 days
-
-        # Blog posts are static
-        if "blog" in url:
-            return 2592000  # 30 days
-
-        # Tutorials moderate change frequency
-        return 259200  # 3 days
-
-
-class CrawlBenchmark:
-    """Benchmark Crawl4AI performance."""
-
-    def __init__(self, crawl4ai: Crawl4AIProvider, firecrawl: object = None):
-        self.crawl4ai = crawl4ai
-        self.firecrawl = firecrawl
-
-    async def run_comparison(self, urls: list[str]) -> dict[str, dict[str, object]]:
-        """Compare performance of both crawlers.
-
-        Args:
-            urls: List of URLs to test against both crawlers
-
-        Returns:
-            Dictionary with performance statistics for each crawler including:
-            - success/failed counts
-            - timing statistics (avg, p95, min, max)
-        """
-        results = {
-            "crawl4ai": {"times": [], "success": 0, "failed": 0},
-            "firecrawl": {"times": [], "success": 0, "failed": 0},
-        }
-
-        # Test Crawl4AI
-        for url in urls:
-            start = time.time()
-            try:
-                result = await self.crawl4ai.scrape_url(url)
-                if result["success"]:
-                    results["crawl4ai"]["success"] += 1
-                else:
-                    results["crawl4ai"]["failed"] += 1
-                results["crawl4ai"]["times"].append(time.time() - start)
-            except Exception:
-                results["crawl4ai"]["failed"] += 1
-
-        # Test Firecrawl if available
-        if self.firecrawl:
-            for url in urls:
-                start = time.time()
-                try:
-                    result = await self.firecrawl.scrape_url(url)
-                    if result.get("success"):
-                        results["firecrawl"]["success"] += 1
-                    else:
-                        results["firecrawl"]["failed"] += 1
-                    results["firecrawl"]["times"].append(time.time() - start)
-                except Exception:
-                    results["firecrawl"]["failed"] += 1
-
-        # Calculate statistics
-        for _crawler, data in results.items():
-            times = data["times"]
-            if times:
-                data["avg_time"] = float(np.mean(times))
-                data["p95_time"] = float(np.percentile(times, 95))
-                data["min_time"] = float(np.min(times))
-                data["max_time"] = float(np.max(times))
-
-        return results
+# NOTE: CrawlCache and CrawlBenchmark classes have been removed as they are redundant:
+#
+# CrawlCache functionality is superseded by the main CacheManager in
+# src/services/cache/manager.py which provides:
+# - Proper CRAWL cache type support with configurable TTL
+# - Two-tier caching (local + DragonflyDB)
+# - Better memory management and compression
+#
+# CrawlBenchmark functionality should be moved to scripts/benchmark_crawl4ai_performance.py
+# for standalone performance testing.
