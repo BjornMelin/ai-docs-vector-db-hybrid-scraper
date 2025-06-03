@@ -72,23 +72,17 @@ class TestCachePatternsWithTaskQueue:
         def persist_func(key, value):
             persist_calls.append((key, value))
 
-        # Execute
-        result = await cache_patterns.write_behind(
-            key="test_key",
-            value={"data": "test"},
-            persist_func=persist_func,
-            delay=0.001  # Very short delay for test
-        )
-
-        # Verify
-        assert result is True
+        # Execute and expect error
+        with pytest.raises(RuntimeError, match="Failed to queue write-behind persistence for test_key"):
+            await cache_patterns.write_behind(
+                key="test_key",
+                value={"data": "test"},
+                persist_func=persist_func,
+                delay=0.001  # Very short delay for test
+            )
 
         # Should have attempted to queue
         task_queue_manager.enqueue.assert_called_once()
-
-        # Should have fallen back to direct persist
-        assert len(persist_calls) == 1
-        assert persist_calls[0] == ("test_key", {"data": "test"})
 
     @pytest.mark.asyncio
     async def test_write_behind_no_queue(self, cache):
@@ -102,23 +96,14 @@ class TestCachePatternsWithTaskQueue:
         def persist_func(key, value):
             persist_calls.append((key, value))
 
-        # Execute
-        result = await cache_patterns.write_behind(
-            key="test_key",
-            value={"data": "test"},
-            persist_func=persist_func,
-            delay=0.001  # Very short delay for test
-        )
-
-        # Verify
-        assert result is True
-
-        # Wait a bit for async persistence
-        await asyncio.sleep(0.01)
-
-        # Should have persisted directly
-        assert len(persist_calls) == 1
-        assert persist_calls[0] == ("test_key", {"data": "test"})
+        # Execute and expect error
+        with pytest.raises(RuntimeError, match="TaskQueueManager is required for write-behind caching"):
+            await cache_patterns.write_behind(
+                key="test_key",
+                value={"data": "test"},
+                persist_func=persist_func,
+                delay=0.001  # Very short delay for test
+            )
 
     @pytest.mark.asyncio
     async def test_write_behind_async_persist_func(self, cache_patterns, cache, task_queue_manager):
