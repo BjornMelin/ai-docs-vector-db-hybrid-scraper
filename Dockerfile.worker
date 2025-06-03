@@ -1,0 +1,42 @@
+# Dockerfile for ARQ task queue worker
+
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster Python package management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Copy requirements
+COPY pyproject.toml requirements.txt ./
+
+# Install Python dependencies
+RUN uv pip install --system -r requirements.txt
+
+# Copy application code
+COPY src/ ./src/
+COPY config/ ./config/
+
+# Set Python path
+ENV PYTHONPATH=/app/src
+
+# Create non-root user
+RUN useradd -m -u 1000 worker && chown -R worker:worker /app
+USER worker
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c "import redis; r = redis.Redis(host='dragonfly', port=6379); r.ping()"
+
+# Run the worker
+CMD ["arq", "src.services.task_queue.worker.WorkerSettings"]

@@ -982,6 +982,54 @@ class SecurityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class TaskQueueConfig(BaseModel):
+    """Task queue configuration for ARQ."""
+
+    # Redis connection settings
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="Redis URL for task queue (uses DragonflyDB)",
+    )
+    redis_password: str | None = Field(default=None, description="Redis password")
+    redis_database: int = Field(
+        default=1, ge=0, le=15, description="Redis database number for task queue"
+    )
+
+    # Worker settings
+    max_jobs: int = Field(
+        default=10, gt=0, description="Maximum concurrent jobs per worker"
+    )
+    job_timeout: int = Field(
+        default=3600, gt=0, description="Default job timeout in seconds"
+    )
+    job_ttl: int = Field(
+        default=86400, gt=0, description="Job result TTL in seconds (24 hours)"
+    )
+
+    # Retry settings
+    max_tries: int = Field(
+        default=3, gt=0, le=10, description="Maximum retry attempts for failed jobs"
+    )
+    retry_delay: float = Field(
+        default=60.0, gt=0, description="Delay between retries in seconds"
+    )
+
+    # Queue settings
+    queue_name: str = Field(
+        default="default", description="Default queue name"
+    )
+    health_check_interval: int = Field(
+        default=60, gt=0, description="Health check interval in seconds"
+    )
+
+    # Worker pool settings
+    worker_pool_size: int = Field(
+        default=4, gt=0, description="Number of worker processes"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class UnifiedConfig(BaseSettings):
     """Unified configuration for the AI Documentation Vector DB system.
 
@@ -1050,6 +1098,9 @@ class UnifiedConfig(BaseSettings):
         default_factory=SecurityConfig, description="Security settings"
     )
     hyde: HyDEConfig = Field(default_factory=HyDEConfig, description="HyDE settings")
+    task_queue: TaskQueueConfig = Field(
+        default_factory=TaskQueueConfig, description="Task queue (ARQ) settings"
+    )
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(
