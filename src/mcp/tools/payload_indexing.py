@@ -3,13 +3,26 @@
 import logging
 from datetime import UTC
 from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
-from fastmcp import Context
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
+
 
 from ...infrastructure.client_manager import ClientManager
 from ...security import SecurityValidator
+from ..models.responses import GenericDictResponse
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +33,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     @mcp.tool()
     async def create_payload_indexes(
         collection_name: str, ctx: Context
-    ) -> dict[str, Any]:
+    ) -> "GenericDictResponse":
         """
         Create payload indexes on a collection for 10-100x faster filtering.
 
@@ -57,14 +70,14 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 f"Successfully created {stats['indexed_fields_count']} payload indexes for {collection_name}"
             )
 
-            return {
-                "collection_name": collection_name,
-                "status": "success",
-                "indexes_created": stats["indexed_fields_count"],
-                "indexed_fields": stats["indexed_fields"],
-                "total_points": stats["total_points"],
-                "request_id": request_id,
-            }
+            return GenericDictResponse(
+                collection_name=collection_name,
+                status="success",
+                indexes_created=stats["indexed_fields_count"],
+                indexed_fields=stats["indexed_fields"],
+                total_points=stats["total_points"],
+                request_id=request_id,
+            )
 
         except Exception as e:
             await ctx.error(
@@ -76,7 +89,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     @mcp.tool()
     async def list_payload_indexes(
         collection_name: str, ctx: Context
-    ) -> dict[str, Any]:
+    ) -> GenericDictResponse:
         """
         List all payload indexes in a collection.
 
@@ -100,7 +113,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 f"Found {stats['indexed_fields_count']} indexed fields in {collection_name}"
             )
 
-            return stats
+            return GenericDictResponse(**stats)
 
         except Exception as e:
             await ctx.error(
@@ -109,8 +122,12 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             logger.error(f"Failed to list payload indexes: {e}")
             raise
 
+    from ..models.responses import ReindexCollectionResponse
+
     @mcp.tool()
-    async def reindex_collection(collection_name: str, ctx: Context) -> dict[str, Any]:
+    async def reindex_collection(
+        collection_name: str, ctx: Context
+    ) -> ReindexCollectionResponse:
         """
         Reindex all payload fields in a collection.
 
@@ -145,15 +162,18 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
 
             await ctx.info(f"Successfully reindexed collection: {collection_name}")
 
-            return {
-                "collection_name": collection_name,
-                "status": "success",
-                "indexes_before": stats_before["indexed_fields_count"],
-                "indexes_after": stats_after["indexed_fields_count"],
-                "indexed_fields": stats_after["indexed_fields"],
-                "total_points": stats_after["total_points"],
-                "request_id": request_id,
-            }
+            return ReindexCollectionResponse(
+                status="success",
+                collection=collection_name,
+                reindexed_count=stats_after["indexed_fields_count"],
+                details={
+                    "indexes_before": stats_before["indexed_fields_count"],
+                    "indexes_after": stats_after["indexed_fields_count"],
+                    "indexed_fields": stats_after["indexed_fields"],
+                    "total_points": stats_after["total_points"],
+                    "request_id": request_id,
+                },
+            )
 
         except Exception as e:
             await ctx.error(f"Failed to reindex collection {collection_name}: {e}")
@@ -166,7 +186,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         test_filters: dict[str, Any],
         query: str = "documentation search test",
         ctx: Context = None,
-    ) -> dict[str, Any]:
+    ) -> GenericDictResponse:
         """
         Benchmark filtered search performance to demonstrate indexing improvements.
 
@@ -222,19 +242,21 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     f"Filtered search completed in {search_time:.2f}ms with {len(results)} results"
                 )
 
-            return {
-                "collection_name": collection_name,
-                "query": query,
-                "filters_applied": test_filters,
-                "search_time_ms": round(search_time, 2),
-                "results_found": len(results),
-                "total_points": collection_stats.get("points_count", 0),
-                "indexed_fields": index_stats["indexed_fields"],
-                "performance_estimate": "10-100x faster than unindexed"
-                if index_stats["indexed_fields"]
-                else "No indexes detected",
-                "benchmark_timestamp": datetime.now(UTC).isoformat(),
-            }
+            return GenericDictResponse(
+                collection_name=collection_name,
+                query=query,
+                filters_applied=test_filters,
+                search_time_ms=round(search_time, 2),
+                results_found=len(results),
+                total_points=collection_stats.get("points_count", 0),
+                indexed_fields=index_stats["indexed_fields"],
+                performance_estimate=(
+                    "10-100x faster than unindexed"
+                    if index_stats["indexed_fields"]
+                    else "No indexes detected"
+                ),
+                benchmark_timestamp=datetime.now(UTC).isoformat(),
+            )
 
         except Exception as e:
             if ctx:

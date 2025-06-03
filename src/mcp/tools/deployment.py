@@ -1,9 +1,20 @@
 """Deployment and alias management tools for MCP server."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
-from fastmcp import Context
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
+
 
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
@@ -51,22 +62,43 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
 
         return await search_documents_core(request, client_manager, ctx)
 
+    from ..models.responses import ABTestAnalysisResponse
+    from ..models.responses import AliasesResponse
+    from ..models.responses import CanaryStatusResponse
+    from ..models.responses import OperationStatus
+
     @mcp.tool()
-    async def list_aliases() -> dict[str, str]:
+    async def list_aliases(ctx=None) -> AliasesResponse:
         """
         List all collection aliases and their targets.
 
         Returns a mapping of alias names to collection names.
         """
-        alias_manager = await client_manager.get_alias_manager()
-        return await alias_manager.list_aliases()
+        if ctx:
+            await ctx.info("Retrieving all collection aliases")
+
+        try:
+            alias_manager = await client_manager.get_alias_manager()
+            aliases = await alias_manager.list_aliases()
+
+            if ctx:
+                await ctx.info(f"Successfully retrieved {len(aliases)} aliases")
+
+            return AliasesResponse(aliases=aliases)
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to list aliases: {e}")
+            logger.error(f"Failed to list aliases: {e}")
+            raise
 
     @mcp.tool()
     async def create_alias(
         alias_name: str,
         collection_name: str,
         force: bool = False,
-    ) -> dict[str, Any]:
+        ctx=None,
+    ) -> OperationStatus:
         """
         Create or update an alias to point to a collection.
 
@@ -78,18 +110,40 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status information
         """
-        alias_manager = await client_manager.get_alias_manager()
-        success = await alias_manager.create_alias(
-            alias_name=alias_name,
-            collection_name=collection_name,
-            force=force,
-        )
+        if ctx:
+            await ctx.info(
+                f"Creating alias {alias_name} -> {collection_name}, force={force}"
+            )
 
-        return {
-            "success": success,
-            "alias": alias_name,
-            "collection": collection_name,
-        }
+        try:
+            alias_manager = await client_manager.get_alias_manager()
+            success = await alias_manager.create_alias(
+                alias_name=alias_name,
+                collection_name=collection_name,
+                force=force,
+            )
+
+            status = "success" if success else "error"
+            if ctx:
+                if success:
+                    await ctx.info(
+                        f"Successfully created alias {alias_name} -> {collection_name}"
+                    )
+                else:
+                    await ctx.warning(
+                        f"Failed to create alias {alias_name} -> {collection_name}"
+                    )
+
+            return OperationStatus(
+                status=status,
+                details={"alias": alias_name, "collection": collection_name},
+            )
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to create alias {alias_name}: {e}")
+            logger.error(f"Failed to create alias: {e}")
+            raise
 
     @mcp.tool()
     async def deploy_new_index(
@@ -98,7 +152,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         validation_queries: "list[str] | None" = None,
         rollback_on_failure: bool = True,
         ctx: Context = None,
-    ) -> dict[str, Any]:
+    ) -> OperationStatus:
         """
         Deploy new index version with zero downtime using blue-green deployment.
 
@@ -139,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 f"Alias {alias} now points to {result['new_collection']}"
             )
 
-        return result
+        return OperationStatus(status="success", details=result)
 
     @mcp.tool()
     async def start_ab_test(
@@ -148,7 +202,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         treatment_collection: str,
         traffic_split: float = 0.5,
         metrics: "list[str] | None" = None,
-    ) -> dict[str, str]:
+        ctx=None,
+    ) -> OperationStatus:
         """
         Start A/B test between two collections.
 
@@ -165,25 +220,44 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Experiment ID and status
         """
-        ab_testing = await client_manager.get_ab_testing()
-        experiment_id = await ab_testing.create_experiment(
-            experiment_name=experiment_name,
-            control_collection=control_collection,
-            treatment_collection=treatment_collection,
-            traffic_split=traffic_split,
-            metrics_to_track=metrics,
-        )
+        if ctx:
+            await ctx.info(
+                f"Starting A/B test: {experiment_name} ({control_collection} vs {treatment_collection})"
+            )
 
-        return {
-            "experiment_id": experiment_id,
-            "status": "started",
-            "control": control_collection,
-            "treatment": treatment_collection,
-            "traffic_split": traffic_split,
-        }
+        try:
+            ab_testing = await client_manager.get_ab_testing()
+            experiment_id = await ab_testing.create_experiment(
+                experiment_name=experiment_name,
+                control_collection=control_collection,
+                treatment_collection=treatment_collection,
+                traffic_split=traffic_split,
+                metrics_to_track=metrics,
+            )
+
+            if ctx:
+                await ctx.info(
+                    f"A/B test started successfully with ID: {experiment_id}"
+                )
+
+            return OperationStatus(
+                status="started",
+                details={
+                    "experiment_id": experiment_id,
+                    "control": control_collection,
+                    "treatment": treatment_collection,
+                    "traffic_split": traffic_split,
+                },
+            )
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to start A/B test {experiment_name}: {e}")
+            logger.error(f"Failed to start A/B test: {e}")
+            raise
 
     @mcp.tool()
-    async def analyze_ab_test(experiment_id: str) -> dict[str, Any]:
+    async def analyze_ab_test(experiment_id: str, ctx=None) -> ABTestAnalysisResponse:
         """
         Analyze results of an A/B test experiment.
 
@@ -196,8 +270,25 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Detailed analysis results
         """
-        ab_testing = await client_manager.get_ab_testing()
-        return await ab_testing.analyze_experiment(experiment_id)
+        if ctx:
+            await ctx.info(f"Analyzing A/B test experiment: {experiment_id}")
+
+        try:
+            ab_testing = await client_manager.get_ab_testing()
+            result = await ab_testing.analyze_experiment(experiment_id)
+
+            if ctx:
+                await ctx.info(
+                    f"A/B test analysis completed for experiment {experiment_id}"
+                )
+
+            return ABTestAnalysisResponse(**result)
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to analyze A/B test {experiment_id}: {e}")
+            logger.error(f"Failed to analyze A/B test: {e}")
+            raise
 
     @mcp.tool()
     async def start_canary_deployment(
@@ -206,7 +297,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         stages: "list[dict] | None" = None,
         auto_rollback: bool = True,
         ctx: Context = None,
-    ) -> dict[str, Any]:
+    ) -> OperationStatus:
         """
         Start canary deployment with gradual traffic rollout.
 
@@ -260,15 +351,17 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         if ctx:
             await ctx.info(f"Canary deployment started with ID: {deployment_id}")
 
-        return {
-            "deployment_id": deployment_id,
-            "status": "started",
-            "alias": alias,
-            "new_collection": new_collection,
-        }
+        return OperationStatus(
+            status="started",
+            details={
+                "deployment_id": deployment_id,
+                "alias": alias,
+                "new_collection": new_collection,
+            },
+        )
 
     @mcp.tool()
-    async def get_canary_status(deployment_id: str) -> dict[str, Any]:
+    async def get_canary_status(deployment_id: str, ctx=None) -> CanaryStatusResponse:
         """
         Get current status of a canary deployment.
 
@@ -280,11 +373,28 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Current deployment status
         """
-        canary = await client_manager.get_canary_deployment()
-        return await canary.get_deployment_status(deployment_id)
+        if ctx:
+            await ctx.info(f"Retrieving canary deployment status: {deployment_id}")
+
+        try:
+            canary = await client_manager.get_canary_deployment()
+            status = await canary.get_deployment_status(deployment_id)
+
+            if ctx:
+                await ctx.info(
+                    f"Successfully retrieved status for deployment {deployment_id}"
+                )
+
+            return CanaryStatusResponse(**status)
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to get canary status for {deployment_id}: {e}")
+            logger.error(f"Failed to get canary status: {e}")
+            raise
 
     @mcp.tool()
-    async def pause_canary(deployment_id: str) -> dict[str, str]:
+    async def pause_canary(deployment_id: str, ctx=None) -> OperationStatus:
         """
         Pause a canary deployment.
 
@@ -296,16 +406,34 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status message
         """
-        canary = await client_manager.get_canary_deployment()
-        success = await canary.pause_deployment(deployment_id)
+        if ctx:
+            await ctx.info(f"Pausing canary deployment: {deployment_id}")
 
-        return {
-            "status": "paused" if success else "failed",
-            "deployment_id": deployment_id,
-        }
+        try:
+            canary = await client_manager.get_canary_deployment()
+            success = await canary.pause_deployment(deployment_id)
+            status = "paused" if success else "failed"
+
+            if ctx:
+                if success:
+                    await ctx.info(f"Successfully paused deployment {deployment_id}")
+                else:
+                    await ctx.warning(f"Failed to pause deployment {deployment_id}")
+
+            return OperationStatus(
+                status=status, details={"deployment_id": deployment_id}
+            )
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(
+                    f"Failed to pause canary deployment {deployment_id}: {e}"
+                )
+            logger.error(f"Failed to pause canary deployment: {e}")
+            raise
 
     @mcp.tool()
-    async def resume_canary(deployment_id: str) -> dict[str, str]:
+    async def resume_canary(deployment_id: str, ctx=None) -> OperationStatus:
         """
         Resume a paused canary deployment.
 
@@ -317,10 +445,28 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         Returns:
             Status message
         """
-        canary = await client_manager.get_canary_deployment()
-        success = await canary.resume_deployment(deployment_id)
+        if ctx:
+            await ctx.info(f"Resuming canary deployment: {deployment_id}")
 
-        return {
-            "status": "resumed" if success else "failed",
-            "deployment_id": deployment_id,
-        }
+        try:
+            canary = await client_manager.get_canary_deployment()
+            success = await canary.resume_deployment(deployment_id)
+            status = "resumed" if success else "failed"
+
+            if ctx:
+                if success:
+                    await ctx.info(f"Successfully resumed deployment {deployment_id}")
+                else:
+                    await ctx.warning(f"Failed to resume deployment {deployment_id}")
+
+            return OperationStatus(
+                status=status, details={"deployment_id": deployment_id}
+            )
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(
+                    f"Failed to resume canary deployment {deployment_id}: {e}"
+                )
+            logger.error(f"Failed to resume canary deployment: {e}")
+            raise

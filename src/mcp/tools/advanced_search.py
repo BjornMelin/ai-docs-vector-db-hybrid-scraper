@@ -2,13 +2,20 @@
 
 import logging
 from typing import TYPE_CHECKING
-from typing import Any
 from uuid import uuid4
 
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
-    from fastmcp import Context
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
+
 
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
@@ -17,6 +24,7 @@ from ..models.requests import FilteredSearchRequest
 from ..models.requests import HyDESearchRequest
 from ..models.requests import MultiStageSearchRequest
 from ..models.requests import SearchRequest
+from ..models.responses import HyDEAdvancedResponse
 from ..models.responses import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -133,16 +141,27 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
 
-            # Convert SearchStageRequest objects to dictionaries for QdrantService
+            # Convert stage configuration to QdrantService format
             stages = []
             for stage_req in request.stages:
-                stage = {
-                    "query_vector": stage_req.query_vector,
-                    "vector_name": stage_req.vector_name,
-                    "vector_type": stage_req.vector_type.value,
-                    "limit": stage_req.limit,
-                    "filter": stage_req.filters,
-                }
+                # Handle both dict and SearchStageRequest object formats
+                if isinstance(stage_req, dict):
+                    stage = {
+                        "query_vector": stage_req["query_vector"],
+                        "vector_name": stage_req["vector_name"],
+                        "vector_type": stage_req["vector_type"],
+                        "limit": stage_req["limit"],
+                        "filter": stage_req.get("filters"),
+                    }
+                else:
+                    # SearchStageRequest object
+                    stage = {
+                        "query_vector": stage_req.query_vector,
+                        "vector_name": stage_req.vector_name,
+                        "vector_type": stage_req.vector_type.value,
+                        "limit": stage_req.limit,
+                        "filter": stage_req.filters,
+                    }
                 stages.append(stage)
 
             # Perform multi-stage search
@@ -338,7 +357,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         enable_ab_testing: bool = False,
         use_cache: bool = True,
         ctx: "Context | None" = None,
-    ) -> dict[str, Any]:
+    ) -> HyDEAdvancedResponse:
         """
         Advanced HyDE search with full configuration control and A/B testing.
 
@@ -367,7 +386,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     await ctx.error("HyDE engine not available")
                 raise ValueError("HyDE engine not initialized") from e
 
-            result = {
+            result_dict = {
                 "request_id": request_id,
                 "query": query,
                 "collection": collection,
@@ -396,7 +415,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     search_results, ab_test_results = await _perform_ab_test_search(
                         query, collection, limit, domain, use_cache, client_manager, ctx
                     )
-                    result["ab_test_results"] = ab_test_results
+                    result_dict["ab_test_results"] = ab_test_results
                 except Exception as ab_error:
                     if ctx:
                         await ctx.warning(f"A/B testing failed: {ab_error}")
@@ -471,7 +490,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     )
 
             # Collect metrics
-            result["metrics"] = {
+            result_dict["metrics"] = {
                 "search_time_ms": round(search_time, 2),
                 "results_found": len(formatted_results),
                 "reranking_applied": enable_reranking,
@@ -483,14 +502,14 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 },
             }
 
-            result["results"] = formatted_results
+            result_dict["results"] = formatted_results
 
             if ctx:
                 await ctx.info(
                     f"Advanced HyDE search {request_id} completed: {len(formatted_results)} results in {search_time:.2f}ms"
                 )
 
-            return result
+            return HyDEAdvancedResponse(**result_dict)
 
         except Exception as e:
             if ctx:

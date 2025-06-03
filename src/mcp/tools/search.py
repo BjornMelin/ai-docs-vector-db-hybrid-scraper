@@ -1,8 +1,20 @@
 """Search and retrieval tools for MCP server."""
 
 import logging
+from typing import TYPE_CHECKING
 
-from fastmcp import Context
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
+
 
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import SearchRequest
@@ -34,21 +46,24 @@ def register_tools(mcp, client_manager: ClientManager):
         collection: str = "documentation",
         limit: int = 10,
         score_threshold: float = 0.7,
-        ctx=None,
+        ctx: Context = None,
     ) -> list[SearchResult]:
         """
         Search for documents similar to a given document ID.
 
         Uses the document's embedding to find semantically similar content.
         """
+        if ctx:
+            await ctx.info(
+                f"Starting similarity search for document {query_id} in collection {collection}"
+            )
+
         try:
             qdrant_service = await client_manager.get_qdrant_service()
 
             # Retrieve the source document
-            await ctx.info(f"Retrieving source document {query_id}")
-
-            # We need to implement a retrieve method or use Qdrant's retrieve API
-            # For now, let's use a simplified approach
+            if ctx:
+                await ctx.debug(f"Retrieving source document {query_id}")
 
             # Get the document by ID
             retrieved = await qdrant_service._client.retrieve(
@@ -59,6 +74,10 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             if not retrieved:
+                if ctx:
+                    await ctx.error(
+                        f"Document {query_id} not found in collection {collection}"
+                    )
                 raise ValueError(
                     f"Document {query_id} not found in collection {collection}"
                 )
@@ -72,6 +91,9 @@ def register_tools(mcp, client_manager: ClientManager):
             else:
                 query_vector = source_doc.vector.get("dense", [])
 
+            if ctx:
+                await ctx.debug(f"Extracted vector with {len(query_vector)} dimensions")
+
             # Search using the document's vector
             results = await qdrant_service.hybrid_search(
                 collection_name=collection,
@@ -83,23 +105,35 @@ def register_tools(mcp, client_manager: ClientManager):
                 search_accuracy="balanced",
             )
 
+            if ctx:
+                await ctx.debug(f"Hybrid search returned {len(results)} results")
+
             # Convert to response format, excluding the source document
             search_results = []
             for result in results:
                 if str(result["id"]) != query_id:
                     search_results.append(
                         SearchResult(
-                            content=result["payload"].get("content", ""),
-                            metadata=result["payload"].get("metadata", {}),
-                            score=result["score"],
                             id=str(result["id"]),
-                            collection=collection,
+                            content=result["payload"].get("content", ""),
+                            score=result["score"],
+                            url=result["payload"].get("url"),
+                            title=result["payload"].get("title"),
+                            metadata=result["payload"],
                         )
                     )
 
-            await ctx.info(f"Found {len(search_results)} similar documents")
-            return search_results[:limit]  # Ensure we don't exceed requested limit
+            final_results = search_results[
+                :limit
+            ]  # Ensure we don't exceed requested limit
+            if ctx:
+                await ctx.info(
+                    f"Found {len(final_results)} similar documents for {query_id}"
+                )
+            return final_results
 
         except Exception as e:
-            await ctx.error(f"Similar search failed: {e!s}")
+            if ctx:
+                await ctx.error(f"Similar search failed: {e}")
+            logger.error(f"Similar search failed: {e}")
             raise

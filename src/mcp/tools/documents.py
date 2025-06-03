@@ -2,10 +2,21 @@
 
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from fastmcp import Context
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
+
 
 from ...chunking import EnhancedChunker
 from ...config.enums import ChunkingStrategy
@@ -21,8 +32,13 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register document management tools with the MCP server."""
 
+    from ..models.responses import AddDocumentResponse
+    from ..models.responses import DocumentBatchResponse
+
     @mcp.tool()
-    async def add_document(request: DocumentRequest, ctx: Context) -> dict[str, Any]:
+    async def add_document(
+        request: DocumentRequest, ctx: Context
+    ) -> AddDocumentResponse:
         """
         Add a document to the vector database with smart chunking.
 
@@ -48,7 +64,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             cached = await cache_manager.get(cache_key)
             if cached:
                 await ctx.debug(f"Document {doc_id} found in cache")
-                return cached
+                return AddDocumentResponse(**cached)
 
             # Crawl the URL
             await ctx.debug(f"Crawling URL for document {doc_id}")
@@ -119,17 +135,17 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
 
             # Prepare response
-            result = {
-                "url": request.url,
-                "title": crawl_result.metadata.get("title", ""),
-                "chunks_created": len(chunks),
-                "collection": request.collection,
-                "chunking_strategy": request.chunk_strategy.value,
-                "embedding_dimensions": len(embeddings[0]),
-            }
+            result = AddDocumentResponse(
+                url=request.url,
+                title=crawl_result.metadata.get("title", ""),
+                chunks_created=len(chunks),
+                collection=request.collection,
+                chunking_strategy=request.chunk_strategy.value,
+                embedding_dimensions=len(embeddings[0]),
+            )
 
             # Cache result
-            await cache_manager.set(cache_key, result, ttl=86400)
+            await cache_manager.set(cache_key, result.model_dump(), ttl=86400)
 
             await ctx.info(
                 f"Document {doc_id} processed successfully: "
@@ -146,18 +162,16 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     @mcp.tool()
     async def add_documents_batch(
         request: BatchRequest, ctx: Context
-    ) -> dict[str, Any]:
+    ) -> DocumentBatchResponse:
         """
         Add multiple documents in batch with optimized processing.
 
         Processes multiple URLs concurrently with rate limiting and
         progress tracking.
         """
-        results = {
-            "successful": [],
-            "failed": [],
-            "total": len(request.urls),
-        }
+        successes: list[AddDocumentResponse] = []
+        failures: list[str] = []
+        total_urls = len(request.urls)
 
         # Process URLs in batches
         semaphore = asyncio.Semaphore(request.max_concurrent)
@@ -174,14 +188,9 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                         collection=request.collection,
                     )
                     result = await add_document(doc_request, ctx)
-                    results["successful"].append(result)
-                except Exception as e:
-                    results["failed"].append(
-                        {
-                            "url": url,
-                            "error": str(e),
-                        }
-                    )
+                    successes.append(result)
+                except Exception:
+                    failures.append(url)
 
         # Process all URLs concurrently
         await asyncio.gather(
@@ -189,4 +198,9 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             return_exceptions=True,
         )
 
-        return results
+        successes.sort(key=lambda x: x.chunks_created, reverse=True)
+        return DocumentBatchResponse(
+            successful=successes,
+            failed=failures,
+            total=total_urls,
+        )
