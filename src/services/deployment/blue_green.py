@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Any
 
 from ...config import UnifiedConfig
@@ -11,7 +12,9 @@ from ..base import BaseService
 from ..core.qdrant_alias_manager import QdrantAliasManager
 from ..embeddings.manager import EmbeddingManager
 from ..errors import ServiceError
-from ..vector_db.service import QdrantService
+
+if TYPE_CHECKING:
+    from ..vector_db.service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,7 @@ class BlueGreenDeployment(BaseService):
     def __init__(
         self,
         config: UnifiedConfig,
-        qdrant_service: QdrantService,
+        qdrant_service: "QdrantService",
         alias_manager: QdrantAliasManager,
         embedding_manager: EmbeddingManager | None = None,
     ):

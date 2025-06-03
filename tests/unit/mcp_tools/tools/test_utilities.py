@@ -93,10 +93,7 @@ async def test_estimate_costs_basic(mock_client_manager, mock_context):
 
     # Test basic cost estimation
     result = await registered_tools["estimate_costs"](
-        text_count=100,
-        average_length=500,
-        include_storage=False,
-        ctx=mock_context
+        text_count=100, average_length=500, include_storage=False, ctx=mock_context
     )
 
     assert isinstance(result, GenericDictResponse)
@@ -131,10 +128,7 @@ async def test_estimate_costs_with_storage(mock_client_manager, mock_context):
 
     # Test cost estimation with storage
     result = await registered_tools["estimate_costs"](
-        text_count=1000,
-        average_length=1000,
-        include_storage=True,
-        ctx=mock_context
+        text_count=1000, average_length=1000, include_storage=True, ctx=mock_context
     )
 
     assert isinstance(result, GenericDictResponse)
@@ -173,10 +167,7 @@ async def test_estimate_costs_default_parameters(mock_client_manager, mock_conte
     register_tools(mock_mcp, mock_client_manager)
 
     # Test with default parameters
-    result = await registered_tools["estimate_costs"](
-        text_count=50,
-        ctx=mock_context
-    )
+    result = await registered_tools["estimate_costs"](text_count=50, ctx=mock_context)
 
     assert isinstance(result, GenericDictResponse)
     assert result.text_count == 50
@@ -206,10 +197,7 @@ async def test_estimate_costs_without_context(mock_client_manager):
 
     # Test without ctx parameter (None)
     result = await registered_tools["estimate_costs"](
-        text_count=10,
-        average_length=200,
-        include_storage=False,
-        ctx=None
+        text_count=10, average_length=200, include_storage=False, ctx=None
     )
 
     assert isinstance(result, GenericDictResponse)
@@ -237,7 +225,7 @@ async def test_estimate_costs_error_handling(mock_client_manager, mock_context):
     with pytest.raises(TypeError):
         await registered_tools["estimate_costs"](
             text_count="invalid",  # Should be int
-            ctx=mock_context
+            ctx=mock_context,
         )
 
     # Verify error logging would be called
@@ -285,7 +273,9 @@ async def test_validate_configuration_success(mock_client_manager, mock_context)
 
 
 @pytest.mark.asyncio
-async def test_validate_configuration_missing_api_keys(mock_client_manager, mock_context):
+async def test_validate_configuration_missing_api_keys(
+    mock_client_manager, mock_context
+):
     """Test configuration validation with missing API keys."""
     from src.mcp_tools.tools.utilities import register_tools
 
@@ -397,7 +387,9 @@ async def test_validate_configuration_error_handling(mock_client_manager, mock_c
     mock_mcp.tool.return_value = capture_tool
 
     # Mock client_manager to raise exception when accessing config
-    type(mock_client_manager.unified_config.qdrant).url = PropertyMock(side_effect=Exception("Config access error"))
+    type(mock_client_manager.unified_config.qdrant).url = PropertyMock(
+        side_effect=Exception("Config access error")
+    )
 
     register_tools(mock_mcp, mock_client_manager)
 
@@ -430,7 +422,7 @@ async def test_estimate_costs_large_numbers(mock_client_manager, mock_context):
         text_count=1000000,  # 1 million texts
         average_length=2000,
         include_storage=True,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     assert isinstance(result, GenericDictResponse)

@@ -104,7 +104,6 @@ class TestCollectionsTools:
         # Verify context logging
         mock_context.info.assert_called()
 
-
     @pytest.mark.asyncio
     async def test_delete_collection(self, mock_client_manager, mock_context):
         """Test deleting a collection."""
@@ -122,7 +121,9 @@ class TestCollectionsTools:
 
         delete_collection = registered_tools["delete_collection"]
 
-        result = await delete_collection(collection_name="old_collection", ctx=mock_context)
+        result = await delete_collection(
+            collection_name="old_collection", ctx=mock_context
+        )
 
         assert isinstance(result, CollectionOperationResponse)
         assert result.status == "deleted"
@@ -130,7 +131,6 @@ class TestCollectionsTools:
 
         # Verify context logging
         mock_context.info.assert_called()
-
 
     @pytest.mark.asyncio
     async def test_collections_error_handling(self, mock_client_manager, mock_context):
@@ -161,14 +161,13 @@ class TestCollectionsTools:
         # Error should be logged
         mock_context.error.assert_called()
 
-
     def test_collection_info_validation(self):
         """Test collection info model validation."""
         collection_info = CollectionInfo(
             name="test_collection",
             vectors_count=1000,
             points_count=1000,
-            status="green"
+            status="green",
         )
 
         assert collection_info.name == "test_collection"
@@ -179,8 +178,7 @@ class TestCollectionsTools:
     def test_collection_operation_response_validation(self):
         """Test collection operation response model validation."""
         operation_response = CollectionOperationResponse(
-            status="deleted",
-            collection="test_collection"
+            status="deleted", collection="test_collection"
         )
 
         assert operation_response.status == "deleted"
@@ -205,7 +203,7 @@ class TestCollectionsTools:
         tools_to_test = [
             ("list_collections", []),
             ("delete_collection", ["old"]),
-            ("optimize_collection", ["test"])
+            ("optimize_collection", ["test"]),
         ]
 
         for tool_name, args in tools_to_test:
@@ -228,4 +226,3 @@ class TestCollectionsTools:
 
         # Should have registered 3 tools
         assert mock_mcp.tool.call_count == 3
-

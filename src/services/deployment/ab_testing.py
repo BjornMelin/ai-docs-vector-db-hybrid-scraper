@@ -10,6 +10,7 @@ from collections import defaultdict
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
+from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
@@ -18,7 +19,9 @@ from scipy import stats
 from ...config import UnifiedConfig
 from ..base import BaseService
 from ..errors import ServiceError
-from ..vector_db.service import QdrantService
+
+if TYPE_CHECKING:
+    from ..vector_db.service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +55,10 @@ class ABTestingManager(BaseService):
     """Manage A/B testing for vector search."""
 
     def __init__(
-        self, config: UnifiedConfig, qdrant_service: QdrantService, client_manager=None
+        self,
+        config: UnifiedConfig,
+        qdrant_service: "QdrantService",
+        client_manager=None,
     ):
         """Initialize A/B testing manager.
 

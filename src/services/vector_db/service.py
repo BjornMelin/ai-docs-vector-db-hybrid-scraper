@@ -14,6 +14,7 @@ from .collections import QdrantCollections
 from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
+from .search_interceptor import SearchInterceptor
 
 if TYPE_CHECKING:
     from ...infrastructure.client_manager import ClientManager
@@ -40,6 +41,8 @@ class QdrantService(BaseService):
         self._search: QdrantSearch | None = None
         self._indexing: QdrantIndexing | None = None
         self._documents: QdrantDocuments | None = None
+        self._search_interceptor: SearchInterceptor | None = None
+        self._canary_router = None
 
     async def initialize(self) -> None:
         """Initialize all Qdrant modules with connection validation.
@@ -62,6 +65,36 @@ class QdrantService(BaseService):
 
             # Initialize each module
             await self._collections.initialize()
+
+            # Initialize search interceptor with canary routing if available
+            try:
+                cache_manager = await self._client_manager.get_cache_manager()
+                if cache_manager and cache_manager.distributed_cache:
+                    from ..deployment.canary_router import CanaryRouter
+
+                    self._canary_router = CanaryRouter(
+                        cache=cache_manager.distributed_cache,
+                        config=self.config,
+                    )
+
+                    self._search_interceptor = SearchInterceptor(
+                        search_service=self._search,
+                        router=self._canary_router,
+                        config=self.config,
+                    )
+                    logger.info("Search interceptor initialized with canary routing")
+                else:
+                    # No canary routing, use direct search
+                    self._search_interceptor = SearchInterceptor(
+                        search_service=self._search,
+                        router=None,
+                        config=self.config,
+                    )
+                    logger.info("Search interceptor initialized without canary routing")
+            except Exception as e:
+                logger.warning(f"Failed to initialize search interceptor: {e}")
+                # Fallback to direct search without interceptor
+                self._search_interceptor = None
 
             self._initialized = True
             logger.info("QdrantService initialized with modular architecture")
@@ -226,6 +259,8 @@ class QdrantService(BaseService):
         score_threshold: float = 0.0,
         fusion_type: str = "rrf",
         search_accuracy: str = "balanced",
+        user_id: str | None = None,
+        request_id: str | None = None,
     ) -> list[dict[str, object]]:
         """Perform hybrid search combining dense and sparse vectors.
 
@@ -237,6 +272,8 @@ class QdrantService(BaseService):
             score_threshold: Minimum score threshold for results
             fusion_type: Fusion algorithm ("rrf" or "dbsf")
             search_accuracy: Accuracy level ("balanced", "fast", "accurate")
+            user_id: Optional user ID for canary routing consistency
+            request_id: Optional request ID for canary metrics tracking
 
         Returns:
             list[dict[str, object]]: Search results with score and payload
@@ -245,15 +282,31 @@ class QdrantService(BaseService):
             QdrantServiceError: If search fails
         """
         self._validate_initialized()
-        return await self._search.hybrid_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            sparse_vector=sparse_vector,
-            limit=limit,
-            score_threshold=score_threshold,
-            fusion_type=fusion_type,
-            search_accuracy=search_accuracy,
-        )
+
+        # Use search interceptor if available for canary routing
+        if self._search_interceptor:
+            return await self._search_interceptor.hybrid_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                sparse_vector=sparse_vector,
+                limit=limit,
+                score_threshold=score_threshold,
+                fusion_type=fusion_type,
+                search_accuracy=search_accuracy,
+                user_id=user_id,
+                request_id=request_id,
+            )
+        else:
+            # Fallback to direct search
+            return await self._search.hybrid_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                sparse_vector=sparse_vector,
+                limit=limit,
+                score_threshold=score_threshold,
+                fusion_type=fusion_type,
+                search_accuracy=search_accuracy,
+            )
 
     async def multi_stage_search(
         self,
@@ -262,6 +315,8 @@ class QdrantService(BaseService):
         limit: int = 10,
         fusion_algorithm: str = "rrf",
         search_accuracy: str = "balanced",
+        user_id: str | None = None,
+        request_id: str | None = None,
     ) -> list[dict[str, object]]:
         """Perform multi-stage retrieval with different strategies.
 
@@ -274,6 +329,8 @@ class QdrantService(BaseService):
             limit: Maximum number of results to return
             fusion_algorithm: Algorithm for combining results ("rrf" or "dbsf")
             search_accuracy: Accuracy level ("balanced", "fast", "accurate")
+            user_id: Optional user ID for canary routing consistency
+            request_id: Optional request ID for canary metrics tracking
 
         Returns:
             list[dict[str, object]]: Fused search results
@@ -282,13 +339,27 @@ class QdrantService(BaseService):
             QdrantServiceError: If multi-stage search fails
         """
         self._validate_initialized()
-        return await self._search.multi_stage_search(
-            collection_name=collection_name,
-            stages=stages,
-            limit=limit,
-            fusion_algorithm=fusion_algorithm,
-            search_accuracy=search_accuracy,
-        )
+
+        # Use search interceptor if available for canary routing
+        if self._search_interceptor:
+            return await self._search_interceptor.multi_stage_search(
+                collection_name=collection_name,
+                stages=stages,
+                limit=limit,
+                fusion_algorithm=fusion_algorithm,
+                search_accuracy=search_accuracy,
+                user_id=user_id,
+                request_id=request_id,
+            )
+        else:
+            # Fallback to direct search
+            return await self._search.multi_stage_search(
+                collection_name=collection_name,
+                stages=stages,
+                limit=limit,
+                fusion_algorithm=fusion_algorithm,
+                search_accuracy=search_accuracy,
+            )
 
     async def hyde_search(
         self,
@@ -299,6 +370,8 @@ class QdrantService(BaseService):
         limit: int = 10,
         fusion_algorithm: str = "rrf",
         search_accuracy: str = "balanced",
+        user_id: str | None = None,
+        request_id: str | None = None,
     ) -> list[dict[str, object]]:
         """Search using HyDE (Hypothetical Document Embeddings).
 
@@ -310,6 +383,8 @@ class QdrantService(BaseService):
             limit: Maximum number of results to return
             fusion_algorithm: Algorithm for combining results ("rrf" or "dbsf")
             search_accuracy: Accuracy level ("balanced", "fast", "accurate")
+            user_id: Optional user ID for canary routing consistency
+            request_id: Optional request ID for canary metrics tracking
 
         Returns:
             list[dict[str, object]]: Search results combining query and hypothetical matches
@@ -318,15 +393,31 @@ class QdrantService(BaseService):
             QdrantServiceError: If HyDE search fails
         """
         self._validate_initialized()
-        return await self._search.hyde_search(
-            collection_name=collection_name,
-            query=query,
-            query_embedding=query_embedding,
-            hypothetical_embeddings=hypothetical_embeddings,
-            limit=limit,
-            fusion_algorithm=fusion_algorithm,
-            search_accuracy=search_accuracy,
-        )
+
+        # Use search interceptor if available for canary routing
+        if self._search_interceptor:
+            return await self._search_interceptor.hyde_search(
+                collection_name=collection_name,
+                query=query,
+                query_embedding=query_embedding,
+                hypothetical_embeddings=hypothetical_embeddings,
+                limit=limit,
+                fusion_algorithm=fusion_algorithm,
+                search_accuracy=search_accuracy,
+                user_id=user_id,
+                request_id=request_id,
+            )
+        else:
+            # Fallback to direct search
+            return await self._search.hyde_search(
+                collection_name=collection_name,
+                query=query,
+                query_embedding=query_embedding,
+                hypothetical_embeddings=hypothetical_embeddings,
+                limit=limit,
+                fusion_algorithm=fusion_algorithm,
+                search_accuracy=search_accuracy,
+            )
 
     async def filtered_search(
         self,
@@ -335,6 +426,8 @@ class QdrantService(BaseService):
         filters: dict[str, object],
         limit: int = 10,
         search_accuracy: str = "balanced",
+        user_id: str | None = None,
+        request_id: str | None = None,
     ) -> list[dict[str, object]]:
         """Optimized filtered search using indexed payload fields.
 
@@ -344,6 +437,8 @@ class QdrantService(BaseService):
             filters: Filter conditions for payload fields (e.g., {"key": "value"})
             limit: Maximum number of results to return
             search_accuracy: Accuracy level ("balanced", "fast", "accurate")
+            user_id: Optional user ID for canary routing consistency
+            request_id: Optional request ID for canary metrics tracking
 
         Returns:
             list[dict[str, object]]: Filtered search results
@@ -352,13 +447,27 @@ class QdrantService(BaseService):
             QdrantServiceError: If filtered search fails
         """
         self._validate_initialized()
-        return await self._search.filtered_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            filters=filters,
-            limit=limit,
-            search_accuracy=search_accuracy,
-        )
+
+        # Use search interceptor if available for canary routing
+        if self._search_interceptor:
+            return await self._search_interceptor.filtered_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                filters=filters,
+                limit=limit,
+                search_accuracy=search_accuracy,
+                user_id=user_id,
+                request_id=request_id,
+            )
+        else:
+            # Fallback to direct search
+            return await self._search.filtered_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                filters=filters,
+                limit=limit,
+                search_accuracy=search_accuracy,
+            )
 
     # Indexing API (delegates to QdrantIndexing)
 

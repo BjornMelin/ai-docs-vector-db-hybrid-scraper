@@ -524,15 +524,24 @@ class ClientManager:
 
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
+                    from src.services.core.qdrant_alias_manager import (
+                        QdrantAliasManager,
+                    )
                     from src.services.deployment.canary import CanaryDeployment
 
                     qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
+
+                    # Initialize alias manager
+                    alias_manager = QdrantAliasManager(self.config, qdrant_service)
+                    await alias_manager.initialize()
 
                     self._canary_deployment = CanaryDeployment(
+                        config=self.config,
+                        alias_manager=alias_manager,
                         qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
+                        client_manager=self,
                     )
+                    await self._canary_deployment.initialize()
                     logger.info("Initialized CanaryDeployment")
 
         return self._canary_deployment
