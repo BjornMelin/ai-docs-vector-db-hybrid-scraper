@@ -60,6 +60,7 @@ class CanaryDeployment(BaseService):
         self,
         config: UnifiedConfig,
         alias_manager: QdrantAliasManager,
+        task_queue_manager,
         qdrant_service: QdrantService | None = None,
         client_manager=None,
     ):
@@ -68,6 +69,7 @@ class CanaryDeployment(BaseService):
         Args:
             config: Unified configuration
             alias_manager: Alias manager instance
+            task_queue_manager: Required task queue manager for background tasks
             qdrant_service: Optional Qdrant service for monitoring
             client_manager: Optional client manager for Redis access
         """
@@ -75,6 +77,7 @@ class CanaryDeployment(BaseService):
         self.aliases = alias_manager
         self.qdrant = qdrant_service
         self.client_manager = client_manager
+        self._task_queue_manager = task_queue_manager
         self.deployments: dict[str, CanaryDeploymentConfig] = {}
         self._state_file = self.config.data_dir / "canary_deployments.json"
         self._lock = asyncio.Lock()
@@ -150,19 +153,33 @@ class CanaryDeployment(BaseService):
         # Persist to storage
         await self._save_deployments()
 
-        # TODO: For production, offload canary deployment orchestration to a persistent task queue
-        # (e.g., Celery, ARQ) to ensure deployment continues even if the server restarts.
-        # Current asyncio.create_task is suitable for simpler deployments but lacks persistence.
-        # This is critical for production deployments as interruptions could leave deployments in an inconsistent state.
-        # Example with Celery:
-        # canary_task_id = run_canary_deployment.apply_async(args=[deployment_id, auto_rollback])
-        # self.deployments[deployment_id].task_id = canary_task_id
+        # Task queue is required for persistent canary deployments
+        if not self._task_queue_manager:
+            raise ServiceError(
+                "TaskQueueManager is required for canary deployments. "
+                "Initialize CanaryDeployment with a TaskQueueManager instance."
+            )
 
-        # Start canary process
-        # Store task reference to avoid RUF006 warning
-        _ = asyncio.create_task(self._run_canary(deployment_id, auto_rollback))  # noqa: RUF006
+        # Convert deployment config to serializable format for task queue
+        deployment_dict = asdict(deployment_config)
 
-        logger.info(f"Started canary deployment {deployment_id}")
+        job_id = await self._task_queue_manager.enqueue(
+            "run_canary_deployment",
+            deployment_id=deployment_id,
+            deployment_config=deployment_dict,
+            auto_rollback=auto_rollback,
+        )
+
+        if job_id:
+            logger.info(
+                f"Started canary deployment {deployment_id} with job ID: {job_id}"
+            )
+            # Store job ID for tracking
+            deployment_config.status = "queued"
+            await self._save_deployments()
+        else:
+            raise ServiceError(f"Failed to queue canary deployment {deployment_id}")
+
         return deployment_id
 
     async def _run_canary(self, deployment_id: str, auto_rollback: bool = True) -> None:
@@ -514,13 +531,32 @@ class CanaryDeployment(BaseService):
         deployment.status = "running"
         await self._save_deployments()
 
-        # TODO: For production, use persistent task queue to resume deployment monitoring
-        # Same concerns as start_canary - deployments should survive server restarts
+        # Task queue is required for resuming deployments
+        if not self._task_queue_manager:
+            raise ServiceError(
+                "TaskQueueManager is required to resume canary deployments. "
+                "Initialize CanaryDeployment with a TaskQueueManager instance."
+            )
 
-        # Restart monitoring from current stage
-        # Store task reference to avoid RUF006 warning
-        _ = asyncio.create_task(self._run_canary(deployment_id))  # noqa: RUF006
-        logger.info(f"Resumed canary deployment {deployment_id}")
+        # Convert deployment config to serializable format for task queue
+        deployment_dict = asdict(deployment)
+
+        job_id = await self._task_queue_manager.enqueue(
+            "run_canary_deployment",
+            deployment_id=deployment_id,
+            deployment_config=deployment_dict,
+            auto_rollback=True,  # Default to safe rollback on resume
+        )
+
+        if job_id:
+            logger.info(
+                f"Resumed canary deployment {deployment_id} with job ID: {job_id}"
+            )
+        else:
+            deployment.status = "paused"  # Revert status
+            await self._save_deployments()
+            raise ServiceError(f"Failed to queue resumed canary deployment {deployment_id}")
+
         return True
 
     def get_active_deployments(self) -> list[dict[str, Any]]:

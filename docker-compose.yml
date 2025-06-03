@@ -91,6 +91,41 @@ services:
     networks:
       - advanced-vector-network
 
+  # ARQ task queue worker for background jobs
+  task-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: task-worker
+    restart: unless-stopped
+    environment:
+      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://dragonfly:6379
+      - AI_DOCS_TASK_QUEUE__REDIS_DATABASE=1
+      - AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE=4
+      - AI_DOCS_LOG_LEVEL=INFO
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - ~/.qdrant_data:/qdrant/storage:z
+    depends_on:
+      - dragonfly
+      - qdrant
+    networks:
+      - advanced-vector-network
+    command: arq src.services.task_queue.worker.WorkerSettings
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+    profiles:
+      - worker
+      - production
+
   # Optional: Add monitoring for production deployments
   qdrant-exporter:
     image: qdrant/qdrant-exporter:latest

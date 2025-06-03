@@ -281,10 +281,9 @@ class BlueGreenDeployment:
             # 5. Monitor for issues
             await self._monitor_after_switch(alias_name, duration_seconds=300)
             
-            # 6. Schedule old collection cleanup
-            asyncio.create_task(
-                self.aliases.safe_delete_collection(blue_collection)
-            )
+            # 6. Schedule old collection cleanup via task queue
+            # This ensures cleanup survives server restarts
+            await self.aliases.safe_delete_collection(blue_collection)
             
             return {
                 "success": True,
@@ -569,8 +568,8 @@ class CanaryDeployment:
             "metrics": defaultdict(list),
         }
         
-        # Start canary process
-        asyncio.create_task(self._run_canary(deployment_id))
+        # Start canary process via task queue for persistence
+        await self.canary.start_canary(deployment_config, auto_rollback=True)
         
         return deployment_id
     

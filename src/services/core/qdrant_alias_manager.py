@@ -1,6 +1,5 @@
 """Qdrant alias manager for zero-downtime collection updates."""
 
-import asyncio
 import logging
 import re
 from collections.abc import Callable
@@ -25,15 +24,22 @@ MAX_NAME_LENGTH = 255
 class QdrantAliasManager(BaseService):
     """Manage Qdrant collection aliases for zero-downtime updates."""
 
-    def __init__(self, config: UnifiedConfig, client: AsyncQdrantClient):
+    def __init__(
+        self,
+        config: UnifiedConfig,
+        client: AsyncQdrantClient,
+        task_queue_manager,
+    ):
         """Initialize alias manager.
 
         Args:
             config: Unified configuration
             client: Qdrant client instance
+            task_queue_manager: Required task queue manager for background tasks
         """
         super().__init__(config)
         self.client = client
+        self._task_queue_manager = task_queue_manager
         self._initialized = True  # Already initialized via client
 
     @staticmethod
@@ -66,15 +72,12 @@ class QdrantAliasManager(BaseService):
         pass
 
     async def cleanup(self) -> None:
-        """Cleanup any pending deletion tasks."""
-        if hasattr(self, "_deletion_tasks"):
-            # Cancel all pending deletion tasks
-            for task in self._deletion_tasks:
-                if not task.done():
-                    task.cancel()
-            # Wait for cancellations to complete
-            await asyncio.gather(*self._deletion_tasks, return_exceptions=True)
-            self._deletion_tasks.clear()
+        """Cleanup alias manager.
+        
+        Note: Persistent task queue jobs continue running independently.
+        """
+        # No local cleanup needed as tasks are managed by task queue
+        pass
 
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False
@@ -185,8 +188,7 @@ class QdrantAliasManager(BaseService):
 
             # Optionally delete old collection
             if delete_old and old_collection:
-                # Store task reference to avoid RUF006 warning
-                _ = asyncio.create_task(self.safe_delete_collection(old_collection))  # noqa: RUF006
+                await self.safe_delete_collection(old_collection)
 
             return old_collection
 
@@ -275,8 +277,7 @@ class QdrantAliasManager(BaseService):
     ) -> None:
         """Safely delete collection after grace period.
 
-        Note: This schedules deletion but returns immediately.
-        For production use, consider using a proper task queue.
+        Uses persistent task queue to ensure deletion completes even if server restarts.
 
         Args:
             collection_name: Name of collection to delete
@@ -293,34 +294,28 @@ class QdrantAliasManager(BaseService):
             f"Scheduling deletion of {collection_name} in {grace_period_minutes} minutes"
         )
 
-        # Create a background task for deletion
-        async def _delayed_delete():
-            """Background task to delete collection after delay."""
-            await asyncio.sleep(grace_period_minutes * 60)
+        # Task queue is required for persistent deletion scheduling
+        if not self._task_queue_manager:
+            raise RuntimeError(
+                "TaskQueueManager is required for safe collection deletion. "
+                "Initialize QdrantAliasManager with a TaskQueueManager instance."
+            )
 
-            # Double-check no aliases
-            aliases = await self.list_aliases()
-            if collection_name not in aliases.values():
-                try:
-                    await self.client.delete_collection(collection_name)
-                    logger.info(f"Deleted collection {collection_name}")
-                except Exception as e:
-                    logger.error(f"Failed to delete collection {collection_name}: {e}")
+        job_id = await self._task_queue_manager.enqueue(
+            "delete_collection",
+            collection_name=collection_name,
+            grace_period_minutes=grace_period_minutes,
+            _delay=grace_period_minutes * 60,  # Convert to seconds
+        )
 
-        # TODO: For production, offload this delayed deletion to a persistent task queue
-        # (e.g., Celery, ARQ) to ensure execution even if the server restarts.
-        # Current asyncio.create_task is suitable for simpler deployments but lacks persistence.
-        # This is critical as it manages collection deletion which affects data retention policies.
-        # Example with ARQ:
-        # await redis_queue.enqueue('delete_collection', collection_name, _delay=grace_period_minutes * 60)
-
-        # Schedule as background task - returns immediately
-        task = asyncio.create_task(_delayed_delete())
-        # Store task reference to prevent garbage collection
-        if not hasattr(self, "_deletion_tasks"):
-            self._deletion_tasks = set()
-        self._deletion_tasks.add(task)
-        task.add_done_callback(self._deletion_tasks.discard)
+        if job_id:
+            logger.info(
+                f"Scheduled deletion of {collection_name} with job ID: {job_id}"
+            )
+        else:
+            raise RuntimeError(
+                f"Failed to schedule deletion of {collection_name} via task queue"
+            )
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
         """Clone collection schema from source to target.
