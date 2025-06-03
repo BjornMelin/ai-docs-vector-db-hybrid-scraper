@@ -16,7 +16,7 @@ class CachePatterns:
 
     def __init__(self, cache: DragonflyCache, task_queue_manager):
         """Initialize with DragonflyDB cache instance.
-        
+
         Args:
             cache: DragonflyDB cache instance
             task_queue_manager: Required task queue manager for background tasks
@@ -58,9 +58,7 @@ class CachePatterns:
                 # Return stale data immediately and refresh in background
                 logger.debug(f"Serving stale data for {key}, refreshing in background")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(
-                    self._refresh_cache(key, fetch_func, ttl)
-                )
+                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
@@ -318,10 +316,11 @@ class CachePatterns:
             if job_id:
                 logger.debug(f"Write-behind queued for {key} with job ID: {job_id}")
             else:
-                raise RuntimeError(f"Failed to queue write-behind persistence for {key}")
+                raise RuntimeError(
+                    f"Failed to queue write-behind persistence for {key}"
+                )
 
         return success
-
 
     async def cache_warming(
         self,
@@ -398,9 +397,7 @@ class CachePatterns:
                 # Start background refresh
                 logger.debug(f"Refresh-ahead triggered for {key}")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(
-                    self._refresh_cache(key, fetch_func, ttl)
-                )
+                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 

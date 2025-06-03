@@ -1,8 +1,10 @@
 """Tests for TaskQueueManager - simplified without backwards compatibility."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
+import pytest
 from src.config import UnifiedConfig
 from src.services.task_queue.manager import TaskQueueManager
 

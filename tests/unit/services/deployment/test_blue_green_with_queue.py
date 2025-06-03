@@ -22,11 +22,13 @@ class TestBlueGreenDeploymentWithTaskQueue:
     def qdrant_service(self):
         """Create mock Qdrant service."""
         mock_service = AsyncMock()
-        mock_service.get_collection_stats = AsyncMock(return_value={
-            "vectors_count": 1000,
-            "indexed_vectors_count": 1000,
-            "points_count": 1000,
-        })
+        mock_service.get_collection_stats = AsyncMock(
+            return_value={
+                "vectors_count": 1000,
+                "indexed_vectors_count": 1000,
+                "points_count": 1000,
+            }
+        )
         return mock_service
 
     @pytest.fixture
@@ -40,9 +42,9 @@ class TestBlueGreenDeploymentWithTaskQueue:
     def embedding_manager(self):
         """Create mock embedding manager."""
         mock_manager = AsyncMock()
-        mock_manager.generate_embedding = AsyncMock(return_value={
-            "embedding": [0.1] * 1536
-        })
+        mock_manager.generate_embedding = AsyncMock(
+            return_value={"embedding": [0.1] * 1536}
+        )
         return mock_manager
 
     @pytest.fixture
@@ -61,20 +63,24 @@ class TestBlueGreenDeploymentWithTaskQueue:
     ):
         """Test deploy_new_version uses task queue for cleanup."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="blue_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="blue_collection"
+        )
         alias_manager.clone_collection_schema = AsyncMock(return_value=True)
         alias_manager.copy_collection_data = AsyncMock(return_value=1000)
         alias_manager.switch_alias = AsyncMock()
         alias_manager.safe_delete_collection = AsyncMock()
 
         # Mock validation to pass
-        qdrant_service.query = AsyncMock(return_value=[
-            {"score": 0.9, "id": "1"},
-            {"score": 0.85, "id": "2"},
-            {"score": 0.8, "id": "3"},
-            {"score": 0.75, "id": "4"},
-            {"score": 0.7, "id": "5"},
-        ])
+        qdrant_service.query = AsyncMock(
+            return_value=[
+                {"score": 0.9, "id": "1"},
+                {"score": 0.85, "id": "2"},
+                {"score": 0.8, "id": "3"},
+                {"score": 0.75, "id": "4"},
+                {"score": 0.7, "id": "5"},
+            ]
+        )
 
         # Mock monitoring to pass quickly
         with patch("asyncio.sleep", return_value=None):
@@ -102,14 +108,18 @@ class TestBlueGreenDeploymentWithTaskQueue:
     ):
         """Test deploy with validation failure doesn't schedule cleanup."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="blue_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="blue_collection"
+        )
         alias_manager.clone_collection_schema = AsyncMock(return_value=True)
         alias_manager.copy_collection_data = AsyncMock(return_value=1000)
 
         # Mock validation to fail
-        qdrant_service.query = AsyncMock(return_value=[
-            {"score": 0.5, "id": "1"},  # Low score
-        ])
+        qdrant_service.query = AsyncMock(
+            return_value=[
+                {"score": 0.5, "id": "1"},  # Low score
+            ]
+        )
 
         # Mock rollback
         blue_green._rollback = AsyncMock()
@@ -133,7 +143,9 @@ class TestBlueGreenDeploymentWithTaskQueue:
     async def test_deploy_with_different_data_sources(self, blue_green, alias_manager):
         """Test deploy with different data source types."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="blue_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="blue_collection"
+        )
         alias_manager.clone_collection_schema = AsyncMock(return_value=True)
 
         # Test backup source (not implemented)
@@ -161,14 +173,20 @@ class TestBlueGreenDeploymentWithTaskQueue:
             )
 
     @pytest.mark.asyncio
-    async def test_get_deployment_status(self, blue_green, alias_manager, qdrant_service):
+    async def test_get_deployment_status(
+        self, blue_green, alias_manager, qdrant_service
+    ):
         """Test get_deployment_status."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="test_collection")
-        qdrant_service.get_collection_stats = AsyncMock(return_value={
-            "vectors_count": 5000,
-            "indexed_vectors_count": 4500,
-        })
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="test_collection"
+        )
+        qdrant_service.get_collection_stats = AsyncMock(
+            return_value={
+                "vectors_count": 5000,
+                "indexed_vectors_count": 4500,
+            }
+        )
 
         # Execute
         status = await blue_green.get_deployment_status("test_alias")

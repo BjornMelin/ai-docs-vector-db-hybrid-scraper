@@ -54,10 +54,14 @@ class TestCanaryDeploymentWithTaskQueue:
         return canary
 
     @pytest.mark.asyncio
-    async def test_start_canary_with_queue(self, canary, alias_manager, task_queue_manager):
+    async def test_start_canary_with_queue(
+        self, canary, alias_manager, task_queue_manager
+    ):
         """Test start_canary uses task queue."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="old_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="old_collection"
+        )
         task_queue_manager.enqueue = AsyncMock(return_value="job_canary_123")
 
         # Execute
@@ -69,7 +73,7 @@ class TestCanaryDeploymentWithTaskQueue:
                 {"percentage": 50, "duration_minutes": 10},
                 {"percentage": 100, "duration_minutes": 0},
             ],
-            auto_rollback=True
+            auto_rollback=True,
         )
 
         # Verify
@@ -97,10 +101,14 @@ class TestCanaryDeploymentWithTaskQueue:
         assert deployment_config["alias"] == "test_alias"
 
     @pytest.mark.asyncio
-    async def test_start_canary_queue_failure(self, canary, alias_manager, task_queue_manager):
+    async def test_start_canary_queue_failure(
+        self, canary, alias_manager, task_queue_manager
+    ):
         """Test start_canary handles queue failure."""
         # Setup
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="old_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="old_collection"
+        )
         task_queue_manager.enqueue = AsyncMock(return_value=None)  # Queue failure
 
         # Execute and expect error
@@ -111,7 +119,9 @@ class TestCanaryDeploymentWithTaskQueue:
             )
 
     @pytest.mark.asyncio
-    async def test_start_canary_no_queue_fallback(self, config, alias_manager, qdrant_service):
+    async def test_start_canary_no_queue_fallback(
+        self, config, alias_manager, qdrant_service
+    ):
         """Test start_canary without task queue falls back to direct execution."""
         # Create canary without task queue
         canary = CanaryDeployment(
@@ -124,7 +134,9 @@ class TestCanaryDeploymentWithTaskQueue:
         canary._load_deployments = AsyncMock()
         canary._run_canary = AsyncMock()
 
-        alias_manager.get_collection_for_alias = AsyncMock(return_value="old_collection")
+        alias_manager.get_collection_for_alias = AsyncMock(
+            return_value="old_collection"
+        )
 
         # Execute
         with patch("asyncio.create_task") as mock_create_task:

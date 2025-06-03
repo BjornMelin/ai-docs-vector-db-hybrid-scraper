@@ -555,7 +555,9 @@ class CanaryDeployment(BaseService):
         else:
             deployment.status = "paused"  # Revert status
             await self._save_deployments()
-            raise ServiceError(f"Failed to queue resumed canary deployment {deployment_id}")
+            raise ServiceError(
+                f"Failed to queue resumed canary deployment {deployment_id}"
+            )
 
         return True
 

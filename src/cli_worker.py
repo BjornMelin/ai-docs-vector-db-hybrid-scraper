@@ -13,33 +13,18 @@ from services.task_queue.worker import WorkerSettings
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
 @click.command()
+@click.option("--workers", "-w", default=1, help="Number of worker processes", type=int)
 @click.option(
-    "--workers",
-    "-w",
-    default=1,
-    help="Number of worker processes",
-    type=int
+    "--max-jobs", "-j", default=10, help="Maximum concurrent jobs per worker", type=int
 )
 @click.option(
-    "--max-jobs",
-    "-j",
-    default=10,
-    help="Maximum concurrent jobs per worker",
-    type=int
-)
-@click.option(
-    "--queue",
-    "-q",
-    default="default",
-    help="Queue name to process",
-    type=str
+    "--queue", "-q", default="default", help="Queue name to process", type=str
 )
 def main(workers: int, max_jobs: int, queue: str):
     """Run the ARQ task queue worker."""
@@ -56,8 +41,7 @@ def main(workers: int, max_jobs: int, queue: str):
     redis_settings = WorkerSettings.get_redis_settings()
 
     logger.info(
-        f"Worker configuration: "
-        f"workers={workers}, max_jobs={max_jobs}, queue={queue}"
+        f"Worker configuration: workers={workers}, max_jobs={max_jobs}, queue={queue}"
     )
     logger.info(
         f"Connecting to Redis at {redis_settings.host}:{redis_settings.port} "

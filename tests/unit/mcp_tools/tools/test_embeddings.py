@@ -20,29 +20,37 @@ class TestEmbeddingsTools:
         mock_embedding = AsyncMock()
 
         # Create a smart mock that returns different results based on inputs
-        async def mock_generate_embeddings(texts, model=None, batch_size=32, generate_sparse=False):
+        async def mock_generate_embeddings(
+            texts, model=None, batch_size=32, generate_sparse=False
+        ):
             mock_result = MagicMock()
             # Generate embeddings based on number of input texts
             mock_result.embeddings = [
-                [0.1 + i*0.1, 0.2 + i*0.1, 0.3 + i*0.1, 0.4 + i*0.1]
+                [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
                 for i in range(len(texts))
             ]
-            mock_result.sparse_embeddings = [
-                [0.8 - i*0.1, 0.0, 0.6 - i*0.1, 0.0, 0.4 - i*0.1]
-                for i in range(len(texts))
-            ] if generate_sparse else None
+            mock_result.sparse_embeddings = (
+                [
+                    [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
+                    for i in range(len(texts))
+                ]
+                if generate_sparse
+                else None
+            )
             mock_result.model = model if model else "BAAI/bge-small-en-v1.5"
             mock_result.total_tokens = len(texts) * 10  # 10 tokens per text
             return mock_result
 
         mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
+
         # Make get_current_provider_info synchronous (not async)
         def mock_provider_info():
             return {
                 "name": "fastembed",
                 "model": "BAAI/bge-small-en-v1.5",
-                "dimensions": 384
+                "dimensions": 384,
             }
+
         mock_embedding.get_current_provider_info = mock_provider_info
         mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
 
@@ -79,7 +87,7 @@ class TestEmbeddingsTools:
             texts=["hello world", "machine learning"],
             model=None,
             batch_size=32,
-            generate_sparse=False
+            generate_sparse=False,
         )
 
         result = await generate_embeddings(request, mock_context)
@@ -95,7 +103,9 @@ class TestEmbeddingsTools:
         mock_context.info.assert_called()
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_with_sparse(self, mock_client_manager, mock_context):
+    async def test_generate_embeddings_with_sparse(
+        self, mock_client_manager, mock_context
+    ):
         """Test embedding generation with sparse embeddings."""
         from src.mcp_tools.tools.embeddings import register_tools
 
@@ -115,7 +125,7 @@ class TestEmbeddingsTools:
             texts=["document analysis", "vector search"],
             model="custom-model",
             batch_size=16,
-            generate_sparse=True
+            generate_sparse=True,
         )
 
         result = await generate_embeddings(request, mock_context)
@@ -162,8 +172,12 @@ class TestEmbeddingsTools:
 
         # Make embedding manager raise an exception
         mock_embedding = AsyncMock()
-        mock_embedding.generate_embeddings.side_effect = Exception("Embedding service unavailable")
-        mock_client_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
+        mock_embedding.generate_embeddings.side_effect = Exception(
+            "Embedding service unavailable"
+        )
+        mock_client_manager.get_embedding_manager = AsyncMock(
+            return_value=mock_embedding
+        )
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -178,10 +192,7 @@ class TestEmbeddingsTools:
         generate_embeddings = registered_tools["generate_embeddings"]
 
         request = EmbeddingRequest(
-            texts=["test text"],
-            model=None,
-            batch_size=32,
-            generate_sparse=False
+            texts=["test text"], model=None, batch_size=32, generate_sparse=False
         )
 
         # Should raise the exception after logging
@@ -209,10 +220,7 @@ class TestEmbeddingsTools:
         generate_embeddings = registered_tools["generate_embeddings"]
 
         request = EmbeddingRequest(
-            texts=[],
-            model=None,
-            batch_size=32,
-            generate_sparse=False
+            texts=[], model=None, batch_size=32, generate_sparse=False
         )
 
         result = await generate_embeddings(request, mock_context)
@@ -230,7 +238,7 @@ class TestEmbeddingsTools:
             texts=["test text", "another text"],
             model="custom-model",
             batch_size=16,
-            generate_sparse=True
+            generate_sparse=True,
         )
         assert len(request.texts) == 2
         assert request.model == "custom-model"
@@ -248,9 +256,7 @@ class TestEmbeddingsTools:
         response = EmbeddingGenerationResponse(
             embeddings=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
             model="test-model",
-            sparse_embeddings=[
-                [0.8, 0.6, 0.0]
-            ]
+            sparse_embeddings=[[0.8, 0.6, 0.0]],
         )
 
         assert len(response.embeddings) == 2
@@ -298,7 +304,9 @@ class TestEmbeddingsTools:
         assert mock_mcp.tool.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_embedding_manager_interactions(self, mock_client_manager, mock_context):
+    async def test_embedding_manager_interactions(
+        self, mock_client_manager, mock_context
+    ):
         """Test proper interaction with embedding manager."""
         from src.mcp_tools.tools.embeddings import register_tools
 
@@ -345,10 +353,7 @@ class TestEmbeddingsTools:
         batch_sizes = [1, 16, 32, 64]
 
         for batch_size in batch_sizes:
-            request = EmbeddingRequest(
-                texts=["test text"],
-                batch_size=batch_size
-            )
+            request = EmbeddingRequest(texts=["test text"], batch_size=batch_size)
             result = await generate_embeddings(request, mock_context)
             assert isinstance(result, EmbeddingGenerationResponse)
             assert len(result.embeddings) == 1
@@ -374,7 +379,7 @@ class TestEmbeddingsTools:
             texts=["test text"],
             model="sentence-transformers/all-MiniLM-L6-v2",
             batch_size=32,
-            generate_sparse=False
+            generate_sparse=False,
         )
 
         result = await generate_embeddings(request, mock_context)

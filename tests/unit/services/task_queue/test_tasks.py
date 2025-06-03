@@ -1,15 +1,15 @@
 """Tests for task queue task functions."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
 import time
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
-from src.services.task_queue.tasks import (
-    delete_collection,
-    persist_cache,
-    run_canary_deployment,
-    TASK_REGISTRY,
-)
+import pytest
+from src.services.task_queue.tasks import TASK_REGISTRY
+from src.services.task_queue.tasks import delete_collection
+from src.services.task_queue.tasks import persist_cache
+from src.services.task_queue.tasks import run_canary_deployment
 
 
 class TestTaskFunctions:

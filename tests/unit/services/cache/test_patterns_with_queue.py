@@ -27,7 +27,9 @@ class TestCachePatternsWithTaskQueue:
         return CachePatterns(cache, task_queue_manager)
 
     @pytest.mark.asyncio
-    async def test_write_behind_with_queue(self, cache_patterns, cache, task_queue_manager):
+    async def test_write_behind_with_queue(
+        self, cache_patterns, cache, task_queue_manager
+    ):
         """Test write_behind uses task queue."""
         # Setup
         cache.set = AsyncMock(return_value=True)
@@ -43,7 +45,7 @@ class TestCachePatternsWithTaskQueue:
             value={"data": "test"},
             persist_func=persist_func,
             ttl=3600,
-            delay=5.0
+            delay=5.0,
         )
 
         # Verify
@@ -61,7 +63,9 @@ class TestCachePatternsWithTaskQueue:
         )
 
     @pytest.mark.asyncio
-    async def test_write_behind_queue_failure_fallback(self, cache_patterns, cache, task_queue_manager):
+    async def test_write_behind_queue_failure_fallback(
+        self, cache_patterns, cache, task_queue_manager
+    ):
         """Test write_behind falls back when queue fails."""
         # Setup
         cache.set = AsyncMock(return_value=True)
@@ -77,7 +81,7 @@ class TestCachePatternsWithTaskQueue:
             key="test_key",
             value={"data": "test"},
             persist_func=persist_func,
-            delay=0.001  # Very short delay for test
+            delay=0.001,  # Very short delay for test
         )
 
         # Verify
@@ -107,7 +111,7 @@ class TestCachePatternsWithTaskQueue:
             key="test_key",
             value={"data": "test"},
             persist_func=persist_func,
-            delay=0.001  # Very short delay for test
+            delay=0.001,  # Very short delay for test
         )
 
         # Verify
@@ -121,7 +125,9 @@ class TestCachePatternsWithTaskQueue:
         assert persist_calls[0] == ("test_key", {"data": "test"})
 
     @pytest.mark.asyncio
-    async def test_write_behind_async_persist_func(self, cache_patterns, cache, task_queue_manager):
+    async def test_write_behind_async_persist_func(
+        self, cache_patterns, cache, task_queue_manager
+    ):
         """Test write_behind with async persist function."""
         # Setup
         cache.set = AsyncMock(return_value=True)
@@ -135,7 +141,7 @@ class TestCachePatternsWithTaskQueue:
             key="test_key",
             value={"data": "test"},
             persist_func=async_persist_func,
-            delay=10.0
+            delay=10.0,
         )
 
         # Verify
@@ -152,7 +158,9 @@ class TestCachePatternsWithTaskQueue:
         )
 
     @pytest.mark.asyncio
-    async def test_write_behind_cache_failure(self, cache_patterns, cache, task_queue_manager):
+    async def test_write_behind_cache_failure(
+        self, cache_patterns, cache, task_queue_manager
+    ):
         """Test write_behind when cache set fails."""
         # Setup
         cache.set = AsyncMock(return_value=False)

@@ -16,22 +16,22 @@ class TestEmbeddingManagerBenchmarks:
     def mock_config(self):
         """Create a mock configuration."""
         config = MagicMock(spec=UnifiedConfig)
-        
+
         # Mock cache config
         mock_cache = MagicMock()
         mock_cache.enable_caching = False
         config.cache = mock_cache
-        
+
         # Mock openai config
         mock_openai = MagicMock()
         mock_openai.api_key = None
         config.openai = mock_openai
-        
+
         # Mock fastembed config
         mock_fastembed = MagicMock()
         mock_fastembed.model = "BAAI/bge-small-en-v1.5"
         config.fastembed = mock_fastembed
-        
+
         # Mock embedding config
         mock_embedding = MagicMock()
         mock_embedding.model_benchmarks = {
@@ -48,12 +48,12 @@ class TestEmbeddingManagerBenchmarks:
             cost_weight=0.3,
         )
         config.embedding = mock_embedding
-        
+
         # Mock embedding provider enum
         mock_provider = MagicMock()
         mock_provider.value = "fastembed"
         config.embedding_provider = mock_provider
-        
+
         return config
 
     @pytest.fixture
@@ -61,7 +61,9 @@ class TestEmbeddingManagerBenchmarks:
         """Create a mock client manager."""
         return MagicMock()
 
-    def test_load_custom_benchmarks_success(self, mock_config, mock_client_manager, tmp_path):
+    def test_load_custom_benchmarks_success(
+        self, mock_config, mock_client_manager, tmp_path
+    ):
         """Test successful loading of custom benchmarks."""
         # Create embedding manager
         manager = EmbeddingManager(
@@ -135,7 +137,9 @@ class TestEmbeddingManagerBenchmarks:
         assert model1.quality_score == 95
         assert model1.avg_latency_ms == 25
 
-    def test_load_custom_benchmarks_file_not_found(self, mock_config, mock_client_manager):
+    def test_load_custom_benchmarks_file_not_found(
+        self, mock_config, mock_client_manager
+    ):
         """Test loading custom benchmarks when file doesn't exist."""
         manager = EmbeddingManager(
             config=mock_config,
@@ -145,7 +149,9 @@ class TestEmbeddingManagerBenchmarks:
         with pytest.raises(FileNotFoundError):
             manager.load_custom_benchmarks("/non/existent/file.json")
 
-    def test_load_custom_benchmarks_invalid_json(self, mock_config, mock_client_manager, tmp_path):
+    def test_load_custom_benchmarks_invalid_json(
+        self, mock_config, mock_client_manager, tmp_path
+    ):
         """Test loading custom benchmarks with invalid JSON."""
         manager = EmbeddingManager(
             config=mock_config,
@@ -297,6 +303,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Create mock text analysis
         from src.services.embeddings.manager import TextAnalysis
+
         text_analysis = TextAnalysis(
             total_length=500,
             avg_length=100,

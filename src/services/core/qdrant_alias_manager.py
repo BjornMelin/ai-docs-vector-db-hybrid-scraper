@@ -73,7 +73,7 @@ class QdrantAliasManager(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup alias manager.
-        
+
         Note: Persistent task queue jobs continue running independently.
         """
         # No local cleanup needed as tasks are managed by task queue

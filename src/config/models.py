@@ -1015,9 +1015,7 @@ class TaskQueueConfig(BaseModel):
     )
 
     # Queue settings
-    queue_name: str = Field(
-        default="default", description="Default queue name"
-    )
+    queue_name: str = Field(default="default", description="Default queue name")
     health_check_interval: int = Field(
         default=60, gt=0, description="Health check interval in seconds"
     )

@@ -183,13 +183,18 @@ class TestConfigLoaderBenchmarks:
         assert isinstance(result2, BenchmarkConfiguration)
 
         # Both should produce same result
-        assert result1.embedding.smart_selection.quality_weight == result2.embedding.smart_selection.quality_weight
+        assert (
+            result1.embedding.smart_selection.quality_weight
+            == result2.embedding.smart_selection.quality_weight
+        )
 
     def test_load_actual_custom_benchmarks_file(self):
         """Test loading the actual custom-benchmarks.json from the project."""
         # Try to load the actual file if it exists
         project_root = Path(__file__).parent.parent.parent.parent
-        custom_benchmarks_path = project_root / "config" / "templates" / "custom-benchmarks.json"
+        custom_benchmarks_path = (
+            project_root / "config" / "templates" / "custom-benchmarks.json"
+        )
 
         if custom_benchmarks_path.exists():
             result = ConfigLoader.load_benchmark_config(custom_benchmarks_path)
@@ -205,5 +210,9 @@ class TestConfigLoaderBenchmarks:
 
             # Verify weights sum to 1.0
             selection = result.embedding.smart_selection
-            weight_sum = selection.quality_weight + selection.speed_weight + selection.cost_weight
+            weight_sum = (
+                selection.quality_weight
+                + selection.speed_weight
+                + selection.cost_weight
+            )
             assert abs(weight_sum - 1.0) < 0.001  # Allow for floating point precision

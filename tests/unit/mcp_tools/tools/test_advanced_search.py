@@ -57,7 +57,9 @@ def mock_client_manager():
 @pytest.fixture
 def mock_security_validator():
     """Create a mock security validator."""
-    with patch('src.mcp_tools.tools.advanced_search.SecurityValidator') as mock_security:
+    with patch(
+        "src.mcp_tools.tools.advanced_search.SecurityValidator"
+    ) as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.side_effect = lambda x: x
         mock_validator.validate_query_string.side_effect = lambda x: x
@@ -82,7 +84,10 @@ async def test_advanced_search_tools_registration(mock_client_manager, mock_cont
     register_tools(mock_mcp, mock_client_manager)
 
     expected_tools = [
-        "multi_stage_search", "hyde_search", "hyde_search_advanced", "filtered_search"
+        "multi_stage_search",
+        "hyde_search",
+        "hyde_search_advanced",
+        "filtered_search",
     ]
 
     for tool in expected_tools:
@@ -90,7 +95,9 @@ async def test_advanced_search_tools_registration(mock_client_manager, mock_cont
 
 
 @pytest.mark.asyncio
-async def test_multi_stage_search_success(mock_client_manager, mock_context, mock_security_validator):
+async def test_multi_stage_search_success(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test successful multi-stage search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -112,8 +119,8 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
                 "content": "Test content 1",
                 "url": "https://example.com/1",
                 "title": "Test Document 1",
-                "type": "documentation"
-            }
+                "type": "documentation",
+            },
         },
         {
             "id": "doc2",
@@ -122,9 +129,9 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
                 "content": "Test content 2",
                 "url": "https://example.com/2",
                 "title": "Test Document 2",
-                "type": "guide"
-            }
-        }
+                "type": "guide",
+            },
+        },
     ]
 
     qdrant_service = await mock_client_manager.get_qdrant_service()
@@ -138,7 +145,7 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
         "vector_name": "dense",
         "vector_type": "dense",
         "limit": 50,
-        "filters": {"type": "documentation"}
+        "filters": {"type": "documentation"},
     }
 
     stage2 = {
@@ -146,7 +153,7 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
         "vector_name": "sparse",
         "vector_type": "sparse",
         "limit": 20,
-        "filters": {}
+        "filters": {},
     }
 
     request = MultiStageSearchRequest(
@@ -155,7 +162,7 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
         stages=[stage1, stage2],
         limit=10,
         fusion_algorithm=FusionAlgorithm.RRF,
-        search_accuracy=SearchAccuracy.BALANCED
+        search_accuracy=SearchAccuracy.BALANCED,
     )
 
     result = await registered_tools["multi_stage_search"](request, mock_context)
@@ -190,7 +197,9 @@ async def test_multi_stage_search_success(mock_client_manager, mock_context, moc
 
 
 @pytest.mark.asyncio
-async def test_multi_stage_search_error_handling(mock_client_manager, mock_context, mock_security_validator):
+async def test_multi_stage_search_error_handling(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test error handling in multi-stage search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -212,16 +221,18 @@ async def test_multi_stage_search_error_handling(mock_client_manager, mock_conte
     request = MultiStageSearchRequest(
         query="test query",
         collection="test_collection",
-        stages=[{
-            "query_vector": [0.1, 0.2, 0.3, 0.4],
-            "vector_name": "dense",
-            "vector_type": "dense",
-            "limit": 10,
-            "filters": None
-        }],
+        stages=[
+            {
+                "query_vector": [0.1, 0.2, 0.3, 0.4],
+                "vector_name": "dense",
+                "vector_type": "dense",
+                "limit": 10,
+                "filters": None,
+            }
+        ],
         limit=5,
         fusion_algorithm=FusionAlgorithm.RRF,
-        search_accuracy=SearchAccuracy.BALANCED
+        search_accuracy=SearchAccuracy.BALANCED,
     )
 
     with pytest.raises(Exception, match="Search service error"):
@@ -232,7 +243,9 @@ async def test_multi_stage_search_error_handling(mock_client_manager, mock_conte
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_success(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_success(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test successful HyDE search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -253,7 +266,7 @@ async def test_hyde_search_success(mock_client_manager, mock_context, mock_secur
             "score": 0.92,
             "url": "https://example.com/hyde1",
             "title": "HyDE Document 1",
-            "metadata": {"generated": True}
+            "metadata": {"generated": True},
         },
         {
             "id": "hyde_doc2",
@@ -261,8 +274,8 @@ async def test_hyde_search_success(mock_client_manager, mock_context, mock_secur
             "score": 0.88,
             "url": "https://example.com/hyde2",
             "title": "HyDE Document 2",
-            "metadata": {"generated": True}
-        }
+            "metadata": {"generated": True},
+        },
     ]
 
     hyde_engine = await mock_client_manager.get_hyde_engine()
@@ -271,14 +284,16 @@ async def test_hyde_search_success(mock_client_manager, mock_context, mock_secur
     # Setup reranking mock
     embedding_manager = await mock_client_manager.get_embedding_manager()
     embedding_manager.rerank_results.return_value = [
-        {"original": SearchResult(
-            id="hyde_doc1",
-            content="HyDE generated content 1",
-            score=0.92,
-            url="https://example.com/hyde1",
-            title="HyDE Document 1",
-            metadata={"generated": True}
-        )}
+        {
+            "original": SearchResult(
+                id="hyde_doc1",
+                content="HyDE generated content 1",
+                score=0.92,
+                url="https://example.com/hyde1",
+                title="HyDE Document 1",
+                metadata={"generated": True},
+            )
+        }
     ]
 
     register_tools(mock_mcp, mock_client_manager)
@@ -293,7 +308,7 @@ async def test_hyde_search_success(mock_client_manager, mock_context, mock_secur
         enable_reranking=True,
         include_metadata=True,
         fusion_algorithm=FusionAlgorithm.RRF,
-        search_accuracy=SearchAccuracy.ACCURATE
+        search_accuracy=SearchAccuracy.ACCURATE,
     )
 
     result = await registered_tools["hyde_search"](request, mock_context)
@@ -324,7 +339,9 @@ async def test_hyde_search_success(mock_client_manager, mock_context, mock_secur
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_fallback(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_fallback(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test HyDE search fallback to regular search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -341,14 +358,19 @@ async def test_hyde_search_fallback(mock_client_manager, mock_context, mock_secu
     mock_client_manager.get_hyde_engine.side_effect = Exception("HyDE not available")
 
     # Mock fallback search
-    with patch('src.mcp_tools.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_fallback:
-        mock_fallback_results = [SearchResult(
-            id="fallback_doc1",
-            content="Fallback content",
-            score=0.8,
-            url="https://example.com/fallback",
-            title="Fallback Document"
-        )]
+    with patch(
+        "src.mcp_tools.tools._search_utils.search_documents_core",
+        new_callable=AsyncMock,
+    ) as mock_fallback:
+        mock_fallback_results = [
+            SearchResult(
+                id="fallback_doc1",
+                content="Fallback content",
+                score=0.8,
+                url="https://example.com/fallback",
+                title="Fallback Document",
+            )
+        ]
         mock_fallback.return_value = mock_fallback_results
 
         register_tools(mock_mcp, mock_client_manager)
@@ -357,7 +379,7 @@ async def test_hyde_search_fallback(mock_client_manager, mock_context, mock_secu
             query="test query",
             collection="test_collection",
             limit=5,
-            enable_reranking=False
+            enable_reranking=False,
         )
 
         result = await registered_tools["hyde_search"](request, mock_context)
@@ -381,7 +403,9 @@ async def test_hyde_search_fallback(mock_client_manager, mock_context, mock_secu
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_qdrant_point_format(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_qdrant_point_format(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test HyDE search with Qdrant point object format."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -401,7 +425,7 @@ async def test_hyde_search_qdrant_point_format(mock_client_manager, mock_context
     mock_point.payload = {
         "content": "Point content",
         "url": "https://example.com/point",
-        "title": "Point Document"
+        "title": "Point Document",
     }
 
     hyde_engine = await mock_client_manager.get_hyde_engine()
@@ -414,7 +438,7 @@ async def test_hyde_search_qdrant_point_format(mock_client_manager, mock_context
         collection="test_collection",
         limit=5,
         enable_reranking=False,
-        include_metadata=True
+        include_metadata=True,
     )
 
     result = await registered_tools["hyde_search"](request, mock_context)
@@ -430,7 +454,9 @@ async def test_hyde_search_qdrant_point_format(mock_client_manager, mock_context
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_advanced_success(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_advanced_success(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test successful advanced HyDE search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -451,7 +477,7 @@ async def test_hyde_search_advanced_success(mock_client_manager, mock_context, m
             "score": 0.93,
             "url": "https://example.com/advanced",
             "title": "Advanced Document",
-            "metadata": {"advanced": True}
+            "metadata": {"advanced": True},
         }
     ]
 
@@ -460,9 +486,7 @@ async def test_hyde_search_advanced_success(mock_client_manager, mock_context, m
 
     # Setup reranking mock
     embedding_manager = await mock_client_manager.get_embedding_manager()
-    embedding_manager.rerank_results.return_value = [
-        {"original": mock_hyde_results[0]}
-    ]
+    embedding_manager.rerank_results.return_value = [{"original": mock_hyde_results[0]}]
 
     register_tools(mock_mcp, mock_client_manager)
 
@@ -477,7 +501,7 @@ async def test_hyde_search_advanced_success(mock_client_manager, mock_context, m
         enable_reranking=True,
         enable_ab_testing=False,
         use_cache=True,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     # Verify response
@@ -516,7 +540,9 @@ async def test_hyde_search_advanced_success(mock_client_manager, mock_context, m
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_advanced_with_ab_testing(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test advanced HyDE search with A/B testing."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -530,13 +556,18 @@ async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_co
     mock_mcp.tool.return_value = capture_tool
 
     # Mock A/B test function
-    with patch('src.mcp_tools.tools.advanced_search._perform_ab_test_search', new_callable=AsyncMock) as mock_ab_test:
-        mock_search_results = [{"id": "ab_doc1", "content": "AB test content", "score": 0.9}]
+    with patch(
+        "src.mcp_tools.tools.advanced_search._perform_ab_test_search",
+        new_callable=AsyncMock,
+    ) as mock_ab_test:
+        mock_search_results = [
+            {"id": "ab_doc1", "content": "AB test content", "score": 0.9}
+        ]
         mock_ab_results = {
             "hyde_count": 5,
             "regular_count": 4,
             "hyde_avg_score": 0.85,
-            "regular_avg_score": 0.78
+            "regular_avg_score": 0.78,
         }
         mock_ab_test.return_value = (mock_search_results, mock_ab_results)
 
@@ -548,7 +579,7 @@ async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_co
             limit=5,
             enable_ab_testing=True,
             enable_reranking=False,
-            ctx=mock_context
+            ctx=mock_context,
         )
 
         # Verify A/B test results are included
@@ -563,7 +594,9 @@ async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_co
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_advanced_engine_unavailable(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_advanced_engine_unavailable(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test advanced HyDE search when engine is unavailable."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -583,9 +616,7 @@ async def test_hyde_search_advanced_engine_unavailable(mock_client_manager, mock
 
     with pytest.raises(ValueError, match="HyDE engine not initialized"):
         await registered_tools["hyde_search_advanced"](
-            query="test query",
-            collection="test_collection",
-            ctx=mock_context
+            query="test query", collection="test_collection", ctx=mock_context
         )
 
     # Verify error logging
@@ -593,7 +624,9 @@ async def test_hyde_search_advanced_engine_unavailable(mock_client_manager, mock
 
 
 @pytest.mark.asyncio
-async def test_filtered_search_success(mock_client_manager, mock_context, mock_security_validator):
+async def test_filtered_search_success(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test successful filtered search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -621,8 +654,8 @@ async def test_filtered_search_success(mock_client_manager, mock_context, mock_s
                 "content": "Filtered content 1",
                 "url": "https://example.com/filtered1",
                 "title": "Filtered Document 1",
-                "category": "technical"
-            }
+                "category": "technical",
+            },
         },
         {
             "id": "filtered_doc2",
@@ -631,9 +664,9 @@ async def test_filtered_search_success(mock_client_manager, mock_context, mock_s
                 "content": "Filtered content 2",
                 "url": "https://example.com/filtered2",
                 "title": "Filtered Document 2",
-                "category": "technical"
-            }
-        }
+                "category": "technical",
+            },
+        },
     ]
 
     qdrant_service = await mock_client_manager.get_qdrant_service()
@@ -648,7 +681,7 @@ async def test_filtered_search_success(mock_client_manager, mock_context, mock_s
         filters={"category": "technical"},
         limit=10,
         search_accuracy=SearchAccuracy.ACCURATE,
-        include_metadata=True
+        include_metadata=True,
     )
 
     result = await registered_tools["filtered_search"](request, mock_context)
@@ -681,7 +714,9 @@ async def test_filtered_search_success(mock_client_manager, mock_context, mock_s
 
 
 @pytest.mark.asyncio
-async def test_filtered_search_without_metadata(mock_client_manager, mock_context, mock_security_validator):
+async def test_filtered_search_without_metadata(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test filtered search without including metadata."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -708,8 +743,8 @@ async def test_filtered_search_without_metadata(mock_client_manager, mock_contex
                 "content": "Content 1",
                 "url": "https://example.com/1",
                 "title": "Document 1",
-                "category": "test"
-            }
+                "category": "test",
+            },
         }
     ]
 
@@ -725,7 +760,7 @@ async def test_filtered_search_without_metadata(mock_client_manager, mock_contex
         filters={"category": "test"},
         limit=5,
         search_accuracy=SearchAccuracy.BALANCED,
-        include_metadata=False
+        include_metadata=False,
     )
 
     result = await registered_tools["filtered_search"](request, mock_context)
@@ -736,7 +771,9 @@ async def test_filtered_search_without_metadata(mock_client_manager, mock_contex
 
 
 @pytest.mark.asyncio
-async def test_filtered_search_error_handling(mock_client_manager, mock_context, mock_security_validator):
+async def test_filtered_search_error_handling(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test error handling in filtered search."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -751,7 +788,9 @@ async def test_filtered_search_error_handling(mock_client_manager, mock_context,
 
     # Make embedding generation fail
     embedding_manager = await mock_client_manager.get_embedding_manager()
-    embedding_manager.generate_embeddings.side_effect = Exception("Embedding generation failed")
+    embedding_manager.generate_embeddings.side_effect = Exception(
+        "Embedding generation failed"
+    )
 
     register_tools(mock_mcp, mock_client_manager)
 
@@ -760,7 +799,7 @@ async def test_filtered_search_error_handling(mock_client_manager, mock_context,
         collection="test_collection",
         filters={"type": "test"},
         limit=5,
-        search_accuracy=SearchAccuracy.BALANCED
+        search_accuracy=SearchAccuracy.BALANCED,
     )
 
     with pytest.raises(Exception, match="Embedding generation failed"):
@@ -777,18 +816,12 @@ async def test_perform_ab_test_search_success(mock_client_manager, mock_context)
 
     # Setup HyDE engine mock
     hyde_engine = await mock_client_manager.get_hyde_engine()
-    mock_hyde_results = [
-        {"id": "hyde1", "score": 0.9},
-        {"id": "hyde2", "score": 0.8}
-    ]
+    mock_hyde_results = [{"id": "hyde1", "score": 0.9}, {"id": "hyde2", "score": 0.8}]
     hyde_engine.enhanced_search.return_value = mock_hyde_results
 
     # Setup Qdrant service mock
     qdrant_service = await mock_client_manager.get_qdrant_service()
-    mock_regular_results = [
-        Mock(score=0.85),
-        Mock(score=0.75)
-    ]
+    mock_regular_results = [Mock(score=0.85), Mock(score=0.75)]
     qdrant_service.hybrid_search.return_value = mock_regular_results
 
     # Test A/B search
@@ -799,7 +832,7 @@ async def test_perform_ab_test_search_success(mock_client_manager, mock_context)
         domain="test",
         use_cache=True,
         client_manager=mock_client_manager,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     # Verify results
@@ -814,7 +847,9 @@ async def test_perform_ab_test_search_success(mock_client_manager, mock_context)
 
 
 @pytest.mark.asyncio
-async def test_perform_ab_test_search_with_exceptions(mock_client_manager, mock_context):
+async def test_perform_ab_test_search_with_exceptions(
+    mock_client_manager, mock_context
+):
     """Test _perform_ab_test_search with service exceptions."""
     from src.mcp_tools.tools.advanced_search import _perform_ab_test_search
 
@@ -835,7 +870,7 @@ async def test_perform_ab_test_search_with_exceptions(mock_client_manager, mock_
         domain=None,
         use_cache=False,
         client_manager=mock_client_manager,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     # Should fall back to regular search results
@@ -853,7 +888,9 @@ async def test_perform_ab_test_search_with_exceptions(mock_client_manager, mock_
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_advanced_without_context(mock_client_manager, mock_security_validator):
+async def test_hyde_search_advanced_without_context(
+    mock_client_manager, mock_security_validator
+):
     """Test advanced HyDE search without context parameter."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -880,7 +917,7 @@ async def test_hyde_search_advanced_without_context(mock_client_manager, mock_se
         collection="test_collection",
         limit=5,
         enable_reranking=False,
-        ctx=None
+        ctx=None,
     )
 
     # Should still work without context
@@ -889,7 +926,9 @@ async def test_hyde_search_advanced_without_context(mock_client_manager, mock_se
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_with_search_accuracy_enum(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_with_search_accuracy_enum(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test HyDE search with SearchAccuracy enum value."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -916,7 +955,7 @@ async def test_hyde_search_with_search_accuracy_enum(mock_client_manager, mock_c
         collection="test_collection",
         limit=5,
         search_accuracy=SearchAccuracy.ACCURATE,  # Enum value
-        enable_reranking=False
+        enable_reranking=False,
     )
 
     result = await registered_tools["hyde_search"](request, mock_context)
@@ -931,7 +970,9 @@ async def test_hyde_search_with_search_accuracy_enum(mock_client_manager, mock_c
 
 
 @pytest.mark.asyncio
-async def test_hyde_search_error_with_failed_fallback(mock_client_manager, mock_context, mock_security_validator):
+async def test_hyde_search_error_with_failed_fallback(
+    mock_client_manager, mock_context, mock_security_validator
+):
     """Test HyDE search error handling when both main and fallback fail."""
     from src.mcp_tools.tools.advanced_search import register_tools
 
@@ -949,15 +990,16 @@ async def test_hyde_search_error_with_failed_fallback(mock_client_manager, mock_
     hyde_engine.enhanced_search.side_effect = Exception("HyDE failed")
 
     # Make fallback search also fail
-    with patch('src.mcp_tools.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_fallback:
+    with patch(
+        "src.mcp_tools.tools._search_utils.search_documents_core",
+        new_callable=AsyncMock,
+    ) as mock_fallback:
         mock_fallback.side_effect = Exception("Fallback failed")
 
         register_tools(mock_mcp, mock_client_manager)
 
         request = HyDESearchRequest(
-            query="test query",
-            collection="test_collection",
-            limit=5
+            query="test query", collection="test_collection", limit=5
         )
 
         # Should raise the original HyDE error

@@ -77,9 +77,16 @@ async def test_deployment_tools_registration(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     expected_tools = [
-        "search_with_alias", "list_aliases", "create_alias", "deploy_new_index",
-        "start_ab_test", "analyze_ab_test", "start_canary_deployment",
-        "get_canary_status", "pause_canary", "resume_canary"
+        "search_with_alias",
+        "list_aliases",
+        "create_alias",
+        "deploy_new_index",
+        "start_ab_test",
+        "analyze_ab_test",
+        "start_canary_deployment",
+        "get_canary_status",
+        "pause_canary",
+        "resume_canary",
     ]
 
     for tool in expected_tools:
@@ -111,11 +118,14 @@ async def test_search_with_alias_success(mock_client_manager, mock_context):
             score=0.9,
             url="https://example.com/doc1",
             title="Test Document",
-            metadata={"type": "documentation"}
+            metadata={"type": "documentation"},
         )
     ]
 
-    with patch('src.mcp_tools.tools._search_utils.search_documents_core', new_callable=AsyncMock) as mock_search:
+    with patch(
+        "src.mcp_tools.tools._search_utils.search_documents_core",
+        new_callable=AsyncMock,
+    ) as mock_search:
         mock_search.return_value = mock_search_results
 
         register_tools(mock_mcp, mock_client_manager)
@@ -127,7 +137,7 @@ async def test_search_with_alias_success(mock_client_manager, mock_context):
             limit=5,
             strategy=SearchStrategy.HYBRID,
             enable_reranking=True,
-            ctx=mock_context
+            ctx=mock_context,
         )
 
         assert len(result) == 1
@@ -171,9 +181,7 @@ async def test_search_with_alias_not_found(mock_client_manager, mock_context):
     # Test with non-existent alias
     with pytest.raises(ValueError, match="Alias missing_alias not found"):
         await registered_tools["search_with_alias"](
-            query="test query",
-            alias="missing_alias",
-            ctx=mock_context
+            query="test query", alias="missing_alias", ctx=mock_context
         )
 
 
@@ -195,7 +203,7 @@ async def test_list_aliases_success(mock_client_manager, mock_context):
     mock_aliases = {
         "documentation": "docs_v2",
         "api": "api_v1",
-        "guides": "guides_latest"
+        "guides": "guides_latest",
     }
 
     alias_manager = await mock_client_manager.get_alias_manager()
@@ -265,10 +273,7 @@ async def test_create_alias_success(mock_client_manager, mock_context):
 
     # Test create_alias function
     result = await registered_tools["create_alias"](
-        alias_name="new_docs",
-        collection_name="docs_v3",
-        force=True,
-        ctx=mock_context
+        alias_name="new_docs", collection_name="docs_v3", force=True, ctx=mock_context
     )
 
     assert isinstance(result, OperationStatus)
@@ -278,9 +283,7 @@ async def test_create_alias_success(mock_client_manager, mock_context):
 
     # Verify service calls
     alias_manager.create_alias.assert_called_once_with(
-        alias_name="new_docs",
-        collection_name="docs_v3",
-        force=True
+        alias_name="new_docs", collection_name="docs_v3", force=True
     )
 
     # Verify context logging
@@ -312,7 +315,7 @@ async def test_create_alias_failure(mock_client_manager, mock_context):
         alias_name="failed_alias",
         collection_name="docs_v1",
         force=False,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     assert isinstance(result, OperationStatus)
@@ -343,7 +346,7 @@ async def test_deploy_new_index_success(mock_client_manager, mock_context):
         "new_collection": "docs_v4",
         "old_collection": "docs_v3",
         "validation_passed": True,
-        "deployment_time": "2023-12-01T10:00:00Z"
+        "deployment_time": "2023-12-01T10:00:00Z",
     }
 
     blue_green = await mock_client_manager.get_blue_green_deployment()
@@ -357,7 +360,7 @@ async def test_deploy_new_index_success(mock_client_manager, mock_context):
         source="collection:docs_v4",
         validation_queries=["python", "javascript"],
         rollback_on_failure=True,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     assert isinstance(result, OperationStatus)
@@ -369,7 +372,7 @@ async def test_deploy_new_index_success(mock_client_manager, mock_context):
         alias_name="documentation",
         data_source="collection:docs_v4",
         validation_queries=["python", "javascript"],
-        rollback_on_failure=True
+        rollback_on_failure=True,
     )
 
     # Verify context logging
@@ -398,9 +401,7 @@ async def test_deploy_new_index_default_validation(mock_client_manager, mock_con
 
     # Test without validation queries (should use defaults)
     result = await registered_tools["deploy_new_index"](
-        alias="documentation",
-        source="crawl:new",
-        ctx=mock_context
+        alias="documentation", source="crawl:new", ctx=mock_context
     )
 
     assert isinstance(result, OperationStatus)
@@ -412,7 +413,7 @@ async def test_deploy_new_index_default_validation(mock_client_manager, mock_con
     assert call_args["validation_queries"] == [
         "python asyncio",
         "react hooks",
-        "fastapi authentication"
+        "fastapi authentication",
     ]
 
 
@@ -443,7 +444,7 @@ async def test_start_ab_test_success(mock_client_manager, mock_context):
         treatment_collection="docs_v2",
         traffic_split=0.3,
         metrics=["relevance", "latency"],
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     assert isinstance(result, OperationStatus)
@@ -459,7 +460,7 @@ async def test_start_ab_test_success(mock_client_manager, mock_context):
         control_collection="docs_v1",
         treatment_collection="docs_v2",
         traffic_split=0.3,
-        metrics_to_track=["relevance", "latency"]
+        metrics_to_track=["relevance", "latency"],
     )
 
     # Verify context logging
@@ -487,9 +488,9 @@ async def test_analyze_ab_test_success(mock_client_manager, mock_context):
         "metrics": {
             "variant_a_conversion": 0.75,
             "variant_b_conversion": 0.82,
-            "p_value": 0.003
+            "p_value": 0.003,
         },
-        "recommendation": "Deploy variant B"
+        "recommendation": "Deploy variant B",
     }
 
     ab_testing = await mock_client_manager.get_ab_testing()
@@ -499,8 +500,7 @@ async def test_analyze_ab_test_success(mock_client_manager, mock_context):
 
     # Test analyze_ab_test function
     result = await registered_tools["analyze_ab_test"](
-        experiment_id="exp_123",
-        ctx=mock_context
+        experiment_id="exp_123", ctx=mock_context
     )
 
     assert isinstance(result, ABTestAnalysisResponse)
@@ -538,7 +538,7 @@ async def test_start_canary_deployment_success(mock_client_manager, mock_context
     custom_stages = [
         {"percentage": 10, "duration_minutes": 5},
         {"percentage": 50, "duration_minutes": 10},
-        {"percentage": 100, "duration_minutes": 1}
+        {"percentage": 100, "duration_minutes": 1},
     ]
 
     result = await registered_tools["start_canary_deployment"](
@@ -546,7 +546,7 @@ async def test_start_canary_deployment_success(mock_client_manager, mock_context
         new_collection="docs_v5",
         stages=custom_stages,
         auto_rollback=True,
-        ctx=mock_context
+        ctx=mock_context,
     )
 
     assert isinstance(result, OperationStatus)
@@ -560,7 +560,7 @@ async def test_start_canary_deployment_success(mock_client_manager, mock_context
         alias_name="documentation",
         new_collection="docs_v5",
         stages=custom_stages,
-        auto_rollback=True
+        auto_rollback=True,
     )
 
     # Verify context logging
@@ -568,7 +568,9 @@ async def test_start_canary_deployment_success(mock_client_manager, mock_context
 
 
 @pytest.mark.asyncio
-async def test_start_canary_deployment_invalid_stages(mock_client_manager, mock_context):
+async def test_start_canary_deployment_invalid_stages(
+    mock_client_manager, mock_context
+):
     """Test canary deployment with invalid stage configuration."""
     from src.mcp_tools.tools.deployment import register_tools
 
@@ -593,12 +595,14 @@ async def test_start_canary_deployment_invalid_stages(mock_client_manager, mock_
             alias="documentation",
             new_collection="docs_v5",
             stages=invalid_stages,
-            ctx=mock_context
+            ctx=mock_context,
         )
 
 
 @pytest.mark.asyncio
-async def test_start_canary_deployment_invalid_percentage(mock_client_manager, mock_context):
+async def test_start_canary_deployment_invalid_percentage(
+    mock_client_manager, mock_context
+):
     """Test canary deployment with invalid percentage values."""
     from src.mcp_tools.tools.deployment import register_tools
 
@@ -618,12 +622,14 @@ async def test_start_canary_deployment_invalid_percentage(mock_client_manager, m
         {"percentage": 150, "duration_minutes": 5}  # Invalid percentage
     ]
 
-    with pytest.raises(ValueError, match="Stage 0 percentage must be between 0 and 100"):
+    with pytest.raises(
+        ValueError, match="Stage 0 percentage must be between 0 and 100"
+    ):
         await registered_tools["start_canary_deployment"](
             alias="documentation",
             new_collection="docs_v5",
             stages=invalid_stages,
-            ctx=mock_context
+            ctx=mock_context,
         )
 
 
@@ -648,7 +654,7 @@ async def test_get_canary_status_success(mock_client_manager, mock_context):
         "current_stage": 1,
         "current_percentage": 25,
         "health_metrics": {"error_rate": 0.02, "latency_p95": 120},
-        "start_time": "2023-12-01T10:00:00Z"
+        "start_time": "2023-12-01T10:00:00Z",
     }
 
     canary = await mock_client_manager.get_canary_deployment()
@@ -658,8 +664,7 @@ async def test_get_canary_status_success(mock_client_manager, mock_context):
 
     # Test get_canary_status function
     result = await registered_tools["get_canary_status"](
-        deployment_id="canary_456",
-        ctx=mock_context
+        deployment_id="canary_456", ctx=mock_context
     )
 
     assert isinstance(result, CanaryStatusResponse)
@@ -693,8 +698,7 @@ async def test_pause_canary_success(mock_client_manager, mock_context):
 
     # Test pause_canary function
     result = await registered_tools["pause_canary"](
-        deployment_id="canary_456",
-        ctx=mock_context
+        deployment_id="canary_456", ctx=mock_context
     )
 
     assert isinstance(result, OperationStatus)
@@ -730,8 +734,7 @@ async def test_pause_canary_failure(mock_client_manager, mock_context):
 
     # Test pause_canary function
     result = await registered_tools["pause_canary"](
-        deployment_id="canary_456",
-        ctx=mock_context
+        deployment_id="canary_456", ctx=mock_context
     )
 
     assert isinstance(result, OperationStatus)
@@ -764,8 +767,7 @@ async def test_resume_canary_success(mock_client_manager, mock_context):
 
     # Test resume_canary function
     result = await registered_tools["resume_canary"](
-        deployment_id="canary_456",
-        ctx=mock_context
+        deployment_id="canary_456", ctx=mock_context
     )
 
     assert isinstance(result, OperationStatus)
@@ -830,9 +832,7 @@ async def test_error_handling_create_alias(mock_client_manager, mock_context):
     # Test that exception is properly handled and re-raised
     with pytest.raises(Exception, match="Alias creation failed"):
         await registered_tools["create_alias"](
-            alias_name="test_alias",
-            collection_name="test_collection",
-            ctx=mock_context
+            alias_name="test_alias", collection_name="test_collection", ctx=mock_context
         )
 
     # Verify error logging
@@ -865,7 +865,7 @@ async def test_error_handling_ab_test(mock_client_manager, mock_context):
             experiment_name="test_experiment",
             control_collection="control",
             treatment_collection="treatment",
-            ctx=mock_context
+            ctx=mock_context,
         )
 
     # Verify error logging
@@ -895,8 +895,7 @@ async def test_error_handling_canary(mock_client_manager, mock_context):
     # Test that exception is properly handled and re-raised
     with pytest.raises(Exception, match="Status retrieval failed"):
         await registered_tools["get_canary_status"](
-            deployment_id="canary_123",
-            ctx=mock_context
+            deployment_id="canary_123", ctx=mock_context
         )
 
     # Verify error logging
