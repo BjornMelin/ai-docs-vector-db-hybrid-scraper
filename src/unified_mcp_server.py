@@ -7,9 +7,7 @@ best practices with lazy initialization and modular tool registration.
 
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager

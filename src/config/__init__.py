@@ -7,6 +7,9 @@ settings across the application into a single, well-structured configuration mod
 # Core configuration models
 # Configuration loading and management
 # Configuration enums
+# Benchmark configuration models
+from .benchmark_models import BenchmarkConfiguration
+from .benchmark_models import EmbeddingBenchmarkSet
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
 from .enums import EmbeddingProvider
@@ -43,18 +46,18 @@ from .schema import ConfigSchemaGenerator
 from .validator import ConfigValidator
 
 __all__ = [
-    # Component configs
+    "BenchmarkConfiguration",
     "CacheConfig",
     "ChunkingConfig",
     "ChunkingStrategy",
     "CollectionHNSWConfigs",
-    # Utilities
     "ConfigLoader",
     "ConfigSchemaGenerator",
     "ConfigValidator",
     "Crawl4AIConfig",
     "CrawlProvider",
     "DocumentationSite",
+    "EmbeddingBenchmarkSet",
     "EmbeddingConfig",
     "EmbeddingProvider",
     "Environment",
@@ -69,9 +72,7 @@ __all__ = [
     "QdrantConfig",
     "SecurityConfig",
     "SmartSelectionConfig",
-    # Core models
     "UnifiedConfig",
-    # Functions
     "get_config",
     "reset_config",
     "set_config",

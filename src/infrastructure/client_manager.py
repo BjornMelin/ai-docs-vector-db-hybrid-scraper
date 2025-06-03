@@ -199,8 +199,6 @@ class ClientManager:
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._initialized = False
         self._health_check_task: asyncio.Task | None = None
-        # Legacy support - in-memory project store (should be replaced by persistent storage)
-        self.projects: dict[str, Any] = {}
 
         # Service instances (lazy-initialized)
         self._qdrant_service: Any = None
@@ -208,6 +206,7 @@ class ClientManager:
         self._cache_manager: Any = None
         self._crawl_manager: Any = None
         self._hyde_engine: Any = None
+        self._project_storage: Any = None
         self._blue_green_deployment: Any = None
         self._ab_testing_manager: Any = None
         self._canary_deployment: Any = None
@@ -473,6 +472,24 @@ class ClientManager:
                     logger.info("Initialized HyDEQueryEngine")
 
         return self._hyde_engine
+
+    async def get_project_storage(self):
+        """Get or create ProjectStorage instance."""
+        if self._project_storage is None:
+            if "project_storage" not in self._service_locks:
+                self._service_locks["project_storage"] = asyncio.Lock()
+
+            async with self._service_locks["project_storage"]:
+                if self._project_storage is None:
+                    from src.services.core.project_storage import ProjectStorage
+
+                    self._project_storage = ProjectStorage(
+                        data_dir=self.config.data_dir
+                    )
+                    await self._project_storage.initialize()
+                    logger.info("Initialized ProjectStorage")
+
+        return self._project_storage
 
     async def get_blue_green_deployment(self):
         """Get or create BlueGreenDeployment instance."""

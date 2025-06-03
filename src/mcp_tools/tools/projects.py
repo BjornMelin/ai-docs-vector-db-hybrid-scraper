@@ -20,7 +20,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     from ..models.responses import ProjectInfo
 
     @mcp.tool()
-    async def create_project(request: ProjectRequest, ctx=None) -> ProjectInfo:
+    async def create_project(request: ProjectRequest, ctx=None) -> ProjectInfo:  # noqa: PLR0912
         """
         Create a new documentation project.
 
@@ -43,14 +43,12 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 "urls": [],
             }
 
-            # Store project in both memory and persistent storage
-            client_manager.projects[project_id] = project
-            await client_manager.project_storage.save_project(project_id, project)
+            # Store project in persistent storage (single source of truth)
+            project_storage = await client_manager.get_project_storage()
+            await project_storage.save_project(project_id, project)
 
             if ctx:
-                await ctx.debug(
-                    f"Project {project_id} stored in memory and persistent storage"
-                )
+                await ctx.debug(f"Project {project_id} stored in persistent storage")
 
             # Create collection with quality-based config
             vector_size = 1536 if request.quality_tier == "premium" else 384
@@ -93,7 +91,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 project["document_count"] = successful_count
 
                 # Update persistent storage
-                await client_manager.project_storage.update_project(
+                await project_storage.update_project(
                     project_id,
                     {
                         "urls": project["urls"],
@@ -130,13 +128,15 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             await ctx.info("Retrieving list of all projects")
 
         try:
-            projects = []
-            project_count = len(client_manager.projects)
+            # Get project storage instance
+            project_storage = await client_manager.get_project_storage()
+            projects_list = await project_storage.list_projects()
 
             if ctx:
-                await ctx.debug(f"Found {project_count} projects in memory")
+                await ctx.debug(f"Found {len(projects_list)} projects in storage")
 
-            for project in client_manager.projects.values():
+            projects = []
+            for project in projects_list:
                 # Get collection stats
                 try:
                     info = await client_manager.qdrant_service.get_collection_info(
@@ -188,7 +188,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
 
         try:
-            project = client_manager.projects.get(project_id)
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
             if not project:
                 if ctx:
                     await ctx.error(f"Project {project_id} not found")
@@ -274,7 +275,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             await ctx.info(f"Updating project {project_id}")
 
         try:
-            project = client_manager.projects.get(project_id)
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
             if not project:
                 if ctx:
                     await ctx.error(f"Project {project_id} not found")
@@ -293,7 +295,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     await ctx.debug("Updated project description")
 
             if updates:
-                await client_manager.project_storage.update_project(project_id, updates)
+                await project_storage.update_project(project_id, updates)
                 if ctx:
                     await ctx.debug(f"Persisted {len(updates)} updates to storage")
 
@@ -328,7 +330,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
 
         try:
-            project = client_manager.projects.get(project_id)
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
             if not project:
                 if ctx:
                     await ctx.error(f"Project {project_id} not found")
@@ -351,13 +354,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                         f"Failed to delete collection {project['collection']}: {e}"
                     )
 
-            # Remove from in-memory storage
-            del client_manager.projects[project_id]
-            if ctx:
-                await ctx.debug(f"Removed project {project_id} from memory")
-
-            # Remove from persistent storage
-            await client_manager.project_storage.delete_project(project_id)
+            # Remove from persistent storage (single source of truth)
+            await project_storage.delete_project(project_id)
             if ctx:
                 await ctx.debug(f"Removed project {project_id} from persistent storage")
 
