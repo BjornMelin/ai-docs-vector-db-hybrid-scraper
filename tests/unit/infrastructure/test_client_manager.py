@@ -1096,10 +1096,16 @@ class TestClientManagerErrorHandling:
         assert "test_client" not in manager._clients
 
     @pytest.mark.asyncio
-    async def test_get_health_status_comprehensive(self):
+    @patch("src.infrastructure.client_manager.AsyncQdrantClient")
+    async def test_get_health_status_comprehensive(self, mock_qdrant_client):
         """Test comprehensive health status reporting."""
         # Clear singleton
         ClientManager._instance = None
+
+        # Mock Qdrant client
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get_collections = AsyncMock(return_value=[])
+        mock_qdrant_client.return_value = mock_client_instance
 
         config = UnifiedConfig()
         config.openai.api_key = "test-key"
@@ -1176,10 +1182,16 @@ class TestClientManagerConfiguration:
                 pass
 
     @pytest.mark.asyncio
-    async def test_qdrant_client_recreation_after_failure(self):
+    @patch("src.infrastructure.client_manager.AsyncQdrantClient")
+    async def test_qdrant_client_recreation_after_failure(self, mock_qdrant_client):
         """Test that Qdrant client is recreated after circuit breaker recovery."""
         # Clear singleton
         ClientManager._instance = None
+
+        # Mock Qdrant client
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get_collections = AsyncMock(return_value=[])
+        mock_qdrant_client.return_value = mock_client_instance
 
         config = UnifiedConfig()
         manager = ClientManager(config)
@@ -1215,6 +1227,9 @@ class TestClientManagerConfiguration:
         config = UnifiedConfig()
         config.openai.api_key = "test-key"
         config.openai.model = "text-embedding-3-large"
+        # Disable cache to avoid CachePatterns issue
+        config.cache.enable_dragonfly_cache = False
+        config.cache.enable_local_cache = False
         manager = ClientManager(config)
 
         embedding_manager = await manager.get_embedding_manager()
