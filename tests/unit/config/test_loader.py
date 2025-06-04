@@ -187,8 +187,13 @@ class TestConfigLoader:
         assert "AI_DOCS__OPENAI__API_KEY=" in content
         assert "AI_DOCS__QDRANT__URL=" in content
 
-    def test_validate_config_valid_production(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_valid_production(self, mock_qdrant_client):
         """Test validation of valid production configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="production",
             debug=False,
@@ -203,8 +208,13 @@ class TestConfigLoader:
         assert is_valid
         assert len(issues) == 0
 
-    def test_validate_config_invalid_production(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_invalid_production(self, mock_qdrant_client):
         """Test validation of invalid production configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="production",
             debug=True,  # Should be False in production
@@ -223,8 +233,13 @@ class TestConfigLoader:
         assert "API keys should be required in production" in issues
         assert "OpenAI API key appears to be a placeholder" in issues
 
-    def test_validate_config_placeholder_keys(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_placeholder_keys(self, mock_qdrant_client):
         """Test validation of placeholder API keys."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="development",
             openai={"api_key": "sk-your-openai-api-key-placeholder"},
@@ -239,8 +254,13 @@ class TestConfigLoader:
         assert "OpenAI API key appears to be a placeholder" in issues
         assert "Firecrawl API key appears to be a placeholder" in issues
 
-    def test_validate_config_development_valid(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_development_valid(self, mock_qdrant_client):
         """Test validation of valid development configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="development",
             debug=True,

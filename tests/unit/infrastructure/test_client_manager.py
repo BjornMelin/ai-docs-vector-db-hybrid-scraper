@@ -1042,10 +1042,24 @@ class TestClientManagerErrorHandling:
         assert manager._health_check_task.cancelled()
 
     @pytest.mark.asyncio
-    async def test_concurrent_service_access(self):
+    @patch("qdrant_client.async_qdrant_client.AsyncQdrantClient")
+    @patch("src.services.vector_db.service.QdrantService")
+    async def test_concurrent_service_access(
+        self, mock_qdrant_service, mock_qdrant_client
+    ):
         """Test concurrent access to the same service."""
         # Clear singleton
         ClientManager._instance = None
+
+        # Mock Qdrant client
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get_collections = AsyncMock(return_value=[])
+        mock_qdrant_client.return_value = mock_client_instance
+
+        # Mock Qdrant service
+        mock_service_instance = AsyncMock()
+        mock_service_instance.initialize = AsyncMock()
+        mock_qdrant_service.return_value = mock_service_instance
 
         config = UnifiedConfig()
         manager = ClientManager(config)
