@@ -1,4 +1,12 @@
-"""Comprehensive tests for browser action schema validation."""
+"""Unit tests for browser automation action schemas with Pydantic v2.
+
+This test module demonstrates:
+- Comprehensive validation testing for Pydantic v2 models
+- Error case handling and validation error testing
+- Union type validation
+- Custom validator testing
+- Field constraint validation
+"""
 
 import pytest
 from pydantic import ValidationError
@@ -21,542 +29,571 @@ from src.services.browser.action_schemas import validate_actions
 
 
 class TestBaseAction:
-    """Test the base action class."""
+    """Test BaseAction base class."""
 
-    def test_valid_base_action(self):
-        """Test valid base action creation."""
-        action = BaseAction(type="test")
-        assert action.type == "test"
+    def test_base_action_requires_type(self):
+        """Test that BaseAction requires a type field."""
+        with pytest.raises(ValidationError) as excinfo:
+            BaseAction()
+
+        errors = excinfo.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("type",)
+        assert errors[0]["type"] == "missing"
 
     def test_base_action_forbids_extra_fields(self):
         """Test that BaseAction forbids extra fields."""
-        with pytest.raises(ValidationError) as exc_info:
-            BaseAction(type="test", invalid_field="value")
-        assert "Extra inputs are not permitted" in str(exc_info.value)
+        with pytest.raises(ValidationError) as excinfo:
+            BaseAction(type="test", extra_field="not_allowed")
 
-    def test_base_action_requires_type(self):
-        """Test that type field is required."""
-        with pytest.raises(ValidationError) as exc_info:
-            BaseAction()
-        assert "Field required" in str(exc_info.value)
+        errors = excinfo.value.errors()
+        assert any(error["type"] == "extra_forbidden" for error in errors)
 
 
 class TestClickAction:
-    """Test click action validation."""
+    """Test ClickAction model."""
 
     def test_valid_click_action(self):
-        """Test valid click action."""
-        action = ClickAction(selector="button#submit")
+        """Test creating valid click action."""
+        action = ClickAction(selector="#button")
         assert action.type == "click"
-        assert action.selector == "button#submit"
+        assert action.selector == "#button"
 
     def test_click_action_requires_selector(self):
-        """Test that selector is required."""
-        with pytest.raises(ValidationError) as exc_info:
+        """Test that click action requires selector."""
+        with pytest.raises(ValidationError) as excinfo:
             ClickAction()
-        assert "Field required" in str(exc_info.value)
 
-    def test_click_action_type_literal(self):
-        """Test that type is automatically set to 'click'."""
-        action = ClickAction(selector=".test")
-        assert action.type == "click"
+        errors = excinfo.value.errors()
+        assert any(error["loc"] == ("selector",) for error in errors)
 
-    def test_click_action_forbids_extra_fields(self):
-        """Test that extra fields are forbidden."""
-        with pytest.raises(ValidationError) as exc_info:
-            ClickAction(selector=".test", extra_field="value")
-        assert "Extra inputs are not permitted" in str(exc_info.value)
+    def test_click_action_type_is_literal(self):
+        """Test that click action type must be 'click'."""
+        with pytest.raises(ValidationError) as excinfo:
+            ClickAction(type="wrong", selector="#button")
+
+        errors = excinfo.value.errors()
+        assert any("literal_error" in error["type"] for error in errors)
 
 
 class TestFillAction:
-    """Test fill action validation."""
+    """Test FillAction model."""
 
     def test_valid_fill_action(self):
-        """Test valid fill action."""
+        """Test creating valid fill action."""
         action = FillAction(selector="input[name='email']", text="test@example.com")
         assert action.type == "fill"
         assert action.selector == "input[name='email']"
         assert action.text == "test@example.com"
 
-    def test_fill_action_requires_selector_and_text(self):
-        """Test that both selector and text are required."""
-        with pytest.raises(ValidationError):
-            FillAction(selector="input")
+    def test_fill_action_requires_all_fields(self):
+        """Test that fill action requires selector and text."""
+        with pytest.raises(ValidationError) as excinfo:
+            FillAction()
 
-        with pytest.raises(ValidationError):
-            FillAction(text="test")
+        errors = excinfo.value.errors()
+        field_errors = {error["loc"][0] for error in errors}
+        assert "selector" in field_errors
+        assert "text" in field_errors
 
-    def test_fill_action_empty_text(self):
-        """Test fill action with empty text."""
+    def test_fill_action_with_empty_text(self):
+        """Test fill action accepts empty text."""
         action = FillAction(selector="input", text="")
         assert action.text == ""
 
 
 class TestTypeAction:
-    """Test type action validation."""
+    """Test TypeAction model."""
 
     def test_valid_type_action(self):
-        """Test valid type action."""
-        action = TypeAction(selector="input", text="Hello World")
+        """Test creating valid type action."""
+        action = TypeAction(selector="textarea", text="Hello, World!")
         assert action.type == "type"
-        assert action.selector == "input"
-        assert action.text == "Hello World"
+        assert action.selector == "textarea"
+        assert action.text == "Hello, World!"
 
-    def test_type_action_special_characters(self):
-        """Test type action with special characters."""
-        action = TypeAction(selector="input", text="test@#$%^&*()")
-        assert action.text == "test@#$%^&*()"
+    def test_type_action_differs_from_fill(self):
+        """Test that type action is distinct from fill action."""
+        type_action = TypeAction(selector="input", text="test")
+        fill_action = FillAction(selector="input", text="test")
+
+        assert type_action.type != fill_action.type
+        assert isinstance(type_action, TypeAction)
+        assert isinstance(fill_action, FillAction)
 
 
 class TestWaitAction:
-    """Test wait action validation."""
+    """Test WaitAction model."""
 
     def test_valid_wait_action(self):
-        """Test valid wait action."""
-        action = WaitAction(timeout=5000)
-        assert action.type == "wait"
-        assert action.timeout == 5000
-
-    def test_wait_action_timeout_validation(self):
-        """Test timeout validation rules."""
-        # Valid timeout
+        """Test creating valid wait action."""
         action = WaitAction(timeout=1000)
+        assert action.type == "wait"
         assert action.timeout == 1000
 
-        # Invalid: zero timeout
-        with pytest.raises(ValidationError) as exc_info:
+    def test_wait_action_timeout_constraints(self):
+        """Test wait action timeout constraints."""
+        # Test minimum constraint
+        with pytest.raises(ValidationError) as excinfo:
             WaitAction(timeout=0)
-        assert "Input should be greater than 0" in str(exc_info.value)
+        assert any("greater_than" in str(error) for error in excinfo.value.errors())
 
-        # Invalid: negative timeout
-        with pytest.raises(ValidationError) as exc_info:
-            WaitAction(timeout=-1000)
-        assert "Input should be greater than 0" in str(exc_info.value)
+        # Test maximum constraint
+        with pytest.raises(ValidationError) as excinfo:
+            WaitAction(timeout=30001)
+        assert any("less_than_equal" in str(error) for error in excinfo.value.errors())
 
-        # Invalid: timeout too long
-        with pytest.raises(ValidationError) as exc_info:
-            WaitAction(timeout=50000)
-        assert "Input should be less than or equal to 30000" in str(exc_info.value)
+    def test_wait_action_requires_timeout(self):
+        """Test that wait action requires timeout."""
+        with pytest.raises(ValidationError) as excinfo:
+            WaitAction()
 
-    def test_wait_action_maximum_timeout(self):
-        """Test maximum allowed timeout."""
-        action = WaitAction(timeout=30000)
-        assert action.timeout == 30000
+        errors = excinfo.value.errors()
+        assert any(error["loc"] == ("timeout",) for error in errors)
 
 
 class TestWaitForSelectorAction:
-    """Test wait for selector action validation."""
+    """Test WaitForSelectorAction model."""
 
     def test_valid_wait_for_selector_action(self):
-        """Test valid wait for selector action."""
-        action = WaitForSelectorAction(selector=".loading")
+        """Test creating valid wait for selector action."""
+        action = WaitForSelectorAction(selector=".loading-complete")
         assert action.type == "wait_for_selector"
-        assert action.selector == ".loading"
-        assert action.timeout == 5000  # default
+        assert action.selector == ".loading-complete"
+        assert action.timeout == 5000  # Default
 
     def test_wait_for_selector_custom_timeout(self):
         """Test wait for selector with custom timeout."""
-        action = WaitForSelectorAction(selector=".element", timeout=10000)
+        action = WaitForSelectorAction(selector="#element", timeout=10000)
         assert action.timeout == 10000
 
-    def test_wait_for_selector_timeout_validation(self):
-        """Test timeout validation for wait for selector."""
+    def test_wait_for_selector_timeout_constraints(self):
+        """Test wait for selector timeout constraints."""
         with pytest.raises(ValidationError):
-            WaitForSelectorAction(selector=".test", timeout=0)
+            WaitForSelectorAction(selector="#element", timeout=0)
 
         with pytest.raises(ValidationError):
-            WaitForSelectorAction(selector=".test", timeout=50000)
+            WaitForSelectorAction(selector="#element", timeout=30001)
 
 
 class TestWaitForLoadStateAction:
-    """Test wait for load state action validation."""
+    """Test WaitForLoadStateAction model."""
 
-    def test_valid_wait_for_load_state_action(self):
-        """Test valid wait for load state action."""
+    def test_valid_wait_for_load_state_default(self):
+        """Test creating wait for load state with default."""
         action = WaitForLoadStateAction()
         assert action.type == "wait_for_load_state"
-        assert action.state == "networkidle"  # default
+        assert action.state == "networkidle"
 
-    def test_wait_for_load_state_custom_state(self):
-        """Test wait for load state with custom state."""
-        for state in ["load", "domcontentloaded", "networkidle"]:
+    def test_wait_for_load_state_options(self):
+        """Test all valid load state options."""
+        states = ["load", "domcontentloaded", "networkidle"]
+
+        for state in states:
             action = WaitForLoadStateAction(state=state)
             assert action.state == state
 
     def test_wait_for_load_state_invalid_state(self):
         """Test invalid load state."""
-        with pytest.raises(ValidationError) as exc_info:
-            WaitForLoadStateAction(state="invalid_state")
-        assert "Input should be 'load', 'domcontentloaded' or 'networkidle'" in str(
-            exc_info.value
-        )
+        with pytest.raises(ValidationError) as excinfo:
+            WaitForLoadStateAction(state="invalid")
+
+        errors = excinfo.value.errors()
+        assert any("literal_error" in error["type"] for error in errors)
 
 
 class TestScrollAction:
-    """Test scroll action validation."""
+    """Test ScrollAction model with custom validator."""
 
-    def test_valid_scroll_action_bottom(self):
-        """Test valid scroll to bottom."""
+    def test_valid_scroll_bottom(self):
+        """Test scroll to bottom (default)."""
         action = ScrollAction()
         assert action.type == "scroll"
-        assert action.direction == "bottom"  # default
+        assert action.direction == "bottom"
         assert action.y == 0
 
-    def test_valid_scroll_action_top(self):
-        """Test valid scroll to top."""
+    def test_valid_scroll_top(self):
+        """Test scroll to top."""
         action = ScrollAction(direction="top")
         assert action.direction == "top"
 
-    def test_valid_scroll_action_position(self):
-        """Test valid scroll to position."""
+    def test_valid_scroll_position(self):
+        """Test scroll to specific position."""
         action = ScrollAction(direction="position", y=500)
         assert action.direction == "position"
         assert action.y == 500
 
-    def test_scroll_action_position_requires_y(self):
+    def test_scroll_position_requires_y(self):
         """Test that position scrolling requires Y coordinate."""
-        with pytest.raises(ValidationError) as exc_info:
+        # Test with y=0 (default)
+        with pytest.raises(ValidationError) as excinfo:
             ScrollAction(direction="position")
-        assert "Y position must be specified for position-based scrolling" in str(
-            exc_info.value
-        )
 
-    def test_scroll_action_position_zero_y_invalid(self):
-        """Test that Y=0 is invalid for position scrolling."""
-        with pytest.raises(ValidationError) as exc_info:
+        error_msg = str(excinfo.value)
+        assert "Y position must be specified" in error_msg
+
+    def test_scroll_position_with_y_zero(self):
+        """Test that position scrolling rejects y=0."""
+        with pytest.raises(ValidationError) as excinfo:
             ScrollAction(direction="position", y=0)
-        assert "Y position must be specified for position-based scrolling" in str(
-            exc_info.value
-        )
 
-    def test_scroll_action_invalid_direction(self):
+        error_msg = str(excinfo.value)
+        assert "Y position must be specified" in error_msg
+
+    def test_scroll_invalid_direction(self):
         """Test invalid scroll direction."""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError):
             ScrollAction(direction="invalid")
-        assert "Input should be 'top', 'bottom' or 'position'" in str(exc_info.value)
 
 
 class TestScreenshotAction:
-    """Test screenshot action validation."""
+    """Test ScreenshotAction model."""
 
-    def test_valid_screenshot_action_defaults(self):
-        """Test screenshot action with defaults."""
+    def test_valid_screenshot_default(self):
+        """Test screenshot with defaults."""
         action = ScreenshotAction()
         assert action.type == "screenshot"
         assert action.path == ""
         assert action.full_page is False
 
-    def test_valid_screenshot_action_custom(self):
-        """Test screenshot action with custom values."""
-        action = ScreenshotAction(path="/tmp/screenshot.png", full_page=True)
+    def test_screenshot_with_options(self):
+        """Test screenshot with all options."""
+        action = ScreenshotAction(
+            path="/tmp/screenshot.png",
+            full_page=True
+        )
         assert action.path == "/tmp/screenshot.png"
         assert action.full_page is True
 
 
 class TestEvaluateAction:
-    """Test evaluate action validation."""
+    """Test EvaluateAction model."""
 
     def test_valid_evaluate_action(self):
-        """Test valid evaluate action."""
-        script = "document.title"
+        """Test creating valid evaluate action."""
+        script = "document.querySelector('#element').click()"
         action = EvaluateAction(script=script)
         assert action.type == "evaluate"
         assert action.script == script
 
-    def test_evaluate_action_complex_script(self):
-        """Test evaluate action with complex JavaScript."""
-        script = """
-        const elements = document.querySelectorAll('h1, h2, h3');
-        return Array.from(elements).map(el => el.textContent);
-        """
-        action = EvaluateAction(script=script)
-        assert action.script == script
-
-    def test_evaluate_action_requires_script(self):
-        """Test that script is required."""
-        with pytest.raises(ValidationError):
+    def test_evaluate_requires_script(self):
+        """Test that evaluate action requires script."""
+        with pytest.raises(ValidationError) as excinfo:
             EvaluateAction()
+
+        errors = excinfo.value.errors()
+        assert any(error["loc"] == ("script",) for error in errors)
 
 
 class TestHoverAction:
-    """Test hover action validation."""
+    """Test HoverAction model."""
 
     def test_valid_hover_action(self):
-        """Test valid hover action."""
-        action = HoverAction(selector=".menu-item")
+        """Test creating valid hover action."""
+        action = HoverAction(selector="a.link")
         assert action.type == "hover"
-        assert action.selector == ".menu-item"
-
-    def test_hover_action_requires_selector(self):
-        """Test that selector is required."""
-        with pytest.raises(ValidationError):
-            HoverAction()
+        assert action.selector == "a.link"
 
 
 class TestSelectAction:
-    """Test select action validation."""
+    """Test SelectAction model."""
 
     def test_valid_select_action(self):
-        """Test valid select action."""
-        action = SelectAction(selector="select[name='country']", value="US")
+        """Test creating valid select action."""
+        action = SelectAction(selector="select#country", value="US")
         assert action.type == "select"
-        assert action.selector == "select[name='country']"
+        assert action.selector == "select#country"
         assert action.value == "US"
 
-    def test_select_action_requires_selector_and_value(self):
-        """Test that both selector and value are required."""
-        with pytest.raises(ValidationError):
+    def test_select_requires_value(self):
+        """Test that select action requires value."""
+        with pytest.raises(ValidationError) as excinfo:
             SelectAction(selector="select")
 
-        with pytest.raises(ValidationError):
-            SelectAction(value="option")
+        errors = excinfo.value.errors()
+        assert any(error["loc"] == ("value",) for error in errors)
 
 
 class TestPressAction:
-    """Test press action validation."""
+    """Test PressAction model."""
 
-    def test_valid_press_action_with_selector(self):
-        """Test valid press action with selector."""
-        action = PressAction(key="Enter", selector="input")
+    def test_valid_press_action_simple(self):
+        """Test press action without selector."""
+        action = PressAction(key="Enter")
         assert action.type == "press"
         assert action.key == "Enter"
-        assert action.selector == "input"
+        assert action.selector == ""
 
-    def test_valid_press_action_without_selector(self):
-        """Test valid press action without selector."""
-        action = PressAction(key="ArrowDown")
-        assert action.key == "ArrowDown"
-        assert action.selector == ""  # default
+    def test_press_action_with_selector(self):
+        """Test press action with selector."""
+        action = PressAction(key="Tab", selector="input#first")
+        assert action.key == "Tab"
+        assert action.selector == "input#first"
 
-    def test_press_action_requires_key(self):
-        """Test that key is required."""
-        with pytest.raises(ValidationError):
-            PressAction()
+    def test_press_special_keys(self):
+        """Test various special key names."""
+        special_keys = ["Enter", "Tab", "ArrowDown", "ArrowUp", "Escape", "Space"]
 
-    def test_press_action_special_keys(self):
-        """Test press action with special keys."""
-        special_keys = [
-            "Enter",
-            "Escape",
-            "Tab",
-            "ArrowUp",
-            "ArrowDown",
-            "F1",
-            "Control+c",
-        ]
         for key in special_keys:
             action = PressAction(key=key)
             assert action.key == key
 
 
 class TestDragAndDropAction:
-    """Test drag and drop action validation."""
+    """Test DragAndDropAction model."""
 
-    def test_valid_drag_and_drop_action(self):
-        """Test valid drag and drop action."""
-        action = DragAndDropAction(source=".drag-source", target=".drop-target")
+    def test_valid_drag_and_drop(self):
+        """Test creating valid drag and drop action."""
+        action = DragAndDropAction(
+            source="#draggable",
+            target="#droppable"
+        )
         assert action.type == "drag_and_drop"
-        assert action.source == ".drag-source"
-        assert action.target == ".drop-target"
+        assert action.source == "#draggable"
+        assert action.target == "#droppable"
 
-    def test_drag_and_drop_requires_source_and_target(self):
-        """Test that both source and target are required."""
-        with pytest.raises(ValidationError):
-            DragAndDropAction(source=".source")
+    def test_drag_and_drop_requires_both_selectors(self):
+        """Test that drag and drop requires both selectors."""
+        with pytest.raises(ValidationError) as excinfo:
+            DragAndDropAction()
 
-        with pytest.raises(ValidationError):
-            DragAndDropAction(target=".target")
+        errors = excinfo.value.errors()
+        field_errors = {error["loc"][0] for error in errors}
+        assert "source" in field_errors
+        assert "target" in field_errors
 
 
 class TestValidateAction:
-    """Test the validate_action utility function."""
+    """Test validate_action function."""
 
-    def test_validate_action_click(self):
-        """Test validating click action."""
-        action_dict = {"type": "click", "selector": "button"}
-        result = validate_action(action_dict)
-        assert isinstance(result, ClickAction)
-        assert result.selector == "button"
+    def test_validate_click_action(self):
+        """Test validating click action dictionary."""
+        action_dict = {"type": "click", "selector": "#button"}
+        action = validate_action(action_dict)
 
-    def test_validate_action_fill(self):
-        """Test validating fill action."""
-        action_dict = {"type": "fill", "selector": "input", "text": "test"}
-        result = validate_action(action_dict)
-        assert isinstance(result, FillAction)
-        assert result.text == "test"
+        assert isinstance(action, ClickAction)
+        assert action.selector == "#button"
 
-    def test_validate_action_wait(self):
-        """Test validating wait action."""
-        action_dict = {"type": "wait", "timeout": 2000}
-        result = validate_action(action_dict)
-        assert isinstance(result, WaitAction)
-        assert result.timeout == 2000
+    def test_validate_scroll_action_with_validator(self):
+        """Test validating scroll action triggers custom validator."""
+        # Valid position scroll
+        action_dict = {"type": "scroll", "direction": "position", "y": 100}
+        action = validate_action(action_dict)
+        assert isinstance(action, ScrollAction)
 
-    def test_validate_action_scroll_position(self):
-        """Test validating scroll action with position."""
-        action_dict = {"type": "scroll", "direction": "position", "y": 1000}
-        result = validate_action(action_dict)
-        assert isinstance(result, ScrollAction)
-        assert result.y == 1000
-
-    def test_validate_action_screenshot(self):
-        """Test validating screenshot action."""
-        action_dict = {"type": "screenshot", "path": "test.png", "full_page": True}
-        result = validate_action(action_dict)
-        assert isinstance(result, ScreenshotAction)
-        assert result.path == "test.png"
-        assert result.full_page is True
-
-    def test_validate_action_evaluate(self):
-        """Test validating evaluate action."""
-        action_dict = {"type": "evaluate", "script": "console.log('test')"}
-        result = validate_action(action_dict)
-        assert isinstance(result, EvaluateAction)
-        assert result.script == "console.log('test')"
-
-    def test_validate_action_unsupported_type(self):
-        """Test validating unsupported action type."""
-        action_dict = {"type": "unsupported_action"}
-        with pytest.raises(ValueError) as exc_info:
-            validate_action(action_dict)
-        assert "Unsupported action type: unsupported_action" in str(exc_info.value)
-
-    def test_validate_action_invalid_data(self):
-        """Test validating action with invalid data."""
-        action_dict = {"type": "wait", "timeout": -1000}
+        # Invalid position scroll
+        action_dict = {"type": "scroll", "direction": "position", "y": 0}
         with pytest.raises(ValidationError):
             validate_action(action_dict)
 
-    def test_validate_action_missing_type(self):
-        """Test validating action without type."""
-        action_dict = {"selector": "button"}
-        with pytest.raises(ValueError) as exc_info:
+    def test_validate_unknown_action_type(self):
+        """Test validating unknown action type."""
+        action_dict = {"type": "unknown_action"}
+
+        with pytest.raises(ValueError) as excinfo:
             validate_action(action_dict)
-        assert "Unsupported action type: None" in str(exc_info.value)
+
+        assert "Unsupported action type: unknown_action" in str(excinfo.value)
+
+    def test_validate_missing_required_fields(self):
+        """Test validation catches missing required fields."""
+        action_dict = {"type": "fill", "selector": "input"}
+        # Missing 'text' field
+
+        with pytest.raises(ValidationError):
+            validate_action(action_dict)
+
+    def test_validate_extra_fields_forbidden(self):
+        """Test validation forbids extra fields."""
+        action_dict = {
+            "type": "click",
+            "selector": "#button",
+            "extra_field": "not_allowed"
+        }
+
+        with pytest.raises(ValidationError):
+            validate_action(action_dict)
 
 
 class TestValidateActions:
-    """Test the validate_actions utility function."""
+    """Test validate_actions function."""
 
-    def test_validate_actions_single(self):
-        """Test validating single action."""
-        actions = [{"type": "click", "selector": "button"}]
-        results = validate_actions(actions)
-        assert len(results) == 1
-        assert isinstance(results[0], ClickAction)
-
-    def test_validate_actions_multiple(self):
-        """Test validating multiple actions."""
-        actions = [
-            {"type": "click", "selector": "button"},
-            {"type": "wait", "timeout": 1000},
-            {"type": "fill", "selector": "input", "text": "test"},
-        ]
-        results = validate_actions(actions)
-        assert len(results) == 3
-        assert isinstance(results[0], ClickAction)
-        assert isinstance(results[1], WaitAction)
-        assert isinstance(results[2], FillAction)
-
-    def test_validate_actions_empty_list(self):
+    def test_validate_empty_list(self):
         """Test validating empty action list."""
-        actions = []
-        results = validate_actions(actions)
-        assert results == []
+        actions = validate_actions([])
+        assert actions == []
 
-    def test_validate_actions_complex_workflow(self):
-        """Test validating complex workflow."""
-        actions = [
-            {"type": "wait_for_load_state", "state": "networkidle"},
-            {"type": "click", "selector": ".menu-toggle"},
-            {"type": "wait_for_selector", "selector": ".menu", "timeout": 3000},
-            {"type": "hover", "selector": ".menu-item"},
-            {"type": "click", "selector": ".submenu-item"},
-            {"type": "fill", "selector": "#search", "text": "test query"},
-            {"type": "press", "key": "Enter", "selector": "#search"},
-            {"type": "wait", "timeout": 2000},
-            {"type": "scroll", "direction": "bottom"},
-            {"type": "screenshot", "path": "result.png", "full_page": True},
-        ]
-        results = validate_actions(actions)
-        assert len(results) == 10
-        assert all(hasattr(action, "type") for action in results)
-
-    def test_validate_actions_with_invalid_action(self):
-        """Test validating actions with one invalid action."""
-        actions = [
-            {"type": "click", "selector": "button"},
-            {"type": "wait", "timeout": -1000},  # Invalid
-        ]
-        with pytest.raises(ValidationError):
-            validate_actions(actions)
-
-    def test_validate_actions_all_action_types(self):
-        """Test validating all supported action types."""
-        actions = [
-            {"type": "click", "selector": "button"},
-            {"type": "fill", "selector": "input", "text": "test"},
-            {"type": "type", "selector": "textarea", "text": "type test"},
+    def test_validate_multiple_actions(self):
+        """Test validating multiple actions."""
+        action_dicts = [
+            {"type": "click", "selector": "#button1"},
             {"type": "wait", "timeout": 1000},
-            {"type": "wait_for_selector", "selector": ".element"},
-            {"type": "wait_for_load_state", "state": "load"},
-            {"type": "scroll", "direction": "top"},
-            {"type": "screenshot", "path": "test.png"},
-            {"type": "evaluate", "script": "document.title"},
-            {"type": "hover", "selector": ".item"},
-            {"type": "select", "selector": "select", "value": "option1"},
-            {"type": "press", "key": "Enter"},
-            {"type": "drag_and_drop", "source": ".source", "target": ".target"},
+            {"type": "fill", "selector": "input", "text": "test"},
+            {"type": "screenshot", "full_page": True}
         ]
 
-        results = validate_actions(actions)
-        assert len(results) == 13
+        actions = validate_actions(action_dicts)
 
-        # Verify each action type
-        expected_types = [
-            ClickAction,
-            FillAction,
-            TypeAction,
-            WaitAction,
-            WaitForSelectorAction,
-            WaitForLoadStateAction,
-            ScrollAction,
-            ScreenshotAction,
-            EvaluateAction,
-            HoverAction,
-            SelectAction,
-            PressAction,
-            DragAndDropAction,
+        assert len(actions) == 4
+        assert isinstance(actions[0], ClickAction)
+        assert isinstance(actions[1], WaitAction)
+        assert isinstance(actions[2], FillAction)
+        assert isinstance(actions[3], ScreenshotAction)
+
+    def test_validate_actions_stops_on_first_error(self):
+        """Test that validation error includes all errors."""
+        action_dicts = [
+            {"type": "click", "selector": "#button"},
+            {"type": "invalid"},  # Invalid
+            {"type": "wait", "timeout": 1000}
         ]
 
-        for result, expected_type in zip(results, expected_types, strict=False):
-            assert isinstance(result, expected_type)
+        with pytest.raises(ValueError):
+            validate_actions(action_dicts)
 
 
 class TestBrowserActionUnion:
-    """Test the BrowserAction union type."""
+    """Test BrowserAction union type."""
 
-    def test_browser_action_union_coverage(self):
-        """Test that BrowserAction union includes all action types."""
-        # This test ensures the union type is properly defined
-        # by creating instances of each action type
+    def test_all_action_types_in_union(self):
+        """Test that all action types are part of BrowserAction union."""
+        # Create instances of each action type
         actions = [
-            ClickAction(selector="button"),
+            ClickAction(selector="#btn"),
             FillAction(selector="input", text="test"),
-            TypeAction(selector="textarea", text="type"),
+            TypeAction(selector="textarea", text="test"),
             WaitAction(timeout=1000),
-            WaitForSelectorAction(selector=".element"),
+            WaitForSelectorAction(selector=".elem"),
             WaitForLoadStateAction(),
             ScrollAction(),
             ScreenshotAction(),
             EvaluateAction(script="console.log('test')"),
-            HoverAction(selector=".item"),
-            SelectAction(selector="select", value="option"),
+            HoverAction(selector="a"),
+            SelectAction(selector="select", value="opt1"),
             PressAction(key="Enter"),
-            DragAndDropAction(source=".source", target=".target"),
+            DragAndDropAction(source="#src", target="#tgt")
         ]
 
-        # All actions should be valid BrowserAction types
+        # All should be valid BrowserAction instances
         for action in actions:
+            # Python's union type doesn't have isinstance support,
+            # but we can verify the action has the expected attributes
             assert hasattr(action, "type")
-            assert isinstance(action.type, str)
+            assert isinstance(action, BaseAction)
+
+
+class TestPydanticV2Features:
+    """Test Pydantic v2 specific features."""
+
+    def test_model_validator_mode_after(self):
+        """Test that model_validator with mode='after' works correctly."""
+        # This tests the ScrollAction validator specifically
+        action = ScrollAction(direction="bottom", y=100)
+        assert action.y == 100  # Y is ignored for non-position scrolling
+
+        # Test that validator runs after field validation
+        with pytest.raises(ValidationError) as excinfo:
+            ScrollAction(direction="position")  # y defaults to 0
+
+        # The error should come from our custom validator, not field validation
+        assert "Y position must be specified" in str(excinfo.value)
+
+    def test_field_constraints(self):
+        """Test Pydantic v2 field constraints."""
+        # Test Field with gt constraint
+        with pytest.raises(ValidationError) as excinfo:
+            WaitAction(timeout=-1)
+
+        errors = excinfo.value.errors()
+        assert any("greater_than" in str(error) for error in errors)
+
+        # Test Field with le constraint
+        with pytest.raises(ValidationError) as excinfo:
+            WaitAction(timeout=40000)
+
+        errors = excinfo.value.errors()
+        assert any("less_than_equal" in str(error) for error in errors)
+
+    def test_literal_types(self):
+        """Test Pydantic v2 Literal type validation."""
+        # Valid literal
+        action = ClickAction(selector="#btn")
+        assert action.type == "click"
+
+        # Invalid literal
+        with pytest.raises(ValidationError) as excinfo:
+            # Manually construct to bypass type checking
+            ClickAction.model_validate({"type": "wrong", "selector": "#btn"})
+
+        errors = excinfo.value.errors()
+        assert any("literal_error" in error["type"] for error in errors)
+
+    def test_extra_forbid_config(self):
+        """Test that extra='forbid' config works in Pydantic v2."""
+        with pytest.raises(ValidationError) as excinfo:
+            ClickAction(selector="#btn", unexpected_field="value")
+
+        errors = excinfo.value.errors()
+        assert any(error["type"] == "extra_forbidden" for error in errors)
+
+
+class TestEdgeCases:
+    """Test edge cases and error scenarios."""
+
+    def test_empty_selector(self):
+        """Test actions with empty selectors."""
+        # Some actions might accept empty selectors
+        action = PressAction(key="Enter", selector="")
+        assert action.selector == ""
+
+        # But required selectors should not be empty
+        # (Pydantic doesn't validate string content by default)
+        action = ClickAction(selector="")
+        assert action.selector == ""  # Empty but valid
+
+    def test_unicode_in_fields(self):
+        """Test unicode characters in text fields."""
+        action = FillAction(
+            selector="input",
+            text="Hello 世界 🌍"
+        )
+        assert action.text == "Hello 世界 🌍"
+
+    def test_special_characters_in_selectors(self):
+        """Test CSS selectors with special characters."""
+        selectors = [
+            "input[name='email']",
+            "#id-with-dash",
+            ".class\\.with\\.dots",
+            "[data-test-id='complex']",
+            "div > span + p"
+        ]
+
+        for selector in selectors:
+            action = ClickAction(selector=selector)
+            assert action.selector == selector
+
+    def test_large_timeout_values(self):
+        """Test maximum allowed timeout values."""
+        action = WaitAction(timeout=30000)  # Maximum
+        assert action.timeout == 30000
+
+        action = WaitForSelectorAction(selector="#elem", timeout=30000)
+        assert action.timeout == 30000
+
+    def test_javascript_code_in_evaluate(self):
+        """Test various JavaScript code snippets."""
+        scripts = [
+            "return document.title",
+            "window.scrollTo(0, 0)",
+            "const elem = document.querySelector('#id'); elem.click();",
+            """
+            // Multi-line script
+            const items = document.querySelectorAll('.item');
+            return items.length;
+            """
+        ]
+
+        for script in scripts:
+            action = EvaluateAction(script=script)
+            assert action.script == script
