@@ -34,7 +34,7 @@ class DeploymentState:
 
 class DeploymentStateManager:
     """Manages shared deployment state in DragonflyDB with optimizations.
-    
+
     Leverages DragonflyDB's performance advantages:
     - Multi-core utilization for better concurrency
     - Faster atomic operations and locking
@@ -215,7 +215,7 @@ class DeploymentStateManager:
         self, status_filter: str | None = None
     ) -> list[DeploymentState]:
         """List all deployments with optional status filter.
-        
+
         Optimized for DragonflyDB's efficient SCAN operation.
 
         Args:
@@ -286,7 +286,7 @@ class DeploymentStateManager:
         changes: dict[str, Any],
     ) -> None:
         """Publish state change event to Redis Stream.
-        
+
         DragonflyDB has better Redis Streams performance.
 
         Args:
@@ -318,7 +318,7 @@ class DeploymentStateManager:
         self, deployment_id: str, holder_id: str, ttl: int = 60
     ) -> bool:
         """Acquire exclusive lock on deployment for coordination.
-        
+
         Uses DragonflyDB's optimized SET NX operations.
 
         Args:
@@ -342,7 +342,7 @@ class DeploymentStateManager:
 
     async def release_deployment_lock(self, deployment_id: str, holder_id: str) -> bool:
         """Release deployment lock if held by holder.
-        
+
         Uses Lua script for atomic check-and-delete.
 
         Args:
@@ -376,7 +376,7 @@ class DeploymentStateManager:
         self, deployment_id: str, holder_id: str, ttl: int = 60
     ) -> bool:
         """Extend deployment lock if held by holder.
-        
+
         Uses Lua script for atomic check-and-extend.
 
         Args:
@@ -411,7 +411,7 @@ class DeploymentStateManager:
         self, deployment_id: str, time_window: int = 300
     ) -> dict[str, Any]:
         """Get real-time metrics for a deployment from event stream.
-        
+
         Leverages DragonflyDB's fast XRANGE operations.
 
         Args:
@@ -432,10 +432,7 @@ class DeploymentStateManager:
 
             # Read events from stream
             events = await self.redis.xrange(
-                "search:events",
-                start_id,
-                end_id,
-                count=1000
+                "search:events", start_id, end_id, count=1000
             )
 
             # Aggregate metrics

@@ -361,7 +361,7 @@ async def monitor_deployment_events(
                     break
                 continue
 
-            for stream_name, messages in events:
+            for _stream_name, messages in events:
                 for msg_id, data in messages:
                     events_processed += 1
                     event_type = data.get(b"type", b"").decode("utf-8")
