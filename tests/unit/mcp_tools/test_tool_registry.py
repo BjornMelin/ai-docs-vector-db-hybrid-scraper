@@ -73,10 +73,8 @@ class TestRegisterAllTools:
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify each module's register_tools was called
-        for module_name, module in mock_tool_modules.items():
-            module.register_tools.assert_called_once_with(
-                mock_mcp, mock_client_manager
-            )
+        for _module_name, module in mock_tool_modules.items():
+            module.register_tools.assert_called_once_with(mock_mcp, mock_client_manager)
 
     @pytest.mark.asyncio
     async def test_registration_order_is_logical(
@@ -87,8 +85,8 @@ class TestRegisterAllTools:
 
         # Track call order
         for module_name, module in mock_tool_modules.items():
-            module.register_tools.side_effect = lambda mcp, cm, name=module_name: call_order.append(
-                name
+            module.register_tools.side_effect = (
+                lambda mcp, cm, name=module_name: call_order.append(name)
             )
 
         # Patch individual tool modules
@@ -125,9 +123,24 @@ class TestRegisterAllTools:
         self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
     ):
         """Test that registration progress is properly logged."""
-        with patch.object(tools, "__dict__", mock_tool_modules):
-            with caplog.at_level(logging.INFO):
-                await register_all_tools(mock_mcp, mock_client_manager)
+        with (
+            patch.multiple(
+                tools,
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+            ),
+            caplog.at_level(logging.INFO),
+        ):
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Check for expected log messages
         log_messages = [record.message for record in caplog.records]
@@ -145,9 +158,24 @@ class TestRegisterAllTools:
         self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
     ):
         """Test that all registered tool names are logged."""
-        with patch.object(tools, "__dict__", mock_tool_modules):
-            with caplog.at_level(logging.INFO):
-                await register_all_tools(mock_mcp, mock_client_manager)
+        with (
+            patch.multiple(
+                tools,
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+            ),
+            caplog.at_level(logging.INFO),
+        ):
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Find the summary log message
         summary_logs = [
@@ -160,74 +188,88 @@ class TestRegisterAllTools:
         summary = summary_logs[0]
 
         # Verify all module names are in the summary
-        for module_name in mock_tool_modules.keys():
+        for module_name in mock_tool_modules:
             assert module_name in summary
 
     @pytest.mark.asyncio
     async def test_handles_missing_register_function_gracefully(
         self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
     ):
-        """Test graceful handling when a module lacks register_tools."""
+        """Test that missing register_tools method raises AttributeError."""
         # Remove register_tools from one module
         del mock_tool_modules["cache"].register_tools
 
         # Patch individual tool modules
-        with patch.multiple(
-            tools,
-            search=mock_tool_modules["search"],
-            documents=mock_tool_modules["documents"],
-            embeddings=mock_tool_modules["embeddings"],
-            collections=mock_tool_modules["collections"],
-            projects=mock_tool_modules["projects"],
-            advanced_search=mock_tool_modules["advanced_search"],
-            payload_indexing=mock_tool_modules["payload_indexing"],
-            deployment=mock_tool_modules["deployment"],
-            analytics=mock_tool_modules["analytics"],
-            cache=mock_tool_modules["cache"],
-            utilities=mock_tool_modules["utilities"],
+        with (
+            patch.multiple(
+                tools,
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+            ),
+            pytest.raises(AttributeError, match="register_tools"),
         ):
-            # Should not raise an exception
-            with caplog.at_level(logging.WARNING):
-                await register_all_tools(mock_mcp, mock_client_manager)
+            await register_all_tools(mock_mcp, mock_client_manager)
 
-        # Other modules should still be registered
-        for module_name, module in mock_tool_modules.items():
-            if module_name != "cache" and hasattr(module, "register_tools"):
-                module.register_tools.assert_called_once()
+        # Modules before the failure should still be registered
+        registered_modules = [
+            "search",
+            "documents",
+            "embeddings",
+            "collections",
+            "projects",
+            "advanced_search",
+            "payload_indexing",
+            "deployment",
+            "analytics",
+        ]
+        for module_name in registered_modules:
+            if module_name in mock_tool_modules:
+                mock_tool_modules[module_name].register_tools.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_continues_registration_after_module_error(
         self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
     ):
-        """Test that registration continues even if one module fails."""
+        """Test that registration stops on module error."""
         # Make one module raise an exception
         mock_tool_modules["documents"].register_tools.side_effect = Exception(
             "Registration failed"
         )
 
         # Patch individual tool modules
-        with patch.multiple(
-            tools,
-            search=mock_tool_modules["search"],
-            documents=mock_tool_modules["documents"],
-            embeddings=mock_tool_modules["embeddings"],
-            collections=mock_tool_modules["collections"],
-            projects=mock_tool_modules["projects"],
-            advanced_search=mock_tool_modules["advanced_search"],
-            payload_indexing=mock_tool_modules["payload_indexing"],
-            deployment=mock_tool_modules["deployment"],
-            analytics=mock_tool_modules["analytics"],
-            cache=mock_tool_modules["cache"],
-            utilities=mock_tool_modules["utilities"],
+        with (
+            patch.multiple(
+                tools,
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+            ),
+            pytest.raises(Exception, match="Registration failed"),
         ):
-            # Should not raise an exception
-            with caplog.at_level(logging.ERROR):
-                await register_all_tools(mock_mcp, mock_client_manager)
+            await register_all_tools(mock_mcp, mock_client_manager)
 
-        # Other modules should still be registered
-        for module_name, module in mock_tool_modules.items():
-            if module_name != "documents":
-                module.register_tools.assert_called_once()
+        # Only modules before the failure should be registered
+        mock_tool_modules["search"].register_tools.assert_called_once()
+        mock_tool_modules["documents"].register_tools.assert_called_once()
+        # Modules after documents should not be called
+        mock_tool_modules["embeddings"].register_tools.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_passes_correct_arguments_to_modules(
@@ -262,6 +304,16 @@ class TestRegisterAllTools:
 class TestToolRegistryIntegration:
     """Integration tests for tool registry behavior."""
 
+    @pytest.fixture
+    def mock_mcp(self):
+        """Create mock FastMCP instance."""
+        return MagicMock(spec=["tool", "context"])
+
+    @pytest.fixture
+    def mock_client_manager(self):
+        """Create mock ClientManager instance."""
+        return AsyncMock(spec=["get_qdrant_client", "get_openai_client"])
+
     @pytest.mark.asyncio
     async def test_real_module_structure(self, mock_mcp, mock_client_manager):
         """Test with real module structure (mocked implementations)."""
@@ -280,10 +332,19 @@ class TestToolRegistryIntegration:
             "utilities": Mock(spec=["register_tools"]),
         }
 
-        with patch.object(
-            __import__("src.mcp_tools.tools", fromlist=list(mock_modules.keys())),
-            "__dict__",
-            mock_modules,
+        with patch.multiple(
+            tools,
+            search=mock_modules["search"],
+            documents=mock_modules["documents"],
+            embeddings=mock_modules["embeddings"],
+            collections=mock_modules["collections"],
+            projects=mock_modules["projects"],
+            advanced_search=mock_modules["advanced_search"],
+            payload_indexing=mock_modules["payload_indexing"],
+            deployment=mock_modules["deployment"],
+            analytics=mock_modules["analytics"],
+            cache=mock_modules["cache"],
+            utilities=mock_modules["utilities"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
@@ -310,6 +371,16 @@ class TestToolRegistryIntegration:
 
 class TestModuleRegistrationPatterns:
     """Test common patterns in module registration."""
+
+    @pytest.fixture
+    def mock_mcp(self):
+        """Create mock FastMCP instance."""
+        return MagicMock(spec=["tool", "context"])
+
+    @pytest.fixture
+    def mock_client_manager(self):
+        """Create mock ClientManager instance."""
+        return AsyncMock(spec=["get_qdrant_client", "get_openai_client"])
 
     @pytest.fixture
     def sample_tool_module(self):
@@ -349,64 +420,60 @@ class TestModuleRegistrationPatterns:
 class TestErrorScenarios:
     """Test error handling scenarios."""
 
+    @pytest.fixture
+    def mock_mcp(self):
+        """Create mock FastMCP instance."""
+        return MagicMock(spec=["tool", "context"])
+
+    @pytest.fixture
+    def mock_client_manager(self):
+        """Create mock ClientManager instance."""
+        return AsyncMock(spec=["get_qdrant_client", "get_openai_client"])
+
+    @pytest.fixture
+    def mock_tool_modules(self):
+        """Create mock tool modules with register_tools functions."""
+        modules = {
+            "search": Mock(register_tools=Mock()),
+            "documents": Mock(register_tools=Mock()),
+            "embeddings": Mock(register_tools=Mock()),
+            "collections": Mock(register_tools=Mock()),
+            "projects": Mock(register_tools=Mock()),
+            "advanced_search": Mock(register_tools=Mock()),
+            "payload_indexing": Mock(register_tools=Mock()),
+            "deployment": Mock(register_tools=Mock()),
+            "analytics": Mock(register_tools=Mock()),
+            "cache": Mock(register_tools=Mock()),
+            "utilities": Mock(register_tools=Mock()),
+        }
+        return modules
+
     @pytest.mark.asyncio
     async def test_handles_import_error(self, mock_mcp, mock_client_manager, caplog):
         """Test handling when tool module import fails."""
-        with patch(
-            "src.mcp_tools.tool_registry.tools",
-            side_effect=ImportError("Module not found"),
+        with (
+            patch("builtins.__import__", side_effect=ImportError("Module not found")),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ImportError),
         ):
-            with caplog.at_level(logging.ERROR):
-                # Should handle the error gracefully
-                with pytest.raises(ImportError):
-                    await register_all_tools(mock_mcp, mock_client_manager)
+            await register_all_tools(mock_mcp, mock_client_manager)
 
     @pytest.mark.asyncio
     async def test_handles_attribute_error(
         self, mock_mcp, mock_client_manager, mock_tool_modules
     ):
         """Test handling when accessing module attributes fails."""
-        # Create a module that raises AttributeError
-        bad_module = Mock()
-        bad_module.register_tools = property(
+        # Make the cache module raise AttributeError when register_tools is accessed
+        mock_tool_modules["cache"]
+        bad_cache = Mock()
+        bad_cache.register_tools = property(
             lambda self: (_ for _ in ()).throw(AttributeError("No such attribute"))
         )
-        mock_tool_modules["bad_module"] = bad_module
+        mock_tool_modules["cache"] = bad_cache
 
         # Patch individual tool modules
-        with patch.multiple(
-            tools,
-            search=mock_tool_modules["search"],
-            documents=mock_tool_modules["documents"],
-            embeddings=mock_tool_modules["embeddings"],
-            collections=mock_tool_modules["collections"],
-            projects=mock_tool_modules["projects"],
-            advanced_search=mock_tool_modules["advanced_search"],
-            payload_indexing=mock_tool_modules["payload_indexing"],
-            deployment=mock_tool_modules["deployment"],
-            analytics=mock_tool_modules["analytics"],
-            cache=mock_tool_modules["cache"],
-            utilities=mock_tool_modules["utilities"],
-            bad_module=mock_tool_modules["bad_module"],
-        ):
-            # Should handle the error for that module but continue
-            await register_all_tools(mock_mcp, mock_client_manager)
-
-        # Other modules should still be registered
-        mock_tool_modules["search"].register_tools.assert_called_once()
-
-
-class TestLoggingBehavior:
-    """Test detailed logging behavior."""
-
-    @pytest.mark.asyncio
-    async def test_logger_name_is_correct(
-        self, mock_mcp, mock_client_manager, mock_tool_modules
-    ):
-        """Test that logger uses correct module name."""
-        with patch("src.mcp_tools.tool_registry.logger") as mock_logger:
-            # Patch individual tool modules
-            with patch.multiple(
+        with (
+            patch.multiple(
                 tools,
                 search=mock_tool_modules["search"],
                 documents=mock_tool_modules["documents"],
@@ -419,8 +486,70 @@ class TestLoggingBehavior:
                 analytics=mock_tool_modules["analytics"],
                 cache=mock_tool_modules["cache"],
                 utilities=mock_tool_modules["utilities"],
-            ):
-                await register_all_tools(mock_mcp, mock_client_manager)
+            ),
+            pytest.raises(TypeError, match="property.*not callable"),
+        ):
+            await register_all_tools(mock_mcp, mock_client_manager)
+
+        # Modules before cache should be registered
+        mock_tool_modules["search"].register_tools.assert_called_once()
+        mock_tool_modules["analytics"].register_tools.assert_called_once()
+
+
+class TestLoggingBehavior:
+    """Test detailed logging behavior."""
+
+    @pytest.fixture
+    def mock_mcp(self):
+        """Create mock FastMCP instance."""
+        return MagicMock(spec=["tool", "context"])
+
+    @pytest.fixture
+    def mock_client_manager(self):
+        """Create mock ClientManager instance."""
+        return AsyncMock(spec=["get_qdrant_client", "get_openai_client"])
+
+    @pytest.fixture
+    def mock_tool_modules(self):
+        """Create mock tool modules with register_tools functions."""
+        modules = {
+            "search": Mock(register_tools=Mock()),
+            "documents": Mock(register_tools=Mock()),
+            "embeddings": Mock(register_tools=Mock()),
+            "collections": Mock(register_tools=Mock()),
+            "projects": Mock(register_tools=Mock()),
+            "advanced_search": Mock(register_tools=Mock()),
+            "payload_indexing": Mock(register_tools=Mock()),
+            "deployment": Mock(register_tools=Mock()),
+            "analytics": Mock(register_tools=Mock()),
+            "cache": Mock(register_tools=Mock()),
+            "utilities": Mock(register_tools=Mock()),
+        }
+        return modules
+
+    @pytest.mark.asyncio
+    async def test_logger_name_is_correct(
+        self, mock_mcp, mock_client_manager, mock_tool_modules
+    ):
+        """Test that logger uses correct module name."""
+        with (
+            patch("src.mcp_tools.tool_registry.logger") as mock_logger,
+            patch.multiple(
+                tools,
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+            ),
+        ):
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify logger is used
         assert mock_logger.info.call_count >= 4  # At least 4 info messages
@@ -437,14 +566,16 @@ class TestLoggingBehavior:
             "embeddings": Mock(register_tools=Mock()),
         }
 
-        with patch.multiple(
-            tools,
-            search=mock_modules["search"],
-            documents=mock_modules["documents"],
-            embeddings=mock_modules["embeddings"],
+        with (
+            patch.multiple(
+                tools,
+                search=mock_modules["search"],
+                documents=mock_modules["documents"],
+                embeddings=mock_modules["embeddings"],
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await register_all_tools(mock_mcp, mock_client_manager)
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Find the summary message
         summary_logs = [
