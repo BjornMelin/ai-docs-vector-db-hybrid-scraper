@@ -128,7 +128,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 - ✅ Issue #19: Persistent storage for projects
 - ✅ Issue #20: Abstract direct Qdrant client access
 - ✅ Issue #21: Service layer integration for manage_vector_db.py
-- ✅ Issue #22: Service layer integration for crawl4ai_bulk_embedder.py
+- ❌ Issue #22: Service layer integration for crawl4ai_bulk_embedder.py (FILE MISSING - see Issue #96)
 - ✅ Issue #23: Consolidate error handling and rate limiting
 - ✅ Issue #24: Integrate structured logging
 - ✅ Issue #25: SecurityValidator integration with UnifiedConfig
@@ -719,7 +719,7 @@ After comprehensive source code review, **ALL V1 Foundation components marked as
 ### Core Advanced Implementation
 
 - [x] **Complete Advanced Scraper Implementation** `feat/advanced-scraper`
-  - [x] Full crawl4ai_bulk_embedder.py with hybrid embedding pipeline
+  - [ ] Full crawl4ai_bulk_embedder.py with hybrid embedding pipeline (FILE MISSING - see Issue #96)
   - [x] Research-backed optimal chunking (1600 chars = 400-600 tokens)
   - [x] Multi-provider embedding support (OpenAI, FastEmbed, Hybrid)
   - [x] BGE-reranker-v2-m3 integration (10-20% accuracy improvement)
@@ -1545,6 +1545,70 @@ Built for **continuous evolution**:
 ---
 
 _This TODO reflects our evolution from basic implementation to Advanced 2025 achievement. Future tasks focus on advanced features, ecosystem expansion, and maintaining performance leadership._
+
+---
+
+## OPEN GITHUB ISSUES (FROM COMPREHENSIVE ANALYSIS 2025-06-05)
+
+### 🐛 Critical Bugs & Missing Components
+
+- [ ] **Issue #96**: Missing entry point file `crawl4ai_bulk_embedder.py` referenced in pyproject.toml
+  - [ ] Create the missing file with bulk embedding functionality
+  - [ ] Integrate with existing crawling and embedding services
+  - [ ] Add comprehensive tests for bulk operations
+  - [ ] Update documentation for bulk embedding workflow
+
+- [ ] **Issue #78**: Fix remaining unit tests and linting issues
+  - [ ] Fix browser automation test failures 
+  - [ ] Fix HNSW optimization test issues
+  - [ ] Address 13 remaining linting issues (mostly complexity warnings)
+  - [ ] Ensure all tests pass before V1 release
+
+### 📋 V1 Release Preparation
+
+- [ ] **Issue #43**: Finalize test suite and achieve >90% coverage
+  - [ ] Complete remaining service tests (MCP, deployment patterns)
+  - [ ] Add integration tests for end-to-end workflows
+  - [ ] Performance benchmarks for all critical paths
+  - [ ] Security and error handling test coverage
+
+- [ ] **Issue #44**: Conduct final documentation review
+  - [ ] Update all README files with current architecture
+  - [ ] Complete API documentation
+  - [ ] Add deployment and operations guides
+  - [ ] Create migration guide from legacy patterns
+
+- [ ] **Issue #45**: V1 Release final polish
+  - [ ] Final code review and cleanup
+  - [ ] Performance optimization pass
+  - [ ] Security audit
+  - [ ] Release notes preparation
+
+### 🧪 Test Coverage Completion
+
+- [ ] **Issue #73**: Complete MCP server testing
+  - [ ] Integration tests for all MCP tools
+  - [ ] End-to-end testing with Claude Desktop
+  - [ ] Performance and load testing
+  - [ ] Error handling and edge cases
+
+- [ ] **Issue #74**: Core component test coverage
+  - [ ] Enhanced chunking tests (AST-based, Tree-sitter)
+  - [ ] Performance benchmarks for chunking
+  - [ ] Client management lifecycle tests
+  - [ ] Utility function comprehensive testing
+
+### 🏗️ Architecture & Cleanup
+
+- [ ] **Issue #68**: Legacy code elimination (tracking issue)
+  - [ ] Continue removing deprecated patterns as found
+  - [ ] Update documentation to remove legacy references
+  - [ ] Ensure clean V1 architecture throughout
+
+- [ ] **Issue #15**: Repository rename consideration
+  - [ ] Decide on new name reflecting MCP capabilities
+  - [ ] Update all references and documentation
+  - [ ] Coordinate with stakeholders
 
 ---
 
