@@ -1,6 +1,19 @@
 """Collection management tools for MCP server."""
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
 
 from ...infrastructure.client_manager import ClientManager
 
@@ -14,7 +27,7 @@ def register_tools(mcp, client_manager: ClientManager):
     from ..models.responses import CollectionOperationResponse
 
     @mcp.tool()
-    async def list_collections(ctx=None) -> list[CollectionInfo]:
+    async def list_collections(ctx: Context = None) -> list[CollectionInfo]:
         """
         List all vector database collections.
 
@@ -74,7 +87,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def delete_collection(
-        collection_name: str, ctx=None
+        collection_name: str, ctx: Context = None
     ) -> CollectionOperationResponse:
         """
         Delete a vector database collection.
@@ -113,7 +126,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def optimize_collection(
-        collection_name: str, ctx=None
+        collection_name: str, ctx: Context = None
     ) -> CollectionOperationResponse:
         """
         Optimize a collection for better performance.

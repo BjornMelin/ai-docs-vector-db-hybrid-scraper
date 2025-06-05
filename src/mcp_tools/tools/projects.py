@@ -3,7 +3,20 @@
 import logging
 from datetime import UTC
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
 
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
@@ -20,7 +33,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     from ..models.responses import ProjectInfo
 
     @mcp.tool()
-    async def create_project(request: ProjectRequest, ctx=None) -> ProjectInfo:  # noqa: PLR0912
+    async def create_project(request: ProjectRequest, ctx: Context = None) -> ProjectInfo:  # noqa: PLR0912
         """
         Create a new documentation project.
 
@@ -118,7 +131,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             raise
 
     @mcp.tool()
-    async def list_projects(ctx=None) -> list[ProjectInfo]:
+    async def list_projects(ctx: Context = None) -> list[ProjectInfo]:
         """
         List all documentation projects.
 
@@ -175,7 +188,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         query: str,
         limit: int = 10,
         strategy: SearchStrategy = SearchStrategy.HYBRID,
-        ctx=None,
+        ctx: Context = None,
     ) -> list[SearchResult]:
         """
         Search within a specific project.
@@ -264,7 +277,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         project_id: str,
         name: str | None = None,
         description: str | None = None,
-        ctx=None,
+        ctx: Context = None,
     ) -> ProjectInfo:
         """
         Update project metadata.
@@ -312,7 +325,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
 
     @mcp.tool()
     async def delete_project(
-        project_id: str, delete_collection: bool = True, ctx=None
+        project_id: str, delete_collection: bool = True, ctx: Context = None
     ) -> OperationStatus:
         """
         Delete a project and optionally its collection.

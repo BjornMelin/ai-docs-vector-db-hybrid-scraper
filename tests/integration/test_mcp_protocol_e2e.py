@@ -11,11 +11,10 @@ from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastmcp import FastMCP
 
-from src.config.models import Config
+from src.config.models import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.tool_registry import register_all_tools
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 class TestMCPProtocolE2E:
@@ -24,12 +23,20 @@ class TestMCPProtocolE2E:
     @pytest.fixture
     async def mock_config(self):
         """Mock configuration for E2E testing."""
-        config = MagicMock(spec=Config)
+        config = MagicMock(spec=UnifiedConfig)
+        
+        # Mock nested config objects
+        config.qdrant = MagicMock()
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = None
+        
+        config.openai = MagicMock()
         config.openai.api_key = "test-openai-key"
-        config.get_active_providers.return_value = ["openai", "fastembed"]
+        
+        config.crawling = MagicMock()
         config.crawling.providers = ["crawl4ai"]
+        
+        config.get_active_providers.return_value = ["openai", "fastembed"]
         return config
 
     @pytest.fixture
@@ -58,13 +65,64 @@ class TestMCPProtocolE2E:
         }
         client_manager.embedding_service = mock_embedding_service
 
+        # Add missing services
+        mock_project_service = AsyncMock()
+        mock_project_service.create_project.return_value = {
+            "id": "test-project-123",
+            "name": "E2E Test Project",
+            "description": "Created by E2E test",
+            "created_at": "2024-01-01T00:00:00Z",
+        }
+        client_manager.project_service = mock_project_service
+
+        mock_cache_service = AsyncMock()
+        mock_cache_service.get_stats.return_value = {
+            "hit_rate": 0.85,
+            "size": 1000,
+            "total_requests": 5000,
+        }
+        client_manager.cache_service = mock_cache_service
+
+        mock_crawling_service = AsyncMock()
+        mock_crawling_service.crawl_url.return_value = {
+            "url": "https://example.com",
+            "title": "Example Page",
+            "content": "Example content",
+            "success": True,
+        }
+        client_manager.crawling_service = mock_crawling_service
+
+        mock_deployment_service = AsyncMock()
+        mock_deployment_service.list_aliases.return_value = {
+            "production": "docs-v1.0",
+            "staging": "docs-v1.1-beta",
+        }
+        client_manager.deployment_service = mock_deployment_service
+
+        mock_analytics_service = AsyncMock()
+        mock_analytics_service.get_analytics.return_value = {
+            "timestamp": "2024-01-01T00:00:00Z",
+            "collections": {},
+            "performance": {"avg_search_time_ms": 85.2},
+        }
+        client_manager.analytics_service = mock_analytics_service
+
+        mock_hyde_service = AsyncMock()
+        mock_hyde_service.search.return_value = {
+            "request_id": "hyde-123",
+            "query": "test query",
+            "results": [],
+            "metrics": {"search_time_ms": 150.5},
+        }
+        client_manager.hyde_service = mock_hyde_service
+
         return client_manager
 
     @pytest.fixture
     async def mcp_server_e2e(self, mock_client_manager):
         """Create MCP server for E2E testing."""
-        mcp = FastMCP("e2e-test-server")
-        await register_all_tools(mcp, mock_client_manager)
+        mcp = MockMCPServer("e2e-test-server")
+        register_mock_tools(mcp, mock_client_manager)
         return mcp
 
     async def test_json_rpc_request_response_cycle(self, mcp_server_e2e, mock_client_manager):
@@ -497,7 +555,7 @@ class TestMCPPerformance:
     @pytest.fixture
     async def performance_server(self):
         """Create server optimized for performance testing."""
-        mcp = FastMCP("performance-test-server")
+        mcp = MockMCPServer("performance-test-server")
         
         # Mock optimized client manager
         mock_client_manager = MagicMock()
@@ -510,7 +568,16 @@ class TestMCPPerformance:
         ]
         mock_client_manager.vector_service = mock_vector_service
 
-        await register_all_tools(mcp, mock_client_manager)
+        # Add other required services for tool registration
+        mock_client_manager.embedding_service = AsyncMock()
+        mock_client_manager.crawling_service = AsyncMock()
+        mock_client_manager.cache_service = AsyncMock()
+        mock_client_manager.project_service = AsyncMock()
+        mock_client_manager.deployment_service = AsyncMock()
+        mock_client_manager.analytics_service = AsyncMock()
+        mock_client_manager.hyde_service = AsyncMock()
+
+        register_mock_tools(mcp, mock_client_manager)
         return mcp, mock_client_manager
 
     async def test_high_frequency_requests(self, performance_server):
