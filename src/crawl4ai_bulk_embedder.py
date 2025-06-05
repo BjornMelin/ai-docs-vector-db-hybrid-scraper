@@ -15,10 +15,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
-from xml.etree import ElementTree
 
 import click
 import httpx
+from defusedxml import ElementTree
 from pydantic import BaseModel
 from pydantic import Field
 from rich.console import Console
@@ -212,10 +212,7 @@ class BulkEmbedder:
 
         try:
             # Scrape the URL
-            scrape_result = await self.crawl_manager.scrape_url(
-                url=url,
-                formats=["markdown", "text"],
-            )
+            scrape_result = await self.crawl_manager.scrape_url(url=url)
 
             if not scrape_result.get("success"):
                 raise Exception(scrape_result.get("error", "Scraping failed"))
