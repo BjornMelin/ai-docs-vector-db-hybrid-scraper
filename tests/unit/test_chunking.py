@@ -1,10 +1,10 @@
 """Unit tests for chunking module."""
 
-from src.chunking import Chunk
-from src.chunking import ChunkingConfig
-from src.chunking import ChunkingStrategy
-from src.chunking import CodeBlock
 from src.chunking import EnhancedChunker
+from src.config.enums import ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.models.document_processing import Chunk
+from src.models.document_processing import CodeBlock
 
 
 class TestChunkingConfig:
@@ -135,6 +135,17 @@ class TestEnhancedChunker:
         chunker = EnhancedChunker(config)
         assert chunker.config == config
         assert isinstance(chunker.parsers, dict)
+
+    def test_initialization_with_multiple_languages(self):
+        """Test chunker initialization with multiple language support."""
+        config = ChunkingConfig(
+            enable_ast_chunking=True,
+            supported_languages=["python", "javascript", "typescript", "markdown"],
+        )
+        chunker = EnhancedChunker(config)
+        assert chunker.config == config
+        assert isinstance(chunker.parsers, dict)
+        # Parsers may or may not be loaded depending on availability
 
     def test_detect_language_from_url(self):
         """Test language detection from URL."""
@@ -353,7 +364,7 @@ Another paragraph."""
 
     def test_chunk_large_code_block_by_functions(self):
         """Test chunking large code blocks by function boundaries."""
-        config = ChunkingConfig(chunk_size=100)
+        config = ChunkingConfig(chunk_size=400, chunk_overlap=50)
         chunker = EnhancedChunker(config)
 
         large_code = """

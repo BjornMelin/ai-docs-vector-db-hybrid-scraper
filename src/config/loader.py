@@ -7,9 +7,8 @@ including environment variables, files, and documentation sites.
 import json
 import os
 from pathlib import Path
-from typing import Any
 
-from .models import DocumentationSite
+from .benchmark_models import BenchmarkConfiguration
 from .models import UnifiedConfig
 
 
@@ -17,31 +16,24 @@ class ConfigLoader:
     """Utility class for loading and managing configuration."""
 
     @staticmethod
-    def load_documentation_sites(config_path: Path | str) -> list[DocumentationSite]:
-        """Load documentation sites from JSON configuration file."""
-        config_path = Path(config_path)
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"Documentation sites config not found: {config_path}"
-            )
-
-        with open(config_path) as f:
-            data = json.load(f)
-
-        sites = []
-        for site_data in data.get("sites", []):
-            # Convert URL string to HttpUrl
-            site = DocumentationSite(**site_data)
-            sites.append(site)
-
-        return sites
-
-    @staticmethod
-    def merge_env_config(base_config: dict[str, Any]) -> dict[str, Any]:
+    def merge_env_config(base_config: dict[str, object]) -> dict[str, object]:
         """Merge environment variables into base configuration.
 
         Supports nested configuration using double underscore delimiter.
         Example: AI_DOCS__QDRANT__URL -> config.qdrant.url
+
+        Args:
+            base_config: Base configuration dictionary to merge into
+
+        Returns:
+            dict[str, object]: Merged configuration with environment overrides
+
+        Note:
+            Environment values are parsed as:
+            - JSON for complex types (lists, dicts)
+            - Booleans for "true"/"false" strings
+            - Numbers for numeric strings
+            - Strings for everything else
         """
         env_prefix = "AI_DOCS__"
 
@@ -85,7 +77,6 @@ class ConfigLoader:
         config_file: Path | str | None = None,
         env_file: Path | str | None = None,
         include_env: bool = True,
-        documentation_sites_file: Path | str | None = None,
     ) -> UnifiedConfig:
         """Load configuration from multiple sources with priority.
 
@@ -99,7 +90,6 @@ class ConfigLoader:
             config_file: Path to configuration file (JSON, YAML, or TOML)
             env_file: Path to .env file (defaults to .env in current directory)
             include_env: Whether to include environment variables
-            documentation_sites_file: Path to documentation sites JSON file
 
         Returns:
             Loaded configuration instance
@@ -119,11 +109,6 @@ class ConfigLoader:
         # Create configuration instance
         config = UnifiedConfig(**config_data)
 
-        # Load documentation sites if file provided
-        if documentation_sites_file:
-            sites = ConfigLoader.load_documentation_sites(documentation_sites_file)
-            config.documentation_sites = sites
-
         return config
 
     @staticmethod
@@ -138,24 +123,7 @@ class ConfigLoader:
             crawl_provider="crawl4ai",
         )
 
-        # Add example documentation sites
-        example_config.documentation_sites = [
-            DocumentationSite(
-                name="Example Documentation",
-                url="https://docs.example.com",
-                max_pages=100,
-                priority="high",
-                description="Example documentation site",
-            ),
-            DocumentationSite(
-                name="Another Example",
-                url="https://docs.another-example.com",
-                max_pages=50,
-                priority="medium",
-                description="Another example site",
-                exclude_patterns=["*/api/*", "*/internal/*"],
-            ),
-        ]
+        # Example configuration is ready with default values
 
         # Save to file
         example_config.save_to_file(output_path, format=format)
@@ -190,7 +158,7 @@ AI_DOCS__QDRANT__COLLECTION_NAME=documents
 
 # Cache Configuration
 AI_DOCS__CACHE__ENABLE_CACHING=true
-AI_DOCS__CACHE__REDIS_URL=redis://localhost:6379
+AI_DOCS__CACHE__DRAGONFLY_URL=redis://localhost:6379
 AI_DOCS__CACHE__TTL_EMBEDDINGS=86400
 AI_DOCS__CACHE__TTL_CRAWL=3600
 AI_DOCS__CACHE__TTL_QUERIES=7200
@@ -233,3 +201,92 @@ AI_DOCS__SECURITY__RATE_LIMIT_REQUESTS=100
             issues.append("Firecrawl API key appears to be a placeholder")
 
         return len(issues) == 0, issues
+
+    @staticmethod
+    def get_provider_display_data(
+        config: UnifiedConfig,
+    ) -> dict[str, dict[str, object]]:
+        """Get formatted provider data for display purposes.
+
+        Args:
+            config: Unified configuration object
+
+        Returns:
+            dict[str, dict[str, object]]: Provider data organized for display with:
+                - provider_name: Human-readable provider name
+                - configuration: Dict of configuration values for display
+        """
+        providers = config.get_active_providers()
+        display_data = {}
+
+        # Embedding provider
+        embedding_config = providers["embedding"]
+        if config.embedding_provider == "openai":
+            display_data["embedding"] = {
+                "provider_name": "OpenAI",
+                "configuration": {
+                    "Model": embedding_config.model,
+                    "Dimensions": str(embedding_config.dimensions),
+                    "API Key": "Set" if embedding_config.api_key else "Not Set",
+                },
+            }
+        else:  # fastembed
+            display_data["embedding"] = {
+                "provider_name": "FastEmbed",
+                "configuration": {
+                    "Model": embedding_config.model,
+                    "Max Length": str(embedding_config.max_length),
+                },
+            }
+
+        # Crawl provider
+        crawl_config = providers["crawl"]
+        if config.crawl_provider == "firecrawl":
+            display_data["crawl"] = {
+                "provider_name": "Firecrawl",
+                "configuration": {
+                    "API URL": crawl_config.api_url,
+                    "API Key": "Set" if crawl_config.api_key else "Not Set",
+                },
+            }
+        else:  # crawl4ai
+            display_data["crawl"] = {
+                "provider_name": "Crawl4AI",
+                "configuration": {
+                    "Browser": crawl_config.browser_type,
+                    "Headless": str(crawl_config.headless),
+                    "Max Concurrent": str(crawl_config.max_concurrent_crawls),
+                },
+            }
+
+        return display_data
+
+    @staticmethod
+    def load_benchmark_config(benchmark_file: Path | str) -> BenchmarkConfiguration:
+        """Load benchmark configuration from JSON file.
+
+        Loads and validates benchmark configuration from files like custom-benchmarks.json
+        using Pydantic models for type safety and validation.
+
+        Args:
+            benchmark_file: Path to benchmark configuration JSON file
+
+        Returns:
+            BenchmarkConfiguration: Validated benchmark configuration object
+
+        Raises:
+            FileNotFoundError: If benchmark file doesn't exist
+            json.JSONDecodeError: If file contains invalid JSON
+            pydantic.ValidationError: If data doesn't match expected schema
+        """
+        benchmark_path = Path(benchmark_file)
+
+        if not benchmark_path.exists():
+            raise FileNotFoundError(f"Benchmark file not found: {benchmark_path}")
+
+        # Load JSON data
+        with open(benchmark_path) as f:
+            data = json.load(f)
+
+        # Validate and parse using Pydantic model
+        return BenchmarkConfiguration(**data)

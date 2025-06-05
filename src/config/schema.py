@@ -5,9 +5,12 @@ and other schema formats from the Pydantic configuration models.
 """
 
 import json
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
+import jsonschema2md
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic.json_schema import JsonSchemaValue
 
@@ -71,6 +74,28 @@ class ConfigSchemaGenerator:
             ref_template="#/definitions/{model}",
         )
 
+        # Convert $defs to definitions for compatibility with json-schema-to-typescript
+        if "$defs" in schema:
+            schema["definitions"] = schema.pop("$defs")
+
+        # Update all $ref pointers to use definitions instead of $defs
+        def convert_refs(obj):
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    if (
+                        key == "$ref"
+                        and isinstance(value, str)
+                        and value.startswith("#/$defs/")
+                    ):
+                        obj[key] = value.replace("#/$defs/", "#/definitions/")
+                    else:
+                        convert_refs(value)
+            elif isinstance(obj, list):
+                for item in obj:
+                    convert_refs(item)
+
+        convert_refs(schema)
+
         # Add schema metadata
         schema["$schema"] = "http://json-schema.org/draft-07/schema#"
         schema["title"] = "AI Documentation Vector DB Configuration"
@@ -95,116 +120,84 @@ class ConfigSchemaGenerator:
         return schema
 
     @staticmethod
-    def generate_typescript_types(schema: dict[str, Any] | None = None) -> str:  # noqa: PLR0915
-        """Generate TypeScript type definitions from schema.
+    def generate_typescript_types(schema: dict[str, Any] | None = None) -> str:
+        """Generate TypeScript type definitions from JSON Schema using json-schema-to-typescript.
 
         Args:
             schema: JSON Schema (generated if not provided)
 
         Returns:
             TypeScript type definitions as string
+
+        Raises:
+            RuntimeError: If TypeScript generation fails
         """
         if schema is None:
             schema = ConfigSchemaGenerator.generate_json_schema()
 
-        # Simple TypeScript generation (could use json-schema-to-typescript for complex cases)
-        lines = []
-        lines.append(
-            "// Auto-generated TypeScript types for AI Documentation Vector DB Configuration"
-        )
-        lines.append("")
+        try:
+            # Try using npx to run json-schema-to-typescript
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as temp_file:
+                json.dump(schema, temp_file, indent=2)
+                temp_file.flush()
 
-        # Generate enums
-        lines.append("export enum Environment {")
-        lines.append('  DEVELOPMENT = "development",')
-        lines.append('  TESTING = "testing",')
-        lines.append('  PRODUCTION = "production"')
-        lines.append("}")
-        lines.append("")
+                # Use npx to run json-schema-to-typescript
+                result = subprocess.run(
+                    [
+                        "npx",
+                        "--package=json-schema-to-typescript",
+                        "json2ts",
+                        temp_file.name,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
 
-        lines.append("export enum LogLevel {")
-        lines.append('  DEBUG = "DEBUG",')
-        lines.append('  INFO = "INFO",')
-        lines.append('  WARNING = "WARNING",')
-        lines.append('  ERROR = "ERROR",')
-        lines.append('  CRITICAL = "CRITICAL"')
-        lines.append("}")
-        lines.append("")
+                # Clean up temp file
+                Path(temp_file.name).unlink()
 
-        lines.append("export enum EmbeddingProvider {")
-        lines.append('  OPENAI = "openai",')
-        lines.append('  FASTEMBED = "fastembed"')
-        lines.append("}")
-        lines.append("")
+                if result.returncode == 0:
+                    # Add header comment to generated TypeScript
+                    header = (
+                        "// Auto-generated TypeScript types for AI Documentation Vector DB Configuration\n"
+                        "// Generated using json-schema-to-typescript\n\n"
+                    )
+                    return header + result.stdout
+                else:
+                    raise RuntimeError(f"TypeScript generation failed: {result.stderr}")
 
-        lines.append("export enum CrawlProvider {")
-        lines.append('  CRAWL4AI = "crawl4ai",')
-        lines.append('  FIRECRAWL = "firecrawl"')
-        lines.append("}")
-        lines.append("")
-
-        # Generate main interface
-        lines.append("export interface UnifiedConfig {")
-        lines.append("  environment?: Environment;")
-        lines.append("  debug?: boolean;")
-        lines.append("  log_level?: LogLevel;")
-        lines.append("  app_name?: string;")
-        lines.append("  version?: string;")
-        lines.append("  embedding_provider?: EmbeddingProvider;")
-        lines.append("  crawl_provider?: CrawlProvider;")
-        lines.append("  cache?: CacheConfig;")
-        lines.append("  qdrant?: QdrantConfig;")
-        lines.append("  openai?: OpenAIConfig;")
-        lines.append("  fastembed?: FastEmbedConfig;")
-        lines.append("  firecrawl?: FirecrawlConfig;")
-        lines.append("  crawl4ai?: Crawl4AIConfig;")
-        lines.append("  chunking?: ChunkingConfig;")
-        lines.append("  performance?: PerformanceConfig;")
-        lines.append("  security?: SecurityConfig;")
-        lines.append("  documentation_sites?: DocumentationSite[];")
-        lines.append("  data_dir?: string;")
-        lines.append("  cache_dir?: string;")
-        lines.append("  logs_dir?: string;")
-        lines.append("}")
-        lines.append("")
-
-        # Generate sub-interfaces (simplified)
-        lines.append("export interface CacheConfig {")
-        lines.append("  enable_caching?: boolean;")
-        lines.append("  enable_local_cache?: boolean;")
-        lines.append("  enable_redis_cache?: boolean;")
-        lines.append("  redis_url?: string;")
-        lines.append("  ttl_embeddings?: number;")
-        lines.append("  ttl_crawl?: number;")
-        lines.append("  ttl_queries?: number;")
-        lines.append("  local_max_size?: number;")
-        lines.append("  local_max_memory_mb?: number;")
-        lines.append("}")
-        lines.append("")
-
-        lines.append("export interface QdrantConfig {")
-        lines.append("  url?: string;")
-        lines.append("  api_key?: string | null;")
-        lines.append("  timeout?: number;")
-        lines.append("  prefer_grpc?: boolean;")
-        lines.append("  collection_name?: string;")
-        lines.append("  batch_size?: number;")
-        lines.append("  max_retries?: number;")
-        lines.append("}")
-        lines.append("")
-
-        lines.append("export interface OpenAIConfig {")
-        lines.append("  api_key?: string | null;")
-        lines.append("  model?: string;")
-        lines.append("  dimensions?: number;")
-        lines.append("  batch_size?: number;")
-        lines.append("}")
-
-        return "\n".join(lines)
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Fallback to manual generation if json-schema-to-typescript is not available
+            return ConfigSchemaGenerator._generate_typescript_fallback(schema)
 
     @staticmethod
-    def generate_markdown_docs(schema: dict[str, Any] | None = None) -> str:  # noqa: PLR0915
-        """Generate Markdown documentation from schema.
+    def _generate_typescript_fallback(schema: dict[str, Any]) -> str:
+        """Simple fallback TypeScript generation when automated tools fail.
+
+        Args:
+            schema: JSON Schema
+
+        Returns:
+            Basic TypeScript type definitions as string
+        """
+        return """// Auto-generated TypeScript types for AI Documentation Vector DB Configuration
+// Generated using simplified fallback (automated tools unavailable)
+
+export interface UnifiedConfig {
+  [key: string]: any;
+}
+
+// Note: Install 'json-schema-to-typescript' globally for detailed type generation:
+// npm install -g json-schema-to-typescript
+"""
+
+    @staticmethod
+    def generate_markdown_docs(schema: dict[str, Any] | None = None) -> str:
+        """Generate Markdown documentation from JSON Schema using jsonschema2md.
 
         Args:
             schema: JSON Schema (generated if not provided)
@@ -215,108 +208,85 @@ class ConfigSchemaGenerator:
         if schema is None:
             schema = ConfigSchemaGenerator.generate_json_schema()
 
-        lines = []
-        lines.append("# AI Documentation Vector DB Configuration Schema")
-        lines.append("")
-        lines.append(
-            "This document describes the complete configuration schema for the AI Documentation Vector DB system."
-        )
-        lines.append("")
-        lines.append("## Configuration Structure")
-        lines.append("")
+        try:
+            # Use jsonschema2md to generate comprehensive documentation
+            parser = jsonschema2md.Parser(
+                examples_as_yaml=False,
+                show_examples="all",
+                header_level=1,
+            )
 
-        # Generate table of contents
-        lines.append("### Table of Contents")
-        lines.append("")
-        lines.append("- [Root Configuration](#root-configuration)")
-        lines.append("- [Cache Configuration](#cache-configuration)")
-        lines.append("- [Qdrant Configuration](#qdrant-configuration)")
-        lines.append("- [OpenAI Configuration](#openai-configuration)")
-        lines.append("- [FastEmbed Configuration](#fastembed-configuration)")
-        lines.append("- [Firecrawl Configuration](#firecrawl-configuration)")
-        lines.append("- [Crawl4AI Configuration](#crawl4ai-configuration)")
-        lines.append("- [Chunking Configuration](#chunking-configuration)")
-        lines.append("- [Performance Configuration](#performance-configuration)")
-        lines.append("- [Security Configuration](#security-configuration)")
-        lines.append(
-            "- [Documentation Site Configuration](#documentation-site-configuration)"
-        )
-        lines.append("")
+            # Generate markdown lines from the schema
+            md_lines = parser.parse_schema(schema)
+            generated_content = "".join(md_lines)
 
-        # Root configuration
-        lines.append("## Root Configuration")
-        lines.append("")
-        lines.append("The root configuration object contains the following properties:")
-        lines.append("")
-        lines.append("| Property | Type | Default | Description |")
-        lines.append("|----------|------|---------|-------------|")
-        lines.append(
-            "| `environment` | `string` | `development` | Application environment (development, testing, production) |"
-        )
-        lines.append("| `debug` | `boolean` | `false` | Enable debug mode |")
-        lines.append(
-            "| `log_level` | `string` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |"
-        )
-        lines.append(
-            "| `app_name` | `string` | `AI Documentation Vector DB` | Application name |"
-        )
-        lines.append("| `version` | `string` | `0.1.0` | Application version |")
-        lines.append(
-            "| `embedding_provider` | `string` | `fastembed` | Embedding provider (openai, fastembed) |"
-        )
-        lines.append(
-            "| `crawl_provider` | `string` | `crawl4ai` | Crawl provider (crawl4ai, firecrawl) |"
-        )
-        lines.append("")
+            # Add custom header and additional sections
+            header_content = [
+                "# AI Documentation Vector DB Configuration Schema",
+                "",
+                "This document describes the complete configuration schema for the AI Documentation Vector DB system.",
+                "Generated automatically from the Pydantic configuration models.",
+                "",
+                "## Environment Variables",
+                "",
+                "All configuration values can be set via environment variables using the `AI_DOCS__` prefix and double underscore (`__`) for nested values:",
+                "",
+                "```bash",
+                "# Set environment",
+                "export AI_DOCS__ENVIRONMENT=production",
+                "",
+                "# Set nested values",
+                "export AI_DOCS__OPENAI__API_KEY=sk-your-api-key",
+                "export AI_DOCS__CACHE__REDIS_URL=redis://redis.example.com:6379",
+                "```",
+                "",
+                "## Configuration Schema",
+                "",
+            ]
 
-        # Add more sections...
-        lines.append("## Cache Configuration")
-        lines.append("")
-        lines.append("The `cache` object configures the caching system:")
-        lines.append("")
-        lines.append("| Property | Type | Default | Description |")
-        lines.append("|----------|------|---------|-------------|")
-        lines.append(
-            "| `enable_caching` | `boolean` | `true` | Enable caching system |"
-        )
-        lines.append(
-            "| `enable_local_cache` | `boolean` | `true` | Enable local in-memory cache |"
-        )
-        lines.append(
-            "| `enable_redis_cache` | `boolean` | `true` | Enable Redis cache |"
-        )
-        lines.append(
-            "| `redis_url` | `string` | `redis://localhost:6379` | Redis connection URL |"
-        )
-        lines.append(
-            "| `ttl_embeddings` | `integer` | `86400` | Embeddings cache TTL in seconds (24 hours) |"
-        )
-        lines.append(
-            "| `ttl_crawl` | `integer` | `3600` | Crawl cache TTL in seconds (1 hour) |"
-        )
-        lines.append(
-            "| `ttl_queries` | `integer` | `7200` | Query cache TTL in seconds (2 hours) |"
-        )
-        lines.append("")
+            return "\n".join(header_content) + generated_content
 
-        # Environment variables section
-        lines.append("## Environment Variables")
-        lines.append("")
-        lines.append(
-            "All configuration values can be set via environment variables using the `AI_DOCS__` prefix and double underscore (`__`) for nested values:"
-        )
-        lines.append("")
-        lines.append("```bash")
-        lines.append("# Set environment")
-        lines.append("export AI_DOCS__ENVIRONMENT=production")
-        lines.append("")
-        lines.append("# Set nested values")
-        lines.append("export AI_DOCS__OPENAI__API_KEY=sk-your-api-key")
-        lines.append("export AI_DOCS__CACHE__REDIS_URL=redis://redis.example.com:6379")
-        lines.append("```")
-        lines.append("")
+        except Exception:
+            # Fallback to manual generation if jsonschema2md fails
+            return ConfigSchemaGenerator._generate_markdown_fallback(schema)
 
-        return "\n".join(lines)
+    @staticmethod
+    def _generate_markdown_fallback(schema: dict[str, Any]) -> str:
+        """Simple fallback Markdown generation when automated tools fail.
+
+        Args:
+            schema: JSON Schema
+
+        Returns:
+            Basic Markdown documentation as string
+        """
+        return """# AI Documentation Vector DB Configuration Schema
+
+This document describes the complete configuration schema for the AI Documentation Vector DB system.
+Generated using simplified fallback (automated tools unavailable).
+
+## Configuration Properties
+
+The configuration schema includes comprehensive settings for all system components.
+
+## Environment Variables
+
+All configuration values can be set via environment variables using the `AI_DOCS__` prefix:
+
+```bash
+# Set environment
+export AI_DOCS__ENVIRONMENT=production
+
+# Set nested values
+export AI_DOCS__OPENAI__API_KEY=sk-your-api-key
+export AI_DOCS__CACHE__REDIS_URL=redis://redis.example.com:6379
+```
+
+Note: Install 'jsonschema2md' for detailed documentation generation:
+```bash
+pip install jsonschema2md
+```
+"""
 
     @staticmethod
     def save_schema(

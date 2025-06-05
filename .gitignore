@@ -102,3 +102,4 @@ yarn-error.log*
 .reference/
 claude_task.pid
 CLAUDE.md.bak
+repomix-output.*

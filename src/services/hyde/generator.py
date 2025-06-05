@@ -4,7 +4,10 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    pass  # Used only for external API compatibility
 
 from pydantic import BaseModel
 
@@ -64,7 +67,13 @@ class HypotheticalDocumentGenerator(BaseService):
         }
 
     async def initialize(self) -> None:
-        """Initialize the generator."""
+        """Initialize the generator.
+
+        Sets up LLM client connection and validates availability.
+
+        Raises:
+            EmbeddingServiceError: If initialization fails or OpenAI client unavailable
+        """
         if self._initialized:
             return
 
@@ -88,7 +97,11 @@ class HypotheticalDocumentGenerator(BaseService):
             ) from e
 
     async def cleanup(self) -> None:
-        """Cleanup generator resources."""
+        """Cleanup generator resources.
+
+        Releases LLM client and client manager resources.
+        Safe to call multiple times.
+        """
         if self.client_manager:
             await self.client_manager.cleanup()
         self._llm_client = None
@@ -99,20 +112,25 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         query: str,
         domain: str | None = None,
-        context: dict[str, Any] | None = None,
+        context: dict[str, object] | None = None,
     ) -> GenerationResult:
         """Generate hypothetical documents for a query.
 
         Args:
-            query: Search query
+            query: Search query to generate documents for
             domain: Optional domain hint (e.g., "python", "javascript")
-            context: Optional context for better generation
+            context: Optional context dictionary for better generation
 
         Returns:
-            Generated documents with metadata
+            GenerationResult: Contains generated documents, metrics, and metadata:
+                - documents: List of generated hypothetical documents
+                - generation_time: Time taken to generate in seconds
+                - tokens_used: Estimated token count
+                - cost_estimate: Estimated cost in USD
+                - diversity_score: Diversity measure between documents (0-1)
 
         Raises:
-            EmbeddingServiceError: If generation fails
+            EmbeddingServiceError: If generation fails or LLM is unavailable
         """
         self._validate_initialized()
 
@@ -173,9 +191,18 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         query: str,
         domain: str | None = None,
-        context: dict[str, Any] | None = None,
+        context: dict[str, object] | None = None,
     ) -> list[str]:
-        """Build diverse prompts for the query."""
+        """Build diverse prompts for the query.
+
+        Args:
+            query: Search query to build prompts for
+            domain: Optional domain hint for context
+            context: Optional context dictionary (currently unused)
+
+        Returns:
+            list[str]: List of diverse prompts for document generation
+        """
 
         # Determine query type
         query_type = self._classify_query(query)
@@ -397,8 +424,18 @@ class HypotheticalDocumentGenerator(BaseService):
 
         return max(0.0, min(1.0, diversity_score))
 
-    def get_metrics(self) -> dict[str, Any]:
-        """Get generation metrics."""
+    def get_metrics(self) -> dict[str, float | int]:
+        """Get generation metrics.
+
+        Returns:
+            dict[str, float | int]: Metrics including:
+                - generation_count: Total number of generations
+                - total_generation_time: Total time spent generating
+                - avg_generation_time: Average generation time per request
+                - total_tokens_used: Total estimated tokens used
+                - total_cost: Total estimated cost in USD
+                - avg_cost_per_generation: Average cost per generation
+        """
         return {
             "generation_count": self.generation_count,
             "total_generation_time": self.total_generation_time,

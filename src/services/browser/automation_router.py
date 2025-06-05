@@ -121,14 +121,7 @@ class AutomationRouter(BaseService):
         try:
             from .crawl4ai_adapter import Crawl4AIAdapter
 
-            adapter_config = {
-                "max_concurrent": self.config.performance.max_concurrent_requests,
-                "headless": True,
-                "browser": "chromium",
-                "page_timeout": int(self.config.performance.request_timeout * 1000),
-            }
-
-            adapter = Crawl4AIAdapter(adapter_config)
+            adapter = Crawl4AIAdapter(self.config.crawl4ai)
             await adapter.initialize()
             self._adapters["crawl4ai"] = adapter
             self.logger.info("Initialized Crawl4AI adapter")
@@ -140,18 +133,7 @@ class AutomationRouter(BaseService):
         try:
             from .browser_use_adapter import BrowserUseAdapter
 
-            adapter_config = {
-                "llm_provider": "openai",  # Default to OpenAI
-                "model": "gpt-4o-mini",  # Cost-optimized model
-                "headless": True,
-                "timeout": 30000,
-                "max_retries": 3,
-                "max_steps": 20,
-                "disable_security": False,
-                "generate_gif": False,
-            }
-
-            adapter = BrowserUseAdapter(adapter_config)
+            adapter = BrowserUseAdapter(self.config.browser_use)
             await adapter.initialize()
             self._adapters["browser_use"] = adapter
             self.logger.info("Initialized BrowserUse adapter")
@@ -163,13 +145,7 @@ class AutomationRouter(BaseService):
         try:
             from .playwright_adapter import PlaywrightAdapter
 
-            adapter_config = {
-                "browser": "chromium",
-                "headless": True,
-                "viewport": {"width": 1920, "height": 1080},
-            }
-
-            adapter = PlaywrightAdapter(adapter_config)
+            adapter = PlaywrightAdapter(self.config.playwright)
             await adapter.initialize()
             self._adapters["playwright"] = adapter
             self.logger.info("Initialized Playwright adapter")

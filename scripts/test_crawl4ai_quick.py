@@ -13,14 +13,16 @@ logger = logging.getLogger(__name__)
 
 async def test_crawl4ai():
     """Quick test of Crawl4AI functionality."""
-    provider = Crawl4AIProvider(
-        config={
-            "max_concurrent": 1,
-            "rate_limit": 60,
-            "browser": "chromium",
-            "headless": True,
-        }
+    from src.config.models import Crawl4AIConfig
+
+    config = Crawl4AIConfig(
+        max_concurrent_crawls=1,
+        headless=True,
+        browser_type="chromium",
+        page_timeout=30.0,
     )
+
+    provider = Crawl4AIProvider(config=config)
 
     try:
         # Initialize

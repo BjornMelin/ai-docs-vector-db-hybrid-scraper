@@ -53,12 +53,26 @@ This directory contains pre-configured templates for common use cases. Each temp
 - Good starting point for customization
 - Easiest to understand and modify
 
+### 👤 personal-use.json
+
+**Use Case:** Individual developers and personal projects
+
+- Resource-optimized for single-user scenarios
+- 60-80% lower resource usage than production
+- DragonflyDB compression and quantization enabled
+- Ideal for learning, experimentation, and side projects
+- Easy scaling path to production when needed
+
 ## How to Use
 
 1. **Copy a template:**
 
    ```bash
+   # For production deployment
    cp config/templates/production.json config.json
+   
+   # For personal projects (recommended for individuals)
+   cp config/templates/personal-use.json config.json
    ```
 
 2. **Set environment variables for sensitive data:**
@@ -73,7 +87,14 @@ This directory contains pre-configured templates for common use cases. Each temp
    - Override specific values via environment variables
    - Use the config management CLI for validation
 
-4. **Validate your configuration:**
+4. **Start services (for personal-use template):**
+
+   ```bash
+   # Start with personal-use configuration
+   docker-compose -f docker-compose.personal-use.yml --profile personal-use up -d
+   ```
+
+5. **Validate your configuration:**
 
    ```bash
    python -m src.manage_config validate --config-file config.json
@@ -90,6 +111,7 @@ Choose your template based on:
 | Privacy requirements | `local-only.json` | No cloud dependencies |
 | CI/CD pipelines | `testing.json` | Fast, isolated, predictable |
 | Getting started | `minimal.json` | Simple, easy to understand |
+| Personal projects | `personal-use.json` | Resource-optimized, cost-effective |
 
 ## Customization Tips
 

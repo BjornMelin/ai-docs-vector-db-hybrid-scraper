@@ -5,7 +5,8 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 try:
     from FlagEmbedding import FlagReranker
@@ -13,12 +14,16 @@ except ImportError:
     FlagReranker = None
 
 from src.config import UnifiedConfig
+from src.config.loader import ConfigLoader
 from src.config.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
 from .openai_provider import OpenAIEmbeddingProvider
+
+if TYPE_CHECKING:
+    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +73,15 @@ class EmbeddingManager:
     def __init__(
         self,
         config: UnifiedConfig,
+        client_manager: "ClientManager",
         budget_limit: float | None = None,
-        rate_limiter: Any = None,
+        rate_limiter: object = None,
     ):
         """Initialize embedding manager.
 
         Args:
             config: Unified configuration
+            client_manager: ClientManager instance for dependency injection
             budget_limit: Optional daily budget limit in USD
             rate_limiter: Optional RateLimitManager instance
         """
@@ -84,12 +91,12 @@ class EmbeddingManager:
         self.budget_limit = budget_limit
         self.usage_stats = UsageStats()
         self.rate_limiter = rate_limiter
+        self._client_manager = client_manager
 
         # Initialize cache manager if caching is enabled
-        self.cache_manager: Any | None = None
+        self.cache_manager: object | None = None
         if config.cache.enable_caching:
             from ..cache import CacheManager
-            from ..cache import CacheType
 
             self.cache_manager = CacheManager(
                 dragonfly_url=config.cache.dragonfly_url,
@@ -97,11 +104,7 @@ class EmbeddingManager:
                 enable_distributed_cache=config.cache.enable_dragonfly_cache,
                 local_max_size=config.cache.local_max_size,
                 local_max_memory_mb=config.cache.local_max_memory_mb,
-                distributed_ttl_seconds={
-                    CacheType.EMBEDDINGS: config.cache.ttl_embeddings,
-                    CacheType.CRAWL_RESULTS: config.cache.ttl_crawl,
-                    CacheType.QUERY_RESULTS: config.cache.ttl_queries,
-                },
+                distributed_ttl_seconds=config.cache.cache_ttl_seconds,
             )
 
         # Model benchmarks and smart selection config (loaded from configuration)
@@ -126,7 +129,14 @@ class EmbeddingManager:
                 logger.warning(f"Failed to initialize reranker: {e}")
 
     async def initialize(self) -> None:
-        """Initialize available providers."""
+        """Initialize available providers.
+
+        Initializes OpenAI provider if API key is available and FastEmbed provider
+        for local embeddings. At least one provider must initialize successfully.
+
+        Raises:
+            EmbeddingServiceError: If no providers can be initialized
+        """
         if self._initialized:
             return
 
@@ -138,6 +148,7 @@ class EmbeddingManager:
                     model_name=self.config.openai.model,
                     dimensions=self.config.openai.dimensions,
                     rate_limiter=self.rate_limiter,
+                    client_manager=self._client_manager,
                 )
                 await provider.initialize()
                 self.providers["openai"] = provider
@@ -170,7 +181,11 @@ class EmbeddingManager:
         )
 
     async def cleanup(self) -> None:
-        """Cleanup all providers and cache."""
+        """Cleanup all providers and cache.
+
+        Gracefully shuts down all initialized providers and closes cache manager
+        if it was initialized. Errors during cleanup are logged but not raised.
+        """
         for name, provider in self.providers.items():
             try:
                 await provider.cleanup()
@@ -197,8 +212,20 @@ class EmbeddingManager:
     ) -> tuple[EmbeddingProvider, str, float, str]:
         """Select provider and model based on parameters.
 
+        Args:
+            text_analysis: Analysis of text characteristics
+            quality_tier: Optional quality tier preference
+            provider_name: Optional specific provider name
+            max_cost: Optional maximum cost constraint in USD
+            speed_priority: Whether to prioritize speed over quality
+            auto_select: Whether to use smart auto-selection
+
         Returns:
-            Tuple of (provider, model_name, estimated_cost, reasoning)
+            tuple: Contains (provider, model_name, estimated_cost, reasoning)
+                - provider: Selected EmbeddingProvider instance
+                - model_name: Name of the selected model
+                - estimated_cost: Estimated cost in USD
+                - reasoning: Human-readable explanation of selection
         """
         if auto_select and not provider_name:
             # Get smart recommendation
@@ -216,17 +243,24 @@ class EmbeddingManager:
                 f"(${estimated_cost:.4f}) - {reasoning}"
             )
         else:
-            # Use legacy selection logic
-            reasoning = "Legacy selection"
-            estimated_cost = 0.0
-            selected_model = None
+            # Default to smart selection with quality_tier=BALANCED when auto_select=False
+            # This modernizes the legacy fallback behavior
+            if not quality_tier:
+                quality_tier = QualityTier.BALANCED
 
-            # If specific provider requested, estimate cost
-            if provider_name and provider_name in self.providers:
-                provider = self.providers[provider_name]
-                estimated_cost = (
-                    text_analysis.estimated_tokens * provider.cost_per_token
-                )
+            recommendation = self.get_smart_provider_recommendation(
+                text_analysis, quality_tier, max_cost, speed_priority
+            )
+
+            provider_name = recommendation["provider"]
+            selected_model = recommendation["model"]
+            estimated_cost = recommendation["estimated_cost"]
+            reasoning = f"Default smart selection: {recommendation['reasoning']}"
+
+            logger.info(
+                f"Default smart selection: {provider_name}/{selected_model} "
+                f"(${estimated_cost:.4f}) - {reasoning}"
+            )
 
         # Get the actual provider instance
         provider = self._get_provider_instance(provider_name, quality_tier)
@@ -240,7 +274,18 @@ class EmbeddingManager:
     def _get_provider_instance(
         self, provider_name: str | None, quality_tier: QualityTier | None
     ) -> EmbeddingProvider:
-        """Get provider instance based on name or quality tier."""
+        """Get provider instance based on name or quality tier.
+
+        Args:
+            provider_name: Specific provider name ("openai" or "fastembed")
+            quality_tier: Quality tier to map to provider (FAST, BALANCED, BEST)
+
+        Returns:
+            EmbeddingProvider: The selected provider instance
+
+        Raises:
+            EmbeddingServiceError: If requested provider is not available
+        """
         if provider_name:
             provider = self.providers.get(provider_name)
             if not provider:
@@ -265,7 +310,14 @@ class EmbeddingManager:
         return provider
 
     def _validate_budget_constraints(self, estimated_cost: float) -> None:
-        """Check budget constraints and raise error if violated."""
+        """Check budget constraints and raise error if violated.
+
+        Args:
+            estimated_cost: Estimated cost for the embedding request in USD
+
+        Raises:
+            EmbeddingServiceError: If budget constraint would be violated
+        """
         budget_check = self.check_budget_constraints(estimated_cost)
         if not budget_check["within_budget"]:
             raise EmbeddingServiceError(
@@ -284,11 +336,24 @@ class EmbeddingManager:
         texts: list[str],
         quality_tier: QualityTier | None,
         start_time: float,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Calculate metrics and update usage statistics.
 
+        Args:
+            provider: EmbeddingProvider instance used for generation
+            provider_name: Optional provider name override
+            selected_model: Model name that was used
+            texts: List of texts that were embedded
+            quality_tier: Quality tier used for selection
+            start_time: Timestamp when embedding started
+
         Returns:
-            Dictionary with calculated metrics
+            dict[str, object]: Dictionary with calculated metrics:
+                - latency_ms: Time taken in milliseconds
+                - tokens: Number of tokens processed
+                - cost: Actual cost in USD
+                - tier_name: Name of quality tier used
+                - provider_key: Normalized provider name
         """
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
@@ -328,7 +393,7 @@ class EmbeddingManager:
         speed_priority: bool = False,
         auto_select: bool = True,
         generate_sparse: bool = False,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Generate embeddings with smart provider selection.
 
         Args:
@@ -369,20 +434,15 @@ class EmbeddingManager:
             # For now, only cache single text embeddings (V2 will handle batches)
             text = texts[0]
 
-            # Try to get from cache using embedding cache directly
-            if (
-                hasattr(self.cache_manager, "_embedding_cache")
-                and self.cache_manager._embedding_cache
-            ):
-                cached_embedding = (
-                    await self.cache_manager._embedding_cache.get_embedding(
-                        text=text,
-                        provider=provider_name or self.config.embedding_provider.value,
-                        model=self.config.openai.model
-                        if provider_name == "openai"
-                        else self.config.fastembed.model,
-                        dimensions=self.config.openai.dimensions,
-                    )
+            # Try to get from cache using public cache API
+            if hasattr(self.cache_manager, "get_embedding"):
+                cached_embedding = await self.cache_manager.get_embedding(
+                    text=text,
+                    provider=provider_name or self.config.embedding_provider.value,
+                    model=self.config.openai.model
+                    if provider_name == "openai"
+                    else self.config.fastembed.model,
+                    dimensions=self.config.openai.dimensions,
                 )
 
                 if cached_embedding is not None:
@@ -447,11 +507,8 @@ class EmbeddingManager:
             # Cache the embedding if enabled and single text
             if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
                 try:
-                    if (
-                        hasattr(self.cache_manager, "_embedding_cache")
-                        and self.cache_manager._embedding_cache
-                    ):
-                        await self.cache_manager._embedding_cache.set_embedding(
+                    if hasattr(self.cache_manager, "set_embedding"):
+                        await self.cache_manager.set_embedding(
                             text=texts[0],
                             model=selected_model,
                             embedding=embeddings[0],
@@ -485,8 +542,8 @@ class EmbeddingManager:
             raise
 
     async def rerank_results(
-        self, query: str, results: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+        self, query: str, results: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
         """Rerank search results using BGE reranker.
 
         Args:
@@ -529,19 +586,53 @@ class EmbeddingManager:
             # Return original results on failure
             return results
 
+    def load_custom_benchmarks(self, benchmark_file: Path | str) -> None:
+        """Load custom benchmark configuration from file.
+
+        Dynamically loads benchmark configuration from JSON files like custom-benchmarks.json,
+        replacing the current benchmarks and smart selection config.
+
+        Args:
+            benchmark_file: Path to benchmark configuration JSON file
+
+        Raises:
+            FileNotFoundError: If benchmark file doesn't exist
+            json.JSONDecodeError: If file contains invalid JSON
+            pydantic.ValidationError: If data doesn't match expected schema
+        """
+        from pathlib import Path
+
+        # Load and validate benchmark configuration
+        benchmark_config = ConfigLoader.load_benchmark_config(benchmark_file)
+
+        # Update manager's benchmarks and smart selection config
+        self._benchmarks = benchmark_config.embedding.model_benchmarks
+        self._smart_config = benchmark_config.embedding.smart_selection
+
+        logger.info(
+            f"Loaded custom benchmarks from {Path(benchmark_file).name} "
+            f"with {len(self._benchmarks)} models"
+        )
+
     def estimate_cost(
         self,
         texts: list[str],
         provider_name: str | None = None,
-    ) -> dict[str, float]:
+    ) -> dict[str, dict[str, float]]:
         """Estimate embedding generation cost.
 
         Args:
-            texts: List of texts
-            provider_name: Optional specific provider
+            texts: List of texts to estimate cost for
+            provider_name: Optional specific provider to estimate
 
         Returns:
-            Cost estimation details
+            dict[str, dict[str, float]]: Cost estimation per provider:
+                - estimated_tokens: Number of tokens estimated
+                - cost_per_token: Cost per token in USD
+                - total_cost: Total estimated cost in USD
+
+        Raises:
+            EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized:
             raise EmbeddingServiceError("Manager not initialized")
@@ -568,11 +659,15 @@ class EmbeddingManager:
 
         return costs
 
-    def get_provider_info(self) -> dict[str, dict]:
+    def get_provider_info(self) -> dict[str, dict[str, object]]:
         """Get information about available providers.
 
         Returns:
-            Provider information
+            dict[str, dict[str, object]]: Provider information with:
+                - model: Model name
+                - dimensions: Embedding dimensions
+                - cost_per_token: Cost per token in USD
+                - max_tokens: Maximum tokens per request
         """
         info = {}
         for name, provider in self.providers.items():
@@ -648,10 +743,16 @@ class EmbeddingManager:
         """Analyze text characteristics for smart model selection.
 
         Args:
-            texts: List of texts to analyze
+            texts: List of texts to analyze for characteristics
 
         Returns:
-            TextAnalysis with characteristics
+            TextAnalysis: Analysis results containing:
+                - total_length: Combined length of all texts
+                - avg_length: Average text length
+                - complexity_score: Vocabulary diversity score (0-1)
+                - estimated_tokens: Estimated token count
+                - text_type: Categorization ("code", "docs", "short", "long")
+                - requires_high_quality: Whether high quality embedding is recommended
         """
         if not texts:
             return TextAnalysis(
@@ -732,17 +833,27 @@ class EmbeddingManager:
         quality_tier: QualityTier | None = None,
         max_cost: float | None = None,
         speed_priority: bool = False,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Get smart provider recommendation based on text analysis.
 
         Args:
-            text_analysis: Analysis of text characteristics
-            quality_tier: Optional quality tier override
-            max_cost: Optional maximum cost constraint
+            text_analysis: Analysis of text characteristics including length,
+                complexity and text type
+            quality_tier: Optional quality tier override (FAST, BALANCED, BEST)
+            max_cost: Optional maximum cost constraint in USD
             speed_priority: Whether to prioritize speed over quality
 
         Returns:
-            Recommendation with provider, model, reasoning
+            dict[str, object]: Recommendation with:
+                - provider: Provider name ("openai" or "fastembed")
+                - model: Specific model name
+                - estimated_cost: Cost estimate in USD
+                - score: Model score (0-100)
+                - reasoning: Human-readable explanation
+                - alternatives: Top 2 alternative options
+
+        Raises:
+            EmbeddingServiceError: If no models meet constraints or manager not initialized
         """
         if not self._initialized:
             raise EmbeddingServiceError("Manager not initialized")
@@ -816,13 +927,18 @@ class EmbeddingManager:
         """Calculate score for model selection.
 
         Args:
-            benchmark: Model benchmark data
-            text_analysis: Text analysis results
-            quality_tier: Quality tier preference
-            speed_priority: Speed priority flag
+            benchmark: Model benchmark data with quality, speed, and cost metrics
+            text_analysis: Text analysis results containing type and complexity
+            quality_tier: Quality tier preference (FAST, BALANCED, BEST)
+            speed_priority: Speed priority flag to weight speed higher
 
         Returns:
-            Score (0-100, higher is better)
+            float: Score between 0-100, where higher is better. Score combines:
+                - Base quality score with configured weight
+                - Speed score based on latency thresholds
+                - Cost efficiency score (local models get max score)
+                - Quality tier bonuses/penalties
+                - Text type specific bonuses
         """
         score = 0.0
 
@@ -890,7 +1006,7 @@ class EmbeddingManager:
 
     def _generate_selection_reasoning(
         self,
-        selection: dict[str, Any],
+        selection: dict[str, object],
         text_analysis: TextAnalysis,
         quality_tier: QualityTier | None,
         speed_priority: bool,
@@ -898,13 +1014,13 @@ class EmbeddingManager:
         """Generate human-readable reasoning for selection.
 
         Args:
-            selection: Selected model info
-            text_analysis: Text analysis results
-            quality_tier: Quality tier preference
+            selection: Selected model info dictionary containing benchmark data
+            text_analysis: Text analysis results with complexity and type
+            quality_tier: Quality tier preference if specified
             speed_priority: Speed priority flag
 
         Returns:
-            Reasoning string
+            str: Human-readable reasoning explaining the selection
         """
         benchmark = selection["benchmark"]
         reasons = []
@@ -931,14 +1047,19 @@ class EmbeddingManager:
 
         return "; ".join(reasons)
 
-    def check_budget_constraints(self, estimated_cost: float) -> dict[str, Any]:
+    def check_budget_constraints(self, estimated_cost: float) -> dict[str, object]:
         """Check if request is within budget constraints.
 
         Args:
-            estimated_cost: Estimated cost for the request
+            estimated_cost: Estimated cost for the request in USD
 
         Returns:
-            Budget check result with warnings
+            dict[str, object]: Budget check result with:
+                - within_budget: Whether request is within budget
+                - warnings: List of warning messages
+                - daily_usage: Current daily cost
+                - estimated_total: Daily usage plus estimated cost
+                - budget_limit: Daily budget limit if set
         """
         result = {
             "within_budget": True,
@@ -977,11 +1098,15 @@ class EmbeddingManager:
         """Update usage statistics.
 
         Args:
-            provider: Provider name
-            model: Model name
+            provider: Provider name ("openai" or "fastembed")
+            model: Model name that was used
             tokens: Number of tokens processed
-            cost: Cost incurred
-            tier: Quality tier used
+            cost: Cost incurred in USD
+            tier: Quality tier used ("fast", "balanced", "best", or "default")
+
+        Note:
+            Daily cost is reset when a new day is detected based on the
+            system date. All other statistics are cumulative.
         """
         self.usage_stats.total_requests += 1
         self.usage_stats.total_tokens += tokens
@@ -996,11 +1121,15 @@ class EmbeddingManager:
             self.usage_stats.daily_cost = cost
             self.usage_stats.last_reset_date = today
 
-    def get_usage_report(self) -> dict[str, Any]:
+    def get_usage_report(self) -> dict[str, object]:
         """Get comprehensive usage report.
 
         Returns:
-            Usage statistics and insights
+            dict[str, object]: Usage statistics with:
+                - summary: Total requests, tokens, costs, and averages
+                - by_tier: Request counts by quality tier
+                - by_provider: Request counts by provider
+                - budget: Daily limit, usage, and remaining budget
         """
         total_cost = self.usage_stats.total_cost
         total_requests = self.usage_stats.total_requests

@@ -173,7 +173,7 @@ class PayloadIndexingBenchmark:
                     # Timestamps
                     "created_at": 1640995200 + (i * 3600),  # Spread over time
                     "last_updated": 1640995200 + (i * 3600),
-                    "scraped_at": 1640995200 + (i * 3600),
+                    "crawl_timestamp": 1640995200 + (i * 3600),
                 },
             }
             points.append(point)

@@ -5,6 +5,7 @@ import logging
 import time
 from typing import Any
 
+from ...config.models import Crawl4AIConfig
 from ..base import BaseService
 from ..crawling.crawl4ai_provider import Crawl4AIProvider
 from ..errors import CrawlServiceError
@@ -15,28 +16,19 @@ logger = logging.getLogger(__name__)
 class Crawl4AIAdapter(BaseService):
     """Adapter for Crawl4AI to work with automation router."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: Crawl4AIConfig):
         """Initialize Crawl4AI adapter.
 
         Args:
-            config: Adapter configuration
+            config: Crawl4AI configuration model
         """
         super().__init__(config)
+        self.config = config
         self.logger = logger
 
-        # Create Crawl4AI provider with crawl4ai-specific config
-        crawl4ai_config = getattr(config, "crawl4ai", {})
-        if hasattr(crawl4ai_config, "get"):
-            # If it's a mock or dict-like object
-            provider_config = crawl4ai_config
-        else:
-            # If it's a direct dict
-            provider_config = (
-                crawl4ai_config if isinstance(crawl4ai_config, dict) else {}
-            )
-
+        # Pass Pydantic config directly to the provider
         self._provider = Crawl4AIProvider(
-            config=provider_config,
+            config=config,
             rate_limiter=None,  # Rate limiting handled by router
         )
         self._initialized = False
@@ -60,10 +52,11 @@ class Crawl4AIAdapter(BaseService):
         if self._provider:
             try:
                 await self._provider.cleanup()
-                self._initialized = False
                 self.logger.info("Crawl4AI adapter cleaned up")
             except Exception as e:
                 self.logger.error(f"Error cleaning up Crawl4AI adapter: {e}")
+            finally:
+                self._initialized = False
 
     async def scrape(
         self,

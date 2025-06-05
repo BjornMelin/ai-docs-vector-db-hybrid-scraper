@@ -7,16 +7,11 @@ best practices with lazy initialization and modular tool registration.
 
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
-
-# Setup import paths
-sys.path.insert(0, str(Path(__file__).parent))
 
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
-from src.mcp.tool_registry import register_all_tools
+from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
 
 # Initialize logging
@@ -134,9 +129,12 @@ async def lifespan():
         # Validate configuration first
         validate_configuration()
 
-        # Initialize client manager
+        # Initialize client manager with unified config
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
-        lifespan.client_manager = ClientManager.from_unified_config()
+        from src.config import get_config
+
+        config = get_config()
+        lifespan.client_manager = ClientManager(config)
         await lifespan.client_manager.initialize()
 
         # Register all tools
@@ -177,11 +175,6 @@ if __name__ == "__main__":
             transport="streamable-http",
             host=host,
             port=port,
-            # Additional streaming optimizations
-            response_buffer_size=os.getenv("FASTMCP_BUFFER_SIZE", "8192"),
-            max_response_size=os.getenv(
-                "FASTMCP_MAX_RESPONSE_SIZE", "10485760"
-            ),  # 10MB
         )
     elif transport == "stdio":
         # Fallback to stdio for Claude Desktop compatibility

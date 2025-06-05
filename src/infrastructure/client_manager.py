@@ -13,17 +13,22 @@ from typing import Optional
 import redis.asyncio as redis
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
 from qdrant_client import AsyncQdrantClient
+from src.config import UnifiedConfig
 from src.services.errors import APIError
 
 logger = logging.getLogger(__name__)
 
 
 class ClientState(Enum):
-    """Client connection state."""
+    """Client connection state enumeration.
+
+    Values:
+        UNINITIALIZED: Client not yet initialized or connected
+        HEALTHY: Client is connected and operating normally
+        DEGRADED: Client is experiencing issues but partially functional
+        FAILED: Client has failed and is not operational
+    """
 
     UNINITIALIZED = "uninitialized"
     HEALTHY = "healthy"
@@ -33,62 +38,19 @@ class ClientState(Enum):
 
 @dataclass
 class ClientHealth:
-    """Client health status."""
+    """Client health status tracking.
+
+    Attributes:
+        state: Current connection state of the client
+        last_check: Unix timestamp of last health check
+        last_error: Description of the last error encountered, if any
+        consecutive_failures: Number of consecutive failures for this client
+    """
 
     state: ClientState
     last_check: float
     last_error: str | None = None
     consecutive_failures: int = 0
-
-
-class ClientManagerConfig(BaseModel):
-    """Configuration for client manager."""
-
-    # Qdrant settings
-    qdrant_url: str = Field(default="http://localhost:6333")
-    qdrant_api_key: str | None = None
-    qdrant_timeout: float = Field(default=30.0, gt=0)
-    qdrant_prefer_grpc: bool = Field(default=False)
-
-    # OpenAI settings
-    openai_api_key: str | None = None
-    openai_timeout: float = Field(default=30.0, gt=0)
-    openai_max_retries: int = Field(default=3, ge=0, le=10)
-
-    # Firecrawl settings
-    firecrawl_api_key: str | None = None
-    firecrawl_timeout: float = Field(default=60.0, gt=0)
-
-    # Redis settings
-    redis_url: str = Field(default="redis://localhost:6379")
-    redis_max_connections: int = Field(default=10, gt=0)
-    redis_decode_responses: bool = Field(default=True)
-
-    # Health check settings
-    health_check_interval: float = Field(default=30.0, gt=0)
-    health_check_timeout: float = Field(default=5.0, gt=0)
-    max_consecutive_failures: int = Field(default=3, gt=0)
-
-    # Circuit breaker settings
-    circuit_breaker_failure_threshold: int = Field(default=5, gt=0)
-    circuit_breaker_recovery_timeout: float = Field(default=60.0, gt=0)
-    circuit_breaker_half_open_requests: int = Field(default=1, gt=0)
-
-    @field_validator("qdrant_url")
-    @classmethod
-    def validate_qdrant_url(cls, v):
-        """Validate Qdrant URL format."""
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("Qdrant URL must start with http:// or https://")
-        return v
-
-    @field_validator("redis_url")
-    @classmethod
-    def validate_redis_url(cls, v):
-        """Validate Redis URL format."""
-        if not v.startswith(("redis://", "rediss://")):
-            raise ValueError("Redis URL must start with redis:// or rediss://")
-        return v
 
 
 class CircuitBreaker:
@@ -119,7 +81,14 @@ class CircuitBreaker:
 
     @property
     def state(self) -> ClientState:
-        """Get current circuit state."""
+        """Get current circuit state.
+
+        Returns:
+            ClientState: Current state of the circuit breaker:
+                - HEALTHY: Normal operation
+                - DEGRADED: Half-open state, testing recovery
+                - FAILED: Circuit open, rejecting requests
+        """
         if (
             self._state == ClientState.FAILED
             and self._last_failure_time
@@ -129,7 +98,20 @@ class CircuitBreaker:
         return self._state
 
     async def call(self, func, *args, **kwargs):
-        """Execute function with circuit breaker protection."""
+        """Execute function with circuit breaker protection.
+
+        Args:
+            func: Async function to execute
+            *args: Positional arguments to pass to func
+            **kwargs: Keyword arguments to pass to func
+
+        Returns:
+            Any: Result from the executed function
+
+        Raises:
+            APIError: If circuit breaker is open or half-open test fails
+            Exception: Any exception raised by the executed function
+        """
         async with self._lock:
             current_state = self.state
 
@@ -166,12 +148,12 @@ class CircuitBreaker:
 
 
 class ClientManager:
-    """Centralized API client management with singleton pattern."""
+    """Centralized API client management with singleton pattern and health checks."""
 
     _instance: Optional["ClientManager"] = None
     _lock = asyncio.Lock()
 
-    def __new__(cls, config: ClientManagerConfig | None = None):
+    def __new__(cls, config: UnifiedConfig | None = None):
         """Ensure singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -184,34 +166,17 @@ class ClientManager:
         This factory method loads configuration from environment variables
         and creates a properly configured ClientManager instance.
         """
-        import os
-
         from src.config.loader import ConfigLoader
 
         # Load the unified configuration
         unified_config = ConfigLoader.load_config()
+        return cls(unified_config)
 
-        config = ClientManagerConfig(
-            # Qdrant settings
-            qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            # OpenAI settings
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            # Firecrawl settings
-            firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY"),
-            # Redis settings
-            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
-        )
-
-        instance = cls(config)
-        instance.unified_config = unified_config
-        return instance
-
-    def __init__(self, config: ClientManagerConfig | None = None):
+    def __init__(self, config: UnifiedConfig | None = None):
         """Initialize client manager.
 
         Args:
-            config: Client manager configuration
+            config: Unified configuration instance
         """
         # Skip re-initialization if already initialized
         if hasattr(self, "_initialized") and self._initialized:
@@ -222,14 +187,31 @@ class ClientManager:
                 )
             return
 
-        self.config = config or ClientManagerConfig()
-        self.unified_config = None  # Will be set by from_unified_config
+        if config is None:
+            from src.config import get_config
+
+            config = get_config()
+
+        self.config = config
         self._clients: dict[str, Any] = {}
         self._locks: dict[str, asyncio.Lock] = {}
         self._health: dict[str, ClientHealth] = {}
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._initialized = False
         self._health_check_task: asyncio.Task | None = None
+
+        # Service instances (lazy-initialized)
+        self._qdrant_service: Any = None
+        self._embedding_manager: Any = None
+        self._cache_manager: Any = None
+        self._crawl_manager: Any = None
+        self._hyde_engine: Any = None
+        self._project_storage: Any = None
+        self._blue_green_deployment: Any = None
+        self._ab_testing_manager: Any = None
+        self._canary_deployment: Any = None
+        self._browser_automation_router: Any = None
+        self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
         """Initialize client manager and start health checks."""
@@ -249,6 +231,30 @@ class ClientManager:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
 
+        # Clean up service instances
+        service_names = [
+            "_qdrant_service",
+            "_embedding_manager",
+            "_cache_manager",
+            "_crawl_manager",
+            "_hyde_engine",
+            "_project_storage",
+            "_alias_manager",
+            "_blue_green",
+            "_ab_testing",
+            "_canary",
+        ]
+        for service_name in service_names:
+            if hasattr(self, service_name):
+                service = getattr(self, service_name)
+                if service and hasattr(service, "cleanup"):
+                    try:
+                        await service.cleanup()
+                        logger.info(f"Cleaned up {service_name}")
+                    except Exception as e:
+                        logger.error(f"Error cleaning up {service_name}: {e}")
+                setattr(self, service_name, None)
+
         # Close all clients
         for name, client in self._clients.items():
             try:
@@ -263,6 +269,18 @@ class ClientManager:
         self._clients.clear()
         self._health.clear()
         self._circuit_breakers.clear()
+
+        # Reset service instances
+        self._qdrant_service = None
+        self._embedding_manager = None
+        self._cache_manager = None
+        self._crawl_manager = None
+        self._hyde_engine = None
+        self._blue_green_deployment = None
+        self._ab_testing_manager = None
+        self._canary_deployment = None
+        self._browser_automation_router = None
+
         self._initialized = False
         logger.info("ClientManager cleaned up")
 
@@ -290,7 +308,7 @@ class ClientManager:
         Raises:
             APIError: If client is unhealthy
         """
-        if not self.config.openai_api_key:
+        if not self.config.openai.api_key:
             return None
 
         return await self._get_or_create_client(
@@ -308,7 +326,7 @@ class ClientManager:
         Raises:
             APIError: If client is unhealthy
         """
-        if not self.config.firecrawl_api_key:
+        if not self.config.firecrawl.api_key:
             return None
 
         return await self._get_or_create_client(
@@ -331,6 +349,243 @@ class ClientManager:
             self._create_redis_client,
             self._check_redis_health,
         )
+
+    # Service getter methods
+    async def get_qdrant_service(self):
+        """Get or create QdrantService instance."""
+        if self._qdrant_service is None:
+            if "qdrant_service" not in self._service_locks:
+                self._service_locks["qdrant_service"] = asyncio.Lock()
+
+            async with self._service_locks["qdrant_service"]:
+                if self._qdrant_service is None:
+                    from src.services.vector_db.service import QdrantService
+
+                    self._qdrant_service = QdrantService(
+                        self.config, client_manager=self
+                    )
+                    await self._qdrant_service.initialize()
+                    logger.info("Initialized QdrantService")
+
+        return self._qdrant_service
+
+    async def get_embedding_manager(self):
+        """Get or create EmbeddingManager instance."""
+        if self._embedding_manager is None:
+            if "embedding_manager" not in self._service_locks:
+                self._service_locks["embedding_manager"] = asyncio.Lock()
+
+            async with self._service_locks["embedding_manager"]:
+                if self._embedding_manager is None:
+                    from src.services.embeddings.manager import EmbeddingManager
+
+                    # Pass ClientManager to EmbeddingManager
+                    self._embedding_manager = EmbeddingManager(
+                        config=self.config,
+                        client_manager=self,
+                    )
+                    await self._embedding_manager.initialize()
+                    logger.info("Initialized EmbeddingManager")
+
+        return self._embedding_manager
+
+    async def get_cache_manager(self):
+        """Get or create CacheManager instance."""
+        if self._cache_manager is None:
+            if "cache_manager" not in self._service_locks:
+                self._service_locks["cache_manager"] = asyncio.Lock()
+
+            async with self._service_locks["cache_manager"]:
+                if self._cache_manager is None:
+                    from src.services.cache.manager import CacheManager
+
+                    self._cache_manager = CacheManager(
+                        dragonfly_url=self.config.cache.dragonfly_url,
+                        enable_local_cache=self.config.cache.enable_local_cache,
+                        enable_distributed_cache=self.config.cache.enable_dragonfly_cache,
+                        local_max_size=self.config.cache.local_max_size,
+                        local_max_memory_mb=self.config.cache.local_max_memory_mb,
+                        distributed_ttl_seconds={
+                            cache_type.value: ttl
+                            for cache_type, ttl in self.config.cache.cache_ttl_seconds.items()
+                        },
+                    )
+                    await self._cache_manager.initialize()
+                    logger.info("Initialized CacheManager")
+
+        return self._cache_manager
+
+    async def get_crawl_manager(self):
+        """Get or create CrawlManager instance."""
+        if self._crawl_manager is None:
+            if "crawl_manager" not in self._service_locks:
+                self._service_locks["crawl_manager"] = asyncio.Lock()
+
+            async with self._service_locks["crawl_manager"]:
+                if self._crawl_manager is None:
+                    from src.services.crawling.manager import CrawlManager
+
+                    # CrawlManager expects rate_limiter but we'll pass None for now
+                    self._crawl_manager = CrawlManager(
+                        config=self.config,
+                        rate_limiter=None,
+                    )
+                    await self._crawl_manager.initialize()
+                    logger.info("Initialized CrawlManager")
+
+        return self._crawl_manager
+
+    async def get_hyde_engine(self):
+        """Get or create HyDEEngine instance."""
+        if self._hyde_engine is None:
+            if "hyde_engine" not in self._service_locks:
+                self._service_locks["hyde_engine"] = asyncio.Lock()
+
+            async with self._service_locks["hyde_engine"]:
+                if self._hyde_engine is None:
+                    from src.services.hyde.config import HyDEConfig
+                    from src.services.hyde.config import HyDEMetricsConfig
+                    from src.services.hyde.config import HyDEPromptConfig
+                    from src.services.hyde.engine import HyDEQueryEngine
+
+                    # Get dependencies
+                    embedding_manager = await self.get_embedding_manager()
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+                    openai_client = await self.get_openai_client()
+
+                    # Create HyDE configurations from UnifiedConfig
+                    hyde_config = HyDEConfig.from_unified_config(self.config.hyde)
+                    prompt_config = HyDEPromptConfig()
+                    metrics_config = HyDEMetricsConfig()
+
+                    self._hyde_engine = HyDEQueryEngine(
+                        config=hyde_config,
+                        prompt_config=prompt_config,
+                        metrics_config=metrics_config,
+                        embedding_manager=embedding_manager,
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                        llm_client=openai_client,
+                    )
+                    await self._hyde_engine.initialize()
+                    logger.info("Initialized HyDEQueryEngine")
+
+        return self._hyde_engine
+
+    async def get_project_storage(self):
+        """Get or create ProjectStorage instance."""
+        if self._project_storage is None:
+            if "project_storage" not in self._service_locks:
+                self._service_locks["project_storage"] = asyncio.Lock()
+
+            async with self._service_locks["project_storage"]:
+                if self._project_storage is None:
+                    from src.services.core.project_storage import ProjectStorage
+
+                    self._project_storage = ProjectStorage(
+                        data_dir=self.config.data_dir
+                    )
+                    await self._project_storage.initialize()
+                    logger.info("Initialized ProjectStorage")
+
+        return self._project_storage
+
+    async def get_blue_green_deployment(self):
+        """Get or create BlueGreenDeployment instance."""
+        if self._blue_green_deployment is None:
+            if "blue_green_deployment" not in self._service_locks:
+                self._service_locks["blue_green_deployment"] = asyncio.Lock()
+
+            async with self._service_locks["blue_green_deployment"]:
+                if self._blue_green_deployment is None:
+                    from src.services.deployment.blue_green import BlueGreenDeployment
+
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+
+                    self._blue_green_deployment = BlueGreenDeployment(
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                    )
+                    logger.info("Initialized BlueGreenDeployment")
+
+        return self._blue_green_deployment
+
+    async def get_ab_testing_manager(self):
+        """Get or create ABTestingManager instance."""
+        if self._ab_testing_manager is None:
+            if "ab_testing_manager" not in self._service_locks:
+                self._service_locks["ab_testing_manager"] = asyncio.Lock()
+
+            async with self._service_locks["ab_testing_manager"]:
+                if self._ab_testing_manager is None:
+                    from src.services.deployment.ab_testing import ABTestingManager
+
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+
+                    self._ab_testing_manager = ABTestingManager(
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                    )
+                    logger.info("Initialized ABTestingManager")
+
+        return self._ab_testing_manager
+
+    async def get_canary_deployment(self):
+        """Get or create CanaryDeployment instance."""
+        if self._canary_deployment is None:
+            if "canary_deployment" not in self._service_locks:
+                self._service_locks["canary_deployment"] = asyncio.Lock()
+
+            async with self._service_locks["canary_deployment"]:
+                if self._canary_deployment is None:
+                    from src.services.core.qdrant_alias_manager import (
+                        QdrantAliasManager,
+                    )
+                    from src.services.deployment.canary import CanaryDeployment
+
+                    qdrant_service = await self.get_qdrant_service()
+
+                    # Initialize alias manager
+                    alias_manager = QdrantAliasManager(self.config, qdrant_service)
+                    await alias_manager.initialize()
+
+                    # Get task queue manager (required for canary deployments)
+                    task_queue_manager = await self.get_task_queue_manager()
+
+                    self._canary_deployment = CanaryDeployment(
+                        config=self.config,
+                        alias_manager=alias_manager,
+                        task_queue_manager=task_queue_manager,
+                        qdrant_service=qdrant_service,
+                        client_manager=self,
+                    )
+                    await self._canary_deployment.initialize()
+                    logger.info("Initialized CanaryDeployment")
+
+        return self._canary_deployment
+
+    async def get_browser_automation_router(self):
+        """Get or create BrowserAutomationRouter instance."""
+        if self._browser_automation_router is None:
+            if "browser_automation_router" not in self._service_locks:
+                self._service_locks["browser_automation_router"] = asyncio.Lock()
+
+            async with self._service_locks["browser_automation_router"]:
+                if self._browser_automation_router is None:
+                    from src.services.browser.automation_router import (
+                        BrowserAutomationRouter,
+                    )
+
+                    self._browser_automation_router = BrowserAutomationRouter(
+                        config=self.config,
+                    )
+                    await self._browser_automation_router.initialize()
+                    logger.info("Initialized BrowserAutomationRouter")
+
+        return self._browser_automation_router
 
     async def _get_or_create_client(
         self,
@@ -368,10 +623,27 @@ class ClientManager:
                     try:
                         # Create circuit breaker if not exists
                         if name not in self._circuit_breakers:
+                            # Use configuration values for circuit breaker settings
+                            failure_threshold = getattr(
+                                self.config.performance,
+                                "circuit_breaker_failure_threshold",
+                                5,
+                            )
+                            recovery_timeout = getattr(
+                                self.config.performance,
+                                "circuit_breaker_recovery_timeout",
+                                60.0,
+                            )
+                            half_open_requests = getattr(
+                                self.config.performance,
+                                "circuit_breaker_half_open_requests",
+                                1,
+                            )
+
                             self._circuit_breakers[name] = CircuitBreaker(
-                                failure_threshold=self.config.circuit_breaker_failure_threshold,
-                                recovery_timeout=self.config.circuit_breaker_recovery_timeout,
-                                half_open_requests=self.config.circuit_breaker_half_open_requests,
+                                failure_threshold=failure_threshold,
+                                recovery_timeout=recovery_timeout,
+                                half_open_requests=half_open_requests,
                             )
 
                         # Create client with circuit breaker
@@ -394,9 +666,12 @@ class ClientManager:
         # Check health status
         if name in self._health:
             health = self._health[name]
+            max_failures = getattr(
+                self.config.performance, "max_consecutive_failures", 3
+            )
             if (
                 health.state == ClientState.FAILED
-                and health.consecutive_failures >= self.config.max_consecutive_failures
+                and health.consecutive_failures >= max_failures
             ):
                 raise APIError(f"{name} client is unhealthy: {health.last_error}")
 
@@ -405,10 +680,10 @@ class ClientManager:
     async def _create_qdrant_client(self) -> AsyncQdrantClient:
         """Create Qdrant client instance."""
         client = AsyncQdrantClient(
-            url=self.config.qdrant_url,
-            api_key=self.config.qdrant_api_key,
-            timeout=self.config.qdrant_timeout,
-            prefer_grpc=self.config.qdrant_prefer_grpc,
+            url=self.config.qdrant.url,
+            api_key=self.config.qdrant.api_key,
+            timeout=self.config.qdrant.timeout,
+            prefer_grpc=self.config.qdrant.prefer_grpc,
         )
 
         # Validate connection
@@ -418,23 +693,24 @@ class ClientManager:
     async def _create_openai_client(self) -> AsyncOpenAI:
         """Create OpenAI client instance."""
         return AsyncOpenAI(
-            api_key=self.config.openai_api_key,
-            timeout=self.config.openai_timeout,
-            max_retries=self.config.openai_max_retries,
+            api_key=self.config.openai.api_key,
+            timeout=self.config.openai.max_tokens_per_minute
+            / 1000,  # Convert to seconds
+            max_retries=self.config.performance.max_retries,
         )
 
     async def _create_firecrawl_client(self) -> AsyncFirecrawlApp:
         """Create Firecrawl client instance."""
         return AsyncFirecrawlApp(
-            api_key=self.config.firecrawl_api_key,
+            api_key=self.config.firecrawl.api_key,
         )
 
     async def _create_redis_client(self) -> redis.Redis:
         """Create Redis client with connection pooling."""
         return redis.from_url(
-            self.config.redis_url,
-            max_connections=self.config.redis_max_connections,
-            decode_responses=self.config.redis_decode_responses,
+            self.config.cache.dragonfly_url,
+            max_connections=self.config.cache.redis_pool_size,
+            decode_responses=True,  # From cache config
         )
 
     async def _check_qdrant_health(self) -> bool:
@@ -509,9 +785,12 @@ class ClientManager:
         """Run a single health check and update client status."""
         try:
             # Run health check with timeout
+            health_timeout = getattr(
+                self.config.performance, "health_check_timeout", 5.0
+            )
             is_healthy = await asyncio.wait_for(
                 check_func(),
-                timeout=self.config.health_check_timeout,
+                timeout=health_timeout,
             )
 
             # Update health status
@@ -536,10 +815,12 @@ class ClientManager:
                 health.last_error = None
             else:
                 health.consecutive_failures += 1
+                max_failures = getattr(
+                    self.config.performance, "max_consecutive_failures", 3
+                )
                 health.state = (
                     ClientState.DEGRADED
-                    if health.consecutive_failures
-                    < self.config.max_consecutive_failures
+                    if health.consecutive_failures < max_failures
                     else ClientState.FAILED
                 )
                 health.last_error = "Health check returned false"
@@ -590,7 +871,10 @@ class ClientManager:
 
         while True:
             try:
-                await asyncio.sleep(self.config.health_check_interval)
+                health_interval = getattr(
+                    self.config.performance, "health_check_interval", 30.0
+                )
+                await asyncio.sleep(health_interval)
 
                 # Run health checks in parallel for better performance
                 active_clients = [
@@ -635,9 +919,12 @@ class ClientManager:
             health.last_check = time.time()
             health.last_error = error
             health.consecutive_failures += 1
+            max_failures = getattr(
+                self.config.performance, "max_consecutive_failures", 3
+            )
             health.state = (
                 ClientState.DEGRADED
-                if health.consecutive_failures < self.config.max_consecutive_failures
+                if health.consecutive_failures < max_failures
                 else ClientState.FAILED
             )
 

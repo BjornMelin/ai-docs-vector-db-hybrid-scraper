@@ -2,79 +2,15 @@
 
 import json
 import os
-import tempfile
-from pathlib import Path
-from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
-
 from src.config.loader import ConfigLoader
-from src.config.models import DocumentationSite
 from src.config.models import UnifiedConfig
 
 
 class TestConfigLoader:
     """Test cases for ConfigLoader class."""
-
-    def test_load_documentation_sites_success(self, tmp_path):
-        """Test successful loading of documentation sites."""
-        # Create test data
-        sites_data = {
-            "sites": [
-                {
-                    "name": "Test Site",
-                    "url": "https://docs.example.com",
-                    "max_pages": 100,
-                    "priority": "high",
-                    "description": "Test documentation site",
-                },
-                {
-                    "name": "Another Site",
-                    "url": "https://docs.another.com",
-                    "max_pages": 50,
-                    "priority": "medium",
-                    "description": "Another test site",
-                    "exclude_patterns": ["*/internal/*"],
-                },
-            ]
-        }
-
-        # Create config file
-        config_file = tmp_path / "sites.json"
-        config_file.write_text(json.dumps(sites_data))
-
-        # Load sites
-        sites = ConfigLoader.load_documentation_sites(config_file)
-
-        # Verify results
-        assert len(sites) == 2
-        assert all(isinstance(site, DocumentationSite) for site in sites)
-        assert sites[0].name == "Test Site"
-        assert str(sites[0].url) == "https://docs.example.com/"  # HttpUrl adds trailing slash
-        assert sites[1].exclude_patterns == ["*/internal/*"]
-
-    def test_load_documentation_sites_file_not_found(self):
-        """Test loading from non-existent file raises error."""
-        with pytest.raises(FileNotFoundError) as exc_info:
-            ConfigLoader.load_documentation_sites("nonexistent.json")
-        assert "Documentation sites config not found" in str(exc_info.value)
-
-    def test_load_documentation_sites_empty_sites(self, tmp_path):
-        """Test loading with empty sites array."""
-        config_file = tmp_path / "empty.json"
-        config_file.write_text(json.dumps({"sites": []}))
-
-        sites = ConfigLoader.load_documentation_sites(config_file)
-        assert sites == []
-
-    def test_load_documentation_sites_no_sites_key(self, tmp_path):
-        """Test loading with missing sites key."""
-        config_file = tmp_path / "no_sites.json"
-        config_file.write_text(json.dumps({"other": []}))
-
-        sites = ConfigLoader.load_documentation_sites(config_file)
-        assert sites == []
 
     def test_merge_env_config_simple_values(self):
         """Test merging simple environment variables."""
@@ -88,7 +24,9 @@ class TestConfigLoader:
             },
             clear=False,
         ):
-            base_config = {"environment": "testing"}  # Use different env to test preservation
+            base_config = {
+                "environment": "testing"
+            }  # Use different env to test preservation
             result = ConfigLoader.merge_env_config(base_config)
 
             assert result["debug"] is True
@@ -104,8 +42,8 @@ class TestConfigLoader:
             {
                 "AI_DOCS__QDRANT__URL": "http://localhost:6333",
                 "AI_DOCS__QDRANT__API_KEY": "test-key",
-                "AI_DOCS__CACHE__REDIS_URL": "redis://localhost:6379",
-                "AI_DOCS__CACHE__TTL_EMBEDDINGS": "86400",
+                "AI_DOCS__CACHE__DRAGONFLY_URL": "redis://localhost:6379",
+                "AI_DOCS__CACHE__CACHE_TTL_SECONDS": '{"embeddings": 86400, "crawl": 3600}',
             },
             clear=False,
         ):
@@ -114,8 +52,11 @@ class TestConfigLoader:
 
             assert result["qdrant"]["url"] == "http://localhost:6333"
             assert result["qdrant"]["api_key"] == "test-key"
-            assert result["cache"]["redis_url"] == "redis://localhost:6379"
-            assert result["cache"]["ttl_embeddings"] == 86400
+            assert result["cache"]["dragonfly_url"] == "redis://localhost:6379"
+            assert result["cache"]["cache_ttl_seconds"] == {
+                "embeddings": 86400,
+                "crawl": 3600,
+            }
 
     def test_merge_env_config_json_values(self):
         """Test merging JSON environment variables."""
@@ -217,30 +158,6 @@ class TestConfigLoader:
             assert config.debug is True  # From env
             assert config.log_level == "DEBUG"  # From env
 
-    def test_load_config_with_documentation_sites(self, tmp_path):
-        """Test loading configuration with documentation sites."""
-        sites_data = {
-            "sites": [
-                {
-                    "name": "Test Site",
-                    "url": "https://docs.example.com",
-                    "max_pages": 100,
-                    "priority": "high",
-                    "description": "Test site",
-                }
-            ]
-        }
-
-        sites_file = tmp_path / "sites.json"
-        sites_file.write_text(json.dumps(sites_data))
-
-        config = ConfigLoader.load_config(
-            documentation_sites_file=sites_file, include_env=False
-        )
-
-        assert len(config.documentation_sites) == 1
-        assert config.documentation_sites[0].name == "Test Site"
-
     def test_create_example_config(self, tmp_path):
         """Test creating example configuration."""
         output_file = tmp_path / "example.json"
@@ -256,7 +173,6 @@ class TestConfigLoader:
         assert config_data["environment"] == "development"
         assert config_data["debug"] is True
         assert config_data["embedding_provider"] == "fastembed"
-        assert len(config_data["documentation_sites"]) == 2
 
     def test_create_env_template(self, tmp_path):
         """Test creating .env template."""
@@ -271,14 +187,20 @@ class TestConfigLoader:
         assert "AI_DOCS__OPENAI__API_KEY=" in content
         assert "AI_DOCS__QDRANT__URL=" in content
 
-    def test_validate_config_valid_production(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_valid_production(self, mock_qdrant_client):
         """Test validation of valid production configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="production",
             debug=False,
             log_level="INFO",
-            openai={"api_key": "sk-real-api-key-here"},
+            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
             security={"require_api_keys": True},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -286,14 +208,20 @@ class TestConfigLoader:
         assert is_valid
         assert len(issues) == 0
 
-    def test_validate_config_invalid_production(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_invalid_production(self, mock_qdrant_client):
         """Test validation of invalid production configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="production",
             debug=True,  # Should be False in production
             log_level="DEBUG",  # Should not be DEBUG in production
-            openai={"api_key": "your-openai-api-key"},  # Placeholder
+            openai={"api_key": "sk-your-openai-api-key-placeholder"},  # Placeholder
             security={"require_api_keys": False},  # Should be True in production
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -305,12 +233,18 @@ class TestConfigLoader:
         assert "API keys should be required in production" in issues
         assert "OpenAI API key appears to be a placeholder" in issues
 
-    def test_validate_config_placeholder_keys(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_placeholder_keys(self, mock_qdrant_client):
         """Test validation of placeholder API keys."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="development",
-            openai={"api_key": "your-openai-api-key"},
-            firecrawl={"api_key": "your-firecrawl-key"},
+            openai={"api_key": "sk-your-openai-api-key-placeholder"},
+            firecrawl={"api_key": "fc-your-firecrawl-key-placeholder"},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -320,14 +254,20 @@ class TestConfigLoader:
         assert "OpenAI API key appears to be a placeholder" in issues
         assert "Firecrawl API key appears to be a placeholder" in issues
 
-    def test_validate_config_development_valid(self):
+    @patch("qdrant_client.QdrantClient")
+    def test_validate_config_development_valid(self, mock_qdrant_client):
         """Test validation of valid development configuration."""
+        # Mock Qdrant client to avoid connection attempts
+        mock_client = mock_qdrant_client.return_value
+        mock_client.get_collections.return_value = []
+
         config = UnifiedConfig(
             environment="development",
             debug=True,
             log_level="DEBUG",
-            openai={"api_key": "sk-test-key"},
+            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
             security={"require_api_keys": False},
+            cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
 
         is_valid, issues = ConfigLoader.validate_config(config)
@@ -337,20 +277,36 @@ class TestConfigLoader:
 
     def test_merge_env_config_preserves_existing(self):
         """Test that environment merging preserves existing config values."""
-        with patch.dict(
-            os.environ, {"AI_DOCS__DEBUG": "true"}, clear=False
-        ):
-            base_config = {
-                "environment": "testing",
-                "log_level": "WARNING",
-                "existing": {"nested": "value"},
-            }
-            result = ConfigLoader.merge_env_config(base_config)
+        # Create env_vars dict with only the variables we want to set
+        env_vars_to_set = {"AI_DOCS__DEBUG": "true"}
 
-            assert result["environment"] == "testing"  # Preserved
-            assert result["log_level"] == "WARNING"  # Preserved
-            assert result["existing"]["nested"] == "value"  # Preserved
-            assert result["debug"] is True  # Added from env
+        # Create a list of variables to delete if they exist
+        env_vars_to_delete = []
+        if "AI_DOCS__LOG_LEVEL" in os.environ:
+            env_vars_to_delete.append("AI_DOCS__LOG_LEVEL")
+
+        with patch.dict(os.environ, env_vars_to_set, clear=False):
+            # Temporarily delete the log level var if it exists
+            saved_log_level = None
+            if env_vars_to_delete:
+                saved_log_level = os.environ.pop("AI_DOCS__LOG_LEVEL", None)
+
+            try:
+                base_config = {
+                    "environment": "testing",
+                    "log_level": "WARNING",
+                    "existing": {"nested": "value"},
+                }
+                result = ConfigLoader.merge_env_config(base_config)
+
+                assert result["environment"] == "testing"  # Preserved
+                assert result["log_level"] == "WARNING"  # Preserved
+                assert result["existing"]["nested"] == "value"  # Preserved
+                assert result["debug"] is True  # Added from env
+            finally:
+                # Restore the log level var if it was there originally
+                if saved_log_level is not None:
+                    os.environ["AI_DOCS__LOG_LEVEL"] = saved_log_level
 
     def test_merge_env_config_invalid_json(self):
         """Test merging environment variables with invalid JSON."""

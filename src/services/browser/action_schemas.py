@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import validator
+from pydantic import model_validator
 
 
 class BaseAction(BaseModel):
@@ -77,14 +77,14 @@ class ScrollAction(BaseAction):
     )
     y: int = Field(default=0, description="Y position for position-based scrolling")
 
-    @validator("y")
-    def validate_y_position(cls, v, values):
+    @model_validator(mode="after")
+    def validate_position_scrolling(self):
         """Validate Y position is required for position scrolling."""
-        if values.get("direction") == "position" and v == 0:
+        if self.direction == "position" and (self.y is None or self.y == 0):
             raise ValueError(
                 "Y position must be specified for position-based scrolling"
             )
-        return v
+        return self
 
 
 class ScreenshotAction(BaseAction):

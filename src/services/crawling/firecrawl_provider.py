@@ -5,6 +5,8 @@ from typing import Any
 
 from firecrawl import FirecrawlApp
 
+from ...config.models import FirecrawlConfig
+from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimitManager
 from .base import CrawlProvider
@@ -12,16 +14,20 @@ from .base import CrawlProvider
 logger = logging.getLogger(__name__)
 
 
-class FirecrawlProvider(CrawlProvider):
+class FirecrawlProvider(BaseService, CrawlProvider):
     """Firecrawl provider for web crawling."""
 
-    def __init__(self, api_key: str, rate_limiter: RateLimitManager | None = None):
+    def __init__(
+        self, config: FirecrawlConfig, rate_limiter: RateLimitManager | None = None
+    ):
         """Initialize Firecrawl provider.
 
         Args:
-            api_key: Firecrawl API key
+            config: Firecrawl configuration model
+            rate_limiter: Optional rate limiter
         """
-        self.api_key = api_key
+        super().__init__(config)
+        self.config = config
         self._client: FirecrawlApp | None = None
         self._initialized = False
         self.rate_limiter = rate_limiter
@@ -32,7 +38,9 @@ class FirecrawlProvider(CrawlProvider):
             return
 
         try:
-            self._client = FirecrawlApp(api_key=self.api_key)
+            self._client = FirecrawlApp(
+                api_key=self.config.api_key, api_url=self.config.api_url
+            )
             self._initialized = True
             logger.info("Firecrawl client initialized")
         except Exception as e:

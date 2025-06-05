@@ -477,54 +477,16 @@ def validate_input(**validators) -> Callable[[F], F]:
     return decorator
 
 
-class RateLimiter:
-    """Simple rate limiter for API calls."""
-
-    def __init__(self, max_calls: int = 10, window_seconds: float = 60.0):
-        """Initialize rate limiter.
-
-        Args:
-            max_calls: Maximum calls allowed in window
-            window_seconds: Time window in seconds
-        """
-        self.max_calls = max_calls
-        self.window_seconds = window_seconds
-        self.calls: list[float] = []
-        self._lock = asyncio.Lock()
-
-    async def acquire(self) -> None:
-        """Acquire rate limit permission.
-
-        Raises:
-            RateLimitError: If rate limit exceeded
-        """
-        async with self._lock:
-            now = time.time()
-
-            # Remove old calls outside the window
-            self.calls = [
-                call_time
-                for call_time in self.calls
-                if now - call_time < self.window_seconds
-            ]
-
-            # Check if we're at the limit
-            if len(self.calls) >= self.max_calls:
-                # Calculate when the oldest call will expire
-                retry_after = self.window_seconds - (now - self.calls[0])
-                raise RateLimitError(
-                    f"Rate limit exceeded: {self.max_calls} calls per {self.window_seconds}s",
-                    retry_after=retry_after,
-                )
-
-            # Record this call
-            self.calls.append(now)
-
-
-# Global rate limiters for different services
-openai_rate_limiter = RateLimiter(max_calls=50, window_seconds=60)  # 50/min
-qdrant_rate_limiter = RateLimiter(max_calls=100, window_seconds=60)  # 100/min
-firecrawl_rate_limiter = RateLimiter(max_calls=20, window_seconds=60)  # 20/min
+# NOTE: Rate limiting has been consolidated to use the advanced RateLimitManager
+# from src.services.utilities.rate_limiter.py, which provides:
+# - Token bucket algorithm with burst capacity
+# - Adaptive rate limiting based on API responses
+# - Centralized configuration through UnifiedConfig
+#
+# For rate limiting in your services, use:
+# from ..utilities.rate_limiter import RateLimitManager
+# rate_limiter = RateLimitManager(config)
+# await rate_limiter.acquire(provider="openai", tokens=1)
 
 
 # Custom Pydantic errors following Pydantic 2.0 patterns

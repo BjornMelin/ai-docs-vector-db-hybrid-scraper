@@ -6,124 +6,62 @@ Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST p
 
 import logging
 import re
-from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 from typing import ClassVar
 
-from pydantic import BaseModel
-from pydantic import Field
-
 # Handle both module and script imports
 from src.config.enums import ChunkingStrategy
+from src.config.models import ChunkingConfig
+from src.models.document_processing import Chunk
+from src.models.document_processing import CodeBlock
+from src.models.document_processing import CodeLanguage
 
-# Tree-sitter imports (will be available after adding to requirements)
 try:
-    import tree_sitter_python as tspython
     from tree_sitter import Language
     from tree_sitter import Node
     from tree_sitter import Parser
 
     TREE_SITTER_AVAILABLE = True
+
+    # Try to import language parsers using modern syntax
+    try:
+        import tree_sitter_python as tspython
+
+        PYTHON_AVAILABLE = True
+    except ImportError:
+        PYTHON_AVAILABLE = False
+        tspython = None  # type: ignore
+
+    try:
+        import tree_sitter_javascript as tsjavascript
+
+        JAVASCRIPT_AVAILABLE = True
+    except ImportError:
+        JAVASCRIPT_AVAILABLE = False
+        tsjavascript = None  # type: ignore
+
+    try:
+        import tree_sitter_typescript as tstypescript
+
+        TYPESCRIPT_AVAILABLE = True
+    except ImportError:
+        TYPESCRIPT_AVAILABLE = False
+        tstypescript = None  # type: ignore
+
 except ImportError:
     TREE_SITTER_AVAILABLE = False
     Parser = None  # type: ignore
     Node = None  # type: ignore
-
-
-class CodeLanguage(str, Enum):
-    """Supported programming languages for AST parsing"""
-
-    PYTHON = "python"
-    JAVASCRIPT = "javascript"
-    TYPESCRIPT = "typescript"
-    MARKDOWN = "markdown"
-    UNKNOWN = "unknown"
-
-
-class ChunkingConfig(BaseModel):
-    """Advanced chunking configuration"""
-
-    # Basic parameters (existing)
-    chunk_size: int = Field(
-        default=1600,
-        description="Target chunk size in characters (research-optimal)",
-    )
-    chunk_overlap: int = Field(
-        default=320, description="Overlap between chunks (20% of chunk_size)"
-    )
-
-    # Enhanced chunking parameters
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED,
-        description="Chunking strategy to use",
-    )
-    enable_ast_chunking: bool = Field(
-        default=True, description="Enable AST-based chunking when available"
-    )
-    preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact across chunks"
-    )
-    preserve_code_blocks: bool = Field(
-        default=True, description="Keep code blocks intact when possible"
-    )
-    max_function_chunk_size: int = Field(
-        default=3200, description="Maximum size for a single function chunk"
-    )
-
-    # Language detection
-    supported_languages: list[str] = Field(
-        default_factory=lambda: [
-            "python",
-            "javascript",
-            "typescript",
-            "markdown",
-        ],
-        description="Languages supported for AST parsing",
-    )
-    fallback_to_text_chunking: bool = Field(
-        default=True, description="Fall back to text chunking if AST fails"
-    )
-
-    # Advanced options
-    detect_language: bool = Field(
-        default=True, description="Auto-detect programming language"
-    )
-    include_function_context: bool = Field(
-        default=True, description="Include function signatures in adjacent chunks"
-    )
-
-
-@dataclass
-class CodeBlock:
-    """Represents a code block found in content"""
-
-    language: str
-    content: str
-    start_pos: int
-    end_pos: int
-    fence_type: str = "```"  # Could be ``` or ~~~
-
-
-@dataclass
-class Chunk:
-    """Enhanced chunk with metadata"""
-
-    content: str
-    start_pos: int
-    end_pos: int
-    chunk_index: int
-    total_chunks: int = 0  # Updated after all chunks created
-    char_count: int = 0
-    token_estimate: int = 0  # Rough estimate: chars / 4
-    chunk_type: str = "text"  # text, code, mixed
-    language: str | None = None
-    has_code: bool = False
-    metadata: dict[str, Any] | None = None
+    PYTHON_AVAILABLE = False
+    JAVASCRIPT_AVAILABLE = False
+    TYPESCRIPT_AVAILABLE = False
+    tspython = None  # type: ignore
+    tsjavascript = None  # type: ignore
+    tstypescript = None  # type: ignore
 
 
 class EnhancedChunker:
-    """SOTA 2025 Enhanced Chunking Implementation"""
+    """Enhanced Chunking Implementation"""
 
     # Regex patterns for code detection
     CODE_FENCE_PATTERN = re.compile(
@@ -195,19 +133,65 @@ class EnhancedChunker:
         self._initialize_parsers()
 
     def _initialize_parsers(self) -> None:
-        """Initialize Tree-sitter parsers for supported languages"""
+        """Initialize Tree-sitter parsers for all supported languages.
+
+        This method attempts to load parsers for each language specified in
+        self.config.supported_languages. If a parser fails to load, it logs
+        a warning and continues with other languages. The successfully loaded
+        parsers are stored in self.parsers dictionary, keyed by language name.
+        """
         if not TREE_SITTER_AVAILABLE or not self.config.enable_ast_chunking:
             return
 
-        try:
-            # Initialize Python parser
-            if "python" in self.config.supported_languages:
-                py_language = Language(tspython.language())
-                parser = Parser(py_language)
-                self.parsers["python"] = parser
-        except Exception:
-            # Tree-sitter not installed, fall back to enhanced chunking
-            pass
+        # Map language names to their parser modules and availability flags
+        language_parsers = {
+            "python": (tspython, PYTHON_AVAILABLE),
+            "javascript": (tsjavascript, JAVASCRIPT_AVAILABLE),
+            "typescript": (tstypescript, TYPESCRIPT_AVAILABLE),
+        }
+
+        for lang in self.config.supported_languages:
+            if lang not in language_parsers:
+                self.logger.warning(
+                    f"Language '{lang}' is not supported for AST parsing. "
+                    f"Supported languages: {list(language_parsers.keys())}"
+                )
+                continue
+
+            parser_module, is_available = language_parsers[lang]
+
+            if not is_available or parser_module is None:
+                self.logger.warning(
+                    f"Parser for '{lang}' is not available. "
+                    f"Install with: pip install tree-sitter-{lang}"
+                )
+                continue
+
+            try:
+                # Initialize language using modern Tree-sitter pattern
+                if lang == "typescript":
+                    # TypeScript has specific function name
+                    language = Language(parser_module.language_typescript())
+                elif lang == "javascript":
+                    # JavaScript standard function name
+                    language = Language(parser_module.language())
+                elif lang == "python":
+                    # Python standard function name
+                    language = Language(parser_module.language())
+                else:
+                    # Fallback to standard function name
+                    language = Language(parser_module.language())
+
+                # Create parser with the language
+                parser = Parser(language)
+                self.parsers[lang] = parser
+                self.logger.debug(f"Successfully loaded parser for '{lang}'")
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to initialize parser for '{lang}': {e}. "
+                    f"Will fall back to enhanced chunking for this language."
+                )
 
     def chunk_content(
         self,
@@ -344,17 +328,36 @@ class EnhancedChunker:
         chunk_start = 0
 
         while current_pos < len(content):
-            current_code_block = self._get_current_code_block(code_blocks, current_pos)
-            if current_code_block and self.config.preserve_code_blocks:
-                self._handle_code_block(
-                    content, chunks, chunk_start, current_code_block
-                )
-                current_pos = current_code_block.end_pos
+            # Find the next code block starting at or after current position
+            next_code_block = self._get_next_code_block(code_blocks, current_pos)
+
+            if next_code_block and self.config.preserve_code_blocks:
+                # Handle any content before the code block
+                if chunk_start < next_code_block.start_pos:
+                    pre_content = content[
+                        chunk_start : next_code_block.start_pos
+                    ].strip()
+                    if pre_content:
+                        chunks.extend(
+                            self._chunk_text_content(
+                                pre_content, chunk_start, next_code_block.start_pos
+                            )
+                        )
+
+                # Handle the code block
+                self._handle_code_block_as_chunk(content, chunks, next_code_block)
+                current_pos = next_code_block.end_pos
                 chunk_start = current_pos
             else:
-                current_pos, chunk_start = self._handle_regular_chunk(
-                    content, chunks, chunk_start, current_pos
-                )
+                # Handle remaining content as regular text
+                remaining_content = content[chunk_start:].strip()
+                if remaining_content:
+                    chunks.extend(
+                        self._chunk_text_content(
+                            remaining_content, chunk_start, len(content)
+                        )
+                    )
+                break
         # Update total chunks count
         for chunk in chunks:
             chunk.total_chunks = len(chunks)
@@ -377,88 +380,54 @@ class EnhancedChunker:
                 return block
         return None
 
-    def _handle_code_block(self, content, chunks, chunk_start, current_code_block):
-        """Handle chunking when at a code block boundary.
+    def _get_next_code_block(self, code_blocks, current_pos):
+        """Return the next code block starting at or after current position.
+
+        Args:
+            code_blocks: List of CodeBlock objects.
+            current_pos: Current character position in content.
+
+        Returns:
+            The next CodeBlock starting at or after current_pos, or None.
+        """
+        for block in code_blocks:
+            if block.start_pos >= current_pos:
+                return block
+        return None
+
+    def _handle_code_block_as_chunk(self, content, chunks, code_block):
+        """Handle a code block as a single chunk.
 
         Args:
             content: The full text content.
             chunks: List to append new chunks to.
-            chunk_start: Start position for chunking.
-            current_code_block: The CodeBlock being processed.
+            code_block: The CodeBlock being processed.
         """
-        # First, chunk any content before the code block
-        if chunk_start < current_code_block.start_pos:
-            pre_content = content[chunk_start : current_code_block.start_pos].strip()
-            if pre_content:
-                chunks.extend(
-                    self._chunk_text_content(
-                        pre_content, chunk_start, current_code_block.start_pos
-                    )
-                )
-        # Add the code block as a chunk (if within size limits)
-        block_size = current_code_block.end_pos - current_code_block.start_pos
+        start = code_block.start_pos
+        end = code_block.end_pos
+        block_size = end - start
+
         if block_size <= self.config.max_function_chunk_size:
-            start = current_code_block.start_pos
-            end = current_code_block.end_pos
             chunks.append(
                 Chunk(
                     content=content[start:end],
-                    start_pos=current_code_block.start_pos,
-                    end_pos=current_code_block.end_pos,
+                    start_pos=start,
+                    end_pos=end,
                     chunk_index=len(chunks),
                     chunk_type="code",
-                    language=current_code_block.language,
+                    language=code_block.language,
                     has_code=True,
                 )
             )
         else:
-            # Code block too large, chunk it preserving boundaries
-            start = current_code_block.start_pos
-            end = current_code_block.end_pos
+            # Code block too large, split it preserving boundaries
             chunks.extend(
                 self._chunk_large_code_block(
                     content[start:end],
-                    current_code_block.start_pos,
-                    current_code_block.language,
+                    start,
+                    code_block.language,
                 )
             )
-
-    def _handle_regular_chunk(self, content, chunks, chunk_start, current_pos):
-        """Handle chunking for regular (non-code-block) text.
-
-        Args:
-            content: The full text content.
-            chunks: List to append new chunks to.
-            chunk_start: Start position for chunking.
-            current_pos: Current character position in content.
-
-        Returns:
-            Tuple of (new current_pos, new chunk_start).
-        """
-        chunk_end = min(chunk_start + self.config.chunk_size, len(content))
-        # Try to find a good boundary
-        if chunk_end < len(content):
-            chunk_end = self._find_enhanced_boundary(content, chunk_start, chunk_end)
-        # Create chunk
-        chunk_content = content[chunk_start:chunk_end].strip()
-        if chunk_content:
-            chunks.append(
-                Chunk(
-                    content=chunk_content,
-                    start_pos=chunk_start,
-                    end_pos=chunk_end,
-                    chunk_index=len(chunks),
-                    chunk_type="text",
-                    has_code=bool(self.CODE_FENCE_PATTERN.search(chunk_content)),
-                )
-            )
-        # Move to next chunk with overlap
-        if chunk_end < len(content):
-            current_pos = chunk_end - self.config.chunk_overlap
-        else:
-            current_pos = len(content)
-        chunk_start = current_pos
-        return current_pos, chunk_start
 
     def _find_enhanced_boundary(self, content: str, start: int, target_end: int) -> int:
         """Find an enhanced boundary considering code structures"""
@@ -670,7 +639,36 @@ class EnhancedChunker:
         return chunks
 
     def _ast_based_chunking(self, content: str, language: str) -> list[Chunk]:
-        """AST-based chunking using Tree-sitter for superior code understanding"""
+        """AST-based chunking using Tree-sitter for superior code understanding.
+
+        This method uses Tree-sitter parsers to create chunks based on the Abstract
+        Syntax Tree (AST) structure of the code. It extracts semantic units like
+        functions and classes as individual chunks.
+
+        Overlap Strategy:
+        -----------------
+        When AST chunking is active, overlap is applied in the following scenarios:
+
+        1. **Text content between code units**: Non-code content uses standard
+           character-based overlap as defined by self.config.chunk_overlap.
+
+        2. **Large code units**: When a function or class exceeds max_function_chunk_size,
+           it is split with overlap. The overlap includes:
+           - For line-based splitting: ~20% of lines from the previous chunk
+           - For AST-based splitting: Context like function signatures or class
+             names are preserved across splits when possible
+
+        3. **Semantic context preservation**: When splitting large units, the chunker
+           attempts to maintain semantic context by including parent node information
+           (e.g., class name when splitting methods).
+
+        Args:
+            content: The source code to chunk
+            language: The programming language of the content
+
+        Returns:
+            List of Chunk objects with AST-based boundaries
+        """
         if not TREE_SITTER_AVAILABLE or language not in self.parsers:
             return self._enhanced_chunking(content, language)
 
@@ -879,10 +877,379 @@ class EnhancedChunker:
     def _split_large_code_unit(
         self, content: str, global_start: int, unit_type: str, language: str
     ) -> list[Chunk]:
-        """Split large code units (classes, functions) intelligently"""
-        # For now, use the existing _chunk_large_code_block method
-        # This can be enhanced later with more sophisticated splitting
+        """Split large code units using AST-specific logic.
+
+        This method intelligently splits large functions or classes based on their
+        AST structure rather than simple line-based splitting. It attempts to:
+
+        1. For classes: Split by method boundaries
+        2. For functions: Split by logical blocks (loops, conditionals)
+        3. Preserve semantic context across splits
+
+        Args:
+            content: The code unit content to split
+            global_start: Starting position in the original document
+            unit_type: Type of code unit ('class' or 'function')
+            language: Programming language
+
+        Returns:
+            List of Chunk objects representing the split code unit
+        """
+        chunks = []
+
+        # If we have a parser for this language, try AST-based splitting
+        if language in self.parsers:
+            try:
+                parser = self.parsers[language]
+                tree = parser.parse(bytes(content, "utf8"))
+                root_node = tree.root_node
+
+                if unit_type == "class":
+                    # For classes, try to split by methods
+                    method_nodes = self._extract_class_methods(
+                        root_node, content, language
+                    )
+
+                    if method_nodes:
+                        # Add class header as first chunk if it exists
+                        first_method_start = method_nodes[0]["start_pos"]
+                        if first_method_start > 0:
+                            class_header = content[:first_method_start].strip()
+                            if class_header:
+                                chunks.append(
+                                    Chunk(
+                                        content=class_header,
+                                        start_pos=global_start,
+                                        end_pos=global_start + first_method_start,
+                                        chunk_index=0,
+                                        chunk_type="code",
+                                        language=language,
+                                        has_code=True,
+                                        metadata={
+                                            "node_type": "class_header",
+                                            "parent_type": unit_type,
+                                        },
+                                    )
+                                )
+
+                        # Add each method as a chunk, with class context
+                        for method in method_nodes:
+                            method_content = content[
+                                method["start_pos"] : method["end_pos"]
+                            ]
+
+                            # If method is still too large, recursively split it
+                            if (
+                                len(method_content)
+                                > self.config.max_function_chunk_size
+                            ):
+                                sub_chunks = self._split_large_code_unit(
+                                    method_content,
+                                    global_start + method["start_pos"],
+                                    "function",
+                                    language,
+                                )
+                                # Add class context to sub-chunks
+                                for sub_chunk in sub_chunks:
+                                    if sub_chunk.metadata is None:
+                                        sub_chunk.metadata = {}
+                                    sub_chunk.metadata["parent_class"] = True
+                                chunks.extend(sub_chunks)
+                            else:
+                                chunks.append(
+                                    Chunk(
+                                        content=method_content,
+                                        start_pos=global_start + method["start_pos"],
+                                        end_pos=global_start + method["end_pos"],
+                                        chunk_index=0,
+                                        chunk_type="code",
+                                        language=language,
+                                        has_code=True,
+                                        metadata={
+                                            "node_type": "method",
+                                            "method_name": method.get("name", ""),
+                                            "parent_type": unit_type,
+                                        },
+                                    )
+                                )
+
+                        return chunks
+
+                elif unit_type == "function":
+                    # For functions, try to split by logical blocks
+                    blocks = self._extract_function_blocks(root_node, content, language)
+
+                    if len(blocks) > 1:
+                        # Add function signature as context for all chunks
+                        func_signature = self._extract_function_signature(
+                            root_node, content, language
+                        )
+
+                        for i, block in enumerate(blocks):
+                            block_content = content[
+                                block["start_pos"] : block["end_pos"]
+                            ]
+
+                            # Include function signature as comment for context (except first block)
+                            if i > 0 and func_signature:
+                                block_content = (
+                                    f"# Function: {func_signature}\n{block_content}"
+                                )
+
+                            chunks.append(
+                                Chunk(
+                                    content=block_content,
+                                    start_pos=global_start + block["start_pos"],
+                                    end_pos=global_start + block["end_pos"],
+                                    chunk_index=0,
+                                    chunk_type="code",
+                                    language=language,
+                                    has_code=True,
+                                    metadata={
+                                        "node_type": "function_block",
+                                        "block_type": block.get("type", ""),
+                                        "parent_type": unit_type,
+                                        "block_index": i,
+                                    },
+                                )
+                            )
+
+                        if chunks:
+                            return chunks
+
+            except Exception as e:
+                self.logger.debug(
+                    f"AST-based splitting failed: {e}, falling back to line-based"
+                )
+
+        # Fallback to line-based splitting with enhanced overlap
         return self._chunk_large_code_block(content, global_start, language)
+
+    def _extract_class_methods(
+        self, node: Any, content: str, language: str
+    ) -> list[dict[str, Any]]:
+        """Extract method definitions from a class AST node.
+
+        Args:
+            node: The class AST node
+            content: The source code content
+            language: Programming language
+
+        Returns:
+            List of dicts containing method info (name, start_pos, end_pos)
+        """
+        methods = []
+
+        def traverse(node: Any) -> None:
+            if language == "python":
+                if node.type in ["function_definition", "async_function_definition"]:
+                    # Check if this is a method (has proper indentation for class)
+                    name_node = None
+                    for child in node.children:
+                        if child.type == "identifier":
+                            name_node = child
+                            break
+
+                    methods.append(
+                        {
+                            "name": content[name_node.start_byte : name_node.end_byte]
+                            if name_node
+                            else "",
+                            "start_pos": node.start_byte,
+                            "end_pos": node.end_byte,
+                            "type": "method",
+                        }
+                    )
+            elif (
+                language in ["javascript", "typescript"]
+                and node.type == "method_definition"
+            ):
+                # Methods in JS/TS classes
+                methods.append(
+                    {
+                        "name": self._get_js_method_name(node, content),
+                        "start_pos": node.start_byte,
+                        "end_pos": node.end_byte,
+                        "type": "method",
+                    }
+                )
+
+            for child in node.children:
+                traverse(child)
+
+        traverse(node)
+        return methods
+
+    def _extract_function_blocks(
+        self, node: Any, content: str, language: str
+    ) -> list[dict[str, Any]]:
+        """Extract logical blocks from a function AST node.
+
+        This method identifies major code blocks within a function such as:
+        - Loop bodies (for, while)
+        - Conditional blocks (if/else)
+        - Try/catch blocks
+        - Large statement sequences
+
+        Args:
+            node: The function AST node
+            content: The source code content
+            language: Programming language
+
+        Returns:
+            List of dicts containing block info (type, start_pos, end_pos)
+        """
+        blocks = []
+
+        # First, check if the function body itself is small enough
+        if node.end_byte - node.start_byte <= self.config.max_function_chunk_size:
+            return [
+                {
+                    "type": "whole_function",
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            ]
+
+        # Extract the function body node
+        body_node = None
+        if language == "python":
+            for child in node.children:
+                if child.type == "block":
+                    body_node = child
+                    break
+        elif language in ["javascript", "typescript"]:
+            for child in node.children:
+                if child.type == "statement_block":
+                    body_node = child
+                    break
+
+        if not body_node:
+            # No body found, return the whole function
+            return [
+                {
+                    "type": "whole_function",
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            ]
+
+        # Extract major blocks from the body
+        current_block_start = body_node.start_byte
+        accumulated_size = 0
+
+        for child in body_node.children:
+            child_size = child.end_byte - child.start_byte
+
+            # Check if this child is a major block structure
+            is_major_block = child.type in [
+                # Python
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "try_statement",
+                "with_statement",
+                # JavaScript/TypeScript
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "do_statement",
+                "try_statement",
+                "switch_statement",
+            ]
+
+            # If adding this child would exceed our limit, or it's a major block
+            if (
+                accumulated_size + child_size > self.config.chunk_size // 2 and blocks
+            ) or (is_major_block and accumulated_size > 0):
+                # Save the current block
+                blocks.append(
+                    {
+                        "type": "statement_sequence",
+                        "start_pos": current_block_start,
+                        "end_pos": child.start_byte,
+                    }
+                )
+                current_block_start = child.start_byte
+                accumulated_size = child_size
+            else:
+                accumulated_size += child_size
+
+        # Add the final block
+        if current_block_start < body_node.end_byte:
+            blocks.append(
+                {
+                    "type": "statement_sequence",
+                    "start_pos": current_block_start,
+                    "end_pos": body_node.end_byte,
+                }
+            )
+
+        # If we only got one block, just return the whole function
+        if len(blocks) <= 1:
+            return [
+                {
+                    "type": "whole_function",
+                    "start_pos": node.start_byte,
+                    "end_pos": node.end_byte,
+                }
+            ]
+
+        # Include function signature with first block
+        if blocks:
+            blocks[0]["start_pos"] = node.start_byte
+
+        return blocks
+
+    def _extract_function_signature(
+        self, node: Any, content: str, language: str
+    ) -> str:
+        """Extract the function signature from a function AST node.
+
+        Args:
+            node: The function AST node
+            content: The source code content
+            language: Programming language
+
+        Returns:
+            The function signature as a string
+        """
+        if language == "python":
+            # Find the colon that ends the signature
+            for child in node.children:
+                if child.type == ":":
+                    sig_end = child.start_byte
+                    signature = content[node.start_byte : sig_end].strip()
+                    return signature
+        elif language in ["javascript", "typescript"]:
+            # Find the opening brace of the function body
+            for child in node.children:
+                if child.type == "statement_block":
+                    sig_end = child.start_byte
+                    signature = content[node.start_byte : sig_end].strip()
+                    return signature
+
+        # Fallback: just get the first line
+        first_line_end = content.find("\n", node.start_byte)
+        if first_line_end > node.start_byte:
+            return content[node.start_byte : first_line_end].strip()
+
+        return ""
+
+    def _get_js_method_name(self, node: Any, content: str) -> str:
+        """Extract method name from JavaScript/TypeScript method node.
+
+        Args:
+            node: The method AST node
+            content: The source code content
+
+        Returns:
+            The method name
+        """
+        for child in node.children:
+            if child.type in ["property_identifier", "identifier"]:
+                return content[child.start_byte : child.end_byte]
+        return ""
 
     def _basic_chunking(self, content: str) -> list[Chunk]:
         """Basic character-based chunking (legacy)"""

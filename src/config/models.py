@@ -4,7 +4,6 @@ This module provides a comprehensive configuration system that consolidates all
 settings across the application into a single, well-structured configuration model.
 """
 
-import re
 from pathlib import Path
 from typing import Any
 
@@ -17,55 +16,24 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
+from .enums import CacheType
 from .enums import ChunkingStrategy
 from .enums import CrawlProvider
 from .enums import EmbeddingModel
 from .enums import EmbeddingProvider
 from .enums import Environment
 from .enums import LogLevel
+from .enums import SearchAccuracy
 from .enums import SearchStrategy
+from .enums import VectorType
 
-
-def _validate_api_key_common(
-    value: str | None,
-    prefix: str,
-    service_name: str,
-    min_length: int = 10,
-    max_length: int = 200,
-    allowed_chars: str = r"[A-Za-z0-9-]+",
-) -> str | None:
-    """Common API key validation logic."""
-    if value is None:
-        return value
-
-    value = value.strip()
-    if not value:
-        return None
-
-    # Check for ASCII-only characters (security requirement)
-    try:
-        value.encode("ascii")
-    except UnicodeEncodeError as err:
-        raise ValueError(
-            f"{service_name} API key contains non-ASCII characters"
-        ) from err
-
-    # Check required prefix
-    if not value.startswith(prefix):
-        raise ValueError(f"{service_name} API key must start with '{prefix}'")
-
-    # Length validation with DoS protection
-    if len(value) < min_length:
-        raise ValueError(f"{service_name} API key appears to be too short")
-
-    if len(value) > max_length:
-        raise ValueError(f"{service_name} API key appears to be too long")
-
-    # Character validation
-    if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
-        raise ValueError(f"{service_name} API key contains invalid characters")
-
-    return value
+# Import validators from config package (avoiding circular imports)
+from .validators import validate_api_key_common
+from .validators import validate_chunk_sizes
+from .validators import validate_model_benchmark_consistency
+from .validators import validate_rate_limit_config
+from .validators import validate_scoring_weights
+from .validators import validate_url_format
 
 
 class ModelBenchmark(BaseModel):
@@ -106,13 +74,26 @@ class CacheConfig(BaseModel):
         description="DragonflyDB connection URL (Redis-compatible)",
     )
 
-    # TTL settings (in seconds)
-    ttl_embeddings: int = Field(
-        default=86400, ge=0, description="Embeddings cache TTL (24 hours)"
+    # Cache key patterns for different data types
+    cache_key_patterns: dict[CacheType, str] = Field(
+        default_factory=lambda: {
+            CacheType.EMBEDDINGS: "embeddings:{model}:{hash}",
+            CacheType.CRAWL: "crawl:{url_hash}",
+            CacheType.SEARCH: "search:{query_hash}",
+            CacheType.HYDE: "hyde:{query_hash}",
+        },
+        description="Cache key patterns for different data types",
     )
-    ttl_crawl: int = Field(default=3600, ge=0, description="Crawl cache TTL (1 hour)")
-    ttl_queries: int = Field(
-        default=7200, ge=0, description="Query cache TTL (2 hours)"
+
+    # TTL settings (in seconds) by cache type
+    cache_ttl_seconds: dict[CacheType, int] = Field(
+        default_factory=lambda: {
+            CacheType.EMBEDDINGS: 86400,  # 24 hours
+            CacheType.CRAWL: 3600,  # 1 hour
+            CacheType.SEARCH: 7200,  # 2 hours
+            CacheType.HYDE: 3600,  # 1 hour
+        },
+        description="TTL settings by cache type",
     )
 
     # Local cache limits
@@ -231,6 +212,49 @@ class CollectionHNSWConfigs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class VectorSearchConfig(BaseModel):
+    """Vector search configuration with accuracy parameters and prefetch settings."""
+
+    # Search accuracy level defaults mapped to HNSW parameters
+    search_accuracy_params: dict[SearchAccuracy, dict[str, int | bool]] = Field(
+        default_factory=lambda: {
+            SearchAccuracy.FAST: {"ef": 50, "exact": False},
+            SearchAccuracy.BALANCED: {"ef": 100, "exact": False},
+            SearchAccuracy.ACCURATE: {"ef": 200, "exact": False},
+            SearchAccuracy.EXACT: {"exact": True},
+        },
+        description="HNSW parameters for different accuracy levels",
+    )
+
+    # Prefetch multipliers by vector type for optimal performance
+    prefetch_multipliers: dict[VectorType, float] = Field(
+        default_factory=lambda: {
+            VectorType.DENSE: 2.0,
+            VectorType.SPARSE: 5.0,
+            VectorType.HYDE: 3.0,
+        },
+        description="Multipliers for prefetch calculations by vector type",
+    )
+
+    # Maximum prefetch limits to prevent performance degradation
+    max_prefetch_limits: dict[VectorType, int] = Field(
+        default_factory=lambda: {
+            VectorType.DENSE: 200,
+            VectorType.SPARSE: 500,
+            VectorType.HYDE: 150,
+        },
+        description="Maximum prefetch limits by vector type",
+    )
+
+    # Default search settings
+    default_search_limit: int = Field(
+        default=10, gt=0, description="Default search limit"
+    )
+    max_search_limit: int = Field(default=100, gt=0, description="Maximum search limit")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
 
@@ -248,11 +272,7 @@ class QdrantConfig(BaseModel):
     )
     max_retries: int = Field(default=3, ge=0, le=10, description="Max retry attempts")
 
-    # HNSW settings (legacy - use collection_hnsw_configs for new collections)
-    hnsw_ef_construct: int = Field(
-        default=200, gt=0, description="HNSW ef_construct parameter (legacy)"
-    )
-    hnsw_m: int = Field(default=16, gt=0, description="HNSW M parameter (legacy)")
+    # Vector quantization settings
     quantization_enabled: bool = Field(
         default=True, description="Enable vector quantization"
     )
@@ -268,15 +288,19 @@ class QdrantConfig(BaseModel):
         default=True, description="Enable HNSW parameter optimization"
     )
 
+    # Vector search configuration
+    vector_search: VectorSearchConfig = Field(
+        default_factory=VectorSearchConfig,
+        description="Vector search accuracy and prefetch configuration",
+    )
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate Qdrant URL format."""
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("Qdrant URL must start with http:// or https://")
-        return v.rstrip("/")
+        return validate_url_format(v)
 
 
 class OpenAIConfig(BaseModel):
@@ -315,7 +339,7 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate OpenAI API key format and structure."""
-        return _validate_api_key_common(
+        return validate_api_key_common(
             v,
             prefix="sk-",
             service_name="OpenAI",
@@ -366,7 +390,7 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         """Validate Firecrawl API key format and structure."""
-        return _validate_api_key_common(
+        return validate_api_key_common(
             v,
             prefix="fc-",
             service_name="Firecrawl",
@@ -383,11 +407,11 @@ class Crawl4AIConfig(BaseModel):
         default="chromium", description="Browser type (chromium, firefox, webkit)"
     )
     headless: bool = Field(default=True, description="Run browser in headless mode")
-    viewport_width: int = Field(
-        default=1920, gt=0, description="Browser viewport width"
-    )
-    viewport_height: int = Field(
-        default=1080, gt=0, description="Browser viewport height"
+
+    # Viewport settings
+    viewport: dict[str, int] = Field(
+        default_factory=lambda: {"width": 1920, "height": 1080},
+        description="Browser viewport dimensions",
     )
 
     # Performance settings
@@ -409,50 +433,135 @@ class Crawl4AIConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ChunkingConfig(BaseModel):
-    """Text chunking configuration."""
+class BrowserUseConfig(BaseModel):
+    """Configuration for BrowserUse adapter with AI-powered automation."""
 
-    strategy: ChunkingStrategy = Field(
-        default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
+    # LLM provider settings
+    llm_provider: str = Field(
+        default="openai", description="LLM provider (openai, anthropic, gemini)"
     )
+    model: str = Field(
+        default="gpt-4o-mini", description="LLM model to use for automation"
+    )
+
+    # Browser settings
+    headless: bool = Field(default=True, description="Run browser in headless mode")
+    disable_security: bool = Field(
+        default=False, description="Disable browser security features"
+    )
+    generate_gif: bool = Field(
+        default=False, description="Generate GIFs of automation process"
+    )
+
+    # Performance settings
+    timeout: int = Field(
+        default=30000, gt=0, description="Default timeout in milliseconds"
+    )
+    max_retries: int = Field(
+        default=3, ge=0, le=10, description="Maximum retry attempts"
+    )
+    max_steps: int = Field(
+        default=20, gt=0, le=100, description="Maximum steps for automation"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PlaywrightConfig(BaseModel):
+    """Configuration for Playwright adapter with direct browser control."""
+
+    # Browser settings
+    browser: str = Field(
+        default="chromium", description="Browser type (chromium, firefox, webkit)"
+    )
+    headless: bool = Field(default=True, description="Run browser in headless mode")
+
+    # Viewport settings
+    viewport: dict[str, int] = Field(
+        default_factory=lambda: {"width": 1920, "height": 1080},
+        description="Browser viewport dimensions",
+    )
+
+    # User agent
+    user_agent: str = Field(
+        default="Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
+        description="User agent string for browser",
+    )
+
+    # Timeout settings
+    timeout: int = Field(
+        default=30000, gt=0, description="Default timeout in milliseconds"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ChunkingConfig(BaseModel):
+    """Advanced chunking configuration for optimal RAG performance."""
+
+    # Basic parameters
     chunk_size: int = Field(
         default=1600, gt=0, description="Target chunk size in characters"
     )
-    chunk_overlap: int = Field(default=200, ge=0, description="Overlap between chunks")
+    chunk_overlap: int = Field(
+        default=320, ge=0, description="Overlap between chunks (characters)"
+    )
 
-    # Code-aware chunking
+    # Strategy settings
+    strategy: ChunkingStrategy = Field(
+        default=ChunkingStrategy.ENHANCED, description="Chunking strategy to use"
+    )
     enable_ast_chunking: bool = Field(
         default=True, description="Enable AST-based chunking when available"
     )
     preserve_function_boundaries: bool = Field(
-        default=True, description="Keep functions intact"
+        default=True, description="Keep functions intact across chunks"
     )
     preserve_code_blocks: bool = Field(
         default=True, description="Keep code blocks intact when possible"
     )
-    supported_languages: list[str] = Field(
-        default=["python", "javascript", "typescript"],
-        description="Languages for AST parsing",
+    max_function_chunk_size: int = Field(
+        default=3200, gt=0, description="Maximum size for a single function chunk"
     )
 
-    # Advanced options
-    min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
-    max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
+    # Language detection and support
+    supported_languages: list[str] = Field(
+        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
+        description="Languages supported for AST parsing",
+    )
+    fallback_to_text_chunking: bool = Field(
+        default=True, description="Fall back to text chunking if AST fails"
+    )
     detect_language: bool = Field(
         default=True, description="Auto-detect programming language"
+    )
+    include_function_context: bool = Field(
+        default=True, description="Include function signatures in adjacent chunks"
+    )
+
+    # Size constraints
+    min_chunk_size: int = Field(
+        default=100, gt=0, description="Minimum chunk size in characters"
+    )
+    max_chunk_size: int = Field(
+        default=3000, gt=0, description="Maximum chunk size in characters"
     )
 
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_chunk_sizes(self) -> "ChunkingConfig":
+    def validate_chunk_sizes_relationships(self) -> "ChunkingConfig":
         """Validate chunk size relationships."""
-        if self.chunk_overlap >= self.chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
-        if self.min_chunk_size >= self.max_chunk_size:
-            raise ValueError("min_chunk_size must be less than max_chunk_size")
-        if self.chunk_size > self.max_chunk_size:
-            raise ValueError("chunk_size cannot exceed max_chunk_size")
+        # Use centralized validation for common chunk size relationships
+        validate_chunk_sizes(
+            self.chunk_size,
+            self.chunk_overlap,
+            self.min_chunk_size,
+            self.max_chunk_size,
+        )
+        # Additional validation for function chunk size specific to this model
+        if self.max_function_chunk_size < self.max_chunk_size:
+            raise ValueError("max_function_chunk_size should be >= max_chunk_size")
         return self
 
 
@@ -526,6 +635,49 @@ class PerformanceConfig(BaseModel):
         description="Default rate limits by provider (max_calls per time_window seconds)",
     )
 
+    # Canary deployment settings (optimized for DragonflyDB)
+    canary_deployment_enabled: bool = Field(
+        default=True, description="Enable canary deployment features"
+    )
+    canary_health_check_interval: int = Field(
+        default=30, gt=0, le=300, description="Health check interval in seconds"
+    )
+    canary_metrics_window: int = Field(
+        default=300, gt=60, le=3600, description="Metrics collection window in seconds"
+    )
+    canary_max_error_rate: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Maximum acceptable error rate"
+    )
+    canary_min_success_count: int = Field(
+        default=10, gt=0, description="Minimum successful requests before promotion"
+    )
+    canary_rollback_threshold: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Error rate threshold for automatic rollback",
+    )
+    canary_deployment_timeout: int = Field(
+        default=3600, gt=0, description="Maximum deployment duration in seconds"
+    )
+
+    # DragonflyDB optimization settings
+    dragonfly_pipeline_size: int = Field(
+        default=100,
+        gt=0,
+        le=1000,
+        description="Pipeline batch size for DragonflyDB operations",
+    )
+    dragonfly_scan_count: int = Field(
+        default=1000,
+        gt=100,
+        le=10000,
+        description="SCAN count for DragonflyDB (higher for better performance)",
+    )
+    enable_dragonfly_compression: bool = Field(
+        default=True, description="Enable DragonflyDB native compression"
+    )
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("default_rate_limits")
@@ -534,30 +686,7 @@ class PerformanceConfig(BaseModel):
         cls, v: dict[str, dict[str, int]]
     ) -> dict[str, dict[str, int]]:
         """Validate rate limit configuration structure."""
-        for provider, limits in v.items():
-            if not isinstance(limits, dict):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must be a dictionary"
-                )
-
-            required_keys = {"max_calls", "time_window"}
-            if not required_keys.issubset(limits.keys()):
-                raise ValueError(
-                    f"Rate limits for provider '{provider}' must contain "
-                    f"keys: {required_keys}, got: {set(limits.keys())}"
-                )
-
-            if limits["max_calls"] <= 0:
-                raise ValueError(
-                    f"max_calls for provider '{provider}' must be positive"
-                )
-
-            if limits["time_window"] <= 0:
-                raise ValueError(
-                    f"time_window for provider '{provider}' must be positive"
-                )
-
-        return v
+        return validate_rate_limit_config(v)
 
 
 class HyDEConfig(BaseModel):
@@ -758,9 +887,9 @@ class SmartSelectionConfig(BaseModel):
     @model_validator(mode="after")
     def validate_weights_sum_to_one(self) -> "SmartSelectionConfig":
         """Validate that scoring weights sum to approximately 1.0."""
-        total = self.quality_weight + self.speed_weight + self.cost_weight
-        if abs(total - 1.0) > 0.01:  # Allow small floating point errors
-            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        validate_scoring_weights(
+            self.quality_weight, self.speed_weight, self.cost_weight
+        )
         return self
 
 
@@ -867,12 +996,7 @@ class EmbeddingConfig(BaseModel):
     def validate_benchmark_keys(self) -> "EmbeddingConfig":
         """Ensure dict keys match ModelBenchmark.model_name for consistency."""
         for key, benchmark in self.model_benchmarks.items():
-            if key != benchmark.model_name:
-                raise ValueError(
-                    f"Dictionary key '{key}' does not match "
-                    f"ModelBenchmark.model_name '{benchmark.model_name}'. "
-                    f"Keys must be consistent for proper model identification."
-                )
+            validate_model_benchmark_consistency(key, benchmark.model_name)
         return self
 
 
@@ -896,6 +1020,52 @@ class SecurityConfig(BaseModel):
     enable_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_requests: int = Field(
         default=100, gt=0, description="Requests per minute"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TaskQueueConfig(BaseModel):
+    """Task queue configuration for ARQ with DragonflyDB optimization."""
+
+    # DragonflyDB connection settings (Redis-compatible)
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="DragonflyDB URL for task queue (Redis-compatible)",
+    )
+    redis_password: str | None = Field(default=None, description="Redis password")
+    redis_database: int = Field(
+        default=1, ge=0, le=15, description="Redis database number for task queue"
+    )
+
+    # Worker settings
+    max_jobs: int = Field(
+        default=10, gt=0, description="Maximum concurrent jobs per worker"
+    )
+    job_timeout: int = Field(
+        default=3600, gt=0, description="Default job timeout in seconds"
+    )
+    job_ttl: int = Field(
+        default=86400, gt=0, description="Job result TTL in seconds (24 hours)"
+    )
+
+    # Retry settings
+    max_tries: int = Field(
+        default=3, gt=0, le=10, description="Maximum retry attempts for failed jobs"
+    )
+    retry_delay: float = Field(
+        default=60.0, gt=0, description="Delay between retries in seconds"
+    )
+
+    # Queue settings
+    queue_name: str = Field(default="default", description="Default queue name")
+    health_check_interval: int = Field(
+        default=60, gt=0, description="Health check interval in seconds"
+    )
+
+    # Worker pool settings
+    worker_pool_size: int = Field(
+        default=4, gt=0, description="Number of worker processes"
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -948,6 +1118,14 @@ class UnifiedConfig(BaseSettings):
     crawl4ai: Crawl4AIConfig = Field(
         default_factory=Crawl4AIConfig, description="Crawl4AI settings"
     )
+    browser_use: BrowserUseConfig = Field(
+        default_factory=BrowserUseConfig,
+        description="BrowserUse AI automation settings",
+    )
+    playwright: PlaywrightConfig = Field(
+        default_factory=PlaywrightConfig,
+        description="Playwright browser control settings",
+    )
     chunking: ChunkingConfig = Field(
         default_factory=ChunkingConfig, description="Chunking settings"
     )
@@ -961,6 +1139,9 @@ class UnifiedConfig(BaseSettings):
         default_factory=SecurityConfig, description="Security settings"
     )
     hyde: HyDEConfig = Field(default_factory=HyDEConfig, description="HyDE settings")
+    task_queue: TaskQueueConfig = Field(
+        default_factory=TaskQueueConfig, description="Task queue (ARQ) settings"
+    )
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(

@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ...config.models import PlaywrightConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
@@ -36,13 +37,14 @@ class PlaywrightAdapter(BaseService):
     Best for authentication scenarios and complex scripted interactions.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: PlaywrightConfig):
         """Initialize Playwright adapter.
 
         Args:
-            config: Adapter configuration
+            config: Playwright configuration model
         """
         super().__init__(config)
+        self.config = config
         self.logger = logger
 
         if not PLAYWRIGHT_AVAILABLE:
@@ -51,27 +53,6 @@ class PlaywrightAdapter(BaseService):
             return
 
         self._available = True
-
-        # Configuration - handle both dict and object configs
-        if hasattr(config, "get"):
-            # Dict-like config
-            self.browser_type = config.get("browser", "chromium")
-            self.headless = config.get("headless", True)
-            self.viewport = config.get("viewport", {"width": 1920, "height": 1080})
-            self.user_agent = config.get(
-                "user_agent",
-                "Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
-            )
-        else:
-            # Object config (for testing)
-            self.browser_type = getattr(config, "browser", "chromium")
-            self.headless = getattr(config, "headless", True)
-            self.viewport = getattr(config, "viewport", {"width": 1920, "height": 1080})
-            self.user_agent = getattr(
-                config,
-                "user_agent",
-                "Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
-            )
 
         # Browser management
         self._playwright: Any | None = None
@@ -92,11 +73,11 @@ class PlaywrightAdapter(BaseService):
             self._playwright = await async_playwright().start()
 
             # Get browser launcher
-            browser_launcher = getattr(self._playwright, self.browser_type)
+            browser_launcher = getattr(self._playwright, self.config.browser)
 
             # Launch browser with optimized settings
             self._browser = await browser_launcher.launch(
-                headless=self.headless,
+                headless=self.config.headless,
                 args=[
                     "--disable-blink-features=AutomationControlled",
                     "--disable-web-security",
@@ -107,7 +88,9 @@ class PlaywrightAdapter(BaseService):
             )
 
             self._initialized = True
-            self.logger.info(f"Playwright adapter initialized with {self.browser_type}")
+            self.logger.info(
+                f"Playwright adapter initialized with {self.config.browser}"
+            )
 
         except Exception as e:
             raise CrawlServiceError(f"Failed to initialize Playwright: {e}") from e
@@ -158,8 +141,8 @@ class PlaywrightAdapter(BaseService):
         try:
             # Create browser context with settings
             context = await self._browser.new_context(
-                viewport=self.viewport,
-                user_agent=self.user_agent,
+                viewport=self.config.viewport,
+                user_agent=self.config.user_agent,
                 ignore_https_errors=True,
                 extra_http_headers={
                     "Accept-Language": "en-US,en;q=0.9",
@@ -220,8 +203,8 @@ class PlaywrightAdapter(BaseService):
                         1 for r in action_results if r.get("success", False)
                     ),
                     "processing_time_ms": processing_time,
-                    "browser_type": self.browser_type,
-                    "viewport": self.viewport,
+                    "browser_type": self.config.browser,
+                    "viewport": self.config.viewport,
                 },
                 "action_results": action_results,
                 "performance": await self._get_performance_metrics(page),
@@ -239,7 +222,7 @@ class PlaywrightAdapter(BaseService):
                 "metadata": {
                     "extraction_method": "playwright",
                     "processing_time_ms": processing_time,
-                    "browser_type": self.browser_type,
+                    "browser_type": self.config.browser,
                 },
             }
 
@@ -637,7 +620,7 @@ class PlaywrightAdapter(BaseService):
                 "response_time_ms": response_time * 1000,
                 "test_url": test_url,
                 "available": True,
-                "browser_type": self.browser_type,
+                "browser_type": self.config.browser,
                 "capabilities": self.get_capabilities(),
             }
 

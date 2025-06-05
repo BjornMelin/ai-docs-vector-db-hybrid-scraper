@@ -1,178 +1,51 @@
 """Enhanced Crawl4AI provider with advanced features for high-performance web crawling."""
 
 import asyncio
-import hashlib
 import logging
-import time
-from typing import Any
 from urllib.parse import urlparse
 
-import numpy as np
 from crawl4ai import AsyncWebCrawler
 from crawl4ai import BrowserConfig
 from crawl4ai import CrawlerRunConfig
+from crawl4ai.async_configs import LLMConfig
 from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
+from ...config.models import Crawl4AIConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
+from .extractors import DocumentationExtractor
+from .extractors import JavaScriptExecutor
 
 logger = logging.getLogger(__name__)
-
-
-class JavaScriptExecutor:
-    """Handle complex JavaScript execution for dynamic content."""
-
-    def __init__(self):
-        self.common_patterns = {
-            "spa_navigation": """
-                // Wait for SPA navigation
-                await new Promise(resolve => {
-                    const observer = new MutationObserver(() => {
-                        if (document.querySelector('.content-loaded')) {
-                            observer.disconnect();
-                            resolve();
-                        }
-                    });
-                    observer.observe(document.body, {childList: true, subtree: true});
-                    setTimeout(resolve, 5000); // Timeout fallback
-                });
-            """,
-            "infinite_scroll": """
-                // Load all content via infinite scroll
-                let lastHeight = 0;
-                while (true) {
-                    window.scrollTo(0, document.body.scrollHeight);
-                    await new Promise(r => setTimeout(r, 1000));
-                    let newHeight = document.body.scrollHeight;
-                    if (newHeight === lastHeight) break;
-                    lastHeight = newHeight;
-                }
-            """,
-            "click_show_more": """
-                // Click all "show more" buttons
-                const buttons = document.querySelectorAll('[class*="show-more"], [class*="load-more"]');
-                for (const button of buttons) {
-                    button.click();
-                    await new Promise(r => setTimeout(r, 500));
-                }
-            """,
-        }
-
-    def get_js_for_site(self, url: str) -> str | None:
-        """Get custom JavaScript for specific documentation sites."""
-        domain = urlparse(url).netloc
-
-        # Site-specific JavaScript
-        site_js = {
-            "docs.python.org": self.common_patterns["spa_navigation"],
-            "reactjs.org": self.common_patterns["spa_navigation"],
-            "react.dev": self.common_patterns["spa_navigation"],
-            "developer.mozilla.org": self.common_patterns["click_show_more"],
-            "stackoverflow.com": self.common_patterns["infinite_scroll"],
-        }
-
-        return site_js.get(domain)
-
-
-class DocumentationExtractor:
-    """Optimized extraction for technical documentation."""
-
-    def __init__(self):
-        self.selectors = {
-            # Common documentation selectors
-            "content": [
-                "main",
-                "article",
-                ".content",
-                ".documentation",
-                "#main-content",
-                ".markdown-body",
-                ".doc-content",
-            ],
-            # Code blocks
-            "code": [
-                "pre code",
-                ".highlight",
-                ".code-block",
-                ".language-*",
-            ],
-            # Navigation (to extract structure)
-            "nav": [
-                ".sidebar",
-                ".toc",
-                "nav",
-                ".navigation",
-            ],
-            # Metadata
-            "metadata": {
-                "title": ["h1", ".title", "title"],
-                "description": ["meta[name='description']", ".description"],
-                "author": [".author", "meta[name='author']"],
-                "version": [".version", ".release"],
-                "last_updated": ["time", ".last-updated", ".modified"],
-            },
-        }
-
-    def create_extraction_schema(self, doc_type: str = "general") -> dict:
-        """Create extraction schema based on documentation type."""
-        schemas = {
-            "api_reference": {
-                "endpoints": "section.endpoint",
-                "parameters": ".parameter",
-                "responses": ".response",
-                "examples": ".example",
-            },
-            "tutorial": {
-                "steps": ".step, .tutorial-step",
-                "code_examples": "pre code",
-                "prerequisites": ".prerequisites",
-                "objectives": ".objectives",
-            },
-            "guide": {
-                "sections": "h2, h3",
-                "content": "p, ul, ol",
-                "callouts": ".note, .warning, .tip",
-                "related": ".related-links",
-            },
-        }
-
-        base_schema = {
-            "title": self.selectors["metadata"]["title"],
-            "content": self.selectors["content"],
-            "code_blocks": self.selectors["code"],
-        }
-
-        return {**base_schema, **schemas.get(doc_type, {})}
 
 
 class Crawl4AIProvider(BaseService, CrawlProvider):
     """High-performance web crawling with Crawl4AI."""
 
-    def __init__(self, config: dict[str, Any] | None = None, rate_limiter: Any = None):
+    def __init__(self, config: Crawl4AIConfig, rate_limiter: object = None):
         """Initialize Crawl4AI provider with advanced configuration."""
-        super().__init__(config or {})
+        super().__init__(config)
+        self.config = config
         self.logger = logger
         self.rate_limiter = rate_limiter or RateLimiter(
-            max_calls=self.config.get("rate_limit", 60), time_window=60
+            max_calls=50,
+            time_window=60,  # Default rate limit for Crawl4AI
         )
 
-        # Browser configuration
+        # Browser configuration from Pydantic model
         self.browser_config = BrowserConfig(
-            browser_type=self.config.get("browser", "chromium"),
-            headless=self.config.get("headless", True),
-            viewport_width=self.config.get("viewport_width", 1920),
-            viewport_height=self.config.get("viewport_height", 1080),
-            user_agent=self.config.get(
-                "user_agent",
-                "Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
-            ),
+            browser_type=self.config.browser_type,
+            headless=self.config.headless,
+            viewport_width=self.config.viewport["width"],
+            viewport_height=self.config.viewport["height"],
+            user_agent="Mozilla/5.0 (compatible; AIDocs/1.0; +https://github.com/ai-docs)",
         )
 
         # Concurrent crawling settings
-        self.max_concurrent = self.config.get("max_concurrent", 10)
+        self.max_concurrent = self.config.max_concurrent_crawls
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
         # Initialize helpers
@@ -198,10 +71,155 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     async def cleanup(self) -> None:
         """Cleanup Crawl4AI resources."""
         if self._crawler:
-            await self._crawler.close()
-            self._crawler = None
-            self._initialized = False
-            self.logger.info("Crawl4AI resources cleaned up")
+            try:
+                await self._crawler.close()
+            except Exception as e:
+                self.logger.error(f"Error closing crawler: {e}")
+            finally:
+                # Always reset state even if close() fails
+                self._crawler = None
+                self._initialized = False
+                self.logger.info("Crawl4AI resources cleaned up")
+
+    def _create_extraction_strategy(self, extraction_type: str) -> object | None:
+        """Create extraction strategy based on type.
+
+        Args:
+            extraction_type: Type of extraction ("structured", "llm", or "markdown")
+
+        Returns:
+            Extraction strategy instance or None for markdown extraction
+        """
+        if extraction_type == "structured":
+            return JsonCssExtractionStrategy(
+                schema=self.doc_extractor.create_extraction_schema()
+            )
+        elif extraction_type == "llm":
+            llm_config = LLMConfig(provider="ollama/llama2")
+            return LLMExtractionStrategy(
+                llm_config=llm_config,
+                instruction="Extract technical documentation with code examples",
+            )
+        return None
+
+    def _create_run_config(
+        self,
+        wait_for: str | None,
+        js_code: str | None,
+        extraction_strategy: object | None,
+    ) -> CrawlerRunConfig:
+        """Create crawler run configuration.
+
+        Args:
+            wait_for: CSS selector to wait for
+            js_code: JavaScript code to execute
+            extraction_strategy: Extraction strategy instance
+
+        Returns:
+            CrawlerRunConfig: Configured crawler run settings
+        """
+        return CrawlerRunConfig(
+            word_count_threshold=10,
+            css_selector=", ".join(self.doc_extractor.selectors["content"]),
+            excluded_tags=[
+                "nav",
+                "footer",
+                "header",
+                "aside",
+                "script",
+                "style",
+            ],
+            wait_for=wait_for,
+            js_code=js_code,
+            extraction_strategy=extraction_strategy,
+            cache_mode="enabled",
+            page_timeout=int(
+                self.config.page_timeout * 1000
+            ),  # Convert seconds to milliseconds
+            wait_until="networkidle",
+        )
+
+    def _build_success_result(
+        self,
+        url: str,
+        result: object,
+        extraction_type: str,
+    ) -> dict[str, object]:
+        """Build success result dictionary.
+
+        Args:
+            url: The scraped URL
+            result: Crawl result object
+            extraction_type: Type of extraction used
+
+        Returns:
+            dict[str, object]: Formatted success result
+        """
+        structured_data = {}
+        if result.extracted_content:
+            structured_data = result.extracted_content
+
+        return {
+            "success": True,
+            "url": url,
+            "title": result.metadata.get("title", ""),
+            "content": result.markdown or "",
+            "html": result.html or "",
+            "metadata": {
+                **result.metadata,
+                "extraction_type": extraction_type,
+                "word_count": len((result.markdown or "").split()),
+                "has_structured_data": bool(structured_data),
+            },
+            "structured_data": structured_data,
+            "links": result.links or [],
+            "media": result.media or {},
+            "provider": "crawl4ai",
+        }
+
+    def _build_error_result(
+        self,
+        url: str,
+        error: str | Exception,
+        extraction_type: str | None = None,
+    ) -> dict[str, object]:
+        """Build error result dictionary.
+
+        Args:
+            url: The URL that failed
+            error: Error message or exception
+            extraction_type: Type of extraction attempted
+
+        Returns:
+            dict[str, object]: Formatted error result
+        """
+        # Get additional context for better error reporting
+        rate_limit_status = "unknown"
+        if hasattr(self.rate_limiter, "current_calls"):
+            rate_limit_status = (
+                f"{self.rate_limiter.current_calls}/{self.rate_limiter.max_calls}"
+            )
+
+        error_context = {
+            "url": url,
+            "extraction_type": extraction_type,
+            "rate_limit_status": rate_limit_status,
+            "semaphore_available": self.semaphore._value
+            if hasattr(self.semaphore, "_value")
+            else "unknown",
+        }
+
+        self.logger.error(f"Failed to scrape {url}: {error} | Context: {error_context}")
+
+        return {
+            "success": False,
+            "error": str(error),
+            "error_context": error_context,
+            "content": "",
+            "metadata": {},
+            "url": url,
+            "provider": "crawl4ai",
+        }
 
     async def scrape_url(
         self,
@@ -210,7 +228,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         extraction_type: str = "markdown",
         wait_for: str | None = None,
         js_code: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Scrape single URL with advanced extraction options.
 
         Args:
@@ -221,7 +239,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             js_code: Custom JavaScript to execute
 
         Returns:
-            Scrape result with content, metadata, and extraction details
+            dict[str, object]: Scrape result with:
+                - success: Whether scraping succeeded
+                - content: Extracted content in markdown format
+                - html: Raw HTML content
+                - metadata: Additional information
+                - structured_data: Structured extraction results
+                - error: Error message if failed
         """
         if not self._initialized:
             raise CrawlServiceError("Provider not initialized")
@@ -235,106 +259,27 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 if not js_code:
                     js_code = self.js_executor.get_js_for_site(url)
 
-                # Configure extraction strategy
-                extraction_strategy = None
-                if extraction_type == "structured":
-                    extraction_strategy = JsonCssExtractionStrategy(
-                        schema=self.doc_extractor.create_extraction_schema()
-                    )
-                elif extraction_type == "llm":
-                    extraction_strategy = LLMExtractionStrategy(
-                        provider="ollama/llama2",
-                        api_token=self.config.get("llm_api_token"),
-                        instruction="Extract technical documentation with code examples",
-                    )
-
-                # Configure crawler run
-                run_config = CrawlerRunConfig(
-                    word_count_threshold=10,
-                    css_selector=", ".join(self.doc_extractor.selectors["content"]),
-                    excluded_tags=[
-                        "nav",
-                        "footer",
-                        "header",
-                        "aside",
-                        "script",
-                        "style",
-                    ],
-                    wait_for=wait_for,
-                    js_code=js_code,
-                    extraction_strategy=extraction_strategy,
-                    cache_mode="enabled",
-                    page_timeout=self.config.get("page_timeout", 30000),
-                    wait_until="networkidle",
+                # Create extraction strategy and run configuration
+                extraction_strategy = self._create_extraction_strategy(extraction_type)
+                run_config = self._create_run_config(
+                    wait_for, js_code, extraction_strategy
                 )
 
                 # Crawl the URL
                 result = await self._crawler.arun(url=url, config=run_config)
 
                 if result.success:
-                    # Extract structured data if available
-                    structured_data = {}
-                    if result.extracted_content:
-                        structured_data = result.extracted_content
-
-                    return {
-                        "success": True,
-                        "url": url,
-                        "title": result.metadata.get("title", ""),
-                        "content": result.markdown or "",
-                        "html": result.html or "",
-                        "metadata": {
-                            **result.metadata,
-                            "extraction_type": extraction_type,
-                            "word_count": len((result.markdown or "").split()),
-                            "has_structured_data": bool(structured_data),
-                        },
-                        "structured_data": structured_data,
-                        "links": result.links or [],
-                        "media": result.media or {},
-                        "provider": "crawl4ai",
-                    }
+                    return self._build_success_result(url, result, extraction_type)
                 else:
-                    return {
-                        "success": False,
-                        "error": getattr(result, "error_message", "Crawl failed"),
-                        "content": "",
-                        "metadata": {},
-                        "url": url,
-                        "provider": "crawl4ai",
-                    }
+                    error_msg = getattr(result, "error_message", "Crawl failed")
+                    return self._build_error_result(url, error_msg, extraction_type)
 
             except Exception as e:
-                # Get additional context for better error reporting
-                rate_limit_status = "unknown"
-                if hasattr(self.rate_limiter, "current_calls"):
-                    rate_limit_status = f"{self.rate_limiter.current_calls}/{self.rate_limiter.max_calls}"
-
-                error_context = {
-                    "url": url,
-                    "extraction_type": extraction_type,
-                    "rate_limit_status": rate_limit_status,
-                    "semaphore_available": self.semaphore._value
-                    if hasattr(self.semaphore, "_value")
-                    else "unknown",
-                }
-
-                self.logger.error(
-                    f"Failed to scrape {url}: {e} | Context: {error_context}"
-                )
-                return {
-                    "success": False,
-                    "error": str(e),
-                    "error_context": error_context,
-                    "content": "",
-                    "metadata": {},
-                    "url": url,
-                    "provider": "crawl4ai",
-                }
+                return self._build_error_result(url, e, extraction_type)
 
     async def crawl_bulk(
         self, urls: list[str], extraction_type: str = "markdown"
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, object]]:
         """Crawl multiple URLs concurrently.
 
         Args:
@@ -371,7 +316,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         url: str,
         max_pages: int = 50,
         formats: list[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Crawl entire site using recursive URL discovery.
 
         Args:
@@ -475,122 +420,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             }
 
 
-class CrawlCache:
-    """Intelligent caching for crawled content."""
-
-    def __init__(self, cache_manager: Any):
-        self.cache = cache_manager
-        self.ttl = 86400  # 24 hours default
-
-    async def get_or_crawl(
-        self,
-        url: str,
-        crawler: Crawl4AIProvider,
-        force_refresh: bool = False,
-    ) -> dict[str, Any]:
-        """Get from cache or crawl if needed."""
-        # Generate cache key
-        cache_key = f"crawl:{hashlib.md5(url.encode()).hexdigest()}"
-
-        # Check cache unless forced refresh
-        if not force_refresh:
-            cached = await self.cache.get(cache_key)
-            if cached:
-                return cached
-
-        # Crawl and cache
-        result = await crawler.scrape_url(url)
-
-        # Determine TTL based on content
-        ttl = self.calculate_ttl(result)
-
-        await self.cache.set(cache_key, result, ttl=ttl)
-
-        return result
-
-    def calculate_ttl(self, result: dict[str, Any]) -> int:
-        """Dynamic TTL based on content characteristics.
-
-        Args:
-            result: Crawl result dictionary containing URL and content
-
-        Returns:
-            TTL in seconds based on content type:
-            - API docs: 7 days (604800s)
-            - Blog posts: 30 days (2592000s)
-            - Other content: 3 days (259200s)
-        """
-        url = result.get("url", "").lower()
-
-        # API docs change less frequently
-        if "api" in url:
-            return 604800  # 7 days
-
-        # Blog posts are static
-        if "blog" in url:
-            return 2592000  # 30 days
-
-        # Tutorials moderate change frequency
-        return 259200  # 3 days
-
-
-class CrawlBenchmark:
-    """Benchmark Crawl4AI performance."""
-
-    def __init__(self, crawl4ai: Crawl4AIProvider, firecrawl: Any = None):
-        self.crawl4ai = crawl4ai
-        self.firecrawl = firecrawl
-
-    async def run_comparison(self, urls: list[str]) -> dict[str, dict[str, Any]]:
-        """Compare performance of both crawlers.
-
-        Args:
-            urls: List of URLs to test against both crawlers
-
-        Returns:
-            Dictionary with performance statistics for each crawler including:
-            - success/failed counts
-            - timing statistics (avg, p95, min, max)
-        """
-        results = {
-            "crawl4ai": {"times": [], "success": 0, "failed": 0},
-            "firecrawl": {"times": [], "success": 0, "failed": 0},
-        }
-
-        # Test Crawl4AI
-        for url in urls:
-            start = time.time()
-            try:
-                result = await self.crawl4ai.scrape_url(url)
-                if result["success"]:
-                    results["crawl4ai"]["success"] += 1
-                else:
-                    results["crawl4ai"]["failed"] += 1
-                results["crawl4ai"]["times"].append(time.time() - start)
-            except Exception:
-                results["crawl4ai"]["failed"] += 1
-
-        # Test Firecrawl if available
-        if self.firecrawl:
-            for url in urls:
-                start = time.time()
-                try:
-                    result = await self.firecrawl.scrape_url(url)
-                    if result.get("success"):
-                        results["firecrawl"]["success"] += 1
-                    else:
-                        results["firecrawl"]["failed"] += 1
-                    results["firecrawl"]["times"].append(time.time() - start)
-                except Exception:
-                    results["firecrawl"]["failed"] += 1
-
-        # Calculate statistics
-        for _crawler, data in results.items():
-            times = data["times"]
-            if times:
-                data["avg_time"] = float(np.mean(times))
-                data["p95_time"] = float(np.percentile(times, 95))
-                data["min_time"] = float(np.min(times))
-                data["max_time"] = float(np.max(times))
-
-        return results
+# NOTE: CrawlCache and CrawlBenchmark classes have been removed as they are redundant:
+#
+# CrawlCache functionality is superseded by the main CacheManager in
+# src/services/cache/manager.py which provides:
+# - Proper CRAWL cache type support with configurable TTL
+# - Two-tier caching (local + DragonflyDB)
+# - Better memory management and compression
+#
+# CrawlBenchmark functionality should be moved to scripts/benchmark_crawl4ai_performance.py
+# for standalone performance testing.

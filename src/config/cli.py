@@ -4,21 +4,66 @@ This tool provides commands for creating, validating, and converting
 configuration files.
 """
 
-import json
 from pathlib import Path
+from typing import Any
 
 import click
-import yaml
 from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
 from .loader import ConfigLoader
-from .migrator import ConfigMigrator
-from .models import UnifiedConfig
 from .schema import ConfigSchemaGenerator
 
 console = Console()
+
+
+def _get_service_icon(service_name: str) -> str:
+    """Get icon for service display."""
+    icons = {
+        "qdrant": "🗃️",
+        "redis": "🔄",
+        "dragonfly": "🔄",
+        "openai": "🤖",
+        "firecrawl": "🕷️",
+    }
+    return icons.get(service_name, "🔍")
+
+
+def _display_health_check_results(results: dict[str, dict[str, Any]]) -> None:
+    """Display health check results in table format."""
+    rprint("[bold]Checking Service Connections...[/bold]\n")
+
+    for service_name, result in results.items():
+        service_icon = _get_service_icon(service_name)
+        rprint(f"{service_icon} Checking {service_name.capitalize()}...")
+
+        if result["connected"]:
+            status_msg = f"[green]✓[/green] {service_name.capitalize()} connected"
+
+            # Add details if available
+            details = result.get("details", {})
+            if details:
+                detail_parts = []
+                if "collections_count" in details:
+                    detail_parts.append(f"{details['collections_count']} collections")
+                if "model" in details:
+                    detail_parts.append(f"model: {details['model']}")
+                if "available_models_count" in details:
+                    detail_parts.append(
+                        f"{details['available_models_count']} models available"
+                    )
+                if detail_parts:
+                    status_msg += f" ({', '.join(detail_parts)})"
+
+            rprint(status_msg)
+        else:
+            error_msg = result.get("error", "Unknown error")
+            rprint(
+                f"[red]✗[/red] {service_name.capitalize()} connection failed: {error_msg}"
+            )
+
+        rprint()  # Add spacing between services
 
 
 @click.group()
@@ -74,7 +119,16 @@ def create_env_template(output: str):
 )
 @click.option("--env-file", "-e", type=click.Path(exists=True), help=".env file path")
 @click.option("--show-config", is_flag=True, help="Show the loaded configuration")
-def validate(config_file: str | None, env_file: str | None, show_config: bool):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results (when --show-config is used)",
+)
+def validate(
+    config_file: str | None, env_file: str | None, show_config: bool, output_format: str
+):
     """Validate configuration from various sources."""
     try:
         # Load configuration
@@ -95,8 +149,11 @@ def validate(config_file: str | None, env_file: str | None, show_config: bool):
                 rprint(f"  [yellow]•[/yellow] {issue}")
 
         if show_config:
-            rprint("\n[bold]Loaded Configuration:[/bold]")
-            rprint(config.model_dump_json(indent=2))
+            if output_format == "json":
+                console.print_json(data=config.model_dump())
+            else:
+                rprint("\n[bold]Loaded Configuration:[/bold]")
+                rprint(config.model_dump_json(indent=2))
 
     except Exception as e:
         rprint(f"[red]Error loading configuration:[/red] {e}")
@@ -141,10 +198,10 @@ def convert(input_file: str, output_file: str, from_format: str | None, to_forma
     try:
         # Load configuration
         if from_format == "env":
-            # Special handling for .env files
-            config = UnifiedConfig()
+            # Special handling for .env files - load with env file support
+            config = ConfigLoader.load_config(env_file=input_path, include_env=True)
         else:
-            config = UnifiedConfig.load_from_file(input_path)
+            config = ConfigLoader.load_config(config_file=input_path, include_env=True)
 
         # Save in new format
         config.save_to_file(output_path, format=to_format)
@@ -164,102 +221,48 @@ def convert(input_file: str, output_file: str, from_format: str | None, to_forma
     type=click.Path(exists=True),
     help="Configuration file to load",
 )
-def show_providers(config_file: str | None):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results",
+)
+def show_providers(config_file: str | None, output_format: str):
     """Show active provider configuration."""
     try:
         # Load configuration
         config = ConfigLoader.load_config(config_file=config_file, include_env=True)
 
-        # Create table
-        table = Table(title="Active Provider Configuration")
-        table.add_column("Provider Type", style="cyan")
-        table.add_column("Selected Provider", style="green")
-        table.add_column("Configuration", style="yellow")
+        # Get provider display data
+        provider_data = ConfigLoader.get_provider_display_data(config)
 
-        # Add rows
-        providers = config.get_active_providers()
-
-        # Embedding provider
-        embedding_config = providers["embedding"]
-        if config.embedding_provider == "openai":
-            table.add_row(
-                "Embedding",
-                "OpenAI",
-                f"Model: {embedding_config.model}\n"
-                f"Dimensions: {embedding_config.dimensions}\n"
-                f"API Key: {'Set' if embedding_config.api_key else 'Not Set'}",
-            )
+        if output_format == "json":
+            # Output JSON format
+            console.print_json(data=provider_data)
         else:
-            table.add_row(
-                "Embedding",
-                "FastEmbed",
-                f"Model: {embedding_config.model}\n"
-                f"Max Length: {embedding_config.max_length}",
-            )
+            # Output table format
+            table = Table(title="Active Provider Configuration")
+            table.add_column("Provider Type", style="cyan")
+            table.add_column("Selected Provider", style="green")
+            table.add_column("Configuration", style="yellow")
 
-        # Crawl provider
-        crawl_config = providers["crawl"]
-        if config.crawl_provider == "firecrawl":
-            table.add_row(
-                "Crawl",
-                "Firecrawl",
-                f"API URL: {crawl_config.api_url}\n"
-                f"API Key: {'Set' if crawl_config.api_key else 'Not Set'}",
-            )
-        else:
-            table.add_row(
-                "Crawl",
-                "Crawl4AI",
-                f"Browser: {crawl_config.browser_type}\n"
-                f"Headless: {crawl_config.headless}\n"
-                f"Max Concurrent: {crawl_config.max_concurrent_crawls}",
-            )
+            # Add rows for each provider
+            for provider_type, provider_info in provider_data.items():
+                config_lines = []
+                for key, value in provider_info["configuration"].items():
+                    config_lines.append(f"{key}: {value}")
 
-        console.print(table)
+                table.add_row(
+                    provider_type.capitalize(),
+                    provider_info["provider_name"],
+                    "\n".join(config_lines),
+                )
+
+            console.print(table)
 
     except Exception as e:
         rprint(f"[red]Error loading configuration:[/red] {e}")
-        raise click.Exit(1) from e
-
-
-@cli.command()
-@click.option(
-    "--source",
-    type=click.Path(exists=True),
-    default="config/documentation-sites.json",
-    help="Source documentation sites file",
-)
-@click.option(
-    "--config-file",
-    "-c",
-    type=click.Path(exists=True),
-    help="Target configuration file",
-)
-def migrate_sites(source: str, config_file: str | None):
-    """Migrate documentation sites from old format to unified config."""
-    try:
-        # Load documentation sites
-        sites = ConfigLoader.load_documentation_sites(source)
-
-        # Load or create configuration
-        if config_file:
-            config = UnifiedConfig.load_from_file(config_file)
-        else:
-            config = UnifiedConfig()
-
-        # Update sites
-        config.documentation_sites = sites
-
-        # Save
-        output_path = Path(config_file) if config_file else Path("config.json")
-        config.save_to_file(output_path, format="json")
-
-        rprint(
-            f"[green]✓[/green] Migrated {len(sites)} documentation sites to {output_path}"
-        )
-
-    except Exception as e:
-        rprint(f"[red]Error migrating sites:[/red] {e}")
         raise click.Exit(1) from e
 
 
@@ -270,69 +273,31 @@ def migrate_sites(source: str, config_file: str | None):
     type=click.Path(exists=True),
     help="Configuration file to check",
 )
-def check_connections(config_file: str | None):
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format for results",
+)
+def check_connections(config_file: str | None, output_format: str):
     """Check connections to all configured services."""
     try:
         # Load configuration
         config = ConfigLoader.load_config(config_file=config_file, include_env=True)
 
-        rprint("[bold]Checking Service Connections...[/bold]\n")
+        # Import the centralized health checker
+        from ..utils.health_checks import ServiceHealthChecker
 
-        # Check Qdrant
-        rprint("🔍 Checking Qdrant...")
-        try:
-            from qdrant_client import QdrantClient
+        # Perform health checks
+        results = ServiceHealthChecker.perform_all_health_checks(config)
 
-            client = QdrantClient(url=config.qdrant.url, api_key=config.qdrant.api_key)
-            collections = client.get_collections()
-            rprint(
-                f"[green]✓[/green] Qdrant connected ({len(collections.collections)} collections)"
-            )
-        except Exception as e:
-            rprint(f"[red]✗[/red] Qdrant connection failed: {e}")
-
-        # Check Redis if enabled
-        if config.cache.enable_redis_cache:
-            rprint("\n🔍 Checking Redis...")
-            try:
-                import redis
-
-                r = redis.from_url(config.cache.redis_url)
-                r.ping()
-                rprint("[green]✓[/green] Redis connected")
-            except Exception as e:
-                rprint(f"[red]✗[/red] Redis connection failed: {e}")
-
-        # Check OpenAI if configured
-        if config.embedding_provider == "openai" and config.openai.api_key:
-            rprint("\n🔍 Checking OpenAI...")
-            try:
-                from openai import OpenAI
-
-                client = OpenAI(api_key=config.openai.api_key)
-                client.models.list()
-                rprint("[green]✓[/green] OpenAI connected")
-            except Exception as e:
-                rprint(f"[red]✗[/red] OpenAI connection failed: {e}")
-
-        # Check Firecrawl if configured
-        if config.crawl_provider == "firecrawl" and config.firecrawl.api_key:
-            rprint("\n🔍 Checking Firecrawl...")
-            try:
-                import httpx
-
-                headers = {"Authorization": f"Bearer {config.firecrawl.api_key}"}
-                response = httpx.get(
-                    f"{config.firecrawl.api_url}/health", headers=headers
-                )
-                if response.status_code == 200:
-                    rprint("[green]✓[/green] Firecrawl connected")
-                else:
-                    rprint(
-                        f"[red]✗[/red] Firecrawl returned status {response.status_code}"
-                    )
-            except Exception as e:
-                rprint(f"[red]✗[/red] Firecrawl connection failed: {e}")
+        if output_format == "json":
+            # Output JSON format
+            console.print_json(data=results)
+        else:
+            # Output table format
+            _display_health_check_results(results)
 
     except Exception as e:
         rprint(f"[red]Error checking connections:[/red] {e}")
@@ -371,113 +336,30 @@ def generate_schema(output_dir: str, format: tuple[str]):
 
 
 @cli.command()
-def show_schema():
+@click.option(
+    "--output-format",
+    "-f",
+    type=click.Choice(["json", "yaml"]),
+    default="json",
+    help="Output format for schema",
+)
+def show_schema(output_format: str):
     """Display configuration schema in the terminal."""
     try:
         schema = ConfigSchemaGenerator.generate_json_schema()
 
-        # Pretty print the schema
-        console.print_json(data=schema)
+        if output_format == "yaml":
+            import yaml
+
+            yaml_output = yaml.dump(schema, default_flow_style=False, indent=2)
+            rprint(yaml_output)
+        else:
+            # Pretty print the schema as JSON
+            console.print_json(data=schema)
 
     except Exception as e:
         rprint(f"[red]Error displaying schema:[/red] {e}")
         raise click.Exit(1) from e
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-@click.option(
-    "--target-version", "-v", default="0.3.0", help="Target version to migrate to"
-)
-@click.option("--no-backup", is_flag=True, help="Skip creating backup file")
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be migrated without making changes"
-)
-def migrate(config_file: str, target_version: str, no_backup: bool, dry_run: bool):
-    """Migrate a configuration file to the latest version."""
-    config_path = Path(config_file)
-
-    try:
-        # Load configuration
-        with open(config_path) as f:
-            if config_path.suffix == ".json":
-                config_data = json.load(f)
-            elif config_path.suffix in [".yaml", ".yml"]:
-                config_data = yaml.safe_load(f)
-            else:
-                rprint(f"[red]Unsupported file format: {config_path.suffix}[/red]")
-                raise click.Exit(1)
-
-        # Detect current version
-        from_version = ConfigMigrator.detect_config_version(config_data)
-        if from_version is None:
-            rprint("[red]Could not detect configuration version[/red]")
-            raise click.Exit(1)
-
-        rprint(f"Current version: [cyan]{from_version}[/cyan]")
-        rprint(f"Target version: [cyan]{target_version}[/cyan]")
-
-        if from_version == target_version:
-            rprint("[green]Configuration already at target version[/green]")
-            return
-
-        # Perform migration (in memory for dry run)
-        if from_version == "legacy":
-            migrated = ConfigMigrator.migrate_legacy_to_unified(config_data)
-        else:
-            migrated = ConfigMigrator.migrate_between_versions(
-                config_data, from_version, target_version
-            )
-
-        # Generate report
-        report = ConfigMigrator.create_migration_report(
-            config_data, migrated, from_version, target_version
-        )
-
-        rprint("\n[bold]Migration Report:[/bold]")
-        rprint(report)
-
-        if dry_run:
-            rprint("\n[yellow]Dry run complete - no changes made[/yellow]")
-        else:
-            # Apply migration
-            success, message = ConfigMigrator.auto_migrate(
-                config_path, target_version, backup=not no_backup
-            )
-            if success:
-                rprint(f"\n[green]✓[/green] {message}")
-            else:
-                rprint(f"\n[red]✗[/red] {message}")
-                raise click.Exit(1)
-
-    except Exception as e:
-        rprint(f"[red]Error during migration:[/red] {e}")
-        raise click.Exit(1) from e
-
-
-@cli.command()
-@click.option("--from-version", "-f", help="Source version")
-@click.option("--to-version", "-t", help="Target version")
-def show_migration_path(from_version: str | None, to_version: str | None):
-    """Show available migration paths between versions."""
-    table = Table(title="Configuration Version History")
-    table.add_column("Version", style="cyan")
-    table.add_column("Description", style="yellow")
-
-    for version, description in ConfigMigrator.VERSIONS.items():
-        table.add_row(version, description)
-
-    console.print(table)
-
-    if from_version and to_version:
-        rprint(f"\nMigration path from {from_version} to {to_version}:")
-        if from_version == "legacy":
-            rprint("  1. Convert legacy format to unified configuration")
-            rprint(f"  2. Apply migrations to reach version {to_version}")
-        else:
-            rprint(
-                f"  1. Apply incremental migrations from {from_version} to {to_version}"
-            )
 
 
 if __name__ == "__main__":

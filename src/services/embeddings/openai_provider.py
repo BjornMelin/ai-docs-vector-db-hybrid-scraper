@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import tempfile
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -13,6 +14,9 @@ from openai import AsyncOpenAI
 from ..errors import EmbeddingServiceError
 from ..utilities.rate_limiter import RateLimitManager
 from .base import EmbeddingProvider
+
+if TYPE_CHECKING:
+    from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     def __init__(
         self,
         api_key: str,
+        client_manager: "ClientManager",
         model_name: str = "text-embedding-3-small",
         dimensions: int | None = None,
         rate_limiter: RateLimitManager | None = None,
@@ -49,8 +54,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Args:
             api_key: OpenAI API key
+            client_manager: ClientManager instance for dependency injection
             model_name: Model name (text-embedding-3-small, text-embedding-3-large)
             dimensions: Optional dimensions for text-embedding-3-* models
+            rate_limiter: Optional RateLimitManager instance
         """
         super().__init__(model_name)
         self.api_key = api_key
@@ -58,6 +65,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._dimensions = dimensions
         self._initialized = False
         self.rate_limiter = rate_limiter
+        self._client_manager = client_manager
 
         if model_name not in self._model_configs:
             raise EmbeddingServiceError(
@@ -78,12 +86,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self.dimensions = config["max_dimensions"]
 
     async def initialize(self) -> None:
-        """Initialize OpenAI client."""
+        """Initialize OpenAI client using ClientManager."""
         if self._initialized:
             return
 
         try:
-            self._client = AsyncOpenAI(api_key=self.api_key)
+            # Get client from ClientManager
+            self._client = await self._client_manager.get_openai_client()
+
+            if self._client is None:
+                raise EmbeddingServiceError("OpenAI API key not configured")
+
             self._initialized = True
             logger.info(f"OpenAI client initialized with model {self.model_name}")
         except Exception as e:
@@ -92,12 +105,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             ) from e
 
     async def cleanup(self) -> None:
-        """Cleanup OpenAI client."""
-        if self._client:
-            await self._client.close()
-            self._client = None
-            self._initialized = False
-            logger.info("OpenAI client closed")
+        """Cleanup OpenAI client (delegated to ClientManager)."""
+        # Note: ClientManager handles client cleanup, we just reset our reference
+        self._client = None
+        self._initialized = False
 
     async def generate_embeddings(
         self, texts: list[str], batch_size: int | None = None

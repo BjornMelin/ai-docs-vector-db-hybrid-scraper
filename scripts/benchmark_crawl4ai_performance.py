@@ -92,21 +92,16 @@ class CrawlerBenchmark:
         self.config = ConfigLoader().load_config()
         self.client_manager = ClientManager(self.config)
 
-        # Initialize providers
+        # Initialize providers using config objects
         self.crawl4ai_provider = Crawl4AIProvider(
-            config={
-                "max_concurrent": 50,
-                "rate_limit": 60,
-                "browser": "chromium",
-                "headless": True,
-            }
+            config=self.config.crawl4ai,
         )
 
         # Only initialize Firecrawl if API key is available
         self.firecrawl_provider = None
         if os.getenv("FIRECRAWL_API_KEY"):
             self.firecrawl_provider = FirecrawlProvider(
-                api_key=os.getenv("FIRECRAWL_API_KEY"),
+                config=self.config.firecrawl,
                 rate_limiter=RateLimiter(max_calls=100, time_window=60),
             )
 

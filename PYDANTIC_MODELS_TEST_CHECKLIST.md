@@ -30,6 +30,7 @@ Based on Pydantic v2 documentation research:
 ## Configuration Models (`src/config/models.py`) ✅ COMPLETED (94% coverage)
 
 ### Core Configuration Classes
+
 - [x] `ModelBenchmark` - Performance benchmark for embedding models
 - [x] `CacheConfig` - Cache configuration settings
 - [x] `HNSWConfig` - HNSW index configuration
@@ -49,6 +50,7 @@ Based on Pydantic v2 documentation research:
 - [x] `UnifiedConfig` - Main unified configuration (BaseSettings)
 
 ### Validators to Test
+
 - [x] API key validation functions
 - [x] URL validation in QdrantConfig
 - [x] Model name validation in OpenAIConfig
@@ -60,6 +62,7 @@ Based on Pydantic v2 documentation research:
 ## MCP Models (`src/mcp/models/`) ✅ COMPLETED (100% coverage)
 
 ### Request Models (`requests.py`)
+
 - [x] `SearchRequest` - Search request with advanced options
 - [x] `EmbeddingRequest` - Embedding generation request
 - [x] `DocumentRequest` - Document processing request
@@ -70,6 +73,7 @@ Based on Pydantic v2 documentation research:
 - [x] `FilteredSearchRequest` - Filtered search request
 
 ### Response Models (`responses.py`)
+
 - [x] `SearchResult` - Individual search result
 - [x] `CrawlResult` - Crawl operation result
 - [x] Response model validation and field constraints
@@ -77,6 +81,7 @@ Based on Pydantic v2 documentation research:
 ## Domain Models (`src/models/`) ✅ COMPLETED (87% average coverage)
 
 ### API Contracts (`api_contracts.py`) - 67 tests
+
 - [x] `MCPRequest` - Base MCP request
 - [x] `MCPResponse` - Base MCP response
 - [x] `ErrorResponse` - Standard error response
@@ -87,6 +92,7 @@ Based on Pydantic v2 documentation research:
 - [x] All field validation and constraint testing
 
 ### Document Processing Models (`document_processing.py`) - 33 tests
+
 - [x] `Document` - Document model
 - [x] `DocumentMetadata` - Document metadata model
 - [x] `Chunk` - Document chunk model
@@ -94,6 +100,7 @@ Based on Pydantic v2 documentation research:
 - [x] `ProcessingStats` - Processing statistics model
 
 ### Vector Search Models (`vector_search.py`) - 51 tests
+
 - [x] `VectorSearchParams` - Search parameters
 - [x] `SearchResult` - Search result model
 - [x] `FusionConfig` - Fusion configuration
@@ -101,6 +108,7 @@ Based on Pydantic v2 documentation research:
 - [x] `SearchMetrics` - Search performance metrics
 
 ### Validators (`validators.py`) - 57 tests
+
 - [x] Custom validator functions
 - [x] Field validation utilities
 - [x] URL and collection name validators
@@ -109,37 +117,44 @@ Based on Pydantic v2 documentation research:
 ## Service Models
 
 ### Browser Action Schemas (`src/services/browser/action_schemas.py`)
+
 - [ ] `BrowserAction` - Browser action model
 - [ ] `ClickAction` - Click action model
 - [ ] `TypeAction` - Type action model
 - [ ] `NavigateAction` - Navigation action model
 
 ### HyDE Models (`src/services/hyde/`)
+
 - [ ] `HyDEConfig` - HyDE configuration (in config.py)
 - [ ] `HyDEQuery` - HyDE query model
 - [ ] `HyDEResult` - HyDE result model
 
 ### Search Models (`src/services/utilities/search_models.py`)
+
 - [ ] Additional search utility models
 
 ## Other Models
 
 ### Chunking Models (`src/chunking.py`)
+
 - [ ] Chunking-related models if any
 
 ### Error Models (`src/core/errors.py`, `src/services/errors.py`)
+
 - [ ] Custom error models with Pydantic
 
 ## Testing Infrastructure ✅ COMPLETED
 
 ### Setup Requirements
+
 - [x] Install pytest-asyncio for async testing
 - [x] Set up conftest.py with common fixtures
 - [x] Create mock fixtures for external services
 - [x] Configure pytest settings in pyproject.toml
 
 ### Test Organization
-```
+
+```plaintext
 tests/
 ├── unit/
 │   ├── config/

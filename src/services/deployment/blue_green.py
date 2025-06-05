@@ -2,7 +2,9 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Any
 
 from ...config import UnifiedConfig
@@ -10,7 +12,9 @@ from ..base import BaseService
 from ..core.qdrant_alias_manager import QdrantAliasManager
 from ..embeddings.manager import EmbeddingManager
 from ..errors import ServiceError
-from ..vector_db.service import QdrantService
+
+if TYPE_CHECKING:
+    from ..vector_db.service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,7 @@ class BlueGreenDeployment(BaseService):
     def __init__(
         self,
         config: UnifiedConfig,
-        qdrant_service: QdrantService,
+        qdrant_service: "QdrantService",
         alias_manager: QdrantAliasManager,
         embedding_manager: EmbeddingManager | None = None,
     ):
@@ -119,10 +123,7 @@ class BlueGreenDeployment(BaseService):
             )
 
             # 6. Schedule old collection cleanup
-            # Store task reference to avoid RUF006 warning
-            _ = asyncio.create_task(  # noqa: RUF006
-                self.aliases.safe_delete_collection(blue_collection)
-            )
+            await self.aliases.safe_delete_collection(blue_collection)
 
             return {
                 "success": True,
@@ -161,12 +162,32 @@ class BlueGreenDeployment(BaseService):
             )
 
         elif data_source.startswith("backup:"):
-            # Restore from backup (placeholder for future implementation)
-            raise NotImplementedError("Backup restore not yet implemented")
+            # TODO: Restore from backup
+            # This would integrate with backup systems like:
+            # - Qdrant collection snapshots
+            # - S3/GCS backup files
+            # - Database dumps
+            # For now, raise NotImplementedError with clear guidance
+            backup_path = data_source.replace("backup:", "")
+            logger.info(f"TODO: Implement backup restore from {backup_path}")
+            raise NotImplementedError(
+                f"Backup restore from {backup_path} not yet implemented. "
+                "Integration needed with backup storage systems."
+            )
 
         elif data_source.startswith("crawl:"):
-            # Fresh crawl (placeholder for future implementation)
-            raise NotImplementedError("Fresh crawl population not yet implemented")
+            # TODO: Fresh crawl population
+            # This would trigger a fresh crawl and indexing process:
+            # - Start crawl job using CrawlManager
+            # - Process documents and generate embeddings
+            # - Index into the new collection
+            # For now, raise NotImplementedError with clear guidance
+            crawl_config = data_source.replace("crawl:", "")
+            logger.info(f"TODO: Implement fresh crawl with config {crawl_config}")
+            raise NotImplementedError(
+                f"Fresh crawl with config {crawl_config} not yet implemented. "
+                "Integration needed with CrawlManager and embedding pipeline."
+            )
 
         else:
             raise ServiceError(f"Unknown data source type: {data_source}")
@@ -245,21 +266,107 @@ class BlueGreenDeployment(BaseService):
         error_count = 0
         max_errors = 5
 
+        # Enhanced monitoring metrics
+        metrics_history = {
+            "response_times": [],
+            "error_rates": [],
+            "collection_stats": [],
+            "search_latencies": [],
+        }
+
         while asyncio.get_event_loop().time() - start_time < duration_seconds:
             try:
-                # Perform health check
+                monitoring_start = time.time()
+
+                # 1. Basic health checks
                 collection = await self.aliases.get_collection_for_alias(alias_name)
                 if not collection:
                     error_count += 1
                     logger.warning(f"Alias {alias_name} not found")
+                    continue
 
-                # Check collection status
+                # 2. Collection statistics monitoring
                 stats = await self.qdrant.get_collection_stats(collection)
                 if stats.get("vectors_count", 0) == 0:
                     error_count += 1
                     logger.warning(f"Collection {collection} has no vectors")
 
+                metrics_history["collection_stats"].append(
+                    {
+                        "timestamp": time.time(),
+                        "vectors_count": stats.get("vectors_count", 0),
+                        "indexed_vectors_count": stats.get("indexed_vectors_count", 0),
+                        "points_count": stats.get("points_count", 0),
+                    }
+                )
+
+                # 3. Search performance monitoring
+                if self.embeddings:
+                    try:
+                        # Test search with a simple query
+                        test_embedding = await self.embeddings.generate_embedding(
+                            "test query"
+                        )
+                        search_start = time.time()
+
+                        search_results = await self.qdrant.query(
+                            collection_name=collection,
+                            query_vector=test_embedding["embedding"],
+                            limit=5,
+                        )
+
+                        search_latency = time.time() - search_start
+                        metrics_history["search_latencies"].append(
+                            {
+                                "timestamp": time.time(),
+                                "latency_ms": search_latency * 1000,
+                                "results_count": len(search_results)
+                                if search_results
+                                else 0,
+                            }
+                        )
+
+                        # Alert on high search latency
+                        if search_latency > 1.0:  # > 1 second
+                            logger.warning(
+                                f"High search latency: {search_latency:.2f}s"
+                            )
+                            error_count += 1
+
+                    except Exception as e:
+                        logger.error(f"Search performance test failed: {e}")
+                        error_count += 1
+
+                # 4. TODO: Integration with external monitoring systems
+                # In production, this would also:
+                # - Query APM systems (DataDog, New Relic, Prometheus)
+                # - Check application logs for error patterns
+                # - Monitor downstream service health
+                # - Track business metrics (conversion rates, user satisfaction)
+                # - Alert external systems (PagerDuty, Slack)
+
+                # Example integrations:
+                # await self._check_apm_metrics(alias_name)
+                # await self._check_application_logs(alias_name, start_time)
+                # await self._check_business_metrics(alias_name)
+
+                # 5. Response time tracking
+                monitoring_duration = time.time() - monitoring_start
+                metrics_history["response_times"].append(
+                    {
+                        "timestamp": time.time(),
+                        "duration_ms": monitoring_duration * 1000,
+                    }
+                )
+
+                # 6. Log comprehensive metrics every few checks
+                if len(metrics_history["response_times"]) % 10 == 0:
+                    self._log_monitoring_summary(alias_name, metrics_history)
+
                 if error_count > max_errors:
+                    logger.error(
+                        f"Too many errors ({error_count}) detected during monitoring"
+                    )
                     raise ServiceError("Too many errors after switch")
 
             except Exception as e:
@@ -267,6 +374,39 @@ class BlueGreenDeployment(BaseService):
                 error_count += 1
 
             await asyncio.sleep(check_interval)
+
+        # Final monitoring summary
+        self._log_monitoring_summary(alias_name, metrics_history, final=True)
+
+    def _log_monitoring_summary(
+        self, alias_name: str, metrics: dict, final: bool = False
+    ) -> None:
+        """Log summary of monitoring metrics."""
+        try:
+            prefix = "Final monitoring" if final else "Monitoring"
+
+            if metrics["search_latencies"]:
+                latencies = [m["latency_ms"] for m in metrics["search_latencies"]]
+                avg_latency = sum(latencies) / len(latencies)
+                max_latency = max(latencies)
+                min_latency = min(latencies)
+
+                logger.info(
+                    f"{prefix} summary for {alias_name}: "
+                    f"Search latency - avg: {avg_latency:.1f}ms, "
+                    f"min: {min_latency:.1f}ms, max: {max_latency:.1f}ms"
+                )
+
+            if metrics["collection_stats"]:
+                latest_stats = metrics["collection_stats"][-1]
+                logger.info(
+                    f"{prefix} collection stats: "
+                    f"vectors: {latest_stats['vectors_count']}, "
+                    f"indexed: {latest_stats['indexed_vectors_count']}"
+                )
+
+        except Exception as e:
+            logger.warning(f"Failed to log monitoring summary: {e}")
 
     async def _rollback(
         self,

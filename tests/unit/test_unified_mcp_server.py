@@ -11,12 +11,12 @@ import pytest
 # Mock problematic imports before importing the module
 sys.modules["fastmcp"] = MagicMock()
 sys.modules["src.infrastructure.client_manager"] = MagicMock()
-sys.modules["src.mcp.tool_registry"] = MagicMock()
+sys.modules["src.mcp_tools.tool_registry"] = MagicMock()
 sys.modules["src.services.logging_config"] = MagicMock()
 sys.modules["src.config"] = MagicMock()
 
-# This is intentionally after mocks due to import dependencies  # noqa: E402
-from src import unified_mcp_server
+# This is intentionally after mocks due to import dependencies
+from src import unified_mcp_server  # noqa: E402
 
 
 class TestValidateStreamingConfig:
@@ -281,13 +281,24 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
+    @patch("src.config.get_config")
     async def test_lifespan_successful_initialization(
-        self, mock_register_tools, mock_client_manager_class, mock_validate_config
+        self,
+        mock_get_config,
+        mock_register_tools,
+        mock_client_manager_class,
+        mock_validate_config,
     ):
         """Test successful lifespan initialization and cleanup."""
+        # Mock config
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+
         # Mock client manager
         mock_client_manager = AsyncMock()
-        mock_client_manager_class.from_unified_config.return_value = mock_client_manager
+        mock_client_manager.initialize = AsyncMock()
+        mock_client_manager.cleanup = AsyncMock()
+        mock_client_manager_class.return_value = mock_client_manager
 
         # Make register_all_tools async
         async def mock_register(*args, **kwargs):
@@ -298,7 +309,8 @@ class TestLifespanContextManager:
         async with unified_mcp_server.lifespan():
             # Verify initialization calls
             mock_validate_config.assert_called_once()
-            mock_client_manager_class.from_unified_config.assert_called_once()
+            mock_get_config.assert_called_once()
+            mock_client_manager_class.assert_called_once_with(mock_config)
             mock_client_manager.initialize.assert_called_once()
             mock_register_tools.assert_called_once()
 
@@ -307,9 +319,17 @@ class TestLifespanContextManager:
 
     @pytest.mark.asyncio
     @patch("src.unified_mcp_server.validate_configuration")
-    async def test_lifespan_validation_failure(self, mock_validate_config):
+    @patch("src.unified_mcp_server.ClientManager")
+    async def test_lifespan_validation_failure(
+        self, mock_client_manager_class, mock_validate_config
+    ):
         """Test lifespan with configuration validation failure."""
         mock_validate_config.side_effect = ValueError("Configuration error")
+
+        # Mock client manager for cleanup
+        mock_client_manager = AsyncMock()
+        mock_client_manager.cleanup = AsyncMock()
+        mock_client_manager_class.return_value = mock_client_manager
 
         with pytest.raises(ValueError, match="Configuration error"):
             async with unified_mcp_server.lifespan():
@@ -318,13 +338,19 @@ class TestLifespanContextManager:
     @pytest.mark.asyncio
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
+    @patch("src.config.get_config")
     async def test_lifespan_client_manager_initialization_failure(
-        self, mock_client_manager_class, mock_validate_config
+        self, mock_get_config, mock_client_manager_class, mock_validate_config
     ):
         """Test lifespan with client manager initialization failure."""
+        # Mock config
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+
         mock_client_manager = AsyncMock()
-        mock_client_manager.initialize.side_effect = Exception("Init error")
-        mock_client_manager_class.from_unified_config.return_value = mock_client_manager
+        mock_client_manager.initialize = AsyncMock(side_effect=Exception("Init error"))
+        mock_client_manager.cleanup = AsyncMock()
+        mock_client_manager_class.return_value = mock_client_manager
 
         with pytest.raises(Exception, match="Init error"):
             async with unified_mcp_server.lifespan():
@@ -337,12 +363,23 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
+    @patch("src.config.get_config")
     async def test_lifespan_cleanup_on_exception(
-        self, mock_register_tools, mock_client_manager_class, mock_validate_config
+        self,
+        mock_get_config,
+        mock_register_tools,
+        mock_client_manager_class,
+        mock_validate_config,
     ):
         """Test that cleanup is called even when exception occurs during operation."""
+        # Mock config
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+
         mock_client_manager = AsyncMock()
-        mock_client_manager_class.from_unified_config.return_value = mock_client_manager
+        mock_client_manager.initialize = AsyncMock()
+        mock_client_manager.cleanup = AsyncMock()
+        mock_client_manager_class.return_value = mock_client_manager
 
         # Make register_all_tools async
         async def mock_register(*args, **kwargs):
@@ -364,13 +401,23 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
+    @patch("src.config.get_config")
     async def test_lifespan_cleanup_exception_handling(
-        self, mock_register_tools, mock_client_manager_class, mock_validate_config
+        self,
+        mock_get_config,
+        mock_register_tools,
+        mock_client_manager_class,
+        mock_validate_config,
     ):
         """Test that cleanup exceptions are handled gracefully."""
+        # Mock config
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+
         mock_client_manager = AsyncMock()
-        mock_client_manager.cleanup.side_effect = Exception("Cleanup error")
-        mock_client_manager_class.from_unified_config.return_value = mock_client_manager
+        mock_client_manager.initialize = AsyncMock()
+        mock_client_manager.cleanup = AsyncMock(side_effect=Exception("Cleanup error"))
+        mock_client_manager_class.return_value = mock_client_manager
 
         # Make register_all_tools async
         async def mock_register(*args, **kwargs):
@@ -469,7 +516,7 @@ class TestImportAndModuleStructure:
         """Test that all required modules can be imported."""
         # These imports should work without errors
         from src.infrastructure.client_manager import ClientManager
-        from src.mcp.tool_registry import register_all_tools
+        from src.mcp_tools.tool_registry import register_all_tools
         from src.services.logging_config import configure_logging
 
         assert ClientManager is not None

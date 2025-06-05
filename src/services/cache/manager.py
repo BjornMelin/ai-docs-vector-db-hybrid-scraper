@@ -3,8 +3,12 @@
 import asyncio
 import hashlib
 import logging
-from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    pass  # Used only for external library compatibility
+
+from src.config.enums import CacheType
 
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
@@ -13,14 +17,6 @@ from .metrics import CacheMetrics
 from .search_cache import SearchResultCache
 
 logger = logging.getLogger(__name__)
-
-
-class CacheType(Enum):
-    """Types of cacheable data."""
-
-    EMBEDDINGS = "embeddings"
-    CRAWL_RESULTS = "crawl_results"
-    QUERY_RESULTS = "query_results"
 
 
 class CacheManager:
@@ -61,8 +57,9 @@ class CacheManager:
         # Default distributed cache TTLs by cache type
         self.distributed_ttl_seconds = distributed_ttl_seconds or {
             CacheType.EMBEDDINGS: 86400 * 7,  # 7 days for embeddings
-            CacheType.CRAWL_RESULTS: 3600,  # 1 hour for crawl results
-            CacheType.QUERY_RESULTS: 3600,  # 1 hour for search results
+            CacheType.CRAWL: 3600,  # 1 hour for crawl results
+            CacheType.SEARCH: 3600,  # 1 hour for search results
+            CacheType.HYDE: 3600,  # 1 hour for HyDE results
         }
 
         # Initialize local cache (L1)
@@ -95,7 +92,7 @@ class CacheManager:
             )
             self._search_cache = SearchResultCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.QUERY_RESULTS],
+                default_ttl=self.distributed_ttl_seconds[CacheType.SEARCH],
             )
 
         # Initialize metrics
@@ -107,35 +104,55 @@ class CacheManager:
 
     @property
     def local_cache(self) -> LocalCache | None:
-        """Access to local cache layer."""
+        """Access to local cache layer.
+
+        Returns:
+            LocalCache | None: Local cache instance if enabled, None otherwise
+        """
         return self._local_cache
 
     @property
     def distributed_cache(self) -> DragonflyCache | None:
-        """Access to DragonflyDB cache layer."""
+        """Access to DragonflyDB cache layer.
+
+        Returns:
+            DragonflyCache | None: Distributed cache instance if enabled, None otherwise
+        """
         return self._distributed_cache
 
     @property
     def embedding_cache(self) -> EmbeddingCache | None:
-        """Access to embedding-specific cache."""
+        """Access to embedding-specific cache.
+
+        Returns:
+            EmbeddingCache | None: Embedding cache instance if enabled, None otherwise
+        """
         return self._embedding_cache
 
     @property
     def search_cache(self) -> SearchResultCache | None:
-        """Access to search result cache."""
+        """Access to search result cache.
+
+        Returns:
+            SearchResultCache | None: Search cache instance if enabled, None otherwise
+        """
         return self._search_cache
 
     @property
     def metrics(self) -> CacheMetrics | None:
-        """Access to cache metrics."""
+        """Access to cache metrics.
+
+        Returns:
+            CacheMetrics | None: Metrics collector instance if enabled, None otherwise
+        """
         return self._metrics
 
     async def get(
         self,
         key: str,
-        cache_type: CacheType = CacheType.CRAWL_RESULTS,
-        default: Any = None,
-    ) -> Any:
+        cache_type: CacheType = CacheType.CRAWL,
+        default: object = None,
+    ) -> object:
         """Get value from cache with L1 -> L2 fallback.
 
         Args:
@@ -144,7 +161,10 @@ class CacheManager:
             default: Default value if not found
 
         Returns:
-            Cached value or default
+            object: Cached value or default
+
+        Raises:
+            Exception: Logged but not raised - returns default on error
         """
         start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
@@ -188,20 +208,23 @@ class CacheManager:
     async def set(
         self,
         key: str,
-        value: Any,
-        cache_type: CacheType = CacheType.CRAWL_RESULTS,
+        value: object,
+        cache_type: CacheType = CacheType.CRAWL,
         ttl: int | None = None,
     ) -> bool:
         """Set value in both cache layers.
 
         Args:
             key: Cache key
-            value: Value to cache
+            value: Value to cache (must be serializable)
             cache_type: Type of cached data for TTL selection
-            ttl: Custom TTL (overrides cache_type default)
+            ttl: Custom TTL in seconds (overrides cache_type default)
 
         Returns:
-            True if successful
+            bool: True if successful in at least one cache layer
+
+        Raises:
+            Exception: Logged but not raised - returns False on error
         """
         start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
@@ -234,9 +257,7 @@ class CacheManager:
                 self._metrics.record_set(cache_type, latency, False)
             return False
 
-    async def delete(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL_RESULTS
-    ) -> bool:
+    async def delete(self, key: str, cache_type: CacheType = CacheType.CRAWL) -> bool:
         """Delete value from both cache layers.
 
         Args:
@@ -298,11 +319,20 @@ class CacheManager:
             logger.error(f"Cache clear error: {e}")
             return False
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> dict[str, object]:
         """Get comprehensive cache statistics.
 
         Returns:
-            Dictionary with cache statistics
+            dict[str, object]: Cache statistics including:
+                - manager: Enabled cache layers info
+                - local: Local cache stats if enabled
+                - dragonfly: Distributed cache stats if enabled
+                - embedding_cache: Embedding cache stats if enabled
+                - search_cache: Search cache stats if enabled
+                - metrics: Performance metrics if enabled
+
+        Raises:
+            Exception: Logged internally - always returns valid stats dict
         """
         stats = {"manager": {"enabled_layers": []}}
 
@@ -335,8 +365,15 @@ class CacheManager:
 
         return stats
 
-    async def close(self):
-        """Clean up cache resources."""
+    async def close(self) -> None:
+        """Clean up cache resources.
+
+        Closes all active cache connections and releases resources.
+        Safe to call multiple times.
+
+        Raises:
+            Exception: Logged but not raised - cleanup continues on error
+        """
         try:
             if self._distributed_cache:
                 await self._distributed_cache.close()
@@ -362,7 +399,15 @@ class CacheManager:
     async def get_embedding_direct(
         self, content_hash: str, model: str
     ) -> list[float] | None:
-        """Direct access to embedding cache."""
+        """Direct access to embedding cache.
+
+        Args:
+            content_hash: Hash of the content that was embedded
+            model: Name of the embedding model used
+
+        Returns:
+            list[float] | None: Cached embedding vector or None if not found
+        """
         if not self._embedding_cache:
             return None
         return await self._embedding_cache.get_embedding(content_hash, model)
@@ -371,18 +416,38 @@ class CacheManager:
         self,
         query_hash: str,
         collection: str,
-        results: list[dict[str, Any]],
+        results: list[dict[str, object]],
         ttl: int | None = None,
     ) -> bool:
-        """Direct access to search result cache."""
+        """Direct access to search result cache.
+
+        Args:
+            query_hash: Hash of the search query
+            collection: Name of the collection searched
+            results: Search results to cache
+            ttl: Custom TTL in seconds (None uses default)
+
+        Returns:
+            bool: True if successfully cached
+        """
         if not self._search_cache:
             return False
         return await self._search_cache.set_search_results(
             query_hash, collection, results, ttl
         )
 
-    async def get_performance_stats(self) -> dict[str, Any]:
-        """Get performance-focused statistics."""
+    async def get_performance_stats(self) -> dict[str, object]:
+        """Get performance-focused statistics.
+
+        Returns:
+            dict[str, object]: Performance metrics including:
+                - hit_rates: Cache hit rates by type and layer
+                - latency_stats: Operation latency statistics
+                - operation_counts: Total operation counts by type
+
+        Note:
+            Returns empty dict if metrics are disabled
+        """
         if not self._metrics:
             return {}
 

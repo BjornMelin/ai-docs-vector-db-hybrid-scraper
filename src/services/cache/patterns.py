@@ -14,9 +14,15 @@ logger = logging.getLogger(__name__)
 class CachePatterns:
     """Advanced caching patterns optimized for DragonflyDB performance."""
 
-    def __init__(self, cache: DragonflyCache):
-        """Initialize with DragonflyDB cache instance."""
+    def __init__(self, cache: DragonflyCache, task_queue_manager):
+        """Initialize with DragonflyDB cache instance.
+
+        Args:
+            cache: DragonflyDB cache instance
+            task_queue_manager: Required task queue manager for background tasks
+        """
         self.cache = cache
+        self._task_queue_manager = task_queue_manager
 
     async def cache_aside(
         self,
@@ -51,13 +57,8 @@ class CachePatterns:
             if ttl_remaining < stale_while_revalidate:
                 # Return stale data immediately and refresh in background
                 logger.debug(f"Serving stale data for {key}, refreshing in background")
-                refresh_task = asyncio.create_task(
-                    self._refresh_cache(key, fetch_func, ttl)
-                )
-                # Store task to prevent garbage collection
-                self._background_tasks = getattr(self, "_background_tasks", set())
-                self._background_tasks.add(refresh_task)
-                refresh_task.add_done_callback(self._background_tasks.discard)
+                # Fire and forget - refresh happens in background
+                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
@@ -275,7 +276,7 @@ class CachePatterns:
     ) -> bool:
         """Write-behind (write-back) caching pattern.
 
-        Writes to cache immediately and persists asynchronously.
+        Writes to cache immediately and persists asynchronously using task queue.
 
         Args:
             key: Cache key
@@ -291,38 +292,35 @@ class CachePatterns:
         success = await self.cache.set(key, value, ttl=ttl)
 
         if success:
-            # Schedule async persistence
-            persist_task = asyncio.create_task(
-                self._delayed_persist(key, value, persist_func, delay)
+            # Task queue is required for write-behind pattern
+            if not self._task_queue_manager:
+                raise RuntimeError(
+                    "TaskQueueManager is required for write-behind caching. "
+                    "Initialize CachePatterns with a TaskQueueManager instance."
+                )
+
+            # Get module and function name for the persist function
+            persist_module = persist_func.__module__
+            persist_name = persist_func.__name__
+
+            job_id = await self._task_queue_manager.enqueue(
+                "persist_cache",
+                key=key,
+                value=value,
+                persist_func_module=persist_module,
+                persist_func_name=persist_name,
+                delay=delay,
+                _delay=int(delay),  # ARQ expects integer seconds
             )
-            # Store task to prevent garbage collection
-            self._background_tasks = getattr(self, "_background_tasks", set())
-            self._background_tasks.add(persist_task)
-            persist_task.add_done_callback(self._background_tasks.discard)
-            logger.debug(f"Write-behind queued for {key}")
+
+            if job_id:
+                logger.debug(f"Write-behind queued for {key} with job ID: {job_id}")
+            else:
+                raise RuntimeError(
+                    f"Failed to queue write-behind persistence for {key}"
+                )
 
         return success
-
-    async def _delayed_persist(
-        self,
-        key: str,
-        value: Any,
-        persist_func: Callable,
-        delay: float,
-    ) -> None:
-        """Persist data after delay."""
-        try:
-            await asyncio.sleep(delay)
-
-            if asyncio.iscoroutinefunction(persist_func):
-                await persist_func(key, value)
-            else:
-                persist_func(key, value)
-
-            logger.debug(f"Write-behind persistence completed for {key}")
-
-        except Exception as e:
-            logger.error(f"Write-behind persistence error for {key}: {e}")
 
     async def cache_warming(
         self,
@@ -398,13 +396,8 @@ class CachePatterns:
             if ttl_remaining < (ttl - refresh_point):
                 # Start background refresh
                 logger.debug(f"Refresh-ahead triggered for {key}")
-                refresh_task = asyncio.create_task(
-                    self._refresh_cache(key, fetch_func, ttl)
-                )
-                # Store task to prevent garbage collection
-                self._background_tasks = getattr(self, "_background_tasks", set())
-                self._background_tasks.add(refresh_task)
-                refresh_task.add_done_callback(self._background_tasks.discard)
+                # Fire and forget - refresh happens in background
+                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
