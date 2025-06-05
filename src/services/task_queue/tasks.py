@@ -178,7 +178,7 @@ async def run_canary_deployment(
     logger.info(f"Starting canary deployment {deployment_id}")
 
     # Get Redis connection from ARQ context
-    redis_conn = ctx.get("redis", None)
+    redis_conn = ctx.get("redis")
 
     try:
         # Publish deployment started event
@@ -326,7 +326,7 @@ async def monitor_deployment_events(
     start_time = time.time()
     logger.info(f"Starting deployment event monitor for {stream_key}")
 
-    redis_conn = ctx.get("redis", None)
+    redis_conn = ctx.get("redis")
     if not redis_conn:
         return {
             "status": "failed",

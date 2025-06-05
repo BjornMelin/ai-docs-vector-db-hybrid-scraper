@@ -43,7 +43,7 @@ from .models import set_config
 from .schema import ConfigSchemaGenerator
 
 # Configuration validation
-from .validator import ConfigValidator
+from .validators import ConfigValidator
 
 __all__ = [
     "BenchmarkConfiguration",
