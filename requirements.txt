@@ -710,7 +710,7 @@ tokenizers==0.21.1
     #   transformers
 tomli-w==1.2.0
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-torch==2.7.0
+torch==2.7.1
     # via
     #   accelerate
     #   crawl4ai
