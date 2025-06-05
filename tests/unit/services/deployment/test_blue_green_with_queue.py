@@ -156,7 +156,7 @@ class TestBlueGreenDeploymentWithTaskQueue:
                 validation_queries=[],
             )
 
-        # Test crawl source (not implemented) - wrapped in ServiceError  
+        # Test crawl source (not implemented) - wrapped in ServiceError
         with pytest.raises(ServiceError, match="Deployment failed.*Fresh crawl"):
             await blue_green.deploy_new_version(
                 alias_name="test_alias",

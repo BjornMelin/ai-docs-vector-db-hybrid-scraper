@@ -103,3 +103,4 @@ yarn-error.log*
 claude_task.pid
 CLAUDE.md.bak
 repomix-output.*
+.crawl4ai_state.json

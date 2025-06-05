@@ -23,6 +23,14 @@ class CachePatterns:
         """
         self.cache = cache
         self._task_queue_manager = task_queue_manager
+        self._background_tasks: set = set()
+
+    def _create_background_task(self, coro):
+        """Create a background task and manage its lifecycle."""
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     async def cache_aside(
         self,
@@ -58,7 +66,7 @@ class CachePatterns:
                 # Return stale data immediately and refresh in background
                 logger.debug(f"Serving stale data for {key}, refreshing in background")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
+                self._create_background_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
@@ -397,7 +405,7 @@ class CachePatterns:
                 # Start background refresh
                 logger.debug(f"Refresh-ahead triggered for {key}")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
+                self._create_background_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 

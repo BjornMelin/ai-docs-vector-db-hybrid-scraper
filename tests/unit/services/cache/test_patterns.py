@@ -24,15 +24,23 @@ class TestCachePatterns:
         return mock_cache
 
     @pytest.fixture
-    def cache_patterns(self, mock_dragonfly_cache):
-        """Create a CachePatterns instance for testing."""
-        return CachePatterns(mock_dragonfly_cache)
+    def mock_task_queue_manager(self):
+        """Create a mock TaskQueueManager for testing."""
+        mock_manager = AsyncMock()
+        mock_manager.enqueue.return_value = "test_job_id"
+        return mock_manager
 
-    def test_cache_patterns_initialization(self, mock_dragonfly_cache):
+    @pytest.fixture
+    def cache_patterns(self, mock_dragonfly_cache, mock_task_queue_manager):
+        """Create a CachePatterns instance for testing."""
+        return CachePatterns(mock_dragonfly_cache, mock_task_queue_manager)
+
+    def test_cache_patterns_initialization(self, mock_dragonfly_cache, mock_task_queue_manager):
         """Test CachePatterns initialization."""
-        patterns = CachePatterns(mock_dragonfly_cache)
+        patterns = CachePatterns(mock_dragonfly_cache, mock_task_queue_manager)
 
         assert patterns.cache == mock_dragonfly_cache
+        assert patterns._task_queue_manager == mock_task_queue_manager
 
     @pytest.mark.asyncio
     async def test_cache_aside_cache_hit_fresh(
@@ -559,11 +567,15 @@ class TestCachePatterns:
         persist_func.assert_called_once_with("test_key", value)
 
     @pytest.mark.asyncio
-    async def test_write_behind_success(self, cache_patterns, mock_dragonfly_cache):
+    async def test_write_behind_success(self, cache_patterns, mock_dragonfly_cache, mock_task_queue_manager):
         """Test write-behind pattern success."""
         mock_dragonfly_cache.set.return_value = True
+        mock_task_queue_manager.enqueue.return_value = "test_job_id"
 
+        # Create a proper mock function with name and module attributes
         persist_func = MagicMock()
+        persist_func.__name__ = "test_persist_func"
+        persist_func.__module__ = "test_module"
         value = {"data": "test_value"}
 
         result = await cache_patterns.write_behind(
@@ -576,6 +588,7 @@ class TestCachePatterns:
 
         assert result is True
         mock_dragonfly_cache.set.assert_called_once_with("test_key", value, ttl=3600)
+        mock_task_queue_manager.enqueue.assert_called_once()
 
         # Persistence should be scheduled but not called yet
         persist_func.assert_not_called()
@@ -600,57 +613,6 @@ class TestCachePatterns:
 
         assert result is False
 
-    @pytest.mark.asyncio
-    async def test_delayed_persist_sync_function(self, cache_patterns):
-        """Test _delayed_persist with synchronous function."""
-        persist_func = MagicMock()
-        value = {"data": "test_value"}
-
-        await cache_patterns._delayed_persist(
-            key="test_key",
-            value=value,
-            persist_func=persist_func,
-            delay=0.001,  # Very short delay for testing
-        )
-
-        persist_func.assert_called_once_with("test_key", value)
-
-    @pytest.mark.asyncio
-    async def test_delayed_persist_async_function(self, cache_patterns):
-        """Test _delayed_persist with async function."""
-        persist_called = False
-
-        async def async_persist(key, value):
-            nonlocal persist_called
-            persist_called = True
-
-        value = {"data": "test_value"}
-
-        await cache_patterns._delayed_persist(
-            key="test_key",
-            value=value,
-            persist_func=async_persist,
-            delay=0.001,
-        )
-
-        assert persist_called
-
-    @pytest.mark.asyncio
-    async def test_delayed_persist_error(self, cache_patterns):
-        """Test _delayed_persist handling errors."""
-
-        def failing_persist(key, value):
-            raise Exception("Persist failed")
-
-        value = {"data": "test_value"}
-
-        # Should not raise exception
-        await cache_patterns._delayed_persist(
-            key="test_key",
-            value=value,
-            persist_func=failing_persist,
-            delay=0.001,
-        )
 
     @pytest.mark.asyncio
     async def test_cache_warming_success(self, cache_patterns, mock_dragonfly_cache):
@@ -782,12 +744,14 @@ class TestCachePatterns:
 
     def test_background_tasks_cleanup(self, cache_patterns):
         """Test that background tasks are properly managed."""
-        # Test that _background_tasks attribute gets created and managed
-        assert not hasattr(cache_patterns, "_background_tasks")
+        # Test that _background_tasks attribute exists and is properly initialized
+        assert hasattr(cache_patterns, "_background_tasks")
+        assert isinstance(cache_patterns._background_tasks, set)
+        assert len(cache_patterns._background_tasks) == 0
 
         # Simulate adding a task (using a mock instead of actual asyncio.create_task)
         mock_task = MagicMock()
-        cache_patterns._background_tasks = {mock_task}
+        cache_patterns._background_tasks.add(mock_task)
 
         # Simulate task completion callback
         cache_patterns._background_tasks.discard(mock_task)

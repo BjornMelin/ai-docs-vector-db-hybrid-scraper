@@ -1,6 +1,19 @@
 """Embedding management tools for MCP server."""
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
 
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import EmbeddingRequest
@@ -16,7 +29,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def generate_embeddings(
-        request: EmbeddingRequest, ctx=None
+        request: EmbeddingRequest, ctx: Context = None
     ) -> EmbeddingGenerationResponse:
         """
         Generate embeddings using the optimal provider.
@@ -72,7 +85,7 @@ def register_tools(mcp, client_manager: ClientManager):
             raise
 
     @mcp.tool()
-    async def list_embedding_providers(ctx=None) -> list[EmbeddingProviderInfo]:
+    async def list_embedding_providers(ctx: Context = None) -> list[EmbeddingProviderInfo]:
         """
         List available embedding providers and their capabilities.
 

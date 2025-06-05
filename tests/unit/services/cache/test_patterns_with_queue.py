@@ -1,6 +1,5 @@
 """Tests for CachePatterns with task queue integration."""
 
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest

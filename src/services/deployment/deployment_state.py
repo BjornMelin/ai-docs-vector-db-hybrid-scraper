@@ -34,7 +34,7 @@ class DeploymentState:
 
 class DeploymentStateManager:
     """Manages shared deployment state in DragonflyDB with optimizations.
-    
+
     Leverages DragonflyDB's performance advantages:
     - Multi-core utilization for better concurrency
     - Faster atomic operations and locking
@@ -111,7 +111,7 @@ class DeploymentStateManager:
                 async with self.redis.pipeline() as pipe:
                     # Watch key for changes
                     await pipe.watch(key)
-                    
+
                     # Get current state
                     current_data = await self.redis.get(key)
                     if current_data:
@@ -215,7 +215,7 @@ class DeploymentStateManager:
         self, status_filter: str | None = None
     ) -> list[DeploymentState]:
         """List all deployments with optional status filter.
-        
+
         Optimized for DragonflyDB's efficient SCAN operation.
 
         Args:
@@ -245,9 +245,9 @@ class DeploymentStateManager:
             async with self.redis.pipeline() as pipe:
                 for key in keys:
                     pipe.get(key)
-                
+
                 results = await pipe.execute()
-                
+
                 for data in results:
                     if data:
                         state_dict = json.loads(data)
@@ -286,7 +286,7 @@ class DeploymentStateManager:
         changes: dict[str, Any],
     ) -> None:
         """Publish state change event to Redis Stream.
-        
+
         DragonflyDB has better Redis Streams performance.
 
         Args:
@@ -318,7 +318,7 @@ class DeploymentStateManager:
         self, deployment_id: str, holder_id: str, ttl: int = 60
     ) -> bool:
         """Acquire exclusive lock on deployment for coordination.
-        
+
         Uses DragonflyDB's optimized SET NX operations.
 
         Args:
@@ -342,7 +342,7 @@ class DeploymentStateManager:
 
     async def release_deployment_lock(self, deployment_id: str, holder_id: str) -> bool:
         """Release deployment lock if held by holder.
-        
+
         Uses Lua script for atomic check-and-delete.
 
         Args:
@@ -376,7 +376,7 @@ class DeploymentStateManager:
         self, deployment_id: str, holder_id: str, ttl: int = 60
     ) -> bool:
         """Extend deployment lock if held by holder.
-        
+
         Uses Lua script for atomic check-and-extend.
 
         Args:
@@ -411,7 +411,7 @@ class DeploymentStateManager:
         self, deployment_id: str, time_window: int = 300
     ) -> dict[str, Any]:
         """Get real-time metrics for a deployment from event stream.
-        
+
         Leverages DragonflyDB's fast XRANGE operations.
 
         Args:
@@ -425,19 +425,16 @@ class DeploymentStateManager:
             # Calculate time range
             end_time = time.time()
             start_time = end_time - time_window
-            
+
             # Convert to Redis Stream IDs
             start_id = f"{int(start_time * 1000)}-0"
             end_id = f"{int(end_time * 1000)}-0"
-            
+
             # Read events from stream
             events = await self.redis.xrange(
-                "search:events",
-                start_id,
-                end_id,
-                count=1000
+                "search:events", start_id, end_id, count=1000
             )
-            
+
             # Aggregate metrics
             metrics = {
                 "total_searches": 0,
@@ -445,27 +442,27 @@ class DeploymentStateManager:
                 "errors": 0,
                 "avg_latency_ms": 0,
             }
-            
+
             latencies = []
-            
+
             for _, data in events:
                 if data.get(b"deployment_id", b"").decode() == deployment_id:
                     metrics["total_searches"] += 1
-                    
+
                     if data.get(b"is_canary", b"").decode() == "true":
                         metrics["canary_searches"] += 1
-                    
+
                     if data.get(b"is_error", b"").decode() == "true":
                         metrics["errors"] += 1
-                    
+
                     if b"latency_ms" in data:
                         latencies.append(float(data[b"latency_ms"].decode()))
-            
+
             if latencies:
                 metrics["avg_latency_ms"] = sum(latencies) / len(latencies)
-            
+
             return metrics
-            
+
         except Exception as e:
             logger.error(f"Failed to get deployment metrics: {e}")
             return {}

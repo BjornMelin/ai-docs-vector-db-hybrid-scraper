@@ -425,10 +425,67 @@ class Crawl4AIConfig(BaseModel):
         default=None, description="CSS selector to wait for"
     )
 
+    # Memory-Adaptive Dispatcher settings
+    enable_memory_adaptive_dispatcher: bool = Field(
+        default=True, description="Enable memory-adaptive dispatching"
+    )
+    memory_threshold_percent: float = Field(
+        default=70.0,
+        ge=10.0,
+        le=95.0,
+        description="Memory threshold percentage for adaptive dispatching",
+    )
+    dispatcher_check_interval: float = Field(
+        default=1.0, gt=0.1, le=10.0, description="Memory check interval in seconds"
+    )
+    max_session_permit: int = Field(
+        default=10,
+        gt=0,
+        le=100,
+        description="Maximum concurrent sessions for dispatcher",
+    )
+
+    # Streaming and real-time processing
+    enable_streaming: bool = Field(
+        default=True, description="Enable streaming mode for real-time results"
+    )
+
+    # Rate limiting for memory-adaptive dispatcher
+    rate_limit_base_delay_min: float = Field(
+        default=1.0,
+        ge=0.1,
+        description="Minimum base delay for rate limiting (seconds)",
+    )
+    rate_limit_base_delay_max: float = Field(
+        default=2.0,
+        ge=0.1,
+        description="Maximum base delay for rate limiting (seconds)",
+    )
+    rate_limit_max_delay: float = Field(
+        default=30.0,
+        ge=1.0,
+        description="Maximum delay for exponential backoff (seconds)",
+    )
+    rate_limit_max_retries: int = Field(
+        default=2, ge=0, le=10, description="Maximum retry attempts"
+    )
+
     # Content extraction
     remove_scripts: bool = Field(default=True, description="Remove script tags")
     remove_styles: bool = Field(default=True, description="Remove style tags")
     extract_links: bool = Field(default=True, description="Extract links from pages")
+
+    @field_validator("rate_limit_base_delay_max")
+    @classmethod
+    def validate_delay_range(cls, v: float, info) -> float:
+        """Ensure max delay is greater than min delay."""
+        if info.data and "rate_limit_base_delay_min" in info.data:
+            min_delay = info.data["rate_limit_base_delay_min"]
+            if v <= min_delay:
+                raise ValueError(
+                    "rate_limit_base_delay_max must be greater than rate_limit_base_delay_min"
+                )
+        return v
 
     model_config = ConfigDict(extra="forbid")
 

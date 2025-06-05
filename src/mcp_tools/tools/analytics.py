@@ -3,6 +3,19 @@
 import logging
 from datetime import UTC
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastmcp import Context
+else:
+    # Use a protocol for testing to avoid FastMCP import issues
+    from typing import Protocol
+
+    class Context(Protocol):
+        async def info(self, msg: str) -> None: ...
+        async def debug(self, msg: str) -> None: ...
+        async def warning(self, msg: str) -> None: ...
+        async def error(self, msg: str) -> None: ...
 
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import AnalyticsRequest
@@ -17,7 +30,7 @@ def register_tools(mcp, client_manager: ClientManager):
     from ..models.responses import SystemHealthResponse
 
     @mcp.tool()
-    async def get_analytics(request: AnalyticsRequest, ctx) -> AnalyticsResponse:
+    async def get_analytics(request: AnalyticsRequest, ctx: Context) -> AnalyticsResponse:
         """
         Get analytics and metrics for collections and operations.
 
@@ -98,7 +111,7 @@ def register_tools(mcp, client_manager: ClientManager):
             raise
 
     @mcp.tool()
-    async def get_system_health(ctx) -> SystemHealthResponse:
+    async def get_system_health(ctx: Context) -> SystemHealthResponse:
         """
         Get system health and status information.
 

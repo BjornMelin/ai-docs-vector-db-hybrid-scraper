@@ -15,8 +15,8 @@ from ...config.enums import VectorType
 class SearchRequest(BaseModel):
     """Search request with advanced options"""
 
-    query: str = Field(..., description="Search query")
-    collection: str = Field(default="documentation", description="Collection to search")
+    query: str = Field(..., min_length=1, description="Search query")
+    collection: str = Field(default="documentation", min_length=1, description="Collection to search")
     limit: int = Field(default=10, ge=1, le=100, description="Number of results")
     strategy: SearchStrategy = Field(
         default=SearchStrategy.HYBRID, description="Search strategy"
@@ -55,8 +55,8 @@ class EmbeddingRequest(BaseModel):
 class DocumentRequest(BaseModel):
     """Document processing request"""
 
-    url: str = Field(..., description="Document URL")
-    collection: str = Field(default="documentation", description="Target collection")
+    url: str = Field(..., min_length=1, description="Document URL")
+    collection: str = Field(default="documentation", min_length=1, description="Target collection")
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
     )
