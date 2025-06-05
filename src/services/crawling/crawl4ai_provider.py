@@ -22,9 +22,6 @@ try:
     MEMORY_ADAPTIVE_AVAILABLE = True
 except ImportError:
     MEMORY_ADAPTIVE_AVAILABLE = False
-    logging.warning(
-        "Crawl4AI MemoryAdaptiveDispatcher not available, falling back to semaphore"
-    )
 
 from ...config.models import Crawl4AIConfig
 from ..base import BaseService
@@ -70,6 +67,14 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             )
         else:
             # Fallback to traditional semaphore approach
+            if (
+                self.config.enable_memory_adaptive_dispatcher
+                and not MEMORY_ADAPTIVE_AVAILABLE
+            ):
+                self.logger.warning(
+                    "Memory-Adaptive Dispatcher requested but not available, "
+                    "falling back to semaphore-based concurrency"
+                )
             self.max_concurrent = self.config.max_concurrent_crawls
             self.semaphore = asyncio.Semaphore(self.max_concurrent)
             self.dispatcher = None
@@ -314,9 +319,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             "url": url,
             "extraction_type": extraction_type,
             "rate_limit_status": rate_limit_status,
-            "semaphore_available": self.semaphore._value
-            if hasattr(self.semaphore, "_value")
-            else "unknown",
+            "semaphore_available": (
+                getattr(self, "semaphore", None)
+                and hasattr(self.semaphore, "_value")
+                and self.semaphore._value
+            )
+            or "unknown",
         }
 
         self.logger.error(f"Failed to scrape {url}: {error} | Context: {error_context}")
