@@ -532,9 +532,8 @@ class TestLoggingBehavior:
         self, mock_mcp, mock_client_manager, mock_tool_modules
     ):
         """Test that logger uses correct module name."""
-        with (
-            patch("src.mcp_tools.tool_registry.logger") as mock_logger,
-            patch.multiple(
+        with patch("src.mcp_tools.tool_registry.logger") as mock_logger:
+            with patch.multiple(
                 tools,
                 search=mock_tool_modules["search"],
                 documents=mock_tool_modules["documents"],
@@ -547,12 +546,11 @@ class TestLoggingBehavior:
                 analytics=mock_tool_modules["analytics"],
                 cache=mock_tool_modules["cache"],
                 utilities=mock_tool_modules["utilities"],
-            ),
-        ):
-            await register_all_tools(mock_mcp, mock_client_manager)
+            ):
+                await register_all_tools(mock_mcp, mock_client_manager)
 
-        # Verify logger is used
-        assert mock_logger.info.call_count >= 4  # At least 4 info messages
+            # Verify logger is used
+            assert mock_logger.info.call_count >= 4  # At least 4 info messages
 
     @pytest.mark.asyncio
     async def test_registration_count_is_accurate(
