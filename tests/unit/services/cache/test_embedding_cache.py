@@ -2,8 +2,6 @@
 
 import hashlib
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from src.services.cache.embedding_cache import EmbeddingCache
@@ -28,40 +26,22 @@ class TestEmbeddingCache:
         return mock_cache
 
     @pytest.fixture
-    def mock_patterns(self):
-        """Create a mock CachePatterns instance."""
-        return MagicMock()
-
-    @pytest.fixture
-    def embedding_cache(self, mock_dragonfly_cache, mock_patterns):
+    def embedding_cache(self, mock_dragonfly_cache):
         """Create an EmbeddingCache instance for testing."""
-        with patch(
-            "src.services.cache.embedding_cache.CachePatterns",
-            return_value=mock_patterns,
-        ):
-            cache = EmbeddingCache(mock_dragonfly_cache, default_ttl=604800)  # 7 days
-            return cache
+        cache = EmbeddingCache(mock_dragonfly_cache, default_ttl=604800)  # 7 days
+        return cache
 
     def test_embedding_cache_initialization(self, mock_dragonfly_cache):
         """Test EmbeddingCache initialization."""
-        with patch(
-            "src.services.cache.embedding_cache.CachePatterns"
-        ) as mock_patterns_cls:
-            mock_patterns = MagicMock()
-            mock_patterns_cls.return_value = mock_patterns
+        cache = EmbeddingCache(mock_dragonfly_cache, default_ttl=86400)
 
-            cache = EmbeddingCache(mock_dragonfly_cache, default_ttl=86400)
-
-            assert cache.cache == mock_dragonfly_cache
-            assert cache.default_ttl == 86400
-            assert cache.patterns == mock_patterns
-            mock_patterns_cls.assert_called_once_with(mock_dragonfly_cache)
+        assert cache.cache == mock_dragonfly_cache
+        assert cache.default_ttl == 86400
 
     def test_embedding_cache_default_initialization(self, mock_dragonfly_cache):
         """Test EmbeddingCache initialization with defaults."""
-        with patch("src.services.cache.embedding_cache.CachePatterns"):
-            cache = EmbeddingCache(mock_dragonfly_cache)
-            assert cache.default_ttl == 86400 * 7  # 7 days
+        cache = EmbeddingCache(mock_dragonfly_cache)
+        assert cache.default_ttl == 86400 * 7  # 7 days
 
     @pytest.mark.asyncio
     async def test_get_embedding_cache_hit(self, embedding_cache, mock_dragonfly_cache):

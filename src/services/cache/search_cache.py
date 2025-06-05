@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 from .dragonfly_cache import DragonflyCache
-from .patterns import CachePatterns
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,6 @@ class SearchResultCache:
             default_ttl: Default TTL in seconds (1 hour for search results)
         """
         self.cache = cache
-        self.patterns = CachePatterns(cache)
         self.default_ttl = default_ttl
 
     async def get_search_results(

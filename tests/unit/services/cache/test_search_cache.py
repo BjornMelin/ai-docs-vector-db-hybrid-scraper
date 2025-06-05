@@ -48,34 +48,22 @@ class TestSearchResultCache:
         return MagicMock()
 
     @pytest.fixture
-    def search_cache(self, mock_dragonfly_cache, mock_patterns):
+    def search_cache(self, mock_dragonfly_cache):
         """Create a SearchResultCache instance for testing."""
-        with patch(
-            "src.services.cache.search_cache.CachePatterns", return_value=mock_patterns
-        ):
-            cache = SearchResultCache(mock_dragonfly_cache, default_ttl=3600)
-            return cache
+        cache = SearchResultCache(mock_dragonfly_cache, default_ttl=3600)
+        return cache
 
     def test_search_cache_initialization(self, mock_dragonfly_cache):
         """Test SearchResultCache initialization."""
-        with patch(
-            "src.services.cache.search_cache.CachePatterns"
-        ) as mock_patterns_cls:
-            mock_patterns = MagicMock()
-            mock_patterns_cls.return_value = mock_patterns
+        cache = SearchResultCache(mock_dragonfly_cache, default_ttl=7200)
 
-            cache = SearchResultCache(mock_dragonfly_cache, default_ttl=7200)
-
-            assert cache.cache == mock_dragonfly_cache
-            assert cache.default_ttl == 7200
-            assert cache.patterns == mock_patterns
-            mock_patterns_cls.assert_called_once_with(mock_dragonfly_cache)
+        assert cache.cache == mock_dragonfly_cache
+        assert cache.default_ttl == 7200
 
     def test_search_cache_default_initialization(self, mock_dragonfly_cache):
         """Test SearchResultCache initialization with defaults."""
-        with patch("src.services.cache.search_cache.CachePatterns"):
-            cache = SearchResultCache(mock_dragonfly_cache)
-            assert cache.default_ttl == 3600
+        cache = SearchResultCache(mock_dragonfly_cache)
+        assert cache.default_ttl == 3600
 
     @pytest.mark.asyncio
     async def test_get_search_results_cache_hit(

@@ -4,7 +4,6 @@ import hashlib
 import logging
 
 from .dragonfly_cache import DragonflyCache
-from .patterns import CachePatterns
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,6 @@ class EmbeddingCache:
             default_ttl: Default TTL in seconds (7 days for embeddings)
         """
         self.cache = cache
-        self.patterns = CachePatterns(cache)
         self.default_ttl = default_ttl
 
     async def get_embedding(

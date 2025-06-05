@@ -137,7 +137,7 @@ class TestBrowserUseAdapterLLMSetup:
 
         # Mock environment variable
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-api-key"}):
-            llm = adapter._setup_llm_config()
+            adapter._setup_llm_config()
 
             mock_chat_openai.assert_called_once_with(
                 model="gpt-4o-mini",
@@ -151,9 +151,11 @@ class TestBrowserUseAdapterLLMSetup:
         adapter = BrowserUseAdapter(basic_config)
 
         # Clear environment variable
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(CrawlServiceError, match="OPENAI_API_KEY"):
-                adapter._setup_llm_config()
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(CrawlServiceError, match="OPENAI_API_KEY"),
+        ):
+            adapter._setup_llm_config()
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.ChatAnthropic")
@@ -162,7 +164,7 @@ class TestBrowserUseAdapterLLMSetup:
         adapter = BrowserUseAdapter(anthropic_config)
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-api-key"}):
-            llm = adapter._setup_llm_config()
+            adapter._setup_llm_config()
 
             mock_chat_anthropic.assert_called_once_with(
                 model="claude-3-haiku-20240307",
@@ -266,9 +268,11 @@ class TestBrowserUseAdapterInitialization:
         # Mock LLM setup failure
         mock_chat_openai.side_effect = Exception("LLM setup failed")
 
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            with pytest.raises(CrawlServiceError, match="Failed to initialize"):
-                await adapter.initialize()
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}),
+            pytest.raises(CrawlServiceError, match="Failed to initialize"),
+        ):
+            await adapter.initialize()
 
 
 class TestBrowserUseAdapterScraping:
