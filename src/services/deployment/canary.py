@@ -563,7 +563,7 @@ class CanaryDeployment(BaseService):
             and deployment.metrics.error_rate
             else (
                 deployment.metrics.error_rate
-                if isinstance(deployment.metrics.error_rate, (int, float))
+                if isinstance(deployment.metrics.error_rate, int | float)
                 else 0.0
             ),
             "success_count": deployment.metrics.success_count,
