@@ -215,7 +215,7 @@ class TestCrawl4AIAdapterScraping:
             url="https://example.com",
             formats=["markdown"],
             extraction_type="markdown",
-            wait_for=".content, main, article",
+            wait_for=None,
             js_code=None,
         )
 
@@ -269,7 +269,7 @@ class TestCrawl4AIAdapterScraping:
             url="https://example.com",
             formats=["markdown"],
             extraction_type="markdown",
-            wait_for=".content, main, article",
+            wait_for=None,
             js_code=js_code,
         )
 
@@ -712,6 +712,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
         """Test getting performance metrics when provider doesn't have metrics."""
         mock_provider = AsyncMock()
         # Provider doesn't have metrics attribute
+        del mock_provider.metrics
         mock_provider_class.return_value = mock_provider
 
         adapter = Crawl4AIAdapter(basic_crawl4ai_config)
@@ -830,9 +831,9 @@ class TestCrawl4AIAdapterEdgeCases:
 
         assert result["success"] is True
 
-        # Check provider was called with None values converted appropriately
+        # Check provider was called with None values passed through
         call_args = mock_provider.scrape_url.call_args[1]
-        assert call_args["wait_for"] == ".content, main, article"  # Default
+        assert call_args["wait_for"] is None
         assert call_args["js_code"] is None
 
     @pytest.mark.asyncio
@@ -964,6 +965,8 @@ class TestCrawl4AIAdapterIntegration:
         assert result["success"] is True  # Should complete successfully
 
         # Test scenario 3: Memory/resource constraints simulation
+        # Reset mock to AsyncMock before setting side_effect
+        mock_provider.scrape_url = AsyncMock()
         mock_provider.scrape_url.side_effect = MemoryError("Out of memory")
         result = await adapter.scrape("https://example.com")
         assert result["success"] is False

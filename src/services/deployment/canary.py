@@ -855,8 +855,8 @@ class CanaryDeployment(BaseService):
 
         except Exception as e:
             if "not found" in str(e).lower():
-                raise ServiceError(f"Collection {collection_name} does not exist")
-            raise ServiceError(f"Failed to check collection {collection_name}: {e}")
+                raise ServiceError(f"Collection {collection_name} does not exist") from e
+            raise ServiceError(f"Failed to check collection {collection_name}: {e}") from e
 
     async def rollback_deployment(self, deployment_id: str) -> bool:
         """Rollback a canary deployment.

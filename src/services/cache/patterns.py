@@ -58,7 +58,7 @@ class CachePatterns:
                 # Return stale data immediately and refresh in background
                 logger.debug(f"Serving stale data for {key}, refreshing in background")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
+                _ = asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
@@ -397,7 +397,7 @@ class CachePatterns:
                 # Start background refresh
                 logger.debug(f"Refresh-ahead triggered for {key}")
                 # Fire and forget - refresh happens in background
-                asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
+                _ = asyncio.create_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 

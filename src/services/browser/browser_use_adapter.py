@@ -149,6 +149,7 @@ class BrowserUseAdapter(BaseService):
         url: str,
         task: str,
         timeout: int | None = None,
+        instructions: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Scrape using AI-powered automation with natural language tasks.
 
@@ -156,6 +157,7 @@ class BrowserUseAdapter(BaseService):
             url: URL to scrape
             task: Natural language task description
             timeout: Timeout in milliseconds
+            instructions: Optional list of structured action instructions
 
         Returns:
             Scraping result with standardized format
@@ -169,6 +171,10 @@ class BrowserUseAdapter(BaseService):
         timeout = timeout or self.config.timeout
         start_time = time.time()
         retry_count = 0
+
+        # Format task with instructions if provided
+        if instructions:
+            task = self._format_instructions_to_task(task, instructions)
 
         while retry_count < self.config.max_retries:
             try:
@@ -283,6 +289,62 @@ class BrowserUseAdapter(BaseService):
         else:
             return "Navigate to the page and extract all documentation content including code examples."
 
+    def capabilities(self) -> dict[str, Any]:
+        """Get adapter capabilities.
+
+        Returns:
+            Capabilities dictionary
+        """
+        return {
+            "ai_powered": True,
+            "natural_language_tasks": True,
+            "self_correcting": True,
+            "max_retries": self.config.max_retries,
+            "supported_providers": ["openai", "anthropic", "gemini"],
+        }
+
+    def _format_instructions_to_task(
+        self, base_task: str, instructions: list[dict[str, Any]]
+    ) -> str:
+        """Format structured instructions into a natural language task.
+
+        Args:
+            base_task: Base task description
+            instructions: List of instruction dictionaries
+
+        Returns:
+            Formatted task description
+        """
+        if not instructions:
+            return base_task
+
+        formatted_actions = []
+        for i, instruction in enumerate(instructions, 1):
+            action = instruction.get("action", "")
+
+            if action == "click":
+                selector = instruction.get("selector", "")
+                formatted_actions.append(f"{i}. Click on element: {selector}")
+            elif action == "type":
+                selector = instruction.get("selector", "")
+                text = instruction.get("text", "")
+                formatted_actions.append(f"{i}. Type '{text}' into element: {selector}")
+            elif action == "scroll":
+                direction = instruction.get("direction", "")
+                formatted_actions.append(f"{i}. Scroll {direction}")
+            elif action == "wait":
+                timeout = instruction.get("timeout", 0)
+                formatted_actions.append(f"{i}. Wait for {timeout}ms")
+            else:
+                # Handle unsupported actions
+                params = {k: v for k, v in instruction.items() if k != "action"}
+                formatted_actions.append(f"{i}. {action} (parameters: {params})")
+
+        if formatted_actions:
+            return f"{base_task}\n\nPlease perform these actions:\n" + "\n".join(formatted_actions)
+        else:
+            return base_task
+
     async def _build_success_result(
         self,
         url: str,
@@ -305,16 +367,36 @@ class BrowserUseAdapter(BaseService):
         """
         processing_time = (time.time() - start_time) * 1000
 
-        # Extract content from browser-use result
-        # browser-use returns the final message content from the LLM
-        content = str(result) if result else ""
+        # Extract content from current page after agent execution
+        page = None
+        try:
+            # Get current page from browser context
+            page = self._browser.context.current_page
 
-        # Try to extract structured information if available
-        html = ""
-        title = ""
+            # Extract page content and metadata
+            if page:
+                html = await page.content()
+                title = await page.title()
+                # Extract text content - browser-use agent result + page title
+                content = title if title else ""
+                if result:
+                    # Include the agent's extracted information
+                    content = f"{content}\n\n{result!s}" if content else str(result)
+            else:
+                # Fallback to agent result only
+                content = str(result) if result else ""
+                html = ""
+                title = ""
+        except Exception as e:
+            self.logger.warning(f"Failed to extract page content: {e}")
+            # Fallback to agent result
+            content = str(result) if result else ""
+            html = ""
+            title = ""
+
         screenshots = []
 
-        # browser-use doesn't return HTML directly, but we can note the extraction method
+        # browser-use extraction metadata
         metadata = {
             "extraction_method": "browser_use_ai",
             "llm_provider": self.config.llm_provider,
@@ -323,11 +405,13 @@ class BrowserUseAdapter(BaseService):
             "processing_time_ms": processing_time,
             "retries_used": retry_count,
             "task_description": task[:100] + "..." if len(task) > 100 else task,
+            "url": page.url if page else url,  # May have changed due to redirects
+            "title": title,
         }
 
         return {
             "success": True,
-            "url": url,
+            "url": page.url if page else url,
             "content": content,
             "html": html,
             "title": title,
@@ -429,6 +513,8 @@ class BrowserUseAdapter(BaseService):
                 "status": "unavailable",
                 "message": "browser-use package not installed or dependencies missing",
                 "available": False,
+                "initialized": False,
+                "adapter": "browser-use",
             }
 
         try:
@@ -438,6 +524,8 @@ class BrowserUseAdapter(BaseService):
                     "status": "not_initialized",
                     "message": "Adapter not initialized",
                     "available": True,
+                    "initialized": False,
+                    "adapter": "browser-use",
                 }
 
             # Test with a simple task
@@ -460,6 +548,8 @@ class BrowserUseAdapter(BaseService):
                 "response_time_ms": response_time * 1000,
                 "test_url": test_url,
                 "available": True,
+                "initialized": True,
+                "adapter": "browser-use",
                 "capabilities": self.get_capabilities(),
             }
 

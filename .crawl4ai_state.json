@@ -1,0 +1,16 @@
+{
+  "urls_to_process": [
+    "https://example.com/page1",
+    "https://example.com/page2",
+    "https://docs.example.com/api"
+  ],
+  "completed_urls": [
+    "https://example.com/page1"
+  ],
+  "failed_urls": {},
+  "total_chunks_processed": 0,
+  "total_embeddings_generated": 0,
+  "start_time": "2025-06-04T23:49:35.117594",
+  "last_checkpoint": "2025-06-04T23:54:36.969841",
+  "collection_name": "bulk_embeddings"
+}

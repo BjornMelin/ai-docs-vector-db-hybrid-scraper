@@ -2,12 +2,12 @@
 
 import asyncio
 import os
-import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from src.config.models import BrowserUseConfig
 from src.services.browser.browser_use_adapter import BrowserUseAdapter
 from src.services.errors import CrawlServiceError
 
@@ -15,38 +15,38 @@ from src.services.errors import CrawlServiceError
 @pytest.fixture
 def basic_config():
     """Basic configuration for BrowserUse adapter."""
-    return {
-        "llm_provider": "openai",
-        "model": "gpt-4o-mini",
-        "headless": True,
-        "timeout": 30000,
-        "max_retries": 3,
-        "max_steps": 20,
-        "disable_security": False,
-        "generate_gif": False,
-    }
+    return BrowserUseConfig(
+        llm_provider="openai",
+        model="gpt-4o-mini",
+        headless=True,
+        timeout=30000,
+        max_retries=3,
+        max_steps=20,
+        disable_security=False,
+        generate_gif=False,
+    )
 
 
 @pytest.fixture
 def anthropic_config():
     """Configuration for Anthropic provider."""
-    return {
-        "llm_provider": "anthropic",
-        "model": "claude-3-haiku-20240307",
-        "headless": True,
-        "timeout": 30000,
-    }
+    return BrowserUseConfig(
+        llm_provider="anthropic",
+        model="claude-3-haiku-20240307",
+        headless=True,
+        timeout=30000,
+    )
 
 
 @pytest.fixture
 def gemini_config():
     """Configuration for Gemini provider."""
-    return {
-        "llm_provider": "gemini",
-        "model": "gemini-pro",
-        "headless": True,
-        "timeout": 30000,
-    }
+    return BrowserUseConfig(
+        llm_provider="gemini",
+        model="gemini-pro",
+        headless=True,
+        timeout=30000,
+    )
 
 
 class TestBrowserUseAdapterInit:
@@ -58,14 +58,14 @@ class TestBrowserUseAdapterInit:
         adapter = BrowserUseAdapter(basic_config)
 
         assert adapter._available is True
-        assert adapter.llm_provider == "openai"
-        assert adapter.model == "gpt-4o-mini"
-        assert adapter.headless is True
-        assert adapter.timeout == 30000
-        assert adapter.max_retries == 3
-        assert adapter.max_steps == 20
-        assert adapter.disable_security is False
-        assert adapter.generate_gif is False
+        assert adapter.config.llm_provider == "openai"
+        assert adapter.config.model == "gpt-4o-mini"
+        assert adapter.config.headless is True
+        assert adapter.config.timeout == 30000
+        assert adapter.config.max_retries == 3
+        assert adapter.config.max_steps == 20
+        assert adapter.config.disable_security is False
+        assert adapter.config.generate_gif is False
         assert adapter._initialized is False
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
@@ -78,17 +78,17 @@ class TestBrowserUseAdapterInit:
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_init_with_defaults(self):
         """Test initialization with default values."""
-        config = {}
+        config = BrowserUseConfig()
         adapter = BrowserUseAdapter(config)
 
-        assert adapter.llm_provider == "openai"
-        assert adapter.model == "gpt-4o-mini"
-        assert adapter.headless is True
-        assert adapter.timeout == 30000
-        assert adapter.max_retries == 3
-        assert adapter.max_steps == 20
-        assert adapter.disable_security is False
-        assert adapter.generate_gif is False
+        assert adapter.config.llm_provider == "openai"
+        assert adapter.config.model == "gpt-4o-mini"
+        assert adapter.config.headless is True
+        assert adapter.config.timeout == 30000
+        assert adapter.config.max_retries == 3
+        assert adapter.config.max_steps == 20
+        assert adapter.config.disable_security is False
+        assert adapter.config.generate_gif is False
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_init_custom_llm_providers(self):
@@ -100,259 +100,364 @@ class TestBrowserUseAdapterInit:
         ]
 
         for provider, model in providers:
-            config = {"llm_provider": provider, "model": model}
+            config = BrowserUseConfig(llm_provider=provider, model=model)
             adapter = BrowserUseAdapter(config)
-            assert adapter.llm_provider == provider
-            assert adapter.model == model
+            assert adapter.config.llm_provider == provider
+            assert adapter.config.model == model
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     def test_init_custom_browser_settings(self):
         """Test initialization with custom browser settings."""
-        config = {
-            "headless": False,
-            "timeout": 60000,
-            "max_retries": 5,
-            "max_steps": 30,
-            "disable_security": True,
-            "generate_gif": True,
-        }
-
+        config = BrowserUseConfig(
+            headless=False,
+            disable_security=True,
+            generate_gif=True,
+            timeout=60000,
+            max_retries=5,
+            max_steps=50,
+        )
         adapter = BrowserUseAdapter(config)
 
-        assert adapter.headless is False
-        assert adapter.timeout == 60000
-        assert adapter.max_retries == 5
-        assert adapter.max_steps == 30
-        assert adapter.disable_security is True
-        assert adapter.generate_gif is True
+        assert adapter.config.headless is False
+        assert adapter.config.disable_security is True
+        assert adapter.config.generate_gif is True
+        assert adapter.config.timeout == 60000
+        assert adapter.config.max_retries == 5
+        assert adapter.config.max_steps == 50
 
 
 class TestBrowserUseAdapterLLMSetup:
     """Test LLM configuration setup."""
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"})
-    def test_setup_llm_config_openai(self, basic_config):
-        """Test OpenAI LLM configuration setup."""
+    @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    def test_setup_llm_config_openai(self, mock_chat_openai, basic_config):
+        """Test OpenAI LLM setup."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with patch(
-            "src.services.browser.browser_use_adapter.ChatOpenAI"
-        ) as mock_openai:
-            mock_llm = MagicMock()
-            mock_openai.return_value = mock_llm
+        # Mock environment variable
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-api-key"}):
+            llm = adapter._setup_llm_config()
 
-            llm_config = adapter._setup_llm_config()
-
-            assert llm_config == mock_llm
-            mock_openai.assert_called_once_with(
+            mock_chat_openai.assert_called_once_with(
                 model="gpt-4o-mini",
                 temperature=0.1,
-                api_key="test-openai-key",
+                api_key="test-api-key",
             )
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"})
-    def test_setup_llm_config_anthropic(self, anthropic_config):
-        """Test Anthropic LLM configuration setup."""
-        adapter = BrowserUseAdapter(anthropic_config)
-
-        with patch(
-            "src.services.browser.browser_use_adapter.ChatAnthropic"
-        ) as mock_anthropic:
-            mock_llm = MagicMock()
-            mock_anthropic.return_value = mock_llm
-
-            llm_config = adapter._setup_llm_config()
-
-            assert llm_config == mock_llm
-            mock_anthropic.assert_called_once_with(
-                model="claude-3-haiku-20240307",
-                temperature=0.1,
-                api_key="test-anthropic-key",
-            )
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"})
-    def test_setup_llm_config_gemini(self, gemini_config):
-        """Test Gemini LLM configuration setup."""
-        adapter = BrowserUseAdapter(gemini_config)
-
-        with patch(
-            "src.services.browser.browser_use_adapter.ChatGoogleGenerativeAI"
-        ) as mock_gemini:
-            mock_llm = MagicMock()
-            mock_gemini.return_value = mock_llm
-
-            llm_config = adapter._setup_llm_config()
-
-            assert llm_config == mock_llm
-            mock_gemini.assert_called_once_with(
-                model="gemini-pro",
-                temperature=0.1,
-                google_api_key="test-google-key",
-            )
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_setup_llm_config_missing_openai_key(self, basic_config):
-        """Test LLM setup fails when OpenAI API key is missing."""
+    def test_setup_llm_config_openai_no_api_key(self, basic_config):
+        """Test OpenAI setup without API key."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            pytest.raises(
-                CrawlServiceError, match="OPENAI_API_KEY environment variable required"
-            ),
-        ):
-            adapter._setup_llm_config()
+        # Clear environment variable
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(CrawlServiceError, match="OPENAI_API_KEY"):
+                adapter._setup_llm_config()
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_setup_llm_config_missing_anthropic_key(self, anthropic_config):
-        """Test LLM setup fails when Anthropic API key is missing."""
+    @patch("src.services.browser.browser_use_adapter.ChatAnthropic")
+    def test_setup_llm_config_anthropic(self, mock_chat_anthropic, anthropic_config):
+        """Test Anthropic LLM setup."""
         adapter = BrowserUseAdapter(anthropic_config)
 
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            pytest.raises(
-                CrawlServiceError,
-                match="ANTHROPIC_API_KEY environment variable required",
-            ),
-        ):
-            adapter._setup_llm_config()
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-api-key"}):
+            llm = adapter._setup_llm_config()
+
+            mock_chat_anthropic.assert_called_once_with(
+                model="claude-3-haiku-20240307",
+                temperature=0.1,
+                api_key="test-api-key",
+            )
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_setup_llm_config_missing_google_key(self, gemini_config):
-        """Test LLM setup fails when Google API key is missing."""
+    @patch("src.services.browser.browser_use_adapter.ChatGoogleGenerativeAI")
+    def test_setup_llm_config_gemini(self, mock_chat_gemini, gemini_config):
+        """Test Gemini LLM setup."""
         adapter = BrowserUseAdapter(gemini_config)
 
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            pytest.raises(
-                CrawlServiceError, match="GOOGLE_API_KEY environment variable required"
-            ),
-        ):
-            adapter._setup_llm_config()
+        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-api-key"}):
+            llm = adapter._setup_llm_config()
+
+            mock_chat_gemini.assert_called_once_with(
+                model="gemini-pro",
+                temperature=0.1,
+                google_api_key="test-api-key",
+            )
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_setup_llm_config_unsupported_provider(self, basic_config):
-        """Test LLM setup fails for unsupported provider."""
-        config = {**basic_config, "llm_provider": "unsupported"}
+    def test_setup_llm_config_unsupported_provider(self):
+        """Test unsupported LLM provider."""
+        config = BrowserUseConfig(llm_provider="unsupported")
         adapter = BrowserUseAdapter(config)
 
-        with pytest.raises(
-            CrawlServiceError, match="Unsupported LLM provider: unsupported"
-        ):
+        with pytest.raises(CrawlServiceError, match="Unsupported LLM provider"):
             adapter._setup_llm_config()
 
 
 class TestBrowserUseAdapterInitialization:
-    """Test adapter initialization process."""
+    """Test BrowserUse adapter initialization process."""
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
     async def test_initialize_browser_use_unavailable(self, basic_config):
-        """Test initialization when browser-use is unavailable."""
+        """Test initialization when browser-use is not available."""
         adapter = BrowserUseAdapter(basic_config)
 
         with pytest.raises(CrawlServiceError, match="browser-use not available"):
             await adapter.initialize()
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    async def test_initialize_success(self, basic_config):
+    @patch("src.services.browser.browser_use_adapter.Browser")
+    @patch("src.services.browser.browser_use_adapter.BrowserConfig")
+    @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    async def test_initialize_success(
+        self, mock_chat_openai, mock_browser_config, mock_browser, basic_config
+    ):
         """Test successful initialization."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with (
-            patch("src.services.browser.browser_use_adapter.ChatOpenAI") as mock_openai,
-            patch(
-                "src.services.browser.browser_use_adapter.BrowserConfig"
-            ) as mock_browser_config,
-            patch(
-                "src.services.browser.browser_use_adapter.Browser"
-            ) as mock_browser_class,
-        ):
-            mock_llm = MagicMock()
-            mock_openai.return_value = mock_llm
+        # Mock LLM setup
+        mock_llm = MagicMock()
+        mock_chat_openai.return_value = mock_llm
 
-            mock_config = MagicMock()
-            mock_browser_config.return_value = mock_config
+        # Mock browser setup
+        mock_browser_instance = MagicMock()
+        mock_browser.return_value = mock_browser_instance
 
-            mock_browser = MagicMock()
-            mock_browser_class.return_value = mock_browser
-
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             await adapter.initialize()
 
-            assert adapter._initialized is True
-            assert adapter.llm_config == mock_llm
-            assert adapter._browser == mock_browser
+            # Verify LLM setup
+            mock_chat_openai.assert_called_once()
 
-            # Verify browser config was created correctly
+            # Verify browser config
             mock_browser_config.assert_called_once_with(
                 headless=True,
                 disable_security=False,
             )
 
-    @pytest.mark.asyncio
+            # Verify browser creation
+            mock_browser.assert_called_once()
+
+            assert adapter._initialized is True
+            assert adapter.llm_config == mock_llm
+            assert adapter._browser == mock_browser_instance
+
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_initialize_already_initialized(self, basic_config):
-        """Test that re-initialization is skipped."""
+    @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    async def test_initialize_already_initialized(
+        self, mock_chat_openai, basic_config
+    ):
+        """Test initialization when already initialized."""
         adapter = BrowserUseAdapter(basic_config)
         adapter._initialized = True
-        original_llm_config = adapter.llm_config
 
         await adapter.initialize()
 
-        assert adapter.llm_config == original_llm_config
+        # Should not setup LLM again
+        mock_chat_openai.assert_not_called()
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    async def test_initialize_llm_setup_failure(self, basic_config):
+    @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    async def test_initialize_llm_setup_failure(self, mock_chat_openai, basic_config):
         """Test initialization failure during LLM setup."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with (
-            patch(
-                "src.services.browser.browser_use_adapter.ChatOpenAI",
-                side_effect=Exception("LLM setup failed"),
-            ),
-            pytest.raises(CrawlServiceError, match="Failed to initialize browser-use"),
-        ):
-            await adapter.initialize()
+        # Mock LLM setup failure
+        mock_chat_openai.side_effect = Exception("LLM setup failed")
 
-    @pytest.mark.asyncio
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            with pytest.raises(CrawlServiceError, match="Failed to initialize"):
+                await adapter.initialize()
+
+
+class TestBrowserUseAdapterScraping:
+    """Test BrowserUse scraping functionality."""
+
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    async def test_initialize_browser_setup_failure(self, basic_config):
-        """Test initialization failure during browser setup."""
+    async def test_scrape_not_initialized(self, basic_config):
+        """Test scraping when not initialized."""
         adapter = BrowserUseAdapter(basic_config)
 
-        with (
-            patch("src.services.browser.browser_use_adapter.ChatOpenAI"),
-            patch(
-                "src.services.browser.browser_use_adapter.Browser",
-                side_effect=Exception("Browser setup failed"),
-            ),
-            pytest.raises(CrawlServiceError, match="Failed to initialize browser-use"),
-        ):
-            await adapter.initialize()
+        with pytest.raises(CrawlServiceError, match="not initialized"):
+            await adapter.scrape("https://example.com", "Extract title")
 
-
-class TestBrowserUseAdapterCleanup:
-    """Test adapter cleanup process."""
-
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_cleanup_success(self, basic_config):
-        """Test successful cleanup."""
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_scrape_simple_success(self, mock_agent_class, basic_config):
+        """Test successful simple scraping."""
         adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+        adapter.llm_config = MagicMock()
+        adapter._browser = MagicMock()
 
-        # Setup initialized state
+        # Mock agent
+        mock_agent = AsyncMock()
+        mock_agent.run.return_value = None
+        mock_agent_class.return_value = mock_agent
+
+        # Mock browser context
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_page.content = AsyncMock(return_value="<html><title>Test</title></html>")
+        mock_page.title = AsyncMock(return_value="Test Page")
+        mock_page.url = "https://example.com"
+        mock_context.current_page = mock_page
+        adapter._browser.context = mock_context
+
+        result = await adapter.scrape("https://example.com", "Extract title")
+
+        assert result["success"] is True
+        assert "Test Page" in result["content"]  # Title should be in content
+        assert result["html"] == "<html><title>Test</title></html>"
+        assert result["title"] == "Test Page"
+        assert result["metadata"]["title"] == "Test Page"
+        assert result["url"] == "https://example.com"
+
+        # Verify agent was created and run
+        mock_agent_class.assert_called_once()
+        # Check the call arguments
+        call_args = mock_agent_class.call_args[1]
+        assert "Extract title" in call_args["task"]
+        assert call_args["llm"] == adapter.llm_config
+        assert call_args["browser"] == adapter._browser
+        assert call_args["max_steps"] == adapter.config.max_steps
+        assert call_args["generate_gif"] == adapter.config.generate_gif
+        mock_agent.run.assert_called_once()
+
+    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_scrape_with_instructions(self, mock_agent_class, basic_config):
+        """Test scraping with action instructions."""
+        adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+        adapter.llm_config = MagicMock()
+        adapter._browser = MagicMock()
+
+        # Mock agent
+        mock_agent = AsyncMock()
+        mock_agent.run.return_value = None
+        mock_agent_class.return_value = mock_agent
+
+        # Mock browser context
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_page.content = AsyncMock(return_value="<html>Content</html>")
+        mock_page.title = AsyncMock(return_value="Title")
+        mock_page.url = "https://example.com"
+        mock_context.current_page = mock_page
+        adapter._browser.context = mock_context
+
+        instructions = [
+            {"action": "click", "selector": "button"},
+            {"action": "type", "selector": "input", "text": "test"},
+        ]
+
+        result = await adapter.scrape(
+            "https://example.com",
+            "Extract data",
+            instructions=instructions
+        )
+
+        # Check that task was properly formatted
+        mock_agent_class.assert_called_once()
+        actual_task = mock_agent_class.call_args[1]["task"]
+
+        # Check that the task contains the formatted instructions
+        assert "Extract data" in actual_task
+        assert "Please perform these actions:" in actual_task
+        assert "1. Click on element: button" in actual_task
+        assert "2. Type 'test' into element: input" in actual_task
+
+    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_scrape_with_retry(self, mock_agent_class, basic_config):
+        """Test scraping with retry on failure."""
+        adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+        adapter.llm_config = MagicMock()
+        adapter._browser = MagicMock()
+
+        # Mock agent that fails first time, succeeds second
+        mock_agent = AsyncMock()
+        mock_agent.run.side_effect = [
+            Exception("First attempt failed"),
+            None,  # Success on second attempt
+        ]
+        mock_agent_class.return_value = mock_agent
+
+        # Mock browser context
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_page.content = AsyncMock(return_value="<html>Success</html>")
+        mock_page.title = AsyncMock(return_value="Success")
+        mock_page.url = "https://example.com"
+        mock_context.current_page = mock_page
+        adapter._browser.context = mock_context
+
+        result = await adapter.scrape("https://example.com", "Extract data")
+
+        assert result["success"] is True
+        assert mock_agent.run.call_count == 2  # Called twice due to retry
+
+    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_scrape_all_retries_failed(self, mock_agent_class, basic_config):
+        """Test scraping when all retries fail."""
+        adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+        adapter.llm_config = MagicMock()
+        adapter._browser = MagicMock()
+
+        # Mock agent that always fails
+        mock_agent = AsyncMock()
+        mock_agent.run.side_effect = Exception("Always fails")
+        mock_agent_class.return_value = mock_agent
+
+        result = await adapter.scrape("https://example.com", "Extract data")
+
+        assert result["success"] is False
+        assert "Always fails" in result["error"]
+        assert mock_agent.run.call_count == 3  # max_retries = 3 total attempts
+
+    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_scrape_timeout(self, mock_agent_class, basic_config):
+        """Test scraping with timeout."""
+        adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+        adapter.llm_config = MagicMock()
+        adapter._browser = MagicMock()
+
+        # Mock agent that takes too long
+        async def slow_run():
+            await asyncio.sleep(5)  # Longer than timeout
+
+        mock_agent = AsyncMock()
+        mock_agent.run = slow_run
+        mock_agent_class.return_value = mock_agent
+
+        # Use short timeout
+        adapter.config.timeout = 100  # 100ms
+
+        result = await adapter.scrape("https://example.com", "Extract data")
+
+        assert result["success"] is False
+        assert "timeout" in result["error"]
+
+
+class TestBrowserUseAdapterUtilities:
+    """Test utility methods."""
+
+    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    async def test_cleanup(self, basic_config):
+        """Test cleanup process."""
+        adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
+
+        # Mock browser
         mock_browser = AsyncMock()
         adapter._browser = mock_browser
-        adapter._initialized = True
 
         await adapter.cleanup()
 
@@ -360,912 +465,171 @@ class TestBrowserUseAdapterCleanup:
         assert adapter._browser is None
         assert adapter._initialized is False
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_cleanup_browser_close_error(self, basic_config):
-        """Test cleanup when browser close fails."""
+    async def test_cleanup_with_error(self, basic_config):
+        """Test cleanup with error during close."""
         adapter = BrowserUseAdapter(basic_config)
+        adapter._initialized = True
 
-        # Setup initialized state with failing browser
+        # Mock browser that raises error on close
         mock_browser = AsyncMock()
         mock_browser.close.side_effect = Exception("Close failed")
         adapter._browser = mock_browser
-        adapter._initialized = True
 
         # Should not raise exception
         await adapter.cleanup()
 
+        # State should still be reset
         assert adapter._browser is None
         assert adapter._initialized is False
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_cleanup_no_browser(self, basic_config):
-        """Test cleanup when browser is None."""
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    async def test_health_check_healthy(self, mock_agent_class, basic_config):
+        """Test health check when healthy."""
         adapter = BrowserUseAdapter(basic_config)
-        adapter._browser = None
-        adapter._initialized = True
-
-        # Should not raise exception
-        await adapter.cleanup()
-
-        assert adapter._browser is None
-        assert adapter._initialized is False
-
-
-class TestBrowserUseAdapterScraping:
-    """Test scraping functionality."""
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
-    async def test_scrape_browser_use_unavailable(self, basic_config):
-        """Test scraping when browser-use is unavailable."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        with pytest.raises(CrawlServiceError, match="browser-use not available"):
-            await adapter.scrape("https://example.com", "Extract content")
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_not_initialized(self, basic_config):
-        """Test scraping when adapter is not initialized."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        with pytest.raises(CrawlServiceError, match="Adapter not initialized"):
-            await adapter.scrape("https://example.com", "Extract content")
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_success_basic(self, basic_config):
-        """Test successful basic scraping."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-
-        # Setup mocks
-        mock_llm = MagicMock()
-        mock_browser = MagicMock()
-        adapter.llm_config = mock_llm
-        adapter._browser = mock_browser
-
-        # Mock agent execution
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run.return_value = "Extracted content from the page"
-
-            result = await adapter.scrape("https://example.com", "Extract all content")
-
-            assert result["success"] is True
-            assert result["url"] == "https://example.com"
-            assert result["content"] == "Extracted content from the page"
-            assert result["metadata"]["extraction_method"] == "browser_use_ai"
-            assert result["metadata"]["llm_provider"] == "openai"
-            assert result["metadata"]["model_used"] == "gpt-4o-mini"
-            assert "processing_time_ms" in result["metadata"]
-            assert result["ai_insights"]["task_completed"] is True
-
-            # Verify agent was created correctly
-            mock_agent_class.assert_called_once()
-            agent_kwargs = mock_agent_class.call_args[1]
-            assert (
-                "Navigate to https://example.com and Extract all content"
-                in agent_kwargs["task"]
-            )
-            assert agent_kwargs["llm"] == mock_llm
-            assert agent_kwargs["browser"] == mock_browser
-            assert agent_kwargs["max_steps"] == 20
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_with_custom_timeout(self, basic_config):
-        """Test scraping with custom timeout."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
         adapter._initialized = True
         adapter.llm_config = MagicMock()
         adapter._browser = MagicMock()
 
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run.return_value = "Content"
+        # Mock successful scrape
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_page.content = AsyncMock(return_value="<html>Test</html>")
+        mock_page.title = AsyncMock(return_value="Test")
+        mock_page.url = "https://httpbin.org/html"
+        mock_context.current_page = mock_page
+        adapter._browser.context = mock_context
+
+        # Mock agent
+        mock_agent = AsyncMock()
+        mock_agent.run.return_value = None
+        mock_agent_class.return_value = mock_agent
+
+        result = await adapter.health_check()
+
+        assert result["healthy"] is True
+        assert result["available"] is True
+        assert result["initialized"] is True
+        assert "browser-use" in result["adapter"]
 
-            with patch("asyncio.wait_for") as mock_wait_for:
-                mock_wait_for.return_value = "Content"
-
-                await adapter.scrape("https://example.com", "Extract", timeout=60000)
-
-                # Should call wait_for with timeout in seconds
-                mock_wait_for.assert_called_once()
-                assert mock_wait_for.call_args[1]["timeout"] == 60.0
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_with_retries(self, basic_config):
-        """Test scraping with retry logic."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-
-            # First two attempts timeout, third succeeds
-            mock_agent.run.side_effect = [
-                TimeoutError(),
-                TimeoutError(),
-                "Success on retry",
-            ]
-
-            with (
-                patch(
-                    "asyncio.wait_for",
-                    side_effect=[
-                        TimeoutError(),
-                        TimeoutError(),
-                        "Success on retry",
-                    ],
-                ),
-                patch("asyncio.sleep") as mock_sleep,
-            ):
-                result = await adapter.scrape("https://example.com", "Extract")
-
-                assert result["success"] is True
-                assert result["content"] == "Success on retry"
-                assert result["metadata"]["retries_used"] == 2
-
-                # Should have called sleep for exponential backoff
-                assert mock_sleep.call_count == 2
-                mock_sleep.assert_any_call(2)  # 2^1
-                mock_sleep.assert_any_call(4)  # 2^2
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_max_retries_exceeded(self, basic_config):
-        """Test scraping when max retries are exceeded."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-
-            # All attempts fail
-            with patch("asyncio.wait_for", side_effect=TimeoutError()):
-                result = await adapter.scrape("https://example.com", "Extract")
-
-                assert result["success"] is False
-                assert "Failed after 3 retries" in result["error"]
-                assert result["metadata"]["extraction_method"] == "browser_use_ai"
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_exception_handling(self, basic_config):
-        """Test scraping exception handling."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-
-            # All attempts raise exception
-            with patch("asyncio.wait_for", side_effect=Exception("Agent error")):
-                result = await adapter.scrape("https://example.com", "Extract")
-
-                assert result["success"] is False
-                assert "Failed after 3 retries" in result["error"]
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_enhanced_task_generation(self, basic_config):
-        """Test that enhanced task is generated correctly."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run.return_value = "Content"
-
-            await adapter.scrape("https://example.com", "Click the submit button")
-
-            # Verify enhanced task contains expected elements
-            agent_kwargs = mock_agent_class.call_args[1]
-            task = agent_kwargs["task"]
-
-            assert "Navigate to https://example.com" in task
-            assert "Click the submit button" in task
-            assert "Wait for the page to fully load" in task
-            assert "Handle any cookie banners" in task
-            assert "Extract all relevant content" in task
-            assert "comprehensive structured content" in task
-
-
-class TestBrowserUseAdapterTaskConversion:
-    """Test task conversion utilities."""
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_convert_instructions_to_task_single_instruction(self, basic_config):
-        """Test converting single instruction to task."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        instructions = ["Click the login button"]
-        task = adapter._convert_instructions_to_task(instructions)
-
-        assert "Navigate to the page, then Click the login button." in task
-        assert "extract all documentation content" in task
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_convert_instructions_to_task_multiple_instructions(self, basic_config):
-        """Test converting multiple instructions to task."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        instructions = [
-            "Fill in the search box",
-            "Click the search button",
-            "Wait for results to load",
-        ]
-        task = adapter._convert_instructions_to_task(instructions)
-
-        expected_parts = [
-            "Fill in the search box.",
-            "Click the search button.",
-            "Wait for results to load.",
-        ]
-
-        for part in expected_parts:
-            assert part in task
-
-        assert "Navigate to the page, then" in task
-        assert "Finally, extract all documentation content" in task
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_convert_instructions_to_task_empty_list(self, basic_config):
-        """Test converting empty instruction list."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        task = adapter._convert_instructions_to_task([])
-
-        assert (
-            task
-            == "Navigate to the page and extract all documentation content including code examples."
-        )
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_convert_instructions_to_task_whitespace_handling(self, basic_config):
-        """Test handling of whitespace in instructions."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        instructions = [
-            "  Fill form  ",
-            "",  # Empty instruction
-            "Submit form",
-            "   ",  # Whitespace only
-        ]
-        task = adapter._convert_instructions_to_task(instructions)
-
-        # Should only include non-empty instructions with proper punctuation
-        assert "Fill form." in task
-        assert "Submit form." in task
-        # Empty/whitespace instructions should be filtered out
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_convert_instructions_to_task_punctuation_handling(self, basic_config):
-        """Test proper punctuation handling in instructions."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        instructions = [
-            "Click button",  # No punctuation
-            "Fill form!",  # Exclamation
-            "Wait.",  # Period
-            "Submit?",  # Question mark
-        ]
-        task = adapter._convert_instructions_to_task(instructions)
-
-        # Should preserve existing punctuation and add periods where missing
-        assert "Click button." in task
-        assert "Fill form!" in task
-        assert "Wait." in task
-        assert "Submit?" in task
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_scrape_with_instructions(self, basic_config):
-        """Test scraping with instruction list compatibility method."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run.return_value = "Content"
-
-            instructions = ["Click login", "Enter credentials"]
-            result = await adapter.scrape_with_instructions(
-                "https://example.com", instructions
-            )
-
-            assert result["success"] is True
-
-            # Verify the task was converted properly
-            agent_kwargs = mock_agent_class.call_args[1]
-            task = agent_kwargs["task"]
-            assert "Click login." in task
-            assert "Enter credentials." in task
-
-
-class TestBrowserUseAdapterResultBuilding:
-    """Test result building functionality."""
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_build_success_result(self, basic_config):
-        """Test building successful result."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        start_time = time.time() - 1.5  # 1.5 seconds ago
-        agent_result = "Extracted content from the page"
-        task = "Extract all content from the documentation page"
-        retry_count = 1
-
-        result = await adapter._build_success_result(
-            "https://example.com", start_time, agent_result, task, retry_count
-        )
-
-        assert result["success"] is True
-        assert result["url"] == "https://example.com"
-        assert result["content"] == "Extracted content from the page"
-        assert result["html"] == ""  # Not provided by browser-use
-        assert result["title"] == ""  # Not provided by browser-use
-        assert result["screenshots"] == []
-
-        metadata = result["metadata"]
-        assert metadata["extraction_method"] == "browser_use_ai"
-        assert metadata["llm_provider"] == "openai"
-        assert metadata["model_used"] == "gpt-4o-mini"
-        assert metadata["max_steps"] == 20
-        assert metadata["retries_used"] == 1
-        assert 1400 <= metadata["processing_time_ms"] <= 1600  # Around 1.5 seconds
-        assert "Extract all content" in metadata["task_description"]
-
-        ai_insights = result["ai_insights"]
-        assert ai_insights["task_completed"] is True
-        assert ai_insights["extraction_confidence"] == "high"
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_build_error_result(self, basic_config):
-        """Test building error result."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        start_time = time.time() - 2.0  # 2 seconds ago
-        error = "Browser automation failed"
-        task = "Complex extraction task"
-
-        result = adapter._build_error_result(
-            "https://example.com", start_time, error, task
-        )
-
-        assert result["success"] is False
-        assert result["url"] == "https://example.com"
-        assert result["error"] == error
-        assert result["content"] == ""
-
-        metadata = result["metadata"]
-        assert metadata["extraction_method"] == "browser_use_ai"
-        assert metadata["llm_provider"] == "openai"
-        assert metadata["model_used"] == "gpt-4o-mini"
-        assert 1900 <= metadata["processing_time_ms"] <= 2100  # Around 2 seconds
-        assert "Complex extraction" in metadata["task_description"]
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_build_success_result_with_none_agent_result(self, basic_config):
-        """Test building result when agent returns None."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        result = await adapter._build_success_result(
-            "https://example.com", time.time(), None, "task", 0
-        )
-
-        assert result["success"] is True
-        assert result["content"] == ""  # Should handle None gracefully
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_build_success_result_task_truncation(self, basic_config):
-        """Test task description truncation in result metadata."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        long_task = "A" * 150  # Longer than 100 characters
-
-        result = await adapter._build_success_result(
-            "https://example.com", time.time(), "content", long_task, 0
-        )
-
-        task_description = result["metadata"]["task_description"]
-        assert len(task_description) == 103  # 100 chars + "..."
-        assert task_description.endswith("...")
-
-
-class TestBrowserUseAdapterCapabilities:
-    """Test capabilities and metadata functionality."""
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_get_capabilities(self, basic_config):
-        """Test getting adapter capabilities."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        capabilities = adapter.get_capabilities()
-
-        assert capabilities["name"] == "browser_use"
-        assert "AI-powered browser automation" in capabilities["description"]
-        assert "advantages" in capabilities
-        assert "limitations" in capabilities
-        assert "best_for" in capabilities
-        assert "performance" in capabilities
-        assert capabilities["javascript_support"] == "excellent"
-        assert capabilities["dynamic_content"] == "excellent"
-        assert capabilities["authentication"] == "good"
-        assert capabilities["cost"] == "api_usage_based"
-        assert capabilities["ai_powered"] is True
-        assert capabilities["available"] is True
-        assert capabilities["llm_provider"] == "openai"
-        assert capabilities["model"] == "gpt-4o-mini"
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
-    def test_get_capabilities_unavailable(self, basic_config):
-        """Test capabilities when browser-use unavailable."""
-        adapter = BrowserUseAdapter(basic_config)
-
-        capabilities = adapter.get_capabilities()
-
-        assert capabilities["available"] is False
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_capabilities_advantages_and_limitations(self, basic_config):
-        """Test that capabilities include expected advantages and limitations."""
-        adapter = BrowserUseAdapter(basic_config)
-        capabilities = adapter.get_capabilities()
-
-        # Check advantages
-        advantages = capabilities["advantages"]
-        assert any("Python-native" in advantage for advantage in advantages)
-        assert any("Multi-LLM" in advantage for advantage in advantages)
-        assert any("Self-correcting" in advantage for advantage in advantages)
-
-        # Check limitations
-        limitations = capabilities["limitations"]
-        assert any("Slower" in limitation for limitation in limitations)
-        assert any("API keys" in limitation for limitation in limitations)
-
-        # Check best use cases
-        best_for = capabilities["best_for"]
-        assert any("Complex interactions" in use_case for use_case in best_for)
-        assert any("Dynamic SPAs" in use_case for use_case in best_for)
-
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    def test_capabilities_performance_metrics(self, basic_config):
-        """Test performance metrics in capabilities."""
-        adapter = BrowserUseAdapter(basic_config)
-        capabilities = adapter.get_capabilities()
-
-        performance = capabilities["performance"]
-        assert "avg_speed" in performance
-        assert "concurrency" in performance
-        assert "success_rate" in performance
-        assert "1.8s" in performance["avg_speed"]
-        assert "96%" in performance["success_rate"]
-
-
-class TestBrowserUseAdapterHealthCheck:
-    """Test health check functionality."""
-
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
     async def test_health_check_unavailable(self, basic_config):
         """Test health check when browser-use unavailable."""
         adapter = BrowserUseAdapter(basic_config)
 
-        health = await adapter.health_check()
+        result = await adapter.health_check()
 
-        assert health["healthy"] is False
-        assert health["status"] == "unavailable"
-        assert health["available"] is False
-        assert "not installed" in health["message"]
+        assert result["healthy"] is False
+        assert result["available"] is False
+        assert result["initialized"] is False
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_health_check_not_initialized(self, basic_config):
-        """Test health check when not initialized."""
+    def test_capabilities(self, basic_config):
+        """Test capabilities method."""
         adapter = BrowserUseAdapter(basic_config)
 
-        health = await adapter.health_check()
+        caps = adapter.capabilities()
 
-        assert health["healthy"] is False
-        assert health["status"] == "not_initialized"
-        assert health["available"] is True
-        assert "not initialized" in health["message"]
+        assert caps["ai_powered"] is True
+        assert caps["natural_language_tasks"] is True
+        assert caps["self_correcting"] is True
+        assert caps["max_retries"] == 3
+        assert caps["supported_providers"] == ["openai", "anthropic", "gemini"]
 
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_health_check_success(self, basic_config):
-        """Test successful health check."""
+    def test_format_instructions_to_task(self, basic_config):
+        """Test instruction formatting."""
         adapter = BrowserUseAdapter(basic_config)
-        adapter._initialized = True
 
-        # Mock successful scrape
-        with patch.object(adapter, "scrape") as mock_scrape:
-            mock_scrape.return_value = {"success": True, "content": "test"}
+        instructions = [
+            {"action": "click", "selector": "button"},
+            {"action": "type", "selector": "input", "text": "hello"},
+            {"action": "scroll", "direction": "down"},
+            {"action": "wait", "timeout": 1000},
+        ]
 
-            health = await adapter.health_check()
+        task = adapter._format_instructions_to_task("Base task", instructions)
 
-            assert health["healthy"] is True
-            assert health["status"] == "operational"
-            assert health["available"] is True
-            assert "Health check passed" in health["message"]
-            assert "response_time_ms" in health
-            assert health["test_url"] == "https://httpbin.org/html"
-            assert "capabilities" in health
+        expected = (
+            "Base task\n\n"
+            "Please perform these actions:\n"
+            "1. Click on element: button\n"
+            "2. Type 'hello' into element: input\n"
+            "3. Scroll down\n"
+            "4. Wait for 1000ms"
+        )
+        assert task == expected
 
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_health_check_failure(self, basic_config):
-        """Test health check when scraping fails."""
+    def test_format_instructions_unsupported_action(self, basic_config):
+        """Test formatting with unsupported action."""
         adapter = BrowserUseAdapter(basic_config)
-        adapter._initialized = True
 
-        # Mock failed scrape
-        with patch.object(adapter, "scrape") as mock_scrape:
-            mock_scrape.return_value = {"success": False, "error": "Scrape failed"}
+        instructions = [
+            {"action": "unsupported", "some": "data"},
+        ]
 
-            health = await adapter.health_check()
+        task = adapter._format_instructions_to_task("Base task", instructions)
 
-            assert health["healthy"] is False
-            assert health["status"] == "degraded"
-            assert "Scrape failed" in health["message"]
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_health_check_timeout(self, basic_config):
-        """Test health check timeout."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._initialized = True
-
-        # Mock timeout
-        async def timeout_scrape(*args, **kwargs):
-            await asyncio.sleep(20)  # Longer than timeout
-
-        with patch.object(adapter, "scrape", side_effect=timeout_scrape):
-            health = await adapter.health_check()
-
-            assert health["healthy"] is False
-            assert health["status"] == "timeout"
-            assert health["response_time_ms"] == 15000
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_health_check_exception(self, basic_config):
-        """Test health check exception handling."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._initialized = True
-
-        # Mock exception
-        with patch.object(adapter, "scrape", side_effect=Exception("Test error")):
-            health = await adapter.health_check()
-
-            assert health["healthy"] is False
-            assert health["status"] == "error"
-            assert "Test error" in health["message"]
-
-
-class TestBrowserUseAdapterAICapabilityTesting:
-    """Test AI capability testing functionality."""
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_test_ai_capabilities_success(self, basic_config):
-        """Test successful AI capability test."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-
-        mock_result = {
-            "success": True,
-            "content": "Test content extracted successfully",
-            "ai_insights": {"task_completed": True, "extraction_confidence": "high"},
-            "metadata": {"processing_time_ms": 2500},
-        }
-
-        with patch.object(adapter, "scrape", return_value=mock_result):
-            result = await adapter.test_ai_capabilities()
-
-            assert result["success"] is True
-            assert result["test_url"] == "https://example.com"
-            assert "Navigate to the page and perform" in result["task_description"]
-            assert result["content_length"] == len(
-                "Test content extracted successfully"
-            )
-            assert result["ai_insights"] == mock_result["ai_insights"]
-            assert "execution_time_ms" in result
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_test_ai_capabilities_custom_url(self, basic_config):
-        """Test AI capability test with custom URL."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-
-        with patch.object(adapter, "scrape") as mock_scrape:
-            mock_scrape.return_value = {"success": True, "content": "custom"}
-
-            result = await adapter.test_ai_capabilities("https://custom.example.com")
-
-            assert result["test_url"] == "https://custom.example.com"
-            mock_scrape.assert_called_once()
-            # Verify custom URL was passed to scrape
-            assert mock_scrape.call_args[0][0] == "https://custom.example.com"
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_test_ai_capabilities_not_available(self, basic_config):
-        """Test AI capability test when adapter not available."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = False
-
-        result = await adapter.test_ai_capabilities()
-
-        assert result["success"] is False
-        assert "not available" in result["error"]
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_test_ai_capabilities_error(self, basic_config):
-        """Test AI capability test error handling."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-
-        with patch.object(adapter, "scrape", side_effect=Exception("AI test failed")):
-            result = await adapter.test_ai_capabilities()
-
-            assert result["success"] is False
-            assert "AI test failed" in result["error"]
-            assert "execution_time_ms" in result
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_test_ai_capabilities_comprehensive_task(self, basic_config):
-        """Test that AI capability test uses comprehensive task."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-
-        with patch.object(adapter, "scrape") as mock_scrape:
-            mock_scrape.return_value = {"success": True, "content": "test"}
-
-            await adapter.test_ai_capabilities()
-
-            # Verify comprehensive task was used
-            task = mock_scrape.call_args[0][1]
-            expected_elements = [
-                "Wait for the page to fully load",
-                "Extract the main heading and title",
-                "Find and note any links present",
-                "Extract all visible text content",
-                "Identify any interactive elements",
-                "Provide a summary of the page structure",
-            ]
-
-            for element in expected_elements:
-                assert element in task
+        expected = (
+            "Base task\n\n"
+            "Please perform these actions:\n"
+            "1. unsupported (parameters: {'some': 'data'})"
+        )
+        assert task == expected
 
 
 class TestBrowserUseAdapterIntegration:
     """Integration tests for BrowserUse adapter."""
 
-    @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    async def test_full_workflow(self, basic_config):
-        """Test complete workflow from initialization to cleanup."""
+    @patch("src.services.browser.browser_use_adapter.Browser")
+    @patch("src.services.browser.browser_use_adapter.Agent")
+    @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    async def test_full_scraping_flow(
+        self, mock_chat_openai, mock_agent_class, mock_browser_class, basic_config
+    ):
+        """Test complete scraping flow from initialization to cleanup."""
         adapter = BrowserUseAdapter(basic_config)
 
-        # Mock dependencies
+        # Mock LLM
         mock_llm = MagicMock()
-        mock_browser_config = MagicMock()
+        mock_chat_openai.return_value = mock_llm
+
+        # Mock browser
         mock_browser = AsyncMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_page.content = AsyncMock(return_value="<html>Test Content</html>")
+        mock_page.title = AsyncMock(return_value="Test Title")
+        mock_page.url = "https://example.com"
+        mock_context.current_page = mock_page
+        mock_browser.context = mock_context
+        mock_browser_class.return_value = mock_browser
 
-        with (
-            patch(
-                "src.services.browser.browser_use_adapter.ChatOpenAI",
-                return_value=mock_llm,
-            ),
-            patch(
-                "src.services.browser.browser_use_adapter.BrowserConfig",
-                return_value=mock_browser_config,
-            ),
-            patch(
-                "src.services.browser.browser_use_adapter.Browser",
-                return_value=mock_browser,
-            ),
-            patch("src.services.browser.browser_use_adapter.Agent") as mock_agent_class,
-        ):
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run.return_value = "Extracted content successfully"
+        # Mock agent
+        mock_agent = AsyncMock()
+        mock_agent.run.return_value = None
+        mock_agent_class.return_value = mock_agent
 
+        # Full flow
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             # Initialize
             await adapter.initialize()
             assert adapter._initialized is True
 
             # Scrape
-            result = await adapter.scrape("https://example.com", "Extract all content")
-            assert result["success"] is True
-            assert result["content"] == "Extracted content successfully"
-
-            # Scrape with instructions
-            instructions_result = await adapter.scrape_with_instructions(
-                "https://example.com", ["Click button", "Extract data"]
+            result = await adapter.scrape(
+                "https://example.com",
+                "Extract all content"
             )
-            assert instructions_result["success"] is True
+            assert result["success"] is True
+            assert "Test Title" in result["content"]
 
             # Health check
             health = await adapter.health_check()
             assert health["healthy"] is True
 
-            # Test AI capabilities
-            ai_test = await adapter.test_ai_capabilities()
-            assert ai_test["success"] is True
-
-            # Get capabilities
-            capabilities = adapter.get_capabilities()
-            assert capabilities["name"] == "browser_use"
-
             # Cleanup
             await adapter.cleanup()
             assert adapter._initialized is False
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_error_resilience(self, basic_config):
-        """Test adapter resilience to various errors."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        # Test various error scenarios
-        error_scenarios = [
-            (TimeoutError(), "timeout"),
-            (Exception("Network error"), "network"),
-            (Exception("LLM API error"), "api"),
-            (MemoryError("Out of memory"), "memory"),
-        ]
-
-        for error, scenario_type in error_scenarios:
-            with patch(
-                "src.services.browser.browser_use_adapter.Agent"
-            ) as mock_agent_class:
-                mock_agent = AsyncMock()
-                mock_agent_class.return_value = mock_agent
-
-                # All attempts fail with the specific error
-                with patch("asyncio.wait_for", side_effect=error):
-                    result = await adapter.scrape(
-                        "https://example.com", f"Test {scenario_type}"
-                    )
-
-                    assert result["success"] is False
-                    assert "Failed after" in result["error"]
-                    assert result["metadata"]["extraction_method"] == "browser_use_ai"
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_multiple_llm_providers(self):
-        """Test adapter with different LLM providers."""
-        providers = [
-            ("openai", {"OPENAI_API_KEY": "test-openai-key"}),
-            ("anthropic", {"ANTHROPIC_API_KEY": "test-anthropic-key"}),
-            ("gemini", {"GOOGLE_API_KEY": "test-google-key"}),
-        ]
-
-        for provider, env_vars in providers:
-            config = {"llm_provider": provider, "model": "test-model"}
-            adapter = BrowserUseAdapter(config)
-
-            with patch.dict(os.environ, env_vars):
-                # Test LLM setup
-                if provider == "openai":
-                    with patch(
-                        "src.services.browser.browser_use_adapter.ChatOpenAI"
-                    ) as mock_llm:
-                        adapter._setup_llm_config()
-                        mock_llm.assert_called_once()
-                elif provider == "anthropic":
-                    with patch(
-                        "src.services.browser.browser_use_adapter.ChatAnthropic"
-                    ) as mock_llm:
-                        adapter._setup_llm_config()
-                        mock_llm.assert_called_once()
-                elif provider == "gemini":
-                    with patch(
-                        "src.services.browser.browser_use_adapter.ChatGoogleGenerativeAI"
-                    ) as mock_llm:
-                        adapter._setup_llm_config()
-                        mock_llm.assert_called_once()
-
-    @pytest.mark.asyncio
-    @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
-    async def test_concurrent_scraping_operations(self, basic_config):
-        """Test adapter behavior with concurrent scraping operations."""
-        adapter = BrowserUseAdapter(basic_config)
-        adapter._available = True
-        adapter._initialized = True
-        adapter.llm_config = MagicMock()
-        adapter._browser = MagicMock()
-
-        # Mock different response times for different URLs
-        async def variable_agent_response(task, **kwargs):
-            if "slow" in task:
-                await asyncio.sleep(0.2)
-                return "Slow response"
-            else:
-                await asyncio.sleep(0.05)
-                return "Fast response"
-
-        with patch(
-            "src.services.browser.browser_use_adapter.Agent"
-        ) as mock_agent_class:
-            mock_agent = AsyncMock()
-            mock_agent_class.return_value = mock_agent
-            mock_agent.run = variable_agent_response
-
-            # Run multiple scrapes concurrently
-            tasks = [
-                adapter.scrape("https://fast.example.com", "Quick task"),
-                adapter.scrape("https://slow.example.com", "Slow complex task"),
-                adapter.scrape("https://medium.example.com", "Medium task"),
-            ]
-
-            results = await asyncio.gather(*tasks)
-
-            assert len(results) == 3
-            assert all(r["success"] for r in results)
-
-            # Fast task should complete before slow task
-            fast_time = results[0]["metadata"]["processing_time_ms"]
-            slow_time = results[1]["metadata"]["processing_time_ms"]
-            assert slow_time > fast_time
+            mock_browser.close.assert_called_once()

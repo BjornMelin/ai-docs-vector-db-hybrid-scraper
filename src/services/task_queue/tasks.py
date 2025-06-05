@@ -1,6 +1,7 @@
 """ARQ task definitions for background processing."""
 
 import asyncio
+import contextlib
 import logging
 import time
 from typing import Any
@@ -336,11 +337,9 @@ async def monitor_deployment_events(
 
     try:
         # Create consumer group if it doesn't exist
-        try:
+        with contextlib.suppress(Exception):
+            # Try to create group - will fail silently if already exists
             await redis_conn.xgroup_create(stream_key, consumer_group, id="0")
-        except Exception:
-            # Group already exists
-            pass
 
         # Process events
         events_processed = 0

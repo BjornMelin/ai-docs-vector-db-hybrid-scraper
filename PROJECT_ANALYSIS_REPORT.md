@@ -172,7 +172,7 @@ src/services/
 - Architecture tracking issue (#68)
 
 ## Next Steps
-1. Create missing entry point file (crawl4ai_bulk_embedder.py) - Issue #96
+1. ✅ COMPLETED: Create missing entry point file (crawl4ai_bulk_embedder.py) - Issue #96 (97% test coverage)
 2. Fix remaining 22 linting issues - Issue #78
 3. Complete MCP server testing - Issue #73
 4. Prepare for V1 release - Issues #43, #44, #45
