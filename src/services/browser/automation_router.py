@@ -18,10 +18,12 @@ logger = logging.getLogger(__name__)
 class AutomationRouter(BaseService):
     """Intelligently route scraping tasks to appropriate automation tool.
 
-    Implements a three-tier automation hierarchy:
-    1. Crawl4AI (90% of sites) - 4-6x faster, $0 cost
-    2. browser-use (Complex interactions) - AI-powered automation with multi-LLM support
-    3. Playwright (Maximum control) - Full programmatic control
+    Implements a five-tier automation hierarchy:
+    0. Lightweight HTTP (httpx + BeautifulSoup) - 5-10x faster for static content, $0 cost
+    1. Crawl4AI Basic (90% of sites) - 4-6x faster, $0 cost
+    2. Crawl4AI Enhanced (Interactive content) - Custom JavaScript, $0 cost
+    3. browser-use (Complex interactions) - AI-powered automation with multi-LLM support
+    4. Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
     """
 
     def __init__(self, config: UnifiedConfig):
@@ -41,9 +43,21 @@ class AutomationRouter(BaseService):
         # Load site-specific routing rules from configuration
         self.routing_rules = self._load_routing_rules()
 
-        # Performance metrics tracking
+        # Performance metrics tracking for all 5 tiers
         self.metrics = {
+            "lightweight": {
+                "success": 0,
+                "failed": 0,
+                "avg_time": 0.0,
+                "total_time": 0.0,
+            },
             "crawl4ai": {"success": 0, "failed": 0, "avg_time": 0.0, "total_time": 0.0},
+            "crawl4ai_enhanced": {
+                "success": 0,
+                "failed": 0,
+                "avg_time": 0.0,
+                "total_time": 0.0,
+            },
             "browser_use": {
                 "success": 0,
                 "failed": 0,
@@ -51,6 +65,12 @@ class AutomationRouter(BaseService):
                 "total_time": 0.0,
             },
             "playwright": {
+                "success": 0,
+                "failed": 0,
+                "avg_time": 0.0,
+                "total_time": 0.0,
+            },
+            "firecrawl": {
                 "success": 0,
                 "failed": 0,
                 "avg_time": 0.0,
@@ -118,6 +138,19 @@ class AutomationRouter(BaseService):
             return
 
         # Import adapters dynamically to avoid circular imports
+        # Initialize Tier 0: Lightweight HTTP scraper
+        try:
+            from .lightweight_scraper import LightweightScraper
+
+            adapter = LightweightScraper(self.config)
+            await adapter.initialize()
+            self._adapters["lightweight"] = adapter
+            self.logger.info("Initialized Lightweight HTTP adapter")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize Lightweight adapter: {e}")
+
+        # Initialize Tier 1: Crawl4AI Basic
         try:
             from .crawl4ai_adapter import Crawl4AIAdapter
 
@@ -129,7 +162,7 @@ class AutomationRouter(BaseService):
         except Exception as e:
             self.logger.warning(f"Failed to initialize Crawl4AI adapter: {e}")
 
-        # Initialize BrowserUse adapter if available
+        # Initialize Tier 2: BrowserUse (Enhanced)
         try:
             from .browser_use_adapter import BrowserUseAdapter
 
@@ -141,7 +174,7 @@ class AutomationRouter(BaseService):
         except Exception as e:
             self.logger.warning(f"Failed to initialize BrowserUse adapter: {e}")
 
-        # Initialize Playwright adapter
+        # Initialize Tier 3: Playwright
         try:
             from .playwright_adapter import PlaywrightAdapter
 
@@ -153,12 +186,22 @@ class AutomationRouter(BaseService):
         except Exception as e:
             self.logger.warning(f"Failed to initialize Playwright adapter: {e}")
 
+        # TODO: Initialize Tier 4: Firecrawl adapter when available
+        # try:
+        #     from .firecrawl_adapter import FirecrawlAdapter
+        #     adapter = FirecrawlAdapter(self.config.firecrawl)
+        #     await adapter.initialize()
+        #     self._adapters["firecrawl"] = adapter
+        #     self.logger.info("Initialized Firecrawl adapter")
+        # except Exception as e:
+        #     self.logger.warning(f"Failed to initialize Firecrawl adapter: {e}")
+
         if not self._adapters:
             raise CrawlServiceError("No automation adapters available")
 
         self._initialized = True
         self.logger.info(
-            f"Automation router initialized with {len(self._adapters)} adapters"
+            f"5-tier automation router initialized with {len(self._adapters)} adapters"
         )
 
     async def cleanup(self) -> None:
@@ -178,7 +221,15 @@ class AutomationRouter(BaseService):
         url: str,
         interaction_required: bool = False,
         custom_actions: list[dict] | None = None,
-        force_tool: Literal["crawl4ai", "browser_use", "playwright"] | None = None,
+        force_tool: Literal[
+            "lightweight",
+            "crawl4ai",
+            "crawl4ai_enhanced",
+            "browser_use",
+            "playwright",
+            "firecrawl",
+        ]
+        | None = None,
         timeout: int = 30000,
     ) -> dict[str, Any]:
         """Route scraping to appropriate tool based on URL and requirements.
@@ -201,11 +252,15 @@ class AutomationRouter(BaseService):
 
         # Determine which tool to use
         if force_tool:
-            if force_tool not in self._adapters:
+            if (
+                force_tool not in self._adapters
+                and force_tool != "crawl4ai_enhanced"
+                and force_tool != "firecrawl"
+            ):
                 raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
             tool = force_tool
         else:
-            tool = self._select_tool(url, interaction_required, custom_actions)
+            tool = await self._select_tool(url, interaction_required, custom_actions)
 
         self.logger.info(f"Using {tool} for {url}")
 
@@ -213,10 +268,16 @@ class AutomationRouter(BaseService):
         start_time = time.time()
 
         try:
-            if tool == "crawl4ai":
+            if tool == "lightweight":
+                result = await self._try_lightweight(url, timeout)
+            elif tool == "crawl4ai":
                 result = await self._try_crawl4ai(url, custom_actions, timeout)
+            elif tool == "crawl4ai_enhanced":
+                result = await self._try_crawl4ai_enhanced(url, custom_actions, timeout)
             elif tool == "browser_use":
                 result = await self._try_browser_use(url, custom_actions, timeout)
+            elif tool == "firecrawl":
+                result = await self._try_firecrawl(url, timeout)
             else:  # playwright
                 result = await self._try_playwright(url, custom_actions, timeout)
 
@@ -236,13 +297,13 @@ class AutomationRouter(BaseService):
             # Try fallback
             return await self._fallback_scrape(url, tool, custom_actions, timeout)
 
-    def _select_tool(
+    async def _select_tool(
         self,
         url: str,
         interaction_required: bool,
         custom_actions: list[dict] | None,
     ) -> str:
-        """Select appropriate tool based on URL and requirements.
+        """Select appropriate tool based on URL and requirements using 5-tier hierarchy.
 
         Args:
             url: URL to analyze
@@ -259,14 +320,25 @@ class AutomationRouter(BaseService):
         if route_tool:
             return route_tool
 
-        # Check for interaction requirements
-        interaction_tool = self._check_interaction_requirements(
-            url, interaction_required, custom_actions
-        )
-        if interaction_tool:
-            return interaction_tool
+        # Check for interaction requirements (forces higher tiers)
+        if interaction_required or custom_actions:
+            return self._get_interaction_tool()
 
-        # Default fallback selection
+        # Tier 0: Try lightweight HTTP first (fastest, $0 cost)
+        if "lightweight" in self._adapters:
+            try:
+                can_handle = await self._adapters["lightweight"].can_handle(url)
+                if can_handle:
+                    return "lightweight"
+            except Exception as e:
+                self.logger.debug(f"Lightweight adapter can_handle check failed: {e}")
+
+        # Check for JavaScript-heavy patterns that need higher tiers
+        js_patterns = ["spa", "react", "vue", "angular", "app", "dashboard", "console"]
+        if any(pattern in url.lower() for pattern in js_patterns):
+            return self._get_enhanced_tool()
+
+        # Default fallback hierarchy
         return self._get_default_tool()
 
     def _check_routing_rules(self, domain: str) -> str | None:
@@ -297,12 +369,34 @@ class AutomationRouter(BaseService):
         return None
 
     def _get_default_tool(self) -> str:
-        """Get default tool based on availability."""
+        """Get default tool based on 5-tier hierarchy."""
+        # Prefer Tier 1 (Crawl4AI Basic) as default
         if "crawl4ai" in self._adapters:
             return "crawl4ai"
+        # Fall back to Tier 0 if available
+        if "lightweight" in self._adapters:
+            return "lightweight"
+        # Then Tier 3 (Playwright)
         if "playwright" in self._adapters:
             return "playwright"
+        # Finally Tier 2 (BrowserUse)
         return "browser_use"
+
+    def _get_interaction_tool(self) -> str:
+        """Get best tool for interactive requirements."""
+        if "browser_use" in self._adapters:
+            return "browser_use"
+        if "playwright" in self._adapters:
+            return "playwright"
+        return "crawl4ai"
+
+    def _get_enhanced_tool(self) -> str:
+        """Get best tool for enhanced/JavaScript-heavy content."""
+        if "browser_use" in self._adapters:
+            return "browser_use"
+        if "crawl4ai" in self._adapters:
+            return "crawl4ai_enhanced"  # Use enhanced mode
+        return "playwright"
 
     async def _try_crawl4ai(
         self,
@@ -617,7 +711,7 @@ class AutomationRouter(BaseService):
 
         return result
 
-    def get_recommended_tool(self, url: str) -> str:
+    async def get_recommended_tool(self, url: str) -> str:
         """Get recommended tool for a URL based on performance metrics.
 
         Args:
@@ -627,7 +721,7 @@ class AutomationRouter(BaseService):
             Recommended tool name
         """
         # Get base recommendation from selection logic
-        base_tool = self._select_tool(url, False, None)
+        base_tool = await self._select_tool(url, False, None)
 
         # Check if we have enough data to make performance-based recommendations
         metrics = self.get_metrics()
@@ -654,3 +748,182 @@ class AutomationRouter(BaseService):
             return best_tool
 
         return base_tool
+
+    async def _try_lightweight(
+        self,
+        url: str,
+        timeout: int = 30000,
+    ) -> dict[str, Any]:
+        """Try scraping with Lightweight HTTP tier.
+
+        Args:
+            url: URL to scrape
+            timeout: Timeout in milliseconds
+
+        Returns:
+            Scraping result
+        """
+        adapter = self._adapters["lightweight"]
+
+        # Convert timeout to seconds for LightweightScraper
+        timeout_seconds = timeout / 1000
+
+        # LightweightScraper returns different format than other adapters
+        scrape_result = await adapter.scrape(url)
+
+        if scrape_result is None:
+            # Escalate to higher tier
+            raise CrawlServiceError(
+                "Lightweight scraper returned None - content should escalate"
+            )
+
+        # Convert LightweightScraper format to standard format
+        return {
+            "success": scrape_result.success,
+            "content": scrape_result.text,
+            "metadata": {
+                "title": scrape_result.title,
+                "url": scrape_result.url,
+                "tier": scrape_result.tier,
+                "headings": scrape_result.headings,
+                "links": scrape_result.links,
+                **scrape_result.metadata,
+            },
+            "url": url,
+            "extraction_time_ms": scrape_result.extraction_time_ms,
+        }
+
+    async def _try_crawl4ai_enhanced(
+        self,
+        url: str,
+        custom_actions: list[dict] | None = None,
+        timeout: int = 30000,
+    ) -> dict[str, Any]:
+        """Try scraping with Crawl4AI Enhanced mode.
+
+        Args:
+            url: URL to scrape
+            custom_actions: Custom actions (converted to JavaScript)
+            timeout: Timeout in milliseconds
+
+        Returns:
+            Scraping result
+        """
+        adapter = self._adapters["crawl4ai"]
+
+        # Enhanced mode uses more sophisticated JavaScript
+        enhanced_js = self._get_enhanced_js(url, custom_actions)
+
+        return await adapter.scrape(
+            url=url,
+            wait_for_selector=".content, main, article, [data-content], .documentation",
+            js_code=enhanced_js,
+            timeout=timeout,
+        )
+
+    async def _try_firecrawl(
+        self,
+        url: str,
+        timeout: int = 30000,
+    ) -> dict[str, Any]:
+        """Try scraping with Firecrawl API (Tier 4).
+
+        Args:
+            url: URL to scrape
+            timeout: Timeout in milliseconds
+
+        Returns:
+            Scraping result
+        """
+        # TODO: Implement Firecrawl adapter
+        # For now, return error indicating not available
+        raise CrawlServiceError("Firecrawl adapter not yet implemented")
+
+    def _get_enhanced_js(
+        self, url: str, custom_actions: list[dict] | None = None
+    ) -> str:
+        """Get enhanced JavaScript for Crawl4AI enhanced mode.
+
+        Args:
+            url: URL being scraped
+            custom_actions: Custom actions to incorporate
+
+        Returns:
+            Enhanced JavaScript code
+        """
+        enhanced_js = """
+        // Enhanced JavaScript for dynamic content
+        console.log('Enhanced mode: Starting advanced content extraction');
+        
+        // Wait for initial load
+        await new Promise(r => setTimeout(r, 3000));
+        
+        // Handle lazy loading
+        async function handleLazyLoading() {
+            // Scroll to trigger lazy loading
+            for (let i = 0; i < 3; i++) {
+                window.scrollTo(0, document.body.scrollHeight / 3 * (i + 1));
+                await new Promise(r => setTimeout(r, 1500));
+            }
+        }
+        
+        // Handle dynamic content expansion
+        async function expandDynamicContent() {
+            // Click expandable elements
+            const expandableSelectors = [
+                '[aria-expanded="false"]',
+                '.expand-btn', '.show-more', '.load-more',
+                'button[data-toggle]', 'button[data-expand]',
+                '.collapsible:not(.active)', '.accordion-header'
+            ];
+            
+            for (const selector of expandableSelectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const el of elements) {
+                    try {
+                        el.click();
+                        await new Promise(r => setTimeout(r, 800));
+                    } catch(e) { console.log('Click failed:', e); }
+                }
+            }
+        }
+        
+        // Handle tab content
+        async function handleTabContent() {
+            const tabSelectors = [
+                '.tab:not(.active)', '.tab-item:not(.active)',
+                '[role="tab"]:not([aria-selected="true"])',
+                '.nav-link:not(.active)'
+            ];
+            
+            for (const selector of tabSelectors) {
+                const tabs = document.querySelectorAll(selector);
+                for (const tab of tabs) {
+                    try {
+                        tab.click();
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch(e) { console.log('Tab click failed:', e); }
+                }
+            }
+        }
+        
+        // Execute enhancement sequence
+        await handleLazyLoading();
+        await expandDynamicContent();
+        await handleTabContent();
+        
+        // Final scroll to ensure all content is loaded
+        window.scrollTo(0, 0);
+        await new Promise(r => setTimeout(r, 1000));
+        window.scrollTo(0, document.body.scrollHeight);
+        await new Promise(r => setTimeout(r, 2000));
+        
+        console.log('Enhanced mode: Content extraction complete');
+        """
+
+        # Add custom actions if provided
+        if custom_actions:
+            custom_js = self._convert_actions_to_js(custom_actions)
+            enhanced_js += f"\n\n// Custom actions\n{custom_js}"
+
+        return enhanced_js

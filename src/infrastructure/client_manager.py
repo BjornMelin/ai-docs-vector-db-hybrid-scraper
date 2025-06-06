@@ -211,6 +211,7 @@ class ClientManager:
         self._ab_testing_manager: Any = None
         self._canary_deployment: Any = None
         self._browser_automation_router: Any = None
+        self._task_queue_manager: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -575,17 +576,35 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.automation_router import (
-                        BrowserAutomationRouter,
+                    from src.services.browser.enhanced_router import (
+                        EnhancedAutomationRouter,
                     )
 
-                    self._browser_automation_router = BrowserAutomationRouter(
+                    self._browser_automation_router = EnhancedAutomationRouter(
                         config=self.config,
                     )
                     await self._browser_automation_router.initialize()
-                    logger.info("Initialized BrowserAutomationRouter")
+                    logger.info("Initialized EnhancedAutomationRouter with performance tracking")
 
         return self._browser_automation_router
+
+    async def get_task_queue_manager(self):
+        """Get or create TaskQueueManager instance."""
+        if self._task_queue_manager is None:
+            if "task_queue_manager" not in self._service_locks:
+                self._service_locks["task_queue_manager"] = asyncio.Lock()
+
+            async with self._service_locks["task_queue_manager"]:
+                if self._task_queue_manager is None:
+                    from src.services.task_queue.manager import TaskQueueManager
+
+                    self._task_queue_manager = TaskQueueManager(
+                        config=self.config,
+                    )
+                    await self._task_queue_manager.initialize()
+                    logger.info("Initialized TaskQueueManager")
+
+        return self._task_queue_manager
 
     async def _get_or_create_client(
         self,

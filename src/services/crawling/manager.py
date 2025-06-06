@@ -1,20 +1,21 @@
-"""Crawl manager with provider abstraction and fallback."""
+"""Crawl manager with 5-tier browser automation via UnifiedBrowserManager."""
 
 import logging
-import time
+from typing import Any
 
 from ...config import UnifiedConfig
 from ..errors import CrawlServiceError
-from .base import CrawlProvider
-from .crawl4ai_provider import Crawl4AIProvider
-from .firecrawl_provider import FirecrawlProvider
-from .lightweight_scraper import LightweightScraper
 
 logger = logging.getLogger(__name__)
 
 
 class CrawlManager:
-    """Manager for crawling with multiple providers and tier-based optimization."""
+    """Manager for crawling using 5-tier UnifiedBrowserManager architecture.
+
+    Provides a high-level interface for crawling that internally uses
+    the UnifiedBrowserManager to intelligently select the best tier for each URL
+    and provides consistent response formatting across all tiers.
+    """
 
     def __init__(self, config: UnifiedConfig, rate_limiter: object = None):
         """Initialize crawl manager.
@@ -24,120 +25,78 @@ class CrawlManager:
             rate_limiter: Optional RateLimitManager instance for rate limiting
         """
         self.config = config
-        self.providers: dict[str, CrawlProvider] = {}
-        self._initialized = False
         self.rate_limiter = rate_limiter
-
-        # Tier metrics tracking
-        self._tier_metrics = {
-            "lightweight": {"attempts": 0, "successes": 0, "total_time": 0.0},
-            "crawl4ai": {"attempts": 0, "successes": 0, "total_time": 0.0},
-            "firecrawl": {"attempts": 0, "successes": 0, "total_time": 0.0},
-        }
+        self._unified_browser_manager: Any = None
+        self._initialized = False
 
     async def initialize(self) -> None:
-        """Initialize available providers in tier order.
+        """Initialize the 5-tier UnifiedBrowserManager.
 
-        Initializes:
-        - Tier 0: Lightweight HTTP scraper (httpx + BeautifulSoup)
-        - Tier 1: Crawl4AI as primary browser-based provider
-        - Tier 2: Firecrawl as fallback if API key available
-
-        At least one provider must initialize successfully.
+        Initializes all 5 tiers through UnifiedBrowserManager:
+        - Tier 0: Lightweight HTTP (httpx + BeautifulSoup)
+        - Tier 1: Crawl4AI Basic
+        - Tier 2: Crawl4AI Enhanced
+        - Tier 3: Browser-use AI
+        - Tier 4: Playwright + Firecrawl
 
         Raises:
-            CrawlServiceError: If no providers can be initialized
+            CrawlServiceError: If UnifiedBrowserManager initialization fails
         """
         if self._initialized:
             return
 
-        # Initialize Tier 0: Lightweight HTTP scraper
-        if self.config.lightweight_scraper.enable_lightweight_tier:
-            try:
-                provider = LightweightScraper(
-                    config=self.config.lightweight_scraper,
-                    rate_limiter=self.rate_limiter,
-                )
-                await provider.initialize()
-                self.providers["lightweight"] = provider
-                logger.info("Initialized Lightweight HTTP scraper as Tier 0")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Lightweight scraper: {e}")
-
-        # Initialize Tier 1: Crawl4AI as primary browser provider
         try:
-            crawl4ai_config = self.config.crawl4ai
-            provider = Crawl4AIProvider(
-                config=crawl4ai_config,
-                rate_limiter=self.rate_limiter,
-            )
-            await provider.initialize()
-            self.providers["crawl4ai"] = provider
-            logger.info("Initialized Crawl4AI provider as Tier 1")
+            from ..browser.unified_manager import UnifiedBrowserManager
+
+            self._unified_browser_manager = UnifiedBrowserManager(self.config)
+            await self._unified_browser_manager.initialize()
+
+            self._initialized = True
+            logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
+
         except Exception as e:
-            logger.warning(f"Failed to initialize Crawl4AI provider: {e}")
-
-        # Initialize Tier 2: Firecrawl if API key available
-        if self.config.firecrawl.api_key:
-            try:
-                provider = FirecrawlProvider(
-                    config=self.config.firecrawl,
-                    rate_limiter=self.rate_limiter,
-                )
-                await provider.initialize()
-                self.providers["firecrawl"] = provider
-                logger.info("Initialized Firecrawl provider as Tier 2")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Firecrawl provider: {e}")
-
-        if not self.providers:
-            raise CrawlServiceError("No crawling providers available")
-
-        self._initialized = True
-        logger.info(
-            f"Crawl manager initialized with {len(self.providers)} providers: "
-            f"{list(self.providers.keys())}"
-        )
+            logger.error(f"Failed to initialize UnifiedBrowserManager: {e}")
+            raise CrawlServiceError(f"Failed to initialize crawl manager: {e}") from e
 
     async def cleanup(self) -> None:
-        """Cleanup all providers."""
-        for name, provider in self.providers.items():
+        """Cleanup the UnifiedBrowserManager."""
+        if self._unified_browser_manager:
             try:
-                await provider.cleanup()
-                logger.info(f"Cleaned up {name} provider")
+                await self._unified_browser_manager.cleanup()
+                logger.info("Cleaned up UnifiedBrowserManager")
             except Exception as e:
-                logger.error(f"Error cleaning up {name} provider: {e}")
+                logger.error(f"Error cleaning up UnifiedBrowserManager: {e}")
 
-        self.providers.clear()
+            self._unified_browser_manager = None
+
         self._initialized = False
 
     async def scrape_url(
         self,
         url: str,
-        formats: list[str] | None = None,
         preferred_provider: str | None = None,
     ) -> dict[str, object]:
-        """Scrape URL with intelligent tier-based provider selection.
+        """Scrape URL with intelligent 5-tier AutomationRouter selection.
 
-        Uses a three-tier approach:
-        - Tier 0: Lightweight HTTP (5-10x faster for simple pages)
-        - Tier 1: Crawl4AI (browser-based with optimizations)
-        - Tier 2: Firecrawl (fallback with API)
+        Uses AutomationRouter's 5-tier approach:
+        - Tier 0: Lightweight HTTP (httpx + BeautifulSoup) - 5-10x faster for static content
+        - Tier 1: Crawl4AI Basic (90% of sites) - 4-6x faster, browser automation
+        - Tier 2: Crawl4AI Enhanced (Interactive content) - Custom JavaScript execution
+        - Tier 3: browser-use (Complex interactions) - AI-powered automation with multi-LLM support
+        - Tier 4: Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
 
         Args:
             url: URL to scrape
-            formats: Output formats (["markdown"], ["html"], ["text"])
-            preferred_provider: Provider to try first (overrides tier selection)
+            preferred_provider: Specific tool to force use (overrides selection logic)
 
         Returns:
             dict[str, object]: Scraping result with:
                 - success: Whether scraping succeeded
-                - content: Scraped content in requested formats
+                - content: Scraped content
                 - metadata: Additional information (title, description, etc.)
-                - provider: Name of provider that succeeded
-                - tier: Tier level used (0, 1, or 2)
-                - performance_ms: Time taken in milliseconds
-                - error: Error message if all providers failed
+                - automation_time_ms: Time taken for automation in milliseconds
+                - url: Source URL
+                - error: Error message if scraping failed
 
         Raises:
             CrawlServiceError: If manager not initialized
@@ -145,146 +104,97 @@ class CrawlManager:
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
 
-        start_time = time.time()
-
-        # If preferred provider specified, use it first
-        if preferred_provider and preferred_provider in self.providers:
-            result = await self._try_provider(
-                preferred_provider, url, formats, start_time
-            )
-            if result["success"]:
-                return result
-
-        # Try Tier 0: Lightweight scraper first (if available and URL is suitable)
-        if "lightweight" in self.providers and not preferred_provider:
-            lightweight_provider = self.providers["lightweight"]
-
-            # Check if URL can be handled by lightweight tier
-            if await lightweight_provider.can_handle(url):
-                logger.info(f"URL {url} eligible for lightweight tier")
-                result = await self._try_provider(
-                    "lightweight", url, formats, start_time
-                )
-
-                if result["success"]:
-                    result["tier"] = 0
-                    return result
-                elif result.get("should_escalate", True):
-                    logger.info(f"Escalating from lightweight tier for {url}")
-                else:
-                    # Don't escalate if explicitly told not to
-                    return result
-
-        # Determine remaining provider order (Tier 1 and 2)
-        provider_order = []
-
-        # Add Crawl4AI as Tier 1
-        if "crawl4ai" in self.providers:
-            provider_order.append("crawl4ai")
-
-        # Add Firecrawl as Tier 2
-        if "firecrawl" in self.providers:
-            provider_order.append("firecrawl")
-
-        # Try remaining providers in tier order
-        last_error = None
-        for idx, provider_name in enumerate(provider_order):
-            result = await self._try_provider(provider_name, url, formats, start_time)
-
-            if result["success"]:
-                result["tier"] = idx + 1  # Tier 1 or 2
-                return result
-            else:
-                last_error = result.get("error", "Unknown error")
-                if not result.get("should_escalate", True):
-                    return result
-
-        # All providers failed
-        return {
-            "success": False,
-            "error": f"All tiers failed. Last error: {last_error}",
-            "content": "",
-            "metadata": {},
-            "url": url,
-            "performance_ms": int((time.time() - start_time) * 1000),
-        }
-
-    async def _try_provider(
-        self,
-        provider_name: str,
-        url: str,
-        formats: list[str] | None,
-        start_time: float,
-    ) -> dict[str, object]:
-        """Try a specific provider and track metrics.
-
-        Args:
-            provider_name: Name of the provider to try
-            url: URL to scrape
-            formats: Output formats
-            start_time: Start time for performance tracking
-
-        Returns:
-            Result dictionary with success status and content
-        """
-        provider = self.providers[provider_name]
-        provider_start = time.time()
-
-        # Update attempt metrics
-        self._tier_metrics[provider_name]["attempts"] += 1
-
         try:
-            logger.info(f"Attempting to scrape {url} with {provider_name}")
-            result = await provider.scrape_url(url, formats)
+            # Create unified request
+            from ..browser.unified_manager import UnifiedScrapingRequest
 
-            # Track timing
-            elapsed = time.time() - provider_start
-            self._tier_metrics[provider_name]["total_time"] += elapsed
+            request = UnifiedScrapingRequest(
+                url=url,
+                tier=preferred_provider if preferred_provider else "auto",
+                interaction_required=False,
+                timeout=30000,
+            )
 
-            if result.get("success", False):
-                self._tier_metrics[provider_name]["successes"] += 1
-                result["provider"] = provider_name
-                result["performance_ms"] = int((time.time() - start_time) * 1000)
-                logger.info(
-                    f"Successfully scraped {url} with {provider_name} "
-                    f"in {result['performance_ms']}ms"
-                )
-                return result
-            else:
-                logger.warning(
-                    f"Provider {provider_name} failed: {result.get('error', 'Unknown')}"
-                )
-                return result
+            # Use UnifiedBrowserManager for intelligent tool selection and execution
+            result = await self._unified_browser_manager.scrape(request)
+
+            # Return response in standardized format
+            return {
+                "success": result.success,
+                "content": result.content,
+                "url": result.url,
+                "title": result.title,
+                "metadata": result.metadata,
+                "tier_used": result.tier_used,
+                "automation_time_ms": result.execution_time_ms,
+                "quality_score": result.quality_score,
+                "error": result.error,
+                "fallback_attempted": result.fallback_attempted,
+                "failed_tiers": result.failed_tiers,
+            }
 
         except Exception as e:
-            logger.error(f"Error with {provider_name}: {e}")
+            logger.error(f"UnifiedBrowserManager failed for {url}: {e}")
             return {
                 "success": False,
-                "error": str(e),
-                "should_escalate": True,
+                "error": f"UnifiedBrowserManager error: {e!s}",
+                "content": "",
+                "url": url,
+                "title": "",
+                "metadata": {},
+                "tier_used": "none",
+                "automation_time_ms": 0,
+                "quality_score": 0.0,
             }
+
+    def get_metrics(self) -> dict[str, dict]:
+        """Get performance metrics for all tiers.
+
+        Returns:
+            Dictionary with metrics for each tier including success rates and timing
+        """
+        if not self._unified_browser_manager:
+            return {}
+
+        # Get tier metrics from UnifiedBrowserManager
+        tier_metrics = self._unified_browser_manager.get_tier_metrics()
+        return {tier: metrics.dict() for tier, metrics in tier_metrics.items()}
+
+    async def get_recommended_tool(self, url: str) -> str:
+        """Get recommended tool for a URL based on performance metrics.
+
+        Args:
+            url: URL to analyze
+
+        Returns:
+            Recommended tool name based on UnifiedBrowserManager analysis
+        """
+        if not self._unified_browser_manager:
+            return "crawl4ai"  # Default fallback
+
+        # Use UnifiedBrowserManager's URL analysis
+        analysis = await self._unified_browser_manager.analyze_url(url)
+        return analysis.get("recommended_tier", "crawl4ai")
 
     async def crawl_site(
         self,
         url: str,
         max_pages: int = 50,
-        formats: list[str] | None = None,
         preferred_provider: str | None = None,
     ) -> dict[str, object]:
-        """Crawl entire website from starting URL.
+        """Crawl entire website from starting URL using AutomationRouter.
 
         Args:
             url: Starting URL for crawl
             max_pages: Maximum pages to crawl (default: 50)
-            formats: Output formats for each page
-            preferred_provider: Provider to use (prefers Crawl4AI for sites)
+            preferred_provider: Specific tool to use for crawling
 
         Returns:
             dict[str, object]: Crawl results with:
                 - success: Whether crawl succeeded
                 - pages: List of crawled page data
                 - total_pages: Number of pages crawled
-                - provider: Name of provider used
+                - provider: Name of tool used
                 - error: Error message if crawl failed
 
         Raises:
@@ -293,92 +203,138 @@ class CrawlManager:
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
 
-        # For site crawling, prefer Crawl4AI for better performance
-        if not preferred_provider and "crawl4ai" in self.providers:
-            preferred_provider = "crawl4ai"
-
-        # Select provider
-        provider_name = preferred_provider or self.config.crawl_provider
-        if provider_name not in self.providers:
-            provider_name = next(iter(self.providers.keys()))
-
-        provider = self.providers[provider_name]
-        logger.info(f"Crawling {url} with {provider_name}")
+        logger.info(f"Starting site crawl of {url} with max {max_pages} pages")
 
         try:
-            result = await provider.crawl_site(url, max_pages, formats)
-            result["provider"] = provider_name
-            return result
-        except Exception as e:
-            logger.error(f"Failed to crawl {url} with {provider_name}: {e}")
+            # Simple site crawling implementation using AutomationRouter
+            # Start with the initial URL
+            pages = []
+            crawled_urls = set()
+            urls_to_crawl = [url]
 
-            # Try fallback if available
-            fallback_providers = [p for p in self.providers if p != provider_name]
+            tool_used = None
 
-            if fallback_providers:
-                fallback_name = fallback_providers[0]
-                logger.info(f"Trying fallback provider {fallback_name}")
+            while urls_to_crawl and len(pages) < max_pages:
+                current_url = urls_to_crawl.pop(0)
 
-                try:
-                    provider = self.providers[fallback_name]
-                    result = await provider.crawl_site(url, max_pages, formats)
-                    result["provider"] = fallback_name
-                    return result
-                except Exception as fallback_error:
-                    logger.error(
-                        f"Fallback provider {fallback_name} also failed: "
-                        f"{fallback_error}"
+                if current_url in crawled_urls:
+                    continue
+
+                crawled_urls.add(current_url)
+
+                # Scrape the current page
+                result = await self.scrape_url(current_url, preferred_provider)
+
+                if result.get("success"):
+                    pages.append(
+                        {
+                            "url": current_url,
+                            "content": result.get("content", ""),
+                            "metadata": result.get("metadata", {}),
+                            "tier_used": result.get("tier_used", "unknown"),
+                        }
+                    )
+
+                    if not tool_used:
+                        tool_used = result.get("tier_used", "unknown")
+
+                    # Extract links for further crawling (simple implementation)
+                    # This is a basic approach - more sophisticated crawling would
+                    # require dedicated crawling logic
+                    links = result.get("metadata", {}).get("links", [])
+                    if isinstance(links, list):
+                        for link in links:
+                            if isinstance(link, dict) and "url" in link:
+                                link_url = link["url"]
+                                if (
+                                    link_url.startswith(url)
+                                    and link_url not in crawled_urls
+                                    and link_url not in urls_to_crawl
+                                ):
+                                    urls_to_crawl.append(link_url)
+                else:
+                    logger.warning(
+                        f"Failed to scrape {current_url}: {result.get('error', 'Unknown error')}"
                     )
 
             return {
+                "success": len(pages) > 0,
+                "pages": pages,
+                "total_pages": len(pages),
+                "provider": tool_used or "none",
+                "error": None if pages else "No pages could be crawled",
+            }
+
+        except Exception as e:
+            logger.error(f"Site crawl failed for {url}: {e}")
+            return {
                 "success": False,
-                "error": str(e),
+                "error": f"Site crawl error: {e!s}",
                 "pages": [],
-                "total": 0,
-                "provider": provider_name,
+                "total_pages": 0,
+                "provider": "none",
             }
 
     def get_provider_info(self) -> dict[str, dict]:
-        """Get information about available providers.
+        """Get information about available automation tools in 5-tier system.
 
         Returns:
-            Provider information including tier assignments
+            Tool information including tier assignments and metrics
         """
+        if not self._unified_browser_manager:
+            return {}
+
+        # Get metrics from UnifiedBrowserManager
+        tier_metrics = self._unified_browser_manager.get_tier_metrics()
+        metrics = {tier: metrics.dict() for tier, metrics in tier_metrics.items()}
+
+        # Enhanced tier mapping for 5-tier system
+        tier_mapping = {
+            "lightweight": 0,
+            "crawl4ai": 1,
+            "crawl4ai_enhanced": 2,
+            "browser_use": 3,
+            "playwright": 4,
+            "firecrawl": 4,  # Also tier 4 as fallback
+        }
+
         info = {}
-        tier_mapping = {"lightweight": 0, "crawl4ai": 1, "firecrawl": 2}
+        for tool_name, tool_metrics in metrics.items():
+            success_rate = tool_metrics.get("success_rate", 0.0) * 100
+            avg_time_ms = tool_metrics.get("avg_time", 0.0) * 1000
 
-        for name, provider in self.providers.items():
-            metrics = self._tier_metrics.get(name, {})
-            success_rate = 0.0
-            avg_time_ms = 0.0
-
-            if metrics.get("attempts", 0) > 0:
-                success_rate = metrics["successes"] / metrics["attempts"] * 100
-                avg_time_ms = metrics["total_time"] / metrics["attempts"] * 1000
-
-            info[name] = {
-                "type": provider.__class__.__name__,
-                "available": True,
-                "tier": tier_mapping.get(name, -1),
-                "is_preferred": name == self.config.crawl_provider,
-                "has_api_key": name == "firecrawl"
-                and bool(self.config.firecrawl.api_key),
+            info[tool_name] = {
+                "type": f"{tool_name.title()}Adapter",
+                "available": tool_metrics.get("available", False),
+                "tier": tier_mapping.get(tool_name, -1),
+                "is_preferred": False,  # AutomationRouter handles selection
+                "has_api_key": tool_name == "firecrawl"
+                and bool(
+                    getattr(self.config, "firecrawl", None)
+                    and getattr(self.config.firecrawl, "api_key", None)
+                ),
                 "metrics": {
-                    "attempts": metrics.get("attempts", 0),
-                    "successes": metrics.get("successes", 0),
+                    "attempts": tool_metrics.get("total_attempts", 0),
+                    "successes": tool_metrics.get("success", 0),
                     "success_rate": round(success_rate, 1),
                     "avg_time_ms": round(avg_time_ms, 0),
                 },
             }
+
         return info
 
     def get_tier_metrics(self) -> dict[str, dict]:
-        """Get performance metrics for each tier.
+        """Get performance metrics for each tier from UnifiedBrowserManager.
 
         Returns:
-            Tier performance metrics
+            Tier performance metrics for all 5 tiers
         """
-        return self._tier_metrics.copy()
+        if not self._unified_browser_manager:
+            return {}
+
+        # Get tier metrics and convert to legacy format
+        tier_metrics = self._unified_browser_manager.get_tier_metrics()
+        return {tier: metrics.dict() for tier, metrics in tier_metrics.items()}
 
     async def map_url(
         self, url: str, include_subdomains: bool = False
@@ -401,13 +357,16 @@ class CrawlManager:
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
 
-        if "firecrawl" not in self.providers:
-            return {
-                "success": False,
-                "error": "URL mapping requires Firecrawl provider",
-                "urls": [],
-                "total": 0,
-            }
+        # URL mapping feature is not currently supported through AutomationRouter
+        # This would require direct access to Firecrawl adapter
+        # For now, use crawl_site as an alternative approach
+        logger.warning(
+            "URL mapping not supported through AutomationRouter. Use crawl_site() instead."
+        )
 
-        provider = self.providers["firecrawl"]
-        return await provider.map_url(url, include_subdomains)
+        return {
+            "success": False,
+            "error": "URL mapping not supported through 5-tier AutomationRouter. Use crawl_site() method instead.",
+            "urls": [],
+            "total": 0,
+        }
