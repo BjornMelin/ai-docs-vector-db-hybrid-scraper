@@ -551,9 +551,7 @@ class TestCLI:
 
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch(
-                "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config,
+            patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
 
@@ -567,7 +565,7 @@ class TestCLI:
                     "-f",
                     str(urls_file),
                 ],
-                )
+            )
 
             assert result.exit_code == 0
             mock_run.assert_called_once()
@@ -576,9 +574,7 @@ class TestCLI:
         """Test CLI with sitemap."""
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch(
-                "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config,
+            patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
 
@@ -587,12 +583,12 @@ class TestCLI:
             runner = CliRunner()
 
             result = runner.invoke(
-                    main,
-                    [
-                        "-s",
-                        "https://example.com/sitemap.xml",
-                    ],
-                )
+                main,
+                [
+                    "-s",
+                    "https://example.com/sitemap.xml",
+                ],
+            )
 
             assert result.exit_code == 0
             mock_run.assert_called_once()
@@ -618,9 +614,7 @@ class TestCLI:
 
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch(
-                "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config,
+            patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
 

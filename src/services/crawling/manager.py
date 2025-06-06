@@ -1,18 +1,20 @@
 """Crawl manager with provider abstraction and fallback."""
 
 import logging
+import time
 
 from ...config import UnifiedConfig
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 from .crawl4ai_provider import Crawl4AIProvider
 from .firecrawl_provider import FirecrawlProvider
+from .lightweight_scraper import LightweightScraper
 
 logger = logging.getLogger(__name__)
 
 
 class CrawlManager:
-    """Manager for crawling with multiple providers."""
+    """Manager for crawling with multiple providers and tier-based optimization."""
 
     def __init__(self, config: UnifiedConfig, rate_limiter: object = None):
         """Initialize crawl manager.
@@ -26,12 +28,22 @@ class CrawlManager:
         self._initialized = False
         self.rate_limiter = rate_limiter
 
-    async def initialize(self) -> None:
-        """Initialize available providers.
+        # Tier metrics tracking
+        self._tier_metrics = {
+            "lightweight": {"attempts": 0, "successes": 0, "total_time": 0.0},
+            "crawl4ai": {"attempts": 0, "successes": 0, "total_time": 0.0},
+            "firecrawl": {"attempts": 0, "successes": 0, "total_time": 0.0},
+        }
 
-        Initializes Crawl4AI as primary provider and Firecrawl as fallback
-        if API key is available. At least one provider must initialize
-        successfully.
+    async def initialize(self) -> None:
+        """Initialize available providers in tier order.
+
+        Initializes:
+        - Tier 0: Lightweight HTTP scraper (httpx + BeautifulSoup)
+        - Tier 1: Crawl4AI as primary browser-based provider
+        - Tier 2: Firecrawl as fallback if API key available
+
+        At least one provider must initialize successfully.
 
         Raises:
             CrawlServiceError: If no providers can be initialized
@@ -39,9 +51,21 @@ class CrawlManager:
         if self._initialized:
             return
 
-        # Always initialize Crawl4AI as primary provider
+        # Initialize Tier 0: Lightweight HTTP scraper
+        if self.config.lightweight_scraper.enable_lightweight_tier:
+            try:
+                provider = LightweightScraper(
+                    config=self.config.lightweight_scraper,
+                    rate_limiter=self.rate_limiter,
+                )
+                await provider.initialize()
+                self.providers["lightweight"] = provider
+                logger.info("Initialized Lightweight HTTP scraper as Tier 0")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Lightweight scraper: {e}")
+
+        # Initialize Tier 1: Crawl4AI as primary browser provider
         try:
-            # Create Crawl4AI config from unified config
             crawl4ai_config = self.config.crawl4ai
             provider = Crawl4AIProvider(
                 config=crawl4ai_config,
@@ -49,11 +73,11 @@ class CrawlManager:
             )
             await provider.initialize()
             self.providers["crawl4ai"] = provider
-            logger.info("Initialized Crawl4AI provider as primary")
+            logger.info("Initialized Crawl4AI provider as Tier 1")
         except Exception as e:
             logger.warning(f"Failed to initialize Crawl4AI provider: {e}")
 
-        # Initialize Firecrawl if API key available (as fallback)
+        # Initialize Tier 2: Firecrawl if API key available
         if self.config.firecrawl.api_key:
             try:
                 provider = FirecrawlProvider(
@@ -62,7 +86,7 @@ class CrawlManager:
                 )
                 await provider.initialize()
                 self.providers["firecrawl"] = provider
-                logger.info("Initialized Firecrawl provider as fallback")
+                logger.info("Initialized Firecrawl provider as Tier 2")
             except Exception as e:
                 logger.warning(f"Failed to initialize Firecrawl provider: {e}")
 
@@ -70,7 +94,10 @@ class CrawlManager:
             raise CrawlServiceError("No crawling providers available")
 
         self._initialized = True
-        logger.info(f"Crawl manager initialized with {len(self.providers)} providers")
+        logger.info(
+            f"Crawl manager initialized with {len(self.providers)} providers: "
+            f"{list(self.providers.keys())}"
+        )
 
     async def cleanup(self) -> None:
         """Cleanup all providers."""
@@ -90,12 +117,17 @@ class CrawlManager:
         formats: list[str] | None = None,
         preferred_provider: str | None = None,
     ) -> dict[str, object]:
-        """Scrape URL with automatic provider fallback.
+        """Scrape URL with intelligent tier-based provider selection.
+
+        Uses a three-tier approach:
+        - Tier 0: Lightweight HTTP (5-10x faster for simple pages)
+        - Tier 1: Crawl4AI (browser-based with optimizations)
+        - Tier 2: Firecrawl (fallback with API)
 
         Args:
             url: URL to scrape
             formats: Output formats (["markdown"], ["html"], ["text"])
-            preferred_provider: Provider to try first ("firecrawl" or "crawl4ai")
+            preferred_provider: Provider to try first (overrides tier selection)
 
         Returns:
             dict[str, object]: Scraping result with:
@@ -103,6 +135,8 @@ class CrawlManager:
                 - content: Scraped content in requested formats
                 - metadata: Additional information (title, description, etc.)
                 - provider: Name of provider that succeeded
+                - tier: Tier level used (0, 1, or 2)
+                - performance_ms: Time taken in milliseconds
                 - error: Error message if all providers failed
 
         Raises:
@@ -111,52 +145,124 @@ class CrawlManager:
         if not self._initialized:
             raise CrawlServiceError("Manager not initialized")
 
-        # Determine provider order
-        if preferred_provider:
-            if preferred_provider not in self.providers:
-                logger.warning(
-                    f"Preferred provider '{preferred_provider}' not available"
+        start_time = time.time()
+
+        # If preferred provider specified, use it first
+        if preferred_provider and preferred_provider in self.providers:
+            result = await self._try_provider(
+                preferred_provider, url, formats, start_time
+            )
+            if result["success"]:
+                return result
+
+        # Try Tier 0: Lightweight scraper first (if available and URL is suitable)
+        if "lightweight" in self.providers and not preferred_provider:
+            lightweight_provider = self.providers["lightweight"]
+
+            # Check if URL can be handled by lightweight tier
+            if await lightweight_provider.can_handle(url):
+                logger.info(f"URL {url} eligible for lightweight tier")
+                result = await self._try_provider(
+                    "lightweight", url, formats, start_time
                 )
-                provider_order = list(self.providers.keys())
-            else:
-                # Preferred provider first, then others
-                provider_order = [preferred_provider] + [
-                    p for p in self.providers if p != preferred_provider
-                ]
-        else:
-            # Use configured preference
-            provider_order = []
-            if self.config.crawl_provider in self.providers:
-                provider_order.append(self.config.crawl_provider)
-            provider_order.extend(p for p in self.providers if p not in provider_order)
 
-        # Try providers in order
-        last_error = None
-        for provider_name in provider_order:
-            provider = self.providers[provider_name]
-            try:
-                logger.info(f"Attempting to scrape {url} with {provider_name}")
-                result = await provider.scrape_url(url, formats)
-
-                if result.get("success", False):
-                    result["provider"] = provider_name
+                if result["success"]:
+                    result["tier"] = 0
                     return result
+                elif result.get("should_escalate", True):
+                    logger.info(f"Escalating from lightweight tier for {url}")
                 else:
-                    last_error = result.get("error", "Unknown error")
-                    logger.warning(f"Provider {provider_name} failed: {last_error}")
+                    # Don't escalate if explicitly told not to
+                    return result
 
-            except Exception as e:
-                last_error = str(e)
-                logger.error(f"Error with {provider_name}: {e}")
+        # Determine remaining provider order (Tier 1 and 2)
+        provider_order = []
+
+        # Add Crawl4AI as Tier 1
+        if "crawl4ai" in self.providers:
+            provider_order.append("crawl4ai")
+
+        # Add Firecrawl as Tier 2
+        if "firecrawl" in self.providers:
+            provider_order.append("firecrawl")
+
+        # Try remaining providers in tier order
+        last_error = None
+        for idx, provider_name in enumerate(provider_order):
+            result = await self._try_provider(provider_name, url, formats, start_time)
+
+            if result["success"]:
+                result["tier"] = idx + 1  # Tier 1 or 2
+                return result
+            else:
+                last_error = result.get("error", "Unknown error")
+                if not result.get("should_escalate", True):
+                    return result
 
         # All providers failed
         return {
             "success": False,
-            "error": f"All providers failed. Last error: {last_error}",
+            "error": f"All tiers failed. Last error: {last_error}",
             "content": "",
             "metadata": {},
             "url": url,
+            "performance_ms": int((time.time() - start_time) * 1000),
         }
+
+    async def _try_provider(
+        self,
+        provider_name: str,
+        url: str,
+        formats: list[str] | None,
+        start_time: float,
+    ) -> dict[str, object]:
+        """Try a specific provider and track metrics.
+
+        Args:
+            provider_name: Name of the provider to try
+            url: URL to scrape
+            formats: Output formats
+            start_time: Start time for performance tracking
+
+        Returns:
+            Result dictionary with success status and content
+        """
+        provider = self.providers[provider_name]
+        provider_start = time.time()
+
+        # Update attempt metrics
+        self._tier_metrics[provider_name]["attempts"] += 1
+
+        try:
+            logger.info(f"Attempting to scrape {url} with {provider_name}")
+            result = await provider.scrape_url(url, formats)
+
+            # Track timing
+            elapsed = time.time() - provider_start
+            self._tier_metrics[provider_name]["total_time"] += elapsed
+
+            if result.get("success", False):
+                self._tier_metrics[provider_name]["successes"] += 1
+                result["provider"] = provider_name
+                result["performance_ms"] = int((time.time() - start_time) * 1000)
+                logger.info(
+                    f"Successfully scraped {url} with {provider_name} "
+                    f"in {result['performance_ms']}ms"
+                )
+                return result
+            else:
+                logger.warning(
+                    f"Provider {provider_name} failed: {result.get('error', 'Unknown')}"
+                )
+                return result
+
+        except Exception as e:
+            logger.error(f"Error with {provider_name}: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "should_escalate": True,
+            }
 
     async def crawl_site(
         self,
@@ -236,18 +342,43 @@ class CrawlManager:
         """Get information about available providers.
 
         Returns:
-            Provider information
+            Provider information including tier assignments
         """
         info = {}
+        tier_mapping = {"lightweight": 0, "crawl4ai": 1, "firecrawl": 2}
+
         for name, provider in self.providers.items():
+            metrics = self._tier_metrics.get(name, {})
+            success_rate = 0.0
+            avg_time_ms = 0.0
+
+            if metrics.get("attempts", 0) > 0:
+                success_rate = metrics["successes"] / metrics["attempts"] * 100
+                avg_time_ms = metrics["total_time"] / metrics["attempts"] * 1000
+
             info[name] = {
                 "type": provider.__class__.__name__,
                 "available": True,
+                "tier": tier_mapping.get(name, -1),
                 "is_preferred": name == self.config.crawl_provider,
                 "has_api_key": name == "firecrawl"
                 and bool(self.config.firecrawl.api_key),
+                "metrics": {
+                    "attempts": metrics.get("attempts", 0),
+                    "successes": metrics.get("successes", 0),
+                    "success_rate": round(success_rate, 1),
+                    "avg_time_ms": round(avg_time_ms, 0),
+                },
             }
         return info
+
+    def get_tier_metrics(self) -> dict[str, dict]:
+        """Get performance metrics for each tier.
+
+        Returns:
+            Tier performance metrics
+        """
+        return self._tier_metrics.copy()
 
     async def map_url(
         self, url: str, include_subdomains: bool = False

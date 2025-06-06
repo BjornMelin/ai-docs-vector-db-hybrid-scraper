@@ -218,8 +218,7 @@ class TestBulkEmbedderExtended:
             patch.object(embedder, "_save_state") as mock_save,
         ):
             results = await embedder.process_urls_batch(
-                urls=["https://example.com/1"]
-                * 15,  # 15 URLs to trigger periodic save
+                urls=["https://example.com/1"] * 15,  # 15 URLs to trigger periodic save
                 max_concurrent=5,
                 progress=None,  # No progress tracking
             )
