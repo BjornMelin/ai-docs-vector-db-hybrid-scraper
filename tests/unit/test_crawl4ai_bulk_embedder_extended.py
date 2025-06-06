@@ -213,19 +213,21 @@ class TestBulkEmbedderExtended:
         async def mock_process(url):
             return {"url": url, "success": True, "chunks": 2, "error": None}
 
-        with patch.object(embedder, "process_url", side_effect=mock_process):
-            with patch.object(embedder, "_save_state") as mock_save:
-                results = await embedder.process_urls_batch(
-                    urls=["https://example.com/1"]
-                    * 15,  # 15 URLs to trigger periodic save
-                    max_concurrent=5,
-                    progress=None,  # No progress tracking
-                )
+        with (
+            patch.object(embedder, "process_url", side_effect=mock_process),
+            patch.object(embedder, "_save_state") as mock_save,
+        ):
+            results = await embedder.process_urls_batch(
+                urls=["https://example.com/1"]
+                * 15,  # 15 URLs to trigger periodic save
+                max_concurrent=5,
+                progress=None,  # No progress tracking
+            )
 
-                assert results["total"] == 15
-                assert results["successful"] == 15
-                # Should have saved state at least once (after 10 completions)
-                assert mock_save.call_count >= 1
+            assert results["total"] == 15
+            assert results["successful"] == 15
+            # Should have saved state at least once (after 10 completions)
+            assert mock_save.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_process_urls_batch_with_exceptions(
@@ -244,21 +246,23 @@ class TestBulkEmbedderExtended:
                 raise Exception("Processing failed")
             return {"url": url, "success": True, "chunks": 2, "error": None}
 
-        with patch.object(embedder, "process_url", side_effect=mock_process):
-            with patch.object(embedder, "_save_state"):
-                results = await embedder.process_urls_batch(
-                    urls=["https://example.com/good", "https://example.com/exception"],
-                    max_concurrent=2,
-                )
+        with (
+            patch.object(embedder, "process_url", side_effect=mock_process),
+            patch.object(embedder, "_save_state"),
+        ):
+            results = await embedder.process_urls_batch(
+                urls=["https://example.com/good", "https://example.com/exception"],
+                max_concurrent=2,
+            )
 
-                assert results["total"] == 2
-                # One should succeed, one should fail due to exception
-                successful_count = sum(
-                    1
-                    for r in results["results"]
-                    if isinstance(r, dict) and r.get("success")
-                )
-                assert successful_count == 1
+            assert results["total"] == 2
+            # One should succeed, one should fail due to exception
+            successful_count = sum(
+                1
+                for r in results["results"]
+                if isinstance(r, dict) and r.get("success")
+            )
+            assert successful_count == 1
 
     @pytest.mark.asyncio
     async def test_run_all_urls_completed(self, mock_config, mock_client_manager):
@@ -271,14 +275,16 @@ class TestBulkEmbedderExtended:
         urls = ["https://example.com/1", "https://example.com/2"]
         embedder.state.completed_urls = urls.copy()
 
-        with patch.object(embedder, "initialize_services", new_callable=AsyncMock):
-            with patch.object(
+        with (
+            patch.object(embedder, "initialize_services", new_callable=AsyncMock),
+            patch.object(
                 embedder, "process_urls_batch", new_callable=AsyncMock
-            ) as mock_process:
-                await embedder.run(urls=urls, resume=True)
+            ) as mock_process,
+        ):
+            await embedder.run(urls=urls, resume=True)
 
-                # Should not process any URLs
-                mock_process.assert_not_called()
+            # Should not process any URLs
+            mock_process.assert_not_called()
 
     def test_display_summary_with_failed_urls(
         self, mock_config, mock_client_manager, capsys
@@ -451,10 +457,10 @@ class TestAsyncMain:
             ) as mock_embedder_class:
                 mock_embedder = AsyncMock()
                 # Make run raise an exception
-                mock_embedder.run = AsyncMock(side_effect=Exception("Test error"))
+                mock_embedder.run = AsyncMock(side_effect=RuntimeError("Test error"))
                 mock_embedder_class.return_value = mock_embedder
 
-                with pytest.raises(Exception):
+                with pytest.raises(RuntimeError):
                     await _async_main(
                         urls=["https://example.com/1"],
                         file=None,

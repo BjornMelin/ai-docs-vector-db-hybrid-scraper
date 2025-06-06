@@ -792,7 +792,7 @@ class TestMCPServerLifecycle:
         assert len(mcp._tools) > 0, "No tools were registered"
 
         # Expected tool names based on tool registry
-        expected_tools = {
+        _expected_tools = {
             "search_documents",
             "add_document",
             "generate_embeddings",

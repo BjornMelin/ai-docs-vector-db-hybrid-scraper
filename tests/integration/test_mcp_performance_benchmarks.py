@@ -118,8 +118,6 @@ class TestMCPPerformanceBenchmarks:
             batch_tasks = []
 
             for i in range(batch_size):
-                task_start = time.time()
-
                 async def timed_operation(idx):
                     op_start = time.time()
                     try:
@@ -133,7 +131,7 @@ class TestMCPPerformanceBenchmarks:
 
             batch_results = await asyncio.gather(*batch_tasks)
 
-            for timing, result in batch_results:
+            for timing, _result in batch_results:
                 if timing is not None:
                     response_times.append(timing)
                 else:
@@ -361,7 +359,7 @@ class TestMCPPerformanceBenchmarks:
 
                 async def timed_search(idx):
                     op_start = time.time()
-                    result = await search_tool.handler(
+                    await search_tool.handler(
                         query=f"sustained load {idx}",
                         collection="docs",
                         limit=5,
@@ -595,10 +593,10 @@ class TestMCPPerformanceBenchmarks:
                         )
                     )
 
-                for i in range(25):
+                for _i in range(25):
                     tasks.append(tools["list_collections"].handler())
 
-                for i in range(25):
+                for _i in range(25):
                     tasks.append(tools["get_cache_stats"].handler())
 
                 return await asyncio.gather(*tasks, return_exceptions=True)

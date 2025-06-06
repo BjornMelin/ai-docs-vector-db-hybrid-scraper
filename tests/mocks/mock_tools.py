@@ -113,7 +113,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
     ) -> dict[str, Any]:
         """Mock add document tool."""
         # First crawl the URL
-        crawl_result = await client_manager.crawling_service.crawl_url(url)
+        await client_manager.crawling_service.crawl_url(url)
 
         # Then add to vector service
         return await client_manager.vector_service.add_document(

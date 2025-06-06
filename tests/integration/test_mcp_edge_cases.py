@@ -237,7 +237,7 @@ class TestMCPEdgeCases:
             ("Content too large", Exception("Content exceeds maximum size limit")),
         ]
 
-        for error_name, error in crawl_errors:
+        for _error_name, error in crawl_errors:
             mock_client_manager.crawling_service.crawl_url.side_effect = error
 
             with pytest.raises(type(error)):
@@ -434,7 +434,7 @@ class TestMCPEdgeCases:
         mock_client_manager.vector_service.search_documents = flaky_search
 
         # First calls should fail
-        for i in range(2):
+        for _i in range(2):
             with pytest.raises(ConnectionError):
                 await search_tool.handler(
                     query="recovery test",

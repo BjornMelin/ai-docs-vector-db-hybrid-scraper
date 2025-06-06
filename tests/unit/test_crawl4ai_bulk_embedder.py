@@ -495,23 +495,25 @@ https://example.com/page2,Page 2
         # Set some completed URLs
         embedder.state.completed_urls = [sample_urls[0]]
 
-        with patch.object(embedder, "initialize_services", new_callable=AsyncMock):
-            with patch.object(
+        with (
+            patch.object(embedder, "initialize_services", new_callable=AsyncMock),
+            patch.object(
                 embedder, "process_urls_batch", new_callable=AsyncMock
-            ) as mock_process:
-                mock_process.return_value = {
-                    "total": 3,
-                    "successful": 3,
-                    "failed": 0,
-                    "results": [],
-                }
+            ) as mock_process,
+        ):
+            mock_process.return_value = {
+                "total": 3,
+                "successful": 3,
+                "failed": 0,
+                "results": [],
+            }
 
-                await embedder.run(urls=sample_urls, max_concurrent=5, resume=False)
+            await embedder.run(urls=sample_urls, max_concurrent=5, resume=False)
 
-                # Should process all URLs
-                call_args = mock_process.call_args[1]
-                processed_urls = call_args["urls"]
-                assert len(processed_urls) == 3
+            # Should process all URLs
+            call_args = mock_process.call_args[1]
+            processed_urls = call_args["urls"]
+            assert len(processed_urls) == 3
 
 
 class TestCLI:
@@ -547,40 +549,44 @@ class TestCLI:
         urls_file = tmp_path / "urls.txt"
         urls_file.write_text("https://example.com/page1\n")
 
-        with patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run:
-            with patch(
+        with (
+            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch(
                 "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config:
-                mock_config.return_value = MagicMock()
+            ) as mock_config,
+        ):
+            mock_config.return_value = MagicMock()
 
-                from click.testing import CliRunner
+            from click.testing import CliRunner
 
-                runner = CliRunner()
+            runner = CliRunner()
 
-                result = runner.invoke(
-                    main,
-                    [
-                        "-f",
-                        str(urls_file),
-                    ],
+            result = runner.invoke(
+                main,
+                [
+                    "-f",
+                    str(urls_file),
+                ],
                 )
 
-                assert result.exit_code == 0
-                mock_run.assert_called_once()
+            assert result.exit_code == 0
+            mock_run.assert_called_once()
 
     def test_cli_with_sitemap(self):
         """Test CLI with sitemap."""
-        with patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run:
-            with patch(
+        with (
+            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch(
                 "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config:
-                mock_config.return_value = MagicMock()
+            ) as mock_config,
+        ):
+            mock_config.return_value = MagicMock()
 
-                from click.testing import CliRunner
+            from click.testing import CliRunner
 
-                runner = CliRunner()
+            runner = CliRunner()
 
-                result = runner.invoke(
+            result = runner.invoke(
                     main,
                     [
                         "-s",
@@ -588,8 +594,8 @@ class TestCLI:
                     ],
                 )
 
-                assert result.exit_code == 0
-                mock_run.assert_called_once()
+            assert result.exit_code == 0
+            mock_run.assert_called_once()
 
     def test_cli_no_input(self):
         """Test CLI with no input."""
@@ -610,37 +616,39 @@ class TestCLI:
         config_file = tmp_path / "config.json"
         config_file.write_text("{}")
 
-        with patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run:
-            with patch(
+        with (
+            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch(
                 "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-            ) as mock_config:
-                mock_config.return_value = MagicMock()
+            ) as mock_config,
+        ):
+            mock_config.return_value = MagicMock()
 
-                from click.testing import CliRunner
+            from click.testing import CliRunner
 
-                runner = CliRunner()
+            runner = CliRunner()
 
-                result = runner.invoke(
-                    main,
-                    [
-                        "-f",
-                        str(urls_file),
-                        "--collection",
-                        "custom_collection",
-                        "--concurrent",
-                        "10",
-                        "--config",
-                        str(config_file),
-                        "--state-file",
-                        str(tmp_path / "state.json"),
-                        "--no-resume",
-                        "--verbose",
-                    ],
-                )
+            result = runner.invoke(
+                main,
+                [
+                    "-f",
+                    str(urls_file),
+                    "--collection",
+                    "custom_collection",
+                    "--concurrent",
+                    "10",
+                    "--config",
+                    str(config_file),
+                    "--state-file",
+                    str(tmp_path / "state.json"),
+                    "--no-resume",
+                    "--verbose",
+                ],
+            )
 
-                assert result.exit_code == 0
-                mock_run.assert_called_once()
+            assert result.exit_code == 0
+            mock_run.assert_called_once()
 
-                # Check arguments passed to async main
-                call_args = mock_run.call_args[0][0]
-                assert call_args == mock_run.call_args[0][0]  # Verify it's a coroutine
+            # Check arguments passed to async main
+            call_args = mock_run.call_args[0][0]
+            assert call_args == mock_run.call_args[0][0]  # Verify it's a coroutine

@@ -36,7 +36,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     @mcp.tool()
     async def create_project(
         request: ProjectRequest, ctx: Context = None
-    ) -> ProjectInfo:  # noqa: PLR0912
+    ) -> ProjectInfo:
         """
         Create a new documentation project.
 
