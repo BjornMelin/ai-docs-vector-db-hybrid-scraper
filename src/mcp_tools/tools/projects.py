@@ -88,15 +88,18 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 if ctx:
                     await ctx.debug(f"Processing {len(request.urls)} initial URLs")
 
-                # Process URLs directly without calling add_documents_batch
+                # Process URLs using 5-tier UnifiedBrowserManager via CrawlManager
                 successful_count = 0
+                crawl_manager = await client_manager.get_crawl_manager()
                 for url in request.urls:
                     try:
-                        # Process each URL
-                        crawl_result = await client_manager.crawl_manager.crawl_single(
-                            url
-                        )
-                        if crawl_result and crawl_result.markdown:
+                        # Scrape each URL using intelligent tier routing
+                        crawl_result = await crawl_manager.scrape_url(url)
+                        if (
+                            crawl_result
+                            and crawl_result.get("success")
+                            and crawl_result.get("content")
+                        ):
                             successful_count += 1
                     except Exception as e:
                         if ctx:

@@ -66,12 +66,18 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 await ctx.debug(f"Document {doc_id} found in cache")
                 return AddDocumentResponse(**cached)
 
-            # Crawl the URL
-            await ctx.debug(f"Crawling URL for document {doc_id}")
-            crawl_result = await crawl_manager.crawl_single(request.url)
-            if not crawl_result or not crawl_result.markdown:
-                await ctx.error(f"Failed to crawl {request.url}")
-                raise ValueError(f"Failed to crawl {request.url}")
+            # Scrape the URL using 5-tier UnifiedBrowserManager
+            await ctx.debug(
+                f"Scraping URL for document {doc_id} via UnifiedBrowserManager"
+            )
+            crawl_result = await crawl_manager.scrape_url(request.url)
+            if (
+                not crawl_result
+                or not crawl_result.get("success")
+                or not crawl_result.get("content")
+            ):
+                await ctx.error(f"Failed to scrape {request.url}")
+                raise ValueError(f"Failed to scrape {request.url}")
 
             # Configure chunking
             chunk_config = ChunkingConfig(
@@ -86,9 +92,10 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             )
             chunker = EnhancedChunker(chunk_config)
             chunks = chunker.chunk_content(
-                content=crawl_result.markdown,
-                title=crawl_result.metadata.get("title", ""),
-                url=crawl_result.metadata.get("url", request.url),
+                content=crawl_result["content"],
+                title=crawl_result["title"]
+                or crawl_result["metadata"].get("title", ""),
+                url=crawl_result["url"],
             )
             await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
 
@@ -109,9 +116,12 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     "payload": {
                         "content": chunk["content"],
                         "url": request.url,
-                        "title": crawl_result.metadata.get("title", ""),
+                        "title": crawl_result["title"]
+                        or crawl_result["metadata"].get("title", ""),
                         "chunk_index": i,
                         "total_chunks": len(chunks),
+                        "tier_used": crawl_result.get("tier_used", "unknown"),
+                        "quality_score": crawl_result.get("quality_score", 0.0),
                         **chunk.get("metadata", {}),
                     },
                 }
@@ -137,7 +147,8 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             # Prepare response
             result = AddDocumentResponse(
                 url=request.url,
-                title=crawl_result.metadata.get("title", ""),
+                title=crawl_result["title"]
+                or crawl_result["metadata"].get("title", ""),
                 chunks_created=len(chunks),
                 collection=request.collection,
                 chunking_strategy=request.chunk_strategy.value,
