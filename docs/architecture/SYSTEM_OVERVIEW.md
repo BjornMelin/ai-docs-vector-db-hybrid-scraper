@@ -72,13 +72,22 @@ The system implements advanced patterns with compound performance gains:
 - Native fusion algorithms (RRF, DBSFusion)
 - Vector quantization for storage efficiency
 
-#### Browser Automation Router
+#### Unified Scraping Architecture (5-Tier System)
 
-- **Crawl4AI Primary**: 4-6x faster, $0 cost
-- **browser-use AI**: Complex interactions
-- **Playwright Fallback**: Maximum control
-- Intelligent tool selection per site
-- 97% overall success rate
+- **Tier 0**: Lightweight HTTP (httpx + BeautifulSoup) - 5-10x faster for static content
+- **Tier 1**: Crawl4AI Basic - Standard dynamic content with browser automation  
+- **Tier 2**: Crawl4AI Enhanced - Interactive content with custom JavaScript
+- **Tier 3**: Browser-use AI - Complex interactions with multi-LLM support
+- **Tier 4**: Playwright + Firecrawl - Maximum control and API fallback
+- Intelligent routing with performance-based learning
+- 97% overall success rate with graceful fallbacks
+
+#### Browser Automation System (⚠️ INTEGRATION REQUIRED)
+
+- **AutomationRouter**: Intelligent tool selection with site-specific routing
+- **Multi-LLM Support**: OpenAI, Anthropic, Gemini for AI-powered automation
+- **Status**: Fully implemented but disconnected from main crawling flow
+- **Action Required**: Integrate with CrawlManager for unified interface
 
 #### DragonflyDB Cache Layer
 
