@@ -145,7 +145,11 @@ class TestQdrantAliasManager:
     @pytest.fixture
     def alias_manager(self, mock_config, mock_client, mock_task_queue_manager):
         """Create QdrantAliasManager instance."""
-        return QdrantAliasManager(config=mock_config, client=mock_client, task_queue_manager=mock_task_queue_manager)
+        return QdrantAliasManager(
+            config=mock_config,
+            client=mock_client,
+            task_queue_manager=mock_task_queue_manager,
+        )
 
     def test_inheritance(self, alias_manager):
         """Test that QdrantAliasManager inherits from BaseService."""
@@ -153,7 +157,11 @@ class TestQdrantAliasManager:
 
     def test_init(self, mock_config, mock_client, mock_task_queue_manager):
         """Test QdrantAliasManager initialization."""
-        manager = QdrantAliasManager(config=mock_config, client=mock_client, task_queue_manager=mock_task_queue_manager)
+        manager = QdrantAliasManager(
+            config=mock_config,
+            client=mock_client,
+            task_queue_manager=mock_task_queue_manager,
+        )
 
         assert manager.config == mock_config
         assert manager.client == mock_client
@@ -322,7 +330,9 @@ class TestQdrantAliasManager:
         assert isinstance(operations[0], CreateAliasOperation)
         assert result is None
 
-    async def test_switch_alias_with_delete_old(self, alias_manager, mock_client, mock_task_queue_manager):
+    async def test_switch_alias_with_delete_old(
+        self, alias_manager, mock_client, mock_task_queue_manager
+    ):
         """Test switching alias with delete_old=True."""
         # Mock existing alias
         existing_alias = MagicMock()
@@ -332,7 +342,9 @@ class TestQdrantAliasManager:
         # First call returns existing alias, subsequent calls return switched alias
         mock_client.get_aliases.side_effect = [
             MagicMock(aliases=[existing_alias]),  # For initial check
-            MagicMock(aliases=[]),  # For list_aliases in safe_delete_collection (no aliases left)
+            MagicMock(
+                aliases=[]
+            ),  # For list_aliases in safe_delete_collection (no aliases left)
         ]
 
         result = await alias_manager.switch_alias(
@@ -497,7 +509,9 @@ class TestQdrantAliasManager:
         # Should not delete collection if aliases exist
         mock_client.delete_collection.assert_not_called()
 
-    async def test_safe_delete_collection_no_aliases(self, alias_manager, mock_client, mock_task_queue_manager):
+    async def test_safe_delete_collection_no_aliases(
+        self, alias_manager, mock_client, mock_task_queue_manager
+    ):
         """Test safe delete when collection has no aliases."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
 

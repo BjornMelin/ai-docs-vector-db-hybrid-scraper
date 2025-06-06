@@ -15,6 +15,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,9 @@ def register_tools(mcp, client_manager: ClientManager):
     from ..models.responses import CacheStatsResponse
 
     @mcp.tool()
-    async def clear_cache(pattern: str | None = None, ctx: Context = None) -> CacheClearResponse:
+    async def clear_cache(
+        pattern: str | None = None, ctx: Context = None
+    ) -> CacheClearResponse:
         """
         Clear cache entries.
 

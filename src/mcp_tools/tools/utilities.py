@@ -15,6 +15,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from ...infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)

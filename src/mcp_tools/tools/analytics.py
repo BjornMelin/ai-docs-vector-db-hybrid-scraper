@@ -17,6 +17,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import AnalyticsRequest
 
@@ -30,7 +31,9 @@ def register_tools(mcp, client_manager: ClientManager):
     from ..models.responses import SystemHealthResponse
 
     @mcp.tool()
-    async def get_analytics(request: AnalyticsRequest, ctx: Context) -> AnalyticsResponse:
+    async def get_analytics(
+        request: AnalyticsRequest, ctx: Context
+    ) -> AnalyticsResponse:
         """
         Get analytics and metrics for collections and operations.
 

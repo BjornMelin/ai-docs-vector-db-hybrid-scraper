@@ -18,6 +18,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import ProjectRequest
@@ -33,7 +34,9 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     from ..models.responses import ProjectInfo
 
     @mcp.tool()
-    async def create_project(request: ProjectRequest, ctx: Context = None) -> ProjectInfo:  # noqa: PLR0912
+    async def create_project(
+        request: ProjectRequest, ctx: Context = None
+    ) -> ProjectInfo:  # noqa: PLR0912
         """
         Create a new documentation project.
 

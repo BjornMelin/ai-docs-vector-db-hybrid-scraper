@@ -10,22 +10,18 @@ Comprehensive testing of:
 """
 
 import asyncio
-import json
-import sys
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from pydantic import ValidationError
-
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import (
-    SearchRequest,
-    DocumentRequest,
-    EmbeddingRequest,
-    ProjectRequest,
-)
-from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
+from src.mcp_tools.models.requests import DocumentRequest
+from src.mcp_tools.models.requests import EmbeddingRequest
+from src.mcp_tools.models.requests import SearchRequest
+
+from tests.mocks.mock_tools import MockMCPServer
+from tests.mocks.mock_tools import register_mock_tools
 
 
 class TestMCPEdgeCases:
@@ -35,7 +31,7 @@ class TestMCPEdgeCases:
     async def edge_case_client_manager(self):
         """Create client manager configured for edge case testing."""
         client_manager = MagicMock(spec=ClientManager)
-        
+
         # Configure services for edge case testing
         mock_vector_service = AsyncMock()
         client_manager.vector_service = mock_vector_service
@@ -75,7 +71,7 @@ class TestMCPEdgeCases:
     async def test_empty_string_inputs(self, edge_case_server):
         """Test handling of empty string inputs."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Test empty query string
         with pytest.raises(ValidationError):
             SearchRequest(query="", collection="docs")
@@ -91,10 +87,10 @@ class TestMCPEdgeCases:
     async def test_extremely_long_inputs(self, edge_case_server):
         """Test handling of extremely long input strings."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Create extremely long query (10MB)
         long_query = "a" * (10 * 1024 * 1024)
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -120,7 +116,7 @@ class TestMCPEdgeCases:
     async def test_special_characters_in_inputs(self, edge_case_server):
         """Test handling of special characters and Unicode."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -154,7 +150,7 @@ class TestMCPEdgeCases:
     async def test_boundary_value_limits(self, edge_case_server):
         """Test boundary values for numeric parameters."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Test limit boundaries
         with pytest.raises(ValidationError):
             SearchRequest(query="test", limit=0)  # Below minimum
@@ -181,7 +177,7 @@ class TestMCPEdgeCases:
     async def test_vector_service_connection_failure(self, edge_case_server):
         """Test handling when vector database is unavailable."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -189,8 +185,8 @@ class TestMCPEdgeCases:
                 break
 
         # Simulate connection failure
-        mock_client_manager.vector_service.search_documents.side_effect = ConnectionError(
-            "Failed to connect to Qdrant at localhost:6333"
+        mock_client_manager.vector_service.search_documents.side_effect = (
+            ConnectionError("Failed to connect to Qdrant at localhost:6333")
         )
 
         with pytest.raises(ConnectionError, match="Failed to connect to Qdrant"):
@@ -203,7 +199,7 @@ class TestMCPEdgeCases:
     async def test_embedding_service_timeout(self, edge_case_server):
         """Test handling of embedding service timeouts."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         embedding_tool = None
         for tool in mcp_server._tools:
             if tool.name == "generate_embeddings":
@@ -213,20 +209,20 @@ class TestMCPEdgeCases:
         # Simulate timeout
         async def timeout_after_delay(*args, **kwargs):
             await asyncio.sleep(10)  # Long delay
-            raise asyncio.TimeoutError("Embedding generation timed out")
+            raise TimeoutError("Embedding generation timed out")
 
         mock_client_manager.embedding_service.generate_embeddings = timeout_after_delay
 
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(
                 embedding_tool.handler(texts=["test text"]),
-                timeout=1.0  # Short timeout
+                timeout=1.0,  # Short timeout
             )
 
     async def test_crawling_service_failure(self, edge_case_server):
         """Test handling of crawling service failures."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         doc_tool = None
         for tool in mcp_server._tools:
             if tool.name == "add_document":
@@ -235,7 +231,7 @@ class TestMCPEdgeCases:
 
         # Simulate various crawling failures
         crawl_errors = [
-            ("Network timeout", asyncio.TimeoutError("Request timed out")),
+            ("Network timeout", TimeoutError("Request timed out")),
             ("404 Not Found", Exception("HTTP 404: Page not found")),
             ("SSL Error", Exception("SSL certificate verification failed")),
             ("Content too large", Exception("Content exceeds maximum size limit")),
@@ -243,7 +239,7 @@ class TestMCPEdgeCases:
 
         for error_name, error in crawl_errors:
             mock_client_manager.crawling_service.crawl_url.side_effect = error
-            
+
             with pytest.raises(type(error)):
                 await doc_tool.handler(
                     url="https://example.com/test",
@@ -255,7 +251,7 @@ class TestMCPEdgeCases:
     async def test_memory_exhaustion_handling(self, edge_case_server):
         """Test handling when approaching memory limits."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         embedding_tool = None
         for tool in mcp_server._tools:
             if tool.name == "generate_embeddings":
@@ -266,8 +262,8 @@ class TestMCPEdgeCases:
         huge_text_list = ["Large text " * 1000] * 100  # Very large input
 
         # Mock memory error
-        mock_client_manager.embedding_service.generate_embeddings.side_effect = MemoryError(
-            "Cannot allocate memory for embeddings"
+        mock_client_manager.embedding_service.generate_embeddings.side_effect = (
+            MemoryError("Cannot allocate memory for embeddings")
         )
 
         with pytest.raises(MemoryError):
@@ -276,7 +272,7 @@ class TestMCPEdgeCases:
     async def test_rate_limiting_scenarios(self, edge_case_server):
         """Test handling of rate limiting from external services."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -285,7 +281,7 @@ class TestMCPEdgeCases:
 
         # Simulate rate limiting
         call_count = 0
-        
+
         async def rate_limited_search(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -323,19 +319,31 @@ class TestMCPEdgeCases:
             {"jsonrpc": "2.0", "id": "test"},  # Missing method
             {"jsonrpc": "2.0", "method": "tools/call"},  # Missing id
             {"jsonrpc": "1.0", "id": "test", "method": "tools/call"},  # Wrong version
-            {"jsonrpc": "2.0", "id": "test", "method": "tools/call", "params": "not-an-object"},  # Invalid params type
+            {
+                "jsonrpc": "2.0",
+                "id": "test",
+                "method": "tools/call",
+                "params": "not-an-object",
+            },  # Invalid params type
         ]
 
         for request in malformed_requests:
             # In real MCP server, these would be rejected at protocol level
-            assert "jsonrpc" not in request or request.get("jsonrpc") != "2.0" or \
-                   "id" not in request or "method" not in request or \
-                   (request.get("params") is not None and not isinstance(request.get("params"), dict))
+            assert (
+                "jsonrpc" not in request
+                or request.get("jsonrpc") != "2.0"
+                or "id" not in request
+                or "method" not in request
+                or (
+                    request.get("params") is not None
+                    and not isinstance(request.get("params"), dict)
+                )
+            )
 
     async def test_invalid_tool_names(self, edge_case_server):
         """Test handling of requests for non-existent tools."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Try to find non-existent tool
         non_existent_tool = None
         for tool in mcp_server._tools:
@@ -348,7 +356,7 @@ class TestMCPEdgeCases:
     async def test_missing_required_parameters(self, edge_case_server):
         """Test handling of missing required parameters."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Test with missing required fields
         with pytest.raises(ValidationError):
             SearchRequest()  # Missing all required fields
@@ -364,17 +372,27 @@ class TestMCPEdgeCases:
     async def test_concurrent_service_failures(self, edge_case_server):
         """Test handling of multiple concurrent service failures."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Find multiple tools
         tools = {}
         for tool in mcp_server._tools:
-            if tool.name in ["search_documents", "generate_embeddings", "list_collections"]:
+            if tool.name in [
+                "search_documents",
+                "generate_embeddings",
+                "list_collections",
+            ]:
                 tools[tool.name] = tool
 
         # Configure all services to fail
-        mock_client_manager.vector_service.search_documents.side_effect = Exception("Vector DB error")
-        mock_client_manager.embedding_service.generate_embeddings.side_effect = Exception("Embedding error")
-        mock_client_manager.vector_service.list_collections.side_effect = Exception("Collection error")
+        mock_client_manager.vector_service.search_documents.side_effect = Exception(
+            "Vector DB error"
+        )
+        mock_client_manager.embedding_service.generate_embeddings.side_effect = (
+            Exception("Embedding error")
+        )
+        mock_client_manager.vector_service.list_collections.side_effect = Exception(
+            "Collection error"
+        )
 
         # Execute all concurrently and collect errors
         tasks = [
@@ -396,7 +414,7 @@ class TestMCPEdgeCases:
     async def test_service_recovery_after_failure(self, edge_case_server):
         """Test that services can recover after transient failures."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -405,7 +423,7 @@ class TestMCPEdgeCases:
 
         # Configure service to fail then succeed
         call_count = 0
-        
+
         async def flaky_search(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -438,7 +456,7 @@ class TestMCPEdgeCases:
     async def test_path_traversal_prevention(self, edge_case_server):
         """Test prevention of path traversal attacks."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Test various path traversal attempts
         malicious_paths = [
             "../../../etc/passwd",
@@ -460,7 +478,7 @@ class TestMCPEdgeCases:
             mock_client_manager.crawling_service.crawl_url.side_effect = Exception(
                 "Invalid URL or access denied"
             )
-            
+
             with pytest.raises(Exception, match="Invalid URL|access denied"):
                 await doc_tool.handler(
                     url=path,
@@ -470,7 +488,7 @@ class TestMCPEdgeCases:
     async def test_injection_attack_prevention(self, edge_case_server):
         """Test prevention of injection attacks."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -503,7 +521,7 @@ class TestMCPEdgeCases:
     async def test_corrupted_response_handling(self, edge_case_server):
         """Test handling of corrupted service responses."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -521,7 +539,7 @@ class TestMCPEdgeCases:
 
         for response in corrupted_responses:
             mock_client_manager.vector_service.search_documents.return_value = response
-            
+
             try:
                 result = await search_tool.handler(
                     query="corruption test",
@@ -537,7 +555,7 @@ class TestMCPEdgeCases:
     async def test_partial_failure_handling(self, edge_case_server):
         """Test handling when some operations succeed and others fail."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         # Test batch operations with partial failures
         embedding_tool = None
         for tool in mcp_server._tools:
@@ -574,7 +592,7 @@ class TestMCPEdgeCases:
     async def test_state_consistency_after_errors(self, edge_case_server):
         """Test that server state remains consistent after errors."""
         mcp_server, mock_client_manager = edge_case_server
-        
+
         project_tool = None
         for tool in mcp_server._tools:
             if tool.name == "create_project":
@@ -596,7 +614,9 @@ class TestMCPEdgeCases:
         assert result1["id"] == "project-1"
 
         # Second call fails
-        mock_client_manager.project_service.create_project.side_effect = Exception("Database error")
+        mock_client_manager.project_service.create_project.side_effect = Exception(
+            "Database error"
+        )
 
         with pytest.raises(Exception, match="Database error"):
             await project_tool.handler(

@@ -15,6 +15,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import EmbeddingRequest
 
@@ -85,7 +86,9 @@ def register_tools(mcp, client_manager: ClientManager):
             raise
 
     @mcp.tool()
-    async def list_embedding_providers(ctx: Context = None) -> list[EmbeddingProviderInfo]:
+    async def list_embedding_providers(
+        ctx: Context = None,
+    ) -> list[EmbeddingProviderInfo]:
         """
         List available embedding providers and their capabilities.
 

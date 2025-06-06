@@ -247,9 +247,7 @@ class TestBrowserUseAdapterInitialization:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
-    async def test_initialize_already_initialized(
-        self, mock_chat_openai, basic_config
-    ):
+    async def test_initialize_already_initialized(self, mock_chat_openai, basic_config):
         """Test initialization when already initialized."""
         adapter = BrowserUseAdapter(basic_config)
         adapter._initialized = True
@@ -358,9 +356,7 @@ class TestBrowserUseAdapterScraping:
         ]
 
         result = await adapter.scrape(
-            "https://example.com",
-            "Extract data",
-            instructions=instructions
+            "https://example.com", "Extract data", instructions=instructions
         )
 
         # Check that task was properly formatted
@@ -622,10 +618,7 @@ class TestBrowserUseAdapterIntegration:
             assert adapter._initialized is True
 
             # Scrape
-            result = await adapter.scrape(
-                "https://example.com",
-                "Extract all content"
-            )
+            result = await adapter.scrape("https://example.com", "Extract all content")
             assert result["success"] is True
             assert "Test Title" in result["content"]
 

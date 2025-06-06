@@ -7,14 +7,16 @@ protocol compliance following JSON-RPC 2.0 specifications.
 import asyncio
 import json
 import time
-from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
-
 from src.config.models import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
-from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
+
+from tests.mocks.mock_tools import MockMCPServer
+from tests.mocks.mock_tools import register_mock_tools
 
 
 class TestMCPProtocolE2E:
@@ -24,18 +26,18 @@ class TestMCPProtocolE2E:
     async def mock_config(self):
         """Mock configuration for E2E testing."""
         config = MagicMock(spec=UnifiedConfig)
-        
+
         # Mock nested config objects
         config.qdrant = MagicMock()
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = None
-        
+
         config.openai = MagicMock()
         config.openai.api_key = "test-openai-key"
-        
+
         config.crawling = MagicMock()
         config.crawling.providers = ["crawl4ai"]
-        
+
         config.get_active_providers.return_value = ["openai", "fastembed"]
         return config
 
@@ -125,7 +127,9 @@ class TestMCPProtocolE2E:
         register_mock_tools(mcp, mock_client_manager)
         return mcp
 
-    async def test_json_rpc_request_response_cycle(self, mcp_server_e2e, mock_client_manager):
+    async def test_json_rpc_request_response_cycle(
+        self, mcp_server_e2e, mock_client_manager
+    ):
         """Test complete JSON-RPC 2.0 request/response cycle."""
         # Simulate JSON-RPC 2.0 request for search
         request_data = {
@@ -138,18 +142,23 @@ class TestMCPProtocolE2E:
                     "query": "machine learning tutorial",
                     "collection": "documentation",
                     "limit": 5,
-                }
-            }
+                },
+            },
         }
 
         # Mock the search service response
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.return_value = [
                 {
                     "id": "ml-tutorial-1",
                     "content": "Comprehensive machine learning tutorial covering basics to advanced topics",
                     "score": 0.95,
-                    "metadata": {"title": "ML Tutorial", "url": "https://example.com/ml-tutorial"},
+                    "metadata": {
+                        "title": "ML Tutorial",
+                        "url": "https://example.com/ml-tutorial",
+                    },
                 }
             ]
 
@@ -171,16 +180,15 @@ class TestMCPProtocolE2E:
             )
 
             # Validate JSON-RPC 2.0 response structure
-            response = {
-                "jsonrpc": "2.0",
-                "id": request_data["id"],
-                "result": result
-            }
+            response = {"jsonrpc": "2.0", "id": request_data["id"], "result": result}
 
             assert response["jsonrpc"] == "2.0"
             assert response["id"] == "e2e-test-1"
             assert len(response["result"]) == 1
-            assert response["result"][0]["content"] == "Comprehensive machine learning tutorial covering basics to advanced topics"
+            assert (
+                response["result"][0]["content"]
+                == "Comprehensive machine learning tutorial covering basics to advanced topics"
+            )
 
     async def test_tool_chain_execution(self, mcp_server_e2e, mock_client_manager):
         """Test executing multiple tools in sequence (tool chaining)."""
@@ -191,7 +199,9 @@ class TestMCPProtocolE2E:
                 project_tool = tool
                 break
 
-        with patch.object(mock_client_manager.project_service, "create_project") as mock_create_project:
+        with patch.object(
+            mock_client_manager.project_service, "create_project"
+        ) as mock_create_project:
             mock_create_project.return_value = {
                 "id": "chain-project-123",
                 "name": "Chain Test Project",
@@ -213,7 +223,9 @@ class TestMCPProtocolE2E:
                 doc_tool = tool
                 break
 
-        with patch.object(mock_client_manager.vector_service, "add_document") as mock_add_doc:
+        with patch.object(
+            mock_client_manager.vector_service, "add_document"
+        ) as mock_add_doc:
             mock_add_doc.return_value = {
                 "url": "https://example.com/chain-doc",
                 "title": "Chain Test Document",
@@ -236,7 +248,9 @@ class TestMCPProtocolE2E:
                 search_tool = tool
                 break
 
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.return_value = [
                 {
                     "id": "chain-search-result",
@@ -258,7 +272,9 @@ class TestMCPProtocolE2E:
         assert len(search_result) == 1
         assert search_result[0]["metadata"]["project_id"] == project_id
 
-    async def test_error_propagation_through_protocol(self, mcp_server_e2e, mock_client_manager):
+    async def test_error_propagation_through_protocol(
+        self, mcp_server_e2e, mock_client_manager
+    ):
         """Test proper error handling and propagation through MCP protocol."""
         search_tool = None
         for tool in mcp_server_e2e._tools:
@@ -267,7 +283,9 @@ class TestMCPProtocolE2E:
                 break
 
         # Test service-level error
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.side_effect = Exception("Vector database connection timeout")
 
             # The error should propagate up through the tool
@@ -282,7 +300,7 @@ class TestMCPProtocolE2E:
         try:
             await search_tool.handler(
                 query="test query",
-                collection="documentation", 
+                collection="documentation",
                 limit=10,
             )
         except Exception as e:
@@ -293,14 +311,19 @@ class TestMCPProtocolE2E:
                 "error": {
                     "code": -32603,  # Internal error
                     "message": "Internal error",
-                    "data": {"error": str(e)}
-                }
+                    "data": {"error": str(e)},
+                },
             }
 
             assert error_response["error"]["code"] == -32603
-            assert "Vector database connection timeout" in error_response["error"]["data"]["error"]
+            assert (
+                "Vector database connection timeout"
+                in error_response["error"]["data"]["error"]
+            )
 
-    async def test_concurrent_requests_handling(self, mcp_server_e2e, mock_client_manager):
+    async def test_concurrent_requests_handling(
+        self, mcp_server_e2e, mock_client_manager
+    ):
         """Test handling multiple concurrent MCP requests."""
         search_tool = None
         embedding_tool = None
@@ -318,16 +341,33 @@ class TestMCPProtocolE2E:
 
         async def mock_embedding_with_delay(*args, **kwargs):
             await asyncio.sleep(0.15)  # Simulate processing time
-            return {"embeddings": [[0.1] * 384], "model": "test-model", "total_tokens": 3}
+            return {
+                "embeddings": [[0.1] * 384],
+                "model": "test-model",
+                "total_tokens": 3,
+            }
 
-        with patch.object(mock_client_manager.vector_service, "search_documents", side_effect=mock_search_with_delay), \
-             patch.object(mock_client_manager.embedding_service, "generate_embeddings", side_effect=mock_embedding_with_delay):
-
+        with (
+            patch.object(
+                mock_client_manager.vector_service,
+                "search_documents",
+                side_effect=mock_search_with_delay,
+            ),
+            patch.object(
+                mock_client_manager.embedding_service,
+                "generate_embeddings",
+                side_effect=mock_embedding_with_delay,
+            ),
+        ):
             # Execute multiple requests concurrently
             start_time = time.time()
             tasks = [
-                search_tool.handler(query="concurrent search 1", collection="docs", limit=5),
-                search_tool.handler(query="concurrent search 2", collection="docs", limit=5),
+                search_tool.handler(
+                    query="concurrent search 1", collection="docs", limit=5
+                ),
+                search_tool.handler(
+                    query="concurrent search 2", collection="docs", limit=5
+                ),
                 embedding_tool.handler(texts=["concurrent text 1"]),
                 embedding_tool.handler(texts=["concurrent text 2"]),
             ]
@@ -343,7 +383,9 @@ class TestMCPProtocolE2E:
             assert len(results[3]["embeddings"]) == 1  # Embedding 2 results
 
             # Execution should be concurrent (faster than sequential)
-            assert execution_time < 0.5, f"Concurrent execution took {execution_time:.3f}s, expected < 0.5s"
+            assert execution_time < 0.5, (
+                f"Concurrent execution took {execution_time:.3f}s, expected < 0.5s"
+            )
 
     async def test_large_response_handling(self, mcp_server_e2e, mock_client_manager):
         """Test handling of large responses through MCP protocol."""
@@ -356,14 +398,19 @@ class TestMCPProtocolE2E:
         # Mock large search results
         large_results = []
         for i in range(100):  # Large result set
-            large_results.append({
-                "id": f"large-doc-{i}",
-                "content": f"Large document content {i} " + "x" * 1000,  # ~1KB per result
-                "score": 0.9 - (i * 0.001),
-                "metadata": {"title": f"Large Doc {i}", "size": "large"},
-            })
+            large_results.append(
+                {
+                    "id": f"large-doc-{i}",
+                    "content": f"Large document content {i} "
+                    + "x" * 1000,  # ~1KB per result
+                    "score": 0.9 - (i * 0.001),
+                    "metadata": {"title": f"Large Doc {i}", "size": "large"},
+                }
+            )
 
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.return_value = large_results
 
             start_time = time.time()
@@ -377,13 +424,17 @@ class TestMCPProtocolE2E:
             # Validate large response handling
             assert len(result) == 100
             assert all("content" in doc for doc in result)
-            
+
             # Performance check for large responses
-            assert execution_time < 2.0, f"Large response handling took {execution_time:.3f}s"
+            assert execution_time < 2.0, (
+                f"Large response handling took {execution_time:.3f}s"
+            )
 
             # Estimate response size
             response_size = len(json.dumps(result))
-            assert response_size > 100000, "Response should be substantial for large data test"
+            assert response_size > 100000, (
+                "Response should be substantial for large data test"
+            )
 
     async def test_session_state_management(self, mcp_server_e2e, mock_client_manager):
         """Test session state management across multiple requests."""
@@ -398,9 +449,12 @@ class TestMCPProtocolE2E:
                 analytics_tool = tool
 
         # Create project in "session"
-        with patch.object(mock_client_manager.project_service, "create_project") as mock_create, \
-             patch.object(mock_client_manager, "analytics_service") as mock_analytics:
-
+        with (
+            patch.object(
+                mock_client_manager.project_service, "create_project"
+            ) as mock_create,
+            patch.object(mock_client_manager, "analytics_service") as mock_analytics,
+        ):
             mock_create.return_value = {
                 "id": "session-project-456",
                 "name": "Session Test Project",
@@ -425,7 +479,7 @@ class TestMCPProtocolE2E:
                 "session_state": {
                     "active_projects": [project_result["id"]],
                     "session_duration": "00:05:30",
-                }
+                },
             }
 
             analytics_result = await analytics_tool.handler(
@@ -436,9 +490,13 @@ class TestMCPProtocolE2E:
             # Validate session state preservation
             assert project_result["id"] == "session-project-456"
             assert f"project-{project_result['id']}" in analytics_result["collections"]
-            assert analytics_result["session_state"]["active_projects"] == ["session-project-456"]
+            assert analytics_result["session_state"]["active_projects"] == [
+                "session-project-456"
+            ]
 
-    async def test_authentication_and_authorization(self, mcp_server_e2e, mock_client_manager):
+    async def test_authentication_and_authorization(
+        self, mcp_server_e2e, mock_client_manager
+    ):
         """Test authentication and authorization mechanisms."""
         # Test with valid authentication
         search_tool = None
@@ -448,8 +506,12 @@ class TestMCPProtocolE2E:
                 break
 
         # Mock authenticated request
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
-            mock_search.return_value = [{"id": "auth-doc", "content": "Authenticated content", "score": 0.9}]
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
+            mock_search.return_value = [
+                {"id": "auth-doc", "content": "Authenticated content", "score": 0.9}
+            ]
 
             # Simulate request with authentication context
             result = await search_tool.handler(
@@ -475,26 +537,20 @@ class TestMCPProtocolE2E:
                 "jsonrpc": "2.0",
                 "id": "http-test-1",
                 "method": "tools/call",
-                "params": {
-                    "name": "list_collections",
-                    "arguments": {}
-                }
-            }
+                "params": {"name": "list_collections", "arguments": {}},
+            },
         }
 
         # Verify server can handle HTTP-style requests
         assert http_request["headers"]["Content-Type"] == "application/json"
         assert http_request["body"]["jsonrpc"] == "2.0"
 
-        # Test stdio transport simulation  
+        # Test stdio transport simulation
         stdio_request = {
             "jsonrpc": "2.0",
             "id": "stdio-test-1",
             "method": "tools/call",
-            "params": {
-                "name": "validate_configuration",
-                "arguments": {}
-            }
+            "params": {"name": "validate_configuration", "arguments": {}},
         }
 
         # Verify server can handle stdio-style requests
@@ -506,12 +562,12 @@ class TestMCPProtocolE2E:
         # Test valid request structure
         valid_request = {
             "jsonrpc": "2.0",
-            "id": "compliance-test-1", 
+            "id": "compliance-test-1",
             "method": "tools/call",
             "params": {
                 "name": "search_documents",
-                "arguments": {"query": "test", "collection": "docs"}
-            }
+                "arguments": {"query": "test", "collection": "docs"},
+            },
         }
 
         # Validate required fields
@@ -525,7 +581,7 @@ class TestMCPProtocolE2E:
         valid_response = {
             "jsonrpc": "2.0",
             "id": valid_request["id"],
-            "result": [{"id": "doc-1", "content": "Test", "score": 0.9}]
+            "result": [{"id": "doc-1", "content": "Test", "score": 0.9}],
         }
 
         assert valid_response["jsonrpc"] == "2.0"
@@ -539,8 +595,8 @@ class TestMCPProtocolE2E:
             "error": {
                 "code": -32602,
                 "message": "Invalid params",
-                "data": {"param": "query", "reason": "required"}
-            }
+                "data": {"param": "query", "reason": "required"},
+            },
         }
 
         assert error_response["jsonrpc"] == "2.0"
@@ -556,10 +612,10 @@ class TestMCPPerformance:
     async def performance_server(self):
         """Create server optimized for performance testing."""
         mcp = MockMCPServer("performance-test-server")
-        
+
         # Mock optimized client manager
         mock_client_manager = MagicMock()
-        
+
         # Fast mock services
         mock_vector_service = AsyncMock()
         mock_vector_service.search_documents.return_value = [
@@ -583,7 +639,7 @@ class TestMCPPerformance:
     async def test_high_frequency_requests(self, performance_server):
         """Test handling high-frequency requests."""
         mcp_server, mock_client_manager = performance_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -593,7 +649,7 @@ class TestMCPPerformance:
         # Execute many requests rapidly
         num_requests = 100
         start_time = time.time()
-        
+
         tasks = []
         for i in range(num_requests):
             task = search_tool.handler(
@@ -608,16 +664,20 @@ class TestMCPPerformance:
 
         # Performance assertions
         assert len(results) == num_requests
-        assert all(len(result) == 10 for result in results)  # Each search returns 10 results
-        
+        assert all(
+            len(result) == 10 for result in results
+        )  # Each search returns 10 results
+
         # Should handle 100 requests in reasonable time
         requests_per_second = num_requests / execution_time
-        assert requests_per_second > 50, f"Performance: {requests_per_second:.1f} req/s, expected > 50 req/s"
+        assert requests_per_second > 50, (
+            f"Performance: {requests_per_second:.1f} req/s, expected > 50 req/s"
+        )
 
     async def test_memory_usage_stability(self, performance_server):
         """Test memory usage remains stable under load."""
         mcp_server, mock_client_manager = performance_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -636,7 +696,7 @@ class TestMCPPerformance:
                 batch_tasks.append(task)
 
             await asyncio.gather(*batch_tasks)
-            
+
             # Small delay between batches
             await asyncio.sleep(0.01)
 
@@ -646,7 +706,7 @@ class TestMCPPerformance:
     async def test_response_time_consistency(self, performance_server):
         """Test response time consistency under varying loads."""
         mcp_server, mock_client_manager = performance_server
-        
+
         search_tool = None
         for tool in mcp_server._tools:
             if tool.name == "search_documents":
@@ -654,20 +714,20 @@ class TestMCPPerformance:
                 break
 
         response_times = []
-        
+
         # Measure response times for individual requests
         for i in range(50):
             start_time = time.time()
-            
+
             result = await search_tool.handler(
                 query=f"consistency test {i}",
                 collection="documentation",
                 limit=5,
             )
-            
+
             response_time = time.time() - start_time
             response_times.append(response_time)
-            
+
             assert len(result) == 10
 
         # Analyze response time consistency
@@ -676,9 +736,15 @@ class TestMCPPerformance:
         min_response_time = min(response_times)
 
         # Response times should be consistent
-        assert avg_response_time < 0.1, f"Average response time {avg_response_time:.3f}s too high"
-        assert max_response_time < 0.2, f"Max response time {max_response_time:.3f}s too high"
-        
+        assert avg_response_time < 0.1, (
+            f"Average response time {avg_response_time:.3f}s too high"
+        )
+        assert max_response_time < 0.2, (
+            f"Max response time {max_response_time:.3f}s too high"
+        )
+
         # Variation should be reasonable
         time_variation = max_response_time - min_response_time
-        assert time_variation < 0.15, f"Response time variation {time_variation:.3f}s too high"
+        assert time_variation < 0.15, (
+            f"Response time variation {time_variation:.3f}s too high"
+        )

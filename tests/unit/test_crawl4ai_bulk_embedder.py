@@ -519,27 +519,28 @@ class TestCLI:
 
     def test_cli_with_urls(self):
         """Test CLI with direct URLs."""
-        with patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run, patch(
-            "src.crawl4ai_bulk_embedder.ConfigLoader.load_config"
-        ) as mock_config:
-                mock_config.return_value = MagicMock()
+        with (
+            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
+        ):
+            mock_config.return_value = MagicMock()
 
-                from click.testing import CliRunner
+            from click.testing import CliRunner
 
-                runner = CliRunner()
+            runner = CliRunner()
 
-                result = runner.invoke(
-                    main,
-                    [
-                        "-u",
-                        "https://example.com/page1",
-                        "-u",
-                        "https://example.com/page2",
-                    ],
-                )
+            result = runner.invoke(
+                main,
+                [
+                    "-u",
+                    "https://example.com/page1",
+                    "-u",
+                    "https://example.com/page2",
+                ],
+            )
 
-                assert result.exit_code == 0
-                mock_run.assert_called_once()
+            assert result.exit_code == 0
+            mock_run.assert_called_once()
 
     def test_cli_with_file(self, tmp_path):
         """Test CLI with file input."""
