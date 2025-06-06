@@ -294,9 +294,9 @@ Coverage: 90%+ across all critical modules
 - [Payload Indexing](../REFACTOR/02_PAYLOAD_INDEXING.md)
 - [HNSW Optimization](../REFACTOR/03_HNSW_OPTIMIZATION.md)
 - [HyDE Implementation](../REFACTOR/04_HYDE_IMPLEMENTATION.md)
-- [Crawl4AI Integration](../REFACTOR/05_CRAWL4AI_INTEGRATION.md)
+- [Crawl4AI User Guide](../user-guides/crawl4ai.md)
 - [DragonflyDB Cache](../REFACTOR/06_DRAGONFLYDB_CACHE.md)
-- [Browser Automation](../REFACTOR/07_BROWSER_AUTOMATION.md)
+- [Browser Automation User Guide](../user-guides/browser-automation.md)
 - [Collection Aliases](../REFACTOR/08_COLLECTION_ALIASES.md)
 
 ### Features & Operations

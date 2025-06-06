@@ -9,6 +9,13 @@ Welcome to the AI Documentation Vector DB documentation. This guide helps you na
 - [**QUICK_START.md**](./QUICK_START.md) - Get up and running in 5 minutes
 - [**Project README**](../README.md) - Project overview and features
 
+### 📖 User Guides
+
+Comprehensive guides consolidating all implementation, configuration, and troubleshooting:
+
+- [**Browser Automation Guide**](./user-guides/browser-automation.md) - Complete 5-tier browser automation system
+- [**Crawl4AI Guide**](./user-guides/crawl4ai.md) - Complete Crawl4AI configuration, implementation, and troubleshooting
+
 ### 🏗️ Architecture
 
 Core architectural patterns and design decisions:
@@ -72,6 +79,7 @@ Deep dives and technical research:
 
 | Category | Docs | Status |
 |----------|------|--------|
+| User Guides | 2 | ✅ Current |
 | Architecture | 3 | ✅ Current |
 | Features | 5 | ✅ Current |
 | Operations | 3 | ✅ Current |
@@ -83,6 +91,7 @@ Deep dives and technical research:
 
 Historical documentation is preserved in the `archive/` directory:
 
+- `consolidated/` - Documentation consolidated into User Guides (Dec 2024)
 - `sprint-2025-05/` - Completed sprint documentation
 - `mcp-legacy/` - Pre-unified MCP server docs
 

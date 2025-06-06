@@ -273,7 +273,6 @@ result = await router.scrape(
 
 ## Related Documentation
 
-- [REFACTOR/07_BROWSER_AUTOMATION.md](../REFACTOR/07_BROWSER_AUTOMATION.md) - Original design
-- [REFACTOR/05_CRAWL4AI_INTEGRATION.md](../REFACTOR/05_CRAWL4AI_INTEGRATION.md) - Crawl4AI details
+- [Browser Automation User Guide](../user-guides/browser-automation.md) - Complete 5-tier implementation guide
+- [Crawl4AI User Guide](../user-guides/crawl4ai.md) - Complete configuration and troubleshooting
 - [api/browser_automation_api.md](../api/browser_automation_api.md) - API reference
-- [features/CRAWL4AI_CONFIGURATION_GUIDE.md](../features/CRAWL4AI_CONFIGURATION_GUIDE.md) - Configuration
