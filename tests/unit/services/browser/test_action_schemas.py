@@ -258,10 +258,7 @@ class TestScreenshotAction:
 
     def test_screenshot_with_options(self):
         """Test screenshot with all options."""
-        action = ScreenshotAction(
-            path="/tmp/screenshot.png",
-            full_page=True
-        )
+        action = ScreenshotAction(path="/tmp/screenshot.png", full_page=True)
         assert action.path == "/tmp/screenshot.png"
         assert action.full_page is True
 
@@ -344,10 +341,7 @@ class TestDragAndDropAction:
 
     def test_valid_drag_and_drop(self):
         """Test creating valid drag and drop action."""
-        action = DragAndDropAction(
-            source="#draggable",
-            target="#droppable"
-        )
+        action = DragAndDropAction(source="#draggable", target="#droppable")
         assert action.type == "drag_and_drop"
         assert action.source == "#draggable"
         assert action.target == "#droppable"
@@ -408,7 +402,7 @@ class TestValidateAction:
         action_dict = {
             "type": "click",
             "selector": "#button",
-            "extra_field": "not_allowed"
+            "extra_field": "not_allowed",
         }
 
         with pytest.raises(ValidationError):
@@ -429,7 +423,7 @@ class TestValidateActions:
             {"type": "click", "selector": "#button1"},
             {"type": "wait", "timeout": 1000},
             {"type": "fill", "selector": "input", "text": "test"},
-            {"type": "screenshot", "full_page": True}
+            {"type": "screenshot", "full_page": True},
         ]
 
         actions = validate_actions(action_dicts)
@@ -445,7 +439,7 @@ class TestValidateActions:
         action_dicts = [
             {"type": "click", "selector": "#button"},
             {"type": "invalid"},  # Invalid
-            {"type": "wait", "timeout": 1000}
+            {"type": "wait", "timeout": 1000},
         ]
 
         with pytest.raises(ValueError):
@@ -471,7 +465,7 @@ class TestBrowserActionUnion:
             HoverAction(selector="a"),
             SelectAction(selector="select", value="opt1"),
             PressAction(key="Enter"),
-            DragAndDropAction(source="#src", target="#tgt")
+            DragAndDropAction(source="#src", target="#tgt"),
         ]
 
         # All should be valid BrowserAction instances
@@ -553,10 +547,7 @@ class TestEdgeCases:
 
     def test_unicode_in_fields(self):
         """Test unicode characters in text fields."""
-        action = FillAction(
-            selector="input",
-            text="Hello 世界 🌍"
-        )
+        action = FillAction(selector="input", text="Hello 世界 🌍")
         assert action.text == "Hello 世界 🌍"
 
     def test_special_characters_in_selectors(self):
@@ -566,7 +557,7 @@ class TestEdgeCases:
             "#id-with-dash",
             ".class\\.with\\.dots",
             "[data-test-id='complex']",
-            "div > span + p"
+            "div > span + p",
         ]
 
         for selector in selectors:
@@ -591,7 +582,7 @@ class TestEdgeCases:
             // Multi-line script
             const items = document.querySelectorAll('.item');
             return items.length;
-            """
+            """,
         ]
 
         for script in scripts:

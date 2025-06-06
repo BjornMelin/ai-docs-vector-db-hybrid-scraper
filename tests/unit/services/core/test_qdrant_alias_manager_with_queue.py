@@ -65,7 +65,10 @@ class TestQdrantAliasManagerWithTaskQueue:
         )
 
         # Execute and expect error
-        with pytest.raises(RuntimeError, match="TaskQueueManager is required for safe collection deletion"):
+        with pytest.raises(
+            RuntimeError,
+            match="TaskQueueManager is required for safe collection deletion",
+        ):
             await alias_manager.safe_delete_collection("test_collection")
 
     @pytest.mark.asyncio
@@ -96,7 +99,10 @@ class TestQdrantAliasManagerWithTaskQueue:
         task_queue_manager.enqueue = AsyncMock(return_value=None)  # Failure
 
         # Execute and expect error
-        with pytest.raises(RuntimeError, match="Failed to schedule deletion of test_collection via task queue"):
+        with pytest.raises(
+            RuntimeError,
+            match="Failed to schedule deletion of test_collection via task queue",
+        ):
             await alias_manager.safe_delete_collection("test_collection")
 
         # Verify enqueue was attempted

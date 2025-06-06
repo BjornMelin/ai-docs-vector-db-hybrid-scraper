@@ -341,7 +341,9 @@ class BrowserUseAdapter(BaseService):
                 formatted_actions.append(f"{i}. {action} (parameters: {params})")
 
         if formatted_actions:
-            return f"{base_task}\n\nPlease perform these actions:\n" + "\n".join(formatted_actions)
+            return f"{base_task}\n\nPlease perform these actions:\n" + "\n".join(
+                formatted_actions
+            )
         else:
             return base_task
 

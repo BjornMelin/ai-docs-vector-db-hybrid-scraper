@@ -5,37 +5,30 @@ and validation of request/response models following FastMCP 2.0 best practices.
 """
 
 import asyncio
-import json
-import os
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict, List
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-
-from src.config.models import (
-    UnifiedConfig, 
-    QdrantConfig, 
-    OpenAIConfig, 
-    FirecrawlConfig,
-)
+from src.config.models import FirecrawlConfig
+from src.config.models import OpenAIConfig
+from src.config.models import QdrantConfig
+from src.config.models import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import (
-    AnalyticsRequest,
-    DocumentRequest,
-    EmbeddingRequest,
-    HyDESearchRequest,
-    ProjectRequest,
-    SearchRequest,
-)
-from src.mcp_tools.models.responses import (
-    AnalyticsResponse,
-    CollectionInfo,
-    SearchResult,
-    OperationStatus,
-)
-from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
+from src.mcp_tools.models.requests import AnalyticsRequest
+from src.mcp_tools.models.requests import DocumentRequest
+from src.mcp_tools.models.requests import EmbeddingRequest
+from src.mcp_tools.models.requests import HyDESearchRequest
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.responses import CollectionInfo
+from src.mcp_tools.models.responses import OperationStatus
+from src.mcp_tools.models.responses import SearchResult
+
+from tests.mocks.mock_tools import MockMCPServer
+from tests.mocks.mock_tools import register_mock_tools
 
 
 class TestMCPToolsIntegration:
@@ -45,24 +38,24 @@ class TestMCPToolsIntegration:
     async def mock_config(self):
         """Create a mock configuration for testing."""
         config = MagicMock(spec=UnifiedConfig)
-        
+
         # Mock nested config objects
         config.qdrant = MagicMock(spec=QdrantConfig)
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = None
-        
+
         config.openai = MagicMock(spec=OpenAIConfig)
         config.openai.api_key = "test-openai-key"
-        
+
         config.firecrawl = MagicMock(spec=FirecrawlConfig)
         config.firecrawl.api_key = "test-firecrawl-key"
-        
+
         # Mock crawling providers directly
         config.crawling = MagicMock()
         config.crawling.providers = ["crawl4ai"]
-        
+
         config.get_active_providers.return_value = ["openai", "fastembed"]
-        
+
         return config
 
     @pytest.fixture
@@ -70,7 +63,7 @@ class TestMCPToolsIntegration:
         """Create a mock client manager with all services."""
         client_manager = MagicMock(spec=ClientManager)
         client_manager.config = mock_config
-        
+
         # Mock vector DB service
         mock_vector_service = AsyncMock()
         mock_vector_service.search_documents.return_value = [
@@ -145,7 +138,7 @@ class TestMCPToolsIntegration:
         }
         client_manager.deployment_service = mock_deployment_service
 
-        # Mock analytics service  
+        # Mock analytics service
         mock_analytics_service = AsyncMock()
         mock_analytics_service.get_analytics.return_value = {
             "timestamp": "2024-01-01T00:00:00Z",
@@ -209,13 +202,18 @@ class TestMCPToolsIntegration:
         assert search_tool is not None, "Search tool not found"
 
         # Mock the tool execution
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.return_value = [
                 {
                     "id": "doc-1",
                     "content": "Test document about Python programming",
                     "score": 0.95,
-                    "metadata": {"title": "Python Guide", "url": "https://example.com/python"},
+                    "metadata": {
+                        "title": "Python Guide",
+                        "url": "https://example.com/python",
+                    },
                 }
             ]
 
@@ -255,7 +253,9 @@ class TestMCPToolsIntegration:
         assert add_doc_tool is not None, "Add document tool not found"
 
         # Mock successful document processing
-        with patch.object(mock_client_manager.vector_service, "add_document") as mock_add:
+        with patch.object(
+            mock_client_manager.vector_service, "add_document"
+        ) as mock_add:
             mock_add.return_value = {
                 "url": request.url,
                 "title": "Example Document",
@@ -276,7 +276,9 @@ class TestMCPToolsIntegration:
             assert result["chunks_created"] == 5
             assert result["embedding_dimensions"] == 384
 
-    async def test_embeddings_tool_generate_embeddings(self, mcp_server, mock_client_manager):
+    async def test_embeddings_tool_generate_embeddings(
+        self, mcp_server, mock_client_manager
+    ):
         """Test embedding generation functionality."""
         request = EmbeddingRequest(
             texts=["Hello world", "Test document"],
@@ -292,7 +294,9 @@ class TestMCPToolsIntegration:
 
         assert embedding_tool is not None, "Embeddings tool not found"
 
-        with patch.object(mock_client_manager.embedding_service, "generate_embeddings") as mock_embed:
+        with patch.object(
+            mock_client_manager.embedding_service, "generate_embeddings"
+        ) as mock_embed:
             mock_embed.return_value = {
                 "embeddings": [[0.1] * 384, [0.2] * 384],
                 "model": request.model,
@@ -309,7 +313,9 @@ class TestMCPToolsIntegration:
             assert result["model"] == request.model
             assert result["total_tokens"] == 6
 
-    async def test_collections_tool_list_collections(self, mcp_server, mock_client_manager):
+    async def test_collections_tool_list_collections(
+        self, mcp_server, mock_client_manager
+    ):
         """Test collection listing functionality."""
         # Find collections tool
         collections_tool = None
@@ -320,7 +326,9 @@ class TestMCPToolsIntegration:
 
         assert collections_tool is not None, "Collections tool not found"
 
-        with patch.object(mock_client_manager.vector_service, "list_collections") as mock_list:
+        with patch.object(
+            mock_client_manager.vector_service, "list_collections"
+        ) as mock_list:
             mock_list.return_value = [
                 {"name": "documentation", "vectors_count": 1000, "status": "green"},
                 {"name": "support", "vectors_count": 500, "status": "green"},
@@ -349,7 +357,9 @@ class TestMCPToolsIntegration:
 
         assert project_tool is not None, "Create project tool not found"
 
-        with patch.object(mock_client_manager.project_service, "create_project") as mock_create:
+        with patch.object(
+            mock_client_manager.project_service, "create_project"
+        ) as mock_create:
             mock_create.return_value = {
                 "id": "proj-123",
                 "name": request.name,
@@ -515,7 +525,9 @@ class TestMCPToolsIntegration:
 
         assert aliases_tool is not None, "List aliases tool not found"
 
-        with patch.object(mock_client_manager.deployment_service, "list_aliases") as mock_aliases:
+        with patch.object(
+            mock_client_manager.deployment_service, "list_aliases"
+        ) as mock_aliases:
             mock_aliases.return_value = {
                 "production": "docs-v2.1",
                 "staging": "docs-v2.2-beta",
@@ -527,7 +539,9 @@ class TestMCPToolsIntegration:
             assert "production" in result["aliases"]
             assert result["aliases"]["production"] == "docs-v2.1"
 
-    async def test_utilities_tool_validate_config(self, mcp_server, mock_client_manager):
+    async def test_utilities_tool_validate_config(
+        self, mcp_server, mock_client_manager
+    ):
         """Test utilities functionality."""
         # Find config validation tool
         config_tool = None
@@ -543,7 +557,9 @@ class TestMCPToolsIntegration:
 
         assert result["status"] == "success"
 
-    async def test_payload_indexing_tool_operations(self, mcp_server, mock_client_manager):
+    async def test_payload_indexing_tool_operations(
+        self, mcp_server, mock_client_manager
+    ):
         """Test payload indexing functionality."""
         # Find reindex tool
         reindex_tool = None
@@ -554,7 +570,9 @@ class TestMCPToolsIntegration:
 
         assert reindex_tool is not None, "Reindex tool not found"
 
-        with patch.object(mock_client_manager.vector_service, "reindex_collection") as mock_reindex:
+        with patch.object(
+            mock_client_manager.vector_service, "reindex_collection"
+        ) as mock_reindex:
             mock_reindex.return_value = {
                 "status": "success",
                 "collection": "documentation",
@@ -569,7 +587,9 @@ class TestMCPToolsIntegration:
 
     # Error Handling Tests
 
-    async def test_tool_error_handling_search_failure(self, mcp_server, mock_client_manager):
+    async def test_tool_error_handling_search_failure(
+        self, mcp_server, mock_client_manager
+    ):
         """Test error handling when search tool fails."""
         search_tool = None
         for tool in mcp_server._tools:
@@ -577,7 +597,9 @@ class TestMCPToolsIntegration:
                 search_tool = tool
                 break
 
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
             mock_search.side_effect = Exception("Qdrant connection failed")
 
             with pytest.raises(Exception, match="Qdrant connection failed"):
@@ -613,8 +635,13 @@ class TestMCPToolsIntegration:
                 search_tool = tool
                 break
 
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search:
-            mock_search.return_value = [{"id": f"doc-{i}", "content": f"Content {i}", "score": 0.9} for i in range(10)]
+        with patch.object(
+            mock_client_manager.vector_service, "search_documents"
+        ) as mock_search:
+            mock_search.return_value = [
+                {"id": f"doc-{i}", "content": f"Content {i}", "score": 0.9}
+                for i in range(10)
+            ]
 
             # Measure execution time
             start_time = time.time()
@@ -626,7 +653,9 @@ class TestMCPToolsIntegration:
             execution_time = time.time() - start_time
 
             # Performance assertions
-            assert execution_time < 1.0, f"Search took {execution_time:.3f}s, expected < 1.0s"
+            assert execution_time < 1.0, (
+                f"Search took {execution_time:.3f}s, expected < 1.0s"
+            )
             assert len(result) == 10
 
     async def test_concurrent_tool_execution(self, mcp_server, mock_client_manager):
@@ -644,12 +673,22 @@ class TestMCPToolsIntegration:
                 collections_tool = tool
 
         # Mock all services
-        with patch.object(mock_client_manager.vector_service, "search_documents") as mock_search, \
-             patch.object(mock_client_manager, "analytics_service") as mock_analytics, \
-             patch.object(mock_client_manager.vector_service, "list_collections") as mock_collections:
-
-            mock_search.return_value = [{"id": "doc-1", "content": "Test", "score": 0.9}]
-            mock_analytics.get_analytics.return_value = {"timestamp": "2024-01-01T00:00:00Z", "collections": {}}
+        with (
+            patch.object(
+                mock_client_manager.vector_service, "search_documents"
+            ) as mock_search,
+            patch.object(mock_client_manager, "analytics_service") as mock_analytics,
+            patch.object(
+                mock_client_manager.vector_service, "list_collections"
+            ) as mock_collections,
+        ):
+            mock_search.return_value = [
+                {"id": "doc-1", "content": "Test", "score": 0.9}
+            ]
+            mock_analytics.get_analytics.return_value = {
+                "timestamp": "2024-01-01T00:00:00Z",
+                "collections": {},
+            }
             mock_collections.return_value = [{"name": "docs", "vectors_count": 100}]
 
             # Execute tools concurrently
@@ -670,7 +709,9 @@ class TestMCPToolsIntegration:
             assert len(results[2]) == 1  # Collections results
 
             # Performance assertion - concurrent execution should be faster
-            assert execution_time < 2.0, f"Concurrent execution took {execution_time:.3f}s"
+            assert execution_time < 2.0, (
+                f"Concurrent execution took {execution_time:.3f}s"
+            )
 
     # Request/Response Model Validation Tests
 
@@ -751,7 +792,7 @@ class TestMCPServerLifecycle:
         assert len(mcp._tools) > 0, "No tools were registered"
 
         # Expected tool names based on tool registry
-        expected_tools = {
+        _expected_tools = {
             "search_documents",
             "add_document",
             "generate_embeddings",
@@ -769,26 +810,28 @@ class TestMCPServerLifecycle:
 
         # Check that we have reasonable coverage of expected tools
         # Note: We have 12 tools registered
-        assert len(registered_tool_names) >= 10, f"Expected at least 10 tools, got {len(registered_tool_names)}"
+        assert len(registered_tool_names) >= 10, (
+            f"Expected at least 10 tools, got {len(registered_tool_names)}"
+        )
 
     async def test_tool_registration_error_handling(self):
         """Test error handling during tool registration."""
         mcp = MockMCPServer("test-server")
-        
+
         # Create client manager that will fail during tool registration
         mock_client_manager = MagicMock()
         mock_client_manager.vector_service = None  # Missing required service
 
         # Registration should still succeed with mock tools
         register_mock_tools(mcp, mock_client_manager)
-        
+
         # But calling tools should fail
         search_tool = None
         for tool in mcp._tools:
             if tool.name == "search_documents":
                 search_tool = tool
                 break
-        
+
         if search_tool:
             with pytest.raises(AttributeError):
                 await search_tool.handler(query="test", collection="docs", limit=5)

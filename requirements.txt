@@ -358,7 +358,6 @@ numpy==2.2.6
     #   fastembed
     #   ir-datasets
     #   langchain-aws
-    #   onnx
     #   onnxruntime
     #   pandas
     #   peft
@@ -407,12 +406,8 @@ nvidia-nvtx-cu12==12.6.77
     # via torch
 ollama==0.5.1
     # via langchain-ollama
-onnx==1.18.0
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 onnxruntime==1.22.0
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   fastembed
+    # via fastembed
 openai==1.83.0
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
@@ -478,7 +473,6 @@ protobuf==6.31.1
     #   google-api-core
     #   googleapis-common-protos
     #   grpcio-status
-    #   onnx
     #   onnxruntime
     #   proto-plus
     #   qdrant-client
@@ -652,9 +646,7 @@ screeninfo==0.8.1
 selenium==4.33.0
     # via crawl4ai
 sentence-transformers==4.1.0
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   flagembedding
+    # via flagembedding
 sentencepiece==0.2.0
     # via flagembedding
 setuptools==80.9.0
@@ -751,7 +743,7 @@ trio==0.30.0
     #   trio-websocket
 trio-websocket==0.12.2
     # via selenium
-triton==3.3.0
+triton==3.3.1
     # via torch
 typer==0.16.0
     # via fastmcp
@@ -764,7 +756,6 @@ typing-extensions==4.13.2
     #   browser-use
     #   huggingface-hub
     #   langchain-core
-    #   onnx
     #   openai
     #   pydantic
     #   pydantic-core

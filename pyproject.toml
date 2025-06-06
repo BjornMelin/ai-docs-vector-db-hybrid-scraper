@@ -75,10 +75,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "aiofiles>=24.1.0",
     "python-multipart>=0.0.12", # For FastAPI file uploads
-    "sentence-transformers>=3.3.1", # For reranking models
     "tomli-w>=1.0.0", # For TOML writing
-    "onnx>=1.18.0", # For FastEmbed
-    "onnxruntime>=1.20.1", # For FastEmbed
     "jsonschema2md>=1.5.2",
     "fastmcp>=2.5.2",
 ]

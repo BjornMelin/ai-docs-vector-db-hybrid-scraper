@@ -139,11 +139,14 @@ async def client_manager_with_stub(config, stub_factory):
     manager._create_qdrant_client = lambda: stub_factory.create_qdrant_client(config)
     manager._create_openai_client = lambda: stub_factory.create_openai_client(config)
     manager._create_redis_client = lambda: stub_factory.create_redis_client(config)
-    manager._create_firecrawl_client = lambda: stub_factory.create_firecrawl_client(config)
+    manager._create_firecrawl_client = lambda: stub_factory.create_firecrawl_client(
+        config
+    )
 
     # Mock get_task_queue_manager if needed
     async def mock_get_task_queue_manager():
         return AsyncMock()
+
     manager.get_task_queue_manager = mock_get_task_queue_manager
 
     yield manager
@@ -215,6 +218,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_healthy_state(self, circuit_breaker):
         """Test circuit breaker in healthy state allows calls."""
+
         async def success_func():
             return "success"
 
@@ -225,6 +229,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_opens_after_failures(self, circuit_breaker):
         """Test circuit breaker opens after threshold failures."""
+
         async def failing_func():
             raise Exception("Test failure")
 
@@ -243,6 +248,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_recovery(self, circuit_breaker):
         """Test circuit breaker recovery after timeout."""
+
         async def failing_func():
             raise Exception("Test failure")
 
@@ -378,7 +384,9 @@ class TestClientManagerHealthChecks:
         assert not client_manager_with_stub._health_check_task.done()
 
     @pytest.mark.asyncio
-    async def test_check_qdrant_health_success(self, client_manager_with_stub, stub_factory):
+    async def test_check_qdrant_health_success(
+        self, client_manager_with_stub, stub_factory
+    ):
         """Test successful Qdrant health check."""
         # Create client first
         await client_manager_with_stub.get_qdrant_client()
@@ -392,7 +400,9 @@ class TestClientManagerHealthChecks:
         assert health.consecutive_failures == 0
 
     @pytest.mark.asyncio
-    async def test_check_qdrant_health_failure(self, client_manager_with_stub, stub_factory):
+    async def test_check_qdrant_health_failure(
+        self, client_manager_with_stub, stub_factory
+    ):
         """Test failed Qdrant health check."""
         # Create client first
         client = await client_manager_with_stub.get_qdrant_client()
@@ -589,6 +599,10 @@ class TestClientManagerIntegration:
 
         # Verify cleanup
         assert manager._clients == {}
-        assert manager._health_check_task.cancelled() if manager._health_check_task else True
+        assert (
+            manager._health_check_task.cancelled()
+            if manager._health_check_task
+            else True
+        )
 
         ClientManager._instance = None

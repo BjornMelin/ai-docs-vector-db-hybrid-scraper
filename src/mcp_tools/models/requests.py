@@ -16,7 +16,9 @@ class SearchRequest(BaseModel):
     """Search request with advanced options"""
 
     query: str = Field(..., min_length=1, description="Search query")
-    collection: str = Field(default="documentation", min_length=1, description="Collection to search")
+    collection: str = Field(
+        default="documentation", min_length=1, description="Collection to search"
+    )
     limit: int = Field(default=10, ge=1, le=100, description="Number of results")
     strategy: SearchStrategy = Field(
         default=SearchStrategy.HYBRID, description="Search strategy"
@@ -56,7 +58,9 @@ class DocumentRequest(BaseModel):
     """Document processing request"""
 
     url: str = Field(..., min_length=1, description="Document URL")
-    collection: str = Field(default="documentation", min_length=1, description="Target collection")
+    collection: str = Field(
+        default="documentation", min_length=1, description="Target collection"
+    )
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
     )

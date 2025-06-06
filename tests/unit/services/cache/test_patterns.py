@@ -35,7 +35,9 @@ class TestCachePatterns:
         """Create a CachePatterns instance for testing."""
         return CachePatterns(mock_dragonfly_cache, mock_task_queue_manager)
 
-    def test_cache_patterns_initialization(self, mock_dragonfly_cache, mock_task_queue_manager):
+    def test_cache_patterns_initialization(
+        self, mock_dragonfly_cache, mock_task_queue_manager
+    ):
         """Test CachePatterns initialization."""
         patterns = CachePatterns(mock_dragonfly_cache, mock_task_queue_manager)
 
@@ -567,7 +569,9 @@ class TestCachePatterns:
         persist_func.assert_called_once_with("test_key", value)
 
     @pytest.mark.asyncio
-    async def test_write_behind_success(self, cache_patterns, mock_dragonfly_cache, mock_task_queue_manager):
+    async def test_write_behind_success(
+        self, cache_patterns, mock_dragonfly_cache, mock_task_queue_manager
+    ):
         """Test write-behind pattern success."""
         mock_dragonfly_cache.set.return_value = True
         mock_task_queue_manager.enqueue.return_value = "test_job_id"
@@ -612,7 +616,6 @@ class TestCachePatterns:
         )
 
         assert result is False
-
 
     @pytest.mark.asyncio
     async def test_cache_warming_success(self, cache_patterns, mock_dragonfly_cache):
