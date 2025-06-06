@@ -1601,6 +1601,100 @@ _This TODO reflects our evolution from basic implementation to Advanced 2025 ach
   - [ ] Client management lifecycle tests
   - [ ] Utility function comprehensive testing
 
+### 🚀 5-Tier Browser Automation Implementation
+
+**Issue #97 Follow-up**: Complete 5-Tier Browser Automation Architecture
+
+**Status**: 🔄 **IN PROGRESS** - Documentation consolidated, implementation phase started
+
+**Priority**: **HIGH** - Core performance improvement feature (5-10x gains for static content)
+
+#### Phase 1: Tier 0 Lightweight HTTP Implementation (Priority: HIGH)
+- [ ] **Implement LightweightScraper class** 
+  - [ ] Create `src/services/browser/lightweight_scraper.py`
+  - [ ] httpx + BeautifulSoup integration for static content
+  - [ ] Content detection and extraction logic
+  - [ ] Performance optimization for 5-10x speed gains
+- [ ] **URL Pattern Analysis System**
+  - [ ] Static file extensions detection (.md, .txt, .json, .pdf)
+  - [ ] GitHub raw content identification
+  - [ ] Documentation site patterns
+  - [ ] Content complexity analysis
+- [ ] **Integration with AutomationRouter**
+  - [ ] Add Tier 0 routing logic to existing AutomationRouter
+  - [ ] Performance-based tier selection
+  - [ ] Fallback escalation to higher tiers
+
+#### Phase 2: Unified Browser Manager Integration (Priority: HIGH)
+- [ ] **Fix ClientManager Integration Issues**
+  - [ ] Resolve `ClientManager` class import error in `src/infrastructure/client_manager.py`
+  - [ ] Implement missing `get_task_queue_manager()` method
+  - [ ] Fix browser automation router initialization
+- [ ] **Create UnifiedBrowserManager Interface**
+  - [ ] Design unified API for all 5 tiers
+  - [ ] Single entry point: `scrape(url, tier=None, interaction_required=False)`
+  - [ ] Consistent response format across all tiers
+- [ ] **Integrate AutomationRouter with CrawlManager**
+  - [ ] Connect existing browser automation to main crawling flow
+  - [ ] Replace fragmented scraping approaches with unified 5-tier system
+  - [ ] Update MCP tools to use unified interface
+
+#### Phase 3: Enhanced Routing and Configuration (Priority: MEDIUM)
+- [ ] **Site-Specific Routing Rules**
+  - [ ] Implement `config/browser-routing-rules.json` configuration
+  - [ ] Add site-specific tier assignments
+  - [ ] Performance-based learning and adaptation
+- [ ] **Advanced Content Analysis**
+  - [ ] JavaScript requirement detection
+  - [ ] SPA (Single Page Application) identification
+  - [ ] Interactive element detection
+  - [ ] Authentication requirements analysis
+- [ ] **Unified Configuration Integration**
+  - [ ] Add browser automation config to `src/config/models.py`
+  - [ ] Environment variable support for all providers
+  - [ ] Validation and type safety for routing rules
+
+#### Phase 4: MCP Integration and Testing (Priority: HIGH)
+- [ ] **Add Browser Automation Tools to MCP Server**
+  - [ ] Create MCP tools for unified browser automation
+  - [ ] Add tier selection and performance monitoring tools
+  - [ ] Update MCP tool registry with new capabilities
+- [ ] **Comprehensive Testing Suite**
+  - [ ] Unit tests for LightweightScraper (target: 90% coverage)
+  - [ ] Integration tests for 5-tier routing logic
+  - [ ] Performance benchmarks comparing all tiers
+  - [ ] End-to-end tests with real websites
+- [ ] **Performance Monitoring and Metrics**
+  - [ ] Success rate tracking per tier and domain
+  - [ ] Response time percentiles (p50, p95, p99)
+  - [ ] Cost per request analysis
+  - [ ] Escalation rate monitoring between tiers
+
+#### Phase 5: Advanced Features and Optimization (Priority: LOW)
+- [ ] **Session Pooling and Resource Management**
+  - [ ] Implement session pooling across all tiers
+  - [ ] Memory-adaptive dispatching for concurrent requests
+  - [ ] Connection reuse and optimization
+- [ ] **Cost-Aware Routing**
+  - [ ] LLM API cost tracking (OpenAI, Anthropic, Gemini)
+  - [ ] Firecrawl API cost monitoring
+  - [ ] Intelligent cost-performance trade-offs
+- [ ] **Advanced Site Configurations**
+  - [ ] Custom JavaScript execution patterns
+  - [ ] Site-specific optimization profiles
+  - [ ] Anti-bot detection mitigation strategies
+- [ ] **Monitoring Dashboard**
+  - [ ] Real-time performance metrics
+  - [ ] Provider health checks
+  - [ ] Usage analytics and insights
+
+**Expected Outcomes:**
+- 5-10x performance improvement for static content (Tier 0)
+- 97% overall success rate with graceful fallbacks
+- Unified interface eliminating fragmented scraping approaches
+- Cost optimization through intelligent tier selection
+- Production-ready browser automation system
+
 ### 🏗️ Architecture & Cleanup
 
 - [ ] **Issue #68**: Legacy code elimination (tracking issue)
