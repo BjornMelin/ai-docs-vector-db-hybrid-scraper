@@ -1,5 +1,20 @@
 {
   "routing_rules": {
+    "lightweight": [
+      "raw.githubusercontent.com",
+      "gist.github.com",
+      "pastebin.com",
+      "api.github.com",
+      "jsonplaceholder.typicode.com"
+    ],
+    "crawl4ai": [
+      "medium.com",
+      "dev.to",
+      "hashnode.com",
+      "blog.rust-lang.org",
+      "python.org",
+      "nodejs.org"
+    ],
     "browser_use": [
       "vercel.com",
       "clerk.com", 
@@ -11,22 +26,151 @@
       "nextjs.org",
       "docs.anthropic.com",
       "docs.openai.com",
-      "beta.openai.com"
+      "beta.openai.com",
+      "platform.openai.com",
+      "console.cloud.google.com",
+      "console.aws.amazon.com",
+      "portal.azure.com"
     ],
     "playwright": [
       "github.com",
+      "gitlab.com",
+      "bitbucket.org",
       "stackoverflow.com",
       "discord.com",
       "slack.com",
       "app.posthog.com",
-      "notion.so"
+      "notion.so",
+      "linear.app",
+      "figma.com"
+    ],
+    "firecrawl": [
+      "linkedin.com",
+      "twitter.com",
+      "facebook.com",
+      "instagram.com"
     ]
   },
-  "description": "Browser automation routing rules for site-specific tool selection",
-  "rules_explanation": {
-    "browser_use": "Sites that need AI-powered interaction due to complex React apps, heavy client-side rendering, dynamic content, or require natural language reasoning. Uses multi-LLM support (OpenAI, Anthropic, Gemini) for optimal cost/performance balance.",
-    "playwright": "Sites that need specific automation for authentication, complex pagination, or heavy JavaScript interactions requiring maximum programmatic control",
-    "crawl4ai": "Default tool for all other sites (fastest and most cost-effective for documentation scraping)"
+  "tier_descriptions": {
+    "lightweight": "Static content, APIs, raw files - fastest and zero cost",
+    "crawl4ai": "Standard web content, blogs, documentation - fast browser automation",
+    "crawl4ai_enhanced": "Dynamic content requiring custom JavaScript execution",
+    "browser_use": "Complex SPAs requiring AI-powered interaction and natural language reasoning",
+    "playwright": "Sites requiring precise programmatic control and authentication",
+    "firecrawl": "Sites with aggressive anti-bot measures or requiring specialized API access"
+  },
+  "url_patterns": {
+    "lightweight": [
+      {
+        "pattern": "\\.(txt|json|xml|csv|yaml|yml|md)$",
+        "priority": 100,
+        "reason": "Static file formats"
+      },
+      {
+        "pattern": "api\\.|/api/|\\.api\\.",
+        "priority": 95,
+        "reason": "API endpoints"
+      },
+      {
+        "pattern": "raw\\.|/raw/",
+        "priority": 90,
+        "reason": "Raw content URLs"
+      }
+    ],
+    "crawl4ai": [
+      {
+        "pattern": "blog|article|post|news",
+        "priority": 70,
+        "reason": "Content-focused pages"
+      },
+      {
+        "pattern": "docs?\\.|/docs?/|documentation",
+        "priority": 75,
+        "reason": "Documentation sites"
+      },
+      {
+        "pattern": "wiki|wikipedia",
+        "priority": 80,
+        "reason": "Wiki-style content"
+      }
+    ],
+    "browser_use": [
+      {
+        "pattern": "app\\.|dashboard|console|portal",
+        "priority": 85,
+        "reason": "Web applications"
+      },
+      {
+        "pattern": "auth|login|signin|oauth",
+        "priority": 90,
+        "reason": "Authentication flows"
+      },
+      {
+        "pattern": "react|vue|angular|nextjs",
+        "priority": 75,
+        "reason": "Modern JS frameworks"
+      }
+    ],
+    "playwright": [
+      {
+        "pattern": "github\\.com/(.*)/pull/|/issues/",
+        "priority": 85,
+        "reason": "GitHub PR/Issue pages"
+      },
+      {
+        "pattern": "stackoverflow\\.com/questions",
+        "priority": 80,
+        "reason": "SO question pages"
+      }
+    ]
+  },
+  "domain_preferences": [
+    {
+      "domain": "*.anthropic.com",
+      "preferred_tier": "browser_use",
+      "required": false,
+      "reason": "Complex React documentation site"
+    },
+    {
+      "domain": "github.com",
+      "preferred_tier": "playwright",
+      "required": false,
+      "reason": "Requires handling of authentication and dynamic content"
+    },
+    {
+      "domain": "raw.githubusercontent.com",
+      "preferred_tier": "lightweight",
+      "required": true,
+      "reason": "Always static content"
+    },
+    {
+      "domain": "*.openai.com",
+      "preferred_tier": "browser_use",
+      "required": false,
+      "reason": "Heavy client-side rendering"
+    }
+  ],
+  "performance_thresholds": {
+    "lightweight": {
+      "max_response_time_ms": 2000,
+      "min_success_rate": 0.95
+    },
+    "crawl4ai": {
+      "max_response_time_ms": 5000,
+      "min_success_rate": 0.85
+    },
+    "browser_use": {
+      "max_response_time_ms": 10000,
+      "min_success_rate": 0.80
+    },
+    "playwright": {
+      "max_response_time_ms": 8000,
+      "min_success_rate": 0.85
+    },
+    "firecrawl": {
+      "max_response_time_ms": 15000,
+      "min_success_rate": 0.75
+    }
   },
   "llm_configuration": {
     "default_provider": "openai",
@@ -38,5 +182,7 @@
       "ANTHROPIC_API_KEY": "Optional for Anthropic models",
       "GOOGLE_API_KEY": "Optional for Gemini models"
     }
-  }
+  },
+  "version": "2.0",
+  "last_updated": "2024-01-01"
 }
