@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 class TierRateLimiter:
     """Rate limiter for browser automation tiers.
-    
+
     Implements a sliding window rate limiter with tier-specific limits.
     Supports both request-per-minute and concurrent request limits.
     """
 
     def __init__(self, tier_configs: dict[str, TierConfiguration]):
         """Initialize rate limiter with tier configurations.
-        
+
         Args:
             tier_configs: Dictionary mapping tier names to configurations
         """
@@ -55,11 +55,11 @@ class TierRateLimiter:
 
     async def acquire(self, tier: str, timeout: float | None = None) -> bool:
         """Acquire permission to make a request for a tier.
-        
+
         Args:
             tier: Tier name
             timeout: Maximum time to wait for permission (seconds)
-            
+
         Returns:
             True if permission granted, False if rate limited
         """
@@ -109,7 +109,7 @@ class TierRateLimiter:
 
     async def release(self, tier: str) -> None:
         """Release a request slot for a tier.
-        
+
         Args:
             tier: Tier name
         """
@@ -123,15 +123,18 @@ class TierRateLimiter:
 
     async def _check_rate_limit(self, tier: str) -> bool:
         """Check if request is within rate limit.
-        
+
         Args:
             tier: Tier name
-            
+
         Returns:
             True if within limit, False otherwise
         """
         config = self.tier_configs[tier]
-        if not hasattr(config, "requests_per_minute") or config.requests_per_minute <= 0:
+        if (
+            not hasattr(config, "requests_per_minute")
+            or config.requests_per_minute <= 0
+        ):
             return True  # No rate limit configured
 
         async with self.lock:
@@ -148,10 +151,10 @@ class TierRateLimiter:
 
     def get_wait_time(self, tier: str) -> float:
         """Get estimated wait time until next request allowed.
-        
+
         Args:
             tier: Tier name
-            
+
         Returns:
             Seconds to wait (0 if no wait needed)
         """
@@ -175,10 +178,10 @@ class TierRateLimiter:
 
     def get_status(self, tier: str | None = None) -> dict[str, Any]:
         """Get rate limiter status.
-        
+
         Args:
             tier: Specific tier to check (None for all)
-            
+
         Returns:
             Status information
         """
@@ -198,10 +201,10 @@ class TierRateLimiter:
 
     def _get_tier_status(self, tier: str) -> dict[str, Any]:
         """Get status for a specific tier.
-        
+
         Args:
             tier: Tier name
-            
+
         Returns:
             Tier status information
         """
@@ -232,20 +235,18 @@ class TierRateLimiter:
 
     async def wait_if_needed(self, tier: str) -> None:
         """Wait if rate limit requires it.
-        
+
         Args:
             tier: Tier name
         """
         wait_time = self.get_wait_time(tier)
         if wait_time > 0:
-            logger.info(
-                f"Rate limit reached for {tier}, waiting {wait_time:.1f}s"
-            )
+            logger.info(f"Rate limit reached for {tier}, waiting {wait_time:.1f}s")
             await asyncio.sleep(wait_time)
 
     def reset_tier(self, tier: str) -> None:
         """Reset rate limit tracking for a tier.
-        
+
         Args:
             tier: Tier name
         """
@@ -265,9 +266,11 @@ class TierRateLimiter:
 class RateLimitContext:
     """Context manager for rate-limited tier operations."""
 
-    def __init__(self, rate_limiter: TierRateLimiter, tier: str, timeout: float | None = None):
+    def __init__(
+        self, rate_limiter: TierRateLimiter, tier: str, timeout: float | None = None
+    ):
         """Initialize rate limit context.
-        
+
         Args:
             rate_limiter: Rate limiter instance
             tier: Tier name
@@ -280,7 +283,7 @@ class RateLimitContext:
 
     async def __aenter__(self) -> bool:
         """Acquire rate limit permission.
-        
+
         Returns:
             True if acquired, False if rate limited
         """

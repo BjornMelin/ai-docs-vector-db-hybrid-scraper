@@ -68,7 +68,9 @@ class CircuitBreakerState:
             elapsed = time.time() - self.last_failure_time
             duration = self.config.performance_thresholds.circuit_break_duration_seconds
             if elapsed > duration:
-                logger.info(f"Circuit breaker reset for {self.tier} after {elapsed:.1f}s")
+                logger.info(
+                    f"Circuit breaker reset for {self.tier} after {elapsed:.1f}s"
+                )
                 self.is_open = False
                 self.consecutive_failures = 0
                 return True
@@ -93,7 +95,9 @@ class EnhancedAutomationRouter(AutomationRouter):
         # Circuit breakers for each tier
         self.circuit_breakers: dict[str, CircuitBreakerState] = {}
         for tier_name, tier_config in self.routing_config.tier_configs.items():
-            self.circuit_breakers[tier_name] = CircuitBreakerState(tier_name, tier_config)
+            self.circuit_breakers[tier_name] = CircuitBreakerState(
+                tier_name, tier_config
+            )
 
         # Domain performance cache
         self.domain_tier_success: dict[str, dict[str, list[bool]]] = defaultdict(
@@ -160,13 +164,21 @@ class EnhancedAutomationRouter(AutomationRouter):
         # Execute scraping with rate limiting
         try:
             # Acquire rate limit permission
-            async with RateLimitContext(self.rate_limiter, selected_tier, timeout=5.0) as allowed:
+            async with RateLimitContext(
+                self.rate_limiter, selected_tier, timeout=5.0
+            ) as allowed:
                 if not allowed:
                     # Rate limited, try fallback
-                    logger.warning(f"Rate limit exceeded for {selected_tier}, attempting fallback")
+                    logger.warning(
+                        f"Rate limit exceeded for {selected_tier}, attempting fallback"
+                    )
                     return await self._intelligent_fallback(
-                        url, domain, selected_tier, custom_actions, timeout,
-                        "Rate limit exceeded"
+                        url,
+                        domain,
+                        selected_tier,
+                        custom_actions,
+                        timeout,
+                        "Rate limit exceeded",
                     )
 
                 result = await self._execute_tier_scraping(
@@ -176,7 +188,12 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Record success
             elapsed = time.time() - start_time
             await self._record_performance(
-                url, domain, selected_tier, True, elapsed * 1000, len(result.get("content", ""))
+                url,
+                domain,
+                selected_tier,
+                True,
+                elapsed * 1000,
+                len(result.get("content", "")),
             )
 
             if breaker:
@@ -193,7 +210,13 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             # Record failure
             await self._record_performance(
-                url, domain, selected_tier, False, elapsed * 1000, 0, str(type(e).__name__)
+                url,
+                domain,
+                selected_tier,
+                False,
+                elapsed * 1000,
+                0,
+                str(type(e).__name__),
             )
 
             if breaker:
@@ -241,7 +264,9 @@ class EnhancedAutomationRouter(AutomationRouter):
             if pref.matches(domain):
                 tier = pref.preferred_tier
                 if tier in self._adapters or tier in ["crawl4ai_enhanced", "firecrawl"]:
-                    logger.debug(f"Domain preference for {domain}: {tier} ({pref.reason})")
+                    logger.debug(
+                        f"Domain preference for {domain}: {tier} ({pref.reason})"
+                    )
                     return tier
         return None
 
@@ -254,7 +279,10 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Skip disabled or unavailable tiers
             if not tier_config.enabled:
                 continue
-            if tier_name not in self._adapters and tier_name not in ["crawl4ai_enhanced", "firecrawl"]:
+            if tier_name not in self._adapters and tier_name not in [
+                "crawl4ai_enhanced",
+                "firecrawl",
+            ]:
                 continue
 
             for pattern in tier_config.preferred_url_patterns:
@@ -299,7 +327,10 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             for tier, analysis in analyses.items():
                 # Skip if not enough data
-                if analysis.total_requests < self.routing_config.min_samples_for_analysis:
+                if (
+                    analysis.total_requests
+                    < self.routing_config.min_samples_for_analysis
+                ):
                     continue
 
                 # Skip if unhealthy
@@ -349,12 +380,16 @@ class EnhancedAutomationRouter(AutomationRouter):
         """Intelligent fallback with performance awareness."""
         if not self.routing_config.enable_intelligent_fallback:
             # Use standard fallback
-            return await self._fallback_scrape(url, failed_tier, custom_actions, timeout)
+            return await self._fallback_scrape(
+                url, failed_tier, custom_actions, timeout
+            )
 
         # Get tier configuration
         tier_config = self.routing_config.tier_configs.get(failed_tier)
         if not tier_config:
-            return await self._fallback_scrape(url, failed_tier, custom_actions, timeout)
+            return await self._fallback_scrape(
+                url, failed_tier, custom_actions, timeout
+            )
 
         # Build fallback order based on configuration and performance
         fallback_order = await self._build_intelligent_fallback_order(
@@ -381,7 +416,12 @@ class EnhancedAutomationRouter(AutomationRouter):
                 # Record success
                 elapsed = time.time() - start_time
                 await self._record_performance(
-                    url, domain, fallback_tier, True, elapsed * 1000, len(result.get("content", ""))
+                    url,
+                    domain,
+                    fallback_tier,
+                    True,
+                    elapsed * 1000,
+                    len(result.get("content", "")),
                 )
 
                 if breaker:
@@ -400,7 +440,13 @@ class EnhancedAutomationRouter(AutomationRouter):
 
                 # Record failure
                 await self._record_performance(
-                    url, domain, fallback_tier, False, elapsed * 1000, 0, str(type(e).__name__)
+                    url,
+                    domain,
+                    fallback_tier,
+                    False,
+                    elapsed * 1000,
+                    0,
+                    str(type(e).__name__),
                 )
 
                 if breaker:
@@ -461,7 +507,9 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             for tier in fallback_order:
                 if tier in analyses:
-                    tier_scores[tier] = self._calculate_performance_score(analyses[tier])
+                    tier_scores[tier] = self._calculate_performance_score(
+                        analyses[tier]
+                    )
 
             # Sort by performance score
             fallback_order.sort(key=lambda t: tier_scores.get(t, 0), reverse=True)
@@ -537,8 +585,12 @@ class EnhancedAutomationRouter(AutomationRouter):
         analyses = {}
 
         # Filter history by time window
-        cutoff_time = time.time() - (self.routing_config.performance_window_hours * 3600)
-        recent_entries = [e for e in self.performance_history if e.timestamp > cutoff_time]
+        cutoff_time = time.time() - (
+            self.routing_config.performance_window_hours * 3600
+        )
+        recent_entries = [
+            e for e in self.performance_history if e.timestamp > cutoff_time
+        ]
 
         # Group by tier
         tier_entries = defaultdict(list)
@@ -563,10 +615,14 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Calculate response times
             success_times = [e.response_time_ms for e in entries if e.success]
             if success_times:
-                analysis.average_response_time_ms = sum(success_times) / len(success_times)
+                analysis.average_response_time_ms = sum(success_times) / len(
+                    success_times
+                )
                 sorted_times = sorted(success_times)
                 p95_index = int(len(sorted_times) * 0.95)
-                analysis.p95_response_time_ms = sorted_times[min(p95_index, len(sorted_times) - 1)]
+                analysis.p95_response_time_ms = sorted_times[
+                    min(p95_index, len(sorted_times) - 1)
+                ]
 
             # Analyze trend (compare first half vs second half)
             if len(entries) >= 10:
@@ -598,7 +654,10 @@ class EnhancedAutomationRouter(AutomationRouter):
                         f"Success rate {analysis.success_rate:.1%} below threshold "
                         f"{thresholds.min_success_rate:.1%}"
                     )
-                elif analysis.average_response_time_ms > thresholds.max_avg_response_time_ms:
+                elif (
+                    analysis.average_response_time_ms
+                    > thresholds.max_avg_response_time_ms
+                ):
                     analysis.health_status = "degraded"
                     analysis.health_reasons.append(
                         f"Average response time {analysis.average_response_time_ms:.0f}ms "
@@ -622,7 +681,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             # Domain-specific analysis
             domain_analyses = {}
-            domains = set(entry.domain for entry in self.performance_history)
+            domains = {entry.domain for entry in self.performance_history}
             for domain in domains:
                 domain_analyses[domain] = await self._analyze_tier_performance(domain)
 
@@ -641,7 +700,9 @@ class EnhancedAutomationRouter(AutomationRouter):
                     tier: analysis.dict() for tier, analysis in overall_analysis.items()
                 },
                 "domain_performance": {
-                    domain: {tier: analysis.dict() for tier, analysis in analyses.items()}
+                    domain: {
+                        tier: analysis.dict() for tier, analysis in analyses.items()
+                    }
                     for domain, analyses in domain_analyses.items()
                 },
                 "circuit_breakers": circuit_status,

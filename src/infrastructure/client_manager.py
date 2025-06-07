@@ -584,7 +584,9 @@ class ClientManager:
                         config=self.config,
                     )
                     await self._browser_automation_router.initialize()
-                    logger.info("Initialized EnhancedAutomationRouter with performance tracking")
+                    logger.info(
+                        "Initialized EnhancedAutomationRouter with performance tracking"
+                    )
 
         return self._browser_automation_router
 

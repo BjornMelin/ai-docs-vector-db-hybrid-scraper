@@ -50,18 +50,27 @@ class TierConfiguration(BaseModel):
     """Configuration for a specific browser automation tier."""
 
     tier_name: Literal[
-        "lightweight", "crawl4ai", "crawl4ai_enhanced", "browser_use", "playwright", "firecrawl"
+        "lightweight",
+        "crawl4ai",
+        "crawl4ai_enhanced",
+        "browser_use",
+        "playwright",
+        "firecrawl",
     ]
     tier_level: int = Field(description="Tier level (0-4)")
     description: str = Field(description="Description of this tier's capabilities")
 
     # Performance settings
     enabled: bool = Field(default=True, description="Whether this tier is enabled")
-    max_concurrent_requests: int = Field(default=5, description="Maximum concurrent requests")
+    max_concurrent_requests: int = Field(
+        default=5, description="Maximum concurrent requests"
+    )
     requests_per_minute: int = Field(
         default=60, description="Maximum requests per minute (0 for unlimited)"
     )
-    timeout_ms: int = Field(default=30000, description="Default timeout in milliseconds")
+    timeout_ms: int = Field(
+        default=30000, description="Default timeout in milliseconds"
+    )
     retry_count: int = Field(default=1, description="Number of retries on failure")
 
     # Cost and resource settings
@@ -180,17 +189,17 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r"\.(txt|json|xml|csv)$",
                             priority=100,
-                            reason="Static file formats"
+                            reason="Static file formats",
                         ),
                         URLPattern(
                             pattern=r"api\.|/api/|\.api\.",
                             priority=90,
-                            reason="API endpoints often return structured data"
+                            reason="API endpoints often return structured data",
                         ),
                         URLPattern(
                             pattern=r"raw\.githubusercontent\.com",
                             priority=95,
-                            reason="GitHub raw content is always static"
+                            reason="GitHub raw content is always static",
                         ),
                     ],
                     supports_javascript=False,
@@ -211,12 +220,12 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r"blog|article|news|post",
                             priority=70,
-                            reason="Content-heavy pages"
+                            reason="Content-heavy pages",
                         ),
                         URLPattern(
                             pattern=r"wikipedia\.org|wikimedia\.org",
                             priority=80,
-                            reason="Well-structured content sites"
+                            reason="Well-structured content sites",
                         ),
                     ],
                     supports_javascript=True,
@@ -239,12 +248,12 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r"spa|app|dashboard|console",
                             priority=75,
-                            reason="Single-page applications"
+                            reason="Single-page applications",
                         ),
                         URLPattern(
                             pattern=r"react|vue|angular",
                             priority=75,
-                            reason="Modern JS frameworks"
+                            reason="Modern JS frameworks",
                         ),
                     ],
                     supports_javascript=True,
@@ -267,17 +276,17 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r"login|signin|auth|oauth",
                             priority=85,
-                            reason="Authentication flows"
+                            reason="Authentication flows",
                         ),
                         URLPattern(
                             pattern=r"checkout|payment|cart",
                             priority=85,
-                            reason="Complex multi-step processes"
+                            reason="Complex multi-step processes",
                         ),
                         URLPattern(
                             pattern=r"captcha|recaptcha|hcaptcha",
                             priority=90,
-                            reason="Requires intelligent interaction"
+                            reason="Requires intelligent interaction",
                         ),
                     ],
                     supports_javascript=True,
@@ -300,12 +309,12 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r"github\.com|gitlab\.com|bitbucket\.org",
                             priority=70,
-                            reason="Code repository sites"
+                            reason="Code repository sites",
                         ),
                         URLPattern(
                             pattern=r"stackoverflow\.com|reddit\.com",
                             priority=70,
-                            reason="Community sites with complex layouts"
+                            reason="Community sites with complex layouts",
                         ),
                     ],
                     supports_javascript=True,
@@ -328,7 +337,7 @@ class EnhancedRoutingConfig(BaseModel):
                         URLPattern(
                             pattern=r".*",  # Can handle anything as last resort
                             priority=0,
-                            reason="Universal fallback"
+                            reason="Universal fallback",
                         ),
                     ],
                     supports_javascript=True,
@@ -342,23 +351,23 @@ class EnhancedRoutingConfig(BaseModel):
                 DomainPreference(
                     domain="*.anthropic.com",
                     preferred_tier="browser_use",
-                    reason="Complex documentation site with dynamic content"
+                    reason="Complex documentation site with dynamic content",
                 ),
                 DomainPreference(
                     domain="github.com",
                     preferred_tier="playwright",
-                    reason="Requires authentication and has anti-bot measures"
+                    reason="Requires authentication and has anti-bot measures",
                 ),
                 DomainPreference(
                     domain="*.openai.com",
                     preferred_tier="browser_use",
-                    reason="Dynamic content with authentication"
+                    reason="Dynamic content with authentication",
                 ),
                 DomainPreference(
                     domain="raw.githubusercontent.com",
                     preferred_tier="lightweight",
                     required_tier=True,
-                    reason="Static content, no need for browser"
+                    reason="Static content, no need for browser",
                 ),
             ],
         )

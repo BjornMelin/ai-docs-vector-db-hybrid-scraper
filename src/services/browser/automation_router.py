@@ -252,11 +252,10 @@ class AutomationRouter(BaseService):
 
         # Determine which tool to use
         if force_tool:
-            if (
-                force_tool not in self._adapters
-                and force_tool != "crawl4ai_enhanced"
-                and force_tool != "firecrawl"
-            ):
+            if force_tool not in self._adapters and force_tool not in {
+                "crawl4ai_enhanced",
+                "firecrawl",
+            }:
                 raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
             tool = force_tool
         else:
@@ -766,7 +765,7 @@ class AutomationRouter(BaseService):
         adapter = self._adapters["lightweight"]
 
         # Convert timeout to seconds for LightweightScraper
-        timeout_seconds = timeout / 1000
+        timeout / 1000
 
         # LightweightScraper returns different format than other adapters
         scrape_result = await adapter.scrape(url)
@@ -854,10 +853,10 @@ class AutomationRouter(BaseService):
         enhanced_js = """
         // Enhanced JavaScript for dynamic content
         console.log('Enhanced mode: Starting advanced content extraction');
-        
+
         // Wait for initial load
         await new Promise(r => setTimeout(r, 3000));
-        
+
         // Handle lazy loading
         async function handleLazyLoading() {
             // Scroll to trigger lazy loading
@@ -866,7 +865,7 @@ class AutomationRouter(BaseService):
                 await new Promise(r => setTimeout(r, 1500));
             }
         }
-        
+
         // Handle dynamic content expansion
         async function expandDynamicContent() {
             // Click expandable elements
@@ -876,7 +875,7 @@ class AutomationRouter(BaseService):
                 'button[data-toggle]', 'button[data-expand]',
                 '.collapsible:not(.active)', '.accordion-header'
             ];
-            
+
             for (const selector of expandableSelectors) {
                 const elements = document.querySelectorAll(selector);
                 for (const el of elements) {
@@ -887,7 +886,7 @@ class AutomationRouter(BaseService):
                 }
             }
         }
-        
+
         // Handle tab content
         async function handleTabContent() {
             const tabSelectors = [
@@ -895,7 +894,7 @@ class AutomationRouter(BaseService):
                 '[role="tab"]:not([aria-selected="true"])',
                 '.nav-link:not(.active)'
             ];
-            
+
             for (const selector of tabSelectors) {
                 const tabs = document.querySelectorAll(selector);
                 for (const tab of tabs) {
@@ -906,18 +905,18 @@ class AutomationRouter(BaseService):
                 }
             }
         }
-        
+
         // Execute enhancement sequence
         await handleLazyLoading();
         await expandDynamicContent();
         await handleTabContent();
-        
+
         // Final scroll to ensure all content is loaded
         window.scrollTo(0, 0);
         await new Promise(r => setTimeout(r, 1000));
         window.scrollTo(0, document.body.scrollHeight);
         await new Promise(r => setTimeout(r, 2000));
-        
+
         console.log('Enhanced mode: Content extraction complete');
         """
 

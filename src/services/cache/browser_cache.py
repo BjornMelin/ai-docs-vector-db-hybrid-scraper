@@ -146,16 +146,31 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         # Static content patterns
         static_patterns = [
-            ".pdf", ".txt", ".json", ".xml", ".csv",
-            "/docs/", "/documentation/", "/api/reference/",
-            "raw.githubusercontent.com", "gist.github.com",
+            ".pdf",
+            ".txt",
+            ".json",
+            ".xml",
+            ".csv",
+            "/docs/",
+            "/documentation/",
+            "/api/reference/",
+            "raw.githubusercontent.com",
+            "gist.github.com",
         ]
 
         # Dynamic content patterns
         dynamic_patterns = [
-            "/search", "/query", "/api/", "/graphql",
-            "api.", "twitter.com", "x.com", "linkedin.com",
-            "/feed", "/stream", "/live",
+            "/search",
+            "/query",
+            "/api/",
+            "/graphql",
+            "api.",
+            "twitter.com",
+            "x.com",
+            "linkedin.com",
+            "/feed",
+            "/stream",
+            "/live",
         ]
 
         # Check for static content
@@ -203,7 +218,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
                     # Promote to local cache
                     if self.local_cache:
-                        await self.local_cache.set(key, cached_json, ttl=300)  # 5 min local
+                        await self.local_cache.set(
+                            key, cached_json, ttl=300
+                        )  # 5 min local
 
                     logger.debug(f"Browser cache hit (distributed): {key}")
                     return entry
@@ -240,7 +257,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             results = []
 
             if self.local_cache:
-                result = await self.local_cache.set(key, cached_json, ttl=min(ttl, 3600))
+                result = await self.local_cache.set(
+                    key, cached_json, ttl=min(ttl, 3600)
+                )
                 results.append(result)
 
             if self.distributed_cache:
@@ -298,11 +317,17 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         count = 0
 
         # For now, we can only invalidate if using distributed cache with pattern support
-        if self.distributed_cache and hasattr(self.distributed_cache, "invalidate_pattern"):
+        if self.distributed_cache and hasattr(
+            self.distributed_cache, "invalidate_pattern"
+        ):
             try:
-                count = await self.distributed_cache.invalidate_pattern(f"browser:*{pattern}*")
+                count = await self.distributed_cache.invalidate_pattern(
+                    f"browser:*{pattern}*"
+                )
                 self._cache_stats["evictions"] += count
-                logger.info(f"Invalidated {count} browser cache entries matching {pattern}")
+                logger.info(
+                    f"Invalidated {count} browser cache entries matching {pattern}"
+                )
             except Exception as e:
                 logger.error(f"Error invalidating browser cache pattern: {e}")
 

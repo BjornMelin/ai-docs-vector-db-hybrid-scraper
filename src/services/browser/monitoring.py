@@ -8,6 +8,7 @@ This module provides comprehensive monitoring capabilities including:
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import defaultdict
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -32,6 +34,7 @@ class AlertSeverity(str, Enum):
 
 class AlertType(str, Enum):
     """Types of alerts."""
+
     TIER_FAILURE = "tier_failure"
     PERFORMANCE_DEGRADATION = "performance_degradation"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
@@ -50,7 +53,9 @@ class Alert(BaseModel):
     alert_type: AlertType = Field(description="Type of alert")
     tier: str | None = Field(default=None, description="Affected tier")
     message: str = Field(description="Human-readable alert message")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional alert data")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional alert data"
+    )
     resolved: bool = Field(default=False, description="Whether alert is resolved")
     resolved_at: float | None = Field(default=None, description="Resolution timestamp")
 
@@ -64,7 +69,9 @@ class HealthStatus(BaseModel):
     success_rate: float = Field(description="Success rate (0-1)")
     avg_response_time_ms: float = Field(description="Average response time")
     error_count: int = Field(default=0, description="Recent error count")
-    details: dict[str, Any] = Field(default_factory=dict, description="Additional health details")
+    details: dict[str, Any] = Field(
+        default_factory=dict, description="Additional health details"
+    )
 
 
 class PerformanceMetrics(BaseModel):
@@ -78,28 +85,46 @@ class PerformanceMetrics(BaseModel):
     p95_response_time_ms: float = Field(description="95th percentile response time")
     active_requests: int = Field(description="Currently active requests")
     cache_hit_rate: float = Field(default=0.0, description="Cache hit rate")
-    error_types: dict[str, int] = Field(default_factory=dict, description="Error type counts")
+    error_types: dict[str, int] = Field(
+        default_factory=dict, description="Error type counts"
+    )
 
 
 class MonitoringConfig(BaseModel):
     """Configuration for monitoring system."""
 
     # Alert thresholds
-    error_rate_threshold: float = Field(default=0.1, description="Error rate threshold for alerts")
-    response_time_threshold_ms: float = Field(default=10000, description="Response time threshold")
-    cache_miss_threshold: float = Field(default=0.8, description="Cache miss rate threshold")
+    error_rate_threshold: float = Field(
+        default=0.1, description="Error rate threshold for alerts"
+    )
+    response_time_threshold_ms: float = Field(
+        default=10000, description="Response time threshold"
+    )
+    cache_miss_threshold: float = Field(
+        default=0.8, description="Cache miss rate threshold"
+    )
 
     # Monitoring intervals
-    health_check_interval_seconds: int = Field(default=30, description="Health check frequency")
-    metrics_collection_interval_seconds: int = Field(default=10, description="Metrics collection frequency")
+    health_check_interval_seconds: int = Field(
+        default=30, description="Health check frequency"
+    )
+    metrics_collection_interval_seconds: int = Field(
+        default=10, description="Metrics collection frequency"
+    )
 
     # Alert settings
-    alert_cooldown_seconds: int = Field(default=300, description="Cooldown between similar alerts")
+    alert_cooldown_seconds: int = Field(
+        default=300, description="Cooldown between similar alerts"
+    )
     max_alerts_per_hour: int = Field(default=10, description="Maximum alerts per hour")
 
     # Data retention
-    metrics_retention_hours: int = Field(default=24, description="How long to keep metrics")
-    alert_retention_hours: int = Field(default=168, description="How long to keep alerts (1 week)")
+    metrics_retention_hours: int = Field(
+        default=24, description="How long to keep metrics"
+    )
+    alert_retention_hours: int = Field(
+        default=168, description="How long to keep alerts (1 week)"
+    )
 
 
 class BrowserAutomationMonitor:
@@ -107,7 +132,7 @@ class BrowserAutomationMonitor:
 
     def __init__(self, config: MonitoringConfig = None):
         """Initialize monitoring system.
-        
+
         Args:
             config: Monitoring configuration
         """
@@ -149,10 +174,8 @@ class BrowserAutomationMonitor:
         self.monitoring_active = False
         if self.monitoring_task:
             self.monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.monitoring_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Monitoring stopped")
 
     async def record_request_metrics(
@@ -161,10 +184,10 @@ class BrowserAutomationMonitor:
         success: bool,
         response_time_ms: float,
         error_type: str | None = None,
-        cache_hit: bool = False
+        cache_hit: bool = False,
     ):
         """Record metrics for a single request.
-        
+
         Args:
             tier: Tier name
             success: Whether request succeeded
@@ -179,18 +202,25 @@ class BrowserAutomationMonitor:
 
             # Get recent metrics for this tier
             recent_metrics = [
-                m for m in self.metrics_history
+                m
+                for m in self.metrics_history
                 if m.tier == tier and current_time - m.timestamp <= recent_window
             ]
 
             # Calculate aggregated metrics
             total_requests = len(recent_metrics) + 1  # Include current request
-            successful_requests = sum(1 for m in recent_metrics if m.success_rate > 0.5) + (1 if success else 0)
+            successful_requests = sum(
+                1 for m in recent_metrics if m.success_rate > 0.5
+            ) + (1 if success else 0)
 
-            success_rate = successful_requests / total_requests if total_requests > 0 else 0.0
+            success_rate = (
+                successful_requests / total_requests if total_requests > 0 else 0.0
+            )
 
             # Calculate response time metrics
-            all_response_times = [m.avg_response_time_ms for m in recent_metrics] + [response_time_ms]
+            all_response_times = [m.avg_response_time_ms for m in recent_metrics] + [
+                response_time_ms
+            ]
             avg_response_time = sum(all_response_times) / len(all_response_times)
 
             sorted_times = sorted(all_response_times)
@@ -199,8 +229,12 @@ class BrowserAutomationMonitor:
 
             # Calculate cache hit rate
             cache_requests = [m for m in recent_metrics if m.cache_hit_rate > 0]
-            total_cache_hits = sum(m.cache_hit_rate for m in cache_requests) + (1 if cache_hit else 0)
-            cache_hit_rate = total_cache_hits / total_requests if total_requests > 0 else 0.0
+            total_cache_hits = sum(m.cache_hit_rate for m in cache_requests) + (
+                1 if cache_hit else 0
+            )
+            cache_hit_rate = (
+                total_cache_hits / total_requests if total_requests > 0 else 0.0
+            )
 
             # Error type tracking
             error_types = defaultdict(int)
@@ -219,7 +253,7 @@ class BrowserAutomationMonitor:
                 p95_response_time_ms=p95_response_time,
                 active_requests=0,  # Would need external tracking
                 cache_hit_rate=cache_hit_rate,
-                error_types=dict(error_types)
+                error_types=dict(error_types),
             )
 
             self.metrics_history.append(metrics)
@@ -233,9 +267,16 @@ class BrowserAutomationMonitor:
     async def _update_health_status(self, tier: str, metrics: PerformanceMetrics):
         """Update health status for a tier based on metrics."""
         # Determine health status
-        if metrics.success_rate >= 0.95 and metrics.avg_response_time_ms <= self.config.response_time_threshold_ms:
+        if (
+            metrics.success_rate >= 0.95
+            and metrics.avg_response_time_ms <= self.config.response_time_threshold_ms
+        ):
             status = "healthy"
-        elif metrics.success_rate >= 0.8 and metrics.avg_response_time_ms <= self.config.response_time_threshold_ms * 2:
+        elif (
+            metrics.success_rate >= 0.8
+            and metrics.avg_response_time_ms
+            <= self.config.response_time_threshold_ms * 2
+        ):
             status = "degraded"
         else:
             status = "unhealthy"
@@ -251,8 +292,8 @@ class BrowserAutomationMonitor:
                 "p95_response_time_ms": metrics.p95_response_time_ms,
                 "cache_hit_rate": metrics.cache_hit_rate,
                 "requests_per_minute": metrics.requests_per_minute,
-                "error_types": metrics.error_types
-            }
+                "error_types": metrics.error_types,
+            },
         )
 
         self.health_status[tier] = health
@@ -263,30 +304,45 @@ class BrowserAutomationMonitor:
 
         # High error rate
         if metrics.success_rate < (1 - self.config.error_rate_threshold):
-            alerts_to_raise.append({
-                "alert_type": AlertType.HIGH_ERROR_RATE,
-                "severity": AlertSeverity.HIGH,
-                "message": f"High error rate in {tier}: {(1-metrics.success_rate)*100:.1f}%",
-                "metadata": {"success_rate": metrics.success_rate, "threshold": self.config.error_rate_threshold}
-            })
+            alerts_to_raise.append(
+                {
+                    "alert_type": AlertType.HIGH_ERROR_RATE,
+                    "severity": AlertSeverity.HIGH,
+                    "message": f"High error rate in {tier}: {(1 - metrics.success_rate) * 100:.1f}%",
+                    "metadata": {
+                        "success_rate": metrics.success_rate,
+                        "threshold": self.config.error_rate_threshold,
+                    },
+                }
+            )
 
         # Slow response time
         if metrics.avg_response_time_ms > self.config.response_time_threshold_ms:
-            alerts_to_raise.append({
-                "alert_type": AlertType.SLOW_RESPONSE_TIME,
-                "severity": AlertSeverity.MEDIUM,
-                "message": f"Slow response time in {tier}: {metrics.avg_response_time_ms:.0f}ms",
-                "metadata": {"response_time_ms": metrics.avg_response_time_ms, "threshold": self.config.response_time_threshold_ms}
-            })
+            alerts_to_raise.append(
+                {
+                    "alert_type": AlertType.SLOW_RESPONSE_TIME,
+                    "severity": AlertSeverity.MEDIUM,
+                    "message": f"Slow response time in {tier}: {metrics.avg_response_time_ms:.0f}ms",
+                    "metadata": {
+                        "response_time_ms": metrics.avg_response_time_ms,
+                        "threshold": self.config.response_time_threshold_ms,
+                    },
+                }
+            )
 
         # Low cache hit rate
         if metrics.cache_hit_rate < (1 - self.config.cache_miss_threshold):
-            alerts_to_raise.append({
-                "alert_type": AlertType.CACHE_MISS_RATE,
-                "severity": AlertSeverity.LOW,
-                "message": f"Low cache hit rate in {tier}: {metrics.cache_hit_rate*100:.1f}%",
-                "metadata": {"cache_hit_rate": metrics.cache_hit_rate, "threshold": self.config.cache_miss_threshold}
-            })
+            alerts_to_raise.append(
+                {
+                    "alert_type": AlertType.CACHE_MISS_RATE,
+                    "severity": AlertSeverity.LOW,
+                    "message": f"Low cache hit rate in {tier}: {metrics.cache_hit_rate * 100:.1f}%",
+                    "metadata": {
+                        "cache_hit_rate": metrics.cache_hit_rate,
+                        "threshold": self.config.cache_miss_threshold,
+                    },
+                }
+            )
 
         # Raise alerts
         for alert_data in alerts_to_raise:
@@ -298,16 +354,18 @@ class BrowserAutomationMonitor:
         severity: AlertSeverity,
         message: str,
         tier: str | None = None,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ):
         """Raise an alert if conditions are met."""
         # Check cooldown
         cooldown_key = f"{tier}:{alert_type}"
         current_time = time.time()
 
-        if cooldown_key in self.alert_cooldowns:
-            if current_time - self.alert_cooldowns[cooldown_key] < self.config.alert_cooldown_seconds:
-                return  # Still in cooldown
+        if cooldown_key in self.alert_cooldowns and (
+            current_time - self.alert_cooldowns[cooldown_key]
+            < self.config.alert_cooldown_seconds
+        ):
+            return  # Still in cooldown
 
         # Check rate limiting
         recent_alerts = [t for t in self.alerts_per_hour if current_time - t <= 3600]
@@ -322,7 +380,7 @@ class BrowserAutomationMonitor:
             alert_type=alert_type,
             tier=tier,
             message=message,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         async with self.alerts_lock:
@@ -367,7 +425,7 @@ class BrowserAutomationMonitor:
             cutoff_time = current_time - (self.config.metrics_retention_hours * 3600)
             self.metrics_history = deque(
                 [m for m in self.metrics_history if m.timestamp > cutoff_time],
-                maxlen=self.metrics_history.maxlen
+                maxlen=self.metrics_history.maxlen,
             )
 
         async with self.alerts_lock:
@@ -375,34 +433,42 @@ class BrowserAutomationMonitor:
             cutoff_time = current_time - (self.config.alert_retention_hours * 3600)
             self.alerts = deque(
                 [a for a in self.alerts if a.timestamp > cutoff_time],
-                maxlen=self.alerts.maxlen
+                maxlen=self.alerts.maxlen,
             )
 
     async def _perform_health_checks(self):
         """Perform periodic health checks."""
         # Update overall system health
         if self.health_status:
-            unhealthy_tiers = [name for name, health in self.health_status.items() if health.status == "unhealthy"]
-            degraded_tiers = [name for name, health in self.health_status.items() if health.status == "degraded"]
+            unhealthy_tiers = [
+                name
+                for name, health in self.health_status.items()
+                if health.status == "unhealthy"
+            ]
+            degraded_tiers = [
+                name
+                for name, health in self.health_status.items()
+                if health.status == "degraded"
+            ]
 
             if unhealthy_tiers:
                 await self._raise_alert(
                     alert_type=AlertType.TIER_FAILURE,
                     severity=AlertSeverity.CRITICAL,
                     message=f"Unhealthy tiers detected: {', '.join(unhealthy_tiers)}",
-                    metadata={"unhealthy_tiers": unhealthy_tiers}
+                    metadata={"unhealthy_tiers": unhealthy_tiers},
                 )
             elif degraded_tiers:
                 await self._raise_alert(
                     alert_type=AlertType.PERFORMANCE_DEGRADATION,
                     severity=AlertSeverity.MEDIUM,
                     message=f"Degraded performance in tiers: {', '.join(degraded_tiers)}",
-                    metadata={"degraded_tiers": degraded_tiers}
+                    metadata={"degraded_tiers": degraded_tiers},
                 )
 
     def add_alert_handler(self, handler: Callable[[Alert], None]):
         """Add an alert handler function.
-        
+
         Args:
             handler: Function that takes an Alert object
         """
@@ -411,14 +477,20 @@ class BrowserAutomationMonitor:
 
     def get_system_health(self) -> dict[str, Any]:
         """Get overall system health status.
-        
+
         Returns:
             Dictionary with system health information
         """
         total_tiers = len(self.health_status)
-        healthy_tiers = sum(1 for h in self.health_status.values() if h.status == "healthy")
-        degraded_tiers = sum(1 for h in self.health_status.values() if h.status == "degraded")
-        unhealthy_tiers = sum(1 for h in self.health_status.values() if h.status == "unhealthy")
+        healthy_tiers = sum(
+            1 for h in self.health_status.values() if h.status == "healthy"
+        )
+        degraded_tiers = sum(
+            1 for h in self.health_status.values() if h.status == "degraded"
+        )
+        unhealthy_tiers = sum(
+            1 for h in self.health_status.values() if h.status == "unhealthy"
+        )
 
         overall_status = "healthy"
         if unhealthy_tiers > 0:
@@ -434,20 +506,24 @@ class BrowserAutomationMonitor:
                 "total": total_tiers,
                 "healthy": healthy_tiers,
                 "degraded": degraded_tiers,
-                "unhealthy": unhealthy_tiers
+                "unhealthy": unhealthy_tiers,
             },
             "recent_alerts": len(recent_alerts),
             "monitoring_active": self.monitoring_active,
-            "tier_details": {name: health.dict() for name, health in self.health_status.items()}
+            "tier_details": {
+                name: health.dict() for name, health in self.health_status.items()
+            },
         }
 
-    def get_recent_metrics(self, tier: str | None = None, hours: int = 1) -> list[PerformanceMetrics]:
+    def get_recent_metrics(
+        self, tier: str | None = None, hours: int = 1
+    ) -> list[PerformanceMetrics]:
         """Get recent performance metrics.
-        
+
         Args:
             tier: Specific tier to filter by (None for all)
             hours: Number of hours of history to return
-            
+
         Returns:
             List of performance metrics
         """
@@ -461,10 +537,10 @@ class BrowserAutomationMonitor:
 
     def get_active_alerts(self, severity: AlertSeverity | None = None) -> list[Alert]:
         """Get active (unresolved) alerts.
-        
+
         Args:
             severity: Filter by severity level
-            
+
         Returns:
             List of active alerts
         """
@@ -476,7 +552,7 @@ class BrowserAutomationMonitor:
 
     async def resolve_alert(self, alert_id: str):
         """Mark an alert as resolved.
-        
+
         Args:
             alert_id: ID of alert to resolve
         """
