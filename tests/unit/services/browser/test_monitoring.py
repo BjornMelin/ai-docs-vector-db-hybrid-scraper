@@ -59,10 +59,7 @@ class TestBrowserAutomationMonitor:
         """Test recording metrics for successful requests."""
         # Record successful request
         await monitor.record_request_metrics(
-            tier="lightweight",
-            success=True,
-            response_time_ms=100.0,
-            cache_hit=True
+            tier="lightweight", success=True, response_time_ms=100.0, cache_hit=True
         )
 
         # Check metrics were recorded
@@ -88,7 +85,7 @@ class TestBrowserAutomationMonitor:
             success=False,
             response_time_ms=8000.0,
             error_type="timeout",
-            cache_hit=False
+            cache_hit=False,
         )
 
         # Check metrics were recorded
@@ -108,12 +105,12 @@ class TestBrowserAutomationMonitor:
     async def test_alert_generation_high_error_rate(self, monitor):
         """Test alert generation for high error rate."""
         # Record multiple failed requests to trigger alert
-        for i in range(5):
+        for _ in range(5):
             await monitor.record_request_metrics(
                 tier="crawl4ai",
                 success=False,
                 response_time_ms=1000.0,
-                error_type="service_error"
+                error_type="service_error",
             )
 
         # Check alert was generated
@@ -136,7 +133,9 @@ class TestBrowserAutomationMonitor:
 
         # Check alert was generated
         alerts = monitor.get_active_alerts()
-        slow_alerts = [a for a in alerts if a.alert_type == AlertType.SLOW_RESPONSE_TIME]
+        slow_alerts = [
+            a for a in alerts if a.alert_type == AlertType.SLOW_RESPONSE_TIME
+        ]
 
         assert len(slow_alerts) > 0
         assert slow_alerts[0].tier == "playwright"
@@ -145,23 +144,23 @@ class TestBrowserAutomationMonitor:
     async def test_alert_cooldown(self, monitor):
         """Test alert cooldown prevents spam."""
         # Record failed requests
-        for i in range(3):
+        for _ in range(3):
             await monitor.record_request_metrics(
                 tier="firecrawl",
                 success=False,
                 response_time_ms=1000.0,
-                error_type="api_error"
+                error_type="api_error",
             )
 
         initial_alert_count = len(monitor.get_active_alerts())
 
         # Record more failures immediately (should be in cooldown)
-        for i in range(3):
+        for _ in range(3):
             await monitor.record_request_metrics(
                 tier="firecrawl",
                 success=False,
                 response_time_ms=1000.0,
-                error_type="api_error"
+                error_type="api_error",
             )
 
         # Should not have generated more alerts due to cooldown
@@ -173,13 +172,13 @@ class TestBrowserAutomationMonitor:
         # Generate many different alerts quickly
         tiers = ["lightweight", "crawl4ai", "browser_use", "playwright", "firecrawl"]
 
-        alert_count = 0
+        _alert_count = 0
         for i, tier in enumerate(tiers * 3):  # 15 potential alerts
             await monitor.record_request_metrics(
                 tier=tier,
                 success=False,
                 response_time_ms=10000.0,  # Slow + error
-                error_type=f"error_{i}"
+                error_type=f"error_{i}",
             )
             # Small delay to avoid all being same timestamp
             await asyncio.sleep(0.01)
@@ -193,17 +192,13 @@ class TestBrowserAutomationMonitor:
         # Record mostly successful requests first to establish baseline
         for _ in range(8):
             await monitor.record_request_metrics(
-                tier="test_tier",
-                success=True,
-                response_time_ms=500.0
+                tier="test_tier", success=True, response_time_ms=500.0
             )
 
         # Then record some failures
         for _ in range(2):
             await monitor.record_request_metrics(
-                tier="test_tier",
-                success=False,
-                response_time_ms=3000.0
+                tier="test_tier", success=False, response_time_ms=3000.0
             )
 
         # Check health status exists
@@ -217,8 +212,8 @@ class TestBrowserAutomationMonitor:
     async def test_get_system_health(self, monitor):
         """Test getting overall system health."""
         # Record metrics for multiple tiers
-        await monitor.record_request_metrics("tier1", True, 500.0)   # Healthy
-        await monitor.record_request_metrics("tier2", False, 8000.0) # Unhealthy
+        await monitor.record_request_metrics("tier1", True, 500.0)  # Healthy
+        await monitor.record_request_metrics("tier2", False, 8000.0)  # Unhealthy
         await monitor.record_request_metrics("tier3", True, 3000.0)  # Healthy
 
         system_health = monitor.get_system_health()
@@ -250,8 +245,12 @@ class TestBrowserAutomationMonitor:
     async def test_get_active_alerts(self, monitor):
         """Test retrieving active alerts."""
         # Generate alerts of different severities
-        await monitor.record_request_metrics("tier1", False, 15000.0)  # High + Medium severity
-        await monitor.record_request_metrics("tier2", True, 1000.0, cache_hit=False)  # Low severity
+        await monitor.record_request_metrics(
+            "tier1", False, 15000.0
+        )  # High + Medium severity
+        await monitor.record_request_metrics(
+            "tier2", True, 1000.0, cache_hit=False
+        )  # Low severity
 
         # Get all active alerts
         all_alerts = monitor.get_active_alerts()
@@ -312,7 +311,7 @@ class TestBrowserAutomationMonitor:
             success_rate=1.0,
             avg_response_time_ms=500.0,
             p95_response_time_ms=600.0,
-            active_requests=0
+            active_requests=0,
         )
         monitor.metrics_history.append(old_metric)
 
@@ -328,12 +327,12 @@ class TestBrowserAutomationMonitor:
     async def test_cache_miss_rate_alert(self, monitor):
         """Test cache miss rate alert generation."""
         # Record requests with low cache hit rate
-        for i in range(5):
+        for _ in range(5):
             await monitor.record_request_metrics(
                 tier="cached_tier",
                 success=True,
                 response_time_ms=1000.0,
-                cache_hit=False  # No cache hits
+                cache_hit=False,  # No cache hits
             )
 
         # Should generate cache miss rate alert
@@ -350,16 +349,18 @@ class TestBrowserAutomationMonitor:
 
         for rt in response_times:
             await monitor.record_request_metrics(
-                tier="perf_tier",
-                success=True,
-                response_time_ms=float(rt)
+                tier="perf_tier", success=True, response_time_ms=float(rt)
             )
 
         # Get the latest metrics
-        latest_metrics = [m for m in monitor.metrics_history if m.tier == "perf_tier"][-1]
+        latest_metrics = [m for m in monitor.metrics_history if m.tier == "perf_tier"][
+            -1
+        ]
 
         # Check basic properties
         assert latest_metrics.tier == "perf_tier"
         assert latest_metrics.success_rate > 0.0  # Should have some success
         assert latest_metrics.avg_response_time_ms > 0.0  # Should have response time
-        assert latest_metrics.p95_response_time_ms >= latest_metrics.avg_response_time_ms  # P95 >= avg
+        assert (
+            latest_metrics.p95_response_time_ms >= latest_metrics.avg_response_time_ms
+        )  # P95 >= avg

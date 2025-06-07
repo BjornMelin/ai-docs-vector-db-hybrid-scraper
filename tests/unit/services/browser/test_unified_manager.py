@@ -131,7 +131,9 @@ class TestUnifiedScrapingAPI:
             mock_cache_manager = Mock()
             mock_cache_manager.local_cache = None
             mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache_manager)
+            mock_client_manager.get_cache_manager = AsyncMock(
+                return_value=mock_cache_manager
+            )
 
             await unified_manager.initialize()
 
@@ -221,9 +223,7 @@ class TestUnifiedScrapingAPI:
             }
 
             # Execute with forced tier
-            response = await unified_manager.scrape(
-                url="https://example.com", tier="browser_use"
-            )
+            await unified_manager.scrape(url="https://example.com", tier="browser_use")
 
             # Verify force_tool was set
             mock_automation_router.scrape.assert_awaited_once()
@@ -402,9 +402,24 @@ class TestMetricsTracking:
 
             # Setup varying responses
             mock_automation_router.scrape.side_effect = [
-                {"success": True, "content": "Test 1", "metadata": {}, "provider": "crawl4ai"},
-                {"success": True, "content": "Test 2", "metadata": {}, "provider": "lightweight"},
-                {"success": False, "content": "", "metadata": {}, "provider": "browser_use"},
+                {
+                    "success": True,
+                    "content": "Test 1",
+                    "metadata": {},
+                    "provider": "crawl4ai",
+                },
+                {
+                    "success": True,
+                    "content": "Test 2",
+                    "metadata": {},
+                    "provider": "lightweight",
+                },
+                {
+                    "success": False,
+                    "content": "",
+                    "metadata": {},
+                    "provider": "browser_use",
+                },
             ]
 
             # Execute multiple scrapes
@@ -633,7 +648,7 @@ class TestCustomActions:
             )
 
             # Execute
-            response = await unified_manager.scrape(request)
+            await unified_manager.scrape(request)
 
             # Verify custom actions were passed
             mock_automation_router.scrape.assert_awaited_once()
@@ -645,7 +660,9 @@ class TestCustomActions:
 class TestUnifiedBrowserManagerMonitoring:
     """Test monitoring system integration with UnifiedBrowserManager."""
 
-    async def test_monitoring_integration(self, unified_manager, mock_client_manager, mock_automation_router):
+    async def test_monitoring_integration(
+        self, unified_manager, mock_client_manager, mock_automation_router
+    ):
         """Test that monitoring system integrates correctly."""
         # Enable monitoring
         unified_manager._monitoring_enabled = True
@@ -664,7 +681,9 @@ class TestUnifiedBrowserManagerMonitoring:
             mock_cache_manager = Mock()
             mock_cache_manager.local_cache = None
             mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache_manager)
+            mock_client_manager.get_cache_manager = AsyncMock(
+                return_value=mock_cache_manager
+            )
 
             await unified_manager.initialize()
 
@@ -677,7 +696,7 @@ class TestUnifiedBrowserManagerMonitoring:
             }
 
             # Perform scraping
-            response = await unified_manager.scrape(url="https://example.com")
+            await unified_manager.scrape(url="https://example.com")
 
             # Verify monitoring was called
             mock_monitor.record_request_metrics.assert_called_once()
@@ -688,7 +707,9 @@ class TestUnifiedBrowserManagerMonitoring:
             assert call_args[1]["response_time_ms"] > 0
             assert call_args[1]["cache_hit"] is False
 
-    async def test_monitoring_disabled(self, unified_manager, mock_client_manager, mock_automation_router):
+    async def test_monitoring_disabled(
+        self, unified_manager, mock_client_manager, mock_automation_router
+    ):
         """Test behavior when monitoring is disabled."""
         # Disable monitoring
         unified_manager._monitoring_enabled = False
@@ -707,7 +728,9 @@ class TestUnifiedBrowserManagerMonitoring:
             mock_cache_manager = Mock()
             mock_cache_manager.local_cache = None
             mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache_manager)
+            mock_client_manager.get_cache_manager = AsyncMock(
+                return_value=mock_cache_manager
+            )
 
             await unified_manager.initialize()
 
@@ -733,11 +756,13 @@ class TestUnifiedBrowserManagerMonitoring:
 
         # Mock monitoring system health
         mock_monitor = Mock()
-        mock_monitor.get_system_health = Mock(return_value={
-            "overall_status": "healthy",
-            "tier_health": {"total": 2, "healthy": 2},
-            "monitoring_active": True
-        })
+        mock_monitor.get_system_health = Mock(
+            return_value={
+                "overall_status": "healthy",
+                "tier_health": {"total": 2, "healthy": 2},
+                "monitoring_active": True,
+            }
+        )
         unified_manager._monitor = mock_monitor
         unified_manager._initialized = True
 
@@ -750,7 +775,9 @@ class TestUnifiedBrowserManagerMonitoring:
         assert status["monitoring_health"]["overall_status"] == "healthy"
         mock_monitor.get_system_health.assert_called_once()
 
-    async def test_monitoring_error_handling(self, unified_manager, mock_client_manager, mock_automation_router):
+    async def test_monitoring_error_handling(
+        self, unified_manager, mock_client_manager, mock_automation_router
+    ):
         """Test graceful handling of monitoring errors."""
         # Enable monitoring
         unified_manager._monitoring_enabled = True
@@ -770,7 +797,9 @@ class TestUnifiedBrowserManagerMonitoring:
             mock_cache_manager = Mock()
             mock_cache_manager.local_cache = None
             mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache_manager)
+            mock_client_manager.get_cache_manager = AsyncMock(
+                return_value=mock_cache_manager
+            )
 
             await unified_manager.initialize()
 
@@ -805,7 +834,7 @@ class TestUnifiedBrowserManagerMonitoring:
             url="https://example.com",
             content="Cached content",
             metadata={"title": "Test"},
-            tier_used="lightweight"
+            tier_used="lightweight",
         )
 
         mock_cache.get.return_value = cache_entry
@@ -816,7 +845,7 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._initialized = True
 
         # Perform scraping that hits cache
-        response = await unified_manager.scrape(url="https://example.com")
+        await unified_manager.scrape(url="https://example.com")
 
         # Verify cache hit was tracked in monitoring
         mock_monitor.record_request_metrics.assert_called_once()

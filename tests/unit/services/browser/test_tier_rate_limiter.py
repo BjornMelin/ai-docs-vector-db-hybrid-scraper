@@ -68,7 +68,7 @@ class TestTierRateLimiter:
         tier = "browser_use"  # 10 requests per minute
 
         # Make 10 requests quickly
-        for i in range(10):
+        for _ in range(10):
             allowed = await rate_limiter.acquire(tier)
             assert allowed is True
             await rate_limiter.release(tier)
@@ -108,7 +108,7 @@ class TestTierRateLimiter:
         tier = "browser_use"  # 10 requests per minute
 
         # Make 10 requests
-        for i in range(10):
+        for _ in range(10):
             allowed = await rate_limiter.acquire(tier)
             assert allowed is True
             await rate_limiter.release(tier)
@@ -135,7 +135,7 @@ class TestTierRateLimiter:
         tier = "firecrawl"
 
         # Should allow many requests
-        for i in range(100):
+        for _ in range(100):
             allowed = await rate_limiter.acquire(tier)
             assert allowed is True
             await rate_limiter.release(tier)
@@ -168,7 +168,7 @@ class TestTierRateLimiter:
 
         # Fill up the rate limit synchronously for testing
         current_time = time.time()
-        for i in range(10):
+        for _ in range(10):
             rate_limiter.request_history[tier].append(current_time)
 
         # Should have to wait
@@ -182,7 +182,9 @@ class TestTierRateLimiter:
 
         # Add some history
         current_time = time.time()
-        rate_limiter.request_history[tier].extend([current_time - 30, current_time - 20, current_time - 10])
+        rate_limiter.request_history[tier].extend(
+            [current_time - 30, current_time - 20, current_time - 10]
+        )
         rate_limiter.concurrent_requests[tier] = 2
         rate_limiter.rate_limit_hits[tier] = 5
 
@@ -221,7 +223,7 @@ class TestTierRateLimiter:
 
         # Fill up rate limit
         current_time = time.time()
-        for i in range(10):
+        for _ in range(10):
             rate_limiter.request_history[tier].append(current_time)
 
         # Should wait (but we'll use a short timeout for testing)
@@ -287,7 +289,7 @@ class TestTierRateLimiter:
         tier = "browser_use"
 
         # Fill up rate limit
-        for i in range(10):
+        for _ in range(10):
             await rate_limiter.acquire(tier)
             await rate_limiter.release(tier)
 
@@ -298,7 +300,7 @@ class TestTierRateLimiter:
     async def test_concurrent_tier_isolation(self, rate_limiter):
         """Test that rate limits are isolated between tiers."""
         # Fill up browser_use tier
-        for i in range(10):
+        for _ in range(10):
             allowed = await rate_limiter.acquire("browser_use")
             assert allowed is True
             await rate_limiter.release("browser_use")

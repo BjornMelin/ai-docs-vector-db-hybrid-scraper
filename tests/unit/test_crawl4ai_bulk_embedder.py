@@ -436,21 +436,23 @@ https://example.com/page2,Page 2
                 return {"url": url, "success": False, "chunks": 0, "error": "Failed"}
             return {"url": url, "success": True, "chunks": 2, "error": None}
 
-        with patch.object(embedder, "process_url", side_effect=mock_process):
-            with patch.object(embedder, "_save_state"):
-                results = await embedder.process_urls_batch(
-                    urls=sample_urls + ["https://example.com/error"],
-                    max_concurrent=2,
-                )
+        with (
+            patch.object(embedder, "process_url", side_effect=mock_process),
+            patch.object(embedder, "_save_state"),
+        ):
+            results = await embedder.process_urls_batch(
+                urls=[*sample_urls, "https://example.com/error"],
+                max_concurrent=2,
+            )
 
-                assert results["total"] == 4
-                assert results["successful"] == 3
-                assert results["failed"] == 1
+            assert results["total"] == 4
+            assert results["successful"] == 3
+            assert results["failed"] == 1
 
-                # Check state updates
-                assert len(embedder.state.completed_urls) == 3
-                assert len(embedder.state.failed_urls) == 1
-                assert embedder.state.total_chunks_processed == 6
+            # Check state updates
+            assert len(embedder.state.completed_urls) == 3
+            assert len(embedder.state.failed_urls) == 1
+            assert embedder.state.total_chunks_processed == 6
 
     @pytest.mark.asyncio
     async def test_run_with_resume(self, mock_config, mock_client_manager, sample_urls):
@@ -463,24 +465,26 @@ https://example.com/page2,Page 2
         # Set some completed URLs
         embedder.state.completed_urls = [sample_urls[0]]
 
-        with patch.object(embedder, "initialize_services", new_callable=AsyncMock):
-            with patch.object(
+        with (
+            patch.object(embedder, "initialize_services", new_callable=AsyncMock),
+            patch.object(
                 embedder, "process_urls_batch", new_callable=AsyncMock
-            ) as mock_process:
-                mock_process.return_value = {
-                    "total": 2,
-                    "successful": 2,
-                    "failed": 0,
-                    "results": [],
-                }
+            ) as mock_process,
+        ):
+            mock_process.return_value = {
+                "total": 2,
+                "successful": 2,
+                "failed": 0,
+                "results": [],
+            }
 
-                await embedder.run(urls=sample_urls, max_concurrent=5, resume=True)
+            await embedder.run(urls=sample_urls, max_concurrent=5, resume=True)
 
-                # Should only process uncompleted URLs
-                call_args = mock_process.call_args[1]
-                processed_urls = call_args["urls"]
-                assert len(processed_urls) == 2
-                assert sample_urls[0] not in processed_urls
+            # Should only process uncompleted URLs
+            call_args = mock_process.call_args[1]
+            processed_urls = call_args["urls"]
+            assert len(processed_urls) == 2
+            assert sample_urls[0] not in processed_urls
 
     @pytest.mark.asyncio
     async def test_run_without_resume(

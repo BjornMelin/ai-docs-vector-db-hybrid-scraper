@@ -153,7 +153,9 @@ class TestBrowserCache:
     def test_generate_cache_key_with_tier(self, browser_cache):
         """Test cache key generation with tier."""
         key1 = browser_cache._generate_cache_key("https://example.com/test", "crawl4ai")
-        key2 = browser_cache._generate_cache_key("https://example.com/test", "browser_use")
+        key2 = browser_cache._generate_cache_key(
+            "https://example.com/test", "browser_use"
+        )
 
         assert key1 != key2
         assert "example.com" in key1
@@ -203,7 +205,9 @@ class TestBrowserCache:
         ttl = browser_cache._determine_ttl(url, 1000)
         assert ttl == browser_cache.default_ttl
 
-    async def test_get_from_local_cache(self, browser_cache, mock_local_cache, sample_cache_entry):
+    async def test_get_from_local_cache(
+        self, browser_cache, mock_local_cache, sample_cache_entry
+    ):
         """Test getting entry from local cache."""
         # Store in local cache
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
@@ -219,7 +223,11 @@ class TestBrowserCache:
         assert mock_local_cache.get_count == 1
 
     async def test_get_from_distributed_cache(
-        self, browser_cache, mock_local_cache, mock_distributed_cache, sample_cache_entry
+        self,
+        browser_cache,
+        mock_local_cache,
+        mock_distributed_cache,
+        sample_cache_entry,
     ):
         """Test getting entry from distributed cache with promotion to local."""
         # Store only in distributed cache
@@ -245,7 +253,11 @@ class TestBrowserCache:
         assert browser_cache._cache_stats["misses"] == 1
 
     async def test_set_to_both_caches(
-        self, browser_cache, mock_local_cache, mock_distributed_cache, sample_cache_entry
+        self,
+        browser_cache,
+        mock_local_cache,
+        mock_distributed_cache,
+        sample_cache_entry,
     ):
         """Test setting entry to both caches."""
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
@@ -264,7 +276,11 @@ class TestBrowserCache:
         assert success is True
 
     async def test_delete_from_both_caches(
-        self, browser_cache, mock_local_cache, mock_distributed_cache, sample_cache_entry
+        self,
+        browser_cache,
+        mock_local_cache,
+        mock_distributed_cache,
+        sample_cache_entry,
     ):
         """Test deleting from both caches."""
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
@@ -289,7 +305,9 @@ class TestBrowserCache:
 
         assert count == 5
         assert browser_cache._cache_stats["evictions"] == 5
-        mock_distributed_cache.invalidate_pattern.assert_called_once_with("browser:*example.com*")
+        mock_distributed_cache.invalidate_pattern.assert_called_once_with(
+            "browser:*example.com*"
+        )
 
     def test_get_stats(self, browser_cache):
         """Test cache statistics."""
@@ -317,7 +335,9 @@ class TestBrowserCache:
         assert stats["hit_rate"] == 0.0
 
     @patch("src.services.cache.browser_cache.logger")
-    async def test_get_with_error_handling(self, mock_logger, browser_cache, mock_local_cache):
+    async def test_get_with_error_handling(
+        self, mock_logger, browser_cache, mock_local_cache
+    ):
         """Test error handling in get operation."""
         # Make local cache raise an exception
         mock_local_cache.get = AsyncMock(side_effect=Exception("Test error"))
@@ -329,7 +349,9 @@ class TestBrowserCache:
         mock_logger.warning.assert_called()
 
     @patch("src.services.cache.browser_cache.logger")
-    async def test_set_with_error_handling(self, mock_logger, browser_cache, mock_local_cache, sample_cache_entry):
+    async def test_set_with_error_handling(
+        self, mock_logger, browser_cache, mock_local_cache, sample_cache_entry
+    ):
         """Test error handling in set operation."""
         # Make local cache raise an exception
         mock_local_cache.set = AsyncMock(side_effect=Exception("Test error"))
@@ -381,7 +403,9 @@ class TestBrowserCache:
         fetch_func.assert_called_once()
 
         # Should be cached now
-        key = browser_cache._generate_cache_key("https://example.com/new", "browser_use")
+        key = browser_cache._generate_cache_key(
+            "https://example.com/new", "browser_use"
+        )
         cached = await browser_cache.get(key)
         assert cached is not None
         assert cached.content == "Fresh content"
@@ -405,9 +429,7 @@ class TestBrowserCacheIntegration:
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
 
         # Concurrent sets
-        tasks = [
-            browser_cache.set(key, sample_cache_entry) for _ in range(5)
-        ]
+        tasks = [browser_cache.set(key, sample_cache_entry) for _ in range(5)]
         results = await asyncio.gather(*tasks)
         assert all(results)
 

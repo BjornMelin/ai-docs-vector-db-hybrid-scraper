@@ -213,7 +213,9 @@ class TestEnhancedTierSelection:
     async def test_url_pattern_selection(self, enhanced_router):
         """Test URL pattern matching for tier selection."""
         # Configure test patterns
-        enhanced_router.routing_config.tier_configs["lightweight"].preferred_url_patterns = [
+        enhanced_router.routing_config.tier_configs[
+            "lightweight"
+        ].preferred_url_patterns = [
             URLPattern(pattern=r"\.json$", priority=100, reason="JSON files")
         ]
         enhanced_router._adapters = {"lightweight": Mock()}
@@ -224,9 +226,13 @@ class TestEnhancedTierSelection:
     async def test_interaction_tier_selection(self, enhanced_router):
         """Test tier selection for interaction requirements."""
         # Configure tiers with interaction support
-        enhanced_router.routing_config.tier_configs["browser_use"].supports_interaction = True
+        enhanced_router.routing_config.tier_configs[
+            "browser_use"
+        ].supports_interaction = True
         enhanced_router.routing_config.tier_configs["browser_use"].tier_level = 3
-        enhanced_router.routing_config.tier_configs["playwright"].supports_interaction = True
+        enhanced_router.routing_config.tier_configs[
+            "playwright"
+        ].supports_interaction = True
         enhanced_router.routing_config.tier_configs["playwright"].tier_level = 4
         enhanced_router._adapters = {"browser_use": Mock(), "playwright": Mock()}
 
@@ -410,22 +416,29 @@ class TestCircuitBreakerIntegration:
         enhanced_router._adapters = {"crawl4ai": Mock(), "browser_use": Mock()}
 
         # Set fallback configuration
-        enhanced_router.routing_config.tier_configs["crawl4ai"].fallback_tiers = ["browser_use"]
+        enhanced_router.routing_config.tier_configs["crawl4ai"].fallback_tiers = [
+            "browser_use"
+        ]
 
         # Create mock for execution
-        with patch.object(
-            enhanced_router, "_enhanced_select_tier", return_value="crawl4ai"
-        ) as mock_select:
-            with patch.object(
-                enhanced_router, "_execute_tier_scraping",
-                return_value={"success": True, "content": "test", "metadata": {}}
-            ) as mock_execute:
-                result = await enhanced_router.scrape("https://example.com")
+        with (
+            patch.object(
+                enhanced_router, "_enhanced_select_tier", return_value="crawl4ai"
+            ),
+            patch.object(
+                enhanced_router,
+                "_execute_tier_scraping",
+                return_value={"success": True, "content": "test", "metadata": {}},
+            ) as mock_execute,
+        ):
+            result = await enhanced_router.scrape("https://example.com")
 
-                # Should have used fallback tier due to circuit breaker
-                mock_execute.assert_called_with("browser_use", "https://example.com", None, 30000)
-                assert result["tier_used"] == "browser_use"
-                assert result["provider"] == "browser_use"
+            # Should have used fallback tier due to circuit breaker
+            mock_execute.assert_called_with(
+                "browser_use", "https://example.com", None, 30000
+            )
+            assert result["tier_used"] == "browser_use"
+            assert result["provider"] == "browser_use"
 
 
 class TestEnhancedMetrics:

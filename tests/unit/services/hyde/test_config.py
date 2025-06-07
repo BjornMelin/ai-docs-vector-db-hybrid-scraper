@@ -724,3 +724,65 @@ class TestHyDEConfigIntegration:
         assert restored_configs["hyde"].num_generations == 4
         assert restored_configs["prompt"].technical_keywords == ["test"]
         assert restored_configs["metrics"].ab_testing_enabled is True
+
+    def test_from_unified_config(self):
+        """Test creating HyDEConfig from unified configuration."""
+        from unittest.mock import Mock
+
+        # Mock unified HyDE config
+        unified_config = Mock()
+        unified_config.enable_hyde = False
+        unified_config.enable_fallback = False
+        unified_config.enable_reranking = False
+        unified_config.enable_caching = False
+        unified_config.num_generations = 3
+        unified_config.generation_temperature = 0.8
+        unified_config.max_generation_tokens = 150
+        unified_config.generation_model = "gpt-4"
+        unified_config.generation_timeout_seconds = 15
+        unified_config.hyde_prefetch_limit = 40
+        unified_config.query_prefetch_limit = 25
+        unified_config.hyde_weight_in_fusion = 0.7
+        unified_config.fusion_algorithm = "dbsf"
+        unified_config.cache_ttl_seconds = 7200
+        unified_config.cache_hypothetical_docs = False
+        unified_config.cache_prefix = "test_hyde"
+        unified_config.parallel_generation = False
+        unified_config.max_concurrent_generations = 3
+        unified_config.use_domain_specific_prompts = False
+        unified_config.prompt_variation = False
+        unified_config.min_generation_length = 30
+        unified_config.filter_duplicates = False
+        unified_config.diversity_threshold = 0.5
+        unified_config.log_generations = True
+        unified_config.track_metrics = False
+
+        # Create HyDEConfig from unified config
+        hyde_config = HyDEConfig.from_unified_config(unified_config)
+
+        # Verify all fields are correctly mapped
+        assert hyde_config.enable_hyde is False
+        assert hyde_config.enable_fallback is False
+        assert hyde_config.enable_reranking is False
+        assert hyde_config.enable_caching is False
+        assert hyde_config.num_generations == 3
+        assert hyde_config.generation_temperature == 0.8
+        assert hyde_config.max_generation_tokens == 150
+        assert hyde_config.generation_model == "gpt-4"
+        assert hyde_config.generation_timeout_seconds == 15
+        assert hyde_config.hyde_prefetch_limit == 40
+        assert hyde_config.query_prefetch_limit == 25
+        assert hyde_config.hyde_weight_in_fusion == 0.7
+        assert hyde_config.fusion_algorithm == "dbsf"
+        assert hyde_config.cache_ttl_seconds == 7200
+        assert hyde_config.cache_hypothetical_docs is False
+        assert hyde_config.cache_prefix == "test_hyde"
+        assert hyde_config.parallel_generation is False
+        assert hyde_config.max_concurrent_generations == 3
+        assert hyde_config.use_domain_specific_prompts is False
+        assert hyde_config.prompt_variation is False
+        assert hyde_config.min_generation_length == 30
+        assert hyde_config.filter_duplicates is False
+        assert hyde_config.diversity_threshold == 0.5
+        assert hyde_config.log_generations is True
+        assert hyde_config.track_metrics is False

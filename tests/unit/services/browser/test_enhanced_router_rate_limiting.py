@@ -1,6 +1,7 @@
 """Tests for EnhancedAutomationRouter with rate limiting integration."""
 
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -45,7 +46,9 @@ async def enhanced_router_with_rate_limiting(mock_config, mock_adapters):
     router.routing_config = EnhancedRoutingConfig.get_default_config()
 
     # Override rate limits for testing
-    router.routing_config.tier_configs["lightweight"].requests_per_minute = 10  # Very low for testing
+    router.routing_config.tier_configs[
+        "lightweight"
+    ].requests_per_minute = 10  # Very low for testing
     router.routing_config.tier_configs["crawl4ai"].requests_per_minute = 5
     router.routing_config.tier_configs["browser_use"].requests_per_minute = 3
 
@@ -81,7 +84,9 @@ async def enhanced_router_with_rate_limiting(mock_config, mock_adapters):
 class TestEnhancedRouterRateLimiting:
     """Test EnhancedAutomationRouter rate limiting functionality."""
 
-    async def test_rate_limiting_blocks_excessive_requests(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limiting_blocks_excessive_requests(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test that rate limiting blocks requests when limit is exceeded."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
@@ -91,7 +96,7 @@ class TestEnhancedRouterRateLimiting:
         results = []
 
         # Make 5 rapid requests
-        for i in range(5):
+        for _ in range(5):
             try:
                 result = await router.scrape(url, force_tool="browser_use")
                 results.append(result)
@@ -107,29 +112,35 @@ class TestEnhancedRouterRateLimiting:
         # (depends on fallback configuration)
         assert len(results) == 5
 
-    async def test_rate_limiting_fallback_behavior(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limiting_fallback_behavior(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test fallback behavior when primary tier is rate limited."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
 
         # Fill up browser_use rate limit
-        for i in range(3):
+        for _ in range(3):
             await router.scrape(url, force_tool="browser_use")
 
         # Configure browser_use to have fallback to playwright
-        router.routing_config.tier_configs["browser_use"].fallback_tiers = ["playwright"]
+        router.routing_config.tier_configs["browser_use"].fallback_tiers = [
+            "playwright"
+        ]
 
         # Mock selection to prefer browser_use
         router._enhanced_select_tier = AsyncMock(return_value="browser_use")
 
         # Next request should fallback
-        result = await router.scrape(url)
+        await router.scrape(url)
 
         # Should have attempted fallback
         # Check that playwright was called (fallback)
         router._try_playwright.assert_called()
 
-    async def test_rate_limiting_with_circuit_breaker(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limiting_with_circuit_breaker(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test interaction between rate limiting and circuit breaker."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
@@ -138,11 +149,9 @@ class TestEnhancedRouterRateLimiting:
         router._try_crawl4ai.side_effect = Exception("Service unavailable")
 
         # Attempt exactly 3 requests to trigger circuit breaker
-        for i in range(3):
-            try:
+        for _ in range(3):
+            with contextlib.suppress(Exception):
                 await router.scrape(url, force_tool="crawl4ai")
-            except:
-                pass
 
         # Circuit breaker should be open after 3 failures
         breaker = router.circuit_breakers.get("crawl4ai")
@@ -183,12 +192,14 @@ class TestEnhancedRouterRateLimiting:
         successes = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
         assert successes >= 3  # At least concurrent limit
 
-    async def test_rate_limit_status_in_performance_report(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limit_status_in_performance_report(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test that rate limit status appears in performance report."""
         router = enhanced_router_with_rate_limiting
 
         # Make some requests to generate data
-        for i in range(2):
+        for _ in range(2):
             await router.scrape("https://example.com", force_tool="lightweight")
 
         # Get performance report
@@ -206,18 +217,22 @@ class TestEnhancedRouterRateLimiting:
         lightweight_status = rate_status["tiers"]["lightweight"]
         assert lightweight_status["recent_requests"] == 2
 
-    async def test_rate_limit_reset_functionality(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limit_reset_functionality(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test resetting rate limits for a tier."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
 
         # Fill up browser_use limit
-        for i in range(3):
+        for _ in range(3):
             await router.scrape(url, force_tool="browser_use")
 
         # Next request should be rate limited
         # Force no fallback by mocking
-        router._intelligent_fallback = AsyncMock(side_effect=CrawlServiceError("No fallback"))
+        router._intelligent_fallback = AsyncMock(
+            side_effect=CrawlServiceError("No fallback")
+        )
 
         # This should fail due to rate limit
         with pytest.raises(CrawlServiceError):
@@ -262,7 +277,9 @@ class TestEnhancedRouterRateLimiting:
             await router.scrape(f"{url}/warmup/{i}", force_tool="browser_use")
 
         # Configure browser_use to have fallback to playwright
-        router.routing_config.tier_configs["browser_use"].fallback_tiers = ["playwright"]
+        router.routing_config.tier_configs["browser_use"].fallback_tiers = [
+            "playwright"
+        ]
 
         # Next request should be rate limited and use fallback
         result = await router.scrape(url, force_tool="browser_use")
@@ -270,17 +287,17 @@ class TestEnhancedRouterRateLimiting:
         # Should have used fallback due to rate limit
         assert "fallback_from" in result or result.get("tier_used") != "browser_use"
 
-    async def test_rate_limiter_metrics_tracking(self, enhanced_router_with_rate_limiting):
+    async def test_rate_limiter_metrics_tracking(
+        self, enhanced_router_with_rate_limiting
+    ):
         """Test that rate limiter tracks metrics correctly."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
 
         # Make several requests
-        for i in range(5):
-            try:
+        for _ in range(5):
+            with contextlib.suppress(Exception):
                 await router.scrape(url, force_tool="lightweight")
-            except:
-                pass
 
         # Check metrics
         status = router.rate_limiter.get_status("lightweight")
@@ -290,18 +307,25 @@ class TestEnhancedRouterRateLimiting:
         assert "remaining_capacity" in status
 
     @patch("src.services.browser.enhanced_router.logger")
-    async def test_rate_limit_logging(self, mock_logger, enhanced_router_with_rate_limiting):
+    async def test_rate_limit_logging(
+        self, mock_logger, enhanced_router_with_rate_limiting
+    ):
         """Test that rate limiting logs appropriate messages."""
         router = enhanced_router_with_rate_limiting
         url = "https://example.com"
 
         # Fill up browser_use limit
-        for i in range(3):
+        for _ in range(3):
             await router.scrape(url, force_tool="browser_use")
 
         # Disable fallback to see rate limit message
         router._intelligent_fallback = AsyncMock(
-            return_value={"success": False, "content": "", "metadata": {}, "tier_used": "none"}
+            return_value={
+                "success": False,
+                "content": "",
+                "metadata": {},
+                "tier_used": "none",
+            }
         )
 
         # This should trigger rate limit warning

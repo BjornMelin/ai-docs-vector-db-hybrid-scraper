@@ -31,7 +31,9 @@ def mock_config():
 def mock_browser_cache():
     """Create mock browser cache."""
     cache = Mock(spec=BrowserCache)
-    cache._generate_cache_key = Mock(side_effect=lambda url, tier: f"browser:test:{url}:{tier or 'auto'}")
+    cache._generate_cache_key = Mock(
+        side_effect=lambda url, tier: f"browser:test:{url}:{tier or 'auto'}"
+    )
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
     cache.get_stats = Mock(return_value={"hits": 5, "misses": 3, "hit_rate": 0.625})
@@ -53,17 +55,23 @@ class TestUnifiedManagerCaching:
 
     @patch("src.infrastructure.client_manager.ClientManager")
     @patch("src.services.cache.browser_cache.BrowserCache")
-    async def test_initialization_with_cache(self, mock_browser_cache_class, mock_client_manager_class, mock_config):
+    async def test_initialization_with_cache(
+        self, mock_browser_cache_class, mock_client_manager_class, mock_config
+    ):
         """Test manager initializes browser cache when enabled."""
         # Setup mocks
         mock_client_manager = AsyncMock()
         mock_client_manager.initialize = AsyncMock()
-        mock_client_manager.get_browser_automation_router = AsyncMock(return_value=Mock())
+        mock_client_manager.get_browser_automation_router = AsyncMock(
+            return_value=Mock()
+        )
 
         mock_cache_manager = Mock()
         mock_cache_manager.local_cache = Mock()
         mock_cache_manager.distributed_cache = Mock()
-        mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache_manager)
+        mock_client_manager.get_cache_manager = AsyncMock(
+            return_value=mock_cache_manager
+        )
 
         mock_client_manager_class.return_value = mock_client_manager
 
@@ -82,7 +90,9 @@ class TestUnifiedManagerCaching:
         assert manager._cache_enabled is True
         assert manager._browser_cache is not None
 
-    async def test_scrape_checks_cache_first(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_scrape_checks_cache_first(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test scraping checks cache before executing."""
         # Setup cache hit
         cached_entry = BrowserCacheEntry(
@@ -103,7 +113,9 @@ class TestUnifiedManagerCaching:
         response = await unified_manager_with_cache.scrape(request)
 
         # Verify cache was checked
-        mock_browser_cache._generate_cache_key.assert_called_with("https://example.com", None)
+        mock_browser_cache._generate_cache_key.assert_called_with(
+            "https://example.com", None
+        )
         mock_browser_cache.get.assert_called_once()
 
         # Verify cached response returned
@@ -117,19 +129,23 @@ class TestUnifiedManagerCaching:
         # Verify router was NOT called
         unified_manager_with_cache._automation_router.scrape.assert_not_called()
 
-    async def test_scrape_caches_successful_result(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_scrape_caches_successful_result(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test successful scrape results are cached."""
         # Setup cache miss
         mock_browser_cache.get.return_value = None
 
         # Setup router response
         mock_router = AsyncMock()
-        mock_router.scrape = AsyncMock(return_value={
-            "success": True,
-            "content": "Fresh content",
-            "metadata": {"title": "Fresh Title"},
-            "provider": "browser_use",
-        })
+        mock_router.scrape = AsyncMock(
+            return_value={
+                "success": True,
+                "content": "Fresh content",
+                "metadata": {"title": "Fresh Title"},
+                "provider": "browser_use",
+            }
+        )
 
         unified_manager_with_cache._browser_cache = mock_browser_cache
         unified_manager_with_cache._automation_router = mock_router
@@ -145,7 +161,7 @@ class TestUnifiedManagerCaching:
         # Verify caching was attempted
         assert mock_browser_cache.set.call_count == 1
         cache_call_args = mock_browser_cache.set.call_args[0]
-        cache_key = cache_call_args[0]
+        _cache_key = cache_call_args[0]
         cache_entry = cache_call_args[1]
 
         assert isinstance(cache_entry, BrowserCacheEntry)
@@ -153,16 +169,20 @@ class TestUnifiedManagerCaching:
         assert cache_entry.content == "Fresh content"
         assert cache_entry.tier_used == "browser_use"
 
-    async def test_scrape_skips_cache_for_interaction(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_scrape_skips_cache_for_interaction(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test caching is skipped when interaction is required."""
         # Setup router response
         mock_router = AsyncMock()
-        mock_router.scrape = AsyncMock(return_value={
-            "success": True,
-            "content": "Interactive content",
-            "metadata": {},
-            "provider": "browser_use",
-        })
+        mock_router.scrape = AsyncMock(
+            return_value={
+                "success": True,
+                "content": "Interactive content",
+                "metadata": {},
+                "provider": "browser_use",
+            }
+        )
 
         unified_manager_with_cache._browser_cache = mock_browser_cache
         unified_manager_with_cache._automation_router = mock_router
@@ -173,7 +193,7 @@ class TestUnifiedManagerCaching:
             interaction_required=True,
             custom_actions=[{"action": "click", "selector": "button"}],
         )
-        response = await unified_manager_with_cache.scrape(request)
+        await unified_manager_with_cache.scrape(request)
 
         # Verify cache was NOT checked or set
         mock_browser_cache.get.assert_not_called()
@@ -182,7 +202,9 @@ class TestUnifiedManagerCaching:
         # Verify router was called
         mock_router.scrape.assert_called_once()
 
-    async def test_scrape_does_not_cache_failures(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_scrape_does_not_cache_failures(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test failed scrapes are not cached."""
         # Setup cache miss
         mock_browser_cache.get.return_value = None
@@ -205,35 +227,45 @@ class TestUnifiedManagerCaching:
         # Verify result was NOT cached
         mock_browser_cache.set.assert_not_called()
 
-    async def test_scrape_with_tier_specific_caching(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_scrape_with_tier_specific_caching(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test caching respects tier specification."""
         # Setup cache miss
         mock_browser_cache.get.return_value = None
 
         # Setup router response
         mock_router = AsyncMock()
-        mock_router.scrape = AsyncMock(return_value={
-            "success": True,
-            "content": "Lightweight content",
-            "metadata": {},
-            "provider": "lightweight",
-        })
+        mock_router.scrape = AsyncMock(
+            return_value={
+                "success": True,
+                "content": "Lightweight content",
+                "metadata": {},
+                "provider": "lightweight",
+            }
+        )
 
         unified_manager_with_cache._browser_cache = mock_browser_cache
         unified_manager_with_cache._automation_router = mock_router
 
         # Execute scrape with specific tier
         request = UnifiedScrapingRequest(url="https://example.com", tier="lightweight")
-        response = await unified_manager_with_cache.scrape(request)
+        await unified_manager_with_cache.scrape(request)
 
         # Verify cache key includes tier
-        mock_browser_cache._generate_cache_key.assert_any_call("https://example.com", "lightweight")
+        mock_browser_cache._generate_cache_key.assert_any_call(
+            "https://example.com", "lightweight"
+        )
 
-    async def test_get_system_status_includes_cache_stats(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_get_system_status_includes_cache_stats(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test system status includes cache statistics."""
         unified_manager_with_cache._browser_cache = mock_browser_cache
         unified_manager_with_cache._automation_router = Mock()
-        unified_manager_with_cache._automation_router.get_metrics = Mock(return_value={})
+        unified_manager_with_cache._automation_router.get_metrics = Mock(
+            return_value={}
+        )
 
         status = unified_manager_with_cache.get_system_status()
 
@@ -255,12 +287,14 @@ class TestUnifiedManagerCaching:
 
         # Setup router
         mock_router = AsyncMock()
-        mock_router.scrape = AsyncMock(return_value={
-            "success": True,
-            "content": "Content",
-            "metadata": {},
-            "provider": "crawl4ai",
-        })
+        mock_router.scrape = AsyncMock(
+            return_value={
+                "success": True,
+                "content": "Content",
+                "metadata": {},
+                "provider": "crawl4ai",
+            }
+        )
         manager._automation_router = mock_router
 
         # Execute scrape
@@ -272,19 +306,23 @@ class TestUnifiedManagerCaching:
         assert response.content == "Content"
         # No cache operations should have been attempted
 
-    async def test_cache_error_handling(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_cache_error_handling(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test graceful handling of cache errors."""
         # Setup cache to raise error
         mock_browser_cache.get.side_effect = Exception("Cache error")
 
         # Setup router response
         mock_router = AsyncMock()
-        mock_router.scrape = AsyncMock(return_value={
-            "success": True,
-            "content": "Fresh content",
-            "metadata": {},
-            "provider": "crawl4ai",
-        })
+        mock_router.scrape = AsyncMock(
+            return_value={
+                "success": True,
+                "content": "Fresh content",
+                "metadata": {},
+                "provider": "crawl4ai",
+            }
+        )
 
         unified_manager_with_cache._browser_cache = mock_browser_cache
         unified_manager_with_cache._automation_router = mock_router
@@ -298,7 +336,9 @@ class TestUnifiedManagerCaching:
         assert response.content == "Fresh content"
         mock_router.scrape.assert_called_once()
 
-    async def test_cache_metrics_update(self, unified_manager_with_cache, mock_browser_cache):
+    async def test_cache_metrics_update(
+        self, unified_manager_with_cache, mock_browser_cache
+    ):
         """Test tier metrics are updated for cache hits."""
         # Setup cache hit
         cached_entry = BrowserCacheEntry(
