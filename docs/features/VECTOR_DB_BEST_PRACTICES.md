@@ -1,7 +1,10 @@
 # Vector Database Management Best Practices
 
 **Status**: V1 Enhanced  
-**Last Updated**: 2025-05-26
+**Last Updated**: 2025-05-26  
+**Part of**: [Features Documentation Hub](./README.md)
+
+> **Quick Links**: [Advanced Search](./ADVANCED_SEARCH_IMPLEMENTATION.md) | [HyDE Enhancement](./HYDE_QUERY_ENHANCEMENT.md) | [Enhanced Chunking](./ENHANCED_CHUNKING_GUIDE.md) | [Embedding Models](./EMBEDDING_MODEL_INTEGRATION.md)
 
 ## Overview
 
@@ -1592,3 +1595,48 @@ class IndexRebuilder:
 - **Deployment Downtime**: 0 seconds (with aliases)
 
 This V1-enhanced guide provides state-of-the-art patterns for managing production Qdrant deployments with industry-leading performance and zero-downtime operations.
+
+## See Also
+
+### Related Features
+
+- **[Advanced Search Implementation](./ADVANCED_SEARCH_IMPLEMENTATION.md)** - Query API, payload indexing, and multi-stage retrieval patterns that optimize vector DB performance
+- **[HyDE Query Enhancement](./HYDE_QUERY_ENHANCEMENT.md)** - Enhanced query embeddings cached in DragonflyDB for 80% cost reduction
+- **[Enhanced Chunking Guide](./ENHANCED_CHUNKING_GUIDE.md)** - Rich metadata extraction that enables powerful payload indexing for 10-100x faster filtering
+- **[Embedding Model Integration](./EMBEDDING_MODEL_INTEGRATION.md)** - Smart embedding generation with DragonflyDB caching and cost optimization
+- **[Reranking Guide](./RERANKING_GUIDE.md)** - BGE reranking that works seamlessly with Query API multi-stage retrieval
+
+### Architecture Documentation
+
+- **[System Overview](../architecture/SYSTEM_OVERVIEW.md)** - Vector database's central role in the AI documentation system
+- **[Unified Configuration](../architecture/UNIFIED_CONFIGURATION.md)** - Configure Qdrant, collections, and indexing strategies
+- **[Performance Guide](../operations/PERFORMANCE_GUIDE.md)** - Monitor and optimize vector database performance in production
+
+### Implementation References
+
+- **[Browser Automation](../user-guides/browser-automation.md)** - Content acquisition that feeds into vector database
+- **[API Reference](../api/API_REFERENCE.md)** - Vector database API endpoints and operations
+- **[Development Workflow](../development/DEVELOPMENT_WORKFLOW.md)** - Testing and validating vector database configurations
+
+### Core Infrastructure Benefits
+
+1. **Query API**: 15-30% performance improvement with multi-stage retrieval and native fusion algorithms
+2. **Payload Indexing**: 10-100x faster filtered searches on metadata fields (language, framework, doc_type)
+3. **Collection Aliases**: Zero-downtime deployments with blue-green and canary patterns
+4. **HNSW Optimization**: 5% accuracy boost with optimized parameters (m=16, ef_construct=200)
+
+### Performance Stack
+
+- **Base**: Qdrant with optimized HNSW and quantization
+- **+ Query API**: Multi-stage retrieval for 15-30% speed improvement
+- **+ Payload Indexing**: 10-100x faster filtering on metadata
+- **+ DragonflyDB**: 4.5x cache performance over Redis
+- **+ Collection Aliases**: Zero-downtime deployments and A/B testing
+- **= Total**: Production-ready vector database with industry-leading performance
+
+### Integration Flow
+
+1. **Content Processing**: Enhanced chunking → embeddings → vector storage with rich metadata
+2. **Search Pipeline**: Query API with prefetch → payload filtering → HyDE enhancement → reranking
+3. **Caching Layer**: DragonflyDB for embeddings, search results, and HyDE documents
+4. **Operations**: Zero-downtime deployments, A/B testing, and automated monitoring

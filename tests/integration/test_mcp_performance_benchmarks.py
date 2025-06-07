@@ -118,6 +118,7 @@ class TestMCPPerformanceBenchmarks:
             batch_tasks = []
 
             for i in range(batch_size):
+
                 async def timed_operation(idx):
                     op_start = time.time()
                     try:

@@ -500,7 +500,7 @@ class TestAutomationRouterScraping:
 class TestToolSelection:
     """Test tool selection logic."""
 
-    def test_select_tool_routing_rules(self, router):
+    async def test_select_tool_routing_rules(self, router):
         """Test tool selection based on routing rules."""
         router.routing_rules = {
             "browser_use": ["vercel.com"],
@@ -509,56 +509,56 @@ class TestToolSelection:
         router._adapters = {"browser_use": MagicMock(), "playwright": MagicMock()}
 
         # Test vercel.com -> browser_use
-        tool = router._select_tool("https://vercel.com/docs", False, None)
+        tool = await router._select_tool("https://vercel.com/docs", False, None)
         assert tool == "browser_use"
 
         # Test github.com -> playwright
-        tool = router._select_tool("https://github.com/user/repo", False, None)
+        tool = await router._select_tool("https://github.com/user/repo", False, None)
         assert tool == "playwright"
 
-    def test_select_tool_interaction_required(self, router):
+    async def test_select_tool_interaction_required(self, router):
         """Test tool selection when interaction is required."""
         router._adapters = {"browser_use": MagicMock(), "playwright": MagicMock()}
 
         # Should prefer browser_use for interaction
-        tool = router._select_tool("https://example.com", True, None)
+        tool = await router._select_tool("https://example.com", True, None)
         assert tool == "browser_use"
 
-    def test_select_tool_custom_actions(self, router):
+    async def test_select_tool_custom_actions(self, router):
         """Test tool selection with custom actions."""
         router._adapters = {"browser_use": MagicMock(), "playwright": MagicMock()}
 
         actions = [{"type": "click", "selector": ".button"}]
-        tool = router._select_tool("https://example.com", False, actions)
+        tool = await router._select_tool("https://example.com", False, actions)
         assert tool == "browser_use"
 
-    def test_select_tool_spa_patterns(self, router):
+    async def test_select_tool_spa_patterns(self, router):
         """Test tool selection for SPA patterns."""
         router._adapters = {"browser_use": MagicMock(), "crawl4ai": MagicMock()}
 
         # Should prefer browser_use for SPAs
-        tool = router._select_tool("https://example.com/spa/app", False, None)
+        tool = await router._select_tool("https://example.com/spa/app", False, None)
         assert tool == "browser_use"
 
-    def test_select_tool_default_crawl4ai(self, router):
+    async def test_select_tool_default_crawl4ai(self, router):
         """Test default tool selection when crawl4ai available."""
         router._adapters = {"crawl4ai": MagicMock()}
 
-        tool = router._select_tool("https://example.com", False, None)
+        tool = await router._select_tool("https://example.com", False, None)
         assert tool == "crawl4ai"
 
-    def test_select_tool_default_playwright(self, router):
+    async def test_select_tool_default_playwright(self, router):
         """Test default tool selection when only playwright available."""
         router._adapters = {"playwright": MagicMock()}
 
-        tool = router._select_tool("https://example.com", False, None)
+        tool = await router._select_tool("https://example.com", False, None)
         assert tool == "playwright"
 
-    def test_select_tool_default_browser_use(self, router):
+    async def test_select_tool_default_browser_use(self, router):
         """Test default tool selection when only browser_use available."""
         router._adapters = {"browser_use": MagicMock()}
 
-        tool = router._select_tool("https://example.com", False, None)
+        tool = await router._select_tool("https://example.com", False, None)
         assert tool == "browser_use"
 
 
@@ -663,14 +663,14 @@ class TestMetrics:
         assert crawl4ai_metrics["total_attempts"] == 2
         assert crawl4ai_metrics["available"] is False  # No adapters in this test
 
-    def test_get_recommended_tool(self, router):
+    async def test_get_recommended_tool(self, router):
         """Test tool recommendation based on metrics."""
         # Setup adapters
         router._adapters = {"crawl4ai": MagicMock(), "playwright": MagicMock()}
 
         # Not enough data, should use base recommendation
         with patch.object(router, "_select_tool", return_value="crawl4ai"):
-            tool = router.get_recommended_tool("https://example.com")
+            tool = await router.get_recommended_tool("https://example.com")
             assert tool == "crawl4ai"
 
         # Add low success rate data
@@ -683,7 +683,7 @@ class TestMetrics:
             for _ in range(5):
                 router._update_metrics("playwright", True, 1.0)
 
-            tool = router.get_recommended_tool("https://example.com")
+            tool = await router.get_recommended_tool("https://example.com")
             assert tool == "playwright"
 
 

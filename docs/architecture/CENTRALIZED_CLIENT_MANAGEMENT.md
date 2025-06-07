@@ -24,24 +24,97 @@ The Centralized Client Management system provides a unified approach to managing
 
 ### Component Structure
 
-```plaintext
-src/infrastructure/
-├── __init__.py
-└── client_manager.py    # Main ClientManager implementation
+```mermaid
+graph LR
+    A["📁 src/infrastructure/"] --> B["📄 __init__.py"]
+    A --> C["🔧 client_manager.py<br/><small>Main ClientManager implementation</small>"]
+    
+    style A fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style B fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
+    style C fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
 ```
 
 ### Class Hierarchy
 
-```python
-ClientManager (Singleton)
-├── Configuration (ClientManagerConfig)
-├── Circuit Breakers (per client)
-├── Health Monitoring (background task)
-└── Client Instances
-    ├── Qdrant (AsyncQdrantClient)
-    ├── OpenAI (AsyncOpenAI)
-    ├── Firecrawl (AsyncFirecrawlApp)
-    └── Redis (redis.asyncio.Redis)
+```mermaid
+classDiagram
+    class ClientManager {
+        <<Singleton>>
+        -_instance: ClientManager
+        -_initialized: bool
+        -config: ClientManagerConfig
+        -circuit_breakers: Dict
+        -health_status: Dict
+        +get_qdrant_client() AsyncQdrantClient
+        +get_openai_client() AsyncOpenAI
+        +get_firecrawl_client() AsyncFirecrawlApp
+        +get_redis_client() Redis
+        +get_health_status() Dict
+        +initialize() None
+        +cleanup() None
+    }
+    
+    class ClientManagerConfig {
+        +qdrant_url: str
+        +openai_api_key: str
+        +redis_url: str
+        +health_check_interval: float
+        +circuit_breaker_failure_threshold: int
+        +validate_config() None
+    }
+    
+    class CircuitBreaker {
+        +state: CircuitBreakerState
+        +failure_count: int
+        +last_failure_time: float
+        +call(func) Any
+        +record_success() None
+        +record_failure() None
+    }
+    
+    class HealthMonitor {
+        +check_interval: float
+        +timeout: float
+        +start() None
+        +stop() None
+        +check_client_health(name) bool
+    }
+    
+    class AsyncQdrantClient {
+        +get_collections() List
+        +create_collection() None
+        +upsert() None
+    }
+    
+    class AsyncOpenAI {
+        +embeddings: EmbeddingsAPI
+        +models: ModelsAPI
+        +create() Response
+    }
+    
+    class AsyncFirecrawlApp {
+        +scrape() Dict
+        +crawl() Dict
+        +search() Dict
+    }
+    
+    class Redis {
+        +ping() bool
+        +get() Any
+        +set() None
+    }
+    
+    ClientManager --> ClientManagerConfig : uses
+    ClientManager --> CircuitBreaker : manages
+    ClientManager --> HealthMonitor : runs
+    ClientManager --> AsyncQdrantClient : creates
+    ClientManager --> AsyncOpenAI : creates
+    ClientManager --> AsyncFirecrawlApp : creates
+    ClientManager --> Redis : creates
+    
+    note for ClientManager "Singleton pattern ensures\nonly one instance exists"
+    note for CircuitBreaker "Per-client circuit breakers\nprevent cascading failures"
+    note for HealthMonitor "Background task monitors\nclient health continuously"
 ```
 
 ## Usage Examples
@@ -178,13 +251,46 @@ The Circuit Breaker prevents cascading failures and provides automatic recovery:
 - `recovery_timeout`: Seconds before attempting recovery (default: 60)
 - `half_open_requests`: Test requests in half-open state (default: 1)
 
-### Example Flow
+### State Transition Flow
 
-```plaintext
-Normal Operation → 5 Failures → Circuit Opens → Wait 60s → 
-Half-Open (1 test) → Success → Circuit Closes → Normal Operation
-                   ↓
-                   Failure → Circuit Opens → Wait 60s...
+```mermaid
+stateDiagram-v2
+    [*] --> Closed : Initialize
+    
+    Closed : 🟢 CLOSED (Healthy)
+    Closed : Requests pass through
+    Closed : Track failure count
+    
+    Open : 🔴 OPEN (Failed)
+    Open : Requests fail immediately
+    Open : Wait for recovery timeout
+    
+    HalfOpen : 🟡 HALF-OPEN (Degraded)
+    HalfOpen : Limited test requests
+    HalfOpen : Monitor recovery
+    
+    Closed --> Open : Failure threshold reached\n(default: 5 failures)
+    Open --> HalfOpen : Recovery timeout elapsed\n(default: 60 seconds)
+    HalfOpen --> Closed : Test request succeeds
+    HalfOpen --> Open : Test request fails
+    
+    note right of Closed
+        Normal operation
+        All requests allowed
+        Monitor for failures
+    end note
+    
+    note right of Open
+        Service degraded
+        Fast-fail mode
+        Prevent cascading failures
+    end note
+    
+    note right of HalfOpen
+        Testing recovery
+        Limited requests
+        Quick decision point
+    end note
 ```
 
 ## Health Monitoring

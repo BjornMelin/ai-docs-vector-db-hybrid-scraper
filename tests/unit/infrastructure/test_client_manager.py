@@ -235,7 +235,7 @@ class TestCircuitBreaker:
 
         # Fail multiple times
         for _ in range(3):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError):
                 await circuit_breaker.call(failing_func)
 
         # Circuit should be open now
@@ -250,14 +250,14 @@ class TestCircuitBreaker:
         """Test circuit breaker recovery after timeout."""
 
         async def failing_func():
-            raise Exception("Test failure")
+            raise RuntimeError("Test failure")
 
         async def success_func():
             return "recovered"
 
         # Open the circuit
         for _ in range(3):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError):
                 await circuit_breaker.call(failing_func)
 
         # Wait for recovery timeout

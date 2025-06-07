@@ -6,9 +6,9 @@
 
 The AI Documentation Vector DB system is designed for high performance and cost efficiency. This guide consolidates proven optimization strategies and configurations based on production benchmarks and real-world usage.
 
-### V1 Performance Metrics
+### Performance Metrics
 
-Based on V1 implementation measurements (2025-05-26):
+Based on implementation measurements (2025-05-26):
 
 | Metric | Pre-V1 Performance | V1 Performance | Improvement | Status |
 |--------|-------------------|----------------|-------------|--------|
@@ -19,7 +19,7 @@ Based on V1 implementation measurements (2025-05-26):
 | **API Cost** | $50/month | $10/month (80% cached) | 80% savings | ✅ Optimized |
 | **Cache Hit Rate** | 82% (Redis) | 92% (DragonflyDB) | 10% better | ✅ Enhanced |
 
-### V1 Component Performance Breakdown
+### Component Performance Breakdown
 
 | Component | Performance Gain | Key Optimization |
 |-----------|-----------------|------------------|
@@ -28,7 +28,7 @@ Based on V1 implementation measurements (2025-05-26):
 | Payload Indexing | 10-100x filtering | Indexed metadata |
 | DragonflyDB | 4.5x throughput | Better than Redis |
 | HNSW Tuning | 5% accuracy | m=16, ef_construct=200 |
-| **Combined** | **50-70% overall** | Synergistic gains |
+| **Combined** | **50-70% overall** | Multiple optimizations |
 
 ## Optimization Strategies
 
@@ -529,8 +529,8 @@ ALERT_THRESHOLDS = {
 Leverage Qdrant's Query API for maximum performance:
 
 ```python
-# V1 Optimized Query Configuration
-V1_QUERY_CONFIG = {
+# Optimized Query Configuration
+QUERY_CONFIG = {
     "prefetch_strategy": {
         "dense": {
             "limit": 100,
@@ -550,8 +550,8 @@ V1_QUERY_CONFIG = {
     "final_limit": 10
 }
 
-async def v1_optimized_search(query: str, collection: str) -> List[Dict]:
-    """V1 Query API optimized search."""
+async def optimized_search(query: str, collection: str) -> List[Dict]:
+    """Query API optimized search."""
     
     query_request = QueryRequest(
         prefetch=[
@@ -559,7 +559,7 @@ async def v1_optimized_search(query: str, collection: str) -> List[Dict]:
                 query=query_embedding,
                 using="dense",
                 limit=100,
-                params=V1_QUERY_CONFIG["prefetch_strategy"]["dense"]["params"]
+                params=QUERY_CONFIG["prefetch_strategy"]["dense"]["params"]
             ),
             PrefetchQuery(
                 query=sparse_embedding,

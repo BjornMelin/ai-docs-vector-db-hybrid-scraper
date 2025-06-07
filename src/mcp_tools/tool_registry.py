@@ -40,6 +40,9 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.embeddings.register_tools(mcp, client_manager)
     registered_tools.append("embeddings")
 
+    tools.lightweight_scrape.register_tools(mcp, client_manager)
+    registered_tools.append("lightweight_scrape")
+
     # Collection and project management
     logger.info("Registering management tools...")
     tools.collections.register_tools(mcp, client_manager)

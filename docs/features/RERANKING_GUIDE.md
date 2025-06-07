@@ -1,7 +1,9 @@
 # Reranking Implementation Guide
 
 > **V1 Status**: Integrated with Query API multi-stage retrieval  
-> **Performance**: 10-20% accuracy improvement, optimized with DragonflyDB caching
+> **Performance**: 10-20% accuracy improvement, optimized with DragonflyDB caching  
+> **Part of**: [Features Documentation Hub](./README.md)
+> **Quick Links**: [Advanced Search](./ADVANCED_SEARCH_IMPLEMENTATION.md) | [HyDE Enhancement](./HYDE_QUERY_ENHANCEMENT.md) | [Vector DB Practices](./VECTOR_DB_BEST_PRACTICES.md) | [Enhanced Chunking](./ENHANCED_CHUNKING_GUIDE.md)
 
 ## 🎯 Overview
 
@@ -386,3 +388,38 @@ The V1 enhanced reranking implementation provides:
 | **Total** | **50-70% improvement** | Speed + accuracy + cost |
 
 This V1 implementation represents the optimal balance between implementation simplicity and search quality improvement for documentation search applications.
+
+## See Also
+
+### Related Features
+
+- **[Advanced Search Implementation](./ADVANCED_SEARCH_IMPLEMENTATION.md)** - Complete search pipeline with reranking integration
+- **[HyDE Query Enhancement](./HYDE_QUERY_ENHANCEMENT.md)** - Stack HyDE with reranking for 25-45% total accuracy improvement
+- **[Vector DB Best Practices](./VECTOR_DB_BEST_PRACTICES.md)** - Query API patterns optimized for reranking workflows
+- **[Enhanced Chunking Guide](./ENHANCED_CHUNKING_GUIDE.md)** - Quality chunking improves reranking effectiveness
+- **[Embedding Model Integration](./EMBEDDING_MODEL_INTEGRATION.md)** - Embedding models for reranking candidate generation
+
+### Architecture Documentation
+
+- **[System Overview](../architecture/SYSTEM_OVERVIEW.md)** - Reranking's role in the search pipeline
+- **[Performance Guide](../operations/PERFORMANCE_GUIDE.md)** - Monitor reranking performance and costs
+- **[API Reference](../api/API_REFERENCE.md)** - Reranking API endpoints and configuration
+
+### Performance Optimization
+
+- **[Monitoring Guide](../operations/MONITORING.md)** - Track reranking effectiveness metrics
+- **[Troubleshooting Guide](../operations/TROUBLESHOOTING.md)** - Common reranking issues and solutions
+
+### Integration Patterns
+
+1. **Search Pipeline**: Query API → Prefetch → Reranking → Results
+2. **Accuracy Stack**: Base Search (+0%) → HyDE (+15-25%) → Reranking (+10-20%) = **+25-45%**
+3. **Performance**: DragonflyDB caching provides 60-80% cache hit rate for repeated queries
+4. **Cost Efficiency**: Local BGE deployment eliminates API costs
+
+### BGE Reranker Advantages
+
+- **No API Costs**: Local deployment vs. expensive reranking APIs
+- **High Performance**: Sub-30ms latency with caching
+- **Quality Results**: 10-20% accuracy improvement proven in production
+- **Easy Integration**: <50 lines of implementation code

@@ -13,11 +13,10 @@ from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
 try:
-    from crawl4ai.async_dispatcher import MemoryAdaptiveDispatcher
-    from crawl4ai.monitor import CrawlerMonitor
-    from crawl4ai.monitor import DisplayMode
-    from crawl4ai.rate_limiter import RateLimiter as Crawl4AIRateLimiter
-    from crawl4ai.web_scraping_strategy import LXMLWebScrapingStrategy
+    from crawl4ai import CrawlerMonitor
+    from crawl4ai import LXMLWebScrapingStrategy
+    from crawl4ai import MemoryAdaptiveDispatcher
+    from crawl4ai import RateLimiter as Crawl4AIRateLimiter
 
     MEMORY_ADAPTIVE_AVAILABLE = True
 except ImportError:
@@ -103,7 +102,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         )
 
         # Create performance monitor
-        monitor = CrawlerMonitor(max_visible_rows=15, display_mode=DisplayMode.DETAILED)
+        monitor = CrawlerMonitor(refresh_rate=1.0, enable_ui=False)
 
         # Create Memory-Adaptive Dispatcher
         dispatcher = MemoryAdaptiveDispatcher(

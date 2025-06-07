@@ -79,12 +79,14 @@ class TestTaskQueueManager:
     @pytest.mark.asyncio
     async def test_initialize_failure(self, manager):
         """Test initialization failure."""
-        with patch(
-            "src.services.task_queue.manager.create_pool",
-            side_effect=Exception("Connection failed"),
+        with (
+            patch(
+                "src.services.task_queue.manager.create_pool",
+                side_effect=Exception("Connection failed"),
+            ),
+            pytest.raises(Exception, match="Connection failed"),
         ):
-            with pytest.raises(Exception, match="Connection failed"):
-                await manager.initialize()
+            await manager.initialize()
 
         assert manager._redis_pool is None
         assert manager._initialized is False

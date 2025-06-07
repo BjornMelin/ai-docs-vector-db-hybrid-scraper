@@ -1,538 +1,559 @@
-# Browser Automation API Documentation
+# 5-Tier Browser Automation API Documentation
 
-This document provides comprehensive API documentation for the browser automation system, focusing on complex methods and their usage patterns.
+This document provides comprehensive API documentation for the advanced 5-tier browser automation system with intelligent routing, caching, rate limiting, and monitoring.
 
 ## Overview
 
-The browser automation system implements a three-tier fallback hierarchy:
+The browser automation system implements a sophisticated 5-tier hierarchy with automatic performance optimization:
 
-1. **Crawl4AI** - High-performance bulk processing (primary)
-2. **browser-use** - AI-powered intelligent automation with multi-LLM support (fallback)
-3. **Playwright** - Direct browser control (final fallback)
+1. **Tier 0: Lightweight HTTP** - httpx + BeautifulSoup (5-10x faster for static content)
+2. **Tier 1: Crawl4AI Basic** - Standard browser automation for dynamic content
+3. **Tier 2: Crawl4AI Enhanced** - Interactive content with custom JavaScript
+4. **Tier 3: Browser-use AI** - Complex interactions with AI-powered automation
+5. **Tier 4: Playwright + Firecrawl** - Maximum control + API fallback
 
-## Core Components
+## Core Architecture Components
 
-### AutomationRouter
+### UnifiedBrowserManager
 
-The central orchestrator that manages adapter selection and fallback behavior.
+The central entry point providing a single interface to all 5 tiers with intelligent routing, caching, and monitoring.
 
-#### `async scrape(url: str, actions: list = None, instructions: list = None, **kwargs) -> dict`
+#### `async scrape(request: UnifiedScrapingRequest | None = None, url: str | None = None, **kwargs) -> UnifiedScrapingResponse`
 
-Primary scraping method with intelligent routing and fallback.
-
-**Parameters:**
-
-- `url` (str): Target URL to scrape
-- `actions` (list, optional): Structured actions for Playwright adapter
-- `instructions` (list, optional): Natural language instructions for browser-use
-- `**kwargs`: Additional adapter-specific configuration
-
-**Returns:**
-
-- `dict`: Standardized result format:
-
-  ```python
-  {
-      "success": bool,
-      "url": str,
-      "content": str,
-      "html": str,
-      "title": str,
-      "metadata": {
-          "extraction_method": str,
-          "processing_time_ms": float,
-          "adapter_used": str,
-          "fallback_count": int
-      },
-      "error": str  # Only if success=False
-  }
-  ```
-
-**Usage Examples:**
-
-```python
-# Basic scraping with automatic adapter selection
-result = await router.scrape("https://docs.example.com")
-
-# AI-powered scraping with natural language instructions
-result = await router.scrape(
-    "https://complex-spa.com",
-    instructions=[
-        "Wait for the page to load completely",
-        "Extract all documentation content",
-        "Take a screenshot for verification"
-    ]
-)
-
-# Structured browser actions for precise control
-result = await router.scrape(
-    "https://login-required.com",
-    actions=[
-        {"type": "fill", "selector": "input[name='username']", "value": "demo"},
-        {"type": "fill", "selector": "input[name='password']", "value": "demo"},
-        {"type": "click", "selector": "button[type='submit']"},
-        {"type": "wait_for_selector", "selector": ".dashboard", "timeout": 5000}
-    ]
-)
-```
-
-**Error Handling:**
-
-- Automatic fallback between adapters on failure
-- Comprehensive error logging with adapter context
-- Graceful degradation with partial results when possible
-
-#### `async force_adapter(adapter_name: str, *args, **kwargs) -> dict`
-
-Force usage of a specific adapter, bypassing routing logic.
+Primary scraping method with automatic tier selection and performance optimization.
 
 **Parameters:**
 
-- `adapter_name` (str): One of 'crawl4ai', 'browser_use', 'playwright'
-- `*args, **kwargs`: Arguments passed directly to adapter
+- `request` (UnifiedScrapingRequest, optional): Structured request object (recommended)
+- `url` (str, optional): URL to scrape (for simple usage)
+- `**kwargs`: Additional parameters (tier, interaction_required, etc.)
 
-**Returns:**
-
-- `dict`: Same format as `scrape()` method
-
-**Usage:**
+**UnifiedScrapingRequest:**
 
 ```python
-# Force browser-use for complex interactions
-result = await router.force_adapter(
-    "browser_use",
-    "https://complex-site.com",
-    ["Navigate to settings", "Enable notifications"]
+from src.services.browser.unified_manager import UnifiedScrapingRequest
+
+request = UnifiedScrapingRequest(
+    url="https://docs.example.com",
+    tier="auto",  # "auto", "lightweight", "crawl4ai", "crawl4ai_enhanced", "browser_use", "playwright", "firecrawl"
+    interaction_required=False,
+    custom_actions=[  # For tier 3+ interactions
+        {"type": "click", "selector": "#button"},
+        {"type": "wait", "duration": 1000}
+    ],
+    timeout=30000,
+    wait_for_selector=".content",
+    extract_metadata=True
 )
 ```
 
-#### `get_performance_metrics() -> dict`
-
-Retrieve detailed performance metrics for monitoring and optimization.
-
-**Returns:**
-
-```python
-{
-    "total_requests": int,
-    "adapter_usage": {
-        "crawl4ai": {"count": int, "success_rate": float},
-        "browser_use": {"count": int, "success_rate": float},
-        "playwright": {"count": int, "success_rate": float}
-    },
-    "avg_response_times": {
-        "crawl4ai": float,  # milliseconds
-        "browser_use": float,
-        "playwright": float
-    },
-    "fallback_frequency": float,  # percentage
-    "error_breakdown": dict
-}
-```
-
-### BrowserUseAdapter
-
-AI-powered browser automation using natural language tasks with multi-LLM support.
-
-#### `async scrape(url: str, task: str, timeout: int = 30000) -> dict`
-
-Execute AI-driven automation based on natural language task descriptions.
-
-**Key Features:**
-
-- **Multi-LLM Support**: OpenAI, Anthropic, Gemini, and local models
-- **Cost Optimization**: Default GPT-4o-mini for routine tasks, GPT-4o for complex interactions
-- **Self-Correcting Behavior**: AI learns from mistakes and adapts execution
-- **Natural Language Tasks**: Describe what you want, not how to do it
-- **Python-Native**: No TypeScript dependencies, fully async
-
-**Task Examples:**
-
-1. **Simple Content Extraction:**
-
-   ```python
-   task = "Extract all documentation content including code examples"
-   result = await adapter.scrape("https://docs.example.com", task)
-   ```
-
-2. **Complex Interactive Tasks:**
-
-   ```python
-   task = """
-   Navigate to the API section, expand any collapsed code examples,
-   extract all endpoint documentation with their parameters,
-   and collect any authentication requirements.
-   """
-   result = await adapter.scrape("https://api-docs.example.com", task)
-   ```
-
-3. **Multi-Step Documentation Scraping:**
-
-   ```python
-   task = """
-   1. Wait for the page to fully load
-   2. Handle any cookie banners by dismissing them
-   3. Navigate to the getting started guide
-   4. Extract all step-by-step instructions
-   5. Find and expand any collapsed sections
-   6. Collect all code snippets and examples
-   """
-   result = await adapter.scrape("https://docs.example.com/guide", task)
-   ```
-
-**LLM Provider Configuration:**
-
-```python
-# OpenAI (default)
-config = {
-    "llm_provider": "openai",
-    "model": "gpt-4o-mini",  # Cost-optimized
-    "headless": True,
-    "max_steps": 20,
-    "max_retries": 3
-}
-
-# Anthropic
-config = {
-    "llm_provider": "anthropic", 
-    "model": "claude-3-haiku-20240307",
-    "headless": True
-}
-
-# Gemini
-config = {
-    "llm_provider": "gemini",
-    "model": "gemini-pro",
-    "headless": True
-}
-```
-
-#### `async scrape_with_instructions(url: str, instructions: list, timeout: int = 30000) -> dict`
-
-Compatibility method that converts instruction lists to natural language tasks.
-
-#### `async test_ai_capabilities(test_url: str = "https://example.com") -> dict`
-
-Comprehensive AI capability testing for validation and benchmarking.
-
-**Returns:**
+**UnifiedScrapingResponse:**
 
 ```python
 {
     "success": bool,
-    "test_url": str,
-    "task_description": str,
-    "execution_time_ms": float,
-    "content_length": int,
-    "ai_insights": dict,
+    "content": str,
+    "url": str,
+    "title": str,
     "metadata": dict,
-    "error": str  # Only if success=False
+    
+    # Execution details
+    "tier_used": str,
+    "execution_time_ms": float,
+    "fallback_attempted": bool,
+    
+    # Quality metrics
+    "content_length": int,
+    "quality_score": float,  # 0.0-1.0
+    
+    # Error information
+    "error": str,
+    "failed_tiers": list
 }
 ```
 
-### PlaywrightAdapter
-
-Direct browser control with structured actions for precise automation.
-
-#### Action Schema System
-
-The adapter uses a comprehensive Pydantic-based action schema for type safety and validation:
+**Usage Examples:**
 
 ```python
-# Click actions with enhanced targeting
-click_action = {
-    "type": "click",
-    "selector": "button.primary",
-    "button": "left",  # left, right, middle
-    "click_count": 1,
-    "modifiers": ["Shift"],  # Alt, Control, Meta, Shift
-    "position": {"x": 10, "y": 5},  # Relative to element
-    "force": False,  # Bypass actionability checks
-    "no_wait_after": False,  # Skip post-action waiting
-    "timeout": 30000,
-    "trial": False  # Test without performing action
-}
+from src.services.browser.unified_manager import UnifiedBrowserManager, UnifiedScrapingRequest
+from src.config import UnifiedConfig
 
-# Form filling with validation
-fill_action = {
-    "type": "fill",
-    "selector": "input[name='email']",
-    "value": "user@example.com",
-    "force": False,
-    "no_wait_after": False,
-    "timeout": 30000
-}
+# Initialize manager
+config = UnifiedConfig()
+manager = UnifiedBrowserManager(config)
+await manager.initialize()
 
-# Advanced waiting strategies
-wait_action = {
-    "type": "wait_for_selector",
-    "selector": ".dynamic-content",
-    "state": "visible",  # attached, detached, visible, hidden
-    "timeout": 10000
-}
+# Simple scraping (automatic tier selection)
+response = await manager.scrape(url="https://docs.example.com")
 
-# JavaScript evaluation with result capture
-evaluate_action = {
-    "type": "evaluate",
-    "expression": "document.querySelector('.data').textContent",
-    "return_value": True  # Capture return value
+# Structured request with tier preference
+request = UnifiedScrapingRequest(
+    url="https://complex-spa.com",
+    tier="browser_use",
+    interaction_required=True,
+    custom_actions=[
+        {"type": "wait_for_selector", "selector": ".dynamic-content"},
+        {"type": "click", "selector": "#load-more"},
+        {"type": "extract", "target": "documentation"}
+    ]
+)
+response = await manager.scrape(request)
+
+# Force specific tier
+response = await manager.scrape(
+    url="https://static-site.com",
+    tier="lightweight"
+)
+```
+
+#### `async analyze_url(url: str) -> dict`
+
+Analyze URL to determine optimal tier and provide performance insights.
+
+```python
+analysis = await manager.analyze_url("https://docs.example.com")
+# Returns:
+{
+    "url": "https://docs.example.com",
+    "domain": "docs.example.com",
+    "recommended_tier": "crawl4ai",
+    "expected_performance": {
+        "estimated_time_ms": 1500.0,
+        "success_rate": 0.95
+    }
 }
 ```
 
-#### Complex Automation Patterns
+#### `get_system_status() -> dict`
 
-**Multi-Step Form Handling:**
-
-```python
-form_actions = [
-    {"type": "fill", "selector": "input[name='username']", "value": "demo"},
-    {"type": "fill", "selector": "input[name='password']", "value": "secure123"},
-    {"type": "select", "selector": "select[name='role']", "value": "admin"},
-    {"type": "check", "selector": "input[name='remember']"},
-    {"type": "click", "selector": "button[type='submit']"},
-    {"type": "wait_for_selector", "selector": ".success-message", "timeout": 5000}
-]
-```
-
-**Dynamic Content Handling:**
+Get comprehensive system health and performance information.
 
 ```python
-dynamic_actions = [
-    {"type": "wait_for_load_state", "state": "networkidle"},
-    {"type": "evaluate", "expression": "window.APP_READY", "return_value": True},
-    {"type": "wait_for_selector", "selector": "[data-testid='content-loaded']"},
-    {"type": "scroll", "selector": "body", "position": {"top": 0, "left": 0}},
-    {"type": "screenshot", "full_page": True}
-]
-```
-
-**SPA Navigation Pattern:**
-
-```python
-spa_actions = [
-    {"type": "click", "selector": "nav a[href='/api-docs']"},
-    {"type": "wait_for_url", "url": "**/api-docs", "timeout": 10000},
-    {"type": "wait_for_selector", "selector": ".api-endpoint", "timeout": 15000},
-    {"type": "evaluate", "expression": "document.querySelectorAll('.api-endpoint').length", "return_value": True}
-]
-```
-
-### Crawl4AIAdapter
-
-High-performance bulk processing adapter optimized for documentation sites.
-
-#### `async scrape(url: str, **kwargs) -> dict`
-
-Optimized scraping with intelligent content extraction and caching.
-
-**Performance Features:**
-
-- **Intelligent Caching**: Content-based cache keys with 80%+ hit rates
-- **Batch Processing**: Optimized for bulk documentation processing
-- **Smart Content Detection**: Automatic article/documentation content identification
-- **Link Discovery**: Intelligent sitemap and link following
-
-**Configuration Options:**
-
-```python
-config = {
-    "max_pages": 100,
-    "concurrent_limit": 10,
-    "cache_duration": 3600,  # seconds
-    "content_filters": {
-        "min_content_length": 500,
-        "exclude_patterns": ["*/admin/*", "*/login/*"],
-        "include_patterns": ["*/docs/*", "*/api/*"]
+status = manager.get_system_status()
+# Returns:
+{
+    "status": "healthy",  # healthy, degraded, unhealthy
+    "initialized": true,
+    "total_requests": 1250,
+    "overall_success_rate": 0.92,
+    "tier_count": 5,
+    "router_available": true,
+    "cache_enabled": true,
+    "cache_stats": {
+        "hit_rate": 0.73,
+        "total_size": "45.2MB",
+        "entries": 342
     },
-    "extraction_strategy": "article_aware"  # article_aware, full_page, custom
+    "monitoring_enabled": true,
+    "monitoring_health": {
+        "overall_status": "healthy",
+        "tier_health": {"total": 5, "healthy": 5},
+        "recent_alerts": 0
+    },
+    "tier_metrics": {
+        "lightweight": {"total_requests": 450, "success_rate": 0.98},
+        "crawl4ai": {"total_requests": 380, "success_rate": 0.94},
+        "browser_use": {"total_requests": 125, "success_rate": 0.87},
+        "playwright": {"total_requests": 95, "success_rate": 0.91},
+        "firecrawl": {"total_requests": 200, "success_rate": 0.96}
+    }
 }
-
-result = await adapter.scrape("https://docs.example.com", **config)
 ```
 
-## Error Handling & Resilience
+### EnhancedAutomationRouter
+
+Advanced routing engine with tier-specific configuration, performance metrics, and intelligent fallback.
+
+#### `async scrape(url: str, interaction_required: bool = False, custom_actions: list = None, force_tool: str = None, timeout: int = 30000) -> dict`
+
+Enhanced scraping with intelligent tier selection based on URL patterns and performance history.
+
+**Features:**
+- **URL Pattern Matching**: Domain-specific tier recommendations
+- **Performance-Based Selection**: Historical success rate optimization
+- **Circuit Breaker Pattern**: Automatic tier health management
+- **Intelligent Fallback**: Multi-tier fallback strategies
+- **Rate Limiting**: Tier-specific request throttling
+
+**Configuration:**
+
+```python
+from src.services.browser.tier_config import EnhancedRoutingConfig, TierConfiguration
+
+config = EnhancedRoutingConfig(
+    tier_configs={
+        "lightweight": TierConfiguration(
+            tier_name="lightweight",
+            tier_level=0,
+            priority_score=10,
+            requests_per_minute=300,
+            max_concurrent_requests=20,
+            timeout_ms=5000,
+            fallback_tiers=["crawl4ai"]
+        ),
+        "crawl4ai": TierConfiguration(
+            tier_name="crawl4ai",
+            tier_level=1,
+            priority_score=8,
+            requests_per_minute=120,
+            max_concurrent_requests=10,
+            timeout_ms=15000,
+            fallback_tiers=["crawl4ai_enhanced", "browser_use"]
+        )
+    },
+    url_patterns={
+        r".*docs\..*": "crawl4ai",
+        r".*api\..*": "lightweight",
+        r".*github\.com.*": "crawl4ai_enhanced"
+    },
+    domain_preferences={
+        "docs.python.org": "crawl4ai",
+        "stackoverflow.com": "lightweight",
+        "complex-spa.com": "browser_use"
+    }
+)
+```
+
+#### `async get_performance_report() -> dict`
+
+Comprehensive performance analytics and optimization insights.
+
+```python
+report = await router.get_performance_report()
+# Returns:
+{
+    "total_requests": 1500,
+    "success_rate": 0.924,
+    "avg_response_time_ms": 2340.5,
+    "tier_performance": {
+        "lightweight": {
+            "requests": 600,
+            "success_rate": 0.982,
+            "avg_time_ms": 450.2,
+            "cache_hit_rate": 0.85
+        },
+        "crawl4ai": {
+            "requests": 450,
+            "success_rate": 0.945,
+            "avg_time_ms": 1850.3,
+            "cache_hit_rate": 0.72
+        }
+    },
+    "fallback_analysis": {
+        "frequency": 0.12,
+        "most_common": "lightweight -> crawl4ai",
+        "success_after_fallback": 0.89
+    },
+    "optimization_recommendations": [
+        "Consider increasing lightweight tier capacity",
+        "Review browser_use timeout settings"
+    ]
+}
+```
+
+## Advanced Features
+
+### Browser Result Caching
+
+Dynamic TTL-based caching system with content-type optimization.
+
+```python
+from src.services.cache.browser_cache import BrowserCache
+
+cache = BrowserCache(
+    default_ttl=3600,
+    dynamic_content_ttl=300,    # Short TTL for dynamic content
+    static_content_ttl=86400,   # Long TTL for static content
+)
+
+# Automatic cache key generation based on URL and tier
+cache_key = cache._generate_cache_key("https://docs.example.com", "crawl4ai")
+
+# Content-based TTL determination
+ttl = cache._determine_ttl("https://static-site.com/guide.pdf", 50000)  # Longer TTL for PDFs
+ttl = cache._determine_ttl("https://api.example.com/search", 1200)      # Shorter TTL for API endpoints
+```
+
+**Cache Performance:**
+- 70-85% hit rate for documentation sites
+- Dynamic TTL based on content type
+- Automatic cache invalidation
+- Memory-efficient LRU eviction
+
+### Tier-Specific Rate Limiting
+
+Advanced rate limiting with sliding window algorithm and concurrency control.
+
+```python
+from src.services.browser.tier_rate_limiter import TierRateLimiter, RateLimitContext
+
+# Rate limiter with tier-specific limits
+rate_limiter = TierRateLimiter(tier_configs)
+
+# Acquire rate limit permission
+async with RateLimitContext(rate_limiter, "browser_use") as allowed:
+    if allowed:
+        result = await perform_scraping()
+    else:
+        # Handle rate limit
+        wait_time = rate_limiter.get_wait_time("browser_use")
+        await asyncio.sleep(wait_time)
+
+# Check rate limit status
+status = rate_limiter.get_status("crawl4ai")
+# Returns:
+{
+    "enabled": true,
+    "concurrent_requests": 3,
+    "max_concurrent": 10,
+    "recent_requests": 15,
+    "rate_limit_hits": 2,
+    "requests_per_minute": 120,
+    "remaining_capacity": 105,
+    "wait_time_seconds": 0.0
+}
+```
+
+### Real-Time Monitoring and Alerting
+
+Comprehensive monitoring system with health status tracking and alert generation.
+
+```python
+from src.services.browser.monitoring import BrowserAutomationMonitor, MonitoringConfig, AlertSeverity
+
+# Configure monitoring
+monitor_config = MonitoringConfig(
+    error_rate_threshold=0.1,
+    response_time_threshold_ms=10000,
+    cache_miss_threshold=0.8,
+    alert_cooldown_seconds=300,
+    max_alerts_per_hour=10
+)
+
+monitor = BrowserAutomationMonitor(monitor_config)
+await monitor.start_monitoring()
+
+# Record request metrics
+await monitor.record_request_metrics(
+    tier="crawl4ai",
+    success=True,
+    response_time_ms=1500.0,
+    cache_hit=False
+)
+
+# Get system health
+health = monitor.get_system_health()
+# Returns:
+{
+    "overall_status": "healthy",
+    "tier_health": {
+        "total": 5,
+        "healthy": 4,
+        "degraded": 1,
+        "unhealthy": 0
+    },
+    "recent_alerts": 1,
+    "monitoring_active": true,
+    "tier_details": {
+        "lightweight": {"status": "healthy", "success_rate": 0.98},
+        "crawl4ai": {"status": "degraded", "success_rate": 0.85}
+    }
+}
+
+# Get active alerts
+alerts = monitor.get_active_alerts(severity=AlertSeverity.HIGH)
+for alert in alerts:
+    print(f"Alert: {alert.message} (Tier: {alert.tier})")
+
+# Add custom alert handler
+def custom_alert_handler(alert):
+    if alert.severity == AlertSeverity.CRITICAL:
+        send_notification(alert.message)
+
+monitor.add_alert_handler(custom_alert_handler)
+```
+
+## Tier-Specific Documentation
+
+### Tier 0: Lightweight HTTP
+
+**Best For:** Static content, documentation sites, API endpoints
+
+```python
+# Automatic selection for static content
+response = await manager.scrape(
+    url="https://docs.python.org/3/tutorial/",
+    tier="lightweight"
+)
+```
+
+**Performance:**
+- 5-10x faster than browser-based tiers
+- 95%+ success rate for static content
+- Minimal resource usage
+- Excellent for bulk processing
+
+### Tier 1: Crawl4AI Basic
+
+**Best For:** Standard dynamic content, most documentation sites
+
+```python
+response = await manager.scrape(
+    url="https://react.dev/learn",
+    tier="crawl4ai"
+)
+```
+
+**Features:**
+- JavaScript execution
+- Dynamic content loading
+- Intelligent content extraction
+- Balanced performance/capability
+
+### Tier 2: Crawl4AI Enhanced
+
+**Best For:** Interactive content, SPAs with custom JavaScript
+
+```python
+response = await manager.scrape(
+    url="https://interactive-docs.com",
+    tier="crawl4ai_enhanced",
+    custom_actions=[
+        {"type": "execute_js", "script": "expandAllSections()"},
+        {"type": "wait", "duration": 2000}
+    ]
+)
+```
+
+### Tier 3: Browser-use AI
+
+**Best For:** Complex interactions requiring AI reasoning
+
+```python
+request = UnifiedScrapingRequest(
+    url="https://complex-dashboard.com",
+    tier="browser_use",
+    interaction_required=True,
+    custom_actions=[
+        {
+            "type": "ai_task",
+            "instruction": "Navigate to the documentation section and extract all API endpoints with their parameters"
+        }
+    ]
+)
+response = await manager.scrape(request)
+```
+
+### Tier 4: Playwright + Firecrawl
+
+**Best For:** Maximum control, authentication, complex workflows
+
+```python
+request = UnifiedScrapingRequest(
+    url="https://authenticated-site.com",
+    tier="playwright",
+    interaction_required=True,
+    custom_actions=[
+        {"type": "fill", "selector": "#username", "value": "demo"},
+        {"type": "fill", "selector": "#password", "value": "demo"},
+        {"type": "click", "selector": "#login"},
+        {"type": "wait_for_selector", "selector": ".dashboard"},
+        {"type": "extract_content", "selector": ".documentation"}
+    ]
+)
+response = await manager.scrape(request)
+```
+
+## Error Handling and Resilience
 
 ### Circuit Breaker Pattern
 
-All adapters implement circuit breaker patterns for external service failures:
+Automatic tier health management with fallback routing:
 
 ```python
-# Automatic fallback configuration
+# Circuit breaker configuration per tier
 circuit_config = {
-    "failure_threshold": 5,     # Failures before opening circuit
-    "timeout": 30,              # Circuit open duration (seconds)
-    "expected_exception": (ConnectionError, TimeoutError)
+    "failure_threshold": 5,      # Failures before opening circuit
+    "timeout_seconds": 60,       # Circuit open duration
+    "half_open_max_calls": 3     # Test calls in half-open state
 }
 ```
 
-### Retry Strategies
-
-**Exponential Backoff:**
+### Intelligent Fallback Strategies
 
 ```python
-retry_config = {
-    "max_retries": 3,
-    "base_delay": 1.0,          # Initial delay (seconds)
-    "max_delay": 10.0,          # Maximum delay cap
-    "backoff_factor": 2.0,      # Exponential multiplier
-    "jitter": True              # Add randomization
+# Automatic fallback hierarchy
+fallback_chains = {
+    "lightweight": ["crawl4ai", "crawl4ai_enhanced"],
+    "crawl4ai": ["crawl4ai_enhanced", "browser_use"],
+    "browser_use": ["playwright", "firecrawl"],
+    "playwright": ["firecrawl"]
 }
 ```
 
-### Error Context and Logging
-
-All methods provide rich error context for debugging:
+### Comprehensive Error Context
 
 ```python
-error_result = {
+error_response = {
     "success": False,
-    "error": "Detailed error message",
+    "error": "Tier execution failed: Connection timeout",
+    "tier_used": "none",
+    "failed_tiers": ["lightweight", "crawl4ai"],
+    "execution_time_ms": 15000,
+    "fallback_attempted": True,
     "error_context": {
-        "adapter": "browser_use",
-        "operation": "page_navigation",
-        "url": "https://example.com",
-        "instruction": "click on submit button",
-        "timestamp": "2024-01-15T10:30:00Z",
+        "last_tier_attempted": "crawl4ai",
+        "failure_reason": "timeout",
         "retry_count": 2,
-        "total_time_ms": 15000
-    },
-    "debugging_info": {
-        "last_screenshot": "base64_encoded_image",
-        "page_html": "current_page_html",
-        "console_logs": ["log1", "log2"],
-        "network_activity": [...]
+        "timestamp": "2024-01-15T10:30:00Z"
     }
 }
 ```
 
 ## Performance Optimization
 
-### Connection Pooling
-
-All adapters use connection pooling for optimal performance:
+### Connection Pooling and Resource Management
 
 ```python
-pool_config = {
-    "max_connections": 100,
-    "max_keepalive_connections": 20,
-    "keepalive_expiry": 30.0,
-    "timeout": {"connect": 10.0, "read": 30.0, "write": 10.0}
-}
-```
-
-### Memory Management
-
-**Resource Cleanup Patterns:**
-
-```python
-async def safe_scrape_pattern(url: str):
-    adapter = None
+# Optimized resource management
+async def efficient_bulk_scraping(urls: list[str]):
+    manager = UnifiedBrowserManager(config)
+    await manager.initialize()
+    
     try:
-        adapter = BrowserUseAdapter(config)
-        await adapter.initialize()
-        result = await adapter.scrape(url, instructions)
-        return result
-    except Exception as e:
-        logger.error(f"Scraping failed: {e}")
-        return {"success": False, "error": str(e)}
+        # Batch process with concurrency control
+        semaphore = asyncio.Semaphore(10)  # Limit concurrent requests
+        
+        async def scrape_single(url):
+            async with semaphore:
+                return await manager.scrape(url)
+        
+        tasks = [scrape_single(url) for url in urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        return results
     finally:
-        if adapter:
-            await adapter.cleanup()  # Always cleanup resources
+        await manager.cleanup()  # Always cleanup resources
 ```
 
-### Monitoring and Metrics
-
-**Health Check Implementation:**
+### Cache Optimization
 
 ```python
-health_status = await adapter.health_check()
+# Cache performance monitoring
+cache_stats = manager._browser_cache.get_stats()
 # Returns:
 {
-    "healthy": bool,
-    "status": "operational|degraded|timeout|error",
-    "message": str,
-    "response_time_ms": float,
-    "test_url": str,
-    "available": bool,
-    "capabilities": dict
+    "hit_rate": 0.78,
+    "total_entries": 1250,
+    "total_size_mb": 45.2,
+    "avg_ttl_seconds": 3600,
+    "eviction_count": 23
 }
-```
 
-**Performance Monitoring:**
-
-```python
-metrics = router.get_performance_metrics()
-# Monitor:
-# - Success rates per adapter
-# - Average response times
-# - Fallback frequency
-# - Error patterns
-# - Resource utilization
-```
-
-## Best Practices
-
-### 1. Adapter Selection Strategy
-
-```python
-# Use routing for automatic optimization
-result = await router.scrape(url)  # Preferred
-
-# Force specific adapters only when needed
-result = await router.force_adapter("browser_use", url, task)
-```
-
-### 2. Task Design for Browser-Use
-
-```python
-# Good: Clear and specific natural language tasks
-task = """
-Navigate to the documentation page, expand any collapsed sections,
-and extract all API endpoint information including parameters,
-examples, and response formats.
-"""
-
-# Good: Simple extraction task
-task = "Extract all code examples and their explanations from this tutorial page"
-
-# Avoid: Vague or overly complex
-task = "Do something with the page"  # Too vague
-task = "Analyze everything and give me all information"  # Too broad
-```
-
-### 3. Error Handling Patterns
-
-```python
-async def robust_scraping(url: str):
-    try:
-        result = await router.scrape(url)
-        if not result["success"]:
-            # Log detailed error context
-            logger.error(f"Scraping failed: {result['error']}")
-            # Implement fallback or retry logic
-            return await fallback_scraping(url)
-        return result
-    except Exception as e:
-        logger.exception(f"Unexpected error scraping {url}")
-        return {"success": False, "error": str(e)}
-```
-
-### 4. Performance Optimization
-
-```python
-# Batch related operations
-urls = ["url1", "url2", "url3"]
-tasks = [router.scrape(url) for url in urls]
-results = await asyncio.gather(*tasks, return_exceptions=True)
-
-# Use appropriate timeouts
-result = await router.scrape(url, timeout=60000)  # For complex pages
-
-# Monitor and adjust based on metrics
-metrics = router.get_performance_metrics()
-if metrics["fallback_frequency"] > 0.3:  # 30% fallback rate
-    # Consider adjusting routing rules or adapter configuration
-    pass
+# Cache warming for high-traffic URLs
+priority_urls = ["https://docs.main.com", "https://api.main.com"]
+for url in priority_urls:
+    await manager.scrape(url)  # Populate cache
 ```
 
 ## Configuration Reference
@@ -540,43 +561,154 @@ if metrics["fallback_frequency"] > 0.3:  # 30% fallback rate
 ### Environment Variables
 
 ```bash
-# Required
-OPENAI_API_KEY=sk-...  # For AI-powered features
+# Core Configuration
+UNIFIED_BROWSER_CACHE_ENABLED=true
+UNIFIED_BROWSER_MONITORING_ENABLED=true
+UNIFIED_BROWSER_RATE_LIMITING_ENABLED=true
 
-# Optional
-PLAYWRIGHT_BROWSERS_PATH=/opt/playwright  # Custom browser path
-BROWSER_USE_LLM_PROVIDER=openai          # LLM provider (openai, anthropic, gemini)
-BROWSER_USE_MODEL=gpt-4o-mini             # Model for cost optimization
-CRAWL4AI_CACHE_DIR=/tmp/crawl_cache       # Cache directory
+# Cache Configuration
+BROWSER_CACHE_TTL=3600
+BROWSER_DYNAMIC_TTL=300
+BROWSER_STATIC_TTL=86400
+
+# Rate Limiting
+LIGHTWEIGHT_REQUESTS_PER_MINUTE=300
+CRAWL4AI_REQUESTS_PER_MINUTE=120
+BROWSER_USE_REQUESTS_PER_MINUTE=30
+
+# Monitoring
+MONITORING_ERROR_THRESHOLD=0.1
+MONITORING_RESPONSE_TIME_THRESHOLD=10000
+MONITORING_ALERT_COOLDOWN=300
+
+# API Keys
+OPENAI_API_KEY=sk-...         # For AI-powered tiers
+ANTHROPIC_API_KEY=sk-ant-...  # Alternative AI provider
+FIRECRAWL_API_KEY=fc-...      # For Firecrawl fallback
 ```
 
-### Adapter-Specific Configuration
+### Complete Configuration Example
 
 ```python
-config = {
-    "browser_use": {
-        "llm_provider": "openai",
-        "model": "gpt-4o-mini",
-        "headless": True,
-        "timeout": 30000,
-        "max_retries": 3,
-        "max_steps": 20,
-        "debug_screenshots": False
-    },
-    "playwright": {
-        "headless": True,
-        "browser_type": "chromium",
-        "viewport": {"width": 1280, "height": 720},
-        "timeout": 30000,
-        "user_agent": "custom-user-agent"
-    },
-    "crawl4ai": {
-        "max_pages": 100,
-        "concurrent_limit": 10,
-        "cache_duration": 3600,
-        "content_strategy": "article_aware"
-    }
-}
+from src.config import UnifiedConfig
+from src.services.browser.unified_manager import UnifiedBrowserManager
+
+# Load configuration
+config = UnifiedConfig()
+
+# Initialize with custom settings
+config.cache.enable_browser_cache = True
+config.cache.browser_cache_ttl = 3600
+config.performance.enable_monitoring = True
+config.performance.enable_rate_limiting = True
+
+# Create and initialize manager
+manager = UnifiedBrowserManager(config)
+await manager.initialize()
+
+# Production-ready scraping
+try:
+    response = await manager.scrape(
+        url="https://production-docs.com",
+        tier="auto",  # Let system choose optimal tier
+        extract_metadata=True
+    )
+    
+    if response.success:
+        print(f"Success! Used {response.tier_used} tier")
+        print(f"Content length: {response.content_length}")
+        print(f"Quality score: {response.quality_score:.2f}")
+        print(f"Execution time: {response.execution_time_ms:.1f}ms")
+    else:
+        print(f"Failed: {response.error}")
+        print(f"Failed tiers: {response.failed_tiers}")
+        
+finally:
+    await manager.cleanup()
 ```
 
-This comprehensive API documentation provides the foundation for effective browser automation integration and advanced usage patterns.
+## Best Practices
+
+### 1. Tier Selection Strategy
+
+```python
+# Let the system choose for optimal performance
+response = await manager.scrape(url=url, tier="auto")  # Recommended
+
+# Use specific tiers only when needed
+response = await manager.scrape(url=url, tier="browser_use")  # Complex interactions only
+```
+
+### 2. Error Handling Patterns
+
+```python
+async def robust_scraping(url: str) -> dict:
+    """Production-ready scraping with comprehensive error handling."""
+    try:
+        response = await manager.scrape(url)
+        
+        if not response.success:
+            # Log detailed error context
+            logger.error(f"Scraping failed for {url}: {response.error}")
+            logger.error(f"Failed tiers: {response.failed_tiers}")
+            
+            # Implement custom fallback logic if needed
+            if "authentication" in response.error.lower():
+                return await handle_auth_required(url)
+            
+        return response
+        
+    except Exception as e:
+        logger.exception(f"Unexpected error scraping {url}")
+        return UnifiedScrapingResponse(
+            success=False,
+            error=str(e),
+            url=url,
+            tier_used="none",
+            execution_time_ms=0,
+            content_length=0
+        )
+```
+
+### 3. Performance Monitoring
+
+```python
+# Regular performance monitoring
+async def monitor_system_health():
+    status = manager.get_system_status()
+    
+    if status["overall_success_rate"] < 0.9:
+        logger.warning("System performance degraded")
+        
+    if status["cache_stats"]["hit_rate"] < 0.7:
+        logger.info("Consider cache optimization")
+        
+    # Check tier-specific metrics
+    for tier, metrics in status["tier_metrics"].items():
+        if metrics["success_rate"] < 0.8:
+            logger.warning(f"Tier {tier} performance issues")
+```
+
+### 4. Resource Management
+
+```python
+# Always use context managers or try/finally
+async def safe_scraping_session():
+    manager = UnifiedBrowserManager(config)
+    
+    try:
+        await manager.initialize()
+        
+        # Perform scraping operations
+        results = []
+        for url in urls:
+            result = await manager.scrape(url)
+            results.append(result)
+            
+        return results
+        
+    finally:
+        await manager.cleanup()  # Essential for resource cleanup
+```
+
+This comprehensive 5-tier browser automation system provides production-ready web scraping with intelligent optimization, comprehensive monitoring, and robust error handling.

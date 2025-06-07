@@ -490,6 +490,81 @@ class Crawl4AIConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class LightweightScraperConfig(BaseModel):
+    """Configuration for lightweight HTTP scraping tier."""
+
+    # Enable/disable settings
+    enable_lightweight_tier: bool = Field(
+        default=True, description="Enable lightweight HTTP tier"
+    )
+    use_head_analysis: bool = Field(
+        default=True, description="Use HEAD request analysis for tier selection"
+    )
+
+    # Content settings
+    content_threshold: int = Field(
+        default=100,
+        gt=0,
+        description="Minimum characters for valid content",
+    )
+    max_lightweight_size: int = Field(
+        default=1_000_000,
+        gt=0,
+        description="Maximum content size in bytes for lightweight tier",
+    )
+
+    # Timeout settings
+    timeout: float = Field(default=5.0, gt=0, description="Request timeout in seconds")
+    head_timeout: float = Field(
+        default=2.0, gt=0, description="HEAD request timeout in seconds"
+    )
+    max_retries: int = Field(
+        default=2, ge=0, le=5, description="Maximum retry attempts"
+    )
+
+    # Pattern matching
+    simple_url_patterns: list[str] = Field(
+        default_factory=lambda: [
+            r".*\.md$",  # Markdown files
+            r".*/raw/.*",  # Raw content URLs
+            r".*\.(txt|json|xml)$",  # Static files
+            r".*/api/v\d+/.*",  # API endpoints
+            r".*\.rst$",  # reStructuredText files
+        ],
+        description="Regex patterns for URLs suitable for lightweight scraping",
+    )
+
+    # Known site configurations
+    known_simple_sites: dict[str, dict] = Field(
+        default_factory=lambda: {
+            "docs.python.org": {"selector": ".document"},
+            "golang.org": {"selector": "#page"},
+            "nodejs.org": {"selector": "#apicontent"},
+            "rust-lang.org": {"selector": ".content"},
+            "developer.mozilla.org": {"selector": ".main-page-content"},
+            "wikipedia.org": {"selector": "#content"},
+            "readthedocs.io": {"selector": ".document"},
+            "github.com": {"selector": ".markdown-body"},
+        },
+        description="Known sites with their content selectors",
+    )
+
+    @field_validator("simple_url_patterns")
+    @classmethod
+    def validate_patterns(cls, v: list[str]) -> list[str]:
+        """Validate regex patterns are compilable."""
+        import re
+
+        for pattern in v:
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                raise ValueError(f"Invalid regex pattern '{pattern}': {e}") from e
+        return v
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class BrowserUseConfig(BaseModel):
     """Configuration for BrowserUse adapter with AI-powered automation."""
 
@@ -1174,6 +1249,10 @@ class UnifiedConfig(BaseSettings):
     )
     crawl4ai: Crawl4AIConfig = Field(
         default_factory=Crawl4AIConfig, description="Crawl4AI settings"
+    )
+    lightweight_scraper: LightweightScraperConfig = Field(
+        default_factory=LightweightScraperConfig,
+        description="Lightweight HTTP scraper settings",
     )
     browser_use: BrowserUseConfig = Field(
         default_factory=BrowserUseConfig,
