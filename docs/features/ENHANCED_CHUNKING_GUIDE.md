@@ -1,7 +1,9 @@
 # Enhanced Code-Aware Chunking Guide
 
 > **V1 Status**: Optimized for Qdrant payload indexing and embedding generation  
-> **Performance**: 30-50% better retrieval precision, integrated with V1 metadata extraction
+> **Performance**: 30-50% better retrieval precision, integrated with V1 metadata extraction  
+> **Part of**: [Features Documentation Hub](./README.md)
+> **Quick Links**: [Advanced Search](./ADVANCED_SEARCH_IMPLEMENTATION.md) | [HyDE Enhancement](./HYDE_QUERY_ENHANCEMENT.md) | [Embedding Models](./EMBEDDING_MODEL_INTEGRATION.md) | [Vector DB Practices](./VECTOR_DB_BEST_PRACTICES.md)
 
 ## Overview
 
@@ -575,3 +577,39 @@ For implementation examples and test cases, see:
 
 - [tests/test_chunking.py](../tests/test_chunking.py)
 - [src/chunking.py](../src/chunking.py)
+
+## See Also
+
+### Related Features
+
+- **[Advanced Search Implementation](./ADVANCED_SEARCH_IMPLEMENTATION.md)** - Enhanced chunking provides rich metadata for advanced search filtering and Query API optimization
+- **[Embedding Model Integration](./EMBEDDING_MODEL_INTEGRATION.md)** - Optimal chunk sizes and boundaries improve embedding quality and reduce costs by 20-30%
+- **[HyDE Query Enhancement](./HYDE_QUERY_ENHANCEMENT.md)** - Code-aware chunking provides better context for HyDE document generation
+- **[Vector DB Best Practices](./VECTOR_DB_BEST_PRACTICES.md)** - Chunking metadata enables powerful payload indexing for 10-100x faster filtering
+- **[Reranking Guide](./RERANKING_GUIDE.md)** - Quality chunk boundaries improve reranking effectiveness
+
+### Architecture Documentation
+
+- **[System Overview](../architecture/SYSTEM_OVERVIEW.md)** - Chunking's role in the content processing pipeline
+- **[Unified Scraping Architecture](../architecture/UNIFIED_SCRAPING_ARCHITECTURE.md)** - Content flow from scraping to chunking
+- **[Performance Guide](../operations/PERFORMANCE_GUIDE.md)** - Optimize chunking performance and memory usage
+
+### Implementation References
+
+- **[Browser Automation](../user-guides/browser-automation.md)** - Content acquisition that feeds into enhanced chunking
+- **[API Reference](../api/API_REFERENCE.md)** - Chunking API endpoints and configuration
+- **[Development Workflow](../development/DEVELOPMENT_WORKFLOW.md)** - Testing and validating chunking strategies
+
+### Integration Benefits
+
+1. **With Search**: Rich metadata enables 10-100x faster filtered searches through payload indexing
+2. **With Embeddings**: Code-aware boundaries reduce embedding costs by 20-30% through optimal sizing
+3. **With HyDE**: Better source material leads to higher quality hypothetical document generation
+4. **With Vector DB**: Structured metadata enables sophisticated query patterns and filtering
+
+### Performance Impact
+
+- **Retrieval Precision**: 30-50% better accuracy for technical documentation
+- **Search Speed**: 10-100x faster when combined with payload indexing
+- **Embedding Efficiency**: 20-30% cost reduction through optimal chunk sizing
+- **Memory Usage**: Efficient processing of large codebases with tree-sitter AST parsing
