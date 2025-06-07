@@ -13,25 +13,29 @@ External research validation confirms the current web scraping architecture as *
 ### First Expert Analysis
 
 **Key Validation Points:**
+
 - ✅ **Solid and Modern Approach:** Combination of Crawl4AI + Playwright + ResultNormalizer + Caching confirmed as robust
 - ✅ **Direct SDK Performance:** Significant performance win over MCP-based approaches
 - ✅ **Intelligent Tool Selection:** Using Crawl4AI for AI-focused extraction and Playwright for JavaScript-heavy sites shows good understanding
 
 **Identified Optimization Opportunities:**
+
 1. **Resource Intensity of Playwright:** While powerful, more resource-intensive than needed for simple pages
 2. **Crawl4AI Overhead:** For very simple static HTML pages, may have unnecessary overhead
 3. **Need for Tiered Approach:** Suggests introducing lighter-weight first-pass for certain URLs
 
 **Recommended Tiered Strategy:**
+
 - **Tier 0:** HTTP GET + Basic Parsing (httpx + BeautifulSoup) for simple static content
 - **Tier 1:** Crawl4AI (current primary) for general-purpose crawling
 - **Tier 2:** Playwright (current fallback) for JavaScript-heavy sites
 
 ### Second Expert Analysis
 
-**Current Implementation Score: 8/10**
+#### **Current Implementation Score: 8/10**
 
 **Strengths Identified:**
+
 - ✅ **Direct SDK Usage:** Huge win for performance and control
 - ✅ **Specialized Tools:** Right tool for the job approach
 - ✅ **Fallback Mechanism:** Robust strategy
@@ -40,6 +44,7 @@ External research validation confirms the current web scraping architecture as *
 - ✅ **Configuration:** Good control mechanisms
 
 **Areas for Refinement to Reach 10/10:**
+
 1. **Efficiency for Simple Static Pages:** Basic HTTP GET would be faster for simple content
 2. **Playwright Resource Intensity:** Needs optimization when used
 3. **Smarter Tier/Tool Selection:** More dynamic and intelligent decision making
@@ -50,12 +55,14 @@ External research validation confirms the current web scraping architecture as *
 Both external analyses converge on similar optimization strategies:
 
 ### V1 Priority Enhancements
+
 1. **Tiered Scraping Architecture** with intelligent tier selection
 2. **Playwright Optimizations** with aggressive resource blocking
 3. **Enhanced Caching** including conditional GETs
 4. **Intelligent Source Selection** based on URL patterns and content type
 
 ### V2 Advanced Features
+
 1. **Distributed Crawling/Scraping** with task queues
 2. **Advanced Anti-Blocking Measures** with proxy rotation
 3. **Machine Learning for Adaptive Parsing**
@@ -66,6 +73,7 @@ Both external analyses converge on similar optimization strategies:
 ### Immediate V1 Optimizations
 
 #### 1. Lightweight HTTP Tier (Tier 0)
+
 ```python
 class LightweightScraper:
     async def attempt_simple_scrape(self, url: str) -> Optional[ScrapedContent]:
@@ -77,6 +85,7 @@ class LightweightScraper:
 ```
 
 #### 2. Enhanced Playwright Resource Blocking
+
 ```python
 async def _handle_route(self, route):
     if route.request.resource_type in ["image", "stylesheet", "font", "media"]:
@@ -88,6 +97,7 @@ async def _handle_route(self, route):
 ```
 
 #### 3. Intelligent Tier Selection
+
 ```python
 class SmartTierSelector:
     def select_tier(self, url: str, content_type: str) -> TierStrategy:
@@ -115,4 +125,4 @@ class SmartTierSelector:
 
 ---
 
-*External research confirms current architecture excellence while providing clear optimization path*
+> *External research confirms current architecture excellence while providing clear optimization path*
