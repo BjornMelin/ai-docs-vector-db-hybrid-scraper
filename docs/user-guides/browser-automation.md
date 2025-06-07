@@ -1,5 +1,7 @@
 # Browser Automation User Guide
 
+> **Quick Links**: [Advanced Search](../features/ADVANCED_SEARCH_IMPLEMENTATION.md) | [Enhanced Chunking](../features/ENHANCED_CHUNKING_GUIDE.md) | [Vector DB Practices](../features/VECTOR_DB_BEST_PRACTICES.md) | [System Overview](../architecture/SYSTEM_OVERVIEW.md)
+
 This guide provides comprehensive information about the 5-tier browser automation system, including implementation, configuration, and troubleshooting.
 
 ## Table of Contents
@@ -29,31 +31,45 @@ The browser automation system provides intelligent, multi-tier web scraping capa
 
 The system uses a hierarchical approach, starting with the fastest/cheapest option and escalating as needed:
 
-```
-Tier 0: Lightweight HTTP (httpx + BeautifulSoup)
-├─ Use case: Static HTML, documentation, raw files
-├─ Performance: 5-10x faster than browser automation
-└─ Cost: $0
-
-Tier 1: Crawl4AI Basic (Browser automation)
-├─ Use case: Standard dynamic content, basic JavaScript
-├─ Performance: 4-6x faster than complex automation
-└─ Cost: $0
-
-Tier 2: Crawl4AI Enhanced (Browser + Custom JavaScript)
-├─ Use case: Interactive content, form submissions
-├─ Performance: Optimized for specific interactions
-└─ Cost: $0
-
-Tier 3: Browser-use AI (Multi-LLM automation)
-├─ Use case: Complex interactions requiring reasoning
-├─ Performance: Natural language task processing
-└─ Cost: LLM API costs ($0.001-0.01 per request)
-
-Tier 4: Playwright + Firecrawl (Maximum control)
-├─ Use case: Complex auth, multi-step workflows
-├─ Performance: Full programmatic control
-└─ Cost: Firecrawl API costs ($0.002-0.01 per request)
+```mermaid
+flowchart TD
+    Start(["📄 Web Scraping Request"]) --> T0
+    
+    T0["⚡ Tier 0: Lightweight HTTP<br/>httpx + BeautifulSoup<br/>🎯 Static HTML, docs, raw files<br/>🚀 5-10x faster<br/>💰 $0"]
+    T0 --> |"Success"| Success1(["✅ Content Extracted"])
+    T0 --> |"Needs JS"| T1
+    
+    T1["🌐 Tier 1: Crawl4AI Basic<br/>Browser automation<br/>🎯 Dynamic content, basic JS<br/>🚀 4-6x faster<br/>💰 $0"]
+    T1 --> |"Success"| Success2(["✅ Content Extracted"])
+    T1 --> |"Complex interactions"| T2
+    
+    T2["🔧 Tier 2: Crawl4AI Enhanced<br/>Browser + Custom JavaScript<br/>🎯 Interactive content, forms<br/>🚀 Optimized interactions<br/>💰 $0"]
+    T2 --> |"Success"| Success3(["✅ Content Extracted"])
+    T2 --> |"AI reasoning needed"| T3
+    
+    T3["🤖 Tier 3: Browser-use AI<br/>Multi-LLM automation<br/>🎯 Complex reasoning tasks<br/>🚀 Natural language processing<br/>💰 $0.001-0.01 per request"]
+    T3 --> |"Success"| Success4(["✅ Content Extracted"])
+    T3 --> |"Max control needed"| T4
+    
+    T4["🎭 Tier 4: Playwright + Firecrawl<br/>Maximum control<br/>🎯 Complex auth, workflows<br/>🚀 Full programmatic control<br/>💰 $0.002-0.01 per request"]
+    T4 --> |"Success"| Success5(["✅ Content Extracted"])
+    T4 --> |"Failure"| Failure(["❌ Extraction Failed"])
+    
+    classDef tier0 fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef tier1 fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef tier2 fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef tier3 fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef tier4 fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef success fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef failure fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    
+    class T0 tier0
+    class T1 tier1
+    class T2 tier2
+    class T3 tier3
+    class T4 tier4
+    class Success1,Success2,Success3,Success4,Success5 success
+    class Failure failure
 ```
 
 ### Intelligent Routing
@@ -65,14 +81,102 @@ The system automatically selects the optimal tier based on:
 3. **Content Complexity** - SPA detection → Tier 2+
 4. **Performance Learning** - Success rate optimization
 
+```mermaid
+flowchart TD
+    Start(["🌐 Incoming URL Request"]) --> ForceCheck{"🎯 Force Tool Specified?"}
+    
+    ForceCheck --> |"Yes"| ForceUseTool["🎭 Use Specified Tool"]
+    ForceCheck --> |"No"| URLAnalysis["🔍 Analyze URL Pattern"]
+    
+    URLAnalysis --> StaticCheck{"📄 Static File?<br/>(.md, .txt, .json, /raw/)"}
+    StaticCheck --> |"Yes"| UseTier0["⚡ Use Tier 0: HTTP"]
+    
+    StaticCheck --> |"No"| SiteRules["🏗️ Check Site-Specific Rules"]
+    
+    SiteRules --> BrowserUseCheck{"🤖 Browser-use Site?<br/>(vercel.com, react.dev,<br/>docs.anthropic.com)"}
+    BrowserUseCheck --> |"Yes"| UseTier3["🤖 Use Tier 3: Browser-use AI"]
+    
+    BrowserUseCheck --> |"No"| PlaywrightCheck{"🎭 Playwright Site?<br/>(github.com, stackoverflow.com,<br/>notion.so)"}
+    PlaywrightCheck --> |"Yes"| UseTier4["🎭 Use Tier 4: Playwright"]
+    
+    PlaywrightCheck --> |"No"| InteractionCheck{"🖱️ Interaction Required?<br/>(custom_actions provided)"}
+    InteractionCheck --> |"Yes"| UseTier3
+    
+    InteractionCheck --> |"No"| DefaultTier["🌐 Use Tier 1: Crawl4AI Basic"]
+    
+    ForceUseTool --> Execute["⚙️ Execute Scraping"]
+    UseTier0 --> Execute
+    UseTier3 --> Execute
+    UseTier4 --> Execute
+    DefaultTier --> Execute
+    
+    Execute --> Success{"✅ Success?"}
+    Success --> |"Yes"| Return(["📄 Return Content"])
+    Success --> |"No"| Fallback["🔄 Activate Fallback Strategy"]
+    
+    classDef start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef tier0 fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef tier1 fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef tier3 fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef tier4 fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef process fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
+    classDef result fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    
+    class Start,URLAnalysis,SiteRules start
+    class ForceCheck,StaticCheck,BrowserUseCheck,PlaywrightCheck,InteractionCheck,Success decision
+    class UseTier0 tier0
+    class DefaultTier tier1
+    class UseTier3 tier3
+    class UseTier4 tier4
+    class ForceUseTool,Execute,Fallback process
+    class Return result
+```
+
 ### Fallback Strategy
 
-```
-Network errors → Retry same tier
-Content loading issues → Escalate to higher tier  
-JavaScript execution errors → Escalate to browser automation
-Anti-bot detection → Escalate to browser-use AI
-Complete failure → Try Firecrawl API as last resort
+```mermaid
+flowchart TD
+    Request(["🌐 Scraping Request"]) --> Attempt["🔄 Attempt Current Tier"]
+    
+    Attempt --> Check{"📊 Analyze Result"}
+    
+    Check --> |"✅ Success"| Success(["✅ Content Extracted"])
+    
+    Check --> |"🌐 Network Error"| NetworkError["🔄 Retry Same Tier<br/>(up to 3 attempts)"]
+    NetworkError --> |"Still failing"| EscalateTier
+    NetworkError --> |"Retry"| Attempt
+    
+    Check --> |"📄 Content Loading Issues"| EscalateTier["⬆️ Escalate to Higher Tier"]
+    
+    Check --> |"⚙️ JavaScript Execution Error"| EscalateBrowser["🌐 Escalate to Browser Automation<br/>(Tier 1+)"]
+    EscalateBrowser --> NextTier
+    
+    Check --> |"🤖 Anti-bot Detection"| EscalateAI["🤖 Escalate to Browser-use AI<br/>(Tier 3+)"]
+    EscalateAI --> NextTier
+    
+    EscalateTier --> NextTier{"🎯 Next Tier Available?"}
+    
+    NextTier --> |"Yes"| UpdateTier["📈 Increase Tier Level"]
+    UpdateTier --> Attempt
+    
+    NextTier --> |"No (Tier 4)"| LastResort["🆘 Try Firecrawl API<br/>as Last Resort"]
+    
+    LastResort --> FinalCheck{"📊 Final Result"}
+    FinalCheck --> |"✅ Success"| Success
+    FinalCheck --> |"❌ Failure"| CompleteFailure(["❌ Complete Failure<br/>Return Error"])
+    
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef success fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    classDef error fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    classDef escalate fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Request,Attempt,UpdateTier,LastResort process
+    class Check,NextTier,FinalCheck decision
+    class Success success
+    class CompleteFailure error
+    class NetworkError,EscalateTier,EscalateBrowser,EscalateAI escalate
 ```
 
 ## Implementation Guide
@@ -747,13 +851,65 @@ js_patterns = {
 
 ### Performance Characteristics
 
-| Tier | Technology | Speed | Cost | Capability | Success Rate |
-|------|------------|--------|------|------------|--------------|
-| 0 | httpx + BeautifulSoup | 5-10x | $0 | Static HTML | 95%+ |
-| 1 | Crawl4AI Basic | 4-6x | $0 | Basic JS | 90%+ |
-| 2 | Crawl4AI Enhanced | 2-4x | $0 | Interactive | 85%+ |
-| 3 | browser-use AI | 1x | $0.001-0.01 | AI Reasoning | 80%+ |
-| 4 | Playwright/Firecrawl | Variable | $0.002-0.01 | Max Control | 95%+ |
+```mermaid
+quadrantChart
+    title Browser Automation Tier Performance Matrix
+    x-axis Low Cost --> High Cost
+    y-axis Low Speed --> High Speed
+    
+    quadrant-1 High Speed, High Cost
+    quadrant-2 High Speed, Low Cost
+    quadrant-3 Low Speed, Low Cost
+    quadrant-4 Low Speed, High Cost
+    
+    "Tier 0: HTTP (95%)" : [0.1, 0.9]
+    "Tier 1: Crawl4AI Basic (90%)" : [0.1, 0.7]
+    "Tier 2: Crawl4AI Enhanced (85%)" : [0.1, 0.5]
+    "Tier 3: Browser-use AI (80%)" : [0.6, 0.3]
+    "Tier 4: Playwright/Firecrawl (95%)" : [0.8, 0.4]
+```
+
+**Detailed Performance Metrics:**
+
+| Tier | Technology | Speed Multiplier | Cost Range | Primary Capability | Success Rate | Best Use Case |
+|------|------------|------------------|------------|-------------------|--------------|---------------|
+| 0 | httpx + BeautifulSoup | 🚀 5-10x | 💰 $0 | Static HTML parsing | ✅ 95%+ | Documentation, raw files |
+| 1 | Crawl4AI Basic | 🚀 4-6x | 💰 $0 | Basic JavaScript | ✅ 90%+ | Dynamic content |
+| 2 | Crawl4AI Enhanced | 🚀 2-4x | 💰 $0 | Interactive elements | ✅ 85%+ | Forms, SPAs |
+| 3 | browser-use AI | 🚀 1x | 💰 $0.001-0.01 | AI reasoning | ✅ 80%+ | Complex interactions |
+| 4 | Playwright/Firecrawl | 🚀 Variable | 💰 $0.002-0.01 | Maximum control | ✅ 95%+ | Auth workflows |
+
+### Tier Escalation Sequence
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 User Request
+    participant Router as 🎯 AutomationRouter
+    participant T0 as ⚡ Tier 0 (HTTP)
+    participant T1 as 🌐 Tier 1 (Crawl4AI)
+    participant T3 as 🤖 Tier 3 (Browser-use)
+    participant T4 as 🎭 Tier 4 (Playwright)
+    
+    User->>Router: scrape(url="https://react.dev/learn")
+    Note over Router: URL Analysis: react.dev → complex site
+    
+    Router->>T1: Try Crawl4AI Basic
+    T1-->>Router: ❌ JavaScript execution failed
+    Note over Router: Escalate due to JS errors
+    
+    Router->>T3: Try Browser-use AI
+    Note over T3: LLM analyzes page<br/>Handles dynamic content
+    T3-->>Router: ❌ Anti-bot detection
+    Note over Router: Escalate due to bot detection
+    
+    Router->>T4: Try Playwright with stealth
+    Note over T4: Full browser control<br/>Bypass protection
+    T4-->>Router: ✅ Success + content
+    
+    Router->>User: 📄 Return extracted content
+    
+    Note over Router,T4: Performance metrics updated:<br/>• react.dev → prefer Tier 4<br/>• Success rate: 95%<br/>• Avg time: 12.3s
+```
 
 ### Monitoring Metrics
 
@@ -872,7 +1028,9 @@ async def browser_automation_health_check() -> dict[str, Any]:
 **Symptoms**: "Failed to launch chromium" or browser crashes
 
 **Solutions**:
+
 1. Install browser dependencies:
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0
@@ -882,6 +1040,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 2. Add browser arguments for containerized environments:
+
    ```python
    browser_config = {
        "extra_args": [
@@ -898,7 +1057,9 @@ async def browser_automation_health_check() -> dict[str, Any]:
 **Symptoms**: Content field contains minimal text
 
 **Solutions**:
+
 1. Use appropriate tier for content type:
+
    ```python
    # For static content
    result = await lightweight_scraper.scrape(url)
@@ -908,6 +1069,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 2. Add wait conditions:
+
    ```python
    result = await crawl4ai.scrape(
        url=url,
@@ -921,7 +1083,9 @@ async def browser_automation_health_check() -> dict[str, Any]:
 **Symptoms**: "Access denied" or Cloudflare challenges
 
 **Solutions**:
+
 1. Use browser-use AI tier:
+
    ```python
    result = await automation_router.scrape(
        url=url,
@@ -930,6 +1094,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 2. Add stealth techniques:
+
    ```python
    browser_config = {
        "extra_args": [
@@ -944,7 +1109,9 @@ async def browser_automation_health_check() -> dict[str, Any]:
 **Symptoms**: System memory usage increases over time
 
 **Solutions**:
+
 1. Reduce concurrency:
+
    ```python
    config = {
        "max_concurrent": 3,  # Lower concurrency
@@ -952,6 +1119,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 2. Process in batches:
+
    ```python
    async def crawl_in_batches(urls: list[str], batch_size: int = 10):
        results = []
@@ -972,7 +1140,9 @@ async def browser_automation_health_check() -> dict[str, Any]:
 **Symptoms**: "Timeout 30000ms exceeded"
 
 **Solutions**:
+
 1. Increase timeouts:
+
    ```python
    config = {
        "page_timeout": 60000,    # 60 seconds
@@ -981,6 +1151,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 2. Implement retry logic:
+
    ```python
    async def crawl_with_retry(url: str, max_retries: int = 3):
        for attempt in range(max_retries):
@@ -998,12 +1169,14 @@ async def browser_automation_health_check() -> dict[str, Any]:
 ### Debugging Techniques
 
 1. **Enable verbose logging**:
+
    ```python
    import logging
    logging.basicConfig(level=logging.DEBUG)
    ```
 
 2. **Use headful mode** for visual debugging:
+
    ```python
    browser_config = {
        "headless": False,  # See browser actions
@@ -1012,6 +1185,7 @@ async def browser_automation_health_check() -> dict[str, Any]:
    ```
 
 3. **Take screenshots** on failure:
+
    ```python
    try:
        result = await provider.scrape_url(url)
@@ -1142,12 +1316,46 @@ async def monitored_scrape(url: str, **kwargs) -> dict[str, Any]:
 
 ---
 
-## Related Documentation
+## See Also
 
-- [Crawl4AI User Guide](./crawl4ai.md) - Detailed Crawl4AI configuration and usage
-- [System Architecture](../architecture/SYSTEM_OVERVIEW.md) - Overall system design
-- [Unified Scraping Architecture](../architecture/UNIFIED_SCRAPING_ARCHITECTURE.md) - Technical specifications
-- [Performance Guide](../operations/PERFORMANCE_GUIDE.md) - Performance optimization strategies
-- [API Reference](../api/browser_automation_api.md) - API documentation
+### Related Features
+
+- **[Enhanced Chunking Guide](../features/ENHANCED_CHUNKING_GUIDE.md)** - Content processing pipeline that handles scraped content from browser automation
+- **[Advanced Search Implementation](../features/ADVANCED_SEARCH_IMPLEMENTATION.md)** - Search system that indexes content acquired through browser automation
+- **[Vector DB Best Practices](../features/VECTOR_DB_BEST_PRACTICES.md)** - Storage and retrieval of scraped content with metadata indexing
+- **[Embedding Model Integration](../features/EMBEDDING_MODEL_INTEGRATION.md)** - Smart embedding generation for scraped documentation
+
+### Architecture Documentation
+
+- **[System Overview](../architecture/SYSTEM_OVERVIEW.md)** - Browser automation's role in the overall AI documentation system
+- **[Unified Scraping Architecture](../architecture/UNIFIED_SCRAPING_ARCHITECTURE.md)** - Technical specifications for multi-tier scraping
+- **[Performance Guide](../operations/PERFORMANCE_GUIDE.md)** - Monitor and optimize browser automation performance
+
+### Implementation References
+
+- **[Crawl4AI User Guide](./crawl4ai.md)** - Detailed Crawl4AI configuration and usage patterns
+- **[API Reference](../api/browser_automation_api.md)** - Browser automation API endpoints and operations
+- **[Development Workflow](../development/DEVELOPMENT_WORKFLOW.md)** - Testing and validating automation configurations
+
+### Integration Flow
+
+1. **Content Acquisition**: 5-tier browser automation → content extraction with metadata
+2. **Content Processing**: Raw content → enhanced chunking → rich metadata extraction
+3. **Storage**: Processed chunks → vector database with payload indexing
+4. **Search**: User queries → advanced search with browser automation metadata filters
+
+### Performance Benefits
+
+- **5-10x Performance**: Lightweight HTTP tier for static content vs browser automation
+- **97%+ Success Rate**: Intelligent fallbacks across automation tiers
+- **Zero Cost**: Free tools (Crawl4AI, Playwright) prioritized over paid APIs
+- **Site-Specific Optimization**: Custom configurations for 97%+ extraction accuracy
+
+### Cost Optimization
+
+- **Tier 0 (HTTP)**: $0 cost for documentation and static content
+- **Tier 1-2 (Crawl4AI)**: $0 cost for dynamic content and interactions
+- **Tier 3 (Browser-use)**: $0.001-0.01 per request for AI-powered automation
+- **Tier 4 (Firecrawl)**: $0.002-0.01 per request for complex workflows
 
 This guide represents the authoritative source for browser automation in the AI Documentation Vector DB system. All implementation, configuration, and troubleshooting information is consolidated here to maintain a single source of truth.
