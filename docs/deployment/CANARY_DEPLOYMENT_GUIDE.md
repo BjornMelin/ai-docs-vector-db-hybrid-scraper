@@ -40,21 +40,80 @@ The canary deployment system provides:
 
 The system implements application-level traffic routing that works independently of infrastructure:
 
-```python
-# Traffic routing decision flow
-1. Search request arrives at QdrantService
-2. SearchInterceptor checks for active canary deployment
-3. CanaryRouter makes routing decision based on:
-   - User ID (for sticky sessions)
-   - Canary percentage
-   - Consistent hashing algorithm
-4. Request routed to appropriate collection
-5. Metrics recorded for monitoring
+```mermaid
+flowchart TD
+    A["🚀 Search Request"] --> B{SearchInterceptor}
+    B -->|Check| C{Active Canary?}
+    
+    C -->|No| D["📦 Direct to Primary<br/>Collection"]
+    C -->|Yes| E[CanaryRouter]
+    
+    E --> F{"Routing Decision<br/>🎯 User ID Hash<br/>📈 Canary %<br/>🔄 Consistent Hash"}
+    
+    F -->|Primary| G["🟦 Route to<br/>Primary Collection"]
+    F -->|Canary| H["🟨 Route to<br/>Canary Collection"]
+    
+    G --> I["📈 Record Metrics<br/>Latency & Errors"]
+    H --> I
+    D --> I
+    
+    I --> J["✅ Return Results"]
+    
+    %% Styling
+    classDef request fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef primary fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef canary fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef metrics fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef result fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000
+    
+    class A request
+    class B,C,F decision
+    class D,G primary
+    class H canary
+    class E,I metrics
+    class J result
 ```
 
 ### Consistent Hashing Algorithm
 
 Traffic distribution uses MD5-based consistent hashing:
+
+```mermaid
+flowchart TD
+    A["🚀 User Request<br/>routing_key: 'user_123'"] --> B["🔢 MD5 Hash<br/>hashlib.md5('user_123')"]
+    
+    B --> C["🎲 Extract 8 chars<br/>.hexdigest()[:8]"]
+    C --> D["🔢 Convert to Int<br/>int(hash, 16) % 100"]
+    
+    D --> E{"key_value < canary_%?"}
+    
+    E -->|"Yes<br/>key_value: 15<br/>canary: 25%"| F["🟨 Route to<br/>Canary Collection"]
+    E -->|"No<br/>key_value: 85<br/>canary: 25%"| G["🟦 Route to<br/>Primary Collection"]
+    
+    F --> H["📋 Store Session<br/>Redis: 24h TTL"]
+    G --> H
+    
+    %% Example calculations
+    I["📊 Hash Examples:<br/>user_123 → 42 → Primary<br/>user_456 → 18 → Canary<br/>user_789 → 67 → Primary"]
+    
+    %% Styling
+    classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef process fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef decision fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef canary fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef primary fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef example fill:#f5f5f5,stroke:#616161,stroke-width:1px,color:#000
+    
+    class A input
+    class B,C,D process
+    class E decision
+    class F canary
+    class G primary
+    class H storage
+    class I example
+```
 
 ```python
 def _make_routing_decision(routing_key: str, percentage: float) -> str:
