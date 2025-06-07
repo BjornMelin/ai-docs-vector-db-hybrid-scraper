@@ -6,65 +6,93 @@ The V1 architecture creates a synergistic system where each component enhances t
 
 ## Architecture Diagram
 
-```plaintext
-┌─────────────────────────────────────────────────────────────────────┐
-│                        V1 INTEGRATED ARCHITECTURE                    │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  User Query                                                          │
-│      ↓                                                               │
-│  ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐       │
-│  │    HyDE     │───▶│ DragonflyDB  │◀───│  Cached Results │       │
-│  │ Generation  │    │    Cache     │    └─────────────────┘       │
-│  └─────────────┘    └──────────────┘                               │
-│      ↓                      ↓                                       │
-│  ┌─────────────────────────────────────────────┐                   │
-│  │          Qdrant Query API + Prefetch         │                   │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐     │                   │
-│  │  │  HyDE   │  │ Original│  │ Sparse  │     │                   │
-│  │  │Embedding│  │  Query  │  │ Vector  │     │                   │
-│  │  └─────────┘  └─────────┘  └─────────┘     │                   │
-│  │         ↓           ↓            ↓           │                   │
-│  │      Prefetch    Prefetch    Prefetch       │                   │
-│  │         └───────────┴────────────┘          │                   │
-│  │                     ↓                        │                   │
-│  │              Native RRF Fusion               │                   │
-│  │                     ↓                        │                   │
-│  │            Filtered by Indexes               │                   │
-│  └─────────────────────────────────────────────┘                   │
-│                        ↓                                            │
-│               BGE Reranking                                         │
-│                        ↓                                            │
-│                 Final Results                                       │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                     CONTENT INGESTION                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────┐    ┌─────────────┐    ┌──────────────┐          │
-│  │  Crawl4AI   │    │ Stagehand   │    │  Playwright  │          │
-│  │   (Bulk)    │    │(JS Complex) │    │  (Fallback)  │          │
-│  └─────────────┘    └─────────────┘    └──────────────┘          │
-│         ↓                  ↓                    ↓                  │
-│  ┌─────────────────────────────────────────────┐                  │
-│  │         Enhanced Metadata Extraction         │                  │
-│  │  • doc_type  • language  • quality_score    │                  │
-│  │  • source    • created_at • js_rendered     │                  │
-│  └─────────────────────────────────────────────┘                  │
-│                        ↓                                           │
-│  ┌─────────────────────────────────────────────┐                  │
-│  │          Intelligent Chunking                │                  │
-│  │  • AST-based  • Function boundaries         │                  │
-│  │  • Overlap    • Multi-language              │                  │
-│  └─────────────────────────────────────────────┘                  │
-│                        ↓                                           │
-│  ┌─────────────────────────────────────────────┐                  │
-│  │     Collection with Payload Indexes          │                  │
-│  │  • Fast filtering  • Versioned collections  │                  │
-│  │  • Zero-downtime   • A/B testing            │                  │
-│  └─────────────────────────────────────────────┘                  │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    %% Styling
+    classDef queryLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef cacheLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef processLayer fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef crawlLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef storageLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef resultLayer fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+
+    %% User Query Layer
+    UQ["🔍 User Query"]:::queryLayer
+
+    %% Cache & HyDE Layer
+    subgraph CacheHyDE ["Cache & Enhancement Layer"]
+        HG["🧠 HyDE Generation"]:::processLayer
+        DC["⚡ DragonflyDB Cache"]:::cacheLayer
+        CR["📊 Cached Results"]:::cacheLayer
+    end
+
+    %% Query Processing Layer
+    subgraph QueryAPI ["Qdrant Query API + Prefetch"]
+        HE["🎯 HyDE Embedding"]:::processLayer
+        OQ["📝 Original Query"]:::processLayer
+        SV["🔍 Sparse Vector"]:::processLayer
+        PF1["Prefetch"]:::processLayer
+        PF2["Prefetch"]:::processLayer
+        PF3["Prefetch"]:::processLayer
+        RRF["🔄 Native RRF Fusion"]:::processLayer
+        FI["🎛️ Filtered by Indexes"]:::processLayer
+    end
+
+    %% Reranking & Results
+    BR["🎯 BGE Reranking"]:::resultLayer
+    FR["✨ Final Results"]:::resultLayer
+
+    %% Content Ingestion Pipeline
+    subgraph Ingestion ["Content Ingestion Pipeline"]
+        subgraph Crawlers ["Multi-Tier Crawling"]
+            C4["🚀 Crawl4AI (Bulk)"]:::crawlLayer
+            SH["🎭 Stagehand (JS Complex)"]:::crawlLayer
+            PW["🎪 Playwright (Fallback)"]:::crawlLayer
+        end
+        
+        subgraph Processing ["Content Processing"]
+            ME["📋 Enhanced Metadata\n• doc_type • language\n• quality_score • source\n• created_at • js_rendered"]:::processLayer
+            IC["✂️ Intelligent Chunking\n• AST-based • Function boundaries\n• Overlap • Multi-language"]:::processLayer
+        end
+        
+        subgraph Storage ["Optimized Storage"]
+            PI["🗂️ Collection with Payload Indexes\n• Fast filtering • Versioned collections\n• Zero-downtime • A/B testing"]:::storageLayer
+        end
+    end
+
+    %% Flow connections
+    UQ --> HG
+    UQ --> DC
+    HG --> DC
+    DC --> CR
+    DC --> QueryAPI
+    
+    HG --> HE
+    UQ --> OQ
+    UQ --> SV
+    
+    HE --> PF1
+    OQ --> PF2
+    SV --> PF3
+    
+    PF1 --> RRF
+    PF2 --> RRF
+    PF3 --> RRF
+    
+    RRF --> FI
+    FI --> BR
+    BR --> FR
+    
+    %% Ingestion flow
+    C4 --> ME
+    SH --> ME
+    PW --> ME
+    ME --> IC
+    IC --> PI
+    
+    %% Cache integration
+    CR -.-> FR
+    PI -.-> FI
 ```
 
 ## Component Synergies
@@ -73,228 +101,413 @@ The V1 architecture creates a synergistic system where each component enhances t
 
 #### HyDE + Query API Prefetch
 
-```python
-# Synergy: HyDE generates better context, Query API efficiently retrieves
-async def enhanced_search(query: str) -> list[SearchResult]:
-    # 1. Check DragonflyDB cache
-    cache_key = f"search:{hash(query)}"
-    if cached := await dragonfly.get(cache_key):
-        return cached
+```mermaid
+sequenceDiagram
+    participant User
+    participant SearchAPI as Search API
+    participant Cache as DragonflyDB
+    participant HyDE as HyDE Generator
+    participant Qdrant as Qdrant Query API
+    participant Embedder as Embedding Service
+
+    User->>SearchAPI: enhanced_search(query)
     
-    # 2. Generate HyDE embedding (with caching)
-    hyde_key = f"hyde:{hash(query)}"
-    if hyde_cached := await dragonfly.get(hyde_key):
-        hyde_embedding = hyde_cached
-    else:
-        hypothetical_docs = await generate_hypothetical_docs(query)
-        hyde_embedding = await embed_and_average(hypothetical_docs)
-        await dragonfly.set(hyde_key, hyde_embedding, ttl=3600)
-    
-    # 3. Query API with multi-stage prefetch
-    results = await qdrant.query_points(
-        collection="documents",
-        prefetch=[
-            # HyDE for semantic understanding
-            Prefetch(query=hyde_embedding, using="dense", limit=50),
-            # Original for precision
-            Prefetch(query=query_embedding, using="dense", limit=30),
-            # Sparse for keyword matching
-            Prefetch(query=sparse_vector, using="sparse", limit=100),
-        ],
-        fusion=Fusion.RRF,
-        filter=build_filter(request),  # Fast due to indexing!
-        limit=10
-    )
-    
-    # 4. Cache results
-    await dragonfly.set(cache_key, results, ttl=1800)
-    
-    return results
+    %% Cache Check
+    SearchAPI->>Cache: get("search:{hash(query)}")
+    alt Cache Hit
+        Cache-->>SearchAPI: cached_results
+        SearchAPI-->>User: return cached_results
+    else Cache Miss
+        %% HyDE Generation with Caching
+        SearchAPI->>Cache: get("hyde:{hash(query)}")
+        alt HyDE Cache Hit
+            Cache-->>SearchAPI: hyde_embedding
+        else HyDE Cache Miss
+            SearchAPI->>HyDE: generate_hypothetical_docs(query)
+            HyDE-->>SearchAPI: hypothetical_docs
+            SearchAPI->>Embedder: embed_and_average(docs)
+            Embedder-->>SearchAPI: hyde_embedding
+            SearchAPI->>Cache: set("hyde:", embedding, ttl=3600)
+        end
+        
+        %% Multi-stage Query with Prefetch
+        SearchAPI->>Embedder: embed(query)
+        Embedder-->>SearchAPI: query_embedding
+        SearchAPI->>Embedder: sparse_embed(query)
+        Embedder-->>SearchAPI: sparse_vector
+        
+        SearchAPI->>Qdrant: query_points(prefetch=[
+        note over Qdrant: HyDE: semantic (limit=50)<br/>Original: precision (limit=30)<br/>Sparse: keywords (limit=100)<br/>Fusion: RRF + Fast Filtering
+        Qdrant-->>SearchAPI: results
+        
+        %% Cache Results
+        SearchAPI->>Cache: set("search:", results, ttl=1800)
+        SearchAPI-->>User: return results
+    end
 ```
 
 ### 2. Content Ingestion Pipeline
 
 #### Crawl4AI + Payload Indexing
 
-```python
-# Synergy: Crawl4AI provides rich metadata, indexes make it searchable
-async def ingest_document(url: str):
-    # 1. Intelligent crawling with fallback
-    try:
-        result = await crawl4ai.crawl(url)
-    except JSRenderingRequired:
-        result = await stagehand.crawl(url)
-    except Exception:
-        result = await playwright.crawl(url)
+```mermaid
+flowchart TD
+    %% Styling
+    classDef crawlStep fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef processStep fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef cacheStep fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef storageStep fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef errorStep fill:#ffebee,stroke:#c62828,stroke-width:2px
+
+    URL["📄 Document URL"]:::crawlStep
     
-    # 2. Extract enhanced metadata (all indexed!)
-    metadata = {
-        "source_url": url,
-        "doc_type": detect_doc_type(result),
-        "language": result.language,
-        "crawl_source": result.source,
-        "quality_score": calculate_quality(result),
-        "js_rendered": result.js_rendered,
-        "created_at": datetime.utcnow(),
-    }
+    %% Intelligent Crawling with Fallback Chain
+    subgraph CrawlChain ["🔄 Intelligent Crawling Chain"]
+        C4["🚀 Try Crawl4AI"]:::crawlStep
+        JSErr{"JS Rendering Required?"}:::errorStep
+        SH["🎭 Try Stagehand"]:::crawlStep
+        GenErr{"General Exception?"}:::errorStep
+        PW["🎪 Fallback to Playwright"]:::crawlStep
+    end
     
-    # 3. Intelligent chunking
-    chunks = await chunk_document(
-        result.content,
-        strategy="ast" if is_code else "enhanced"
-    )
+    %% Content Processing
+    subgraph Processing ["📊 Enhanced Processing"]
+        Meta["📋 Extract Rich Metadata<br/>• doc_type • language<br/>• quality_score • source<br/>• js_rendered • created_at"]:::processStep
+        DetectType{"🔍 Code Content?"}:::processStep
+        ChunkAST["✂️ AST-based Chunking"]:::processStep
+        ChunkEnh["✂️ Enhanced Chunking"]:::processStep
+    end
     
-    # 4. Generate embeddings with caching
-    embeddings = []
-    for chunk in chunks:
-        cache_key = f"embed:{hash(chunk.text)}"
-        if cached := await dragonfly.get(cache_key):
-            embeddings.append(cached)
-        else:
-            embedding = await generate_embedding(chunk.text)
-            await dragonfly.set(cache_key, embedding, ttl=86400)
-            embeddings.append(embedding)
+    %% Embedding with Caching
+    subgraph EmbedCache ["🎯 Cached Embedding Generation"]
+        LoopChunks["🔄 For each chunk"]:::processStep
+        CheckCache{"💾 Cache Hit?"}:::cacheStep
+        GenEmbed["🧠 Generate Embedding"]:::processStep
+        SetCache["💾 Cache Embedding"]:::cacheStep
+        GetCache["💾 Get from Cache"]:::cacheStep
+    end
     
-    # 5. Upsert to versioned collection
-    await upsert_with_zero_downtime(chunks, embeddings, metadata)
+    %% Zero-downtime Storage
+    ZDU["🔄 Zero-Downtime Upsert<br/>to Versioned Collection"]:::storageStep
+    
+    %% Flow connections
+    URL --> C4
+    C4 --> JSErr
+    JSErr -->|Yes| SH
+    JSErr -->|No| Meta
+    SH --> GenErr
+    GenErr -->|Yes| PW
+    GenErr -->|No| Meta
+    PW --> Meta
+    
+    Meta --> DetectType
+    DetectType -->|Yes| ChunkAST
+    DetectType -->|No| ChunkEnh
+    
+    ChunkAST --> LoopChunks
+    ChunkEnh --> LoopChunks
+    
+    LoopChunks --> CheckCache
+    CheckCache -->|Hit| GetCache
+    CheckCache -->|Miss| GenEmbed
+    GenEmbed --> SetCache
+    
+    GetCache --> ZDU
+    SetCache --> ZDU
+    
+    %% Performance annotations
+    C4 -.->|"4-6x faster"| Meta
+    CheckCache -.->|"~80% hit rate"| GetCache
+    ZDU -.->|"99.99% uptime"| URL
 ```
 
 ### 3. Cache Layer Integration
 
 #### DragonflyDB Optimization Patterns
 
-```python
-class IntegratedCacheManager:
-    def __init__(self, dragonfly_client):
-        self.cache = dragonfly_client
-        
-    async def multi_level_cache(self, operation: str, key: str, 
-                                compute_fn: Callable, ttl: int):
-        """Multi-level caching with computation."""
-        
-        # L1: Check local process cache (microseconds)
-        if cached := self.local_cache.get(key):
-            return cached
-            
-        # L2: Check DragonflyDB (sub-millisecond)
-        if cached := await self.cache.get(key):
-            self.local_cache.set(key, cached)
-            return cached
-            
-        # L3: Compute and cache at all levels
-        result = await compute_fn()
-        
-        # Cache in DragonflyDB
-        await self.cache.set(key, result, ttl=ttl)
-        
-        # Cache locally
-        self.local_cache.set(key, result)
-        
-        return result
+```mermaid
+flowchart TB
+    %% Styling
+    classDef l1Cache fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
+    classDef l2Cache fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef compute fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef pipeline fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef timing fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+
+    Request["🔍 Cache Request"]:::compute
     
-    async def batch_cache_operations(self, operations: list[CacheOp]):
-        """Batch cache operations for efficiency."""
+    subgraph MultiLevel ["🏗️ Multi-Level Cache Strategy"]
+        L1Check{"📱 L1: Local Cache\n(microseconds)"}:::l1Cache
+        L1Hit["✅ L1 Cache Hit"]:::l1Cache
         
-        # DragonflyDB supports pipelining
-        pipeline = self.cache.pipeline()
+        L2Check{"⚡ L2: DragonflyDB\n(sub-millisecond)"}:::l2Cache
+        L2Hit["✅ L2 Cache Hit"]:::l2Cache
+        L2Store["💾 Store in L1"]:::l1Cache
         
-        for op in operations:
-            if op.type == "get":
-                pipeline.get(op.key)
-            elif op.type == "set":
-                pipeline.set(op.key, op.value, ttl=op.ttl)
-                
-        results = await pipeline.execute()
-        return results
+        Compute["⚙️ L3: Compute Result"]:::compute
+        StoreL2["💾 Store in DragonflyDB"]:::l2Cache
+        StoreL1["💾 Store in Local"]:::l1Cache
+    end
+    
+    subgraph BatchOps ["📦 Batch Operations"]
+        Pipeline["😰 DragonflyDB Pipeline"]:::pipeline
+        BatchGet["📥 Batch GET operations"]:::pipeline
+        BatchSet["📤 Batch SET operations"]:::pipeline
+        Execute["⚡ Execute Pipeline"]:::pipeline
+    end
+    
+    Result["📊 Return Result"]:::compute
+    
+    %% Multi-level flow
+    Request --> L1Check
+    L1Check -->|Hit| L1Hit
+    L1Check -->|Miss| L2Check
+    L2Check -->|Hit| L2Hit
+    L2Check -->|Miss| Compute
+    
+    L2Hit --> L2Store
+    L2Store --> Result
+    
+    Compute --> StoreL2
+    StoreL2 --> StoreL1
+    StoreL1 --> Result
+    
+    L1Hit --> Result
+    
+    %% Batch operations flow
+    Request -.->|"Multiple ops"| Pipeline
+    Pipeline --> BatchGet
+    Pipeline --> BatchSet
+    BatchGet --> Execute
+    BatchSet --> Execute
+    Execute --> Result
+    
+    %% Performance annotations
+    L1Check -.->|"~1μs"| L1Hit
+    L2Check -.->|"<1ms"| L2Hit
+    Compute -.->|"Variable"| StoreL2
+    Execute -.->|"Pipelined"| Result
 ```
 
 ## Performance Optimizations
 
 ### 1. Query Optimization Stack
 
-```python
-class QueryOptimizationStack:
-    """Layered optimizations for maximum performance."""
+```mermaid
+graph LR
+    %% Styling
+    classDef layer1 fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef layer2 fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    classDef layer3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    classDef layer4 fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef layer5 fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    classDef timing fill:#ffecb3,stroke:#ff8f00,stroke-width:2px
+    classDef performance fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+
+    Query["🔍 User Query"]:::performance
     
-    async def optimized_search(self, query: str) -> list[SearchResult]:
-        # Layer 1: Cache check (0.1ms)
-        if cached := await self.check_cache(query):
-            return cached
-            
-        # Layer 2: Payload filtering (1ms with indexes)
-        pre_filter = await self.build_smart_filter(query)
-        
-        # Layer 3: HyDE enhancement (5ms with cache)
-        hyde_embedding = await self.get_or_compute_hyde(query)
-        
-        # Layer 4: Query API prefetch (20ms)
-        results = await self.query_with_prefetch(
-            hyde_embedding, 
-            query_embedding,
-            pre_filter
-        )
-        
-        # Layer 5: Reranking (10ms for top-20)
-        reranked = await self.rerank_results(query, results[:20])
-        
-        # Total: ~37ms for complex search (vs 100ms+ baseline)
-        return reranked[:10]
+    subgraph Stack ["📈 Query Optimization Stack"]
+        L1["🏎️ Layer 1: Cache Check\n0.1ms"]:::layer1
+        L2["🎛️ Layer 2: Smart Filtering\n1ms (with indexes)"]:::layer2
+        L3["🧠 Layer 3: HyDE Enhancement\n5ms (with cache)"]:::layer3
+        L4["⚡ Layer 4: Query API Prefetch\n20ms"]:::layer4
+        L5["🎯 Layer 5: BGE Reranking\n10ms (top-20)"]:::layer5
+    end
+    
+    Results["✨ Final Results\n~37ms total\n(vs 100ms+ baseline)"]:::performance
+    
+    %% Layer details
+    L1Detail["💾 DragonflyDB\nInstant retrieval"]:::timing
+    L2Detail["📊 Payload Indexes\n10-100x faster filtering"]:::timing
+    L3Detail["🎯 Hypothetical docs\nCached embeddings"]:::timing
+    L4Detail["🔄 Multi-stage prefetch\nHyDE + Original + Sparse"]:::timing
+    L5Detail["🏆 BGE reranker\nAccuracy boost"]:::timing
+    
+    %% Flow
+    Query --> L1
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+    L4 --> L5
+    L5 --> Results
+    
+    %% Details connections
+    L1 -.-> L1Detail
+    L2 -.-> L2Detail
+    L3 -.-> L3Detail
+    L4 -.-> L4Detail
+    L5 -.-> L5Detail
+    
+    %% Performance improvements
+    L1Detail -.->|"80% hit rate"| Results
+    L2Detail -.->|"Index optimization"| Results
+    L3Detail -.->|"Semantic boost"| Results
+    L4Detail -.->|"Parallel processing"| Results
+    L5Detail -.->|"95%+ accuracy"| Results
 ```
 
 ### 2. Ingestion Optimization Stack
 
-```python
-class IngestionOptimizationStack:
-    """Optimized content ingestion pipeline."""
+```mermaid
+flowchart TD
+    %% Styling
+    classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef parallel fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef batch fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef cache fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef storage fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef performance fill:#ffecb3,stroke:#ff8f00,stroke-width:2px
+
+    URLs["📊 URLs List\n[url1, url2, url3, ...]"]:::input
     
-    async def bulk_ingest(self, urls: list[str]):
-        # Parallel crawling with Crawl4AI
-        crawl_tasks = [
-            self.crawl_with_retry(url) 
-            for url in urls
-        ]
-        results = await asyncio.gather(*crawl_tasks)
-        
-        # Batch embedding generation
-        all_chunks = []
-        for result in results:
-            chunks = await self.intelligent_chunk(result)
-            all_chunks.extend(chunks)
-            
-        # Batch embeddings with caching
-        embeddings = await self.batch_embed_with_cache(
-            [c.text for c in all_chunks],
-            batch_size=100
-        )
-        
-        # Bulk upsert with zero-downtime
-        await self.zero_downtime_upsert(all_chunks, embeddings)
+    subgraph ParallelCrawl ["🚀 Parallel Crawling Phase"]
+        Task1["🔄 crawl_with_retry(url1)"]:::parallel
+        Task2["🔄 crawl_with_retry(url2)"]:::parallel
+        Task3["🔄 crawl_with_retry(url3)"]:::parallel
+        TaskN["🔄 crawl_with_retry(urlN)"]:::parallel
+        Gather["⚡ asyncio.gather(*tasks)"]:::parallel
+    end
+    
+    subgraph ChunkPhase ["✂️ Chunking Phase"]
+        Results["📄 Crawl Results"]:::batch
+        ChunkLoop["🔄 For each result"]:::batch
+        IntChunk["🧠 intelligent_chunk(result)"]:::batch
+        AllChunks["📦 all_chunks.extend()"]:::batch
+    end
+    
+    subgraph EmbedPhase ["🎯 Embedding Phase"]
+        BatchEmbed["🧠 batch_embed_with_cache()"]:::cache
+        BatchSize["📊 batch_size=100"]:::cache
+        CacheCheck["💾 Cache optimization"]:::cache
+    end
+    
+    subgraph UploadPhase ["🔄 Storage Phase"]
+        ZeroDown["⚛️ zero_downtime_upsert()"]:::storage
+        BulkOp["📈 Bulk operations"]:::storage
+    end
+    
+    Complete["✅ Ingestion Complete"]:::performance
+    
+    %% Flow connections
+    URLs --> Task1
+    URLs --> Task2
+    URLs --> Task3
+    URLs --> TaskN
+    
+    Task1 --> Gather
+    Task2 --> Gather
+    Task3 --> Gather
+    TaskN --> Gather
+    
+    Gather --> Results
+    Results --> ChunkLoop
+    ChunkLoop --> IntChunk
+    IntChunk --> AllChunks
+    
+    AllChunks --> BatchEmbed
+    BatchEmbed --> BatchSize
+    BatchSize --> CacheCheck
+    
+    CacheCheck --> ZeroDown
+    ZeroDown --> BulkOp
+    BulkOp --> Complete
+    
+    %% Performance annotations
+    Task1 -.->|"4-6x faster"| Gather
+    BatchEmbed -.->|"80% cache hit"| CacheCheck
+    ZeroDown -.->|"99.99% uptime"| Complete
+    
+    %% Efficiency indicators
+    Gather -.->|"Parallel processing"| Results
+    BatchSize -.->|"Optimized batching"| CacheCheck
+    BulkOp -.->|"Atomic operations"| Complete
 ```
 
 ## Key Integration Points
 
 ### 1. Metadata Flow
 
-```plaintext
-Crawl4AI → Rich Metadata → Payload Indexes → Fast Filtering
+```mermaid
+flowchart LR
+    classDef crawl fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef meta fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef index fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
+    classDef filter fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    
+    C4["🚀 Crawl4AI"]:::crawl
+    RM["📋 Rich Metadata\n• doc_type • language\n• quality_score • source"]:::meta
+    PI["🗂️ Payload Indexes\n• Fast lookup\n• Structured queries"]:::index
+    FF["⚡ Fast Filtering\n10-100x improvement"]:::filter
+    
+    C4 --> RM
+    RM --> PI
+    PI --> FF
 ```
 
 ### 2. Embedding Flow
 
-```plaintext
-Text → Cache Check → Smart Provider → DragonflyDB → Qdrant
+```mermaid
+flowchart LR
+    classDef input fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef cache fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef provider fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef storage fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    
+    Text["📝 Text Input"]:::input
+    CC["💾 Cache Check\nDragonflyDB"]:::cache
+    SP["🧠 Smart Provider\nOpenAI/FastEmbed"]:::provider
+    DB["⚡ DragonflyDB\nCache Storage"]:::cache
+    Q["🗄️ Qdrant\nVector Storage"]:::storage
+    
+    Text --> CC
+    CC -->|Miss| SP
+    CC -->|Hit| Q
+    SP --> DB
+    DB --> Q
 ```
 
 ### 3. Search Flow
 
-```plaintext
-Query → HyDE → Query API Prefetch → Fusion → Reranking → Results
+```mermaid
+flowchart LR
+    classDef query fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef enhance fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef process fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef fusion fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef rerank fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef results fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    
+    Query["🔍 Query"]:::query
+    HyDE["🧠 HyDE\nEnhancement"]:::enhance
+    QAP["⚡ Query API\nPrefetch"]:::process
+    Fusion["🔄 RRF\nFusion"]:::fusion
+    Rerank["🎯 BGE\nReranking"]:::rerank
+    Results["✨ Results"]:::results
+    
+    Query --> HyDE
+    HyDE --> QAP
+    QAP --> Fusion
+    Fusion --> Rerank
+    Rerank --> Results
 ```
 
 ### 4. Update Flow
 
-```plaintext
-New Content → Versioned Collection → Atomic Alias Update → Zero Downtime
+```mermaid
+flowchart LR
+    classDef content fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef version fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
+    classDef atomic fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef uptime fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    NC["📄 New Content"]:::content
+    VC["🔄 Versioned\nCollection"]:::version
+    AAU["⚛️ Atomic Alias\nUpdate"]:::atomic
+    ZD["🎯 Zero Downtime\n99.99% uptime"]:::uptime
+    
+    NC --> VC
+    VC --> AAU
+    AAU --> ZD
 ```
 
 ## Configuration for Maximum Synergy
