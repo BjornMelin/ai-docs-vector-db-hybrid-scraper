@@ -16,10 +16,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Set
-from typing import Tuple
 
 
 class LinkValidator:
@@ -28,8 +24,8 @@ class LinkValidator:
     def __init__(self, docs_root: Path):
         self.docs_root = docs_root
         self.markdown_files = list(docs_root.rglob("*.md"))
-        self.broken_links: List[Dict] = []
-        self.valid_files: Set[Path] = set()
+        self.broken_links: list[dict] = []
+        self.valid_files: set[Path] = set()
         self._build_file_index()
 
     def _build_file_index(self):
@@ -39,7 +35,7 @@ class LinkValidator:
             rel_path = md_file.relative_to(self.docs_root)
             self.valid_files.add(rel_path)
 
-    def validate_all_links(self) -> Dict:
+    def validate_all_links(self) -> dict:
         """Validate all links in all markdown files."""
         total_links = 0
         broken_count = 0
@@ -72,7 +68,7 @@ class LinkValidator:
             ),
         }
 
-    def _extract_links(self, file_path: Path) -> List[Tuple[str, str, int]]:
+    def _extract_links(self, file_path: Path) -> list[tuple[str, str, int]]:
         """Extract all markdown links from a file."""
         links = []
         try:
@@ -150,7 +146,7 @@ class LinkValidator:
                         else valid_file
                     )
                     similar_files.append(str(rel_path))
-                except:
+                except Exception:
                     similar_files.append(str(valid_file))
 
         if similar_files:
@@ -198,7 +194,9 @@ class LinkValidator:
 def main():
     parser = argparse.ArgumentParser(description="Validate documentation links")
     parser.add_argument("--fix", action="store_true", help="Auto-fix obvious issues")
-    parser.add_argument("--check-only", action="store_true", help="Only validate, don't fix (for CI)")
+    parser.add_argument(
+        "--check-only", action="store_true", help="Only validate, don't fix (for CI)"
+    )
     parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
@@ -230,15 +228,15 @@ def main():
         print(json.dumps(results, indent=2))
     else:
         # Text output
-        print(f"Documentation Link Validation Results")
-        print(f"=====================================")
+        print("Documentation Link Validation Results")
+        print("=====================================")
         print(f"Total links checked: {results['total_links']}")
         print(f"Broken links found: {results['broken_links']}")
         print(f"Success rate: {results['success_rate']:.1%}")
 
         if results["broken_links"] > 0:
-            print(f"\nBroken Links Details:")
-            print(f"---------------------")
+            print("\nBroken Links Details:")
+            print("---------------------")
             for broken in results["broken_details"]:
                 print(f"📁 {broken['file']}:{broken['line']}")
                 print(f"   Link: [{broken['link_text']}]({broken['link_path']})")

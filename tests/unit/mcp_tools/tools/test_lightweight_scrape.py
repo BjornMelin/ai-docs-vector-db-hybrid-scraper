@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from src.services.errors import CrawlServiceError
@@ -14,6 +13,25 @@ def mock_client_manager():
     manager = MagicMock()
     manager.config = MagicMock()
     manager.config.lightweight_scraper = MagicMock()
+
+    # Mock the crawl manager chain
+    mock_crawl_manager = MagicMock()
+    mock_unified_manager = MagicMock()
+    mock_unified_manager.analyze_url = AsyncMock(
+        return_value={"recommended_tier": "lightweight"}
+    )
+    mock_crawl_manager._unified_browser_manager = mock_unified_manager
+    mock_crawl_manager.scrape_url = AsyncMock(
+        return_value={
+            "success": True,
+            "content": "# Test Content",
+            "metadata": {"title": "Test", "raw_html": "<h1>Test</h1>"},
+            "tier_used": "lightweight",
+            "quality_score": 0.8,
+        }
+    )
+
+    manager.get_crawl_manager = AsyncMock(return_value=mock_crawl_manager)
     return manager
 
 
@@ -59,20 +77,20 @@ class TestLightweightScrapeTool:
         """Test successful scraping with markdown format."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {"markdown": "# Test Content\n\nThis is test content."},
-                "metadata": {
-                    "title": "Test Page",
-                    "description": "Test description",
-                    "tier": "lightweight",
-                },
-            }
-        )
+        # Set up mock crawl manager to return successful result
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "# Test Content\n\nThis is test content.",
+            "metadata": {
+                "title": "Test Page",
+                "description": "Test description",
+                "raw_html": "<h1>Test Content</h1><p>This is test content.</p>",
+            },
+            "tier_used": "lightweight",
+            "quality_score": 0.8,
+            "url": "https://example.com/test.md",
+        }
 
         # Register the tool
         mock_mcp = MagicMock()
@@ -85,9 +103,6 @@ class TestLightweightScrapeTool:
 
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
-
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
 
         # Test the tool
         result = await tool_func(
@@ -105,9 +120,10 @@ class TestLightweightScrapeTool:
         mock_context.info.assert_any_call(
             "Starting lightweight scrape of https://example.com/test.md"
         )
-        mock_scraper.can_handle.assert_called_once_with("https://example.com/test.md")
-        mock_scraper.scrape_url.assert_called_once_with(
-            "https://example.com/test.md", formats=["markdown"]
+
+        # Verify the crawl manager was called correctly
+        crawl_manager.scrape_url.assert_called_once_with(
+            url="https://example.com/test.md", preferred_provider="lightweight"
         )
 
     @pytest.mark.asyncio
@@ -117,20 +133,15 @@ class TestLightweightScrapeTool:
         """Test scraping with multiple output formats."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {
-                    "markdown": "# Test",
-                    "html": "<h1>Test</h1>",
-                    "text": "Test",
-                },
-                "metadata": {"tier": "lightweight"},
-            }
-        )
+        # Set up mock crawl manager to return successful result
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "# Test Content",
+            "metadata": {"tier": "lightweight", "raw_html": "<h1>Test Content</h1>"},
+            "tier_used": "lightweight",
+            "quality_score": 0.8,
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -144,9 +155,6 @@ class TestLightweightScrapeTool:
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
 
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
-
         # Test the tool
         result = await tool_func(
             url="https://example.com",
@@ -158,6 +166,13 @@ class TestLightweightScrapeTool:
         assert "markdown" in result["content"]
         assert "html" in result["content"]
         assert "text" in result["content"]
+
+        # Verify the formats were converted correctly
+        assert result["content"]["markdown"] == "# Test Content"
+        assert result["content"]["html"] == "<h1>Test Content</h1>"
+        assert (
+            "Test Content" in result["content"]["text"]
+        )  # Text version strips markdown
 
     @pytest.mark.asyncio
     async def test_invalid_format_raises_error(self, mock_client_manager, mock_context):
@@ -189,16 +204,18 @@ class TestLightweightScrapeTool:
         """Test warning when URL is not suitable for lightweight scraping."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=False)  # URL not suitable
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {"markdown": "Content"},
-                "metadata": {"tier": "lightweight"},
-            }
-        )
+        # Set up mock to return that URL is not suitable for lightweight tier
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager._unified_browser_manager.analyze_url.return_value = {
+            "recommended_tier": "crawl4ai",  # Not lightweight
+            "reason": "Complex JavaScript content",
+        }
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "Content",
+            "metadata": {"tier": "lightweight"},
+            "tier_used": "lightweight",
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -212,16 +229,13 @@ class TestLightweightScrapeTool:
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
 
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
-
         # Test the tool
         await tool_func(url="https://spa.example.com", ctx=mock_context)
 
         # Verify warning was logged
         mock_context.warning.assert_called_once()
         warning_msg = mock_context.warning.call_args[0][0]
-        assert "not suitable for lightweight scraping" in warning_msg
+        assert "may not be optimal for lightweight scraping" in warning_msg
 
     @pytest.mark.asyncio
     async def test_scraping_failure_with_escalation(
@@ -230,16 +244,13 @@ class TestLightweightScrapeTool:
         """Test handling of scraping failure that should escalate."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": False,
-                "error": "Insufficient content extracted",
-                "should_escalate": True,
-            }
-        )
+        # Set up mock crawl manager to return failure
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": False,
+            "error": "Insufficient content extracted",
+            "failed_tiers": ["lightweight"],
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -253,9 +264,6 @@ class TestLightweightScrapeTool:
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
 
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
-
         # Test the tool
         with pytest.raises(CrawlServiceError, match="Try browser-based tools"):
             await tool_func(url="https://example.com", ctx=mock_context)
@@ -263,26 +271,23 @@ class TestLightweightScrapeTool:
         # Verify error logging
         mock_context.error.assert_called()
         mock_context.info.assert_any_call(
-            "This content requires browser-based scraping. "
+            "Lightweight tier failed. This content requires browser-based scraping. "
             "Consider using standard search or crawl tools."
         )
 
     @pytest.mark.asyncio
-    async def test_scraper_initialization_once(self, mock_client_manager, mock_context):
-        """Test that scraper is initialized only once and reused."""
+    async def test_crawl_manager_reuse(self, mock_client_manager, mock_context):
+        """Test that crawl manager is reused across calls."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {"markdown": "Content"},
-                "metadata": {"tier": "lightweight"},
-            }
-        )
-        mock_scraper.initialize = AsyncMock()
+        # Set up mock crawl manager
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "Content",
+            "metadata": {"tier": "lightweight"},
+            "tier_used": "lightweight",
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -297,43 +302,27 @@ class TestLightweightScrapeTool:
         register_tools(mock_mcp, mock_client_manager)
 
         # Test the tool twice
-        with patch(
-            "src.mcp_tools.tools.lightweight_scrape.LightweightScraper"
-        ) as mock_class:
-            mock_class.return_value = mock_scraper
+        await tool_func(url="https://example1.com", ctx=mock_context)
+        await tool_func(url="https://example2.com", ctx=mock_context)
 
-            # Delete _lightweight_scraper if it exists (MagicMock creates it dynamically)
-            if hasattr(mock_client_manager, "_lightweight_scraper"):
-                delattr(mock_client_manager, "_lightweight_scraper")
-
-            # First call - scraper should be created
-            await tool_func(url="https://example1.com", ctx=mock_context)
-
-            # Second call - scraper should be reused (now it exists on client_manager)
-            await tool_func(url="https://example2.com", ctx=mock_context)
-
-        # Verify scraper was created only once
-        mock_class.assert_called_once()
-        mock_scraper.initialize.assert_called_once()
-
-        # Verify both URLs were scraped
-        assert mock_scraper.scrape_url.call_count == 2
+        # Verify crawl manager scrape was called twice (manager can be accessed multiple times)
+        assert crawl_manager.scrape_url.call_count == 2
+        # Verify we got the same crawl manager each time
+        assert mock_client_manager.get_crawl_manager.call_count >= 2
 
     @pytest.mark.asyncio
     async def test_default_format_is_markdown(self, mock_client_manager, mock_context):
         """Test that default format is markdown when not specified."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {"markdown": "# Default"},
-                "metadata": {"tier": "lightweight"},
-            }
-        )
+        # Set up mock crawl manager
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "# Default",
+            "metadata": {"tier": "lightweight"},
+            "tier_used": "lightweight",
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -347,32 +336,26 @@ class TestLightweightScrapeTool:
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
 
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
+        # Test without specifying formats (should default to markdown)
+        result = await tool_func(url="https://example.com", ctx=mock_context)
 
-        # Test without specifying formats
-        await tool_func(url="https://example.com", ctx=mock_context)
-
-        # Verify markdown format was used
-        mock_scraper.scrape_url.assert_called_once_with(
-            "https://example.com", formats=["markdown"]
-        )
+        # Verify result contains markdown format
+        assert "markdown" in result["content"]
+        assert result["content"]["markdown"] == "# Default"
 
     @pytest.mark.asyncio
     async def test_performance_metrics_added(self, mock_client_manager, mock_context):
         """Test that performance metrics are added to successful results."""
         from src.mcp_tools.tools.lightweight_scrape import register_tools
 
-        # Create mock scraper
-        mock_scraper = AsyncMock()
-        mock_scraper.can_handle = AsyncMock(return_value=True)
-        mock_scraper.scrape_url = AsyncMock(
-            return_value={
-                "success": True,
-                "content": {"markdown": "Content"},
-                "metadata": {"tier": "lightweight"},
-            }
-        )
+        # Set up mock crawl manager
+        crawl_manager = await mock_client_manager.get_crawl_manager()
+        crawl_manager.scrape_url.return_value = {
+            "success": True,
+            "content": "Content",
+            "metadata": {"tier": "lightweight"},
+            "tier_used": "lightweight",
+        }
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -385,9 +368,6 @@ class TestLightweightScrapeTool:
 
         mock_mcp.tool = MagicMock(return_value=capture_tool)
         register_tools(mock_mcp, mock_client_manager)
-
-        # Set up the scraper on client manager
-        mock_client_manager._lightweight_scraper = mock_scraper
 
         # Test the tool
         result = await tool_func(url="https://example.com", ctx=mock_context)
