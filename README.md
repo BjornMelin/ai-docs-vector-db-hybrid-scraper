@@ -26,6 +26,7 @@ A production-grade vector RAG system implementing research-backed best practices
 - [Development Guidelines](#development-guidelines)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
 - [Contributing](#contributing)
 - [How to Cite](#how-to-cite)
 - [License](#license)
@@ -593,10 +594,53 @@ docker-compose restart
 
 ### Performance Optimization
 
-For detailed optimization guidelines, see:
-- [Performance Tuning Guide](docs/operations/PERFORMANCE_GUIDE.md)
-- [Troubleshooting Documentation](docs/operations/TROUBLESHOOTING.md)
-- [Monitoring Setup](docs/operations/MONITORING.md)
+For detailed optimization guidelines, see our consolidated documentation:
+- [Performance & Optimization](docs/operators/deployment.md#performance-optimization)
+- [Monitoring & Observability](docs/operators/monitoring.md)
+- [Troubleshooting Procedures](docs/operators/operations.md#troubleshooting)
+
+## Documentation
+
+Our documentation is organized by user role for efficient navigation and focused guidance:
+
+### 📚 For End Users
+- **[Quick Start Guide](docs/users/quick-start.md)** - Get up and running in minutes
+- **[Search & Retrieval](docs/users/search-and-retrieval.md)** - Complete search functionality guide
+- **[Web Scraping](docs/users/web-scraping.md)** - Multi-tier browser automation guide
+- **[Examples & Recipes](docs/users/examples-and-recipes.md)** - Practical usage examples
+- **[Troubleshooting](docs/users/troubleshooting.md)** - Common questions and solutions
+
+### 👩‍💻 For Developers  
+- **[API Reference](docs/developers/api-reference.md)** - Complete API documentation (REST, Browser, MCP)
+- **[Integration Guide](docs/developers/integration-guide.md)** - SDK, Docker, and framework integration
+- **[Architecture Guide](docs/developers/architecture.md)** - System design and component details
+- **[Configuration Reference](docs/developers/configuration.md)** - Complete configuration documentation
+- **[Getting Started](docs/developers/getting-started.md)** - Development setup and workflow
+- **[Contributing Guide](docs/developers/contributing.md)** - Contribution guidelines and standards
+
+### 🚀 For Operators
+- **[Deployment Guide](docs/operators/deployment.md)** - Production deployment and optimization
+- **[Monitoring & Observability](docs/operators/monitoring.md)** - Comprehensive monitoring setup
+- **[Operations Manual](docs/operators/operations.md)** - Day-to-day operational procedures
+- **[Configuration Management](docs/operators/configuration.md)** - Environment and configuration management
+- **[Security Guide](docs/operators/security.md)** - Security implementation and best practices
+
+### 📋 Additional Resources
+- **[Backup Documentation](docs-backup-20250609-115943/)** - Previous documentation structure (archived)
+- **[Project Analysis](FEATURES_DOCUMENTATION_ANALYSIS_REPORT.md)** - Comprehensive feature analysis report
+
+### 🎯 Quick Navigation by Task
+
+| What you want to do | Go to |
+|---------------------|-------|
+| **Set up the system** | [Quick Start Guide](docs/users/quick-start.md) |
+| **Integrate with your app** | [Integration Guide](docs/developers/integration-guide.md) |
+| **Deploy to production** | [Deployment Guide](docs/operators/deployment.md) |
+| **Monitor performance** | [Monitoring Guide](docs/operators/monitoring.md) |
+| **Understand the API** | [API Reference](docs/developers/api-reference.md) |
+| **Configure the system** | [Configuration Reference](docs/developers/configuration.md) |
+| **Secure your deployment** | [Security Guide](docs/operators/security.md) |
+| **Troubleshoot issues** | [Operations Manual](docs/operators/operations.md) |
 
 ## Contributing
 
