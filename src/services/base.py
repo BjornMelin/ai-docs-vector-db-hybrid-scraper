@@ -44,7 +44,6 @@ class BaseService(ABC):
         finally:
             await self.cleanup()
 
-
     def _validate_initialized(self) -> None:
         """Ensure service is initialized."""
         if not self._initialized:
