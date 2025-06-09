@@ -62,7 +62,7 @@ class PlaywrightAdapter(BaseService):
         self._playwright: Any | None = None
         self._browser: Any | None = None  # Browser instance when available
         self._initialized = False
-        
+
         # Enhanced anti-detection system
         self.anti_detection = EnhancedAntiDetection() if enable_anti_detection else None
 
@@ -160,11 +160,11 @@ class PlaywrightAdapter(BaseService):
         # Determine site profile for anti-detection
         domain = urlparse(url).netloc
         site_profile = "default"
-        
+
         if self.anti_detection:
             site_profile = self.anti_detection.get_recommended_strategy(domain)
             stealth_config = self.anti_detection.get_stealth_config(site_profile)
-            
+
             # Add pre-scrape delay for anti-detection
             delay = await self.anti_detection.get_human_like_delay(site_profile)
             await asyncio.sleep(delay)
@@ -209,7 +209,7 @@ class PlaywrightAdapter(BaseService):
 
             # Navigate to URL
             await page.goto(url, wait_until="networkidle", timeout=timeout)
-            
+
             # Add post-navigation delay for anti-detection
             if self.anti_detection:
                 post_nav_delay = await self.anti_detection.get_human_like_delay(site_profile)
@@ -270,11 +270,11 @@ class PlaywrightAdapter(BaseService):
                 "action_results": action_results,
                 "performance": await self._get_performance_metrics(page),
             }
-            
+
             # Add anti-detection success metrics if enabled
             if self.anti_detection:
                 result["metadata"]["anti_detection_metrics"] = self.anti_detection.get_success_metrics()
-            
+
             return result
 
         except Exception as e:
@@ -298,11 +298,11 @@ class PlaywrightAdapter(BaseService):
                     "site_profile": site_profile if self.anti_detection else None,
                 },
             }
-            
+
             # Add anti-detection metrics even on failure
             if self.anti_detection:
                 result["metadata"]["anti_detection_metrics"] = self.anti_detection.get_success_metrics()
-            
+
             return result
 
         finally:
@@ -314,7 +314,7 @@ class PlaywrightAdapter(BaseService):
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
         """Inject JavaScript patterns to avoid detection.
-        
+
         Args:
             page: Playwright page instance
             stealth_config: Browser stealth configuration
@@ -326,7 +326,7 @@ class PlaywrightAdapter(BaseService):
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined,
             });
-            
+
             // Override the chrome property to mimic a regular Chrome browser
             window.chrome = {
                 runtime: {},
@@ -334,7 +334,7 @@ class PlaywrightAdapter(BaseService):
                 csi: function() {},
                 app: {}
             };
-            
+
             // Override the permissions property
             const originalQuery = window.navigator.permissions.query;
             window.navigator.permissions.query = (parameters) => (
@@ -342,17 +342,17 @@ class PlaywrightAdapter(BaseService):
                     Promise.resolve({ state: Notification.permission }) :
                     originalQuery(parameters)
             );
-            
+
             // Override the plugins property to mimic a real browser
             Object.defineProperty(navigator, 'plugins', {
                 get: () => [1, 2, 3, 4, 5],
             });
-            
+
             // Override the languages property
             Object.defineProperty(navigator, 'languages', {
                 get: () => ['en-US', 'en'],
             });
-            
+
             // Add realistic screen properties
             Object.defineProperty(screen, 'availWidth', {
                 get: () => screen.width,
@@ -361,7 +361,7 @@ class PlaywrightAdapter(BaseService):
                 get: () => screen.height - 40, // Account for taskbar
             });
             """
-            
+
             # Advanced canvas fingerprinting protection
             if hasattr(stealth_config, 'canvas_fingerprint_protection') and stealth_config.canvas_fingerprint_protection:
                 canvas_protection_script = """
@@ -385,7 +385,7 @@ class PlaywrightAdapter(BaseService):
                 };
                 """
                 stealth_script += canvas_protection_script
-            
+
             # WebGL fingerprinting protection
             if hasattr(stealth_config, 'webgl_fingerprint_protection') and stealth_config.webgl_fingerprint_protection:
                 webgl_protection_script = """
@@ -402,11 +402,11 @@ class PlaywrightAdapter(BaseService):
                 };
                 """
                 stealth_script += webgl_protection_script
-            
+
             # Inject the stealth script
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
-            
+
         except Exception as e:
             self.logger.warning(f"Failed to inject stealth scripts: {e}")
 
