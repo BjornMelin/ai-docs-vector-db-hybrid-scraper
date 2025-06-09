@@ -85,11 +85,14 @@ class ServiceHealthChecker:
         return result
 
     @staticmethod
-    def check_openai_connection(config: UnifiedConfig) -> dict[str, object]:
+    def check_openai_connection(
+        config: UnifiedConfig, client_manager=None
+    ) -> dict[str, object]:
         """Check OpenAI API connection status.
 
         Args:
             config: Unified configuration object containing OpenAI settings
+            client_manager: Optional ClientManager instance for service layer access
 
         Returns:
             dict[str, object]: Connection status with:
@@ -107,10 +110,31 @@ class ServiceHealthChecker:
             return result
 
         try:
-            from openai import OpenAI
+            if client_manager:
+                # Use modern service layer pattern through ClientManager
+                import asyncio
 
-            client = OpenAI(api_key=config.openai.api_key, timeout=5.0)
-            models = list(client.models.list())
+                async def _check_async():
+                    client = await client_manager.get_openai_client()
+                    if client is None:
+                        raise Exception("OpenAI client not available")
+                    models = await client.models.list()
+                    return list(models)
+
+                # Run async call in sync context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    models = loop.run_until_complete(_check_async())
+                finally:
+                    loop.close()
+            else:
+                # Fallback to direct client instantiation (legacy pattern)
+                from openai import OpenAI
+
+                client = OpenAI(api_key=config.openai.api_key, timeout=5.0)
+                models = list(client.models.list())
+
             result["connected"] = True
             result["details"]["model"] = config.openai.model
             result["details"]["dimensions"] = config.openai.dimensions
@@ -170,12 +194,13 @@ class ServiceHealthChecker:
 
     @classmethod
     def perform_all_health_checks(
-        cls, config: UnifiedConfig
+        cls, config: UnifiedConfig, client_manager=None
     ) -> dict[str, dict[str, object]]:
         """Perform health checks for all configured services.
 
         Args:
             config: Unified configuration object
+            client_manager: Optional ClientManager instance for service layer access
 
         Returns:
             dict[str, dict[str, object]]: Service names mapped to health check results.
@@ -192,7 +217,7 @@ class ServiceHealthChecker:
 
         # Check embedding provider
         if config.embedding_provider == "openai":
-            results["openai"] = cls.check_openai_connection(config)
+            results["openai"] = cls.check_openai_connection(config, client_manager)
 
         # Check crawl provider
         if config.crawl_provider == "firecrawl":
@@ -201,16 +226,19 @@ class ServiceHealthChecker:
         return results
 
     @classmethod
-    def get_connection_summary(cls, config: UnifiedConfig) -> dict[str, object]:
+    def get_connection_summary(
+        cls, config: UnifiedConfig, client_manager=None
+    ) -> dict[str, object]:
         """Get a summary of all service connection statuses.
 
         Args:
             config: Unified configuration object
+            client_manager: Optional ClientManager instance for service layer access
 
         Returns:
             Summary dictionary with overall status and individual service results
         """
-        results = cls.perform_all_health_checks(config)
+        results = cls.perform_all_health_checks(config, client_manager)
 
         connected_services = [
             service for service, result in results.items() if result["connected"]
