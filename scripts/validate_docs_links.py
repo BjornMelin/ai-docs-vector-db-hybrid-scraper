@@ -112,14 +112,12 @@ class LinkValidator:
             return True
 
         # Handle relative paths
-        if clean_link.startswith("./"):
-            clean_link = clean_link[2:]
-        elif clean_link.startswith("../"):
+        if clean_link.startswith("./") or clean_link.startswith("../"):
             # Resolve relative path from source file's directory
             source_dir = source_file.parent
             target_path = (source_dir / clean_link).resolve()
             try:
-                target_rel = target_path.relative_to(self.docs_root)
+                target_rel = target_path.relative_to(self.docs_root.resolve())
                 return target_rel in self.valid_files
             except ValueError:
                 return False
