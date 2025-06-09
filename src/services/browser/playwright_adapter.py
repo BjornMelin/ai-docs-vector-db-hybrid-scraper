@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 from pydantic import ValidationError
 
@@ -11,6 +12,7 @@ from ...config.models import PlaywrightConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
+from .enhanced_anti_detection import EnhancedAntiDetection
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +39,17 @@ class PlaywrightAdapter(BaseService):
     Best for authentication scenarios and complex scripted interactions.
     """
 
-    def __init__(self, config: PlaywrightConfig):
+    def __init__(self, config: PlaywrightConfig, enable_anti_detection: bool = True):
         """Initialize Playwright adapter.
 
         Args:
             config: Playwright configuration model
+            enable_anti_detection: Whether to enable enhanced anti-detection features
         """
         super().__init__(config)
         self.config = config
         self.logger = logger
+        self.enable_anti_detection = enable_anti_detection
 
         if not PLAYWRIGHT_AVAILABLE:
             self.logger.warning("Playwright not available - adapter will be disabled")
@@ -58,6 +62,9 @@ class PlaywrightAdapter(BaseService):
         self._playwright: Any | None = None
         self._browser: Any | None = None  # Browser instance when available
         self._initialized = False
+
+        # Enhanced anti-detection system
+        self.anti_detection = EnhancedAntiDetection() if enable_anti_detection else None
 
     async def initialize(self) -> None:
         """Initialize Playwright browser."""
@@ -75,21 +82,33 @@ class PlaywrightAdapter(BaseService):
             # Get browser launcher
             browser_launcher = getattr(self._playwright, self.config.browser)
 
-            # Launch browser with optimized settings
-            self._browser = await browser_launcher.launch(
-                headless=self.config.headless,
-                args=[
+            # Determine browser arguments
+            if self.anti_detection:
+                # Use enhanced anti-detection args
+                stealth_config = self.anti_detection.get_stealth_config()
+                browser_args = stealth_config.extra_args
+                self.logger.info("Using enhanced anti-detection browser configuration")
+            else:
+                # Use basic args
+                browser_args = [
                     "--disable-blink-features=AutomationControlled",
                     "--disable-web-security",
                     "--disable-features=VizDisplayCompositor",
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
-                ],
+                ]
+
+            # Launch browser with optimized settings
+            self._browser = await browser_launcher.launch(
+                headless=self.config.headless,
+                args=browser_args,
             )
 
             self._initialized = True
+            anti_detection_status = "enabled" if self.anti_detection else "disabled"
             self.logger.info(
-                f"Playwright adapter initialized with {self.config.browser}"
+                f"Playwright adapter initialized with {self.config.browser} "
+                f"(anti-detection: {anti_detection_status})"
             )
 
         except Exception as e:
@@ -135,11 +154,71 @@ class PlaywrightAdapter(BaseService):
             raise CrawlServiceError("Adapter not initialized")
 
         start_time = time.time()
-        context: Any | None = None  # BrowserContext when available
-        page: Any | None = None  # Page when available
+        context: Any | None = None
+        page: Any | None = None
+
+        # Setup anti-detection configuration
+        domain = urlparse(url).netloc
+        site_profile, stealth_config = await self._setup_anti_detection(domain)
 
         try:
-            # Create browser context with settings
+            # Create browser context and page
+            context, page = await self._create_browser_context_and_page(
+                site_profile, stealth_config, timeout
+            )
+
+            # Navigate and execute actions
+            action_results = await self._navigate_and_execute_actions(
+                page, url, actions, timeout, site_profile
+            )
+
+            # Extract content and build result
+            result = await self._build_success_result(
+                page, actions, action_results, start_time, site_profile, stealth_config
+            )
+
+            return result
+
+        except Exception as e:
+            return await self._build_error_result(e, url, start_time, site_profile)
+
+        finally:
+            await self._cleanup_context(context)
+
+    async def _setup_anti_detection(self, domain: str) -> tuple[str, Any]:
+        """Setup anti-detection configuration for domain."""
+        site_profile = "default"
+        stealth_config = None
+
+        if self.anti_detection:
+            site_profile = self.anti_detection.get_recommended_strategy(domain)
+            stealth_config = self.anti_detection.get_stealth_config(site_profile)
+
+            # Add pre-scrape delay for anti-detection
+            delay = await self.anti_detection.get_human_like_delay(site_profile)
+            await asyncio.sleep(delay)
+
+        return site_profile, stealth_config
+
+    async def _create_browser_context_and_page(
+        self, site_profile: str, stealth_config: Any, timeout: int
+    ) -> tuple[Any, Any]:
+        """Create browser context and page with appropriate configuration."""
+        # Create browser context with enhanced settings
+        if self.anti_detection and stealth_config:
+            context = await self._browser.new_context(
+                viewport={
+                    "width": stealth_config.viewport.width,
+                    "height": stealth_config.viewport.height,
+                },
+                user_agent=stealth_config.user_agent,
+                ignore_https_errors=True,
+                extra_http_headers=stealth_config.headers,
+                device_scale_factor=stealth_config.viewport.device_scale_factor,
+            )
+            self.logger.debug(f"Using anti-detection profile: {site_profile}")
+        else:
+            # Use original configuration
             context = await self._browser.new_context(
                 viewport=self.config.viewport,
                 user_agent=self.config.user_agent,
@@ -149,89 +228,258 @@ class PlaywrightAdapter(BaseService):
                 },
             )
 
-            # Create new page
-            page = await context.new_page()
+        # Create new page
+        page = await context.new_page()
 
-            # Set up event listeners for debugging
-            page.on("console", lambda msg: self.logger.debug(f"Console: {msg.text}"))
-            page.on(
-                "pageerror", lambda error: self.logger.warning(f"Page error: {error}")
+        # Set up event listeners for debugging
+        page.on("console", lambda msg: self.logger.debug(f"Console: {msg.text}"))
+        page.on("pageerror", lambda error: self.logger.warning(f"Page error: {error}"))
+
+        return context, page
+
+    async def _navigate_and_execute_actions(
+        self, page: Any, url: str, actions: list[dict], timeout: int, site_profile: str
+    ) -> list[dict[str, Any]]:
+        """Navigate to URL and execute all actions."""
+        # Inject stealth JavaScript patterns for enhanced anti-detection
+        if self.anti_detection:
+            stealth_config = self.anti_detection.get_stealth_config(site_profile)
+            await self._inject_stealth_scripts(page, stealth_config)
+
+        # Navigate to URL
+        await page.goto(url, wait_until="networkidle", timeout=timeout)
+
+        # Add post-navigation delay for anti-detection
+        if self.anti_detection:
+            post_nav_delay = await self.anti_detection.get_human_like_delay(
+                site_profile
+            )
+            await asyncio.sleep(post_nav_delay * 0.5)  # Shorter delay after navigation
+
+        # Validate actions before executing
+        try:
+            validated_actions = validate_actions(actions)
+        except ValidationError as e:
+            raise CrawlServiceError(f"Invalid actions: {e}") from e
+
+        # Execute custom actions
+        action_results = []
+        for i, action in enumerate(validated_actions):
+            try:
+                result = await self._execute_action(page, action, i)
+                action_results.append(result)
+            except Exception as e:
+                self.logger.warning(f"Action {i} failed: {e}")
+                action_results.append(
+                    {
+                        "action_index": i,
+                        "success": False,
+                        "error": str(e),
+                    }
+                )
+
+        return action_results
+
+    async def _build_success_result(
+        self,
+        page: Any,
+        actions: list[dict],
+        action_results: list[dict[str, Any]],
+        start_time: float,
+        site_profile: str,
+        stealth_config: Any,
+    ) -> dict[str, Any]:
+        """Build successful scraping result."""
+        # Extract content
+        content_data = await self._extract_content(page)
+        metadata = await self._extract_metadata(page)
+
+        processing_time = (time.time() - start_time) * 1000
+
+        # Record successful attempt for anti-detection monitoring
+        if self.anti_detection:
+            self.anti_detection.record_attempt(True, site_profile)
+
+        result = {
+            "success": True,
+            "url": page.url,  # May have changed due to redirects
+            "content": content_data["text"],
+            "html": content_data["html"],
+            "title": metadata.get("title", ""),
+            "metadata": {
+                **metadata,
+                "extraction_method": "playwright",
+                "actions_executed": len(actions),
+                "successful_actions": sum(
+                    1 for r in action_results if r.get("success", False)
+                ),
+                "processing_time_ms": processing_time,
+                "browser_type": self.config.browser,
+                "viewport": stealth_config.viewport.model_dump()
+                if self.anti_detection and stealth_config
+                else self.config.viewport,
+                "anti_detection_enabled": self.enable_anti_detection,
+                "site_profile": site_profile if self.anti_detection else None,
+                "user_agent": stealth_config.user_agent
+                if self.anti_detection and stealth_config
+                else self.config.user_agent,
+            },
+            "action_results": action_results,
+            "performance": await self._get_performance_metrics(page),
+        }
+
+        # Add anti-detection success metrics if enabled
+        if self.anti_detection:
+            result["metadata"]["anti_detection_metrics"] = (
+                self.anti_detection.get_success_metrics()
             )
 
-            # Navigate to URL
-            await page.goto(url, wait_until="networkidle", timeout=timeout)
+        return result
 
-            # Validate actions before executing
+    async def _build_error_result(
+        self, error: Exception, url: str, start_time: float, site_profile: str
+    ) -> dict[str, Any]:
+        """Build error result for failed scraping."""
+        processing_time = (time.time() - start_time) * 1000
+        self.logger.error(f"Playwright error for {url}: {error}")
+
+        # Record failed attempt for anti-detection monitoring
+        if self.anti_detection:
+            self.anti_detection.record_attempt(False, site_profile)
+
+        result = {
+            "success": False,
+            "url": url,
+            "error": str(error),
+            "content": "",
+            "metadata": {
+                "extraction_method": "playwright",
+                "processing_time_ms": processing_time,
+                "browser_type": self.config.browser,
+                "anti_detection_enabled": self.enable_anti_detection,
+                "site_profile": site_profile if self.anti_detection else None,
+            },
+        }
+
+        # Add anti-detection metrics even on failure
+        if self.anti_detection:
+            result["metadata"]["anti_detection_metrics"] = (
+                self.anti_detection.get_success_metrics()
+            )
+
+        return result
+
+    async def _cleanup_context(self, context: Any | None) -> None:
+        """Clean up browser context."""
+        if context:
             try:
-                validated_actions = validate_actions(actions)
-            except ValidationError as e:
-                raise CrawlServiceError(f"Invalid actions: {e}") from e
+                await context.close()
+            except Exception as e:
+                self.logger.warning(f"Failed to close context: {e}")
 
-            # Execute custom actions
-            action_results = []
-            for i, action in enumerate(validated_actions):
-                try:
-                    result = await self._execute_action(page, action, i)
-                    action_results.append(result)
-                except Exception as e:
-                    self.logger.warning(f"Action {i} failed: {e}")
-                    action_results.append(
-                        {
-                            "action_index": i,
-                            "success": False,
-                            "error": str(e),
-                        }
-                    )
+    async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
+        """Inject JavaScript patterns to avoid detection.
 
-            # Extract content
-            content_data = await self._extract_content(page)
-            metadata = await self._extract_metadata(page)
+        Args:
+            page: Playwright page instance
+            stealth_config: Browser stealth configuration
+        """
+        try:
+            # Basic stealth script to hide automation indicators
+            stealth_script = """
+            // Remove webdriver property
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
 
-            processing_time = (time.time() - start_time) * 1000
+            // Override the chrome property to mimic a regular Chrome browser
+            window.chrome = {
+                runtime: {},
+                loadTimes: function() {},
+                csi: function() {},
+                app: {}
+            };
 
-            return {
-                "success": True,
-                "url": page.url,  # May have changed due to redirects
-                "content": content_data["text"],
-                "html": content_data["html"],
-                "title": metadata.get("title", ""),
-                "metadata": {
-                    **metadata,
-                    "extraction_method": "playwright",
-                    "actions_executed": len(actions),
-                    "successful_actions": sum(
-                        1 for r in action_results if r.get("success", False)
-                    ),
-                    "processing_time_ms": processing_time,
-                    "browser_type": self.config.browser,
-                    "viewport": self.config.viewport,
-                },
-                "action_results": action_results,
-                "performance": await self._get_performance_metrics(page),
-            }
+            // Override the permissions property
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+
+            // Override the plugins property to mimic a real browser
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5],
+            });
+
+            // Override the languages property
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en'],
+            });
+
+            // Add realistic screen properties
+            Object.defineProperty(screen, 'availWidth', {
+                get: () => screen.width,
+            });
+            Object.defineProperty(screen, 'availHeight', {
+                get: () => screen.height - 40, // Account for taskbar
+            });
+            """
+
+            # Advanced canvas fingerprinting protection
+            if (
+                hasattr(stealth_config, "canvas_fingerprint_protection")
+                and stealth_config.canvas_fingerprint_protection
+            ):
+                canvas_protection_script = """
+                // Canvas fingerprinting protection
+                const getContext = HTMLCanvasElement.prototype.getContext;
+                HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+                    const context = getContext.call(this, contextType, contextAttributes);
+                    if (contextType === '2d') {
+                        const getImageData = context.getImageData;
+                        context.getImageData = function(sx, sy, sw, sh) {
+                            const imageData = getImageData.call(this, sx, sy, sw, sh);
+                            for (let i = 0; i < imageData.data.length; i += 4) {
+                                imageData.data[i] += Math.floor(Math.random() * 3) - 1;
+                                imageData.data[i + 1] += Math.floor(Math.random() * 3) - 1;
+                                imageData.data[i + 2] += Math.floor(Math.random() * 3) - 1;
+                            }
+                            return imageData;
+                        };
+                    }
+                    return context;
+                };
+                """
+                stealth_script += canvas_protection_script
+
+            # WebGL fingerprinting protection
+            if (
+                hasattr(stealth_config, "webgl_fingerprint_protection")
+                and stealth_config.webgl_fingerprint_protection
+            ):
+                webgl_protection_script = """
+                // WebGL fingerprinting protection
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    if (parameter === 37445) {
+                        return 'Intel Inc.';
+                    }
+                    if (parameter === 37446) {
+                        return 'Intel(R) Iris(TM) Graphics 6100';
+                    }
+                    return getParameter.call(this, parameter);
+                };
+                """
+                stealth_script += webgl_protection_script
+
+            # Inject the stealth script
+            await page.add_init_script(stealth_script)
+            self.logger.debug("Stealth JavaScript patterns injected successfully")
 
         except Exception as e:
-            processing_time = (time.time() - start_time) * 1000
-            self.logger.error(f"Playwright error for {url}: {e}")
-
-            return {
-                "success": False,
-                "url": url,
-                "error": str(e),
-                "content": "",
-                "metadata": {
-                    "extraction_method": "playwright",
-                    "processing_time_ms": processing_time,
-                    "browser_type": self.config.browser,
-                },
-            }
-
-        finally:
-            if context:
-                try:
-                    await context.close()
-                except Exception as e:
-                    self.logger.warning(f"Failed to close context: {e}")
+            self.logger.warning(f"Failed to inject stealth scripts: {e}")
 
     async def _execute_action(
         self, page: Any, action: Any, index: int
