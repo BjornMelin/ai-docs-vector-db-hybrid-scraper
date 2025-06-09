@@ -61,12 +61,16 @@ class ViewportProfile(BaseModel):
         return [
             cls(width=1366, height=768, device_scale_factor=1.0),  # Most common laptop
             cls(width=1920, height=1080, device_scale_factor=1.0),  # Full HD
-            cls(width=1440, height=900, device_scale_factor=1.0),   # MacBook Pro 13"
-            cls(width=1536, height=864, device_scale_factor=1.0),   # Surface Laptop
-            cls(width=1280, height=720, device_scale_factor=1.0),   # HD
-            cls(width=1600, height=900, device_scale_factor=1.0),   # 16:9 widescreen
-            cls(width=375, height=667, device_scale_factor=2.0, is_mobile=True),  # iPhone SE
-            cls(width=414, height=896, device_scale_factor=2.0, is_mobile=True),  # iPhone 11
+            cls(width=1440, height=900, device_scale_factor=1.0),  # MacBook Pro 13"
+            cls(width=1536, height=864, device_scale_factor=1.0),  # Surface Laptop
+            cls(width=1280, height=720, device_scale_factor=1.0),  # HD
+            cls(width=1600, height=900, device_scale_factor=1.0),  # 16:9 widescreen
+            cls(
+                width=375, height=667, device_scale_factor=2.0, is_mobile=True
+            ),  # iPhone SE
+            cls(
+                width=414, height=896, device_scale_factor=2.0, is_mobile=True
+            ),  # iPhone 11
         ]
 
 
@@ -75,8 +79,12 @@ class SiteProfile(BaseModel):
 
     domain: str = Field(description="Domain or pattern this profile applies to")
     risk_level: str = Field(default="medium", pattern="^(low|medium|high|extreme)$")
-    required_delay_ms: tuple[int, int] = Field(default=(1000, 3000), description="Min/max delay range")
-    stealth_level: str = Field(default="standard", pattern="^(basic|standard|advanced|maximum)$")
+    required_delay_ms: tuple[int, int] = Field(
+        default=(1000, 3000), description="Min/max delay range"
+    )
+    stealth_level: str = Field(
+        default="standard", pattern="^(basic|standard|advanced|maximum)$"
+    )
     user_agent_rotation: bool = Field(default=True)
     viewport_randomization: bool = Field(default=True)
     behavioral_timing: bool = Field(default=True)
@@ -87,11 +95,21 @@ class SiteProfile(BaseModel):
 class TimingPattern(BaseModel):
     """Human-like timing patterns for interactions."""
 
-    mouse_movement_delay: tuple[int, int] = Field(default=(50, 200), description="Mouse movement delay range (ms)")
-    click_delay: tuple[int, int] = Field(default=(100, 300), description="Click delay range (ms)")
-    typing_speed_wpm: tuple[int, int] = Field(default=(40, 80), description="Typing speed range (WPM)")
-    page_reading_time: tuple[int, int] = Field(default=(2000, 8000), description="Page reading time range (ms)")
-    scroll_speed_px_s: tuple[int, int] = Field(default=(100, 400), description="Scroll speed range (px/s)")
+    mouse_movement_delay: tuple[int, int] = Field(
+        default=(50, 200), description="Mouse movement delay range (ms)"
+    )
+    click_delay: tuple[int, int] = Field(
+        default=(100, 300), description="Click delay range (ms)"
+    )
+    typing_speed_wpm: tuple[int, int] = Field(
+        default=(40, 80), description="Typing speed range (WPM)"
+    )
+    page_reading_time: tuple[int, int] = Field(
+        default=(2000, 8000), description="Page reading time range (ms)"
+    )
+    scroll_speed_px_s: tuple[int, int] = Field(
+        default=(100, 400), description="Scroll speed range (px/s)"
+    )
 
 
 class BrowserStealthConfig(BaseModel):
@@ -112,9 +130,15 @@ class SessionData(BaseModel):
 
     session_id: str = Field(description="Unique session identifier")
     domain: str = Field(description="Domain this session belongs to")
-    cookies: list[dict[str, Any]] = Field(default_factory=list, description="Cookie data")
-    local_storage: dict[str, str] = Field(default_factory=dict, description="localStorage data")
-    session_storage: dict[str, str] = Field(default_factory=dict, description="sessionStorage data")
+    cookies: list[dict[str, Any]] = Field(
+        default_factory=list, description="Cookie data"
+    )
+    local_storage: dict[str, str] = Field(
+        default_factory=dict, description="localStorage data"
+    )
+    session_storage: dict[str, str] = Field(
+        default_factory=dict, description="sessionStorage data"
+    )
     user_agent: str = Field(description="User agent used for this session")
     viewport: dict[str, int] = Field(description="Viewport used for this session")
     created_at: float = Field(description="Session creation timestamp")
@@ -150,7 +174,9 @@ class SessionManager:
         """Get session file path."""
         return self.session_dir / f"{session_id}.json"
 
-    def create_session(self, domain: str, user_agent: str, viewport: dict[str, int]) -> SessionData:
+    def create_session(
+        self, domain: str, user_agent: str, viewport: dict[str, int]
+    ) -> SessionData:
         """Create a new session for a domain."""
         session_id = f"{domain}_{int(time.time())}_{random.randint(1000, 9999)}"
 
@@ -197,7 +223,7 @@ class SessionManager:
         """Save session to disk."""
         session_file = self._get_session_file(session.session_id)
         try:
-            with open(session_file, 'w') as f:
+            with open(session_file, "w") as f:
                 json.dump(session.model_dump(), f, indent=2)
         except Exception:
             pass  # Silently fail to avoid breaking functionality
@@ -207,7 +233,7 @@ class SessionManager:
         session_id: str,
         cookies: list[dict[str, Any]] | None = None,
         local_storage: dict[str, str] | None = None,
-        session_storage: dict[str, str] | None = None
+        session_storage: dict[str, str] | None = None,
     ) -> None:
         """Update session data."""
         if session_id in self.active_sessions:
@@ -227,8 +253,7 @@ class SessionManager:
         """Clean up expired sessions."""
         # Clean up active sessions
         expired_ids = [
-            sid for sid, session in self.active_sessions.items()
-            if session.is_expired()
+            sid for sid, session in self.active_sessions.items() if session.is_expired()
         ]
         for sid in expired_ids:
             del self.active_sessions[sid]
@@ -270,7 +295,7 @@ class SuccessRateMonitor(BaseModel):
             self.strategy_performance[strategy] = {
                 "attempts": 0,
                 "successes": 0,
-                "recent_performance": []
+                "recent_performance": [],
             }
 
         self.strategy_performance[strategy]["attempts"] += 1
@@ -329,38 +354,40 @@ class EnhancedAntiDetection:
 
     def _load_default_site_profiles(self) -> None:
         """Load default site-specific profiles."""
-        self.site_profiles.update({
-            "github.com": SiteProfile(
-                domain="github.com",
-                risk_level="high",
-                required_delay_ms=(2000, 5000),
-                stealth_level="advanced",
-                canvas_fingerprint_protection=True,
-            ),
-            "linkedin.com": SiteProfile(
-                domain="linkedin.com",
-                risk_level="extreme",
-                required_delay_ms=(3000, 8000),
-                stealth_level="maximum",
-                canvas_fingerprint_protection=True,
-                webgl_fingerprint_protection=True,
-            ),
-            "cloudflare.com": SiteProfile(
-                domain="cloudflare.com",
-                risk_level="extreme",
-                required_delay_ms=(5000, 10000),
-                stealth_level="maximum",
-                canvas_fingerprint_protection=True,
-                webgl_fingerprint_protection=True,
-            ),
-            # Default for other sites
-            "default": SiteProfile(
-                domain="*",
-                risk_level="medium",
-                required_delay_ms=(1000, 3000),
-                stealth_level="standard",
-            ),
-        })
+        self.site_profiles.update(
+            {
+                "github.com": SiteProfile(
+                    domain="github.com",
+                    risk_level="high",
+                    required_delay_ms=(2000, 5000),
+                    stealth_level="advanced",
+                    canvas_fingerprint_protection=True,
+                ),
+                "linkedin.com": SiteProfile(
+                    domain="linkedin.com",
+                    risk_level="extreme",
+                    required_delay_ms=(3000, 8000),
+                    stealth_level="maximum",
+                    canvas_fingerprint_protection=True,
+                    webgl_fingerprint_protection=True,
+                ),
+                "cloudflare.com": SiteProfile(
+                    domain="cloudflare.com",
+                    risk_level="extreme",
+                    required_delay_ms=(5000, 10000),
+                    stealth_level="maximum",
+                    canvas_fingerprint_protection=True,
+                    webgl_fingerprint_protection=True,
+                ),
+                # Default for other sites
+                "default": SiteProfile(
+                    domain="*",
+                    risk_level="medium",
+                    required_delay_ms=(1000, 3000),
+                    stealth_level="standard",
+                ),
+            }
+        )
 
     def get_stealth_config(self, site_profile: str = "default") -> BrowserStealthConfig:
         """Get stealth configuration for specified site profile.
@@ -389,7 +416,7 @@ class EnhancedAntiDetection:
         browser_pools = [
             self.user_agents.chrome_agents,
             self.user_agents.firefox_agents,
-            self.user_agents.safari_agents
+            self.user_agents.safari_agents,
         ]
 
         selected_pool = random.choices(browser_pools, weights=browser_weights)[0]
@@ -459,28 +486,32 @@ class EnhancedAntiDetection:
         ]
 
         if profile.stealth_level in ["advanced", "maximum"]:
-            base_args.extend([
-                "--disable-ipc-flooding-protection",
-                "--disable-default-apps",
-                "--disable-sync",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--disable-client-side-phishing-detection",
-                "--disable-component-update",
-                "--disable-hang-monitor",
-                "--disable-prompt-on-repost",
-                "--disable-background-networking",
-            ])
+            base_args.extend(
+                [
+                    "--disable-ipc-flooding-protection",
+                    "--disable-default-apps",
+                    "--disable-sync",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-client-side-phishing-detection",
+                    "--disable-component-update",
+                    "--disable-hang-monitor",
+                    "--disable-prompt-on-repost",
+                    "--disable-background-networking",
+                ]
+            )
 
         if profile.stealth_level == "maximum":
-            base_args.extend([
-                "--disable-extensions",
-                "--disable-plugins-discovery",
-                "--disable-preconnect",
-                "--disable-software-rasterizer",
-                "--media-cache-size=0",
-                "--disk-cache-size=0",
-            ])
+            base_args.extend(
+                [
+                    "--disable-extensions",
+                    "--disable-plugins-discovery",
+                    "--disable-preconnect",
+                    "--disable-software-rasterizer",
+                    "--media-cache-size=0",
+                    "--disk-cache-size=0",
+                ]
+            )
 
         return base_args
 
@@ -585,6 +616,6 @@ class EnhancedAntiDetection:
             if current_rate < 0.6:
                 return "cloudflare.com"  # Maximum stealth
             elif current_rate < 0.8:
-                return "linkedin.com"    # High stealth
+                return "linkedin.com"  # High stealth
 
         return "default"

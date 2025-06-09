@@ -180,9 +180,7 @@ class PlaywrightAdapter(BaseService):
             return result
 
         except Exception as e:
-            return await self._build_error_result(
-                e, url, start_time, site_profile
-            )
+            return await self._build_error_result(e, url, start_time, site_profile)
 
         finally:
             await self._cleanup_context(context)
@@ -235,9 +233,7 @@ class PlaywrightAdapter(BaseService):
 
         # Set up event listeners for debugging
         page.on("console", lambda msg: self.logger.debug(f"Console: {msg.text}"))
-        page.on(
-            "pageerror", lambda error: self.logger.warning(f"Page error: {error}")
-        )
+        page.on("pageerror", lambda error: self.logger.warning(f"Page error: {error}"))
 
         return context, page
 
@@ -255,7 +251,9 @@ class PlaywrightAdapter(BaseService):
 
         # Add post-navigation delay for anti-detection
         if self.anti_detection:
-            post_nav_delay = await self.anti_detection.get_human_like_delay(site_profile)
+            post_nav_delay = await self.anti_detection.get_human_like_delay(
+                site_profile
+            )
             await asyncio.sleep(post_nav_delay * 0.5)  # Shorter delay after navigation
 
         # Validate actions before executing
@@ -283,8 +281,13 @@ class PlaywrightAdapter(BaseService):
         return action_results
 
     async def _build_success_result(
-        self, page: Any, actions: list[dict], action_results: list[dict[str, Any]],
-        start_time: float, site_profile: str, stealth_config: Any
+        self,
+        page: Any,
+        actions: list[dict],
+        action_results: list[dict[str, Any]],
+        start_time: float,
+        site_profile: str,
+        stealth_config: Any,
     ) -> dict[str, Any]:
         """Build successful scraping result."""
         # Extract content
@@ -312,10 +315,14 @@ class PlaywrightAdapter(BaseService):
                 ),
                 "processing_time_ms": processing_time,
                 "browser_type": self.config.browser,
-                "viewport": stealth_config.viewport.model_dump() if self.anti_detection and stealth_config else self.config.viewport,
+                "viewport": stealth_config.viewport.model_dump()
+                if self.anti_detection and stealth_config
+                else self.config.viewport,
                 "anti_detection_enabled": self.enable_anti_detection,
                 "site_profile": site_profile if self.anti_detection else None,
-                "user_agent": stealth_config.user_agent if self.anti_detection and stealth_config else self.config.user_agent,
+                "user_agent": stealth_config.user_agent
+                if self.anti_detection and stealth_config
+                else self.config.user_agent,
             },
             "action_results": action_results,
             "performance": await self._get_performance_metrics(page),
@@ -323,7 +330,9 @@ class PlaywrightAdapter(BaseService):
 
         # Add anti-detection success metrics if enabled
         if self.anti_detection:
-            result["metadata"]["anti_detection_metrics"] = self.anti_detection.get_success_metrics()
+            result["metadata"]["anti_detection_metrics"] = (
+                self.anti_detection.get_success_metrics()
+            )
 
         return result
 
@@ -354,7 +363,9 @@ class PlaywrightAdapter(BaseService):
 
         # Add anti-detection metrics even on failure
         if self.anti_detection:
-            result["metadata"]["anti_detection_metrics"] = self.anti_detection.get_success_metrics()
+            result["metadata"]["anti_detection_metrics"] = (
+                self.anti_detection.get_success_metrics()
+            )
 
         return result
 
@@ -417,7 +428,10 @@ class PlaywrightAdapter(BaseService):
             """
 
             # Advanced canvas fingerprinting protection
-            if hasattr(stealth_config, 'canvas_fingerprint_protection') and stealth_config.canvas_fingerprint_protection:
+            if (
+                hasattr(stealth_config, "canvas_fingerprint_protection")
+                and stealth_config.canvas_fingerprint_protection
+            ):
                 canvas_protection_script = """
                 // Canvas fingerprinting protection
                 const getContext = HTMLCanvasElement.prototype.getContext;
@@ -441,7 +455,10 @@ class PlaywrightAdapter(BaseService):
                 stealth_script += canvas_protection_script
 
             # WebGL fingerprinting protection
-            if hasattr(stealth_config, 'webgl_fingerprint_protection') and stealth_config.webgl_fingerprint_protection:
+            if (
+                hasattr(stealth_config, "webgl_fingerprint_protection")
+                and stealth_config.webgl_fingerprint_protection
+            ):
                 webgl_protection_script = """
                 // WebGL fingerprinting protection
                 const getParameter = WebGLRenderingContext.prototype.getParameter;
