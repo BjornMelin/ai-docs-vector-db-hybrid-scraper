@@ -1,0 +1,125 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'scripts/validate_docs_links.py'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  validate-docs:
+    name: Validate Documentation Links
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Validate documentation links
+        run: |
+          uv run python scripts/validate_docs_links.py --check-only
+          
+      - name: Check for broken links
+        if: failure()
+        run: |
+          echo "❌ Broken documentation links found!"
+          echo "Please run 'uv run python scripts/validate_docs_links.py --fix' locally to fix them."
+          echo "Or check the validation output above for details."
+          exit 1
+          
+  lint-docs:
+    name: Lint Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check markdown formatting
+        uses: DavidAnson/markdownlint-action@v1
+        with:
+          files: '**/*.md'
+          ignore: 'node_modules'
+          config: '.markdownlint.json'
+          
+      - name: Check for missing status headers
+        run: |
+          # Check that all markdown files have status headers
+          missing_headers=()
+          
+          while IFS= read -r -d '' file; do
+            if [[ "$file" != *"README.md" ]] && [[ "$file" != *"document-template.md" ]] && [[ "$file" != *"file-naming-guidelines.md" ]]; then
+              if ! grep -q "**Status**:" "$file"; then
+                missing_headers+=("$file")
+              fi
+            fi
+          done < <(find docs -name "*.md" -print0)
+          
+          if [ ${#missing_headers[@]} -gt 0 ]; then
+            echo "❌ Files missing status headers:"
+            printf '%s\n' "${missing_headers[@]}"
+            echo ""
+            echo "Please add status headers using the document template:"
+            echo "See docs/document-template.md for the correct format"
+            exit 1
+          else
+            echo "✅ All documentation files have proper status headers"
+          fi
+          
+  check-naming-convention:
+    name: Check File Naming Convention
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check kebab-case naming
+        run: |
+          # Check that all documentation files follow kebab-case convention
+          non_kebab_files=()
+          
+          while IFS= read -r -d '' file; do
+            filename=$(basename "$file" .md)
+            # Skip special files
+            if [[ "$filename" == "README" ]] || [[ "$filename" == "LICENSE" ]] || [[ "$filename" == "CONTRIBUTING" ]]; then
+              continue
+            fi
+            
+            # Check if filename follows kebab-case (lowercase with hyphens)
+            if [[ ! "$filename" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+              non_kebab_files+=("$file")
+            fi
+          done < <(find docs -name "*.md" -print0)
+          
+          if [ ${#non_kebab_files[@]} -gt 0 ]; then
+            echo "❌ Files not following kebab-case convention:"
+            printf '%s\n' "${non_kebab_files[@]}"
+            echo ""
+            echo "Please rename files to follow kebab-case convention:"
+            echo "See docs/file-naming-guidelines.md for details"
+            exit 1
+          else
+            echo "✅ All documentation files follow kebab-case naming convention"
+          fi
