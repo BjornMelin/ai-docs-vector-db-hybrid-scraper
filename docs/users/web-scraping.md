@@ -96,35 +96,35 @@ Our system automatically analyzes each website and chooses the optimal scraping 
 
 ### When Each Tier Is Used
 
-**🚀 Tier 0: Lightning HTTP**
+#### **🚀 Tier 0: Lightning HTTP**
 
 - **Triggers**: Static HTML sites, simple content pages
 - **Best for**: Documentation, blog posts, news articles
 - **Speed**: Milliseconds
 - **Example sites**: GitHub README files, simple blogs
 
-**🧠 Tier 1: Crawl4AI Basic**
+#### **🧠 Tier 1: Crawl4AI Basic**
 
 - **Triggers**: Modern websites with some JavaScript
 - **Best for**: Most commercial websites, CMS-powered sites
 - **Speed**: 1-3 seconds
 - **Example sites**: Company websites, online stores
 
-**⚡ Tier 2: Crawl4AI Enhanced**
+#### **⚡ Tier 2: Crawl4AI Enhanced**
 
 - **Triggers**: Dynamic content, complex layouts
 - **Best for**: Single-page applications, interactive sites
 - **Speed**: 3-8 seconds  
 - **Example sites**: React/Vue apps, complex dashboards
 
-**🤖 Tier 3: AI Browser Automation**
+#### **🤖 Tier 3: AI Browser Automation**
 
 - **Triggers**: Interactive elements, forms, authentication
 - **Best for**: Complex user interactions, protected content
 - **Speed**: 10-30 seconds
 - **Example sites**: Social media, interactive tools
 
-**🛡️ Tier 4: Premium Fallback**
+#### **🛡️ Tier 4: Premium Fallback**
 
 - **Triggers**: All other methods failed
 - **Best for**: Heavily protected sites, complex authentication

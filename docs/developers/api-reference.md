@@ -515,28 +515,28 @@ Add to your Claude Desktop config file:
 - **`search_by_collection`** - Search within specific collections
 - **`search_similar`** - Find similar documents
 
-#### Document Management
+#### Document Management - `document_management`
 
 - **`add_url`** - Add single URL to index
 - **`add_urls`** - Bulk URL addition
 - **`update_document`** - Update existing documents
 - **`delete_document`** - Remove documents
 
-#### Collection Management
+#### Collection Management - `collection_management`
 
 - **`list_collections`** - Show all collections
 - **`create_collection`** - Create new collection
 - **`delete_collection`** - Remove collection
 - **`get_collection_stats`** - Collection metrics
 
-#### Project Management
+#### Project Management - `project_management`
 
 - **`create_project`** - Initialize new project
 - **`list_projects`** - Show all projects
 - **`update_project`** - Modify project settings
 - **`delete_project`** - Remove project
 
-#### Analytics
+#### Analytics - `analytics`
 
 - **`get_usage_stats`** - API usage metrics
 - **`get_performance_metrics`** - Search performance
@@ -1089,7 +1089,7 @@ config.performance.max_memory_mb = 2048
 config.performance.request_timeout = 30
 ```
 
-### Monitoring and Alerting
+### Monitoring and Alerting - `monitoring`
 
 #### System Health Monitoring
 
@@ -1217,7 +1217,7 @@ if not validate_url_format(request.url):
     raise ValidationError("Invalid URL format")
 ```
 
-#### Rate Limiting
+#### Rate Limiting - `rate_limiting`
 
 ```python
 # Implement rate limiting for external APIs

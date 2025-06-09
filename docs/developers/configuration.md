@@ -312,7 +312,7 @@ class Crawl4AIConfig(BaseModel):
 
 #### Environment-Specific Crawl4AI Configurations
 
-**High-Memory Systems (16GB+ RAM)**
+#### **High-Memory Systems (16GB+ RAM)**
 
 ```python
 high_memory_config = Crawl4AIConfig(
@@ -330,7 +330,7 @@ high_memory_config = Crawl4AIConfig(
 )
 ```
 
-**Memory-Constrained Systems (8GB or less)**
+#### **Memory-Constrained Systems (8GB or less)**
 
 ```python
 low_memory_config = Crawl4AIConfig(
@@ -348,7 +348,7 @@ low_memory_config = Crawl4AIConfig(
 )
 ```
 
-**Streaming Mode Configuration**
+#### **Streaming Mode Configuration**
 
 ```python
 streaming_config = Crawl4AIConfig(
@@ -366,7 +366,7 @@ streaming_config = Crawl4AIConfig(
 
 #### Site-Specific Configurations
 
-**React/Angular Documentation**
+##### **React/Angular Documentation**
 
 ```python
 spa_config = {
@@ -396,7 +396,7 @@ spa_config = {
 }
 ```
 
-**API Documentation**
+##### **API Documentation**
 
 ```python
 api_docs_config = {

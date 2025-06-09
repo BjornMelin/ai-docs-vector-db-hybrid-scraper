@@ -63,7 +63,7 @@ mcp search --query "authentication best practices" --collections "all"
 
 **Scenario**: Researching AI/ML papers and documentation
 
-**Step 1: Gather Sources**
+#### **Step 1: Gather Sources**
 
 ```bash
 # Scrape research-oriented sites
@@ -71,7 +71,7 @@ mcp scrape --url "https://arxiv.org/abs/2301.00001" --extract-citations
 mcp scrape --url "https://papers.nips.cc/paper/123" --save-metadata
 ```
 
-**Step 2: Search for Concepts**
+#### **Step 2: Search for Concepts**
 
 ```bash
 # Find related concepts across sources
@@ -79,7 +79,7 @@ mcp search --query "transformer architecture attention mechanisms"
 mcp search --query "vector database similarity search algorithms"
 ```
 
-**Step 3: Cross-Reference Findings**
+#### **Step 3: Cross-Reference Findings**
 
 ```bash
 # Search for specific techniques mentioned in papers

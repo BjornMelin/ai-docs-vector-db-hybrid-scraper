@@ -26,36 +26,36 @@ The `minimal-cost` configuration template has been renamed to `personal-use`. If
 
 1. **Update Configuration Files**
 
-```bash
-# Backup existing config
-cp config.json config.json.backup
+   ```bash
+   # Backup existing config
+   cp config.json config.json.backup
 
-# Copy new personal-use template
-cp config/templates/personal-use.json config.json
+   # Copy new personal-use template
+   cp config/templates/personal-use.json config.json
 
-# Apply any custom settings from backup
-diff config.json.backup config.json
-```
+   # Apply any custom settings from backup
+   diff config.json.backup config.json
+   ```
 
 2. **Update Docker Compose Commands**
 
-```bash
-# Old (deprecated)
-docker-compose -f docker-compose.minimal-cost.yml --profile minimal-cost up -d
+   ```bash
+   # Old (deprecated)
+   docker-compose -f docker-compose.minimal-cost.yml --profile minimal-cost up -d
 
-# New (current)
-docker-compose -f docker-compose.personal-use.yml --profile personal-use up -d
-```
+   # New (current)
+   docker-compose -f docker-compose.personal-use.yml --profile personal-use up -d
+   ```
 
 3. **Update Environment Variables**
 
-```bash
-# Old
-export CONFIG_TEMPLATE=minimal-cost
+   ```bash
+   # Old
+   export CONFIG_TEMPLATE=minimal-cost
 
-# New
-export CONFIG_TEMPLATE=personal-use
-```
+   # New
+   export CONFIG_TEMPLATE=personal-use
+   ```
 
 #### What Changed
 
@@ -76,17 +76,17 @@ graph TD
     A[Production Traffic] --> B[Load Balancer]
     B --> C[Blue Environment<br/>Current Production]
     B -.->|Switch| D[Green Environment<br/>New Version]
-    
+
     E[Deploy to Green] --> F[Test Green]
     F --> G[Update Alias]
     G --> H[Green is Live]
     H --> I[Cleanup Blue]
-    
+
     subgraph "Zero Downtime Switch"
         J[Delete old alias] --> K[Create new alias]
         K --> L[Atomic operation]
     end
-    
+
     style C fill:#e3f2fd
     style D fill:#e8f5e8
     style G fill:#fff3e0
@@ -97,7 +97,7 @@ graph TD
 ```python
 class ZeroDowntimeDeployment:
     """Production deployment with zero downtime."""
-    
+
     async def blue_green_deployment(
         self,
         alias_name: str,
@@ -105,13 +105,13 @@ class ZeroDowntimeDeployment:
         validation_queries: List[str]
     ) -> Dict[str, Any]:
         """Deploy with zero downtime using blue-green pattern."""
-        
+
         # 1. Get current collection (blue)
         blue_collection = await self._get_collection_for_alias(alias_name)
-        
+
         # 2. Create new collection (green)
         green_collection = f"{alias_name}_green_{int(time.time())}"
-        
+
         try:
             # 3. Clone configuration from blue
             blue_config = await self.client.get_collection(blue_collection)
@@ -121,22 +121,22 @@ class ZeroDowntimeDeployment:
                 hnsw_config=blue_config.config.hnsw_config,
                 quantization_config=blue_config.config.quantization_config
             )
-            
+
             # 4. Populate green collection
             await self._populate_collection(green_collection, new_data_source)
-            
+
             # 5. Create indexes for performance
             await self._create_v1_indexes(green_collection)
-            
+
             # 6. Validate green collection
             validation_passed = await self._validate_collection(
                 green_collection,
                 validation_queries
             )
-            
+
             if not validation_passed:
                 raise ValueError("Validation failed for green collection")
-            
+
             # 7. Atomic alias switch (zero downtime)
             await self.client.update_collection_aliases(
                 change_aliases_operations=[
@@ -151,22 +151,22 @@ class ZeroDowntimeDeployment:
                     )
                 ]
             )
-            
+
             # 8. Monitor for 5 minutes
             await self._monitor_deployment(alias_name, duration=300)
-            
+
             # 9. Schedule blue cleanup (24h grace period)
             asyncio.create_task(
                 self._cleanup_old_collection(blue_collection, delay_hours=24)
             )
-            
+
             return {
                 "success": True,
                 "old_collection": blue_collection,
                 "new_collection": green_collection,
                 "deployment_time": datetime.utcnow()
             }
-            
+
         except Exception as e:
             # Automatic rollback on failure
             await self._rollback(alias_name, blue_collection)
@@ -181,23 +181,23 @@ Gradual traffic shifting with real-time monitoring and automatic rollback.
 graph LR
     A[User Request] --> B{SearchInterceptor}
     B --> C{Active Canary?}
-    
+
     C -->|No| D[Primary Collection]
     C -->|Yes| E[CanaryRouter]
-    
+
     E --> F{Traffic Decision<br/>MD5 Hash % 100}
-    
+
     F -->|< canary_%| G[Canary Collection]
     F -->|>= canary_%| H[Primary Collection]
-    
+
     G --> I[Record Metrics]
     H --> I
     D --> I
-    
+
     I --> J[Monitor Thresholds]
     J -->|Healthy| K[Continue]
     J -->|Unhealthy| L[Auto Rollback]
-    
+
     style G fill:#ffebee
     style H fill:#e8f5e8
     style L fill:#ffcdd2
@@ -230,7 +230,7 @@ def _make_routing_decision(routing_key: str, percentage: float) -> str:
     """Consistent hashing for traffic distribution."""
     # Convert routing key to number in range [0, 100)
     key_value = int(hashlib.md5(routing_key.encode()).hexdigest()[:8], 16) % 100
-    
+
     # Route based on percentage threshold
     if key_value < percentage:
         return new_collection
@@ -259,7 +259,7 @@ await canary_service._rollback_canary(deployment_id)   # Rollback
 ```python
 class ABTestingManager:
     """Production A/B testing for configurations."""
-    
+
     async def create_ab_test(
         self,
         test_name: str,
@@ -269,20 +269,20 @@ class ABTestingManager:
         metrics_to_track: List[str]
     ) -> str:
         """Create A/B test for different configurations."""
-        
+
         test_id = f"ab_test_{test_name}_{int(time.time())}"
-        
+
         # Create control collection
         control_name = f"{test_id}_control"
         await self._create_collection_with_config(control_name, control_config)
-        
+
         # Create variant collections
         variants = []
         for i, config in enumerate(variant_configs):
             variant_name = f"{test_id}_variant_{i}"
             await self._create_collection_with_config(variant_name, config)
             variants.append(variant_name)
-        
+
         # Setup traffic routing
         self.active_tests[test_id] = {
             "control": control_name,
@@ -291,7 +291,7 @@ class ABTestingManager:
             "metrics": {name: defaultdict(list) for name in metrics_to_track},
             "start_time": datetime.utcnow()
         }
-        
+
         return test_id
 ```
 
@@ -311,24 +311,24 @@ services:
       QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 16
       QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER: 32
       QDRANT__STORAGE__OPTIMIZERS__FLUSH_INTERVAL_SEC: 30
-      
+
       # Memory Optimization
       QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM: true
       QDRANT__STORAGE__ON_DISK_PAYLOAD: true
-      
+
       # HNSW Optimization (V1 Enhanced)
       QDRANT__STORAGE__HNSW__M: 16
       QDRANT__STORAGE__HNSW__EF_CONSTRUCT: 200
       QDRANT__STORAGE__HNSW__MAX_M: 32
-    
+
     deploy:
       resources:
         limits:
           memory: 8G
-          cpus: '4'
+          cpus: "4"
         reservations:
           memory: 4G
-          cpus: '2'
+          cpus: "2"
 ```
 
 #### Collection Optimization
@@ -390,10 +390,10 @@ services:
       resources:
         limits:
           memory: 2.5G
-          cpus: '2'
+          cpus: "2"
         reservations:
           memory: 1G
-          cpus: '1'
+          cpus: "1"
 ```
 
 ```python
@@ -441,7 +441,7 @@ QUERY_CONFIG = {
 
 async def optimized_search(query: str, collection: str) -> List[Dict]:
     """Query API optimized search."""
-    
+
     query_request = QueryRequest(
         prefetch=[
             PrefetchQuery(
@@ -460,7 +460,7 @@ async def optimized_search(query: str, collection: str) -> List[Dict]:
         limit=10,
         with_payload=True
     )
-    
+
     return await qdrant.query_points(collection, query_request)
 ```
 
@@ -522,13 +522,13 @@ async def create_payload_indexes(collection: str):
 
 Based on V1 implementation measurements:
 
-| Metric | Pre-V1 Performance | V1 Performance | Improvement | Target |
-|--------|-------------------|----------------|-------------|---------|
-| Embedding Speed | 78ms (OpenAI) | 15ms (cached) / 45ms (new) | 70% faster | < 50ms |
-| Search Latency | 41ms (baseline) | 23ms (Query API) | 44% faster | < 30ms |
-| Cache Hit Rate | 82% (Redis) | 92% (DragonflyDB) | 10% better | > 85% |
-| Search Accuracy | 89.3% (hybrid) | 95.2% (HyDE + rerank) | 6% gain | > 90% |
-| API Cost | $50/month | $10/month (80% cached) | 80% savings | < $20/month |
+| Metric          | Pre-V1 Performance | V1 Performance             | Improvement | Target      |
+| --------------- | ------------------ | -------------------------- | ----------- | ----------- |
+| Embedding Speed | 78ms (OpenAI)      | 15ms (cached) / 45ms (new) | 70% faster  | < 50ms      |
+| Search Latency  | 41ms (baseline)    | 23ms (Query API)           | 44% faster  | < 30ms      |
+| Cache Hit Rate  | 82% (Redis)        | 92% (DragonflyDB)          | 10% better  | > 85%       |
+| Search Accuracy | 89.3% (hybrid)     | 95.2% (HyDE + rerank)      | 6% gain     | > 90%       |
+| API Cost        | $50/month          | $10/month (80% cached)     | 80% savings | < $20/month |
 
 #### Core Monitoring Stack
 
@@ -538,7 +538,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-logger.info("search_request", 
+logger.info("search_request",
     query=query,
     collection=collection_name,
     correlation_id=request_id,
@@ -560,7 +560,7 @@ GET /health/detailed
   "status": "healthy",
   "services": {
     "qdrant": "connected",
-    "dragonfly": "connected", 
+    "dragonfly": "connected",
     "openai": "available"
   },
   "metrics": {
@@ -594,7 +594,7 @@ QUERY_API_METRICS = {
 # HyDE performance tracking
 class V1HyDEMetrics:
     """Track HyDE enhancement effectiveness."""
-    
+
     def __init__(self):
         self.metrics = {
             "hyde_queries_total": Counter("hyde_queries_total"),
@@ -615,20 +615,20 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'ai-docs-vector-db'
+  - job_name: "ai-docs-vector-db"
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ["localhost:8000"]
     scrape_interval: 5s
     metrics_path: /metrics
 
-  - job_name: 'qdrant'
+  - job_name: "qdrant"
     static_configs:
-      - targets: ['localhost:6333']
+      - targets: ["localhost:6333"]
     scrape_interval: 10s
 
-  - job_name: 'dragonfly'
+  - job_name: "dragonfly"
     static_configs:
-      - targets: ['localhost:6379']
+      - targets: ["localhost:6379"]
     scrape_interval: 10s
 ```
 
@@ -674,7 +674,7 @@ groups:
           severity: warning
         annotations:
           summary: "Search latency exceeding 50ms"
-          
+
       - alert: LowCacheHitRate
         expr: dragonfly_cache_hit_rate < 0.8
         for: 10m
@@ -682,7 +682,7 @@ groups:
           severity: warning
         annotations:
           summary: "Cache hit rate below 80%"
-          
+
       - alert: HyDEPerformanceDegradation
         expr: avg(hyde_accuracy_improvement) < 0.15
         for: 10m
@@ -772,8 +772,8 @@ export QDRANT_API_KEY="$(aws ssm get-parameter --name /ai-docs/qdrant-key --with
 networks:
   internal:
     driver: bridge
-    internal: true  # No external access
-  
+    internal: true # No external access
+
   external:
     driver: bridge
 
@@ -783,16 +783,16 @@ services:
       - external
       - internal
     ports:
-      - "8000:8000"  # Only API exposed
-  
+      - "8000:8000" # Only API exposed
+
   qdrant:
     networks:
-      - internal  # Internal only
+      - internal # Internal only
     # No ports exposed externally
-  
+
   dragonfly:
     networks:
-      - internal  # Internal only
+      - internal # Internal only
     # No ports exposed externally
 ```
 
@@ -803,12 +803,12 @@ services:
 server {
     listen 443 ssl http2;
     server_name api.yourdomain.com;
-    
+
     ssl_certificate /etc/ssl/certs/yourdomain.crt;
     ssl_certificate_key /etc/ssl/private/yourdomain.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512;
-    
+
     location / {
         proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
@@ -827,15 +827,15 @@ server {
 # Memory management for large datasets
 class MemoryOptimizer:
     """Optimize memory usage for production workloads."""
-    
+
     def __init__(self, max_memory_gb: float = 8.0):
         self.max_memory_gb = max_memory_gb
         self.memory_threshold = 0.8  # 80% threshold
-        
+
     async def adaptive_batch_size(self, total_items: int) -> int:
         """Calculate optimal batch size based on available memory."""
         available_memory = psutil.virtual_memory().available / (1024**3)
-        
+
         if available_memory > self.max_memory_gb * self.memory_threshold:
             return min(1000, total_items // 10)
         elif available_memory > self.max_memory_gb * 0.5:
@@ -877,7 +877,7 @@ fi
 ```python
 class ProductionBackupManager:
     """Production backup management."""
-    
+
     async def create_backup(
         self,
         collection_name: str,
@@ -885,41 +885,41 @@ class ProductionBackupManager:
         retention_days: int = 30
     ) -> str:
         """Create production backup with retention policy."""
-        
+
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         backup_id = f"{collection_name}_{backup_type}_{timestamp}"
-        
+
         if backup_type == "full":
             await self._create_full_backup(collection_name, backup_id)
         else:
             await self._create_incremental_backup(collection_name, backup_id)
-        
+
         # Schedule cleanup
         await self._schedule_backup_cleanup(retention_days)
-        
+
         return backup_id
-    
+
     async def disaster_recovery(
         self,
         backup_id: str,
         target_environment: str = "staging"
     ):
         """Disaster recovery procedure."""
-        
+
         # 1. Validate backup integrity
         if not await self._validate_backup(backup_id):
             raise ValueError("Backup validation failed")
-        
+
         # 2. Create temporary environment
         temp_collection = f"recovery_{int(time.time())}"
-        
+
         # 3. Restore data
         await self._restore_backup(backup_id, temp_collection)
-        
+
         # 4. Validate restoration
         if not await self._validate_restoration(temp_collection):
             raise ValueError("Restoration validation failed")
-        
+
         # 5. Switch to production (if target is production)
         if target_environment == "production":
             await self._switch_to_recovered_collection(temp_collection)
@@ -951,10 +951,10 @@ services:
       replicas: 3
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 4G
         reservations:
-          cpus: '1'
+          cpus: "1"
           memory: 2G
       update_config:
         parallelism: 1
@@ -968,7 +968,7 @@ services:
 
   qdrant:
     deploy:
-      replicas: 2  # Read replicas
+      replicas: 2 # Read replicas
       placement:
         constraints:
           - node.role == worker
@@ -988,7 +988,7 @@ upstream api_backend {
 server {
     listen 80;
     server_name api.yourdomain.com;
-    
+
     location / {
         proxy_pass http://api_backend;
         proxy_set_header Host $host;
@@ -997,7 +997,7 @@ server {
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
     }
-    
+
     location /health {
         access_log off;
         proxy_pass http://api_backend/health;
@@ -1021,25 +1021,25 @@ spec:
   minReplicas: 2
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-  - type: Pods
-    pods:
-      metric:
-        name: search_requests_per_second
-      target:
-        type: AverageValue
-        averageValue: "50"
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: search_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "50"
 ```
 
 ## Troubleshooting
@@ -1157,7 +1157,7 @@ async def add_request_id(request: Request, call_next):
     """Add request ID for tracing."""
     req_id = str(uuid.uuid4())
     request_id.set(req_id)
-    
+
     structlog.configure(
         processors=[
             structlog.stdlib.add_log_level,
@@ -1168,7 +1168,7 @@ async def add_request_id(request: Request, call_next):
             structlog.processors.JSONRenderer()
         ]
     )
-    
+
     response = await call_next(request)
     return response
 ```
@@ -1183,17 +1183,17 @@ from typing import Optional
 
 class ProductionProfiler:
     """Safe profiling for production use."""
-    
+
     def __init__(self, sample_rate: float = 0.01):
         self.sample_rate = sample_rate
         self.profiler: Optional[cProfile.Profile] = None
-        
+
     async def maybe_profile(self, func: Callable) -> Any:
         """Profile function with sampling."""
         if random.random() < self.sample_rate:
             self.profiler = cProfile.Profile()
             self.profiler.enable()
-            
+
         try:
             result = await func()
             return result
@@ -1201,7 +1201,7 @@ class ProductionProfiler:
             if self.profiler:
                 self.profiler.disable()
                 self._save_profile()
-                
+
     def _save_profile(self):
         """Save profile data."""
         stats = pstats.Stats(self.profiler)
@@ -1294,6 +1294,6 @@ Regular review and optimization of these procedures ensures continued high perfo
 ## Related Documentation
 
 - [Architecture Overview](../concepts/architecture/system-overview.md) - System design principles
-- [Configuration Reference](../reference/configuration/config-schema.md) - Complete configuration options  
+- [Configuration Reference](../reference/configuration/config-schema.md) - Complete configuration options
 - [API Reference](../reference/api/rest-api.md) - Production API documentation
 - [Troubleshooting Guide](../operations/monitoring/troubleshooting.md) - Detailed troubleshooting procedures

@@ -39,7 +39,7 @@ Quick solutions for the most common issues you might encounter. Most problems ha
 
 **Most common causes and fixes**:
 
-**1. Documents not indexed yet**
+#### **1. Documents not indexed yet**
 
 ```bash
 # Check if you have any collections
@@ -49,18 +49,18 @@ mcp list-collections
 mcp add-documents --path "/path/to/documents"
 ```
 
-**2. Query too specific**
+#### **2. Query too specific**
 
 - **Try broader terms**: "database" instead of "PostgreSQL 15.2 configuration"
 - **Use simpler language**: "setup guide" instead of "installation and configuration procedures"
 - **Break up complex queries**: Search for one concept at a time
 
-**3. Wrong terminology**
+#### **3. Wrong terminology**
 
 - **Try alternative words**: "config" vs "configuration", "docs" vs "documentation"
 - **Use questions instead**: "How do I configure the database?" vs "database configuration"
 
-**4. Collection issues**
+#### **4. Collection issues**
 
 ```bash
 # Check specific collection
@@ -80,19 +80,19 @@ mcp search --query "your terms" --collections "all"
 
 **Solutions**:
 
-**1. Improve your query**
+#### **1. Improve your query**
 
 - **Add context**: "Python web scraping tutorial" vs just "scraping"
 - **Be more specific**: "fix SSL certificate error" vs "fix error"
 - **Use natural language**: "Why is my search slow?" vs "search performance"
 
-**2. Try different search approaches**
+#### **2. Try different search approaches**
 
 - **Question format**: "What is the best way to..."
 - **Problem-solution format**: "When X happens, how do I fix Y?"
 - **Comparison format**: "Difference between A and B"
 
-**3. Check your expectations**
+#### **3. Check your expectations**
 
 - Are you searching the right collection?
 - Is the information actually in the system?
@@ -108,20 +108,20 @@ mcp search --query "your terms" --collections "all"
 
 **Quick fixes**:
 
-**1. Simplify your query**
+#### **1. Simplify your query**
 
 - Use fewer words
 - Search for one concept at a time
 - Avoid very broad terms like "everything about..."
 
-**2. Reduce result count**
+#### **2. Reduce result count**
 
 ```bash
 # Limit results to speed up search
 mcp search --query "your terms" --limit 5
 ```
 
-**3. Check system resources**
+#### **3. Check system resources**
 
 - Close other applications using memory
 - Restart the system if it's been running for a long time
@@ -139,25 +139,25 @@ mcp search --query "your terms" --limit 5
 
 **Solutions**:
 
-**1. Verify the website works**
+#### **1. Verify the website works**
 
 - Open the URL in your browser manually
 - Check if the content is actually there
 - Ensure the site doesn't require login
 
-**2. Try different URLs**
+#### **2. Try different URLs**
 
 - Use direct links to content pages
 - Avoid homepage URLs when possible
 - Try specific article or page URLs
 
-**3. Allow more time**
+#### **3. Allow more time**
 
 - Some sites need extra time to load content
 - Dynamic sites may take 10-30 seconds
 - The system automatically retries with different methods
 
-**4. Check for common issues**
+#### **4. Check for common issues**
 
 ```bash
 # Test with a simple site first
@@ -178,25 +178,25 @@ mcp scrape --url "https://your-target-site.com"
 
 **Respectful solutions**:
 
-**1. Slow down your requests**
+#### **1. Slow down your requests**
 
 - Wait longer between scraping attempts
 - Don't scrape the same site repeatedly
 - Space out requests by several minutes
 
-**2. Check site policies**
+#### **2. Check site policies**
 
 - Look for robots.txt file (add /robots.txt to the domain)
 - Respect any crawling restrictions
 - Consider if the content is meant to be scraped
 
-**3. Try different approaches**
+#### **3. Try different approaches**
 
 - Use specific page URLs instead of general crawling
 - Focus on publicly available content
 - Consider if there's an official API available
 
-**4. Alternative strategies**
+#### **4. Alternative strategies**
 
 - Look for RSS feeds or sitemaps
 - Check if content is available through official channels
@@ -212,19 +212,19 @@ mcp scrape --url "https://your-target-site.com"
 
 **Optimizations**:
 
-**1. Target better sites**
+#### **1. Target better sites**
 
 - Simple, static sites work faster
 - Well-structured sites give better results
 - Avoid heavily dynamic or complex sites
 
-**2. Be more specific**
+#### **2. Be more specific**
 
 - Use direct URLs to the content you need
 - Avoid scraping entire sites when you need specific pages
 - Target content-rich pages rather than navigation pages
 
-**3. Understand tier escalation**
+#### **3. Understand tier escalation**
 
 - Simple sites use fast methods (seconds)
 - Complex sites automatically use slower, more thorough methods (minutes)
@@ -242,19 +242,19 @@ mcp scrape --url "https://your-target-site.com"
 
 **Solutions**:
 
-**1. Check your .env file**
+#### **1. Check your .env file**
 
 - Ensure API keys are correct and complete
 - No extra spaces or quotes around the keys
 - Keys should start with the correct prefix (sk- for OpenAI)
 
-**2. Verify key validity**
+#### **2. Verify key validity**
 
 - Test keys directly with the provider's website
 - Check if keys have necessary permissions
 - Ensure keys haven't expired
 
-**3. Restart after changes**
+#### **3. Restart after changes**
 
 - Always restart the server after changing .env
 - Changes to configuration require a restart to take effect
@@ -269,19 +269,19 @@ mcp scrape --url "https://your-target-site.com"
 
 **Common fixes**:
 
-**1. Check prerequisites**
+#### **1. Check prerequisites**
 
 - Docker is running (for Qdrant)
 - Python version is 3.13+
 - All dependencies installed with `uv sync`
 
-**2. Check for conflicts**
+#### **2. Check for conflicts**
 
 - Other services using the same ports
 - Previous instances still running
 - Firewall blocking connections
 
-**3. Clean restart**
+#### **3. Clean restart**
 
 ```bash
 # Stop everything
@@ -297,19 +297,19 @@ docker stop $(docker ps -q)
 
 **General performance tips**:
 
-**1. Resource management**
+#### **1. Resource management**
 
 - Close unnecessary applications
 - Ensure adequate RAM (8GB+ recommended)
 - Check available disk space
 
-**2. Optimize usage patterns**
+#### **2. Optimize usage patterns**
 
 - Use specific searches rather than broad exploration
 - Limit result counts when you don't need many results
 - Batch similar operations together
 
-**3. Regular maintenance**
+#### **3. Regular maintenance**
 
 - Restart services periodically
 - Clear temporary files if disk space is low
@@ -325,13 +325,13 @@ docker stop $(docker ps -q)
 
 **Solutions**:
 
-**1. Reduce memory usage**
+#### **1. Reduce memory usage**
 
 - Process smaller batches of documents
 - Use more specific search queries
 - Close other memory-intensive applications
 
-**2. Adjust processing**
+#### **2. Adjust processing**
 
 - Use smaller chunk sizes for document processing
 - Process documents in smaller batches

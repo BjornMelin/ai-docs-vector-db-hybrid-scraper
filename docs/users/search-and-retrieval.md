@@ -31,7 +31,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 **✅ Good Query Examples:**
 
-```
+```text
 "how to optimize vector database performance"
 "troubleshooting slow search responses"  
 "best practices for document indexing"
@@ -40,7 +40,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 **❌ Avoid These Patterns:**
 
-```
+```text
 "database" (too vague)
 "fix error" (no context)
 "help" (not specific)
@@ -58,19 +58,19 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ### Search Strategies by Use Case
 
-**📚 Research & Learning**
+#### **📚 Research & Learning**
 
 - Use question format: "What is the difference between dense and sparse vectors?"
 - Include learning level: "beginner guide to vector databases"
 - Ask for comparisons: "Redis vs DragonflyDB performance"
 
-**🔧 Troubleshooting**
+#### **🔧 Troubleshooting**
 
 - Describe the problem: "search results are empty"
 - Include error context: "timeout errors during large document indexing"
 - Mention what you tried: "increased chunk size but still getting errors"
 
-**⚙️ Configuration**
+#### **⚙️ Configuration**
 
 - Be specific about settings: "configure HNSW parameters for accuracy"
 - Mention your environment: "production deployment configuration"
@@ -135,7 +135,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ### Using Search Filters
 
-```
+```text
 # Search within specific document types
 query: "API documentation" filter: type=reference
 
@@ -154,20 +154,20 @@ query: "configuration" filter: project=production
 
 ### Power User Tips
 
-**🎯 Precision Searching**
+#### **🎯 Precision Searching**
 
 - Use quotes for exact phrases: `"error code 500"`
 - Include specific versions: `"Python 3.13 compatibility"`
 - Mention specific tools: `"Qdrant collection aliases"`
 
-**🔄 Iterative Refinement**
+#### **🔄 Iterative Refinement**
 
 1. Start with a broad search
 2. Review top results for better terminology
 3. Refine your query using discovered keywords
 4. Repeat until you find exactly what you need
 
-**📋 Research Workflows**
+#### **📋 Research Workflows**
 
 - Search for overviews first: `"system architecture overview"`
 - Then dive into specifics: `"client management implementation"`

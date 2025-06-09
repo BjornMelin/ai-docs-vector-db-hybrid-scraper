@@ -32,7 +32,7 @@ uv sync
 uv run pytest tests/unit/ --tb=short -q
 ```
 
-If everything passes, you're ready to develop! Skip to [First Contribution](#first-contribution).
+If everything passes, you're ready to develop! Skip to [First Contribution](#-first-contribution).
 
 ## 📋 Detailed Setup
 

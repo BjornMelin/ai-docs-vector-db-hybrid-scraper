@@ -798,7 +798,7 @@ groups:
 
 #### Security Incident Notification
 
-```
+```text
 Subject: [SECURITY INCIDENT] P${SEVERITY} - ${INCIDENT_TYPE}
 
 Incident ID: ${INCIDENT_ID}

@@ -691,7 +691,7 @@ rm "$CURRENT_CONFIG.backup"
 
 **Symptoms:**
 
-```
+```text
 Error: OpenAI API key required when using OpenAI embedding provider
 ```
 
@@ -712,7 +712,7 @@ python -m src.manage_config validate -c config.json
 
 **Symptoms:**
 
-```
+```text
 Error: Qdrant connection failed: Connection refused
 ```
 
@@ -748,7 +748,7 @@ export AI_DOCS__QDRANT__URL="http://localhost:6333"
 
 **Symptoms:**
 
-```
+```text
 MemoryError: Unable to allocate array
 ```
 
@@ -789,7 +789,7 @@ print(provider._get_dispatcher_stats())
 
 **Symptoms:**
 
-```
+```text
 RateLimitError: Rate limit exceeded
 ```
 
