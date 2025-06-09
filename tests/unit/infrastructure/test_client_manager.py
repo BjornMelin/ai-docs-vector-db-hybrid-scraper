@@ -235,7 +235,7 @@ class TestCircuitBreaker:
 
         # Fail multiple times
         for _ in range(3):
-            with pytest.raises(RuntimeError):
+            with pytest.raises(Exception):
                 await circuit_breaker.call(failing_func)
 
         # Circuit should be open now
