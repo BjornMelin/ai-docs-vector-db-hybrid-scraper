@@ -32,7 +32,7 @@ uv sync
 uv run pytest tests/unit/ --tb=short -q
 ```
 
-If everything passes, you're ready to develop! Skip to [First Contribution](#-first-contribution).
+If everything passes, you're ready to develop! Skip to [First Contribution](#first-contribution).
 
 ## 📋 Detailed Setup
 
@@ -469,7 +469,7 @@ git push origin fix/issue-description
 
 - **[Architecture Guide](./architecture.md)**: System design and components
 - **[API Reference](./api-reference.md)**: Complete API documentation
-- **[Contributing Guide](./contributing.md)**: Detailed contribution guidelines
+- **[Contributing Guide](../developers/contributing.md)**: Detailed contribution guidelines
 
 ### External Resources
 

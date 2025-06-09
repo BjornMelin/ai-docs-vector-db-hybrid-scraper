@@ -35,8 +35,8 @@ Welcome to the user documentation! This section is designed for anyone who wants
 
 ## 🔗 Related Resources
 
-- **For Developers**: See [../developers/](../developers/) for API integration guides
-- **For Operations**: See [../operators/](../operators/) for deployment and maintenance
+- **For Developers**: See [../developers/](../developers/README.md) for API integration guides
+- **For Operations**: See [../operators/](../operators/README.md) for deployment and maintenance
 - **Need Help?**: Check [troubleshooting](./troubleshooting.md) or [examples](./examples-and-recipes.md)
 
 ---

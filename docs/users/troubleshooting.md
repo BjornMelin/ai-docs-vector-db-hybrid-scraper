@@ -387,8 +387,8 @@ Before asking for help, try these:
 
 ### Technical Resources
 
-- **[Developer Documentation](../developers/)**: For integration and API issues
-- **[Operator Documentation](../operators/)**: For deployment and infrastructure issues
+- **[Developer Documentation](../developers/README.md)**: For integration and API issues
+- **[Operator Documentation](../operators/README.md)**: For deployment and infrastructure issues
 
 ### External Resources
 

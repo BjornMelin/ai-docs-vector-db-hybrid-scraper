@@ -4,7 +4,7 @@
 > **Last Updated**: 2025-06-09  
 > **Purpose**: Comprehensive security guide for production deployment and operations  
 > **Audience**: System administrators, DevOps engineers, security engineers  
-> **Related**: [Configuration Guide](configuration.md), [Deployment Guide](deployment.md), [Monitoring Guide](monitoring.md)
+> **Related**: [Configuration Guide](./configuration.md), [Deployment Guide](./deployment.md), [Monitoring Guide](./monitoring.md)
 
 ## Overview
 
@@ -1302,9 +1302,9 @@ class SecureAPIClient:
 
 ## Related Documentation
 
-- 🛠️ [Configuration Guide](configuration.md) - System configuration details
-- 🚀 [Deployment Guide](deployment.md) - Production deployment procedures  
-- 📊 [Monitoring Guide](monitoring.md) - System monitoring and observability
-- 🔧 [Operations Guide](operations.md) - Day-to-day operational procedures
+- 🛠️ [Configuration Guide](./configuration.md) - System configuration details
+- 🚀 [Deployment Guide](./deployment.md) - Production deployment procedures  
+- 📊 [Monitoring Guide](./monitoring.md) - System monitoring and observability
+- 🔧 [Operations Guide](./operations.md) - Day-to-day operational procedures
 
 For security incident reporting, contact: <security@company.com>

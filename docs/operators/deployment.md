@@ -1293,7 +1293,7 @@ Regular review and optimization of these procedures ensures continued high perfo
 
 ## Related Documentation
 
-- [Architecture Overview](../concepts/architecture/system-overview.md) - System design principles
-- [Configuration Reference](../reference/configuration/config-schema.md) - Complete configuration options
-- [API Reference](../reference/api/rest-api.md) - Production API documentation
-- [Troubleshooting Guide](../operations/monitoring/troubleshooting.md) - Detailed troubleshooting procedures
+- [Architecture Overview](../developers/architecture.md) - System design principles
+- [Configuration Reference](./configuration.md) - Complete configuration options
+- [API Reference](../developers/api-reference.md) - Production API documentation
+- [Troubleshooting Guide](../operators/monitoring.md) - Detailed troubleshooting procedures

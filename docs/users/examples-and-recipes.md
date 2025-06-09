@@ -397,7 +397,7 @@ mcp scrape --url-list "sites.txt" --delay 2s --respectful
 - **[Search & Retrieval](./search-and-retrieval.md)**: Master search techniques
 - **[Web Scraping](./web-scraping.md)**: Understand the scraping system
 - **[Troubleshooting](./troubleshooting.md)**: Solve common problems
-- **Developer Resources**: See [../developers/](../developers/) for API integration
+- **Developer Resources**: See [../developers/](../developers/README.md) for API integration
 
 ---
 

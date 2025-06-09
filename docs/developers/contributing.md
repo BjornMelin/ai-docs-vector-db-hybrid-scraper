@@ -11,7 +11,7 @@ Welcome to the AI Documentation Vector DB project! This guide covers everything 
 
 ### Before You Start
 
-1. ✅ Read the [Getting Started Guide](./getting-started.md) and set up your environment
+1. ✅ Read the [Getting Started Guide](../developers/getting-started.md) and set up your environment
 2. ✅ Check existing [GitHub Issues](https://github.com/project/issues) for work opportunities
 3. ✅ Join our discussions to connect with the community
 4. ✅ Review this guide for detailed workflow instructions

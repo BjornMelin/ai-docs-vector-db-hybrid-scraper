@@ -155,8 +155,8 @@ Once you're up and running:
 
 - **User Issues**: Check [troubleshooting guide](./troubleshooting.md)
 - **Examples**: See [examples and recipes](./examples-and-recipes.md)
-- **Developer Integration**: Visit [../developers/](../developers/)
-- **Deployment**: See [../operators/](../operators/)
+- **Developer Integration**: Visit [../developers/](../developers/README.md)
+- **Deployment**: See [../operators/](../operators/README.md)
 
 ---
 

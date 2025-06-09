@@ -124,7 +124,7 @@ Contributing code, features, or bug fixes to the project.
 ### **DevOps Engineers**
 
 Deploying and maintaining the system in production environments.
-→ See [Architecture](./architecture.md) and visit [../operators/](../operators/) section
+→ See [Architecture](./architecture.md) and visit [Operators Documentation](../operators/README.md) section
 
 ### **Platform Engineers**
 
@@ -159,18 +159,18 @@ Building platforms or tools that incorporate our vector search capabilities.
 1. Review [Architecture](./architecture.md) for system design
 2. Check [Configuration](./configuration.md) for tuning options
 3. Implement monitoring and profiling
-4. See [../operators/performance-optimization.md](../operators/performance-optimization.md)
+4. See [Performance Optimization](../operators/deployment.md)
 
 ## 🔗 Related Resources
 
 ### User Resources
 
-- **[User Documentation](../users/)**: End-user guides and tutorials
+- **[User Documentation](../users/README.md)**: End-user guides and tutorials
 - **[User Quick Start](../users/quick-start.md)**: 5-minute setup for users
 
 ### Operations Resources
 
-- **[Operator Documentation](../operators/)**: Deployment and maintenance
+- **[Operator Documentation](../operators/README.md)**: Deployment and maintenance
 - **[Monitoring Guide](../operators/monitoring.md)**: System monitoring and alerts
 
 ### External Resources
