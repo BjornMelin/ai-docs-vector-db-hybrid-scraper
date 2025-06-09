@@ -98,7 +98,7 @@ class TestContextTyping:
         # For now, we just ensure the modules load without import errors
         for module_name in MCP_TOOL_MODULES:
             try:
-                module = importlib.import_module(f"src.mcp_tools.tools.{module_name}")
+                importlib.import_module(f"src.mcp_tools.tools.{module_name}")
                 # If we can import it, the Context typing is working
                 assert True
             except ImportError as e:

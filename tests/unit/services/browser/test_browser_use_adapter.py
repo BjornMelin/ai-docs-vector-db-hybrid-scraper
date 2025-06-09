@@ -179,7 +179,7 @@ class TestBrowserUseAdapterLLMSetup:
         adapter = BrowserUseAdapter(gemini_config)
 
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-api-key"}):
-            llm = adapter._setup_llm_config()
+            adapter._setup_llm_config()
 
             mock_chat_gemini.assert_called_once_with(
                 model="gemini-pro",
@@ -355,7 +355,7 @@ class TestBrowserUseAdapterScraping:
             {"action": "type", "selector": "input", "text": "test"},
         ]
 
-        result = await adapter.scrape(
+        await adapter.scrape(
             "https://example.com", "Extract data", instructions=instructions
         )
 

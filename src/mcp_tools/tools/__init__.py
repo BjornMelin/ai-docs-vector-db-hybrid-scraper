@@ -12,6 +12,7 @@ from . import collections
 from . import deployment
 from . import documents
 from . import embeddings
+from . import lightweight_scrape
 from . import payload_indexing
 from . import projects
 from . import search
@@ -25,6 +26,7 @@ __all__ = [
     "deployment",
     "documents",
     "embeddings",
+    "lightweight_scrape",
     "payload_indexing",
     "projects",
     "search",
