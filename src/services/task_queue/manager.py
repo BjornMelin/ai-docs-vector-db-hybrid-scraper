@@ -12,6 +12,14 @@ from ..base import BaseService
 
 logger = logging.getLogger(__name__)
 
+# Import monitoring registry for Prometheus integration
+try:
+    from ..monitoring.metrics import get_metrics_registry
+
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
+
 
 class TaskQueueManager(BaseService):
     """Manages task queue operations using ARQ."""
@@ -25,6 +33,15 @@ class TaskQueueManager(BaseService):
         super().__init__(config)
         self._redis_pool: ArqRedis | None = None
         self._redis_settings = self._create_redis_settings()
+
+        # Initialize Prometheus metrics registry if available
+        self.metrics_registry = None
+        if MONITORING_AVAILABLE:
+            try:
+                self.metrics_registry = get_metrics_registry()
+                logger.debug("Task queue monitoring enabled")
+            except Exception as e:
+                logger.debug(f"Task queue monitoring disabled: {e}")
 
     def _create_redis_settings(self) -> RedisSettings:
         """Create Redis settings from config."""
@@ -114,9 +131,21 @@ class TaskQueueManager(BaseService):
                     f"Enqueued task {task_name} with job ID {job.job_id}"
                     f"{f' (delayed by {_delay}s)' if _delay else ''}"
                 )
+
+                # Record task enqueue metrics
+                if self.metrics_registry:
+                    self.metrics_registry.record_task_execution(
+                        task_name, 0.0, True
+                    )  # Just tracking enqueue for now
+
                 return job.job_id
             else:
                 logger.error(f"Failed to enqueue task {task_name}")
+
+                # Record failure metrics
+                if self.metrics_registry:
+                    self.metrics_registry.record_task_execution(task_name, 0.0, False)
+
                 return None
 
         except Exception as e:

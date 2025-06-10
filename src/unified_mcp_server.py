@@ -5,6 +5,7 @@ This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
 """
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -13,6 +14,11 @@ from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
+from src.services.monitoring.initialization import initialize_monitoring_system
+from src.services.monitoring.initialization import run_periodic_health_checks
+from src.services.monitoring.initialization import setup_fastmcp_monitoring
+from src.services.monitoring.initialization import update_cache_metrics_periodically
+from src.services.monitoring.initialization import update_system_metrics_periodically
 
 # Initialize logging
 configure_logging()
@@ -125,6 +131,7 @@ def validate_configuration():
 @asynccontextmanager
 async def lifespan():
     """Server lifecycle management with lazy initialization."""
+    monitoring_tasks = []
     try:
         # Validate configuration first
         validate_configuration()
@@ -137,6 +144,61 @@ async def lifespan():
         lifespan.client_manager = ClientManager(config)
         await lifespan.client_manager.initialize()
 
+        # Initialize monitoring system
+        logger.info("Initializing monitoring system...")
+        qdrant_client = getattr(lifespan.client_manager, "qdrant_client", None)
+        redis_url = (
+            config.cache.dragonfly_url if config.cache.enable_dragonfly_cache else None
+        )
+
+        lifespan.metrics_registry, lifespan.health_manager = (
+            initialize_monitoring_system(config, qdrant_client, redis_url)
+        )
+
+        # Set up FastMCP monitoring integration
+        if lifespan.metrics_registry and lifespan.health_manager:
+            setup_fastmcp_monitoring(
+                mcp, config, lifespan.metrics_registry, lifespan.health_manager
+            )
+
+            # Start background monitoring tasks
+            if config.monitoring.enabled:
+                # Start periodic health checks
+                health_check_task = asyncio.create_task(
+                    run_periodic_health_checks(
+                        lifespan.health_manager, interval_seconds=60.0
+                    )
+                )
+                monitoring_tasks.append(health_check_task)
+
+                # Start periodic system metrics updates
+                if config.monitoring.include_system_metrics:
+                    metrics_task = asyncio.create_task(
+                        update_system_metrics_periodically(
+                            lifespan.metrics_registry,
+                            interval_seconds=config.monitoring.system_metrics_interval,
+                        )
+                    )
+                    monitoring_tasks.append(metrics_task)
+
+                # Start periodic cache metrics updates
+                if (
+                    config.cache.enable_local_cache
+                    or config.cache.enable_dragonfly_cache
+                ):
+                    # Initialize cache manager first to ensure it's available for monitoring
+                    await lifespan.client_manager.get_cache_manager()
+                    cache_metrics_task = asyncio.create_task(
+                        update_cache_metrics_periodically(
+                            lifespan.metrics_registry,
+                            lifespan.client_manager._cache_manager,
+                            interval_seconds=30.0,
+                        )
+                    )
+                    monitoring_tasks.append(cache_metrics_task)
+
+                logger.info("Started background monitoring tasks")
+
         # Register all tools
         logger.info("Registering MCP tools...")
         await register_all_tools(mcp, lifespan.client_manager)
@@ -147,6 +209,15 @@ async def lifespan():
     finally:
         # Cleanup on shutdown
         logger.info("Shutting down server...")
+
+        # Cancel monitoring tasks
+        for task in monitoring_tasks:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
         if hasattr(lifespan, "client_manager"):
             await lifespan.client_manager.cleanup()
         logger.info("Server shutdown complete")

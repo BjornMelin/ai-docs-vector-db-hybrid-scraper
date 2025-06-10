@@ -1,0 +1,29 @@
+# Override file to integrate monitoring stack with main application
+version: "3.8"
+
+services:
+  # Add monitoring network to existing services
+  qdrant:
+    networks:
+      - advanced-vector-network
+      - monitoring
+
+  dragonfly:
+    networks:
+      - advanced-vector-network  
+      - monitoring
+
+  task-worker:
+    networks:
+      - advanced-vector-network
+      - monitoring
+
+  qdrant-exporter:
+    networks:
+      - advanced-vector-network
+      - monitoring
+
+networks:
+  monitoring:
+    external: true
+    name: monitoring-observability-vect_18478f295ebe501a_monitoring

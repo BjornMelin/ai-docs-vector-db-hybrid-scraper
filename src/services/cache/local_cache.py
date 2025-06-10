@@ -1,6 +1,7 @@
 """Local in-memory LRU cache implementation with TTL support."""
 
 import asyncio
+import logging
 import sys
 import time
 from collections import OrderedDict
@@ -8,6 +9,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from .base import CacheInterface
+
+logger = logging.getLogger(__name__)
+
+# Import monitoring registry for metrics integration
+try:
+    from ..monitoring.metrics import get_metrics_registry
+
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
 
 
 @dataclass
@@ -50,6 +61,15 @@ class LocalCache(CacheInterface[Any]):
         self._misses = 0
         self._evictions = 0
         self._current_memory = 0
+
+        # Initialize metrics registry if available
+        self.metrics_registry = None
+        if MONITORING_AVAILABLE:
+            try:
+                self.metrics_registry = get_metrics_registry()
+                logger.debug("Local cache monitoring enabled")
+            except Exception as e:
+                logger.debug(f"Local cache monitoring disabled: {e}")
 
     async def get(self, key: str) -> Any | None:
         """Get value from cache with LRU update."""
@@ -204,6 +224,12 @@ class LocalCache(CacheInterface[Any]):
         self._update_memory_usage(key, entry.value, remove=True)
         self._evictions += 1
 
+        # Record eviction in monitoring metrics
+        if self.metrics_registry:
+            self.metrics_registry._metrics["cache_evictions"].labels(
+                cache_type="local", cache_name="main"
+            ).inc()
+
     def _estimate_size(self, value: Any) -> int:
         """Estimate memory size of a value in bytes."""
         # Simple estimation - can be improved
@@ -235,3 +261,9 @@ class LocalCache(CacheInterface[Any]):
 
         # Ensure non-negative
         self._current_memory = max(0, self._current_memory)
+
+        # Update memory usage metrics
+        if self.metrics_registry:
+            self.metrics_registry.update_cache_memory_usage(
+                "local", "main", self._current_memory
+            )

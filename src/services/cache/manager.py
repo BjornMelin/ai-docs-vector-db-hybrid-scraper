@@ -18,6 +18,14 @@ from .search_cache import SearchResultCache
 
 logger = logging.getLogger(__name__)
 
+# Import monitoring registry for Prometheus integration
+try:
+    from ..monitoring.metrics import get_metrics_registry
+
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
+
 
 class CacheManager:
     """Simplified two-tier cache manager with DragonflyDB and specialized cache layers."""
@@ -97,6 +105,16 @@ class CacheManager:
 
         # Initialize metrics
         self._metrics = CacheMetrics() if enable_metrics else None
+
+        # Initialize Prometheus monitoring registry
+        self.metrics_registry = None
+        if enable_metrics and MONITORING_AVAILABLE:
+            try:
+                self.metrics_registry = get_metrics_registry()
+                logger.info("Cache monitoring enabled with Prometheus integration")
+            except Exception as e:
+                logger.warning(f"Failed to initialize cache monitoring: {e}")
+
         logger.info(
             f"CacheManager initialized with DragonflyDB: {dragonfly_url}, "
             f"local={enable_local_cache}, specialized={enable_specialized_caches}"
@@ -166,6 +184,26 @@ class CacheManager:
         Raises:
             Exception: Logged but not raised - returns default on error
         """
+        # Monitor cache operations with Prometheus if available
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_cache_performance(
+                cache_type=cache_type.value, operation="get"
+            )
+
+            async def _monitored_get():
+                return await self._execute_cache_get(key, cache_type, default)
+
+            return await decorator(_monitored_get)()
+        else:
+            return await self._execute_cache_get(key, cache_type, default)
+
+    async def _execute_cache_get(
+        self,
+        key: str,
+        cache_type: CacheType,
+        default: object = None,
+    ) -> object:
+        """Execute the actual cache get operation."""
         start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
 
@@ -176,7 +214,13 @@ class CacheManager:
                 if value is not None:
                     if self._metrics:
                         latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                        self._metrics.record_hit(cache_type, "local", latency)
+                        self._metrics.record_hit(cache_type.value, "local", latency)
+
+                    # Record hit in Prometheus metrics
+                    if self.metrics_registry:
+                        self.metrics_registry.record_cache_hit(
+                            "local", cache_type.value
+                        )
                     return value
 
             # Try L2 cache (DragonflyDB)
@@ -189,20 +233,36 @@ class CacheManager:
 
                     if self._metrics:
                         latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                        self._metrics.record_hit(cache_type, "distributed", latency)
+                        self._metrics.record_hit(
+                            cache_type.value, "distributed", latency
+                        )
+
+                    # Record hit in Prometheus metrics
+                    if self.metrics_registry:
+                        self.metrics_registry.record_cache_hit(
+                            "distributed", cache_type.value
+                        )
                     return value
 
             # Cache miss
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_miss(cache_type, latency)
+                self._metrics.record_miss(cache_type.value, latency)
+
+            # Record miss in Prometheus metrics
+            if self.metrics_registry:
+                self.metrics_registry.record_cache_miss(cache_type.value)
             return default
 
         except Exception as e:
             logger.error(f"Cache get error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_miss(cache_type, latency)
+                self._metrics.record_miss(cache_type.value, latency)
+
+            # Record miss in Prometheus metrics
+            if self.metrics_registry:
+                self.metrics_registry.record_cache_miss(cache_type.value)
             return default
 
     async def set(
@@ -226,6 +286,27 @@ class CacheManager:
         Raises:
             Exception: Logged but not raised - returns False on error
         """
+        # Monitor cache operations with Prometheus if available
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_cache_performance(
+                cache_type=cache_type.value, operation="set"
+            )
+
+            async def _monitored_set():
+                return await self._execute_cache_set(key, value, cache_type, ttl)
+
+            return await decorator(_monitored_set)()
+        else:
+            return await self._execute_cache_set(key, value, cache_type, ttl)
+
+    async def _execute_cache_set(
+        self,
+        key: str,
+        value: object,
+        cache_type: CacheType,
+        ttl: int | None = None,
+    ) -> bool:
+        """Execute the actual cache set operation."""
         start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
         effective_ttl = ttl or self.distributed_ttl_seconds.get(cache_type, 3600)
@@ -246,7 +327,7 @@ class CacheManager:
 
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_set(cache_type, latency, success)
+                self._metrics.record_set(cache_type.value, latency, success)
 
             return success
 
@@ -254,7 +335,7 @@ class CacheManager:
             logger.error(f"Cache set error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_set(cache_type, latency, False)
+                self._metrics.record_set(cache_type.value, latency, False)
             return False
 
     async def delete(self, key: str, cache_type: CacheType = CacheType.CRAWL) -> bool:

@@ -12,6 +12,7 @@ from typing import ClassVar
 from openai import AsyncOpenAI
 
 from ..errors import EmbeddingServiceError
+from ..monitoring.metrics import get_metrics_registry
 from ..utilities.rate_limiter import RateLimitManager
 from .base import EmbeddingProvider
 
@@ -85,6 +86,15 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         else:
             self.dimensions = config["max_dimensions"]
 
+        # Initialize metrics if available
+        try:
+            self.metrics_registry = get_metrics_registry()
+        except Exception:
+            logger.warning(
+                "Metrics registry not available - embedding monitoring disabled"
+            )
+            self.metrics_registry = None
+
     async def initialize(self) -> None:
         """Initialize OpenAI client using ClientManager."""
         if self._initialized:
@@ -125,6 +135,35 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Raises:
             EmbeddingServiceError: If not initialized or API call fails
         """
+        # Monitor embedding generation
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_embedding_generation(
+                provider="openai", model=self.model_name
+            )
+
+            async def _monitored_generation():
+                return await self._execute_embedding_generation(texts, batch_size)
+
+            embeddings = await decorator(_monitored_generation)()
+
+            # Track costs
+            total_tokens = sum(
+                len(text.split()) for text in texts
+            )  # Rough token estimation
+            cost = self._calculate_cost(total_tokens)
+            if cost > 0:
+                self.metrics_registry.record_embedding_cost(
+                    "openai", self.model_name, cost
+                )
+
+            return embeddings
+        else:
+            return await self._execute_embedding_generation(texts, batch_size)
+
+    async def _execute_embedding_generation(
+        self, texts: list[str], batch_size: int | None = None
+    ) -> list[list[float]]:
+        """Execute the actual embedding generation."""
         if not self._initialized:
             raise EmbeddingServiceError("Provider not initialized")
 
@@ -215,6 +254,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     def max_tokens_per_request(self) -> int:
         """Get maximum tokens per request."""
         return self._model_configs[self.model_name]["max_tokens"]
+
+    def _calculate_cost(self, token_count: int) -> float:
+        """Calculate cost for given token count.
+
+        Args:
+            token_count: Number of tokens
+
+        Returns:
+            Cost in USD
+        """
+        return token_count * self.cost_per_token
 
     async def generate_embeddings_batch_api(
         self, texts: list[str], custom_ids: list[str] | None = None
