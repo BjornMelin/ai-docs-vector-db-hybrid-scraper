@@ -1,5 +1,6 @@
 """Project management tools for MCP server."""
 
+import contextlib
 import logging
 from datetime import UTC
 from datetime import datetime
@@ -75,13 +76,19 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                     f"Creating collection with vector size {vector_size}, hybrid: {enable_hybrid}"
                 )
 
-            await client_manager.qdrant_service.create_collection(
-                collection_name=project["collection"],
-                vector_size=vector_size,
-                distance="Cosine",
-                sparse_vector_name="sparse" if enable_hybrid else None,
-                enable_quantization=request.quality_tier != "premium",
-            )
+            try:
+                await client_manager.qdrant_service.create_collection(
+                    collection_name=project["collection"],
+                    vector_size=vector_size,
+                    distance="Cosine",
+                    sparse_vector_name="sparse" if enable_hybrid else None,
+                    enable_quantization=request.quality_tier != "premium",
+                )
+            except Exception as e:
+                # Clean up the project if collection creation fails
+                with contextlib.suppress(Exception):
+                    await project_storage.delete_project(project_id)
+                raise e
 
             # Add initial URLs if provided
             if request.urls:

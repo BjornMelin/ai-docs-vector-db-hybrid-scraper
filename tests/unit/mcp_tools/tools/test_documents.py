@@ -36,7 +36,7 @@ def mock_client_manager():
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
     mock_crawl = Mock()
-    mock_crawl.crawl_single = AsyncMock()
+    mock_crawl.scrape_url = AsyncMock()
     manager.get_crawl_manager = AsyncMock(return_value=mock_crawl)
 
     mock_embedding = Mock()
@@ -54,14 +54,17 @@ def mock_client_manager():
 @pytest.fixture
 def mock_crawl_result():
     """Create a mock crawl result."""
-    result = Mock()
-    result.markdown = "# Test Document\n\nThis is test content for the document."
-    result.metadata = {
+    return {
+        "success": True,
+        "content": "# Test Document\n\nThis is test content for the document.",
         "title": "Test Document",
         "url": "https://example.com/test",
-        "description": "A test document",
+        "metadata": {
+            "title": "Test Document",
+            "url": "https://example.com/test",
+            "description": "A test document",
+        },
     }
-    return result
 
 
 @pytest.fixture
@@ -117,7 +120,7 @@ async def test_add_document_success(
 
     # Setup mocks
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    crawl_manager.crawl_single.return_value = mock_crawl_result
+    crawl_manager.scrape_url.return_value = mock_crawl_result
 
     embedding_manager = await mock_client_manager.get_embedding_manager()
     mock_embedding_result = Mock()
@@ -164,9 +167,7 @@ async def test_add_document_success(
             assert result.embedding_dimensions == 4
 
             # Verify services were called correctly
-            crawl_manager.crawl_single.assert_called_once_with(
-                "https://example.com/test"
-            )
+            crawl_manager.scrape_url.assert_called_once_with("https://example.com/test")
             embedding_manager.generate_embeddings.assert_called_once()
 
             # Verify chunks were processed correctly
@@ -245,7 +246,7 @@ async def test_add_document_cache_hit(mock_client_manager, mock_context):
 
         # Verify no crawling occurred
         crawl_manager = await mock_client_manager.get_crawl_manager()
-        crawl_manager.crawl_single.assert_not_called()
+        crawl_manager.scrape_url.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -264,7 +265,7 @@ async def test_add_document_crawl_failure(mock_client_manager, mock_context):
 
     # Setup crawl failure
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    crawl_manager.crawl_single.return_value = None
+    crawl_manager.scrape_url.return_value = None
 
     # Mock security validator
     with patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security:
@@ -278,7 +279,7 @@ async def test_add_document_crawl_failure(mock_client_manager, mock_context):
             url="https://example.com/fail", collection="test_collection"
         )
 
-        with pytest.raises(ValueError, match="Failed to crawl"):
+        with pytest.raises(ValueError, match="Failed to scrape"):
             await registered_tools["add_document"](request, mock_context)
 
         # Verify error logging
@@ -303,7 +304,7 @@ async def test_add_document_basic_chunking_no_sparse_vector(
 
     # Setup mocks
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    crawl_manager.crawl_single.return_value = mock_crawl_result
+    crawl_manager.scrape_url.return_value = mock_crawl_result
 
     embedding_manager = await mock_client_manager.get_embedding_manager()
     mock_embedding_result = Mock()
@@ -360,10 +361,14 @@ async def test_add_documents_batch_success(mock_client_manager, mock_context):
 
     # Setup all mocks for successful processing
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    mock_crawl_result = Mock()
-    mock_crawl_result.markdown = "Test content"
-    mock_crawl_result.metadata = {"title": "Test", "url": "https://example.com/test"}
-    crawl_manager.crawl_single.return_value = mock_crawl_result
+    mock_crawl_result = {
+        "success": True,
+        "content": "Test content",
+        "title": "Test",
+        "url": "https://example.com/test",
+        "metadata": {"title": "Test", "url": "https://example.com/test"},
+    }
+    crawl_manager.scrape_url.return_value = mock_crawl_result
 
     embedding_manager = await mock_client_manager.get_embedding_manager()
     mock_embedding_result = Mock()
@@ -504,7 +509,7 @@ async def test_add_document_chunking_config(
 
     # Setup mocks
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    crawl_manager.crawl_single.return_value = mock_crawl_result
+    crawl_manager.scrape_url.return_value = mock_crawl_result
 
     embedding_manager = await mock_client_manager.get_embedding_manager()
     mock_embedding_result = Mock()
@@ -567,7 +572,7 @@ async def test_add_document_cache_set(
 
     # Setup mocks
     crawl_manager = await mock_client_manager.get_crawl_manager()
-    crawl_manager.crawl_single.return_value = mock_crawl_result
+    crawl_manager.scrape_url.return_value = mock_crawl_result
 
     embedding_manager = await mock_client_manager.get_embedding_manager()
     mock_embedding_result = Mock()
