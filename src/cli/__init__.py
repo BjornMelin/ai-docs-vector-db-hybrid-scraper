@@ -3,7 +3,7 @@
 This module provides a comprehensive CLI interface with:
 - Rich console output and progress visualization
 - Interactive configuration wizard
-- Auto-completion support  
+- Auto-completion support
 - Batch operations
 - Enhanced user experience
 """

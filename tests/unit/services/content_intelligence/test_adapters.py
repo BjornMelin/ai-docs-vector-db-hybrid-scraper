@@ -24,17 +24,17 @@ class TestSiteAdapter:
         url = "https://github.com/user/repo/blob/main/README.md"
         content = """
         # My Project
-        
+
         This is a README file for my project.
-        
+
         ## Installation
-        
+
         ```bash
         npm install
         ```
-        
+
         ## Usage
-        
+
         ```javascript
         const myLib = require('my-lib');
         ```
@@ -51,14 +51,14 @@ class TestSiteAdapter:
         url = "https://stackoverflow.com/questions/12345/how-to-fix-error"
         content = """
         **Question:** How do I fix this Python error?
-        
+
         I'm getting this error when running my code:
         ```
         TypeError: 'NoneType' object is not subscriptable
         ```
-        
+
         **Answer:** This error occurs when...
-        
+
         **Comments:** Thanks, that worked!
         """
 
@@ -132,7 +132,7 @@ class TestSiteAdapter:
         url = "https://premium.example.com/article"
         content = """
         This is a premium article. To continue reading, please subscribe to our service.
-        
+
         Paywall: Subscribe now for unlimited access to premium content.
         """
 
@@ -228,8 +228,9 @@ class TestSiteAdapter:
             (r for r in recommendations if r.site_domain == "stackoverflow.com"), None
         )
         assert so_rec is not None
-        assert AdaptationStrategy.FOLLOW_SCHEMA in [so_rec.strategy] + [
-            s for s in (so_rec.fallback_strategies or [])
+        assert AdaptationStrategy.FOLLOW_SCHEMA in [
+            so_rec.strategy,
+            *list(so_rec.fallback_strategies or []),
         ]
 
     async def test_get_medium_recommendations(self, site_adapter):

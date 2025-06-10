@@ -226,10 +226,10 @@ class TestMemoryAdaptiveDispatcherScraping:
         """Test error handling during scraping with Memory-Adaptive Dispatcher."""
         provider = provider_with_dispatcher
 
-        # Mock session that raises an exception
-        provider.dispatcher.get_session = MagicMock(
-            side_effect=RuntimeError("Dispatcher error")
-        )
+        # Mock crawler to raise an exception during scraping
+        mock_crawler = AsyncMock()
+        mock_crawler.arun.side_effect = RuntimeError("Dispatcher error")
+        provider._crawler = mock_crawler
 
         result = await provider.scrape_url("https://example.com")
 

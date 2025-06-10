@@ -249,13 +249,13 @@ class BackgroundTaskManager:
             await self._task_queue.put(task_id)
             logger.debug(f"Task {task_id} submitted successfully")
             return task_id
-        except asyncio.QueueFull:
+        except asyncio.QueueFull as e:
             # Remove from storage if queue is full
             with self._task_lock:
                 del self._tasks[task_id]
                 del self._results[task_id]
                 self._total_tasks -= 1
-            raise ValueError("Task queue is full")
+            raise ValueError("Task queue is full") from e
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.
@@ -448,7 +448,11 @@ class BackgroundTaskManager:
             )
 
             # Schedule retry
-            asyncio.create_task(self._schedule_retry(task.task_id, delay))
+            retry_task = asyncio.create_task(self._schedule_retry(task.task_id, delay))
+            # Store reference to prevent task from being garbage collected
+            self._retry_tasks = getattr(self, "_retry_tasks", set())
+            self._retry_tasks.add(retry_task)
+            retry_task.add_done_callback(self._retry_tasks.discard)
         else:
             # Max retries reached
             with self._task_lock:
@@ -537,7 +541,7 @@ def get_task_manager() -> BackgroundTaskManager:
     Returns:
         Background task manager instance
     """
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager is None:
         _task_manager = BackgroundTaskManager()
     return _task_manager
@@ -552,7 +556,7 @@ async def initialize_task_manager(
         max_workers: Maximum number of concurrent workers
         max_queue_size: Maximum size of task queue
     """
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager is None:
         _task_manager = BackgroundTaskManager(max_workers, max_queue_size)
     await _task_manager.start()
@@ -560,7 +564,7 @@ async def initialize_task_manager(
 
 async def cleanup_task_manager() -> None:
     """Clean up the global background task manager."""
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager:
         await _task_manager.stop()
         _task_manager = None

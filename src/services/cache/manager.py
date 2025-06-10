@@ -197,7 +197,7 @@ class CacheManager:
         else:
             return await self._execute_cache_get(key, cache_type, default)
 
-    async def _execute_cache_get(
+    async def _execute_cache_get(  # noqa: PLR0912
         self,
         key: str,
         cache_type: CacheType,

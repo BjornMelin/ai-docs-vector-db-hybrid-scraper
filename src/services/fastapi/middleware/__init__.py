@@ -17,19 +17,19 @@ from .tracing import TracingMiddleware
 from .tracing import get_correlation_id
 
 __all__ = [
+    "BulkheadMiddleware",
+    "CSRFProtectionMiddleware",
+    "CircuitState",
     # Compression
     "CompressionMiddleware",
+    "EndpointStats",
     # Performance monitoring
     "PerformanceMiddleware",
     "RequestMetrics",
-    "EndpointStats",
     # Security
     "SecurityMiddleware",
-    "CSRFProtectionMiddleware",
     # Timeout and resilience
     "TimeoutMiddleware",
-    "BulkheadMiddleware",
-    "CircuitState",
     # Tracing
     "TracingMiddleware",
     "get_correlation_id",

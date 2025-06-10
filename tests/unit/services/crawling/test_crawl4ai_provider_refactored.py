@@ -22,6 +22,7 @@ class TestCrawl4AIProvider:
             viewport={"width": 1920, "height": 1080},
             max_concurrent_crawls=5,
             page_timeout=30.0,
+            enable_streaming=False,  # Disable streaming for tests
         )
 
     @pytest.fixture

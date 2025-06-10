@@ -874,7 +874,7 @@ class EnhancedChunker:
                 }
             )
 
-    def _split_large_code_unit(
+    def _split_large_code_unit(  # noqa: PLR0912
         self, content: str, global_start: int, unit_type: str, language: str
     ) -> list[Chunk]:
         """Split large code units using AST-specific logic.
@@ -1080,7 +1080,7 @@ class EnhancedChunker:
         traverse(node)
         return methods
 
-    def _extract_function_blocks(
+    def _extract_function_blocks(  # noqa: PLR0912
         self, node: Any, content: str, language: str
     ) -> list[dict[str, Any]]:
         """Extract logical blocks from a function AST node.

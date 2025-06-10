@@ -79,7 +79,7 @@ class TestCrawlManager:
         manager = CrawlManager(config)
 
         assert manager.config == config
-        assert manager.providers == {}
+        assert manager._unified_browser_manager is None
         assert manager._initialized is False
         assert manager.rate_limiter is None
 
@@ -93,52 +93,40 @@ class TestCrawlManager:
 
     @pytest.mark.asyncio
     async def test_initialize_success(self):
-        """Test successful initialization with both providers."""
+        """Test successful initialization with UnifiedBrowserManager."""
         config = MagicMock(spec=UnifiedConfig)
-        config.crawl4ai = MagicMock()  # Add Crawl4AI config
-        config.firecrawl = MagicMock()
-        config.firecrawl.api_key = "test_key"
 
-        with (
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-        ):
-            mock_crawl4ai_instance = AsyncMock()
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
-
-            mock_firecrawl_instance = AsyncMock()
-            mock_firecrawl.return_value = mock_firecrawl_instance
+        with patch(
+            "src.services.crawling.manager.UnifiedBrowserManager"
+        ) as mock_unified_manager:
+            mock_unified_instance = AsyncMock()
+            mock_unified_manager.return_value = mock_unified_instance
 
             manager = CrawlManager(config)
             await manager.initialize()
 
             assert manager._initialized is True
-            assert len(manager.providers) == 2
-            assert "crawl4ai" in manager.providers
-            assert "firecrawl" in manager.providers
-
-            mock_crawl4ai_instance.initialize.assert_called_once()
-            mock_firecrawl_instance.initialize.assert_called_once()
+            assert manager._unified_browser_manager is not None
+            mock_unified_manager.assert_called_once_with(config)
+            mock_unified_instance.initialize.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_initialize_crawl4ai_only(self):
-        """Test initialization with only Crawl4AI (no Firecrawl API key)."""
+        """Test initialization always uses UnifiedBrowserManager."""
         config = MagicMock(spec=UnifiedConfig)
-        config.crawl4ai = MagicMock()  # Add Crawl4AI config
-        config.firecrawl = MagicMock()
-        config.firecrawl.api_key = None
 
-        with patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai:
-            mock_crawl4ai_instance = AsyncMock()
-            mock_crawl4ai.return_value = mock_crawl4ai_instance
+        with patch(
+            "src.services.crawling.manager.UnifiedBrowserManager"
+        ) as mock_unified_manager:
+            mock_unified_instance = AsyncMock()
+            mock_unified_manager.return_value = mock_unified_instance
 
             manager = CrawlManager(config)
             await manager.initialize()
 
             assert manager._initialized is True
-            assert len(manager.providers) == 1
-            assert "crawl4ai" in manager.providers
-            assert "firecrawl" not in manager.providers
+            assert manager._unified_browser_manager is not None
+            # UnifiedBrowserManager handles all tiers internally
 
     @pytest.mark.asyncio
     async def test_initialize_failure_both_providers(self):

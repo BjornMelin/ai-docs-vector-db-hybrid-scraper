@@ -335,7 +335,7 @@ class QualityAssessor:
 
             # Check for extraction quality indicators
             quality_score = extraction_metadata.get("quality_score", 0.5)
-            if isinstance(quality_score, (int, float)):
+            if isinstance(quality_score, int | float):
                 base_confidence = (base_confidence + quality_score) / 2
 
             # Check for tier/method used
@@ -517,7 +517,7 @@ class QualityAssessor:
             sentence_lengths = [len(s.split()) for s in sentences]
             avg_length = sum(sentence_lengths) / len(sentence_lengths)
             length_variance = sum(
-                (l - avg_length) ** 2 for l in sentence_lengths
+                (length - avg_length) ** 2 for length in sentence_lengths
             ) / len(sentence_lengths)
 
             # Prefer moderate sentence length with reasonable variation
@@ -638,7 +638,7 @@ class QualityAssessor:
         try:
             # Use semantic similarity if embedding manager is available
             if self.embedding_manager and len(existing_content) > 0:
-                all_texts = [content] + existing_content
+                all_texts = [content, *existing_content]
 
                 result = await self.embedding_manager.generate_embeddings(
                     texts=all_texts, quality_tier=None, auto_select=True
@@ -811,11 +811,10 @@ class QualityAssessor:
             )
 
         # Check for missing elements
-        if not re.search(r"```", content):
-            if "code" in content.lower() or "function" in content.lower():
-                suggestions.append(
-                    "Consider adding code examples for better illustration"
-                )
+        if not re.search(r"```", content) and (
+            "code" in content.lower() or "function" in content.lower()
+        ):
+            suggestions.append("Consider adding code examples for better illustration")
 
         if not re.search(r"^#{1,6}\s", content, re.MULTILINE):
             suggestions.append("Add section headings to improve content organization")

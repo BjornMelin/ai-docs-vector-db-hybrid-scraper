@@ -107,7 +107,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         # Rate limiter for tier requests
         self.rate_limiter = TierRateLimiter(self.routing_config.tier_configs)
 
-    async def scrape(
+    async def scrape(  # noqa: PLR0912
         self,
         url: str,
         interaction_required: bool = False,

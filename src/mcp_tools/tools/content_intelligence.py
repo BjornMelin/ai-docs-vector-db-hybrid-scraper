@@ -34,7 +34,7 @@ from ..models.responses import ContentIntelligenceResult
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register content intelligence tools with the MCP server."""
 
     @mcp.tool()
@@ -297,8 +297,8 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def get_adaptation_recommendations(
         url: str,
-        content_patterns: list[str] = None,
-        quality_issues: list[str] = None,
+        content_patterns: list[str] | None = None,
+        quality_issues: list[str] | None = None,
         ctx: Context = None,
     ) -> list[dict]:
         """

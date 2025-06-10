@@ -115,7 +115,7 @@ class TestUtilsPackagePathResolution:
     def test_parent_directory_calculation(self):
         """Test that parent directory is calculated correctly."""
         # This tests the logic: parent_dir = Path(__file__).parent.parent
-        init_file = Path("src/utils/__init__.py")
+        Path("src/utils/__init__.py")
         # expected_parent = init_file.parent.parent  # Should be the project root
 
         # Mock the Path calculation
@@ -154,30 +154,32 @@ class TestUtilsPackageImportLogic:
 
     def test_importlib_spec_creation(self):
         """Test spec creation for dynamic import."""
-        with patch("importlib.util.spec_from_file_location") as mock_spec_func:
-            with patch("importlib.util.module_from_spec") as mock_module_func:
-                with patch("pathlib.Path.exists", return_value=True):
-                    mock_spec = Mock()
-                    mock_loader = Mock()
-                    mock_spec.loader = mock_loader
-                    mock_spec_func.return_value = mock_spec
+        with (
+            patch("importlib.util.spec_from_file_location") as mock_spec_func,
+            patch("importlib.util.module_from_spec") as mock_module_func,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
+            mock_spec = Mock()
+            mock_loader = Mock()
+            mock_spec.loader = mock_loader
+            mock_spec_func.return_value = mock_spec
 
-                    mock_module = Mock()
-                    mock_module.async_to_sync_click = Mock()
-                    mock_module.async_command = Mock()
-                    mock_module_func.return_value = mock_module
+            mock_module = Mock()
+            mock_module.async_to_sync_click = Mock()
+            mock_module.async_command = Mock()
+            mock_module_func.return_value = mock_module
 
-                    # Remove module from cache to force re-import
-                    module_name = "src.utils"
-                    if module_name in sys.modules:
-                        del sys.modules[module_name]
+            # Remove module from cache to force re-import
+            module_name = "src.utils"
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
-                    # Import to trigger the logic
+            # Import to trigger the logic
 
-                    # Verify the importlib functions were called
-                    mock_spec_func.assert_called()
-                    mock_module_func.assert_called_once_with(mock_spec)
-                    mock_loader.exec_module.assert_called_once_with(mock_module)
+            # Verify the importlib functions were called
+            mock_spec_func.assert_called()
+            mock_module_func.assert_called_once_with(mock_spec)
+            mock_loader.exec_module.assert_called_once_with(mock_module)
 
 
 class TestUtilsPackageEdgeCases:
@@ -195,32 +197,33 @@ class TestUtilsPackageEdgeCases:
 
     def test_import_with_missing_parent_utils_functions(self):
         """Test behavior when parent utils.py exists but lacks expected functions."""
-        with patch("pathlib.Path.exists", return_value=True):
-            # Mock importlib to return a module without the expected functions
-            with patch("importlib.util.spec_from_file_location") as mock_spec_func:
-                with patch("importlib.util.module_from_spec") as mock_module_func:
-                    mock_spec = Mock()
-                    mock_loader = Mock()
-                    mock_spec.loader = mock_loader
-                    mock_spec_func.return_value = mock_spec
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("importlib.util.spec_from_file_location") as mock_spec_func,
+            patch("importlib.util.module_from_spec") as mock_module_func,
+        ):
+            mock_spec = Mock()
+            mock_loader = Mock()
+            mock_spec.loader = mock_loader
+            mock_spec_func.return_value = mock_spec
 
-                    # Create module without the expected attributes
-                    mock_module = Mock()
-                    # Remove any async_command or async_to_sync_click if they exist
-                    if hasattr(mock_module, "async_command"):
-                        del mock_module.async_command
-                    if hasattr(mock_module, "async_to_sync_click"):
-                        del mock_module.async_to_sync_click
+            # Create module without the expected attributes
+            mock_module = Mock()
+            # Remove any async_command or async_to_sync_click if they exist
+            if hasattr(mock_module, "async_command"):
+                del mock_module.async_command
+            if hasattr(mock_module, "async_to_sync_click"):
+                del mock_module.async_to_sync_click
 
-                    mock_module_func.return_value = mock_module
+            mock_module_func.return_value = mock_module
 
-                    # This should raise AttributeError when trying to access the functions
-                    module_name = "src.utils"
-                    if module_name in sys.modules:
-                        del sys.modules[module_name]
+            # This should raise AttributeError when trying to access the functions
+            module_name = "src.utils"
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
-                    with pytest.raises(AttributeError):
-                        pass
+            with pytest.raises(AttributeError):
+                pass
 
     def test_docstring_present(self):
         """Test that package docstring is present."""
