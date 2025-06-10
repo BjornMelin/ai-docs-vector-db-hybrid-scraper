@@ -233,15 +233,15 @@ class TestCircuitBreaker:
         async def failing_func():
             raise Exception("Test failure")
 
-        # Fail multiple times
-        for _ in range(3):
-            with pytest.raises(RuntimeError):
+        # Fail multiple times - circuit breaker should pass through the original exception
+        for _ in range(3):  # Fixture failure threshold is 3
+            with pytest.raises(Exception, match="Test failure"):
                 await circuit_breaker.call(failing_func)
 
         # Circuit should be open now
         assert circuit_breaker._state == ClientState.FAILED
 
-        # Next call should fail immediately
+        # Next call should fail immediately with circuit breaker error
         with pytest.raises(APIError, match="Circuit breaker is open"):
             await circuit_breaker.call(failing_func)
 
