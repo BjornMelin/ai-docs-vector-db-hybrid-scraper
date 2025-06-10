@@ -57,11 +57,9 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Check markdown formatting
-        uses: DavidAnson/markdownlint-action@v1
+        uses: DavidAnson/markdownlint-cli2-action@v18
         with:
-          files: '**/*.md'
-          ignore: 'node_modules'
-          config: '.markdownlint.json'
+          globs: '**/*.md'
           
       - name: Check for missing status headers
         run: |
