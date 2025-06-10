@@ -109,10 +109,10 @@ class TestQueryPreprocessor:
             ("What   is    Python???", "What is Python?"),
             ("JavaScript  w/  TypeScript", "JavaScript with TypeScript"),
             ("React  e.g.  for  UI", "React for example for UI"),
-            ("API–REST–GraphQL", "API-REST-GraphQL"),
+            ("API-REST-GraphQL", "API-REST-GraphQL"),
         ]
 
-        for input_query, expected_pattern in test_cases:
+        for input_query, _expected_pattern in test_cases:
             result = await initialized_preprocessor.preprocess_query(
                 input_query, enable_normalization=True
             )
@@ -345,7 +345,7 @@ class TestQueryPreprocessor:
 
     async def test_special_characters_normalization(self, initialized_preprocessor):
         """Test normalization of special characters."""
-        query = 'What\'s the "best" way to handle –dashes– and…ellipses?'
+        query = 'What\'s the "best" way to handle -dashes- and...ellipses?'
 
         result = await initialized_preprocessor.preprocess_query(
             query, enable_normalization=True

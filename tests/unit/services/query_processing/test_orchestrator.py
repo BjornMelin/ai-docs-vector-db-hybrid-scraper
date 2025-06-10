@@ -409,7 +409,7 @@ class TestQueryProcessingOrchestrator:
     ):
         """Test performance statistics tracking."""
         # Process multiple queries to build stats
-        for i in range(3):
+        for _i in range(3):
             await initialized_orchestrator.process_query(sample_request)
 
         stats = initialized_orchestrator.get_performance_stats()

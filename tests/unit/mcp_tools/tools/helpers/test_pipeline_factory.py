@@ -107,14 +107,14 @@ class TestPipelineFactoryErrorHandling:
     async def test_cache_manager_unavailable(self, pipeline_factory, mock_context):
         """Test graceful handling when cache manager is unavailable."""
         # Configure cache manager to fail
-        pipeline_factory.client_manager.get_cache_manager.side_effect = Exception(
+        pipeline_factory.client_manager.get_cache_manager.side_effect = RuntimeError(
             "Cache unavailable"
         )
 
         # For this test, we focus on the error handling behavior without creating the full pipeline
         # This follows the principle of testing real-world scenarios
 
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await pipeline_factory.client_manager.get_cache_manager()
 
         # In the real implementation, the factory should handle this gracefully

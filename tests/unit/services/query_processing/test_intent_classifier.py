@@ -92,7 +92,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # Should detect troubleshooting intent (may be primary or secondary)
-        all_intents = [result.primary_intent] + result.secondary_intents
+        all_intents = [result.primary_intent, *result.secondary_intents]
         assert QueryIntent.TROUBLESHOOTING in all_intents
         assert result.confidence_scores[QueryIntent.TROUBLESHOOTING] > 0.0
 
@@ -121,7 +121,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # Should detect performance intent (may be primary or secondary)
-        all_intents = [result.primary_intent] + result.secondary_intents
+        all_intents = [result.primary_intent, *result.secondary_intents]
         assert QueryIntent.PERFORMANCE in all_intents
         assert result.confidence_scores[QueryIntent.PERFORMANCE] > 0.0
 
@@ -132,7 +132,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # Should detect security intent (may be primary or secondary)
-        all_intents = [result.primary_intent] + result.secondary_intents
+        all_intents = [result.primary_intent, *result.secondary_intents]
         assert QueryIntent.SECURITY in all_intents
         assert result.confidence_scores[QueryIntent.SECURITY] > 0.0
 
@@ -170,7 +170,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # Should detect migration intent (may be primary or secondary)
-        all_intents = [result.primary_intent] + result.secondary_intents
+        all_intents = [result.primary_intent, *result.secondary_intents]
         assert QueryIntent.MIGRATION in all_intents
         assert result.confidence_scores[QueryIntent.MIGRATION] > 0.0
 
@@ -181,7 +181,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # Should detect debugging intent (may be primary or secondary)
-        all_intents = [result.primary_intent] + result.secondary_intents
+        all_intents = [result.primary_intent, *result.secondary_intents]
         assert QueryIntent.DEBUGGING in all_intents
         assert result.confidence_scores[QueryIntent.DEBUGGING] > 0.0
 
@@ -309,7 +309,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # All confidence scores should be between 0 and 1
-        for intent, score in result.confidence_scores.items():
+        for _intent, score in result.confidence_scores.items():
             assert 0.0 <= score <= 1.0
 
     async def test_classification_reasoning_content(self, initialized_classifier):

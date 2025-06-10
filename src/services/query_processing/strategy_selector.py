@@ -274,13 +274,15 @@ class SearchStrategySelector:
                 adjusted["reasoning"] += " (optimized for speed)"
 
         # Force reranking for expert queries
-        if complexity_config.get("force_reranking", False):
-            if adjusted["primary"] != SearchStrategy.RERANKED:
-                # Add reranking as primary or fallback
-                if SearchStrategy.RERANKED not in adjusted["fallbacks"]:
-                    adjusted["fallbacks"] = [SearchStrategy.RERANKED] + adjusted[
-                        "fallbacks"
-                    ][:2]
+        if (
+            complexity_config.get("force_reranking", False)
+            and adjusted["primary"] != SearchStrategy.RERANKED
+            and SearchStrategy.RERANKED not in adjusted["fallbacks"]
+        ):
+            # Add reranking as primary or fallback
+            adjusted["fallbacks"] = [SearchStrategy.RERANKED] + adjusted[
+                "fallbacks"
+            ][:2]
 
         # Limit fallback strategies based on complexity
         max_fallbacks = complexity_config["max_fallbacks"]
@@ -352,51 +354,50 @@ class SearchStrategySelector:
         adjusted = config.copy()
 
         # Programming language context
-        if "programming_language" in context:
-            languages = context["programming_language"]
-            if any(lang in ["python", "javascript", "java"] for lang in languages):
-                # These languages have rich documentation, semantic search works well
-                if (
-                    SearchStrategy.SEMANTIC
-                    not in [adjusted["primary"]] + adjusted["fallbacks"]
-                ):
-                    adjusted["fallbacks"] = [SearchStrategy.SEMANTIC] + adjusted[
-                        "fallbacks"
-                    ][:2]
+        if (
+            "programming_language" in context
+            and any(
+                lang in ["python", "javascript", "java"]
+                for lang in context["programming_language"]
+            )
+            and SearchStrategy.SEMANTIC
+            not in [adjusted["primary"]] + adjusted["fallbacks"]
+        ):
+            # These languages have rich documentation, semantic search works well
+            adjusted["fallbacks"] = [SearchStrategy.SEMANTIC] + adjusted[
+                "fallbacks"
+            ][:2]
 
         # Framework context
-        if "framework" in context:
-            frameworks = context["framework"]
-            if frameworks:
-                # Framework-specific queries often benefit from filtered search
-                if (
-                    SearchStrategy.FILTERED
-                    not in [adjusted["primary"]] + adjusted["fallbacks"]
-                ):
-                    adjusted["fallbacks"] = [SearchStrategy.FILTERED] + adjusted[
-                        "fallbacks"
-                    ][:2]
+        if (
+            "framework" in context
+            and context["framework"]
+            and SearchStrategy.FILTERED
+            not in [adjusted["primary"]] + adjusted["fallbacks"]
+        ):
+            # Framework-specific queries often benefit from filtered search
+            adjusted["fallbacks"] = [SearchStrategy.FILTERED] + adjusted[
+                "fallbacks"
+            ][:2]
 
         # Error code context
-        if "error_code" in context:
+        if (
+            "error_code" in context
+            and adjusted["primary"] != SearchStrategy.FILTERED
+        ):
             # Error codes benefit from precise filtering
-            if adjusted["primary"] != SearchStrategy.FILTERED:
-                adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][
-                    :1
-                ]
-                adjusted["primary"] = SearchStrategy.FILTERED
-                adjusted["reasoning"] += " (optimized for error code lookup)"
+            adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][:1]
+            adjusted["primary"] = SearchStrategy.FILTERED
+            adjusted["reasoning"] += " (optimized for error code lookup)"
 
         # Version context
-        if "version" in context:
+        if (
+            "version" in context
+            and SearchStrategy.HYBRID
+            not in [adjusted["primary"]] + adjusted["fallbacks"]
+        ):
             # Version-specific queries often need precise matching
-            if (
-                SearchStrategy.HYBRID
-                not in [adjusted["primary"]] + adjusted["fallbacks"]
-            ):
-                adjusted["fallbacks"] = [SearchStrategy.HYBRID] + adjusted["fallbacks"][
-                    :2
-                ]
+            adjusted["fallbacks"] = [SearchStrategy.HYBRID] + adjusted["fallbacks"][:2]
 
         # Urgency context
         urgency = context.get("urgency")

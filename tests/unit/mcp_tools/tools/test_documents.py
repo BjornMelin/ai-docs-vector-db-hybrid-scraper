@@ -232,8 +232,8 @@ class TestAddDocument:
             )
 
             try:
-                result = await tool_func(sample_document_request, mock_context)
-                assert False, "Expected ValueError to be raised"
+                await tool_func(sample_document_request, mock_context)
+                raise AssertionError("Expected ValueError to be raised")
             except Exception as e:
                 # Verify error is propagated correctly
                 assert "URL not allowed" in str(e)
@@ -258,8 +258,8 @@ class TestAddDocument:
             )
 
             try:
-                result = await tool_func(sample_document_request, mock_context)
-                assert False, "Expected AttributeError to be raised"
+                await tool_func(sample_document_request, mock_context)
+                raise AssertionError("Expected AttributeError to be raised")
             except AttributeError as e:
                 # Verify error is related to None crawl manager
                 assert "'NoneType' object has no attribute 'scrape_url'" in str(e)
@@ -294,8 +294,8 @@ class TestAddDocument:
             )
 
             try:
-                result = await tool_func(sample_document_request, mock_context)
-                assert False, "Expected ValueError to be raised"
+                await tool_func(sample_document_request, mock_context)
+                raise AssertionError("Expected ValueError to be raised")
             except ValueError as e:
                 # Verify error relates to scraping failure
                 assert "Failed to scrape" in str(e)
@@ -330,8 +330,8 @@ class TestAddDocument:
             ]
 
             try:
-                result = await tool_func(sample_document_request, mock_context)
-                assert False, "Expected Exception to be raised"
+                await tool_func(sample_document_request, mock_context)
+                raise AssertionError("Expected Exception to be raised")
             except Exception as e:
                 # Verify error relates to embedding failure
                 assert "Embedding service error" in str(e)
@@ -373,8 +373,8 @@ class TestAddDocument:
             )
 
             try:
-                result = await tool_func(sample_document_request, mock_context)
-                assert False, "Expected Exception to be raised"
+                await tool_func(sample_document_request, mock_context)
+                raise AssertionError("Expected Exception to be raised")
             except Exception as e:
                 # Verify error relates to vector DB failure
                 assert "Vector DB storage error" in str(e)
@@ -534,8 +534,8 @@ class TestDocumentIntegration:
             )
 
             try:
-                result = await tool_func(minimal_request, mock_context)
-                assert False, "Expected ValueError to be raised"
+                await tool_func(minimal_request, mock_context)
+                raise AssertionError("Expected ValueError to be raised")
             except ValueError as e:
                 # Should handle minimal data gracefully even when URL validation fails
                 assert "URL not allowed" in str(e)

@@ -246,9 +246,7 @@ class TestSearchStrategySelector:
             )
 
             # Should include the expected strategy in primary or fallbacks
-            all_strategies = [
-                selection.primary_strategy
-            ] + selection.fallback_strategies
+            all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
             if expected_strategy_type == SearchStrategy.SEMANTIC:
                 assert SearchStrategy.SEMANTIC in all_strategies
             elif expected_strategy_type == SearchStrategy.FILTERED:
@@ -274,7 +272,7 @@ class TestSearchStrategySelector:
         troubleshooting_strategy = SearchStrategy.RERANKED
         performance_strategy = SearchStrategy.RERANKED
 
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert (
             troubleshooting_strategy in all_strategies
             or performance_strategy in all_strategies
@@ -377,7 +375,7 @@ class TestSearchStrategySelector:
     async def test_strategy_performance_estimates(self, strategy_selector):
         """Test strategy performance estimate consistency."""
         # All strategies should have performance estimates
-        for strategy, perf in strategy_selector._strategy_performance.items():
+        for _strategy, perf in strategy_selector._strategy_performance.items():
             assert "latency" in perf
             assert "quality" in perf
             assert 0 < perf["latency"] < 1000  # Reasonable latency range

@@ -315,7 +315,7 @@ class TestAdvancedQueryProcessingTool:
 
             # Execute the tool
             tool_func = self.mock_mcp.tools["advanced_query_processing"]
-            response = await tool_func(request, mock_context)
+            await tool_func(request, mock_context)
 
             # Verify the pipeline was called with force options
             self.mock_pipeline.process_advanced.assert_called_once()
@@ -352,7 +352,7 @@ class TestAdvancedQueryProcessingTool:
 
             # Execute the tool
             tool_func = self.mock_mcp.tools["advanced_query_processing"]
-            response = await tool_func(request, mock_context)
+            await tool_func(request, mock_context)
 
             # Verify warnings were logged
             assert len(mock_context.logs["warning"]) >= 2

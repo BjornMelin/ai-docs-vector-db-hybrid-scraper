@@ -75,10 +75,11 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 #### **[BJO-89](https://linear.app/bjorn-dev/issue/BJO-89)** - Complete Advanced Query Processing
 
-- **Status**: ✅ **COMPLETED**
+- **Status**: ✅ **COMPLETED & MERGED**
 - **Priority**: High  
 - **Effort**: 3-4 days (Completed)
 - **Description**: Extended intent classification, Matryoshka embeddings, centralized pipeline
+- **Merged**: 2025-06-10 - Advanced Query Processing Pipeline with 14-category intent classification, strategy selection, and Matryoshka embeddings
 
 ### Security & Search Enhancements
 

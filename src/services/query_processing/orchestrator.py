@@ -519,7 +519,7 @@ class QueryProcessingOrchestrator:
     ) -> list[dict[str, Any]]:
         """Execute search with BGE reranking."""
         # First, get more results than needed for reranking
-        larger_limit = min(request.limit * 3, 50)  # Get 3x results for reranking
+        min(request.limit * 3, 50)  # Get 3x results for reranking
 
         # Execute base semantic search
         base_results = await self._execute_semantic_search(query, dimension, request)

@@ -223,10 +223,10 @@ class QueryPreprocessor:
         normalized = re.sub(r"\s+", " ", normalized)
 
         # Normalize quotation marks
-        normalized = re.sub(r'[""' "‚„]", '"', normalized)
+        normalized = re.sub(r'[""' ",„]", '"', normalized)
 
         # Normalize hyphens and dashes
-        normalized = re.sub(r"[–—]", "-", normalized)
+        normalized = re.sub(r"[-—]", "-", normalized)
 
         # Remove redundant punctuation (but keep meaningful punctuation)
         normalized = re.sub(r"([.!?]){2,}", r"\1", normalized)
@@ -257,15 +257,13 @@ class QueryPreprocessor:
         # Only add expansions if query is short enough
         if len(words) <= 8:  # Avoid expanding very long queries
             for abbreviation, expansions in self._synonym_expansions.items():
-                if abbreviation in query_lower:
-                    # Add the most relevant expansion (first one)
-                    if expansions:
-                        best_expansion = expansions[0]
-                        if best_expansion not in query_lower:
-                            expanded_parts.append(best_expansion)
-                            expansions_added.append(
-                                f"{abbreviation} → {best_expansion}"
-                            )
+                if abbreviation in query_lower and expansions:
+                    best_expansion = expansions[0]
+                    if best_expansion not in query_lower:
+                        expanded_parts.append(best_expansion)
+                        expansions_added.append(
+                            f"{abbreviation} → {best_expansion}"
+                        )
 
         # Combine original query with expansions
         if expanded_parts:
