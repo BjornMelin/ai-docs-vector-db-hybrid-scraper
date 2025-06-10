@@ -104,9 +104,9 @@ class StatusIndicatorAdder:
 
         return f"""# {title}
 
-> **Status**: {status}  
-> **Last Updated**: {self.today}  
-> **Purpose**: {purpose}  
+> **Status**: {status}
+> **Last Updated**: {self.today}
+> **Purpose**: {purpose}
 > **Audience**: {audience}
 
 """

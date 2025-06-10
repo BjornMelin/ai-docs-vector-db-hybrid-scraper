@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class QueryPreprocessor:
     """Advanced query preprocessing for enhanced search quality.
-    
+
     Provides spell correction, normalization, expansion, and context extraction
     to prepare queries for optimal processing by the query pipeline.
     """
@@ -38,7 +38,7 @@ class QueryPreprocessor:
             "intergration": "integration",
             "confguration": "configuration",
             "achitecture": "architecture",
-            "secuirty": "security"
+            "secuirty": "security",
         }
 
         # Synonym expansions for better search coverage
@@ -55,43 +55,64 @@ class QueryPreprocessor:
             "ai": ["artificial intelligence"],
             "ci/cd": ["continuous integration", "continuous deployment"],
             "k8s": ["kubernetes"],
-            "docker": ["containerization"]
+            "docker": ["containerization"],
         }
 
         # Stop words that can be removed for better search
         self._stop_words = {
-            "a", "an", "and", "are", "as", "at", "be", "by", "for",
-            "from", "has", "he", "in", "is", "it", "its", "of", "on",
-            "that", "the", "to", "was", "will", "with"
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "by",
+            "for",
+            "from",
+            "has",
+            "he",
+            "in",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "that",
+            "the",
+            "to",
+            "was",
+            "will",
+            "with",
         }
 
         # Technical context patterns
         self._context_patterns = {
             "programming_language": [
                 r"\b(?:python|javascript|java|cpp|csharp|go|rust|php|ruby)\b",
-                r"\b(?:js|py|c\+\+|c#)\b"
+                r"\b(?:js|py|c\+\+|c#)\b",
             ],
             "framework": [
                 r"\b(?:react|vue|angular|django|flask|spring|express|laravel)\b",
-                r"\b(?:rails|nextjs|nuxt|svelte)\b"
+                r"\b(?:rails|nextjs|nuxt|svelte)\b",
             ],
             "database": [
                 r"\b(?:mysql|postgresql|mongodb|redis|sqlite|oracle)\b",
-                r"\b(?:sql|nosql|database|db)\b"
+                r"\b(?:sql|nosql|database|db)\b",
             ],
             "cloud_platform": [
                 r"\b(?:aws|azure|gcp|google cloud|amazon web services)\b",
-                r"\b(?:ec2|s3|lambda|kubernetes|docker)\b"
+                r"\b(?:ec2|s3|lambda|kubernetes|docker)\b",
             ],
             "version": [
                 r"\bversion\s+(\d+(?:\.\d+)*)\b",
                 r"\bv(\d+(?:\.\d+)*)\b",
-                r"\b(\d+(?:\.\d+)+)\b"
+                r"\b(\d+(?:\.\d+)+)\b",
             ],
             "error_code": [
                 r"\b(?:error|exception)\s+(\w+\d+|\d+)\b",
-                r"\b(\d{3,4})\s+(?:error|status)\b"
-            ]
+                r"\b(\d{3,4})\s+(?:error|status)\b",
+            ],
         }
 
     async def initialize(self) -> None:
@@ -105,20 +126,20 @@ class QueryPreprocessor:
         enable_spell_correction: bool = True,
         enable_expansion: bool = True,
         enable_normalization: bool = True,
-        enable_context_extraction: bool = True
+        enable_context_extraction: bool = True,
     ) -> QueryPreprocessingResult:
         """Preprocess query with comprehensive enhancements.
-        
+
         Args:
             query: Original query to preprocess
             enable_spell_correction: Whether to apply spell corrections
             enable_expansion: Whether to add synonym expansions
             enable_normalization: Whether to normalize text
             enable_context_extraction: Whether to extract context information
-            
+
         Returns:
             QueryPreprocessingResult: Preprocessing results with enhanced query
-            
+
         Raises:
             RuntimeError: If preprocessor not initialized
         """
@@ -126,6 +147,7 @@ class QueryPreprocessor:
             raise RuntimeError("QueryPreprocessor not initialized")
 
         import time
+
         start_time = time.time()
 
         # Track what preprocessing steps were applied
@@ -143,7 +165,9 @@ class QueryPreprocessor:
 
         # 2. Apply spell corrections
         if enable_spell_correction:
-            corrected_query, corrections = self._apply_spell_corrections(processed_query)
+            corrected_query, corrections = self._apply_spell_corrections(
+                processed_query
+            )
             if corrections:
                 processed_query = corrected_query
                 corrections_applied.extend(corrections)
@@ -172,7 +196,7 @@ class QueryPreprocessor:
             expansions_added=expansions_added,
             normalization_applied=normalization_applied,
             context_extracted=context_extracted,
-            preprocessing_time_ms=processing_time_ms
+            preprocessing_time_ms=processing_time_ms,
         )
 
     def _apply_spell_corrections(self, query: str) -> tuple[str, list[str]]:
@@ -196,24 +220,24 @@ class QueryPreprocessor:
         normalized = query.strip()
 
         # Remove extra whitespace
-        normalized = re.sub(r'\s+', ' ', normalized)
+        normalized = re.sub(r"\s+", " ", normalized)
 
         # Normalize quotation marks
-        normalized = re.sub(r'[""''‚„]', '"', normalized)
+        normalized = re.sub(r'[""' "‚„]", '"', normalized)
 
         # Normalize hyphens and dashes
-        normalized = re.sub(r'[–—]', '-', normalized)
+        normalized = re.sub(r"[–—]", "-", normalized)
 
         # Remove redundant punctuation (but keep meaningful punctuation)
-        normalized = re.sub(r'([.!?]){2,}', r'\1', normalized)
+        normalized = re.sub(r"([.!?]){2,}", r"\1", normalized)
 
         # Normalize common abbreviations
         abbreviation_map = {
-            r'\bw/\b': 'with',
-            r'\bw/o\b': 'without',
-            r'\be\.g\.\b': 'for example',
-            r'\bi\.e\.\b': 'that is',
-            r'\betc\.?\b': 'and so on'
+            r"\bw/\b": "with",
+            r"\bw/o\b": "without",
+            r"\be\.g\.\b": "for example",
+            r"\bi\.e\.\b": "that is",
+            r"\betc\.?\b": "and so on",
         }
 
         for pattern, replacement in abbreviation_map.items():
@@ -239,7 +263,9 @@ class QueryPreprocessor:
                         best_expansion = expansions[0]
                         if best_expansion not in query_lower:
                             expanded_parts.append(best_expansion)
-                            expansions_added.append(f"{abbreviation} → {best_expansion}")
+                            expansions_added.append(
+                                f"{abbreviation} → {best_expansion}"
+                            )
 
         # Combine original query with expansions
         if expanded_parts:
@@ -267,13 +293,21 @@ class QueryPreprocessor:
 
         # Extract technical complexity indicators
         complexity_indicators = []
-        if re.search(r'\b(?:architecture|design pattern|scalability)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:architecture|design pattern|scalability)\b", query, re.IGNORECASE
+        ):
             complexity_indicators.append("architectural")
-        if re.search(r'\b(?:performance|optimization|latency|throughput)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:performance|optimization|latency|throughput)\b", query, re.IGNORECASE
+        ):
             complexity_indicators.append("performance")
-        if re.search(r'\b(?:security|authentication|encryption)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:security|authentication|encryption)\b", query, re.IGNORECASE
+        ):
             complexity_indicators.append("security")
-        if re.search(r'\b(?:integration|api|webhook|microservice)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:integration|api|webhook|microservice)\b", query, re.IGNORECASE
+        ):
             complexity_indicators.append("integration")
 
         if complexity_indicators:
@@ -281,9 +315,11 @@ class QueryPreprocessor:
 
         # Extract urgency/priority indicators
         urgency_indicators = []
-        if re.search(r'\b(?:urgent|asap|critical|emergency|production)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:urgent|asap|critical|emergency|production)\b", query, re.IGNORECASE
+        ):
             urgency_indicators.append("high")
-        elif re.search(r'\b(?:soon|quick|fast|immediate)\b', query, re.IGNORECASE):
+        elif re.search(r"\b(?:soon|quick|fast|immediate)\b", query, re.IGNORECASE):
             urgency_indicators.append("medium")
 
         if urgency_indicators:
@@ -291,11 +327,15 @@ class QueryPreprocessor:
 
         # Extract experience level indicators
         experience_indicators = []
-        if re.search(r'\b(?:beginner|new to|just started|learning)\b', query, re.IGNORECASE):
+        if re.search(
+            r"\b(?:beginner|new to|just started|learning)\b", query, re.IGNORECASE
+        ):
             experience_indicators.append("beginner")
-        elif re.search(r'\b(?:advanced|expert|professional|enterprise)\b', query, re.IGNORECASE):
+        elif re.search(
+            r"\b(?:advanced|expert|professional|enterprise)\b", query, re.IGNORECASE
+        ):
             experience_indicators.append("advanced")
-        elif re.search(r'\b(?:intermediate|some experience)\b', query, re.IGNORECASE):
+        elif re.search(r"\b(?:intermediate|some experience)\b", query, re.IGNORECASE):
             experience_indicators.append("intermediate")
 
         if experience_indicators:
@@ -312,7 +352,16 @@ class QueryPreprocessor:
             return query
 
         # Preserve important stop words that affect meaning
-        important_stop_words = {"not", "no", "without", "from", "to", "in", "on", "with"}
+        important_stop_words = {
+            "not",
+            "no",
+            "without",
+            "from",
+            "to",
+            "in",
+            "on",
+            "with",
+        }
 
         filtered_words = []
         for word in words:

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class QueryIntentClassifier:
     """Advanced query intent classifier using hybrid rule-based and semantic analysis.
-    
+
     Expands classification from 4 basic categories to 14 comprehensive categories
     for intelligent search strategy selection and query processing optimization.
     """
@@ -39,9 +39,20 @@ class QueryIntentClassifier:
             # Basic categories (existing)
             QueryIntent.CONCEPTUAL: {
                 "keywords": [
-                    "what is", "what are", "explain", "definition", "concept",
-                    "understand", "overview", "introduction", "fundamentals",
-                    "theory", "principle", "basic", "meaning", "purpose"
+                    "what is",
+                    "what are",
+                    "explain",
+                    "definition",
+                    "concept",
+                    "understand",
+                    "overview",
+                    "introduction",
+                    "fundamentals",
+                    "theory",
+                    "principle",
+                    "basic",
+                    "meaning",
+                    "purpose",
                 ],
                 "patterns": [
                     r"what\s+(is|are|does|means?)",
@@ -50,14 +61,24 @@ class QueryIntentClassifier:
                     r"help\s+(?:me\s+)?understand",
                     r"(?:basic|fundamental)\s+(?:concept|principle)",
                 ],
-                "weight": 1.0
+                "weight": 1.0,
             },
-
             QueryIntent.PROCEDURAL: {
                 "keywords": [
-                    "how to", "step by step", "tutorial", "guide", "walkthrough",
-                    "instructions", "process", "procedure", "implement", "create",
-                    "build", "setup", "configure", "install"
+                    "how to",
+                    "step by step",
+                    "tutorial",
+                    "guide",
+                    "walkthrough",
+                    "instructions",
+                    "process",
+                    "procedure",
+                    "implement",
+                    "create",
+                    "build",
+                    "setup",
+                    "configure",
+                    "install",
                 ],
                 "patterns": [
                     r"how\s+(?:do\s+i|to|can\s+i)",
@@ -66,13 +87,22 @@ class QueryIntentClassifier:
                     r"(?:tutorial|guide|walkthrough)\s+(?:on|for)",
                     r"(?:setup|configure|install|implement|create|build)",
                 ],
-                "weight": 1.0
+                "weight": 1.0,
             },
-
             QueryIntent.FACTUAL: {
                 "keywords": [
-                    "when", "where", "who", "which", "version", "latest", "current",
-                    "support", "compatible", "requirements", "specifications", "details"
+                    "when",
+                    "where",
+                    "who",
+                    "which",
+                    "version",
+                    "latest",
+                    "current",
+                    "support",
+                    "compatible",
+                    "requirements",
+                    "specifications",
+                    "details",
                 ],
                 "patterns": [
                     r"(?:when|where|who|which)\s+",
@@ -82,14 +112,25 @@ class QueryIntentClassifier:
                     r"(?:technical\s+)?specifications",
                     r"(?:is\s+)?(?:supported|compatible)",
                 ],
-                "weight": 1.0
+                "weight": 1.0,
             },
-
             QueryIntent.TROUBLESHOOTING: {
                 "keywords": [
-                    "error", "problem", "issue", "bug", "broken", "not working",
-                    "failed", "crash", "exception", "fix", "solve", "resolve",
-                    "debug", "troubleshoot", "help"
+                    "error",
+                    "problem",
+                    "issue",
+                    "bug",
+                    "broken",
+                    "not working",
+                    "failed",
+                    "crash",
+                    "exception",
+                    "fix",
+                    "solve",
+                    "resolve",
+                    "debug",
+                    "troubleshoot",
+                    "help",
                 ],
                 "patterns": [
                     r"(?:getting|receiving)\s+(?:an?\s+)?error",
@@ -99,15 +140,26 @@ class QueryIntentClassifier:
                     r"(?:keeps?\s+)?(?:crashing|failing)",
                     r"exception\s+(?:thrown|occurred)",
                 ],
-                "weight": 1.0
+                "weight": 1.0,
             },
-
             # Advanced categories (new)
             QueryIntent.COMPARATIVE: {
                 "keywords": [
-                    "vs", "versus", "compare", "comparison", "difference", "differences",
-                    "better", "best", "alternative", "alternatives", "choose", "choice",
-                    "pros and cons", "advantages", "disadvantages"
+                    "vs",
+                    "versus",
+                    "compare",
+                    "comparison",
+                    "difference",
+                    "differences",
+                    "better",
+                    "best",
+                    "alternative",
+                    "alternatives",
+                    "choose",
+                    "choice",
+                    "pros and cons",
+                    "advantages",
+                    "disadvantages",
                 ],
                 "patterns": [
                     r"\bvs\b|\bversus\b",
@@ -117,14 +169,22 @@ class QueryIntentClassifier:
                     r"(?:pros\s+and\s+cons|advantages?\s+and\s+disadvantages?)",
                     r"(?:should\s+i\s+)?(?:choose|use|pick)",
                 ],
-                "weight": 1.2
+                "weight": 1.2,
             },
-
             QueryIntent.ARCHITECTURAL: {
                 "keywords": [
-                    "architecture", "design", "pattern", "patterns", "structure",
-                    "system design", "microservices", "monolith", "scalability",
-                    "design pattern", "architecture pattern", "system architecture"
+                    "architecture",
+                    "design",
+                    "pattern",
+                    "patterns",
+                    "structure",
+                    "system design",
+                    "microservices",
+                    "monolith",
+                    "scalability",
+                    "design pattern",
+                    "architecture pattern",
+                    "system architecture",
                 ],
                 "patterns": [
                     r"(?:system\s+)?(?:architecture|design)",
@@ -134,14 +194,25 @@ class QueryIntentClassifier:
                     r"(?:scalable|scalability)\s+(?:architecture|design)",
                     r"(?:how\s+to\s+)?(?:architect|structure)\s+",
                 ],
-                "weight": 1.3
+                "weight": 1.3,
             },
-
             QueryIntent.PERFORMANCE: {
                 "keywords": [
-                    "performance", "optimization", "optimize", "speed", "fast", "slow",
-                    "latency", "throughput", "scaling", "memory", "cpu", "efficiency",
-                    "benchmark", "profiling", "bottleneck"
+                    "performance",
+                    "optimization",
+                    "optimize",
+                    "speed",
+                    "fast",
+                    "slow",
+                    "latency",
+                    "throughput",
+                    "scaling",
+                    "memory",
+                    "cpu",
+                    "efficiency",
+                    "benchmark",
+                    "profiling",
+                    "bottleneck",
                 ],
                 "patterns": [
                     r"(?:performance|speed)\s+(?:optimization|tuning|improvement)",
@@ -151,14 +222,26 @@ class QueryIntentClassifier:
                     r"(?:memory|cpu)\s+(?:usage|optimization|efficiency)",
                     r"(?:profiling|benchmarking|bottleneck)",
                 ],
-                "weight": 1.2
+                "weight": 1.2,
             },
-
             QueryIntent.SECURITY: {
                 "keywords": [
-                    "security", "secure", "authentication", "authorization", "encryption",
-                    "vulnerability", "attack", "protection", "firewall", "ssl", "tls",
-                    "certificate", "oauth", "jwt", "permissions", "access control"
+                    "security",
+                    "secure",
+                    "authentication",
+                    "authorization",
+                    "encryption",
+                    "vulnerability",
+                    "attack",
+                    "protection",
+                    "firewall",
+                    "ssl",
+                    "tls",
+                    "certificate",
+                    "oauth",
+                    "jwt",
+                    "permissions",
+                    "access control",
                 ],
                 "patterns": [
                     r"(?:security|secure)\s+(?:implementation|setup|configuration)",
@@ -168,14 +251,25 @@ class QueryIntentClassifier:
                     r"(?:access\s+control|permissions?)\s+(?:setup|management)",
                     r"(?:vulnerability|security)\s+(?:assessment|audit)",
                 ],
-                "weight": 1.3
+                "weight": 1.3,
             },
-
             QueryIntent.INTEGRATION: {
                 "keywords": [
-                    "integration", "integrate", "api", "webhook", "rest", "graphql",
-                    "third party", "external", "connect", "connection", "endpoint",
-                    "sdk", "library", "plugin", "middleware"
+                    "integration",
+                    "integrate",
+                    "api",
+                    "webhook",
+                    "rest",
+                    "graphql",
+                    "third party",
+                    "external",
+                    "connect",
+                    "connection",
+                    "endpoint",
+                    "sdk",
+                    "library",
+                    "plugin",
+                    "middleware",
                 ],
                 "patterns": [
                     r"(?:api\s+)?integration\s+(?:with|to)",
@@ -185,14 +279,21 @@ class QueryIntentClassifier:
                     r"(?:webhook|callback)\s+(?:setup|integration|configuration)",
                     r"(?:sdk|library|plugin)\s+(?:integration|usage)",
                 ],
-                "weight": 1.2
+                "weight": 1.2,
             },
-
             QueryIntent.BEST_PRACTICES: {
                 "keywords": [
-                    "best practices", "best practice", "recommended", "convention",
-                    "conventions", "guidelines", "standards", "coding standards",
-                    "industry standard", "good practice", "proper way"
+                    "best practices",
+                    "best practice",
+                    "recommended",
+                    "convention",
+                    "conventions",
+                    "guidelines",
+                    "standards",
+                    "coding standards",
+                    "industry standard",
+                    "good practice",
+                    "proper way",
                 ],
                 "patterns": [
                     r"best\s+practices?",
@@ -202,14 +303,22 @@ class QueryIntentClassifier:
                     r"(?:good|proper)\s+practices?",
                     r"(?:what\s+is\s+)?(?:the\s+)?(?:recommended|standard)\s+way",
                 ],
-                "weight": 1.1
+                "weight": 1.1,
             },
-
             QueryIntent.CODE_REVIEW: {
                 "keywords": [
-                    "code review", "review", "feedback", "improve", "refactor",
-                    "clean code", "code quality", "optimization", "suggestions",
-                    "better way", "code analysis", "static analysis"
+                    "code review",
+                    "review",
+                    "feedback",
+                    "improve",
+                    "refactor",
+                    "clean code",
+                    "code quality",
+                    "optimization",
+                    "suggestions",
+                    "better way",
+                    "code analysis",
+                    "static analysis",
                 ],
                 "patterns": [
                     r"code\s+(?:review|analysis|quality|improvement)",
@@ -219,14 +328,22 @@ class QueryIntentClassifier:
                     r"(?:static\s+)?(?:code\s+)?analysis",
                     r"(?:suggestions?|feedback)\s+(?:on\s+)?(?:my\s+)?code",
                 ],
-                "weight": 1.2
+                "weight": 1.2,
             },
-
             QueryIntent.MIGRATION: {
                 "keywords": [
-                    "migration", "migrate", "upgrade", "update", "transition",
-                    "move from", "convert", "port", "legacy", "modernize",
-                    "version upgrade", "framework migration"
+                    "migration",
+                    "migrate",
+                    "upgrade",
+                    "update",
+                    "transition",
+                    "move from",
+                    "convert",
+                    "port",
+                    "legacy",
+                    "modernize",
+                    "version upgrade",
+                    "framework migration",
                 ],
                 "patterns": [
                     r"(?:migrate|migration)\s+(?:from|to)",
@@ -236,14 +353,23 @@ class QueryIntentClassifier:
                     r"(?:framework|library|platform)\s+(?:migration|transition)",
                     r"(?:version\s+)?(?:upgrade|update)\s+(?:guide|process)",
                 ],
-                "weight": 1.3
+                "weight": 1.3,
             },
-
             QueryIntent.DEBUGGING: {
                 "keywords": [
-                    "debug", "debugging", "debugger", "breakpoint", "stack trace",
-                    "error message", "exception", "logging", "trace", "step through",
-                    "inspect", "console", "dev tools"
+                    "debug",
+                    "debugging",
+                    "debugger",
+                    "breakpoint",
+                    "stack trace",
+                    "error message",
+                    "exception",
+                    "logging",
+                    "trace",
+                    "step through",
+                    "inspect",
+                    "console",
+                    "dev tools",
                 ],
                 "patterns": [
                     r"(?:how\s+to\s+)?debug(?:ging)?",
@@ -253,14 +379,22 @@ class QueryIntentClassifier:
                     r"(?:logging|console)\s+(?:setup|configuration|output)",
                     r"(?:step\s+through|inspect)\s+(?:code|execution)",
                 ],
-                "weight": 1.2
+                "weight": 1.2,
             },
-
             QueryIntent.CONFIGURATION: {
                 "keywords": [
-                    "configuration", "configure", "config", "setup", "settings",
-                    "environment", "variables", "parameters", "options", "customize",
-                    "initialization", "setup guide"
+                    "configuration",
+                    "configure",
+                    "config",
+                    "setup",
+                    "settings",
+                    "environment",
+                    "variables",
+                    "parameters",
+                    "options",
+                    "customize",
+                    "initialization",
+                    "setup guide",
                 ],
                 "patterns": [
                     r"(?:how\s+to\s+)?(?:configure|setup|initialize)",
@@ -270,8 +404,8 @@ class QueryIntentClassifier:
                     r"(?:customize|modify)\s+(?:settings?|configuration)",
                     r"(?:default\s+)?(?:configuration|settings?|parameters?)",
                 ],
-                "weight": 1.1
-            }
+                "weight": 1.1,
+            },
         }
 
         # Complexity indicators for determining query complexity
@@ -279,55 +413,117 @@ class QueryIntentClassifier:
             QueryComplexity.SIMPLE: {
                 "patterns": [r"^what\s+is", r"^how\s+to", r"^where\s+", r"^when\s+"],
                 "max_words": 6,
-                "max_tech_terms": 1
+                "max_tech_terms": 1,
             },
             QueryComplexity.MODERATE: {
                 "patterns": [r"compare|vs|versus", r"best\s+practice", r"how\s+do\s+i"],
                 "max_words": 12,
-                "max_tech_terms": 3
+                "max_tech_terms": 3,
             },
             QueryComplexity.COMPLEX: {
-                "patterns": [r"architecture|design\s+pattern", r"integration.*with", r"migration.*from"],
+                "patterns": [
+                    r"architecture|design\s+pattern",
+                    r"integration.*with",
+                    r"migration.*from",
+                ],
                 "max_words": 20,
-                "max_tech_terms": 5
+                "max_tech_terms": 5,
             },
             QueryComplexity.EXPERT: {
-                "patterns": [r"(?:performance|security).*optimization", r"scalable.*architecture"],
+                "patterns": [
+                    r"(?:performance|security).*optimization",
+                    r"scalable.*architecture",
+                ],
                 "max_words": 50,
-                "max_tech_terms": 10
-            }
+                "max_tech_terms": 10,
+            },
         }
 
         # Technical domain terms for domain detection
         self._domain_terms = {
-            "web_development": ["html", "css", "javascript", "react", "vue", "angular", "dom", "frontend"],
-            "backend": ["api", "rest", "graphql", "database", "server", "microservices", "backend"],
-            "devops": ["docker", "kubernetes", "ci/cd", "deployment", "infrastructure", "cloud"],
-            "data_science": ["machine learning", "ai", "data", "analysis", "python", "pandas", "numpy"],
-            "mobile": ["ios", "android", "mobile", "app", "native", "flutter", "react native"],
-            "security": ["security", "encryption", "authentication", "authorization", "ssl", "oauth"],
-            "database": ["sql", "nosql", "mongodb", "postgresql", "mysql", "database", "query"]
+            "web_development": [
+                "html",
+                "css",
+                "javascript",
+                "react",
+                "vue",
+                "angular",
+                "dom",
+                "frontend",
+            ],
+            "backend": [
+                "api",
+                "rest",
+                "graphql",
+                "database",
+                "server",
+                "microservices",
+                "backend",
+            ],
+            "devops": [
+                "docker",
+                "kubernetes",
+                "ci/cd",
+                "deployment",
+                "infrastructure",
+                "cloud",
+            ],
+            "data_science": [
+                "machine learning",
+                "ai",
+                "data",
+                "analysis",
+                "python",
+                "pandas",
+                "numpy",
+            ],
+            "mobile": [
+                "ios",
+                "android",
+                "mobile",
+                "app",
+                "native",
+                "flutter",
+                "react native",
+            ],
+            "security": [
+                "security",
+                "encryption",
+                "authentication",
+                "authorization",
+                "ssl",
+                "oauth",
+            ],
+            "database": [
+                "sql",
+                "nosql",
+                "mongodb",
+                "postgresql",
+                "mysql",
+                "database",
+                "query",
+            ],
         }
 
     async def initialize(self) -> None:
         """Initialize the intent classifier."""
         self._initialized = True
-        logger.info("Advanced QueryIntentClassifier initialized with 14 intent categories")
+        logger.info(
+            "Advanced QueryIntentClassifier initialized with 14 intent categories"
+        )
 
     async def classify_query_advanced(
-        self,
-        query: str,
-        context: dict[str, Any] | None = None
+        self, query: str, context: dict[str, Any] | None = None
     ) -> QueryIntentClassification:
         """Perform advanced multi-label query intent classification.
-        
+
         Args:
             query: User query to classify
             context: Optional context information
-            
+
         Returns:
             QueryIntentClassification: Classification results with confidence scores
-            
+
         Raises:
             RuntimeError: If classifier not initialized
         """
@@ -340,7 +536,7 @@ class QueryIntentClassifier:
                 secondary_intents=[],
                 confidence_scores={QueryIntent.FACTUAL: 0.1},
                 complexity_level=QueryComplexity.SIMPLE,
-                classification_reasoning="Empty query provided"
+                classification_reasoning="Empty query provided",
             )
 
         # Normalize query
@@ -379,7 +575,8 @@ class QueryIntentClassifier:
             primary_intent = sorted_intents[0][0]
             # Include secondary intents with score > 0.2 and within 0.4 of primary
             secondary_intents = [
-                intent for intent, score in sorted_intents[1:3]
+                intent
+                for intent, score in sorted_intents[1:3]
                 if score > 0.2 and (sorted_intents[0][1] - score) < 0.4
             ]
 
@@ -394,7 +591,9 @@ class QueryIntentClassifier:
         suggested_followups = self._generate_followups(primary_intent, query)
 
         # Determine if additional context is needed
-        requires_context = self._requires_context(primary_intent, complexity_level, query_lower)
+        requires_context = self._requires_context(
+            primary_intent, complexity_level, query_lower
+        )
 
         return QueryIntentClassification(
             primary_intent=primary_intent,
@@ -404,7 +603,7 @@ class QueryIntentClassifier:
             domain_category=domain_category,
             classification_reasoning=reasoning,
             requires_context=requires_context,
-            suggested_followups=suggested_followups
+            suggested_followups=suggested_followups,
         )
 
     async def _calculate_intent_scores(self, query: str) -> dict[QueryIntent, float]:
@@ -416,15 +615,15 @@ class QueryIntentClassifier:
 
             # Keyword matching
             keyword_matches = sum(
-                1 for keyword in config["keywords"]
-                if keyword in query
+                1 for keyword in config["keywords"] if keyword in query
             )
             if keyword_matches > 0:
                 score += min(keyword_matches / len(config["keywords"]), 0.6) * 0.6
 
             # Pattern matching
             pattern_matches = sum(
-                1 for pattern in config["patterns"]
+                1
+                for pattern in config["patterns"]
                 if re.search(pattern, query, re.IGNORECASE)
             )
             if pattern_matches > 0:
@@ -438,7 +637,9 @@ class QueryIntentClassifier:
 
         return scores
 
-    async def _semantic_intent_classification(self, query: str) -> dict[QueryIntent, float]:
+    async def _semantic_intent_classification(
+        self, query: str
+    ) -> dict[QueryIntent, float]:
         """Perform semantic classification using embeddings."""
         # Reference queries for each intent category
         reference_queries = {
@@ -455,7 +656,7 @@ class QueryIntentClassifier:
             QueryIntent.CODE_REVIEW: "How to improve and refactor this code?",
             QueryIntent.MIGRATION: "How to migrate and upgrade the system?",
             QueryIntent.DEBUGGING: "How to debug and trace the execution?",
-            QueryIntent.CONFIGURATION: "How to configure and setup the system?"
+            QueryIntent.CONFIGURATION: "How to configure and setup the system?",
         }
 
         try:
@@ -478,7 +679,9 @@ class QueryIntentClassifier:
             # Calculate cosine similarity scores
             scores = {}
             for i, (intent, _) in enumerate(reference_queries.items()):
-                similarity = self._cosine_similarity(query_embedding, reference_embeddings[i])
+                similarity = self._cosine_similarity(
+                    query_embedding, reference_embeddings[i]
+                )
                 scores[intent] = max(0.0, similarity)  # Ensure non-negative
 
             return scores
@@ -527,7 +730,11 @@ class QueryIntentClassifier:
             word_match = word_count <= indicators["max_words"]
             tech_match = tech_term_count <= indicators["max_tech_terms"]
 
-            if pattern_match or (not word_match and tech_term_count > 3) or (word_match and tech_match):
+            if (
+                pattern_match
+                or (not word_match and tech_term_count > 3)
+                or (word_match and tech_match)
+            ):
                 return complexity
 
         return QueryComplexity.SIMPLE
@@ -552,37 +759,42 @@ class QueryIntentClassifier:
             QueryIntent.CONCEPTUAL: [
                 "What are the key benefits and use cases?",
                 "How does this compare to alternatives?",
-                "What are the prerequisites to understand this?"
+                "What are the prerequisites to understand this?",
             ],
             QueryIntent.PROCEDURAL: [
                 "What are the common pitfalls to avoid?",
                 "Are there any alternative approaches?",
-                "What tools or dependencies are needed?"
+                "What tools or dependencies are needed?",
             ],
             QueryIntent.TROUBLESHOOTING: [
                 "What are the common causes of this issue?",
                 "How can I prevent this in the future?",
-                "Are there any diagnostic tools to help?"
+                "Are there any diagnostic tools to help?",
             ],
             QueryIntent.PERFORMANCE: [
                 "What are the key performance metrics to monitor?",
                 "How can I benchmark the improvements?",
-                "What are the trade-offs of different optimizations?"
+                "What are the trade-offs of different optimizations?",
             ],
             QueryIntent.SECURITY: [
                 "What are the current security best practices?",
                 "How can I test the security implementation?",
-                "What are common security vulnerabilities to avoid?"
-            ]
+                "What are common security vulnerabilities to avoid?",
+            ],
         }
 
-        return followup_templates.get(intent, [
-            "Can you provide more specific details?",
-            "What is your current setup or context?",
-            "Are there any constraints or requirements to consider?"
-        ])
+        return followup_templates.get(
+            intent,
+            [
+                "Can you provide more specific details?",
+                "What is your current setup or context?",
+                "Are there any constraints or requirements to consider?",
+            ],
+        )
 
-    def _requires_context(self, intent: QueryIntent, complexity: QueryComplexity, query: str) -> bool:
+    def _requires_context(
+        self, intent: QueryIntent, complexity: QueryComplexity, query: str
+    ) -> bool:
         """Determine if the query requires additional context for proper handling."""
         # High complexity queries usually need more context
         if complexity in [QueryComplexity.COMPLEX, QueryComplexity.EXPERT]:
@@ -594,7 +806,7 @@ class QueryIntentClassifier:
             QueryIntent.INTEGRATION,
             QueryIntent.MIGRATION,
             QueryIntent.TROUBLESHOOTING,
-            QueryIntent.CODE_REVIEW
+            QueryIntent.CODE_REVIEW,
         }
 
         if intent in context_heavy_intents:

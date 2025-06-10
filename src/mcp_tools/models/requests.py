@@ -298,7 +298,7 @@ class AdvancedQueryProcessingRequest(BaseModel):
         default="documentation", min_length=1, description="Target collection"
     )
     limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    
+
     # Processing control options
     enable_preprocessing: bool = Field(
         default=True, description="Enable query preprocessing and enhancement"
@@ -309,7 +309,7 @@ class AdvancedQueryProcessingRequest(BaseModel):
     enable_strategy_selection: bool = Field(
         default=True, description="Enable intelligent strategy selection"
     )
-    
+
     # Override options
     force_strategy: str | None = Field(
         default=None, description="Force specific search strategy"
@@ -317,13 +317,13 @@ class AdvancedQueryProcessingRequest(BaseModel):
     force_dimension: int | None = Field(
         default=None, description="Force specific Matryoshka dimension"
     )
-    
+
     # Context and metadata
     user_context: dict[str, Any] = Field(
         default_factory=dict, description="User context for enhanced processing"
     )
     filters: dict[str, Any] | None = Field(default=None, description="Search filters")
-    
+
     # Performance requirements
     max_processing_time_ms: int | None = Field(
         default=None, description="Maximum processing time constraint"
@@ -331,11 +331,9 @@ class AdvancedQueryProcessingRequest(BaseModel):
     search_accuracy: SearchAccuracy = Field(
         default=SearchAccuracy.BALANCED, description="Search accuracy level"
     )
-    
+
     # Output options
-    include_metadata: bool = Field(
-        default=True, description="Include result metadata"
-    )
+    include_metadata: bool = Field(default=True, description="Include result metadata")
     include_analytics: bool = Field(
         default=False, description="Include detailed analytics"
     )

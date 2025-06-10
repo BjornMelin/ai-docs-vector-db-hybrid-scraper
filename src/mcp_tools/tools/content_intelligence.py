@@ -266,7 +266,6 @@ def register_tools(mcp, client_manager: ClientManager):
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentMetadata(
-                    url=request.url,
                     word_count=len(request.content.split()),
                     char_count=len(request.content),
                 )
@@ -289,7 +288,6 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
-                url=request.url,
                 word_count=len(request.content.split()),
                 char_count=len(request.content),
             )
@@ -297,9 +295,9 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def get_adaptation_recommendations(
         url: str,
-        content_patterns: list[str] = None,
-        quality_issues: list[str] = None,
-        ctx: Context = None,
+        content_patterns: list[str] | None = None,
+        quality_issues: list[str] | None = None,
+        ctx: Context | None = None,
     ) -> list[dict]:
         """
         Generate site-specific optimization and adaptation recommendations.

@@ -823,3 +823,483 @@ async def test_quality_tier_enum_handling(mock_client_manager, mock_context):
     result = await registered_tools["create_project"](request, mock_context)
 
     assert result.quality_tier == "premium"
+
+
+# Additional comprehensive tests for error handling and edge cases
+
+
+@pytest.mark.asyncio
+async def test_create_project_url_processing_failures(
+    mock_client_manager, mock_context
+):
+    """Test project creation with URL processing failures."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.save_project = AsyncMock()
+    project_storage.update_project = AsyncMock()
+
+    qdrant = await mock_client_manager.get_qdrant_service()
+    qdrant.create_collection = AsyncMock()
+
+    # Setup crawl manager to fail for some URLs
+    crawl_manager = await mock_client_manager.get_crawl_manager()
+    crawl_manager.scrape_url.side_effect = [
+        {"url": "https://example.com/doc1", "success": True, "content": "content1"},
+        Exception("Network error"),  # Second URL fails
+        {
+            "url": "https://example.com/doc3",
+            "success": False,
+            "error": "Timeout",
+        },  # Third URL fails with success=False
+    ]
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    from src.mcp_tools.models.requests import ProjectRequest
+
+    request = ProjectRequest(
+        name="Test Project",
+        quality_tier="balanced",
+        urls=[
+            "https://example.com/doc1",
+            "https://example.com/doc2",
+            "https://example.com/doc3",
+        ],
+    )
+
+    # Mock uuid4 for predictable ID
+    with patch("src.mcp_tools.tools.projects.uuid4") as mock_uuid:
+        mock_uuid.return_value = Mock()
+        mock_uuid.return_value.__str__ = Mock(return_value="proj_123")
+
+        result = await registered_tools["create_project"](request, mock_context)
+
+        # Should succeed with only 1 successful URL
+        assert result.document_count == 1  # Only first URL succeeded
+        assert result.urls == request.urls  # All URLs should be stored
+
+        # Verify warning logs for failed URLs
+        mock_context.warning.assert_called()
+        warning_calls = [call.args[0] for call in mock_context.warning.call_args_list]
+        assert any("Failed to process URL" in call for call in warning_calls)
+
+
+@pytest.mark.asyncio
+async def test_list_projects_with_collection_stats_failure(
+    mock_client_manager, mock_context
+):
+    """Test list_projects when collection stats retrieval fails."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.list_projects.return_value = [
+        {
+            "id": "proj_1",
+            "name": "Project 1",
+            "collection": "project_proj_1",
+            "quality_tier": "economy",
+        }
+    ]
+
+    # Make collection info retrieval fail
+    qdrant = await mock_client_manager.get_qdrant_service()
+    qdrant.get_collection_info.side_effect = Exception("Qdrant connection error")
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["list_projects"](mock_context)
+
+    assert len(result) == 1
+    assert result[0].vector_count == 0  # Should default to 0 on error
+    assert result[0].indexed_count == 0  # Should default to 0 on error
+
+    # Verify warning was logged
+    mock_context.warning.assert_called()
+    warning_call = mock_context.warning.call_args[0][0]
+    assert "Failed to get stats for project" in warning_call
+
+
+@pytest.mark.asyncio
+async def test_search_project_not_found(mock_client_manager, mock_context):
+    """Test search_project with non-existent project."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = None
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    # Test search with non-existent project
+    with pytest.raises(ValueError, match="Project .* not found"):
+        await registered_tools["search_project"](
+            "missing_proj", "test query", 10, None, mock_context
+        )
+
+    # Verify error logging
+    mock_context.error.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_search_project_success(mock_client_manager, mock_context):
+    """Test successful project search."""
+    from src.config.enums import SearchStrategy
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "name": "Test Project",
+        "collection": "project_proj_123",
+    }
+
+    # Mock embedding manager
+    embedding_manager = Mock()
+    embedding_manager.generate_embeddings = AsyncMock(
+        return_value={
+            "embeddings": [[0.1, 0.2, 0.3]],
+            "sparse_embeddings": [[0.0, 0.1, 0.0, 0.2]],
+        }
+    )
+    mock_client_manager.embedding_manager = embedding_manager
+
+    # Mock qdrant service
+    qdrant = await mock_client_manager.get_qdrant_service()
+    mock_point = Mock()
+    mock_point.id = "doc_1"
+    mock_point.score = 0.95
+    mock_point.payload = {
+        "content": "Test document content",
+        "url": "https://example.com/doc1",
+        "title": "Test Document",
+    }
+    qdrant.hybrid_search = AsyncMock(return_value=[mock_point])
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["search_project"](
+        "proj_123", "test query", 10, SearchStrategy.HYBRID, mock_context
+    )
+
+    assert len(result) == 1
+    assert result[0].id == "doc_1"
+    assert result[0].content == "Test document content"
+    assert result[0].score == 0.95
+
+    # Verify service calls
+    embedding_manager.generate_embeddings.assert_called_once()
+    qdrant.hybrid_search.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_project_not_found(mock_client_manager, mock_context):
+    """Test update_project with non-existent project."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = None
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    # Test update with non-existent project
+    with pytest.raises(ValueError, match="Project .* not found"):
+        await registered_tools["update_project"](
+            "missing_proj", "New Name", "New Description", mock_context
+        )
+
+    # Verify error logging
+    mock_context.error.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_update_project_name_only(mock_client_manager, mock_context):
+    """Test updating only project name."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "name": "Old Name",
+        "description": "Original description",
+    }
+    project_storage.update_project = AsyncMock()
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["update_project"](
+        "proj_123", "New Name", None, mock_context
+    )
+
+    assert result.name == "New Name"
+    assert result.description == "Original description"
+
+    # Verify update called with only name
+    project_storage.update_project.assert_called_once_with(
+        "proj_123", {"name": "New Name"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_project_no_changes(mock_client_manager, mock_context):
+    """Test update_project with no actual changes."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "name": "Test Project",
+        "description": "Test description",
+    }
+    project_storage.update_project = AsyncMock()
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["update_project"](
+        "proj_123", None, None, mock_context
+    )
+
+    assert result.name == "Test Project"
+    assert result.description == "Test description"
+
+    # Verify no update call was made
+    project_storage.update_project.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_project_collection_deletion_failure(
+    mock_client_manager, mock_context
+):
+    """Test delete_project when collection deletion fails."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "name": "Test Project",
+        "collection": "project_proj_123",
+    }
+    project_storage.delete_project = AsyncMock()
+
+    # Make collection deletion fail
+    qdrant = await mock_client_manager.get_qdrant_service()
+    qdrant.delete_collection.side_effect = Exception("Collection deletion failed")
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["delete_project"]("proj_123", True, mock_context)
+
+    # Should still succeed and delete project even if collection deletion fails
+    assert result.status == "deleted"
+    assert result.details["project_id"] == "proj_123"
+
+    # Verify project was still deleted
+    project_storage.delete_project.assert_called_once_with("proj_123")
+
+    # Verify warning was logged for collection deletion failure
+    mock_context.warning.assert_called()
+    warning_call = mock_context.warning.call_args[0][0]
+    assert "Failed to delete collection" in warning_call
+
+
+@pytest.mark.asyncio
+async def test_delete_project_without_collection_deletion(
+    mock_client_manager, mock_context
+):
+    """Test delete_project without deleting collection."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "name": "Test Project",
+        "collection": "project_proj_123",
+    }
+    project_storage.delete_project = AsyncMock()
+
+    qdrant = await mock_client_manager.get_qdrant_service()
+    qdrant.delete_collection = AsyncMock()
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    result = await registered_tools["delete_project"]("proj_123", False, mock_context)
+
+    assert result.status == "deleted"
+    assert result.details["collection_deleted"] == "False"
+
+    # Verify collection deletion was NOT called
+    qdrant.delete_collection.assert_not_called()
+
+    # Verify project was deleted
+    project_storage.delete_project.assert_called_once_with("proj_123")
+
+
+@pytest.mark.asyncio
+async def test_search_project_embedding_failure(mock_client_manager, mock_context):
+    """Test search_project when embedding generation fails."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "collection": "project_proj_123",
+    }
+
+    # Make embedding generation fail
+    embedding_manager = Mock()
+    embedding_manager.generate_embeddings = AsyncMock(
+        side_effect=Exception("Embedding error")
+    )
+    mock_client_manager.embedding_manager = embedding_manager
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    with pytest.raises(Exception, match="Embedding error"):
+        await registered_tools["search_project"](
+            "proj_123", "test query", 10, None, mock_context
+        )
+
+    # Verify error logging
+    mock_context.error.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_search_project_qdrant_failure(mock_client_manager, mock_context):
+    """Test search_project when Qdrant search fails."""
+    from src.mcp_tools.tools.projects import register_tools
+
+    mock_mcp = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(func):
+        registered_tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture_tool
+
+    # Setup mocks
+    project_storage = await mock_client_manager.get_project_storage()
+    project_storage.get_project.return_value = {
+        "id": "proj_123",
+        "collection": "project_proj_123",
+    }
+
+    # Mock successful embedding generation
+    embedding_manager = Mock()
+    embedding_manager.generate_embeddings = AsyncMock(
+        return_value={"embeddings": [[0.1, 0.2, 0.3]], "sparse_embeddings": None}
+    )
+    mock_client_manager.embedding_manager = embedding_manager
+
+    # Make Qdrant search fail
+    qdrant = await mock_client_manager.get_qdrant_service()
+    qdrant.hybrid_search.side_effect = Exception("Qdrant search error")
+
+    register_tools(mock_mcp, mock_client_manager)
+
+    with pytest.raises(Exception, match="Qdrant search error"):
+        await registered_tools["search_project"](
+            "proj_123", "test query", 10, None, mock_context
+        )
+
+    # Verify error logging
+    mock_context.error.assert_called()

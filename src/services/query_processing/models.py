@@ -16,7 +16,7 @@ from pydantic import Field
 
 class QueryIntent(str, Enum):
     """Advanced query intent classification categories.
-    
+
     Expanded from 4 basic categories to 14 total categories for comprehensive
     query understanding and strategy selection.
     """
@@ -139,9 +139,7 @@ class SearchStrategySelection(BaseModel):
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence in strategy selection"
     )
-    reasoning: str = Field(
-        default="", description="Reasoning for strategy selection"
-    )
+    reasoning: str = Field(default="", description="Reasoning for strategy selection")
     estimated_quality: float = Field(
         default=0.5, ge=0.0, le=1.0, description="Estimated search quality"
     )
@@ -211,9 +209,7 @@ class QueryProcessingResponse(BaseModel):
     results: list[dict[str, Any]] = Field(
         default_factory=list, description="Search results"
     )
-    total_results: int = Field(
-        default=0, description="Total matching documents"
-    )
+    total_results: int = Field(default=0, description="Total matching documents")
 
     # Processing insights
     intent_classification: QueryIntentClassification | None = Field(
@@ -252,15 +248,11 @@ class QueryProcessingResponse(BaseModel):
     fallback_used: bool = Field(
         default=False, description="Whether fallback strategy was used"
     )
-    cache_hit: bool = Field(
-        default=False, description="Whether results were cached"
-    )
+    cache_hit: bool = Field(default=False, description="Whether results were cached")
 
     # Error handling
     error: str | None = Field(default=None, description="Error message if failed")
-    warnings: list[str] = Field(
-        default_factory=list, description="Warning messages"
-    )
+    warnings: list[str] = Field(default_factory=list, description="Warning messages")
 
     model_config = ConfigDict(extra="forbid")
 

@@ -17,23 +17,19 @@ logger = logging.getLogger(__name__)
 
 class QueryProcessingPipeline(BaseService):
     """Unified interface for advanced query processing pipeline.
-    
+
     Provides a single entry point for all query processing operations,
     coordinating intent classification, preprocessing, strategy selection,
     and search execution through the orchestrator.
     """
 
-    def __init__(
-        self,
-        orchestrator: QueryProcessingOrchestrator,
-        config: Any = None
-    ):
+    def __init__(self, orchestrator: QueryProcessingOrchestrator, config: Any = None):
         """Initialize the query processing pipeline.
 
         Args:
             orchestrator: Query processing orchestrator instance
             config: Optional configuration object
-            
+
         Raises:
             ValueError: If orchestrator is None
         """
@@ -62,22 +58,22 @@ class QueryProcessingPipeline(BaseService):
         query_or_request,
         collection_name: str = "documents",
         limit: int = 10,
-        **kwargs
+        **kwargs,
     ) -> QueryProcessingResponse:
         """Process a query through the complete advanced pipeline.
-        
+
         This is the main entry point for query processing that coordinates
         all pipeline components to deliver optimal search results.
-        
+
         Args:
             query_or_request: Either a string query or QueryProcessingRequest object
             collection_name: Target collection for search (used only if query_or_request is string)
             limit: Maximum number of results to return (used only if query_or_request is string)
             **kwargs: Additional processing options (used only if query_or_request is string)
-            
+
         Returns:
             QueryProcessingResponse: Complete processing results
-            
+
         Raises:
             RuntimeError: If pipeline not initialized
         """
@@ -94,7 +90,7 @@ class QueryProcessingPipeline(BaseService):
                     success=False,
                     results=[],
                     total_results=0,
-                    error="Empty query provided"
+                    error="Empty query provided",
                 )
 
             # Create processing request from parameters
@@ -102,21 +98,20 @@ class QueryProcessingPipeline(BaseService):
                 query=query_or_request,
                 collection_name=collection_name,
                 limit=limit,
-                **kwargs
+                **kwargs,
             )
 
         # Process through orchestrator
         return await self.orchestrator.process_query(request)
 
     async def process_advanced(
-        self,
-        request: QueryProcessingRequest
+        self, request: QueryProcessingRequest
     ) -> QueryProcessingResponse:
         """Process a query with full advanced options.
-        
+
         Args:
             request: Complete processing request with all options
-            
+
         Returns:
             QueryProcessingResponse: Complete processing results
         """
@@ -124,16 +119,14 @@ class QueryProcessingPipeline(BaseService):
         return await self.orchestrator.process_query(request)
 
     async def process_batch(
-        self,
-        requests: list[QueryProcessingRequest],
-        max_concurrent: int = 5
+        self, requests: list[QueryProcessingRequest], max_concurrent: int = 5
     ) -> list[QueryProcessingResponse]:
         """Process multiple queries concurrently.
-        
+
         Args:
             requests: List of processing requests
             max_concurrent: Maximum concurrent processing
-            
+
         Returns:
             list[QueryProcessingResponse]: Results for each query
         """
@@ -143,17 +136,16 @@ class QueryProcessingPipeline(BaseService):
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def process_single_request(request: QueryProcessingRequest) -> QueryProcessingResponse:
+        async def process_single_request(
+            request: QueryProcessingRequest,
+        ) -> QueryProcessingResponse:
             async with semaphore:
                 try:
                     return await self.process(request)
                 except Exception as e:
                     logger.error(f"Batch processing failed for query '{request}': {e}")
                     return QueryProcessingResponse(
-                        success=False,
-                        results=[],
-                        total_results=0,
-                        error=str(e)
+                        success=False, results=[], total_results=0, error=str(e)
                     )
 
         # Execute all queries concurrently
@@ -164,18 +156,18 @@ class QueryProcessingPipeline(BaseService):
         self,
         query: str,
         enable_preprocessing: bool = True,
-        enable_intent_classification: bool = True
+        enable_intent_classification: bool = True,
     ) -> dict[str, Any]:
         """Analyze a query without executing search.
-        
+
         Useful for understanding query characteristics and optimal processing
         strategies without performing the actual search.
-        
+
         Args:
             query: Query to analyze
             enable_preprocessing: Whether to preprocess the query
             enable_intent_classification: Whether to classify intent
-            
+
         Returns:
             dict[str, Any]: Analysis results including intent and strategy
         """
@@ -188,7 +180,7 @@ class QueryProcessingPipeline(BaseService):
             limit=1,  # Minimal search for analysis
             enable_preprocessing=enable_preprocessing,
             enable_intent_classification=enable_intent_classification,
-            enable_strategy_selection=True
+            enable_strategy_selection=True,
         )
 
         # Process through orchestrator
@@ -199,16 +191,18 @@ class QueryProcessingPipeline(BaseService):
             "query": query,
             "preprocessing": response.preprocessing_result,
             "intent_classification": response.intent_classification,
-            "complexity": response.intent_classification.complexity_level if response.intent_classification else None,
+            "complexity": response.intent_classification.complexity_level
+            if response.intent_classification
+            else None,
             "strategy": response.strategy_selection,
-            "processing_time_ms": response.total_processing_time_ms
+            "processing_time_ms": response.total_processing_time_ms,
         }
 
         return analysis
 
     async def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive performance metrics.
-        
+
         Returns:
             dict[str, Any]: Performance statistics and metrics
         """
@@ -217,7 +211,7 @@ class QueryProcessingPipeline(BaseService):
                 "total_queries": 0,
                 "successful_queries": 0,
                 "average_processing_time": 0.0,
-                "strategy_usage": {}
+                "strategy_usage": {},
             }
 
         base_metrics = self.orchestrator.get_performance_stats()
@@ -228,12 +222,12 @@ class QueryProcessingPipeline(BaseService):
             "successful_queries": base_metrics.get("successful_queries", 0),
             "average_processing_time": base_metrics.get("average_processing_time", 0.0),
             "strategy_usage": base_metrics.get("strategy_usage", {}),
-            "pipeline_initialized": self._initialized
+            "pipeline_initialized": self._initialized,
         }
 
     async def health_check(self) -> dict[str, Any]:
         """Perform health check on all pipeline components.
-        
+
         Returns:
             dict[str, Any]: Health status of all components
         """
@@ -241,9 +235,7 @@ class QueryProcessingPipeline(BaseService):
             "status": "healthy" if self._initialized else "unhealthy",
             "pipeline_healthy": self._initialized,
             "components": {},
-            "performance": {
-                "initialized": self._initialized
-            }
+            "performance": {"initialized": self._initialized},
         }
 
         if self._initialized:
@@ -252,7 +244,7 @@ class QueryProcessingPipeline(BaseService):
                 test_response = await self.analyze_query(
                     "test query",
                     enable_preprocessing=True,
-                    enable_intent_classification=True
+                    enable_intent_classification=True,
                 )
 
                 # Check component health based on successful analysis
@@ -261,14 +253,36 @@ class QueryProcessingPipeline(BaseService):
                 strategy_healthy = test_response.get("strategy") is not None
 
                 health_status["components"] = {
-                    "orchestrator": {"status": "healthy", "message": "Working correctly"},
-                    "intent_classifier": {"status": "healthy" if intent_healthy else "degraded", "message": "Classification working" if intent_healthy else "Classification issues"},
-                    "preprocessor": {"status": "healthy" if preprocessing_healthy else "degraded", "message": "Preprocessing working" if preprocessing_healthy else "Preprocessing issues"},
-                    "strategy_selector": {"status": "healthy" if strategy_healthy else "degraded", "message": "Selection working" if strategy_healthy else "Selection issues"}
+                    "orchestrator": {
+                        "status": "healthy",
+                        "message": "Working correctly",
+                    },
+                    "intent_classifier": {
+                        "status": "healthy" if intent_healthy else "degraded",
+                        "message": "Classification working"
+                        if intent_healthy
+                        else "Classification issues",
+                    },
+                    "preprocessor": {
+                        "status": "healthy" if preprocessing_healthy else "degraded",
+                        "message": "Preprocessing working"
+                        if preprocessing_healthy
+                        else "Preprocessing issues",
+                    },
+                    "strategy_selector": {
+                        "status": "healthy" if strategy_healthy else "degraded",
+                        "message": "Selection working"
+                        if strategy_healthy
+                        else "Selection issues",
+                    },
                 }
 
                 # Overall status based on components
-                if not all(comp["status"] == "healthy" for comp in health_status["components"].values() if isinstance(comp, dict)):
+                if not all(
+                    comp["status"] == "healthy"
+                    for comp in health_status["components"].values()
+                    if isinstance(comp, dict)
+                ):
                     health_status["status"] = "degraded"
 
             except Exception as e:
@@ -276,22 +290,23 @@ class QueryProcessingPipeline(BaseService):
                 health_status["status"] = "unhealthy"
                 health_status["components"] = {
                     "orchestrator": {"status": "unhealthy", "message": str(e)},
-                    "error": str(e)
+                    "error": str(e),
                 }
 
         return health_status
 
     async def warm_up(self) -> dict[str, Any]:
         """Warm up the pipeline with test queries.
-        
+
         Useful for pre-loading models and caches before handling real traffic.
-        
+
         Returns:
             dict[str, Any]: Warmup results including status and timing
         """
         self._validate_initialized()
 
         import time
+
         start_time = time.time()
 
         warmup_requests = [
@@ -300,22 +315,22 @@ class QueryProcessingPipeline(BaseService):
                 collection_name="warmup",
                 limit=1,
                 enable_preprocessing=True,
-                enable_intent_classification=True
+                enable_intent_classification=True,
             ),
             QueryProcessingRequest(
                 query="How to implement authentication in Python?",
                 collection_name="warmup",
                 limit=1,
                 enable_preprocessing=True,
-                enable_intent_classification=True
+                enable_intent_classification=True,
             ),
             QueryProcessingRequest(
                 query="Best practices for API design",
                 collection_name="warmup",
                 limit=1,
                 enable_preprocessing=True,
-                enable_intent_classification=True
-            )
+                enable_intent_classification=True,
+            ),
         ]
 
         logger.info("Warming up query processing pipeline...")
@@ -323,8 +338,7 @@ class QueryProcessingPipeline(BaseService):
         try:
             # Process warmup queries to initialize all components
             responses = await self.process_batch(
-                requests=warmup_requests,
-                max_concurrent=2
+                requests=warmup_requests, max_concurrent=2
             )
 
             end_time = time.time()
@@ -339,7 +353,12 @@ class QueryProcessingPipeline(BaseService):
                 "warmup_time_ms": warmup_time_ms,
                 "queries_processed": len(responses),
                 "successful_queries": successful_warmups,
-                "components_warmed": ["orchestrator", "intent_classifier", "preprocessor", "strategy_selector"]
+                "components_warmed": [
+                    "orchestrator",
+                    "intent_classifier",
+                    "preprocessor",
+                    "strategy_selector",
+                ],
             }
 
         except Exception as e:
@@ -353,7 +372,7 @@ class QueryProcessingPipeline(BaseService):
                 "warmup_time_ms": warmup_time_ms,
                 "error": str(e),
                 "queries_processed": 0,
-                "successful_queries": 0
+                "successful_queries": 0,
             }
 
     async def cleanup(self) -> None:

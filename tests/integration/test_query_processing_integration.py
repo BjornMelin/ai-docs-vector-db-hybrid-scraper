@@ -1,33 +1,27 @@
 """Integration tests for the complete query processing system."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
-from src.services.query_processing.pipeline import QueryProcessingPipeline
+import pytest
+from src.services.query_processing.models import MatryoshkaDimension
+from src.services.query_processing.models import QueryComplexity
+from src.services.query_processing.models import QueryIntent
+from src.services.query_processing.models import QueryProcessingRequest
+from src.services.query_processing.models import SearchStrategy
 from src.services.query_processing.orchestrator import QueryProcessingOrchestrator
-from src.services.query_processing.intent_classifier import QueryIntentClassifier
-from src.services.query_processing.preprocessor import QueryPreprocessor
-from src.services.query_processing.strategy_selector import SearchStrategySelector
-from src.services.query_processing.models import (
-    MatryoshkaDimension,
-    QueryComplexity,
-    QueryIntent,
-    QueryProcessingRequest,
-    SearchStrategy,
-)
+from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
 @pytest.fixture
 def mock_embedding_manager():
     """Create a mock embedding manager."""
     manager = AsyncMock()
-    manager.generate_embeddings = AsyncMock(return_value={
-        "success": True,
-        "embeddings": [[0.1] * 768]
-    })
-    manager.rerank_results = AsyncMock(return_value=[
-        {"original": {"id": "1", "content": "test", "score": 0.9}}
-    ])
+    manager.generate_embeddings = AsyncMock(
+        return_value={"success": True, "embeddings": [[0.1] * 768]}
+    )
+    manager.rerank_results = AsyncMock(
+        return_value=[{"original": {"id": "1", "content": "test", "score": 0.9}}]
+    )
     return manager
 
 
@@ -35,16 +29,44 @@ def mock_embedding_manager():
 def mock_qdrant_service():
     """Create a mock Qdrant service."""
     service = AsyncMock()
-    service.filtered_search = AsyncMock(return_value=[
-        {"id": "1", "payload": {"content": "Machine learning is a subset of AI", "title": "ML Intro"}, "score": 0.9},
-        {"id": "2", "payload": {"content": "Python is great for ML", "title": "Python ML"}, "score": 0.8},
-    ])
-    service.search.hybrid_search = AsyncMock(return_value=[
-        {"id": "3", "payload": {"content": "Deep learning concepts", "title": "Deep Learning"}, "score": 0.85},
-    ])
-    service.search.multi_stage_search = AsyncMock(return_value=[
-        {"id": "4", "payload": {"content": "Advanced algorithms", "title": "Algorithms"}, "score": 0.88},
-    ])
+    service.filtered_search = AsyncMock(
+        return_value=[
+            {
+                "id": "1",
+                "payload": {
+                    "content": "Machine learning is a subset of AI",
+                    "title": "ML Intro",
+                },
+                "score": 0.9,
+            },
+            {
+                "id": "2",
+                "payload": {"content": "Python is great for ML", "title": "Python ML"},
+                "score": 0.8,
+            },
+        ]
+    )
+    service.search.hybrid_search = AsyncMock(
+        return_value=[
+            {
+                "id": "3",
+                "payload": {
+                    "content": "Deep learning concepts",
+                    "title": "Deep Learning",
+                },
+                "score": 0.85,
+            },
+        ]
+    )
+    service.search.multi_stage_search = AsyncMock(
+        return_value=[
+            {
+                "id": "4",
+                "payload": {"content": "Advanced algorithms", "title": "Algorithms"},
+                "score": 0.88,
+            },
+        ]
+    )
     return service
 
 
@@ -52,14 +74,23 @@ def mock_qdrant_service():
 def mock_hyde_engine():
     """Create a mock HyDE engine."""
     engine = AsyncMock()
-    engine.enhanced_search = AsyncMock(return_value=[
-        {"id": "5", "content": "HyDE enhanced results", "title": "Enhanced", "score": 0.92}
-    ])
+    engine.enhanced_search = AsyncMock(
+        return_value=[
+            {
+                "id": "5",
+                "content": "HyDE enhanced results",
+                "title": "Enhanced",
+                "score": 0.92,
+            }
+        ]
+    )
     return engine
 
 
 @pytest.fixture
-async def complete_pipeline(mock_embedding_manager, mock_qdrant_service, mock_hyde_engine):
+async def complete_pipeline(
+    mock_embedding_manager, mock_qdrant_service, mock_hyde_engine
+):
     """Create a complete query processing pipeline with all components."""
     # Create orchestrator with core dependencies
     orchestrator = QueryProcessingOrchestrator(
@@ -67,13 +98,13 @@ async def complete_pipeline(mock_embedding_manager, mock_qdrant_service, mock_hy
         qdrant_service=mock_qdrant_service,
         hyde_engine=mock_hyde_engine,
     )
-    
+
     # Create pipeline
     pipeline = QueryProcessingPipeline(orchestrator=orchestrator)
-    
+
     # Initialize everything
     await pipeline.initialize()
-    
+
     return pipeline
 
 
@@ -90,19 +121,19 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         # Verify successful processing
         assert response.success is True
         assert response.total_results >= 0  # May be 0 with mocked services
-        
+
         # Verify processing components were used
         assert response.preprocessing_result is not None
         assert response.intent_classification is not None
         assert response.intent_classification.primary_intent == QueryIntent.CONCEPTUAL
         assert response.strategy_selection is not None
-        
+
         # Verify timing information
         assert response.total_processing_time_ms > 0
         assert response.search_time_ms >= 0
@@ -117,9 +148,9 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         assert response.intent_classification.primary_intent == QueryIntent.PROCEDURAL
         # Procedural queries should use HyDE strategy
@@ -135,11 +166,13 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
-        assert response.intent_classification.primary_intent == QueryIntent.TROUBLESHOOTING
+        assert (
+            response.intent_classification.primary_intent == QueryIntent.TROUBLESHOOTING
+        )
         # Troubleshooting queries should use reranked strategy
         assert response.strategy_selection.primary_strategy == SearchStrategy.RERANKED
 
@@ -152,15 +185,17 @@ class TestQueryProcessingIntegration:
             enable_preprocessing=True,
             enable_intent_classification=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         assert response.preprocessing_result is not None
         assert "python" in response.preprocessing_result.processed_query.lower()
         assert len(response.preprocessing_result.corrections_applied) > 0
 
-    async def test_context_extraction_and_intent_classification(self, complete_pipeline):
+    async def test_context_extraction_and_intent_classification(
+        self, complete_pipeline
+    ):
         """Test context extraction affecting intent classification."""
         request = QueryProcessingRequest(
             query="How to optimize React performance for large applications?",
@@ -170,16 +205,16 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
-        
+
         # Should extract framework context
         if response.preprocessing_result.context_extracted:
             context = response.preprocessing_result.context_extracted
             assert "framework" in context or "react" in str(context).lower()
-        
+
         # Should classify as performance intent
         assert response.intent_classification.primary_intent == QueryIntent.PERFORMANCE
 
@@ -194,9 +229,9 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         simple_response = await complete_pipeline.process(simple_request)
-        
+
         # Complex query
         complex_request = QueryProcessingRequest(
             query="How to design a distributed microservices architecture with event sourcing and CQRS patterns?",
@@ -206,17 +241,20 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         complex_response = await complete_pipeline.process(complex_request)
-        
+
         # Both should succeed
         assert simple_response.success is True
         assert complex_response.success is True
-        
+
         # Complex query should have higher complexity
-        assert (complex_response.intent_classification.complexity_level.value > 
-                simple_response.intent_classification.complexity_level.value or
-                complex_response.intent_classification.complexity_level == QueryComplexity.EXPERT)
+        assert (
+            complex_response.intent_classification.complexity_level.value
+            > simple_response.intent_classification.complexity_level.value
+            or complex_response.intent_classification.complexity_level
+            == QueryComplexity.EXPERT
+        )
 
     async def test_forced_strategy_override(self, complete_pipeline):
         """Test forcing a specific search strategy."""
@@ -227,9 +265,9 @@ class TestQueryProcessingIntegration:
             force_strategy=SearchStrategy.HYBRID,
             force_dimension=MatryoshkaDimension.LARGE,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         # Strategy should be overridden
         # (Verification would depend on orchestrator implementation)
@@ -245,9 +283,9 @@ class TestQueryProcessingIntegration:
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         # Should consider performance constraints
 
@@ -260,15 +298,15 @@ class TestQueryProcessingIntegration:
             user_context={
                 "programming_language": ["python"],
                 "experience_level": "beginner",
-                "urgency": "medium"
+                "urgency": "medium",
             },
             enable_preprocessing=True,
             enable_intent_classification=True,
             enable_strategy_selection=True,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         # Context should influence processing
 
@@ -281,26 +319,30 @@ class TestQueryProcessingIntegration:
             filters={"category": "web", "difficulty": "intermediate"},
             force_strategy=SearchStrategy.FILTERED,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         assert response.success is True
         # Filters should be applied in search
 
-    async def test_fallback_strategy_usage(self, complete_pipeline, mock_qdrant_service):
+    async def test_fallback_strategy_usage(
+        self, complete_pipeline, mock_qdrant_service
+    ):
         """Test fallback strategy when primary fails."""
         # Make primary search fail
-        mock_qdrant_service.filtered_search.side_effect = Exception("Primary search failed")
-        
+        mock_qdrant_service.filtered_search.side_effect = Exception(
+            "Primary search failed"
+        )
+
         request = QueryProcessingRequest(
             query="Database optimization techniques",
             collection_name="performance",
             limit=5,
             force_strategy=SearchStrategy.FILTERED,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         # Should still succeed with fallback
         assert response.success is True
         assert response.fallback_used is True
@@ -328,16 +370,18 @@ class TestQueryProcessingIntegration:
                 enable_intent_classification=True,
             ),
         ]
-        
+
         responses = await complete_pipeline.process_batch(requests)
-        
+
         assert len(responses) == 3
         assert all(resp.success is True for resp in responses)
-        
+
         # Different intents should be detected
-        intent_types = [resp.intent_classification.primary_intent 
-                       for resp in responses 
-                       if resp.intent_classification]
+        intent_types = [
+            resp.intent_classification.primary_intent
+            for resp in responses
+            if resp.intent_classification
+        ]
         assert len(set(intent_types)) > 1  # Should have different intents
 
     async def test_comprehensive_pipeline_metrics(self, complete_pipeline):
@@ -349,7 +393,7 @@ class TestQueryProcessingIntegration:
             "Compare frameworks performance",
             "Configure production settings",
         ]
-        
+
         for query in queries:
             request = QueryProcessingRequest(
                 query=query,
@@ -360,9 +404,9 @@ class TestQueryProcessingIntegration:
                 enable_strategy_selection=True,
             )
             await complete_pipeline.process(request)
-        
+
         metrics = await complete_pipeline.get_metrics()
-        
+
         assert metrics["total_queries"] >= 4
         assert metrics["successful_queries"] >= 4
         assert metrics["average_processing_time"] > 0
@@ -371,14 +415,19 @@ class TestQueryProcessingIntegration:
     async def test_health_check_integration(self, complete_pipeline):
         """Test health check of integrated system."""
         health = await complete_pipeline.health_check()
-        
+
         assert health["status"] == "healthy"
         assert "components" in health
         assert "performance" in health
-        
+
         # Should check all components
         components = health["components"]
-        expected_components = ["orchestrator", "intent_classifier", "preprocessor", "strategy_selector"]
+        expected_components = [
+            "orchestrator",
+            "intent_classifier",
+            "preprocessor",
+            "strategy_selector",
+        ]
         for component in expected_components:
             if component in components:
                 assert components[component]["status"] == "healthy"
@@ -386,24 +435,28 @@ class TestQueryProcessingIntegration:
     async def test_warm_up_integration(self, complete_pipeline):
         """Test system warm-up integration."""
         result = await complete_pipeline.warm_up()
-        
+
         assert result["status"] == "completed"
         assert "warmup_time_ms" in result
         assert result["warmup_time_ms"] >= 0
 
-    async def test_error_handling_integration(self, complete_pipeline, mock_embedding_manager):
+    async def test_error_handling_integration(
+        self, complete_pipeline, mock_embedding_manager
+    ):
         """Test error handling across integrated components."""
         # Make embeddings fail
-        mock_embedding_manager.generate_embeddings.side_effect = Exception("Embedding service down")
-        
+        mock_embedding_manager.generate_embeddings.side_effect = Exception(
+            "Embedding service down"
+        )
+
         request = QueryProcessingRequest(
             query="Test query with embedding failure",
             collection_name="docs",
             limit=5,
         )
-        
+
         response = await complete_pipeline.process(request)
-        
+
         # Should handle error gracefully
         assert isinstance(response, type(response))
         # Response might be successful with fallback or unsuccessful with error message
@@ -416,7 +469,7 @@ class TestQueryProcessingIntegration:
     async def test_concurrent_processing_integration(self, complete_pipeline):
         """Test concurrent processing with integrated system."""
         import asyncio
-        
+
         requests = [
             QueryProcessingRequest(
                 query=f"Concurrent query {i}: What is technology {i}?",
@@ -427,18 +480,21 @@ class TestQueryProcessingIntegration:
             )
             for i in range(5)
         ]
-        
+
         # Process concurrently
         tasks = [complete_pipeline.process(req) for req in requests]
         responses = await asyncio.gather(*tasks)
-        
+
         assert len(responses) == 5
         assert all(isinstance(resp, type(responses[0])) for resp in responses)
 
     async def test_advanced_intent_detection_integration(self, complete_pipeline):
         """Test detection of advanced intent categories."""
         advanced_queries = [
-            ("How to design scalable microservices architecture?", QueryIntent.ARCHITECTURAL),
+            (
+                "How to design scalable microservices architecture?",
+                QueryIntent.ARCHITECTURAL,
+            ),
             ("Compare React vs Vue vs Angular performance", QueryIntent.COMPARATIVE),
             ("How to secure OAuth 2.0 implementation?", QueryIntent.SECURITY),
             ("Best practices for Python code organization", QueryIntent.BEST_PRACTICES),
@@ -446,7 +502,7 @@ class TestQueryProcessingIntegration:
             ("Debug performance bottlenecks in production", QueryIntent.DEBUGGING),
             ("Configure Django for production deployment", QueryIntent.CONFIGURATION),
         ]
-        
+
         for query, expected_intent in advanced_queries:
             request = QueryProcessingRequest(
                 query=query,
@@ -454,9 +510,9 @@ class TestQueryProcessingIntegration:
                 limit=5,
                 enable_intent_classification=True,
             )
-            
+
             response = await complete_pipeline.process(request)
-            
+
             assert response.success is True
             assert response.intent_classification is not None
             assert response.intent_classification.primary_intent == expected_intent

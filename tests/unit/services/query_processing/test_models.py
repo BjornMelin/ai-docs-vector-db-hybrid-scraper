@@ -2,18 +2,15 @@
 
 import pytest
 from pydantic import ValidationError
-
-from src.services.query_processing.models import (
-    MatryoshkaDimension,
-    QueryComplexity,
-    QueryIntent,
-    QueryIntentClassification,
-    QueryPreprocessingResult,
-    QueryProcessingRequest,
-    QueryProcessingResponse,
-    SearchStrategy,
-    SearchStrategySelection,
-)
+from src.services.query_processing.models import MatryoshkaDimension
+from src.services.query_processing.models import QueryComplexity
+from src.services.query_processing.models import QueryIntent
+from src.services.query_processing.models import QueryIntentClassification
+from src.services.query_processing.models import QueryPreprocessingResult
+from src.services.query_processing.models import QueryProcessingRequest
+from src.services.query_processing.models import QueryProcessingResponse
+from src.services.query_processing.models import SearchStrategy
+from src.services.query_processing.models import SearchStrategySelection
 
 
 class TestQueryIntent:
@@ -95,7 +92,7 @@ class TestQueryIntentClassification:
             complexity_level=QueryComplexity.MODERATE,
             classification_reasoning="Test reasoning",
         )
-        
+
         assert classification.primary_intent == QueryIntent.CONCEPTUAL
         assert len(classification.secondary_intents) == 1
         assert classification.confidence_scores[QueryIntent.CONCEPTUAL] == 0.8
@@ -110,7 +107,7 @@ class TestQueryIntentClassification:
             complexity_level=QueryComplexity.SIMPLE,
             classification_reasoning="Simple factual query",
         )
-        
+
         assert classification.domain_category is None
         assert classification.requires_context is False
         assert classification.suggested_followups == []
@@ -130,7 +127,7 @@ class TestQueryPreprocessingResult:
             context_extracted={"programming_language": ["python"]},
             preprocessing_time_ms=15.5,
         )
-        
+
         assert result.original_query == "what is phython?"
         assert result.processed_query == "what is python?"
         assert len(result.corrections_applied) == 1
@@ -142,7 +139,7 @@ class TestQueryPreprocessingResult:
             original_query="test",
             processed_query="test",
         )
-        
+
         assert result.corrections_applied == []
         assert result.expansions_added == []
         assert result.normalization_applied is False
@@ -164,7 +161,7 @@ class TestSearchStrategySelection:
             estimated_quality=0.9,
             estimated_latency_ms=200.0,
         )
-        
+
         assert selection.primary_strategy == SearchStrategy.HYDE
         assert len(selection.fallback_strategies) == 2
         assert selection.matryoshka_dimension == MatryoshkaDimension.LARGE
@@ -194,7 +191,7 @@ class TestQueryProcessingRequest:
             collection_name="docs",
             limit=10,
         )
-        
+
         assert request.query == "What is machine learning?"
         assert request.collection_name == "docs"
         assert request.limit == 10
@@ -216,7 +213,7 @@ class TestQueryProcessingRequest:
             filters={"category": "database"},
             max_processing_time_ms=5000,
         )
-        
+
         assert request.enable_preprocessing is False
         assert request.force_strategy == SearchStrategy.RERANKED
         assert request.user_context["urgency"] == "high"
@@ -254,7 +251,7 @@ class TestQueryProcessingResponse:
             confidence_score=0.85,
             quality_score=0.9,
         )
-        
+
         assert response.success is True
         assert len(response.results) == 1
         assert response.total_results == 1
@@ -268,7 +265,7 @@ class TestQueryProcessingResponse:
             total_results=0,
             error="Processing failed",
         )
-        
+
         assert response.success is False
         assert response.results == []
         assert response.error == "Processing failed"
@@ -282,14 +279,14 @@ class TestQueryProcessingResponse:
             complexity_level=QueryComplexity.COMPLEX,
             classification_reasoning="Performance optimization query",
         )
-        
+
         preprocessing_result = QueryPreprocessingResult(
             original_query="optimize db performance",
             processed_query="optimize database performance",
             corrections_applied=[],
             expansions_added=["db → database"],
         )
-        
+
         response = QueryProcessingResponse(
             success=True,
             results=[],
@@ -299,9 +296,12 @@ class TestQueryProcessingResponse:
             processing_steps=["preprocessing", "intent_classification", "search"],
             fallback_used=False,
         )
-        
+
         assert response.intent_classification.primary_intent == QueryIntent.PERFORMANCE
-        assert response.preprocessing_result.processed_query == "optimize database performance"
+        assert (
+            response.preprocessing_result.processed_query
+            == "optimize database performance"
+        )
         assert len(response.processing_steps) == 3
         assert response.fallback_used is False
 
@@ -312,7 +312,7 @@ class TestQueryProcessingResponse:
             results=[],
             total_results=0,
         )
-        
+
         assert response.total_processing_time_ms == 0.0
         assert response.search_time_ms == 0.0
         assert response.confidence_score == 0.0

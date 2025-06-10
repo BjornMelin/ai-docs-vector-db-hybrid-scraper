@@ -410,12 +410,8 @@ class SearchStrategyResult(BaseModel):
     )
     confidence: float = Field(..., description="Confidence in strategy selection")
     reasoning: str = Field(..., description="Reasoning for strategy choice")
-    estimated_quality: float = Field(
-        ..., description="Estimated result quality score"
-    )
-    estimated_latency_ms: float = Field(
-        ..., description="Estimated processing latency"
-    )
+    estimated_quality: float = Field(..., description="Estimated result quality score")
+    estimated_latency_ms: float = Field(..., description="Estimated processing latency")
 
 
 class AdvancedQueryProcessingResponse(BaseModel):
@@ -426,7 +422,7 @@ class AdvancedQueryProcessingResponse(BaseModel):
         default_factory=list, description="Search results"
     )
     total_results: int = Field(default=0, description="Total number of results")
-    
+
     # Processing results
     intent_classification: QueryIntentResult | None = Field(
         default=None, description="Intent classification results"
@@ -437,26 +433,22 @@ class AdvancedQueryProcessingResponse(BaseModel):
     strategy_selection: SearchStrategyResult | None = Field(
         default=None, description="Strategy selection results"
     )
-    
+
     # Performance metrics
     total_processing_time_ms: float = Field(
         default=0.0, description="Total processing time"
     )
-    search_time_ms: float = Field(
-        default=0.0, description="Search execution time"
-    )
+    search_time_ms: float = Field(default=0.0, description="Search execution time")
     strategy_selection_time_ms: float = Field(
         default=0.0, description="Strategy selection time"
     )
-    
+
     # Quality indicators
     confidence_score: float = Field(
         default=0.0, description="Overall confidence in results"
     )
-    quality_score: float = Field(
-        default=0.0, description="Estimated result quality"
-    )
-    
+    quality_score: float = Field(default=0.0, description="Estimated result quality")
+
     # Processing details
     processing_steps: list[str] = Field(
         default_factory=list, description="Steps taken during processing"
@@ -464,10 +456,8 @@ class AdvancedQueryProcessingResponse(BaseModel):
     fallback_used: bool = Field(
         default=False, description="Whether fallback strategy was used"
     )
-    cache_hit: bool = Field(
-        default=False, description="Whether result was cached"
-    )
-    
+    cache_hit: bool = Field(default=False, description="Whether result was cached")
+
     # Error handling
     error: str | None = Field(default=None, description="Error message if failed")
 
