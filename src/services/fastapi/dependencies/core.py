@@ -145,7 +145,6 @@ def get_container() -> DependencyContainer:
     Raises:
         RuntimeError: If container is not initialized
     """
-    global _container
     if _container is None:
         raise RuntimeError(
             "Dependency container not initialized. Call initialize_dependencies() first."

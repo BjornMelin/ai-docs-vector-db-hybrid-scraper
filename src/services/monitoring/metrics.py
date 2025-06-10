@@ -794,7 +794,6 @@ def get_metrics_registry() -> MetricsRegistry:
     Raises:
         RuntimeError: If registry not initialized
     """
-    global _global_registry
     if _global_registry is None:
         raise RuntimeError(
             "Metrics registry not initialized. Call initialize_metrics() first."
