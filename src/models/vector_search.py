@@ -13,7 +13,6 @@ from pydantic import field_validator
 from ..config.enums import ABTestVariant
 from ..config.enums import FusionAlgorithm
 from ..config.enums import ModelType
-from ..config.enums import OptimizationStrategy
 from ..config.enums import QueryComplexity
 from ..config.enums import QueryType
 from ..config.enums import SearchAccuracy
@@ -305,7 +304,9 @@ class QueryClassification(BaseModel):
 
     query_type: QueryType = Field(..., description="Primary query type")
     complexity_level: QueryComplexity = Field(..., description="Query complexity level")
-    domain: str = Field(..., description="Technical domain (programming, general, etc.)")
+    domain: str = Field(
+        ..., description="Technical domain (programming, general, etc.)"
+    )
     programming_language: str | None = Field(
         None, description="Detected programming language if applicable"
     )
@@ -403,7 +404,7 @@ class SPLADEConfig(BaseModel):
 
     model_name: str = Field(
         default="naver/splade-cocondenser-ensembledistil",
-        description="SPLADE model identifier"
+        description="SPLADE model identifier",
     )
     max_sequence_length: int = Field(
         default=512, description="Maximum input sequence length"
@@ -428,7 +429,7 @@ class ABTestConfig(BaseModel):
     )
     success_metrics: list[str] = Field(
         default_factory=lambda: ["ndcg@10", "mrr", "click_through_rate"],
-        description="Metrics to track for success"
+        description="Metrics to track for success",
     )
     minimum_sample_size: int = Field(
         default=1000, description="Minimum samples per variant for significance"
@@ -477,9 +478,7 @@ class AdvancedHybridSearchRequest(BaseModel):
     user_id: str | None = Field(
         None, description="User ID for personalization and A/B testing"
     )
-    session_id: str | None = Field(
-        None, description="Session ID for context tracking"
-    )
+    session_id: str | None = Field(None, description="Session ID for context tracking")
     score_threshold: float = Field(0.0, description="Minimum score threshold")
 
 
@@ -569,10 +568,10 @@ __all__ = [
     "QueryClassification",
     "QueryFeatures",
     "RetrievalMetrics",
+    "SPLADEConfig",
     "SearchParams",
     "SearchResponse",
     "SearchResult",
     "SearchStage",
-    "SPLADEConfig",
     "VectorSearchConfig",
 ]

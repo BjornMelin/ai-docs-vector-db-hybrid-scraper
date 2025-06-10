@@ -4,9 +4,9 @@ This module contains comprehensive tests for the SPLADEProvider
 including sparse vector generation, tokenization, and caching.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
 from src.config import UnifiedConfig
 from src.models.vector_search import SPLADEConfig
 from src.services.vector_db.splade_provider import SPLADEProvider
@@ -26,7 +26,7 @@ class TestSPLADEProvider:
         return SPLADEConfig(
             model_name="naver/splade-cocondenser-ensembledistil",
             top_k_tokens=100,
-            cache_embeddings=True
+            cache_embeddings=True,
         )
 
     @pytest.fixture
@@ -61,20 +61,20 @@ class TestSPLADEProvider:
     async def test_fallback_vocabulary_structure(self, provider):
         """Test fallback vocabulary structure and content."""
         vocab = provider._build_fallback_vocabulary()
-        
+
         assert isinstance(vocab, dict)
         assert len(vocab) > 0
-        
+
         # Check for key programming terms
         assert "function" in vocab
         assert "class" in vocab
         assert "python" in vocab
         assert "javascript" in vocab
-        
+
         # Check for question words
         assert "how" in vocab
         assert "what" in vocab
-        
+
         # All values should be integers (token IDs)
         for token, token_id in vocab.items():
             assert isinstance(token_id, int)
@@ -83,16 +83,16 @@ class TestSPLADEProvider:
     async def test_basic_sparse_vector_generation(self, provider):
         """Test basic sparse vector generation."""
         text = "How to implement async functions in Python?"
-        
+
         sparse_vector = await provider.generate_sparse_vector(text)
-        
+
         assert isinstance(sparse_vector, dict)
         assert len(sparse_vector) > 0
-        
+
         # All keys should be integers (token IDs)
         for token_id in sparse_vector.keys():
             assert isinstance(token_id, int)
-        
+
         # All values should be floats (weights)
         for weight in sparse_vector.values():
             assert isinstance(weight, float)
@@ -101,24 +101,25 @@ class TestSPLADEProvider:
     async def test_sparse_vector_normalization(self, provider):
         """Test sparse vector normalization."""
         text = "Python programming tutorial"
-        
+
         normalized = await provider.generate_sparse_vector(text, normalize=True)
         unnormalized = await provider.generate_sparse_vector(text, normalize=False)
-        
+
         # Normalized should have different weights
         assert normalized != unnormalized
-        
+
         # Check that normalized vector has L2 norm ≈ 1
         import math
-        norm = math.sqrt(sum(weight ** 2 for weight in normalized.values()))
+
+        norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance
 
     async def test_programming_aware_tokenization(self, provider):
         """Test programming-aware tokenization."""
         code_text = "def calculateSum(a, b): return a + b"
-        
+
         tokens = provider._tokenize_text(code_text)
-        
+
         assert "def" in tokens
         assert "calculatesum" in tokens  # Should be lowercased
         assert "return" in tokens
@@ -128,9 +129,9 @@ class TestSPLADEProvider:
     async def test_camel_case_tokenization(self, provider):
         """Test camelCase tokenization."""
         camel_text = "calculateSum functionName"
-        
+
         tokens = provider._tokenize_text(camel_text)
-        
+
         # Should split camelCase
         assert "calculate" in tokens
         assert "sum" in tokens
@@ -140,9 +141,9 @@ class TestSPLADEProvider:
     async def test_snake_case_tokenization(self, provider):
         """Test snake_case tokenization."""
         snake_text = "function_name variable_value"
-        
+
         tokens = provider._tokenize_text(snake_text)
-        
+
         # Should handle underscores
         assert "function" in tokens
         assert "name" in tokens
@@ -152,14 +153,14 @@ class TestSPLADEProvider:
     async def test_tf_score_calculation(self, provider):
         """Test term frequency score calculation."""
         tokens = ["python", "function", "python", "code", "function", "function"]
-        
+
         tf_scores = provider._calculate_tf_scores(tokens)
-        
+
         assert isinstance(tf_scores, dict)
         assert "python" in tf_scores
         assert "function" in tf_scores
         assert "code" in tf_scores
-        
+
         # function appears more often, should have higher score
         assert tf_scores["function"] > tf_scores["code"]
 
@@ -167,15 +168,15 @@ class TestSPLADEProvider:
         """Test semantic expansion of terms."""
         tf_scores = {"function": 1.0, "variable": 0.8, "error": 0.6}
         text = "How to define a function with variables and handle errors?"
-        
+
         expanded = await provider._apply_semantic_expansion(tf_scores, text)
-        
+
         assert isinstance(expanded, dict)
         # Should include original terms
         assert "function" in expanded
         assert "variable" in expanded
         assert "error" in expanded
-        
+
         # Should include expansions
         assert len(expanded) >= len(tf_scores)
 
@@ -183,9 +184,9 @@ class TestSPLADEProvider:
         """Test programming keyword semantic expansion."""
         tf_scores = {"function": 1.0}
         text = "function definition"
-        
+
         expanded = await provider._apply_semantic_expansion(tf_scores, text)
-        
+
         # Should expand function to related terms
         related_terms = ["method", "procedure", "def", "func"]
         for term in related_terms:
@@ -197,10 +198,14 @@ class TestSPLADEProvider:
         tf_scores = {"tutorial": 0.5}
         question_text = "How to learn Python programming?"
         non_question_text = "Python programming concepts"
-        
-        question_expanded = await provider._apply_semantic_expansion(tf_scores, question_text)
-        non_question_expanded = await provider._apply_semantic_expansion(tf_scores, non_question_text)
-        
+
+        question_expanded = await provider._apply_semantic_expansion(
+            tf_scores, question_text
+        )
+        non_question_expanded = await provider._apply_semantic_expansion(
+            tf_scores, non_question_text
+        )
+
         # Question text should boost tutorial-related terms more
         if "tutorial" in question_expanded and "tutorial" in non_question_expanded:
             assert question_expanded["tutorial"] >= non_question_expanded["tutorial"]
@@ -208,11 +213,11 @@ class TestSPLADEProvider:
     async def test_token_id_generation(self, provider):
         """Test token ID generation and consistency."""
         token = "python"
-        
+
         # Should return consistent IDs
         id1 = provider._get_token_id(token)
         id2 = provider._get_token_id(token)
-        
+
         assert id1 == id2
         assert isinstance(id1, int)
         assert id1 > 0
@@ -220,12 +225,12 @@ class TestSPLADEProvider:
     async def test_unknown_token_handling(self, provider):
         """Test handling of unknown tokens."""
         unknown_token = "veryunusualtoken12345"
-        
+
         token_id = provider._get_token_id(unknown_token)
-        
+
         assert isinstance(token_id, int)
         assert token_id > 0
-        
+
         # Should be added to vocabulary
         assert unknown_token in provider._token_vocab
 
@@ -233,11 +238,11 @@ class TestSPLADEProvider:
         """Test top-k filtering of sparse vectors."""
         # Create a sparse vector with many tokens
         large_sparse_vector = {i: float(i) / 1000 for i in range(200)}
-        
+
         filtered = provider._apply_top_k_filtering(large_sparse_vector)
-        
+
         assert len(filtered) <= provider.splade_config.top_k_tokens
-        
+
         # Should keep the highest weighted tokens
         max_filtered_weight = max(filtered.values())
         assert max_filtered_weight == max(large_sparse_vector.values())
@@ -245,15 +250,15 @@ class TestSPLADEProvider:
     async def test_caching_functionality(self, provider):
         """Test sparse vector caching."""
         text = "Python programming tutorial"
-        
+
         # First call should compute and cache
         vector1 = await provider.generate_sparse_vector(text)
-        
+
         # Second call should use cache
         vector2 = await provider.generate_sparse_vector(text)
-        
+
         assert vector1 == vector2
-        
+
         # Should be in cache
         cache_key = f"{text}_True"
         assert cache_key in provider._cache
@@ -262,9 +267,9 @@ class TestSPLADEProvider:
         """Test disabling cache functionality."""
         provider.splade_config.cache_embeddings = False
         text = "Python programming"
-        
+
         await provider.generate_sparse_vector(text)
-        
+
         # Should not be cached
         cache_key = f"{text}_True"
         assert cache_key not in provider._cache
@@ -274,11 +279,11 @@ class TestSPLADEProvider:
         texts = [
             "Python function definition",
             "JavaScript async await",
-            "Machine learning algorithms"
+            "Machine learning algorithms",
         ]
-        
+
         vectors = await provider.batch_generate_sparse_vectors(texts)
-        
+
         assert len(vectors) == len(texts)
         for vector in vectors:
             assert isinstance(vector, dict)
@@ -287,7 +292,7 @@ class TestSPLADEProvider:
     async def test_empty_text_handling(self, provider):
         """Test handling of empty or whitespace text."""
         empty_texts = ["", "   ", "\n\t"]
-        
+
         for text in empty_texts:
             vector = await provider.generate_sparse_vector(text)
             # Should return empty dict or minimal vector
@@ -296,18 +301,18 @@ class TestSPLADEProvider:
     async def test_long_text_handling(self, provider):
         """Test handling of very long text."""
         long_text = "python function " * 1000  # Very long text
-        
+
         vector = await provider.generate_sparse_vector(long_text)
-        
+
         assert isinstance(vector, dict)
         assert len(vector) > 0
 
     async def test_special_characters_handling(self, provider):
         """Test handling of text with special characters."""
         special_text = "def func(): return @decorator #comment"
-        
+
         vector = await provider.generate_sparse_vector(special_text)
-        
+
         assert isinstance(vector, dict)
         assert len(vector) > 0
 
@@ -320,7 +325,7 @@ class TestSPLADEProvider:
             ("how", "question_word"),
             ("function", "general"),
         ]
-        
+
         for token, expected_category in test_cases:
             category = provider._categorize_token(token)
             assert category == expected_category
@@ -330,9 +335,9 @@ class TestSPLADEProvider:
         # Add a token to vocabulary
         token = "testtoken"
         token_id = provider._get_token_id(token)
-        
+
         info = provider.get_token_info(token_id)
-        
+
         assert info is not None
         assert info["token"] == token
         assert info["id"] == token_id
@@ -349,20 +354,20 @@ class TestSPLADEProvider:
         # Generate some vectors to populate cache
         await provider.generate_sparse_vector("test text 1")
         await provider.generate_sparse_vector("test text 2")
-        
+
         assert len(provider._cache) > 0
-        
+
         provider.clear_cache()
-        
+
         assert len(provider._cache) == 0
 
     async def test_cache_statistics(self, provider):
         """Test cache statistics retrieval."""
         # Generate some vectors
         await provider.generate_sparse_vector("test text")
-        
+
         stats = provider.get_cache_stats()
-        
+
         assert isinstance(stats, dict)
         assert "cache_size" in stats
         assert "vocabulary_size" in stats
@@ -376,7 +381,7 @@ class TestSPLADEProvider:
         # Mock an error in the fallback generation
         original_method = provider._generate_with_fallback
         provider._generate_with_fallback = lambda x: None.__getattribute__("error")
-        
+
         try:
             vector = await provider.generate_sparse_vector("test")
             # Should return empty dict on error
@@ -396,16 +401,19 @@ class TestSPLADEProvider:
         normalized = provider._normalize_sparse_vector(zero_vector)
         assert normalized == zero_vector
 
-    @pytest.mark.parametrize("text,expected_features", [
-        ("async def process():", ["async", "def", "process"]),
-        ("import numpy as np", ["import", "numpy", "np"]),
-        ("for item in list:", ["for", "item", "in", "list"]),
-        ("class MyClass(object):", ["class", "myclass", "object"]),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_features",
+        [
+            ("async def process():", ["async", "def", "process"]),
+            ("import numpy as np", ["import", "numpy", "np"]),
+            ("for item in list:", ["for", "item", "in", "list"]),
+            ("class MyClass(object):", ["class", "myclass", "object"]),
+        ],
+    )
     async def test_specific_tokenization_cases(self, provider, text, expected_features):
         """Test specific tokenization scenarios."""
         tokens = provider._tokenize_text(text)
-        
+
         for feature in expected_features:
             assert feature in tokens
 
@@ -415,16 +423,16 @@ class TestSPLADEProvider:
             "Python list comprehension syntax",
             "JavaScript async/await pattern",
             "Java Spring Boot configuration",
-            "C++ memory management"
+            "C++ memory management",
         ]
-        
+
         vectors = []
         for text in test_cases:
             vector = await provider.generate_sparse_vector(text)
             vectors.append(vector)
             assert isinstance(vector, dict)
             assert len(vector) > 0
-        
+
         # Each should produce different sparse vectors
         for i in range(len(vectors)):
             for j in range(i + 1, len(vectors)):
@@ -434,20 +442,20 @@ class TestSPLADEProvider:
         """Test semantic consistency for related terms."""
         related_texts = [
             "Python function definition",
-            "Python method implementation", 
-            "Python procedure creation"
+            "Python method implementation",
+            "Python procedure creation",
         ]
-        
+
         vectors = []
         for text in related_texts:
             vector = await provider.generate_sparse_vector(text)
             vectors.append(vector)
-        
+
         # Should have some overlap in tokens due to semantic expansion
         all_tokens = set()
         for vector in vectors:
             all_tokens.update(vector.keys())
-        
+
         # Each vector should share some tokens with others
         for i, vector in enumerate(vectors):
             shared_count = 0
@@ -461,11 +469,11 @@ class TestSPLADEProvider:
     async def test_weight_distribution(self, provider):
         """Test that weight distribution is reasonable."""
         text = "Python programming tutorial with examples and code"
-        
+
         vector = await provider.generate_sparse_vector(text)
-        
+
         weights = list(vector.values())
-        
+
         # Should have a reasonable distribution
         assert len(weights) > 0
         assert max(weights) > min(weights)  # Should have variation
@@ -475,15 +483,15 @@ class TestSPLADEProvider:
         """Test behavior when actual SPLADE model is not available."""
         # The provider should use fallback implementation
         vector = await provider.generate_sparse_vector("machine learning algorithm")
-        
+
         assert isinstance(vector, dict)
         assert len(vector) > 0
-        
+
         # Should contain programming-related tokens
         token_ids = set(vector.keys())
         vocab_reverse = {v: k for k, v in provider._token_vocab.items()}
         tokens = [vocab_reverse.get(tid, "") for tid in token_ids]
-        
+
         # Should have some meaningful tokens
         meaningful_tokens = [t for t in tokens if len(t) > 2]
         assert len(meaningful_tokens) > 0

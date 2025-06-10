@@ -31,7 +31,9 @@ class ModelSelector:
         self.config = config
         self.model_registry = self._initialize_model_registry()
         self.performance_history: dict[str, dict[str, float]] = {}
-        self.cost_budget = getattr(config, 'embedding_cost_budget', 1000.0)  # Monthly budget in USD
+        self.cost_budget = getattr(
+            config, "embedding_cost_budget", 1000.0
+        )  # Monthly budget in USD
 
     def _initialize_model_registry(self) -> dict[str, dict[str, Any]]:
         """Initialize registry of available embedding models with their characteristics."""
@@ -46,7 +48,7 @@ class ModelSelector:
                 "specializations": ["general", "conceptual", "documentation"],
                 "max_tokens": 8191,
                 "provider": "openai",
-                "description": "Cost-effective general purpose embedding model"
+                "description": "Cost-effective general purpose embedding model",
             },
             EmbeddingModel.TEXT_EMBEDDING_3_LARGE.value: {
                 "type": ModelType.GENERAL_PURPOSE,
@@ -57,9 +59,8 @@ class ModelSelector:
                 "specializations": ["complex", "conceptual", "multimodal"],
                 "max_tokens": 8191,
                 "provider": "openai",
-                "description": "High-quality general purpose embedding model"
+                "description": "High-quality general purpose embedding model",
             },
-
             # FastEmbed Models (Local inference)
             EmbeddingModel.NV_EMBED_V2.value: {
                 "type": ModelType.GENERAL_PURPOSE,
@@ -70,7 +71,7 @@ class ModelSelector:
                 "specializations": ["general", "code", "technical"],
                 "max_tokens": 32768,
                 "provider": "fastembed",
-                "description": "Top-performing open source embedding model"
+                "description": "Top-performing open source embedding model",
             },
             EmbeddingModel.BGE_SMALL_EN_V15.value: {
                 "type": ModelType.GENERAL_PURPOSE,
@@ -81,7 +82,7 @@ class ModelSelector:
                 "specializations": ["general", "fast"],
                 "max_tokens": 512,
                 "provider": "fastembed",
-                "description": "Fast, cost-effective open source model"
+                "description": "Fast, cost-effective open source model",
             },
             EmbeddingModel.BGE_LARGE_EN_V15.value: {
                 "type": ModelType.GENERAL_PURPOSE,
@@ -92,9 +93,8 @@ class ModelSelector:
                 "specializations": ["general", "balanced"],
                 "max_tokens": 512,
                 "provider": "fastembed",
-                "description": "High-quality open source embedding model"
+                "description": "High-quality open source embedding model",
             },
-
             # Specialized Models
             "code-search-net": {
                 "type": ModelType.CODE_SPECIALIZED,
@@ -105,7 +105,7 @@ class ModelSelector:
                 "specializations": ["code", "programming", "api"],
                 "max_tokens": 2048,
                 "provider": "local",
-                "description": "Code-specialized embedding model"
+                "description": "Code-specialized embedding model",
             },
             "clip-vit-base-patch32": {
                 "type": ModelType.MULTIMODAL,
@@ -116,15 +116,15 @@ class ModelSelector:
                 "specializations": ["multimodal", "visual", "documentation"],
                 "max_tokens": 77,
                 "provider": "local",
-                "description": "Multi-modal vision-text embedding model"
-            }
+                "description": "Multi-modal vision-text embedding model",
+            },
         }
 
     async def select_optimal_model(
         self,
         query_classification: QueryClassification,
         optimization_strategy: OptimizationStrategy = OptimizationStrategy.BALANCED,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> ModelSelectionStrategy:
         """Select the optimal embedding model based on query characteristics.
 
@@ -150,7 +150,8 @@ class ModelSelector:
 
             # Determine fallback models
             fallback_models = [
-                model["model_id"] for model in sorted(
+                model["model_id"]
+                for model in sorted(
                     scored_candidates, key=lambda x: x["total_score"], reverse=True
                 )[1:3]  # Top 2 alternatives
             ]
@@ -166,14 +167,16 @@ class ModelSelector:
                 selection_rationale=best_model["rationale"],
                 expected_performance=best_model["quality_score"],
                 cost_efficiency=best_model["cost_efficiency"],
-                query_classification=query_classification
+                query_classification=query_classification,
             )
 
         except Exception as e:
             logger.error(f"Model selection failed: {e}", exc_info=True)
             return self._get_fallback_strategy(query_classification)
 
-    def _get_candidate_models(self, query_classification: QueryClassification) -> list[str]:
+    def _get_candidate_models(
+        self, query_classification: QueryClassification
+    ) -> list[str]:
         """Get candidate models based on query characteristics."""
         candidates = []
 
@@ -183,12 +186,21 @@ class ModelSelector:
 
             # Check if model is suitable for query type
             if query_classification.query_type == QueryType.CODE:
-                if "code" in specializations or model_info["type"] == ModelType.CODE_SPECIALIZED:
+                if (
+                    "code" in specializations
+                    or model_info["type"] == ModelType.CODE_SPECIALIZED
+                ):
                     candidates.append(model_id)
             elif query_classification.query_type == QueryType.MULTIMODAL:
-                if "multimodal" in specializations or model_info["type"] == ModelType.MULTIMODAL:
+                if (
+                    "multimodal" in specializations
+                    or model_info["type"] == ModelType.MULTIMODAL
+                ):
                     candidates.append(model_id)
-            elif query_classification.query_type in [QueryType.CONCEPTUAL, QueryType.DOCUMENTATION]:
+            elif query_classification.query_type in [
+                QueryType.CONCEPTUAL,
+                QueryType.DOCUMENTATION,
+            ]:
                 if "general" in specializations or "conceptual" in specializations:
                     candidates.append(model_id)
             elif query_classification.query_type == QueryType.API_REFERENCE:
@@ -197,7 +209,10 @@ class ModelSelector:
 
         # Always include general-purpose models as fallbacks
         for model_id, model_info in self.model_registry.items():
-            if model_info["type"] == ModelType.GENERAL_PURPOSE and model_id not in candidates:
+            if (
+                model_info["type"] == ModelType.GENERAL_PURPOSE
+                and model_id not in candidates
+            ):
                 candidates.append(model_id)
 
         return candidates
@@ -207,7 +222,7 @@ class ModelSelector:
         candidates: list[str],
         query_classification: QueryClassification,
         optimization_strategy: OptimizationStrategy,
-        context: dict[str, Any] | None
+        context: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
         """Score candidate models based on multiple criteria."""
         scored_candidates = []
@@ -218,7 +233,9 @@ class ModelSelector:
             # Base scores
             quality_score = model_info["quality_score"]
             speed_score = 1.0 - (model_info["latency_ms"] / 300.0)  # Normalize to 0-1
-            cost_score = 1.0 - min(model_info["cost_per_1k_tokens"] / 0.001, 1.0)  # Normalize
+            cost_score = 1.0 - min(
+                model_info["cost_per_1k_tokens"] / 0.001, 1.0
+            )  # Normalize
 
             # Specialization bonus
             specialization_score = self._calculate_specialization_score(
@@ -226,33 +243,43 @@ class ModelSelector:
             )
 
             # Historical performance adjustment
-            historical_score = self._get_historical_performance(model_id, query_classification)
+            historical_score = self._get_historical_performance(
+                model_id, query_classification
+            )
 
             # Combine scores based on optimization strategy
             total_score = self._calculate_weighted_score(
-                quality_score, speed_score, cost_score, specialization_score,
-                historical_score, optimization_strategy
+                quality_score,
+                speed_score,
+                cost_score,
+                specialization_score,
+                historical_score,
+                optimization_strategy,
             )
 
             # Cost efficiency calculation
-            cost_efficiency = quality_score / max(model_info["cost_per_1k_tokens"], 0.00001)
+            cost_efficiency = quality_score / max(
+                model_info["cost_per_1k_tokens"], 0.00001
+            )
 
             # Generate rationale
             rationale = self._generate_selection_rationale(
                 model_id, model_info, total_score, optimization_strategy
             )
 
-            scored_candidates.append({
-                "model_id": model_id,
-                "total_score": total_score,
-                "quality_score": quality_score,
-                "speed_score": speed_score,
-                "cost_score": cost_score,
-                "specialization_score": specialization_score,
-                "historical_score": historical_score,
-                "cost_efficiency": cost_efficiency,
-                "rationale": rationale
-            })
+            scored_candidates.append(
+                {
+                    "model_id": model_id,
+                    "total_score": total_score,
+                    "quality_score": quality_score,
+                    "speed_score": speed_score,
+                    "cost_score": cost_score,
+                    "specialization_score": specialization_score,
+                    "historical_score": historical_score,
+                    "cost_efficiency": cost_efficiency,
+                    "rationale": rationale,
+                }
+            )
 
         return scored_candidates
 
@@ -274,7 +301,10 @@ class ModelSelector:
                 score += 0.4
             if model_info["type"] == ModelType.MULTIMODAL:
                 score += 0.3
-        elif query_classification.query_type in [QueryType.CONCEPTUAL, QueryType.DOCUMENTATION]:
+        elif query_classification.query_type in [
+            QueryType.CONCEPTUAL,
+            QueryType.DOCUMENTATION,
+        ]:
             if "conceptual" in specializations or "documentation" in specializations:
                 score += 0.2
 
@@ -297,7 +327,9 @@ class ModelSelector:
         self, model_id: str, query_classification: QueryClassification
     ) -> float:
         """Get historical performance score for model on similar queries."""
-        query_type_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
+        query_type_key = (
+            f"{query_classification.query_type}_{query_classification.complexity_level}"
+        )
 
         if model_id not in self.performance_history:
             return 0.5  # Neutral score for unknown models
@@ -318,11 +350,17 @@ class ModelSelector:
         cost_score: float,
         specialization_score: float,
         historical_score: float,
-        optimization_strategy: OptimizationStrategy
+        optimization_strategy: OptimizationStrategy,
     ) -> float:
         """Calculate weighted total score based on optimization strategy."""
         if optimization_strategy == OptimizationStrategy.QUALITY_OPTIMIZED:
-            weights = [0.4, 0.1, 0.1, 0.25, 0.15]  # Quality, Speed, Cost, Specialization, Historical
+            weights = [
+                0.4,
+                0.1,
+                0.1,
+                0.25,
+                0.15,
+            ]  # Quality, Speed, Cost, Specialization, Historical
         elif optimization_strategy == OptimizationStrategy.SPEED_OPTIMIZED:
             weights = [0.2, 0.4, 0.1, 0.15, 0.15]
         elif optimization_strategy == OptimizationStrategy.COST_OPTIMIZED:
@@ -330,10 +368,18 @@ class ModelSelector:
         else:  # BALANCED
             weights = [0.25, 0.2, 0.2, 0.2, 0.15]
 
-        scores = [quality_score, speed_score, cost_score, specialization_score, historical_score]
-        return sum(w * s for w, s in zip(weights, scores))
+        scores = [
+            quality_score,
+            speed_score,
+            cost_score,
+            specialization_score,
+            historical_score,
+        ]
+        return sum(w * s for w, s in zip(weights, scores, strict=False))
 
-    def _calculate_ensemble_weights(self, scored_candidates: list[dict[str, Any]]) -> dict[str, float]:
+    def _calculate_ensemble_weights(
+        self, scored_candidates: list[dict[str, Any]]
+    ) -> dict[str, float]:
         """Calculate ensemble weights for multi-model usage."""
         if len(scored_candidates) < 2:
             return {}
@@ -356,20 +402,28 @@ class ModelSelector:
         model_id: str,
         model_info: dict[str, Any],
         total_score: float,
-        optimization_strategy: OptimizationStrategy
+        optimization_strategy: OptimizationStrategy,
     ) -> str:
         """Generate human-readable rationale for model selection."""
         rationale_parts = [f"Selected {model_id}"]
 
         # Add primary reason based on optimization strategy
         if optimization_strategy == OptimizationStrategy.QUALITY_OPTIMIZED:
-            rationale_parts.append(f"for optimal quality (score: {model_info['quality_score']:.2f})")
+            rationale_parts.append(
+                f"for optimal quality (score: {model_info['quality_score']:.2f})"
+            )
         elif optimization_strategy == OptimizationStrategy.SPEED_OPTIMIZED:
-            rationale_parts.append(f"for fastest response ({model_info['latency_ms']}ms latency)")
+            rationale_parts.append(
+                f"for fastest response ({model_info['latency_ms']}ms latency)"
+            )
         elif optimization_strategy == OptimizationStrategy.COST_OPTIMIZED:
-            rationale_parts.append(f"for cost efficiency (${model_info['cost_per_1k_tokens']:.5f}/1k tokens)")
+            rationale_parts.append(
+                f"for cost efficiency (${model_info['cost_per_1k_tokens']:.5f}/1k tokens)"
+            )
         else:
-            rationale_parts.append(f"for balanced performance (total score: {total_score:.2f})")
+            rationale_parts.append(
+                f"for balanced performance (total score: {total_score:.2f})"
+            )
 
         # Add specialization info
         if model_info["specializations"]:
@@ -384,7 +438,9 @@ class ModelSelector:
 
         return ". ".join(rationale_parts)
 
-    def _get_fallback_strategy(self, query_classification: QueryClassification) -> ModelSelectionStrategy:
+    def _get_fallback_strategy(
+        self, query_classification: QueryClassification
+    ) -> ModelSelectionStrategy:
         """Get fallback strategy when selection fails."""
         # Default to balanced general-purpose model
         fallback_model = EmbeddingModel.BGE_LARGE_EN_V15.value
@@ -397,14 +453,14 @@ class ModelSelector:
             selection_rationale="Fallback to reliable general-purpose model due to selection error",
             expected_performance=0.7,
             cost_efficiency=0.8,
-            query_classification=query_classification
+            query_classification=query_classification,
         )
 
     async def update_performance_history(
         self,
         model_id: str,
         query_classification: QueryClassification,
-        performance_score: float
+        performance_score: float,
     ) -> None:
         """Update performance history for a model on a specific query type."""
         try:
@@ -431,23 +487,30 @@ class ModelSelector:
         """Get information about a specific model."""
         return self.model_registry.get(model_id)
 
-    def list_available_models(self, model_type: ModelType | None = None) -> list[dict[str, Any]]:
+    def list_available_models(
+        self, model_type: ModelType | None = None
+    ) -> list[dict[str, Any]]:
         """List available models, optionally filtered by type."""
         models = []
         for model_id, model_info in self.model_registry.items():
             if model_type is None or model_info["type"] == model_type:
-                models.append({
-                    "id": model_id,
-                    "type": model_info["type"],
-                    "description": model_info["description"],
-                    "quality_score": model_info["quality_score"],
-                    "cost_per_1k_tokens": model_info["cost_per_1k_tokens"],
-                    "latency_ms": model_info["latency_ms"]
-                })
+                models.append(
+                    {
+                        "id": model_id,
+                        "type": model_info["type"],
+                        "description": model_info["description"],
+                        "quality_score": model_info["quality_score"],
+                        "cost_per_1k_tokens": model_info["cost_per_1k_tokens"],
+                        "latency_ms": model_info["latency_ms"],
+                    }
+                )
         return models
 
     def estimate_monthly_cost(
-        self, model_id: str, estimated_queries_per_month: int, avg_tokens_per_query: int = 100
+        self,
+        model_id: str,
+        estimated_queries_per_month: int,
+        avg_tokens_per_query: int = 100,
     ) -> float:
         """Estimate monthly cost for using a specific model."""
         model_info = self.model_registry.get(model_id)
@@ -468,12 +531,14 @@ class ModelSelector:
             estimated_cost = self.estimate_monthly_cost(model_id, estimated_queries)
             if estimated_cost <= monthly_budget:
                 efficiency = model_info["quality_score"] / max(estimated_cost, 0.01)
-                recommendations.append({
-                    "model_id": model_id,
-                    "estimated_monthly_cost": estimated_cost,
-                    "quality_score": model_info["quality_score"],
-                    "cost_efficiency": efficiency,
-                    "description": model_info["description"]
-                })
+                recommendations.append(
+                    {
+                        "model_id": model_id,
+                        "estimated_monthly_cost": estimated_cost,
+                        "quality_score": model_info["quality_score"],
+                        "cost_efficiency": efficiency,
+                        "description": model_info["description"],
+                    }
+                )
 
         return sorted(recommendations, key=lambda x: x["cost_efficiency"], reverse=True)

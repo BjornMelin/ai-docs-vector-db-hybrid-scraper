@@ -28,25 +28,107 @@ class QueryClassifier:
         """
         self.config = config
         self._programming_keywords = {
-            "function", "method", "class", "variable", "array", "object", "string",
-            "integer", "boolean", "import", "export", "async", "await", "promise",
-            "callback", "interface", "type", "enum", "generic", "template",
-            "module", "package", "library", "framework", "api", "endpoint",
-            "database", "query", "schema", "model", "controller", "service",
-            "component", "directive", "decorator", "annotation", "inheritance",
-            "polymorphism", "encapsulation", "abstraction", "algorithm",
-            "data structure", "recursion", "iteration", "loop", "condition",
-            "exception", "error", "debug", "test", "unit test", "integration",
-            "deployment", "build", "compile", "runtime", "memory", "performance",
-            "optimization", "refactor", "version control", "git", "repository"
+            "function",
+            "method",
+            "class",
+            "variable",
+            "array",
+            "object",
+            "string",
+            "integer",
+            "boolean",
+            "import",
+            "export",
+            "async",
+            "await",
+            "promise",
+            "callback",
+            "interface",
+            "type",
+            "enum",
+            "generic",
+            "template",
+            "module",
+            "package",
+            "library",
+            "framework",
+            "api",
+            "endpoint",
+            "database",
+            "query",
+            "schema",
+            "model",
+            "controller",
+            "service",
+            "component",
+            "directive",
+            "decorator",
+            "annotation",
+            "inheritance",
+            "polymorphism",
+            "encapsulation",
+            "abstraction",
+            "algorithm",
+            "data structure",
+            "recursion",
+            "iteration",
+            "loop",
+            "condition",
+            "exception",
+            "error",
+            "debug",
+            "test",
+            "unit test",
+            "integration",
+            "deployment",
+            "build",
+            "compile",
+            "runtime",
+            "memory",
+            "performance",
+            "optimization",
+            "refactor",
+            "version control",
+            "git",
+            "repository",
         }
 
         self._programming_languages = {
-            "python", "javascript", "typescript", "java", "c++", "c#", "go",
-            "rust", "swift", "kotlin", "scala", "ruby", "php", "html", "css",
-            "sql", "bash", "shell", "powershell", "react", "vue", "angular",
-            "node", "django", "flask", "spring", "laravel", "rails", "express",
-            ".net", "pandas", "numpy", "tensorflow", "pytorch", "sklearn"
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "c++",
+            "c#",
+            "go",
+            "rust",
+            "swift",
+            "kotlin",
+            "scala",
+            "ruby",
+            "php",
+            "html",
+            "css",
+            "sql",
+            "bash",
+            "shell",
+            "powershell",
+            "react",
+            "vue",
+            "angular",
+            "node",
+            "django",
+            "flask",
+            "spring",
+            "laravel",
+            "rails",
+            "express",
+            ".net",
+            "pandas",
+            "numpy",
+            "tensorflow",
+            "pytorch",
+            "sklearn",
         }
 
         self._question_patterns = {
@@ -59,7 +141,7 @@ class QueryClassifier:
             "implement": r"\b(implement|create|build|make|develop)\b",
             "debug": r"\b(debug|fix|solve|error|issue|problem)\b",
             "compare": r"\b(compare|difference|vs|versus|better)\b",
-            "tutorial": r"\b(tutorial|guide|learn|example|demo)\b"
+            "tutorial": r"\b(tutorial|guide|learn|example|demo)\b",
         }
 
         self._code_syntax_patterns = [
@@ -102,7 +184,9 @@ class QueryClassifier:
             programming_language = self._detect_programming_language(query, features)
 
             # Calculate overall confidence
-            confidence = self._calculate_confidence(query, features, query_type, complexity)
+            confidence = self._calculate_confidence(
+                query, features, query_type, complexity
+            )
 
             # Check for multimodal indicators
             is_multimodal = self._detect_multimodal(query, features)
@@ -114,7 +198,7 @@ class QueryClassifier:
                 programming_language=programming_language,
                 is_multimodal=is_multimodal,
                 confidence=confidence,
-                features=features.model_dump()
+                features=features.model_dump(),
             )
 
         except Exception as e:
@@ -127,7 +211,7 @@ class QueryClassifier:
                 programming_language=None,
                 is_multimodal=False,
                 confidence=0.5,
-                features={}
+                features={},
             )
 
     def _extract_features(self, query: str) -> QueryFeatures:
@@ -139,10 +223,13 @@ class QueryClassifier:
         query_length = len(tokens)
 
         # Programming-related features
-        has_code_keywords = any(keyword in query_lower for keyword in self._programming_keywords)
+        has_code_keywords = any(
+            keyword in query_lower for keyword in self._programming_keywords
+        )
         has_function_names = bool(re.search(r"\w+\(\)", query))
         has_programming_syntax = any(
-            re.search(pattern, query, re.IGNORECASE) for pattern in self._code_syntax_patterns
+            re.search(pattern, query, re.IGNORECASE)
+            for pattern in self._code_syntax_patterns
         )
 
         # Question analysis
@@ -156,8 +243,7 @@ class QueryClassifier:
 
         # Programming language indicators
         programming_language_indicators = [
-            lang for lang in self._programming_languages
-            if lang in query_lower
+            lang for lang in self._programming_languages if lang in query_lower
         ]
 
         # Semantic complexity scoring
@@ -176,7 +262,7 @@ class QueryClassifier:
             entity_mentions=entity_mentions,
             programming_language_indicators=programming_language_indicators,
             semantic_complexity=semantic_complexity,
-            keyword_density=keyword_density
+            keyword_density=keyword_density,
         )
 
     def _classify_query_type(self, query: str, features: QueryFeatures) -> QueryType:
@@ -184,39 +270,62 @@ class QueryClassifier:
         query_lower = query.lower()
 
         # Code search indicators
-        if (features.has_programming_syntax or
-            features.has_function_names or
-            len(features.programming_language_indicators) > 0):
+        if (
+            features.has_programming_syntax
+            or features.has_function_names
+            or len(features.programming_language_indicators) > 0
+        ):
             return QueryType.CODE
 
         # API reference indicators
-        if any(term in query_lower for term in ["api", "reference", "documentation", "docs"]):
-            if any(term in query_lower for term in ["endpoint", "method", "parameter", "response"]):
+        if any(
+            term in query_lower
+            for term in ["api", "reference", "documentation", "docs"]
+        ):
+            if any(
+                term in query_lower
+                for term in ["endpoint", "method", "parameter", "response"]
+            ):
                 return QueryType.API_REFERENCE
 
         # Documentation indicators
-        if any(term in query_lower for term in [
-            "documentation", "docs", "guide", "manual", "specification"
-        ]):
+        if any(
+            term in query_lower
+            for term in ["documentation", "docs", "guide", "manual", "specification"]
+        ):
             return QueryType.DOCUMENTATION
 
         # Troubleshooting indicators
-        if any(term in query_lower for term in [
-            "error", "issue", "problem", "bug", "fix", "debug", "troubleshoot",
-            "not working", "fails", "broken"
-        ]):
+        if any(
+            term in query_lower
+            for term in [
+                "error",
+                "issue",
+                "problem",
+                "bug",
+                "fix",
+                "debug",
+                "troubleshoot",
+                "not working",
+                "fails",
+                "broken",
+            ]
+        ):
             return QueryType.TROUBLESHOOTING
 
         # Multimodal indicators
-        if features.has_code_keywords and any(term in query_lower for term in [
-            "example", "tutorial", "demo", "screenshot", "image", "video"
-        ]):
+        if features.has_code_keywords and any(
+            term in query_lower
+            for term in ["example", "tutorial", "demo", "screenshot", "image", "video"]
+        ):
             return QueryType.MULTIMODAL
 
         # Default to conceptual
         return QueryType.CONCEPTUAL
 
-    def _assess_complexity(self, query: str, features: QueryFeatures) -> QueryComplexity:
+    def _assess_complexity(
+        self, query: str, features: QueryFeatures
+    ) -> QueryComplexity:
         """Assess query complexity level."""
         complexity_score = 0
 
@@ -239,7 +348,14 @@ class QueryClassifier:
             complexity_score += 2
 
         # Multi-hop indicators
-        multi_hop_keywords = ["and", "then", "after", "also", "additionally", "furthermore"]
+        multi_hop_keywords = [
+            "and",
+            "then",
+            "after",
+            "also",
+            "additionally",
+            "furthermore",
+        ]
         if any(keyword in query.lower() for keyword in multi_hop_keywords):
             complexity_score += 1
 
@@ -260,32 +376,55 @@ class QueryClassifier:
             return "programming"
 
         # Web development
-        if any(term in query_lower for term in [
-            "web", "frontend", "backend", "html", "css", "javascript", "react", "vue"
-        ]):
+        if any(
+            term in query_lower
+            for term in [
+                "web",
+                "frontend",
+                "backend",
+                "html",
+                "css",
+                "javascript",
+                "react",
+                "vue",
+            ]
+        ):
             return "web_development"
 
         # Data science
-        if any(term in query_lower for term in [
-            "data", "analysis", "machine learning", "ai", "pandas", "numpy", "sklearn"
-        ]):
+        if any(
+            term in query_lower
+            for term in [
+                "data",
+                "analysis",
+                "machine learning",
+                "ai",
+                "pandas",
+                "numpy",
+                "sklearn",
+            ]
+        ):
             return "data_science"
 
         # DevOps
-        if any(term in query_lower for term in [
-            "docker", "kubernetes", "deployment", "ci/cd", "aws", "cloud"
-        ]):
+        if any(
+            term in query_lower
+            for term in ["docker", "kubernetes", "deployment", "ci/cd", "aws", "cloud"]
+        ):
             return "devops"
 
         # Mobile development
-        if any(term in query_lower for term in [
-            "mobile", "android", "ios", "swift", "kotlin", "react native"
-        ]):
+        if any(
+            term in query_lower
+            for term in ["mobile", "android", "ios", "swift", "kotlin", "react native"]
+        ):
             return "mobile_development"
 
         return "general"
 
-    def _detect_programming_language(self, query: str, features: QueryFeatures) -> str | None:
+    def _detect_programming_language(
+        self, query: str, features: QueryFeatures
+    ) -> str | None:
         """Detect the primary programming language mentioned in the query."""
         if features.programming_language_indicators:
             # Return the first detected language (could be enhanced with ranking)
@@ -297,7 +436,7 @@ class QueryClassifier:
         query: str,
         features: QueryFeatures,
         query_type: QueryType,
-        complexity: QueryComplexity
+        complexity: QueryComplexity,
     ) -> float:
         """Calculate confidence score for the classification."""
         confidence = 0.5  # Base confidence
@@ -324,8 +463,18 @@ class QueryClassifier:
         """Detect if query involves multiple modalities."""
         query_lower = query.lower()
         multimodal_keywords = [
-            "image", "picture", "screenshot", "diagram", "chart", "graph",
-            "video", "audio", "visual", "example", "demo", "illustration"
+            "image",
+            "picture",
+            "screenshot",
+            "diagram",
+            "chart",
+            "graph",
+            "video",
+            "audio",
+            "visual",
+            "example",
+            "demo",
+            "illustration",
         ]
         return any(keyword in query_lower for keyword in multimodal_keywords)
 
@@ -339,12 +488,27 @@ class QueryClassifier:
     def _assess_technical_depth(self, query_lower: str, tokens: list[str]) -> str:
         """Assess the technical depth of the query."""
         advanced_terms = [
-            "architecture", "pattern", "optimization", "algorithm", "complexity",
-            "performance", "scalability", "design", "implementation", "framework"
+            "architecture",
+            "pattern",
+            "optimization",
+            "algorithm",
+            "complexity",
+            "performance",
+            "scalability",
+            "design",
+            "implementation",
+            "framework",
         ]
         basic_terms = [
-            "what", "how", "basic", "simple", "introduction", "beginner",
-            "start", "getting started", "hello world"
+            "what",
+            "how",
+            "basic",
+            "simple",
+            "introduction",
+            "beginner",
+            "start",
+            "getting started",
+            "hello world",
         ]
 
         advanced_count = sum(1 for term in advanced_terms if term in query_lower)
@@ -367,24 +531,39 @@ class QueryClassifier:
         entities.extend(quoted_terms)
 
         # Extract terms in code blocks
-        code_terms = re.findall(r'`([^`]*)`', query_lower)
+        code_terms = re.findall(r"`([^`]*)`", query_lower)
         entities.extend(code_terms)
 
         # Extract function/method names
-        function_names = re.findall(r'(\w+)\(\)', query_lower)
+        function_names = re.findall(r"(\w+)\(\)", query_lower)
         entities.extend(function_names)
 
         return entities
 
-    def _calculate_semantic_complexity(self, query_lower: str, tokens: list[str]) -> float:
+    def _calculate_semantic_complexity(
+        self, query_lower: str, tokens: list[str]
+    ) -> float:
         """Calculate semantic complexity of the query."""
         complexity_indicators = [
-            "relationship", "difference", "comparison", "integration", "combination",
-            "interaction", "dependency", "correlation", "cause", "effect",
-            "consequence", "implication", "alternative", "trade-off"
+            "relationship",
+            "difference",
+            "comparison",
+            "integration",
+            "combination",
+            "interaction",
+            "dependency",
+            "correlation",
+            "cause",
+            "effect",
+            "consequence",
+            "implication",
+            "alternative",
+            "trade-off",
         ]
 
-        complexity_score = sum(1 for indicator in complexity_indicators if indicator in query_lower)
+        complexity_score = sum(
+            1 for indicator in complexity_indicators if indicator in query_lower
+        )
         return min(complexity_score / 5.0, 1.0)  # Normalize to 0-1
 
     def _calculate_keyword_density(self, query_lower: str, tokens: list[str]) -> float:
@@ -393,8 +572,10 @@ class QueryClassifier:
             return 0.0
 
         technical_tokens = sum(
-            1 for token in tokens
-            if token in self._programming_keywords or token in self._programming_languages
+            1
+            for token in tokens
+            if token in self._programming_keywords
+            or token in self._programming_languages
         )
 
         return technical_tokens / len(tokens)

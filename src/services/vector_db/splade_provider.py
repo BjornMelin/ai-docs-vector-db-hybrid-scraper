@@ -4,7 +4,6 @@ This module implements SPLADE (Sparse Lexical And Expansion model for Passage re
 for generating high-quality sparse vectors that combine keyword matching with semantic expansion.
 """
 
-import asyncio
 import logging
 import re
 from typing import Any
@@ -20,7 +19,9 @@ logger = logging.getLogger(__name__)
 class SPLADEProvider:
     """SPLADE provider for generating sparse vectors with semantic expansion."""
 
-    def __init__(self, config: UnifiedConfig, splade_config: SPLADEConfig | None = None):
+    def __init__(
+        self, config: UnifiedConfig, splade_config: SPLADEConfig | None = None
+    ):
         """Initialize SPLADE provider.
 
         Args:
@@ -43,7 +44,9 @@ class SPLADEProvider:
             await self._load_splade_model()
             logger.info("SPLADE provider initialized successfully")
         except Exception as e:
-            logger.warning(f"Failed to load SPLADE model: {e}. Using fallback sparse generation.")
+            logger.warning(
+                f"Failed to load SPLADE model: {e}. Using fallback sparse generation."
+            )
             self._model = None
             self._tokenizer = None
 
@@ -63,7 +66,9 @@ class SPLADEProvider:
             pass
 
         except ImportError:
-            logger.warning("Transformers library not available, using fallback sparse generation")
+            logger.warning(
+                "Transformers library not available, using fallback sparse generation"
+            )
         except Exception as e:
             logger.error(f"Failed to load SPLADE model: {e}")
             raise
@@ -145,11 +150,11 @@ class SPLADEProvider:
 
         # Handle code-specific tokenization
         # Split on programming syntax
-        text = re.sub(r'([.(){}[\],;:=<>!&|+\-*/])', r' \1 ', text)
+        text = re.sub(r"([.(){}[\],;:=<>!&|+\-*/])", r" \1 ", text)
 
         # Handle camelCase and snake_case
-        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
-        text = re.sub(r'_', ' _ ', text)
+        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+        text = re.sub(r"_", " _ ", text)
 
         # Basic tokenization
         tokens = text.split()
@@ -158,7 +163,17 @@ class SPLADEProvider:
         filtered_tokens = []
         for token in tokens:
             token = token.strip()
-            if len(token) >= 2 or token in ['a', 'i', 'or', 'if', 'is', 'to', 'of', 'in', 'on']:
+            if len(token) >= 2 or token in [
+                "a",
+                "i",
+                "or",
+                "if",
+                "is",
+                "to",
+                "of",
+                "in",
+                "on",
+            ]:
                 filtered_tokens.append(token)
 
         return filtered_tokens
@@ -205,7 +220,7 @@ class SPLADEProvider:
             "database": ["db", "storage", "data"],
             "api": ["endpoint", "service", "interface"],
             "test": ["testing", "spec", "unittest"],
-            "debug": ["debugging", "trace", "troubleshoot"]
+            "debug": ["debugging", "trace", "troubleshoot"],
         }
 
         # Apply expansions with reduced weights
@@ -219,11 +234,30 @@ class SPLADEProvider:
 
         # Boost important programming keywords
         programming_keywords = {
-            "async", "await", "promise", "callback", "event", "listener",
-            "component", "module", "package", "library", "framework",
-            "algorithm", "performance", "optimization", "memory",
-            "security", "authentication", "authorization", "validation",
-            "deployment", "build", "compile", "runtime", "configuration"
+            "async",
+            "await",
+            "promise",
+            "callback",
+            "event",
+            "listener",
+            "component",
+            "module",
+            "package",
+            "library",
+            "framework",
+            "algorithm",
+            "performance",
+            "optimization",
+            "memory",
+            "security",
+            "authentication",
+            "authorization",
+            "validation",
+            "deployment",
+            "build",
+            "compile",
+            "runtime",
+            "configuration",
         }
 
         keyword_boost = 1.2
@@ -232,8 +266,17 @@ class SPLADEProvider:
                 expanded_scores[keyword] *= keyword_boost
 
         # Apply question-specific boosts
-        if any(q in original_text.lower() for q in ["how", "what", "why", "when", "where"]):
-            question_terms = ["tutorial", "guide", "example", "demo", "learn", "explain"]
+        if any(
+            q in original_text.lower() for q in ["how", "what", "why", "when", "where"]
+        ):
+            question_terms = [
+                "tutorial",
+                "guide",
+                "example",
+                "demo",
+                "learn",
+                "explain",
+            ]
             for term in question_terms:
                 if term in expanded_scores:
                     expanded_scores[term] *= 1.3
@@ -257,71 +300,152 @@ class SPLADEProvider:
         # Common programming and technical terms with assigned IDs
         base_vocab = {
             # Basic programming terms
-            "function": 1, "method": 2, "class": 3, "variable": 4, "array": 5,
-            "string": 6, "number": 7, "boolean": 8, "object": 9, "type": 10,
-            "interface": 11, "enum": 12, "struct": 13, "union": 14, "pointer": 15,
-
+            "function": 1,
+            "method": 2,
+            "class": 3,
+            "variable": 4,
+            "array": 5,
+            "string": 6,
+            "number": 7,
+            "boolean": 8,
+            "object": 9,
+            "type": 10,
+            "interface": 11,
+            "enum": 12,
+            "struct": 13,
+            "union": 14,
+            "pointer": 15,
             # Control flow
-            "if": 20, "else": 21, "for": 22, "while": 23, "loop": 24,
-            "break": 25, "continue": 26, "return": 27, "yield": 28, "throw": 29,
-
+            "if": 20,
+            "else": 21,
+            "for": 22,
+            "while": 23,
+            "loop": 24,
+            "break": 25,
+            "continue": 26,
+            "return": 27,
+            "yield": 28,
+            "throw": 29,
             # Data structures
-            "list": 30, "dict": 31, "set": 32, "map": 33, "queue": 34,
-            "stack": 35, "tree": 36, "graph": 37, "table": 38, "index": 39,
-
+            "list": 30,
+            "dict": 31,
+            "set": 32,
+            "map": 33,
+            "queue": 34,
+            "stack": 35,
+            "tree": 36,
+            "graph": 37,
+            "table": 38,
+            "index": 39,
             # Programming languages
-            "python": 50, "javascript": 51, "java": 52, "cpp": 53, "csharp": 54,
-            "go": 55, "rust": 56, "swift": 57, "kotlin": 58, "typescript": 59,
-
+            "python": 50,
+            "javascript": 51,
+            "java": 52,
+            "cpp": 53,
+            "csharp": 54,
+            "go": 55,
+            "rust": 56,
+            "swift": 57,
+            "kotlin": 58,
+            "typescript": 59,
             # Web development
-            "html": 70, "css": 71, "react": 72, "vue": 73, "angular": 74,
-            "node": 75, "express": 76, "api": 77, "rest": 78, "graphql": 79,
-
+            "html": 70,
+            "css": 71,
+            "react": 72,
+            "vue": 73,
+            "angular": 74,
+            "node": 75,
+            "express": 76,
+            "api": 77,
+            "rest": 78,
+            "graphql": 79,
             # Database terms
-            "database": 90, "sql": 91, "query": 92, "table": 93, "column": 94,
-            "row": 95, "primary": 96, "foreign": 97, "key": 98, "index": 99,
-
+            "database": 90,
+            "sql": 91,
+            "query": 92,
+            "table": 93,
+            "column": 94,
+            "row": 95,
+            "primary": 96,
+            "foreign": 97,
+            "key": 98,
+            "index": 99,
             # Common question words
-            "how": 100, "what": 101, "why": 102, "when": 103, "where": 104,
-            "which": 105, "who": 106, "can": 107, "should": 108, "would": 109,
-
+            "how": 100,
+            "what": 101,
+            "why": 102,
+            "when": 103,
+            "where": 104,
+            "which": 105,
+            "who": 106,
+            "can": 107,
+            "should": 108,
+            "would": 109,
             # Action words
-            "create": 120, "build": 121, "implement": 122, "develop": 123, "make": 124,
-            "use": 125, "call": 126, "invoke": 127, "execute": 128, "run": 129,
-
+            "create": 120,
+            "build": 121,
+            "implement": 122,
+            "develop": 123,
+            "make": 124,
+            "use": 125,
+            "call": 126,
+            "invoke": 127,
+            "execute": 128,
+            "run": 129,
             # Error/debugging terms
-            "error": 140, "exception": 141, "bug": 142, "debug": 143, "fix": 144,
-            "issue": 145, "problem": 146, "solve": 147, "troubleshoot": 148, "trace": 149,
-
+            "error": 140,
+            "exception": 141,
+            "bug": 142,
+            "debug": 143,
+            "fix": 144,
+            "issue": 145,
+            "problem": 146,
+            "solve": 147,
+            "troubleshoot": 148,
+            "trace": 149,
             # Documentation terms
-            "example": 160, "tutorial": 161, "guide": 162, "documentation": 163, "docs": 164,
-            "reference": 165, "manual": 166, "help": 167, "demo": 168, "sample": 169
+            "example": 160,
+            "tutorial": 161,
+            "guide": 162,
+            "documentation": 163,
+            "docs": 164,
+            "reference": 165,
+            "manual": 166,
+            "help": 167,
+            "demo": 168,
+            "sample": 169,
         }
 
         return base_vocab
 
-    def _normalize_sparse_vector(self, sparse_vector: dict[int, float]) -> dict[int, float]:
+    def _normalize_sparse_vector(
+        self, sparse_vector: dict[int, float]
+    ) -> dict[int, float]:
         """Normalize sparse vector weights."""
         if not sparse_vector:
             return sparse_vector
 
         # Calculate L2 norm
-        norm = np.sqrt(sum(weight ** 2 for weight in sparse_vector.values()))
+        norm = np.sqrt(sum(weight**2 for weight in sparse_vector.values()))
         if norm == 0:
             return sparse_vector
 
         # Normalize weights
-        normalized = {token_id: weight / norm for token_id, weight in sparse_vector.items()}
+        normalized = {
+            token_id: weight / norm for token_id, weight in sparse_vector.items()
+        }
         return normalized
 
-    def _apply_top_k_filtering(self, sparse_vector: dict[int, float]) -> dict[int, float]:
+    def _apply_top_k_filtering(
+        self, sparse_vector: dict[int, float]
+    ) -> dict[int, float]:
         """Keep only top-k highest weighted tokens."""
         if len(sparse_vector) <= self.splade_config.top_k_tokens:
             return sparse_vector
 
         # Sort by weight and keep top-k
         sorted_items = sorted(sparse_vector.items(), key=lambda x: x[1], reverse=True)
-        top_k_items = sorted_items[:self.splade_config.top_k_tokens]
+        top_k_items = sorted_items[: self.splade_config.top_k_tokens]
 
         return dict(top_k_items)
 
@@ -345,7 +469,7 @@ class SPLADEProvider:
                 return {
                     "token": token,
                     "id": token_id,
-                    "category": self._categorize_token(token)
+                    "category": self._categorize_token(token),
                 }
         return None
 
@@ -378,5 +502,5 @@ class SPLADEProvider:
         return {
             "cache_size": len(self._cache),
             "vocabulary_size": len(self._token_vocab),
-            "cache_enabled": self.splade_config.cache_embeddings
+            "cache_enabled": self.splade_config.cache_embeddings,
         }

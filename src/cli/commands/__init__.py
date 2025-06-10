@@ -2,9 +2,9 @@
 
 This package contains all command group implementations:
 - config: Configuration management commands
-- database: Vector database operations  
+- database: Vector database operations
 - batch: Batch processing operations
 - setup: Interactive configuration wizard
 """
 
-__all__ = ["config", "database", "batch", "setup"]
+__all__ = ["batch", "config", "database", "setup"]

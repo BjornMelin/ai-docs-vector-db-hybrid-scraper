@@ -4,7 +4,6 @@ This module implements ML-based adaptive fusion weight tuning using effectivenes
 scoring and online learning algorithms like multi-armed bandits.
 """
 
-import asyncio
 import logging
 import math
 import random
@@ -14,7 +13,6 @@ from typing import Any
 import numpy as np
 
 from ...config import UnifiedConfig
-from ...config.enums import FusionAlgorithm
 from ...models.vector_search import AdaptiveFusionWeights
 from ...models.vector_search import EffectivenessScore
 from ...models.vector_search import QueryClassification
@@ -57,7 +55,7 @@ class AdaptiveFusionTuner:
         query_id: str,
         dense_results: list[dict[str, Any]] | None = None,
         sparse_results: list[dict[str, Any]] | None = None,
-        user_feedback: dict[str, Any] | None = None
+        user_feedback: dict[str, Any] | None = None,
     ) -> AdaptiveFusionWeights:
         """Compute adaptive fusion weights based on query characteristics and effectiveness.
 
@@ -101,7 +99,7 @@ class AdaptiveFusionTuner:
                 confidence=optimized_weights["confidence"],
                 learning_rate=self.learning_rate,
                 query_classification=query_classification,
-                effectiveness_score=effectiveness_score
+                effectiveness_score=effectiveness_score,
             )
 
             # Store for future learning
@@ -119,7 +117,7 @@ class AdaptiveFusionTuner:
         query_id: str,
         dense_results: list[dict[str, Any]],
         sparse_results: list[dict[str, Any]],
-        user_feedback: dict[str, Any] | None = None
+        user_feedback: dict[str, Any] | None = None,
     ) -> EffectivenessScore:
         """Calculate effectiveness scores for dense and sparse retrieval."""
         timestamp = time.time()
@@ -146,7 +144,7 @@ class AdaptiveFusionTuner:
             hybrid_effectiveness=hybrid_effectiveness,
             query_id=query_id,
             timestamp=timestamp,
-            evaluation_method="top_result_with_feedback"
+            evaluation_method="top_result_with_feedback",
         )
 
     def _evaluate_top_result_quality(self, results: list[dict[str, Any]]) -> float:
@@ -214,14 +212,14 @@ class AdaptiveFusionTuner:
         return {
             "dense": float(avg_dense),
             "sparse": float(avg_sparse),
-            "confidence": float(avg_confidence)
+            "confidence": float(avg_confidence),
         }
 
     async def _compute_weights_from_multiple_strategies(
         self,
         query_classification: QueryClassification,
         effectiveness_score: EffectivenessScore | None,
-        historical_weights: dict[str, float]
+        historical_weights: dict[str, float],
     ) -> dict[str, float]:
         """Compute weights using multiple strategies and combine them."""
         strategies = []
@@ -232,7 +230,9 @@ class AdaptiveFusionTuner:
 
         # Strategy 2: Effectiveness-based weights (DAT approach)
         if effectiveness_score:
-            effectiveness_based = self._compute_effectiveness_based_weights(effectiveness_score)
+            effectiveness_based = self._compute_effectiveness_based_weights(
+                effectiveness_score
+            )
             strategies.append({"weights": effectiveness_based, "confidence": 0.8})
 
         # Strategy 3: Historical performance weights
@@ -241,7 +241,9 @@ class AdaptiveFusionTuner:
         # Combine strategies using weighted average
         return self._combine_strategies(strategies)
 
-    def _compute_rule_based_weights(self, query_classification: QueryClassification) -> dict[str, float]:
+    def _compute_rule_based_weights(
+        self, query_classification: QueryClassification
+    ) -> dict[str, float]:
         """Compute weights based on query classification rules."""
         # Default balanced weights
         dense_weight = 0.7
@@ -277,9 +279,14 @@ class AdaptiveFusionTuner:
 
         return {"dense": dense_weight, "sparse": sparse_weight, "confidence": 0.7}
 
-    def _compute_effectiveness_based_weights(self, effectiveness_score: EffectivenessScore) -> dict[str, float]:
+    def _compute_effectiveness_based_weights(
+        self, effectiveness_score: EffectivenessScore
+    ) -> dict[str, float]:
         """Compute weights based on effectiveness scores (DAT approach)."""
-        total_effectiveness = effectiveness_score.dense_effectiveness + effectiveness_score.sparse_effectiveness
+        total_effectiveness = (
+            effectiveness_score.dense_effectiveness
+            + effectiveness_score.sparse_effectiveness
+        )
 
         if total_effectiveness == 0:
             return {"dense": 0.5, "sparse": 0.5, "confidence": 0.3}
@@ -294,10 +301,17 @@ class AdaptiveFusionTuner:
         sparse_weight = 1.0 - dense_weight
 
         # Confidence based on the difference in effectiveness
-        effectiveness_diff = abs(effectiveness_score.dense_effectiveness - effectiveness_score.sparse_effectiveness)
+        effectiveness_diff = abs(
+            effectiveness_score.dense_effectiveness
+            - effectiveness_score.sparse_effectiveness
+        )
         confidence = min(0.9, 0.5 + effectiveness_diff)
 
-        return {"dense": dense_weight, "sparse": sparse_weight, "confidence": confidence}
+        return {
+            "dense": dense_weight,
+            "sparse": sparse_weight,
+            "confidence": confidence,
+        }
 
     def _combine_strategies(self, strategies: list[dict[str, Any]]) -> dict[str, float]:
         """Combine multiple weight strategies using confidence-weighted averaging."""
@@ -307,9 +321,10 @@ class AdaptiveFusionTuner:
             return {"dense": 0.7, "sparse": 0.3, "confidence": 0.5}
 
         # Weighted average of dense weights
-        dense_weight = sum(
-            s["weights"]["dense"] * s["confidence"] for s in strategies
-        ) / total_confidence
+        dense_weight = (
+            sum(s["weights"]["dense"] * s["confidence"] for s in strategies)
+            / total_confidence
+        )
 
         # Sparse weight is complementary
         sparse_weight = 1.0 - dense_weight
@@ -320,14 +335,14 @@ class AdaptiveFusionTuner:
         return {
             "dense": dense_weight,
             "sparse": sparse_weight,
-            "confidence": avg_confidence
+            "confidence": avg_confidence,
         }
 
     def _apply_bandit_optimization(
         self,
         base_weights: dict[str, float],
         query_classification: QueryClassification,
-        effectiveness_score: EffectivenessScore | None
+        effectiveness_score: EffectivenessScore | None,
     ) -> dict[str, float]:
         """Apply multi-armed bandit optimization for continuous learning."""
         self.query_count += 1
@@ -336,7 +351,7 @@ class AdaptiveFusionTuner:
         arms = {
             "dense": {"dense": 0.8, "sparse": 0.2},
             "sparse": {"dense": 0.3, "sparse": 0.7},
-            "balanced": {"dense": 0.6, "sparse": 0.4}
+            "balanced": {"dense": 0.6, "sparse": 0.4},
         }
 
         # ε-greedy arm selection
@@ -351,7 +366,9 @@ class AdaptiveFusionTuner:
 
         # Combine bandit selection with base weights
         adaptation_rate = 0.3
-        final_dense = (1 - adaptation_rate) * base_weights["dense"] + adaptation_rate * selected_weights["dense"]
+        final_dense = (1 - adaptation_rate) * base_weights[
+            "dense"
+        ] + adaptation_rate * selected_weights["dense"]
         final_sparse = 1.0 - final_dense
 
         # Update bandit statistics if we have effectiveness feedback
@@ -362,7 +379,8 @@ class AdaptiveFusionTuner:
         return {
             "dense": final_dense,
             "sparse": final_sparse,
-            "confidence": base_weights["confidence"] * 0.9  # Slight confidence reduction for exploration
+            "confidence": base_weights["confidence"]
+            * 0.9,  # Slight confidence reduction for exploration
         }
 
     def _select_best_arm(self) -> str:
@@ -374,11 +392,12 @@ class AdaptiveFusionTuner:
         ucb_values = {}
         for arm in self.arm_counts:
             if self.arm_counts[arm] == 0:
-                ucb_values[arm] = float('inf')
+                ucb_values[arm] = float("inf")
             else:
                 avg_reward = self.arm_rewards[arm] / self.arm_counts[arm]
                 confidence_bonus = math.sqrt(
-                    (self.confidence_multiplier * math.log(self.query_count)) / self.arm_counts[arm]
+                    (self.confidence_multiplier * math.log(self.query_count))
+                    / self.arm_counts[arm]
                 )
                 ucb_values[arm] = avg_reward + confidence_bonus
 
@@ -407,9 +426,13 @@ class AdaptiveFusionTuner:
 
         # Keep only recent history to prevent memory bloat
         if len(self.weight_history[query_type_key]) > 100:
-            self.weight_history[query_type_key] = self.weight_history[query_type_key][-50:]
+            self.weight_history[query_type_key] = self.weight_history[query_type_key][
+                -50:
+            ]
 
-    def _get_fallback_weights(self, query_classification: QueryClassification) -> AdaptiveFusionWeights:
+    def _get_fallback_weights(
+        self, query_classification: QueryClassification
+    ) -> AdaptiveFusionWeights:
         """Get fallback weights when adaptive computation fails."""
         return AdaptiveFusionWeights(
             dense_weight=0.7,
@@ -418,14 +441,14 @@ class AdaptiveFusionTuner:
             confidence=0.5,
             learning_rate=self.learning_rate,
             query_classification=query_classification,
-            effectiveness_score=None
+            effectiveness_score=None,
         )
 
     async def update_with_feedback(
         self,
         query_id: str,
         user_feedback: dict[str, Any],
-        weights_used: AdaptiveFusionWeights
+        weights_used: AdaptiveFusionWeights,
     ) -> None:
         """Update the tuner with user feedback for continuous learning."""
         try:
@@ -439,16 +462,21 @@ class AdaptiveFusionTuner:
             # Create updated effectiveness score
             if weights_used.effectiveness_score:
                 updated_score = EffectivenessScore(
-                    dense_effectiveness=weights_used.effectiveness_score.dense_effectiveness * (1 + reward * 0.1),
-                    sparse_effectiveness=weights_used.effectiveness_score.sparse_effectiveness * (1 + reward * 0.1),
-                    hybrid_effectiveness=weights_used.effectiveness_score.hybrid_effectiveness * (1 + reward * 0.1),
+                    dense_effectiveness=weights_used.effectiveness_score.dense_effectiveness
+                    * (1 + reward * 0.1),
+                    sparse_effectiveness=weights_used.effectiveness_score.sparse_effectiveness
+                    * (1 + reward * 0.1),
+                    hybrid_effectiveness=weights_used.effectiveness_score.hybrid_effectiveness
+                    * (1 + reward * 0.1),
                     query_id=query_id,
                     timestamp=time.time(),
-                    evaluation_method="user_feedback_adjusted"
+                    evaluation_method="user_feedback_adjusted",
                 )
                 self.effectiveness_history[query_id].append(updated_score)
 
-            logger.debug(f"Updated tuner with feedback for query {query_id}: reward={reward}")
+            logger.debug(
+                f"Updated tuner with feedback for query {query_id}: reward={reward}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to update with feedback: {e}", exc_info=True)
@@ -491,5 +519,5 @@ class AdaptiveFusionTuner:
                 for arm in self.arm_counts
             },
             "exploration_rate": self.epsilon,
-            "learning_rate": self.learning_rate
+            "learning_rate": self.learning_rate,
         }

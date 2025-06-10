@@ -4,25 +4,24 @@ This module contains comprehensive tests for the AdvancedHybridSearchService
 including query classification, model selection, adaptive fusion, and A/B testing.
 """
 
-import asyncio
-import time
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
-
 from src.config import UnifiedConfig
-from src.config.enums import ABTestVariant, OptimizationStrategy, QueryComplexity, QueryType
-from src.models.vector_search import (
-    ABTestConfig,
-    AdvancedHybridSearchRequest,
-    AdvancedSearchResponse,
-    QueryClassification,
-    SearchAccuracy,
-    SearchParams,
-    FusionConfig,
-    SPLADEConfig,
-)
+from src.config.enums import ABTestVariant
+from src.config.enums import OptimizationStrategy
+from src.config.enums import QueryComplexity
+from src.config.enums import QueryType
+from src.models.vector_search import ABTestConfig
+from src.models.vector_search import AdvancedHybridSearchRequest
+from src.models.vector_search import AdvancedSearchResponse
+from src.models.vector_search import FusionConfig
+from src.models.vector_search import QueryClassification
+from src.models.vector_search import SearchAccuracy
+from src.models.vector_search import SearchParams
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
 
@@ -69,8 +68,7 @@ class TestAdvancedHybridSearchService:
             collection_name="test_collection",
             limit=5,
             search_params=SearchParams(
-                accuracy_level=SearchAccuracy.BALANCED,
-                hnsw_ef=64
+                accuracy_level=SearchAccuracy.BALANCED, hnsw_ef=64
             ),
             fusion_config=FusionConfig(algorithm="rrf"),
             enable_query_classification=True,
@@ -78,7 +76,7 @@ class TestAdvancedHybridSearchService:
             enable_adaptive_fusion=True,
             enable_splade=True,
             user_id="test_user",
-            session_id="test_session"
+            session_id="test_session",
         )
 
     @pytest.fixture
@@ -91,7 +89,7 @@ class TestAdvancedHybridSearchService:
             programming_language="python",
             is_multimodal=False,
             confidence=0.85,
-            features={"has_code_keywords": True, "query_length": 8}
+            features={"has_code_keywords": True, "query_length": 8},
         )
 
     async def test_initialization(self, service):
@@ -108,7 +106,7 @@ class TestAdvancedHybridSearchService:
 
     async def test_service_initialization_process(self, service):
         """Test service initialization process."""
-        with patch.object(service.splade_provider, 'initialize') as mock_init:
+        with patch.object(service.splade_provider, "initialize") as mock_init:
             mock_init.return_value = None
             await service.initialize()
             mock_init.assert_called_once()
@@ -116,11 +114,16 @@ class TestAdvancedHybridSearchService:
     async def test_basic_advanced_hybrid_search(self, service, sample_request):
         """Test basic advanced hybrid search functionality."""
         # Mock all components
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify, \
-             patch.object(service.model_selector, 'select_optimal_model') as mock_model, \
-             patch.object(service.splade_provider, 'generate_sparse_vector') as mock_splade, \
-             patch.object(service.adaptive_fusion_tuner, 'compute_adaptive_weights') as mock_fusion:
-            
+        with (
+            patch.object(service.query_classifier, "classify_query") as mock_classify,
+            patch.object(service.model_selector, "select_optimal_model") as mock_model,
+            patch.object(
+                service.splade_provider, "generate_sparse_vector"
+            ) as mock_splade,
+            patch.object(
+                service.adaptive_fusion_tuner, "compute_adaptive_weights"
+            ) as mock_fusion,
+        ):
             # Setup mocks
             mock_classify.return_value = QueryClassification(
                 query_type=QueryType.CODE,
@@ -129,14 +132,14 @@ class TestAdvancedHybridSearchService:
                 programming_language="python",
                 is_multimodal=False,
                 confidence=0.85,
-                features={}
+                features={},
             )
             mock_model.return_value = MagicMock()
             mock_splade.return_value = {1: 0.8, 2: 0.6, 3: 0.4}
             mock_fusion.return_value = MagicMock(
                 dense_weight=0.7,
                 sparse_weight=0.3,
-                effectiveness_score=MagicMock(hybrid_effectiveness=0.85)
+                effectiveness_score=MagicMock(hybrid_effectiveness=0.85),
             )
 
             response = await service.advanced_hybrid_search(sample_request)
@@ -149,12 +152,14 @@ class TestAdvancedHybridSearchService:
             assert response.optimization_applied is True
             assert response.retrieval_metrics is not None
 
-    async def test_search_with_query_classification_disabled(self, service, sample_request):
+    async def test_search_with_query_classification_disabled(
+        self, service, sample_request
+    ):
         """Test search with query classification disabled."""
         sample_request.enable_query_classification = False
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert isinstance(response, AdvancedSearchResponse)
         assert response.query_classification is None
         assert len(response.results) > 0
@@ -162,27 +167,27 @@ class TestAdvancedHybridSearchService:
     async def test_search_with_model_selection_disabled(self, service, sample_request):
         """Test search with model selection disabled."""
         sample_request.enable_model_selection = False
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert isinstance(response, AdvancedSearchResponse)
         assert response.model_selection is None
 
     async def test_search_with_splade_disabled(self, service, sample_request):
         """Test search with SPLADE disabled."""
         sample_request.enable_splade = False
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert isinstance(response, AdvancedSearchResponse)
         assert len(response.results) > 0
 
     async def test_search_with_adaptive_fusion_disabled(self, service, sample_request):
         """Test search with adaptive fusion disabled."""
         sample_request.enable_adaptive_fusion = False
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert isinstance(response, AdvancedSearchResponse)
         assert response.fusion_weights is None
         assert response.optimization_applied is False
@@ -192,72 +197,81 @@ class TestAdvancedHybridSearchService:
         sample_request.ab_test_config = ABTestConfig(
             traffic_allocation={"control": 0.5, "treatment": 0.5}
         )
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
-        assert response.ab_test_variant in [ABTestVariant.CONTROL, ABTestVariant.TREATMENT]
+
+        assert response.ab_test_variant in [
+            ABTestVariant.CONTROL,
+            ABTestVariant.TREATMENT,
+        ]
 
     async def test_ab_test_consistent_assignment(self, service, sample_request):
         """Test that A/B test assignment is consistent for same user."""
         sample_request.ab_test_config = ABTestConfig(
             traffic_allocation={"control": 0.5, "treatment": 0.5}
         )
-        
+
         # Run multiple times with same user ID
         variants = []
         for _ in range(5):
             response = await service.advanced_hybrid_search(sample_request)
             variants.append(response.ab_test_variant)
-        
+
         # All variants should be the same for consistent user experience
         assert len(set(variants)) == 1
 
     async def test_query_classification_timeout(self, service, sample_request):
         """Test query classification timeout handling."""
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify:
+        with patch.object(service.query_classifier, "classify_query") as mock_classify:
             # Simulate timeout
-            mock_classify.side_effect = asyncio.TimeoutError()
-            
+            mock_classify.side_effect = TimeoutError()
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert response.query_classification is None
             assert len(response.results) > 0  # Should fallback gracefully
 
     async def test_model_selection_timeout(self, service, sample_request):
         """Test model selection timeout handling."""
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify, \
-             patch.object(service.model_selector, 'select_optimal_model') as mock_model:
-            
+        with (
+            patch.object(service.query_classifier, "classify_query") as mock_classify,
+            patch.object(service.model_selector, "select_optimal_model") as mock_model,
+        ):
             mock_classify.return_value = MagicMock()
-            mock_model.side_effect = asyncio.TimeoutError()
-            
+            mock_model.side_effect = TimeoutError()
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert response.model_selection is None
             assert len(response.results) > 0
 
     async def test_splade_generation_timeout(self, service, sample_request):
         """Test SPLADE generation timeout handling."""
-        with patch.object(service.splade_provider, 'generate_sparse_vector') as mock_splade:
-            mock_splade.side_effect = asyncio.TimeoutError()
-            
+        with patch.object(
+            service.splade_provider, "generate_sparse_vector"
+        ) as mock_splade:
+            mock_splade.side_effect = TimeoutError()
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert len(response.results) > 0
 
     async def test_adaptive_fusion_error_handling(self, service, sample_request):
         """Test adaptive fusion error handling."""
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify, \
-             patch.object(service.adaptive_fusion_tuner, 'compute_adaptive_weights') as mock_fusion:
-            
+        with (
+            patch.object(service.query_classifier, "classify_query") as mock_classify,
+            patch.object(
+                service.adaptive_fusion_tuner, "compute_adaptive_weights"
+            ) as mock_fusion,
+        ):
             mock_classify.return_value = MagicMock()
             mock_fusion.side_effect = Exception("Fusion error")
-            
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert response.fusion_weights is None
             assert response.effectiveness_score is None
@@ -265,11 +279,11 @@ class TestAdvancedHybridSearchService:
 
     async def test_fallback_search_on_error(self, service, sample_request):
         """Test fallback search when advanced features fail."""
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify:
+        with patch.object(service.query_classifier, "classify_query") as mock_classify:
             mock_classify.side_effect = Exception("Classification error")
-            
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert response.fallback_reason is not None
             assert "Classification error" in response.fallback_reason
@@ -278,26 +292,31 @@ class TestAdvancedHybridSearchService:
     async def test_fallback_disabled_error_propagation(self, service, sample_request):
         """Test error propagation when fallback is disabled."""
         service.enable_fallback = False
-        
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify:
+
+        with patch.object(service.query_classifier, "classify_query") as mock_classify:
             mock_classify.side_effect = Exception("Classification error")
-            
-            with pytest.raises(QdrantServiceError, match="Advanced hybrid search failed"):
+
+            with pytest.raises(
+                QdrantServiceError, match="Advanced hybrid search failed"
+            ):
                 await service.advanced_hybrid_search(sample_request)
 
     async def test_search_metrics_calculation(self, service, sample_request):
         """Test search metrics calculation."""
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert response.retrieval_metrics is not None
         assert response.retrieval_metrics.total_time_ms > 0
         assert response.retrieval_metrics.results_count == len(response.results)
-        assert response.retrieval_metrics.hnsw_ef_used == sample_request.search_params.hnsw_ef
+        assert (
+            response.retrieval_metrics.hnsw_ef_used
+            == sample_request.search_params.hnsw_ef
+        )
 
     async def test_dense_vector_generation(self, service):
         """Test dense vector generation."""
         vector = await service._generate_dense_vector("test query", None)
-        
+
         assert isinstance(vector, list)
         assert len(vector) == 1536  # OpenAI embedding dimension
         assert all(isinstance(x, float) for x in vector)
@@ -306,11 +325,11 @@ class TestAdvancedHybridSearchService:
         """Test execution of different search strategies."""
         dense_vector = [0.1] * 1536
         sparse_vector = {1: 0.8, 2: 0.6}
-        
+
         results = await service._execute_search_strategies(
             sample_request, dense_vector, sparse_vector, ABTestVariant.CONTROL
         )
-        
+
         assert "dense" in results
         assert "sparse" in results
         assert "hybrid" in results
@@ -327,15 +346,17 @@ class TestAdvancedHybridSearchService:
             "sparse": [
                 {"id": "doc2", "score": 0.85, "payload": {"title": "Doc 2"}},
                 {"id": "doc3", "score": 0.75, "payload": {"title": "Doc 3"}},
-            ]
+            ],
         }
-        
+
         fusion_weights = MagicMock()
         fusion_weights.dense_weight = 0.7
         fusion_weights.sparse_weight = 0.3
-        
-        fused_results = service._apply_weighted_fusion(search_results, fusion_weights, 5)
-        
+
+        fused_results = service._apply_weighted_fusion(
+            search_results, fusion_weights, 5
+        )
+
         assert len(fused_results) <= 5
         assert all("id" in result for result in fused_results)
         assert all("score" in result for result in fused_results)
@@ -345,15 +366,18 @@ class TestAdvancedHybridSearchService:
         # Add some mock metrics
         service.search_metrics["test1"] = MagicMock(total_time_ms=100.0)
         service.search_metrics["test2"] = MagicMock(total_time_ms=200.0)
-        
-        with patch.object(service.adaptive_fusion_tuner, 'get_performance_stats') as mock_stats, \
-             patch.object(service.splade_provider, 'get_cache_stats') as mock_cache:
-            
+
+        with (
+            patch.object(
+                service.adaptive_fusion_tuner, "get_performance_stats"
+            ) as mock_stats,
+            patch.object(service.splade_provider, "get_cache_stats") as mock_cache,
+        ):
             mock_stats.return_value = {"total_queries": 10}
             mock_cache.return_value = {"cache_size": 5}
-            
+
             stats = service.get_performance_statistics()
-            
+
             assert stats["total_searches"] == 2
             assert stats["average_search_time"] == 150.0
             assert "fusion_tuner_stats" in stats
@@ -363,7 +387,7 @@ class TestAdvancedHybridSearchService:
         """Test user feedback processing."""
         query_id = str(uuid.uuid4())
         feedback = {"satisfaction": 0.8, "clicked": True, "dwell_time": 45}
-        
+
         # This should not raise an exception
         await service.update_with_user_feedback(query_id, feedback)
 
@@ -371,21 +395,28 @@ class TestAdvancedHybridSearchService:
         """Test storage of search results for learning."""
         query_id = str(uuid.uuid4())
         response = AdvancedSearchResponse(results=[], retrieval_metrics=MagicMock())
-        
-        with patch.object(service.model_selector, 'update_performance_history') as mock_update:
+
+        with patch.object(
+            service.model_selector, "update_performance_history"
+        ) as mock_update:
             await service._store_search_for_learning(query_id, sample_request, response)
-            
+
             assert query_id in service.search_metrics
 
     async def test_format_search_results(self, service):
         """Test search results formatting."""
         raw_results = [
-            {"id": "doc1", "score": 0.9, "payload": {"title": "Doc 1"}, "vector": [0.1, 0.2]},
+            {
+                "id": "doc1",
+                "score": 0.9,
+                "payload": {"title": "Doc 1"},
+                "vector": [0.1, 0.2],
+            },
             {"id": "doc2", "score": 0.8, "payload": {"title": "Doc 2"}},
         ]
-        
+
         formatted = service._format_search_results(raw_results)
-        
+
         assert len(formatted) == 2
         assert formatted[0].id == "doc1"
         assert formatted[0].score == 0.9
@@ -396,9 +427,9 @@ class TestAdvancedHybridSearchService:
         """Test handling of empty search results."""
         service.qdrant_search.filtered_search.return_value = []
         service.qdrant_search.hybrid_search.return_value = []
-        
+
         response = await service.advanced_hybrid_search(sample_request)
-        
+
         assert isinstance(response, AdvancedSearchResponse)
         assert len(response.results) == 0
         assert response.retrieval_metrics.results_count == 0
@@ -411,23 +442,28 @@ class TestAdvancedHybridSearchService:
             for i in range(100)
         ]
         service.qdrant_search.hybrid_search.return_value = large_results
-        
-        response = await service.advanced_hybrid_search(sample_request)
-        
-        assert isinstance(response, AdvancedSearchResponse)
-        assert len(response.results) == sample_request.limit  # Should be limited to request limit
 
-    @pytest.mark.parametrize("query_type", [
-        QueryType.CODE,
-        QueryType.DOCUMENTATION,
-        QueryType.CONCEPTUAL,
-        QueryType.API_REFERENCE,
-        QueryType.TROUBLESHOOTING,
-        QueryType.MULTIMODAL
-    ])
+        response = await service.advanced_hybrid_search(sample_request)
+
+        assert isinstance(response, AdvancedSearchResponse)
+        assert (
+            len(response.results) == sample_request.limit
+        )  # Should be limited to request limit
+
+    @pytest.mark.parametrize(
+        "query_type",
+        [
+            QueryType.CODE,
+            QueryType.DOCUMENTATION,
+            QueryType.CONCEPTUAL,
+            QueryType.API_REFERENCE,
+            QueryType.TROUBLESHOOTING,
+            QueryType.MULTIMODAL,
+        ],
+    )
     async def test_different_query_types(self, service, sample_request, query_type):
         """Test search with different query types."""
-        with patch.object(service.query_classifier, 'classify_query') as mock_classify:
+        with patch.object(service.query_classifier, "classify_query") as mock_classify:
             mock_classify.return_value = QueryClassification(
                 query_type=query_type,
                 complexity_level=QueryComplexity.MODERATE,
@@ -435,26 +471,31 @@ class TestAdvancedHybridSearchService:
                 programming_language=None,
                 is_multimodal=False,
                 confidence=0.8,
-                features={}
+                features={},
             )
-            
+
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
             assert response.query_classification.query_type == query_type
 
-    @pytest.mark.parametrize("optimization_strategy", [
-        OptimizationStrategy.SPEED_OPTIMIZED,
-        OptimizationStrategy.QUALITY_OPTIMIZED,
-        OptimizationStrategy.COST_OPTIMIZED,
-        OptimizationStrategy.BALANCED
-    ])
-    async def test_different_optimization_strategies(self, service, sample_request, optimization_strategy):
+    @pytest.mark.parametrize(
+        "optimization_strategy",
+        [
+            OptimizationStrategy.SPEED_OPTIMIZED,
+            OptimizationStrategy.QUALITY_OPTIMIZED,
+            OptimizationStrategy.COST_OPTIMIZED,
+            OptimizationStrategy.BALANCED,
+        ],
+    )
+    async def test_different_optimization_strategies(
+        self, service, sample_request, optimization_strategy
+    ):
         """Test search with different optimization strategies."""
-        with patch.object(service.model_selector, 'select_optimal_model') as mock_model:
+        with patch.object(service.model_selector, "select_optimal_model") as mock_model:
             mock_model.return_value = MagicMock()
-            
+
             # This would require extending the request model, but tests the concept
             response = await service.advanced_hybrid_search(sample_request)
-            
+
             assert isinstance(response, AdvancedSearchResponse)
