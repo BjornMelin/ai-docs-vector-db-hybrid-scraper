@@ -8,8 +8,14 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 
+from ..config.enums import ABTestVariant
 from ..config.enums import FusionAlgorithm
+from ..config.enums import ModelType
+from ..config.enums import OptimizationStrategy
+from ..config.enums import QueryComplexity
+from ..config.enums import QueryType
 from ..config.enums import SearchAccuracy
 from ..config.enums import VectorType
 
@@ -294,22 +300,279 @@ class VectorSearchConfig(BaseModel):
     )
 
 
+class QueryClassification(BaseModel):
+    """Query classification results for adaptive search optimization."""
+
+    query_type: QueryType = Field(..., description="Primary query type")
+    complexity_level: QueryComplexity = Field(..., description="Query complexity level")
+    domain: str = Field(..., description="Technical domain (programming, general, etc.)")
+    programming_language: str | None = Field(
+        None, description="Detected programming language if applicable"
+    )
+    is_multimodal: bool = Field(
+        False, description="Whether query involves multiple modalities"
+    )
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Classification confidence score"
+    )
+    features: dict[str, Any] = Field(
+        default_factory=dict, description="Extracted query features"
+    )
+
+
+class EffectivenessScore(BaseModel):
+    """Effectiveness scoring for fusion weight optimization."""
+
+    dense_effectiveness: float = Field(
+        ..., ge=0.0, le=1.0, description="Dense retrieval effectiveness score"
+    )
+    sparse_effectiveness: float = Field(
+        ..., ge=0.0, le=1.0, description="Sparse retrieval effectiveness score"
+    )
+    hybrid_effectiveness: float = Field(
+        ..., ge=0.0, le=1.0, description="Combined hybrid effectiveness score"
+    )
+    query_id: str = Field(..., description="Unique query identifier")
+    timestamp: float = Field(..., description="Scoring timestamp")
+    evaluation_method: str = Field(
+        default="top_result", description="Method used for effectiveness evaluation"
+    )
+
+
+class AdaptiveFusionWeights(BaseModel):
+    """Dynamic fusion weights based on query characteristics."""
+
+    dense_weight: float = Field(
+        ..., ge=0.0, le=1.0, description="Weight for dense vector results"
+    )
+    sparse_weight: float = Field(
+        ..., ge=0.0, le=1.0, description="Weight for sparse vector results"
+    )
+    hybrid_weight: float = Field(
+        default=1.0, ge=0.0, description="Overall hybrid fusion weight"
+    )
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Weight assignment confidence"
+    )
+    learning_rate: float = Field(
+        default=0.01, gt=0.0, description="Learning rate for weight adaptation"
+    )
+    query_classification: QueryClassification = Field(
+        ..., description="Query classification that informed weights"
+    )
+    effectiveness_score: EffectivenessScore | None = Field(
+        None, description="Effectiveness score used for weight calculation"
+    )
+
+    @field_validator("dense_weight", "sparse_weight")
+    @classmethod
+    def validate_weights_sum_to_one(cls, v, info):
+        """Ensure dense and sparse weights sum to approximately 1.0."""
+        if info.data and "dense_weight" in info.data:
+            total = info.data["dense_weight"] + v
+            if not (0.95 <= total <= 1.05):  # Allow small tolerance
+                raise ValueError("Dense and sparse weights should sum to ~1.0")
+        return v
+
+
+class ModelSelectionStrategy(BaseModel):
+    """Strategy for selecting optimal embedding models based on query."""
+
+    primary_model: str = Field(..., description="Primary embedding model to use")
+    model_type: ModelType = Field(..., description="Type of the selected model")
+    fallback_models: list[str] = Field(
+        default_factory=list, description="Fallback models if primary fails"
+    )
+    model_weights: dict[str, float] = Field(
+        default_factory=dict, description="Weights for ensemble model usage"
+    )
+    selection_rationale: str = Field(..., description="Reason for model selection")
+    expected_performance: float = Field(
+        ..., ge=0.0, le=1.0, description="Expected performance score"
+    )
+    cost_efficiency: float = Field(
+        ..., ge=0.0, le=1.0, description="Cost efficiency rating"
+    )
+    query_classification: QueryClassification = Field(
+        ..., description="Query classification that informed selection"
+    )
+
+
+class SPLADEConfig(BaseModel):
+    """Configuration for SPLADE sparse vector generation."""
+
+    model_name: str = Field(
+        default="naver/splade-cocondenser-ensembledistil",
+        description="SPLADE model identifier"
+    )
+    max_sequence_length: int = Field(
+        default=512, description="Maximum input sequence length"
+    )
+    top_k_tokens: int = Field(
+        default=256, description="Top-k tokens to keep in sparse vector"
+    )
+    alpha: float = Field(default=1.0, description="Sparsity regularization parameter")
+    cache_embeddings: bool = Field(
+        default=True, description="Whether to cache SPLADE embeddings"
+    )
+    batch_size: int = Field(default=32, description="Batch size for SPLADE inference")
+
+
+class ABTestConfig(BaseModel):
+    """Configuration for A/B testing different fusion strategies."""
+
+    experiment_name: str = Field(..., description="Name of the A/B test experiment")
+    variants: list[ABTestVariant] = Field(..., description="List of test variants")
+    traffic_allocation: dict[str, float] = Field(
+        ..., description="Traffic allocation per variant (must sum to 1.0)"
+    )
+    success_metrics: list[str] = Field(
+        default_factory=lambda: ["ndcg@10", "mrr", "click_through_rate"],
+        description="Metrics to track for success"
+    )
+    minimum_sample_size: int = Field(
+        default=1000, description="Minimum samples per variant for significance"
+    )
+    max_duration_days: int = Field(
+        default=30, description="Maximum experiment duration"
+    )
+    significance_threshold: float = Field(
+        default=0.05, description="P-value threshold for statistical significance"
+    )
+    early_stopping: bool = Field(
+        default=True, description="Enable early stopping for clear winners"
+    )
+
+
+class AdvancedHybridSearchRequest(BaseModel):
+    """Request for advanced hybrid search with adaptive optimization."""
+
+    collection_name: str = Field(..., description="Target collection")
+    query: str = Field(..., description="Search query text")
+    limit: int = Field(10, description="Number of results to return")
+    enable_adaptive_fusion: bool = Field(
+        default=True, description="Enable adaptive fusion weight tuning"
+    )
+    enable_query_classification: bool = Field(
+        default=True, description="Enable automatic query classification"
+    )
+    enable_model_selection: bool = Field(
+        default=True, description="Enable dynamic model selection"
+    )
+    enable_splade: bool = Field(
+        default=True, description="Enable SPLADE sparse vector generation"
+    )
+    fusion_config: FusionConfig = Field(
+        default_factory=FusionConfig, description="Fusion configuration"
+    )
+    search_params: SearchParams = Field(
+        default_factory=SearchParams, description="Search parameters"
+    )
+    splade_config: SPLADEConfig = Field(
+        default_factory=SPLADEConfig, description="SPLADE configuration"
+    )
+    ab_test_config: ABTestConfig | None = Field(
+        None, description="A/B testing configuration"
+    )
+    user_id: str | None = Field(
+        None, description="User ID for personalization and A/B testing"
+    )
+    session_id: str | None = Field(
+        None, description="Session ID for context tracking"
+    )
+    score_threshold: float = Field(0.0, description="Minimum score threshold")
+
+
+class AdvancedSearchResponse(BaseModel):
+    """Response from advanced hybrid search with optimization metadata."""
+
+    results: list[SearchResult] = Field(
+        default_factory=list, description="Search results"
+    )
+    query_classification: QueryClassification | None = Field(
+        None, description="Query classification results"
+    )
+    fusion_weights: AdaptiveFusionWeights | None = Field(
+        None, description="Fusion weights used"
+    )
+    model_selection: ModelSelectionStrategy | None = Field(
+        None, description="Model selection strategy used"
+    )
+    effectiveness_score: EffectivenessScore | None = Field(
+        None, description="Effectiveness evaluation"
+    )
+    ab_test_variant: ABTestVariant | None = Field(
+        None, description="A/B test variant used"
+    )
+    retrieval_metrics: RetrievalMetrics = Field(
+        default_factory=RetrievalMetrics, description="Performance metrics"
+    )
+    optimization_applied: bool = Field(
+        default=False, description="Whether optimization was applied"
+    )
+    fallback_reason: str | None = Field(
+        None, description="Reason if fallback strategy was used"
+    )
+
+
+class QueryFeatures(BaseModel):
+    """Extracted features from query for classification and optimization."""
+
+    query_length: int = Field(..., description="Number of words/tokens in query")
+    has_code_keywords: bool = Field(
+        default=False, description="Contains programming keywords"
+    )
+    has_function_names: bool = Field(
+        default=False, description="Contains function/method names"
+    )
+    has_programming_syntax: bool = Field(
+        default=False, description="Contains code syntax elements"
+    )
+    question_type: str | None = Field(
+        None, description="Type of question (how, what, why, etc.)"
+    )
+    technical_depth: str = Field(
+        default="medium", description="Technical depth (basic, medium, advanced)"
+    )
+    entity_mentions: list[str] = Field(
+        default_factory=list, description="Detected entities in query"
+    )
+    programming_language_indicators: list[str] = Field(
+        default_factory=list, description="Programming language indicators"
+    )
+    semantic_complexity: float = Field(
+        ..., ge=0.0, le=1.0, description="Semantic complexity score"
+    )
+    keyword_density: float = Field(
+        ..., ge=0.0, le=1.0, description="Technical keyword density"
+    )
+
+
 # Export commonly used types
 __all__ = [
+    "ABTestConfig",
+    "AdaptiveFusionWeights",
     "AdaptiveSearchParams",
+    "AdvancedHybridSearchRequest",
+    "AdvancedSearchResponse",
     "CollectionStats",
+    "EffectivenessScore",
     "FilteredSearchRequest",
     "FusionConfig",
     "HyDESearchRequest",
     "HybridSearchRequest",
     "IndexingRequest",
+    "ModelSelectionStrategy",
     "MultiStageSearchRequest",
     "OptimizationRequest",
     "PrefetchConfig",
+    "QueryClassification",
+    "QueryFeatures",
     "RetrievalMetrics",
     "SearchParams",
     "SearchResponse",
     "SearchResult",
     "SearchStage",
+    "SPLADEConfig",
     "VectorSearchConfig",
 ]
