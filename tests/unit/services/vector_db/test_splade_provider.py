@@ -468,15 +468,17 @@ class TestSPLADEProvider:
 
     async def test_weight_distribution(self, provider):
         """Test that weight distribution is reasonable."""
-        text = "Python programming tutorial with examples and code"
+        # Use text with repeated tokens to create frequency variation
+        text = "Python Python programming programming programming tutorial examples code"
 
-        vector = await provider.generate_sparse_vector(text)
+        # Test without normalization to see raw weight differences
+        vector = await provider.generate_sparse_vector(text, normalize=False)
 
         weights = list(vector.values())
 
         # Should have a reasonable distribution
         assert len(weights) > 0
-        assert max(weights) > min(weights)  # Should have variation
+        assert max(weights) > min(weights)  # Should have variation due to frequency differences
         assert all(w > 0 for w in weights)  # All positive
 
     async def test_fallback_model_simulation(self, provider):

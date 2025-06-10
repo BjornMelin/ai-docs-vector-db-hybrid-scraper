@@ -145,16 +145,16 @@ class SPLADEProvider:
 
     def _tokenize_text(self, text: str) -> list[str]:
         """Tokenize text with programming-aware preprocessing."""
+        # Handle camelCase and snake_case BEFORE lowercasing
+        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+        text = re.sub(r"_", " _ ", text)
+        
         # Convert to lowercase for consistency
         text = text.lower()
 
         # Handle code-specific tokenization
         # Split on programming syntax
         text = re.sub(r"([.(){}[\],;:=<>!&|+\-*/])", r" \1 ", text)
-
-        # Handle camelCase and snake_case
-        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
-        text = re.sub(r"_", " _ ", text)
 
         # Basic tokenization
         tokens = text.split()
@@ -204,13 +204,13 @@ class SPLADEProvider:
         for token in tokens:
             token_counts[token] = token_counts.get(token, 0) + 1
 
-        # Calculate TF scores (log normalization)
+        # Calculate TF scores (log normalization with frequency boost)
         tf_scores = {}
         total_tokens = len(tokens)
         for token, count in token_counts.items():
             tf = count / total_tokens
-            # Ensure positive weights by using max with small epsilon
-            tf_scores[token] = max(1 + np.log(tf), 0.1) if tf > 0 else 0.1
+            # Use log(1 + tf) for better distribution and add frequency factor
+            tf_scores[token] = np.log(1 + tf) + 0.1 * count if tf > 0 else 0.1
 
         return tf_scores
 
