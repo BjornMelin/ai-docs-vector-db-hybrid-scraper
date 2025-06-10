@@ -98,6 +98,13 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 #### **[BJO-95](https://linear.app/bjorn-dev/issue/BJO-95)** - Intelligent Search Features
 
+- **Status**: ✅ **COMPLETED**
+- **Priority**: Medium
+- **Effort**: 2-3 days (Completed)
+- **Description**: Added comprehensive documentation for all new features including Content Intelligence Service, Advanced CLI Interface, Query API optimization with RRF/DBSF fusion, benchmarking suite, and 14-category intent classification
+
+#### **[BJO-96](https://linear.app/bjorn-dev/issue/BJO-96)** - Advanced Query Processing Extensions
+
 - **Status**: 🔴 Not Started
 - **Priority**: Medium
 - **Effort**: 5-6 days

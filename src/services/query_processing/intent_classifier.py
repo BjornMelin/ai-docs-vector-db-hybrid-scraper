@@ -661,7 +661,7 @@ class QueryIntentClassifier:
 
         try:
             # Get embeddings for query and reference texts
-            all_texts = [query] + list(reference_queries.values())
+            all_texts = [query, *list(reference_queries.values())]
 
             result = await self.embedding_manager.generate_embeddings(
                 texts=all_texts,
@@ -673,7 +673,7 @@ class QueryIntentClassifier:
                 return {}
 
             embeddings = result["embeddings"]
-            
+
             # Defensive check: ensure we have the expected number of embeddings
             expected_count = len(reference_queries) + 1  # +1 for the query
             if len(embeddings) != expected_count:
@@ -681,7 +681,7 @@ class QueryIntentClassifier:
                     f"Expected {expected_count} embeddings but got {len(embeddings)}"
                 )
                 return {}
-            
+
             query_embedding = embeddings[0]
             reference_embeddings = embeddings[1:]
 
@@ -827,10 +827,7 @@ class QueryIntentClassifier:
             return True
 
         # Vague or very short queries need context
-        if len(query.split()) < 4:
-            return True
-
-        return False
+        return len(query.split()) < 4
 
     async def cleanup(self) -> None:
         """Cleanup classifier resources."""

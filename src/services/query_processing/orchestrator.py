@@ -131,7 +131,6 @@ class QueryProcessingOrchestrator:
             # Step 2: Query preprocessing
             preprocessing_result = None
             if request.enable_preprocessing:
-                preprocessing_start = time.time()
                 preprocessing_result = await self.preprocessor.preprocess_query(
                     request.query,
                     enable_spell_correction=True,
@@ -314,7 +313,7 @@ class QueryProcessingOrchestrator:
     ) -> tuple[list[dict[str, Any]], SearchStrategy]:
         """Execute search with intelligent fallback handling."""
 
-        strategies_to_try = [primary_strategy] + fallback_strategies
+        strategies_to_try = [primary_strategy, *fallback_strategies]
         last_error = None
 
         for strategy in strategies_to_try:
