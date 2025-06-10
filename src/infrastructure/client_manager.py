@@ -212,6 +212,7 @@ class ClientManager:
         self._canary_deployment: Any = None
         self._browser_automation_router: Any = None
         self._task_queue_manager: Any = None
+        self._content_intelligence_service: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -244,6 +245,7 @@ class ClientManager:
             "_blue_green",
             "_ab_testing",
             "_canary",
+            "_content_intelligence_service",
         ]
         for service_name in service_names:
             if hasattr(self, service_name):
@@ -281,6 +283,7 @@ class ClientManager:
         self._ab_testing_manager = None
         self._canary_deployment = None
         self._browser_automation_router = None
+        self._content_intelligence_service = None
 
         self._initialized = False
         logger.info("ClientManager cleaned up")
@@ -607,6 +610,32 @@ class ClientManager:
                     logger.info("Initialized TaskQueueManager")
 
         return self._task_queue_manager
+
+    async def get_content_intelligence_service(self):
+        """Get or create ContentIntelligenceService instance."""
+        if self._content_intelligence_service is None:
+            if "content_intelligence_service" not in self._service_locks:
+                self._service_locks["content_intelligence_service"] = asyncio.Lock()
+
+            async with self._service_locks["content_intelligence_service"]:
+                if self._content_intelligence_service is None:
+                    from src.services.content_intelligence.service import (
+                        ContentIntelligenceService,
+                    )
+
+                    # Get dependencies
+                    embedding_manager = await self.get_embedding_manager()
+                    cache_manager = await self.get_cache_manager()
+
+                    self._content_intelligence_service = ContentIntelligenceService(
+                        config=self.config,
+                        embedding_manager=embedding_manager,
+                        cache_manager=cache_manager,
+                    )
+                    await self._content_intelligence_service.initialize()
+                    logger.info("Initialized ContentIntelligenceService")
+
+        return self._content_intelligence_service
 
     async def _get_or_create_client(
         self,
