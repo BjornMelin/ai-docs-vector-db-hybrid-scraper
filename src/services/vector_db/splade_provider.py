@@ -148,7 +148,7 @@ class SPLADEProvider:
         # Handle camelCase and snake_case BEFORE lowercasing
         text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
         text = re.sub(r"_", " _ ", text)
-        
+
         # Convert to lowercase for consistency
         text = text.lower()
 
