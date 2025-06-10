@@ -240,7 +240,7 @@ async def test_create_project_invalid_quality_tier(mock_client_manager, mock_con
     from src.mcp_tools.models.requests import ProjectRequest
 
     with pytest.raises(ValidationError):
-        request = ProjectRequest(
+        ProjectRequest(
             name="Test Project", description="Test", quality_tier="invalid_tier"
         )
 
@@ -730,31 +730,33 @@ async def test_error_handling_collection_creation_failure(
 
     # Setup mocks
     project_storage = await mock_client_manager.get_project_storage()
-    project_storage.create_project.return_value = {
-        "id": "proj_123",
-        "name": "Test Project",
-    }
 
+    # Mock both qdrant_service direct access and get_qdrant_service()
     qdrant = await mock_client_manager.get_qdrant_service()
-    qdrant.create_collection_with_quality.side_effect = Exception(
-        "Collection creation failed"
-    )
+    qdrant.create_collection.side_effect = Exception("Collection creation failed")
+    # Ensure direct attribute access also points to the same mock
+    mock_client_manager.qdrant_service = qdrant
 
     # Project should be deleted on collection creation failure
     project_storage.delete_project.return_value = True
 
     register_tools(mock_mcp, mock_client_manager)
 
-    # Test that exception is propagated
-    with pytest.raises(Exception, match="Collection creation failed"):
-        from src.mcp_tools.models.requests import ProjectRequest
+    # Mock uuid4 to return predictable UUID
+    with patch("src.mcp_tools.tools.projects.uuid4") as mock_uuid:
+        mock_uuid.return_value = Mock()
+        mock_uuid.return_value.__str__ = Mock(return_value="proj_123")
 
-        request = ProjectRequest(name="Test Project", quality_tier="balanced")
+        # Test that exception is propagated
+        with pytest.raises(Exception, match="Collection creation failed"):
+            from src.mcp_tools.models.requests import ProjectRequest
 
-        await registered_tools["create_project"](request, mock_context)
+            request = ProjectRequest(name="Test Project", quality_tier="balanced")
 
-    # Verify cleanup was attempted
-    project_storage.delete_project.assert_called_once_with("proj_123")
+            await registered_tools["create_project"](request, mock_context)
+
+        # Verify cleanup was attempted
+        project_storage.delete_project.assert_called_once_with("proj_123")
 
 
 @pytest.mark.asyncio
