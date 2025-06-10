@@ -173,9 +173,10 @@ def initialize_monitoring_system(
 
     # Create health check manager
     from .health import HealthCheckConfig
+
     health_config = HealthCheckConfig(
-        enabled=config.monitoring.enabled, 
-        timeout=config.monitoring.health_check_timeout
+        enabled=config.monitoring.enabled,
+        timeout=config.monitoring.health_check_timeout,
     )
     health_manager = HealthCheckManager(health_config, metrics_registry)
 
@@ -414,8 +415,6 @@ async def update_system_metrics_periodically(
             logger.error(f"Error updating system metrics: {e}")
 
         await asyncio.sleep(interval_seconds)
-
-
 
 
 async def update_cache_metrics_periodically(

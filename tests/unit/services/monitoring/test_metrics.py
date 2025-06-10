@@ -1,12 +1,13 @@
 """Comprehensive tests for monitoring metrics functionality."""
 
 import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from prometheus_client.registry import CollectorRegistry
-from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
+from src.services.monitoring.metrics import MetricsConfig
+from src.services.monitoring.metrics import MetricsRegistry
 
 
 class TestMetricsConfig:
@@ -65,7 +66,7 @@ class TestMetricsRegistry:
         """Test that all expected metrics are created."""
         expected_metrics = [
             "search_requests",
-            "search_duration", 
+            "search_duration",
             "search_concurrent",
             "embedding_requests",
             "embedding_duration",
@@ -115,11 +116,13 @@ class TestMetricsRegistry:
     def test_update_cache_stats(self, registry):
         """Test updating cache statistics."""
         mock_cache_manager = MagicMock()
-        mock_cache_manager.get_stats = AsyncMock(return_value={
-            "local_cache": {"hits": 10, "misses": 2, "size": 1024},
-            "embedding_cache": {"hits": 5, "misses": 1, "size": 512}
-        })
-        
+        mock_cache_manager.get_stats = AsyncMock(
+            return_value={
+                "local_cache": {"hits": 10, "misses": 2, "size": 1024},
+                "embedding_cache": {"hits": 5, "misses": 1, "size": 512},
+            }
+        )
+
         registry.update_cache_stats(mock_cache_manager)
         assert "cache_hits" in registry._metrics
         assert "cache_misses" in registry._metrics
@@ -145,7 +148,9 @@ class TestMetricsRegistry:
 
     def test_update_qdrant_metrics(self, registry):
         """Test Qdrant-specific metrics."""
-        registry.update_qdrant_metrics("test_collection", size=1000, memory_usage=1024000)
+        registry.update_qdrant_metrics(
+            "test_collection", size=1000, memory_usage=1024000
+        )
         registry.record_qdrant_operation("search", "test_collection", success=True)
         assert "qdrant_collection_size" in registry._metrics
         assert "qdrant_operations" in registry._metrics
@@ -155,7 +160,7 @@ class TestMetricsRegistry:
         registry.record_task_queue_size("embeddings", "pending", 25)
         registry.record_task_execution("embeddings", duration_seconds=2.5, success=True)
         registry.update_worker_count("embeddings", 3)
-        
+
         assert "task_queue_size" in registry._metrics
         assert "task_execution_duration" in registry._metrics
         assert "worker_active" in registry._metrics
@@ -164,6 +169,6 @@ class TestMetricsRegistry:
         """Test browser automation metrics."""
         registry.record_browser_request("premium", duration_seconds=1.2, success=True)
         registry.update_browser_tier_health("basic", healthy=True)
-        
+
         assert "browser_response_time" in registry._metrics
         assert "browser_tier_health" in registry._metrics

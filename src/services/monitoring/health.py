@@ -316,27 +316,27 @@ class HTTPHealthCheck(HealthCheck):
                     aiohttp.ClientSession(timeout=timeout) as session,
                     session.get(self.url, headers=self.headers) as response,
                 ):
-                        if response.status == self.expected_status:
-                            return HealthCheckResult(
-                                name=self.name,
-                                status=HealthStatus.HEALTHY,
-                                message=f"HTTP endpoint responding with status {response.status}",
-                                duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                                metadata={
-                                    "status_code": response.status,
-                                    "content_type": response.headers.get(
-                                        "content-type", "unknown"
-                                    ),
-                                },
-                            )
-                        else:
-                            return HealthCheckResult(
-                                name=self.name,
-                                status=HealthStatus.UNHEALTHY,
-                                message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
-                                duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                                metadata={"status_code": response.status},
-                            )
+                    if response.status == self.expected_status:
+                        return HealthCheckResult(
+                            name=self.name,
+                            status=HealthStatus.HEALTHY,
+                            message=f"HTTP endpoint responding with status {response.status}",
+                            duration_ms=0.0,  # Will be updated by _execute_with_timeout
+                            metadata={
+                                "status_code": response.status,
+                                "content_type": response.headers.get(
+                                    "content-type", "unknown"
+                                ),
+                            },
+                        )
+                    else:
+                        return HealthCheckResult(
+                            name=self.name,
+                            status=HealthStatus.UNHEALTHY,
+                            message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+                            duration_ms=0.0,  # Will be updated by _execute_with_timeout
+                            metadata={"status_code": response.status},
+                        )
 
             except aiohttp.ClientError as e:
                 return HealthCheckResult(

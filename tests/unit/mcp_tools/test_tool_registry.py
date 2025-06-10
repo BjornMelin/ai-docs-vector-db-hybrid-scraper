@@ -150,7 +150,7 @@ class TestRegisterAllTools:
         assert any("Registering advanced tools" in msg for msg in log_messages)
         assert any("Registering utility tools" in msg for msg in log_messages)
         assert any(
-            "Successfully registered 12 tool modules" in msg for msg in log_messages
+            "Successfully registered 13 tool modules" in msg for msg in log_messages
         )
 
     @pytest.mark.asyncio
@@ -585,5 +585,5 @@ class TestLoggingBehavior:
             if "Successfully registered" in record.message
         ]
 
-        # Should report 12 modules (since register_all_tools always tries to register all modules)
-        assert "Successfully registered 12 tool modules" in summary_logs[0]
+        # Should report 13 modules (since register_all_tools always tries to register all modules)
+        assert "Successfully registered 13 tool modules" in summary_logs[0]

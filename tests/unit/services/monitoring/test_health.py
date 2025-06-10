@@ -1,19 +1,18 @@
 """Comprehensive tests for monitoring health check functionality."""
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
-from src.services.monitoring.health import (
-    HealthCheckConfig,
-    HealthCheckManager,
-    HealthCheckResult,
-    HealthStatus,
-    HTTPHealthCheck,
-    QdrantHealthCheck,
-    RedisHealthCheck,
-    SystemResourceHealthCheck,
-)
+from src.services.monitoring.health import HealthCheckConfig
+from src.services.monitoring.health import HealthCheckManager
+from src.services.monitoring.health import HealthCheckResult
+from src.services.monitoring.health import HealthStatus
+from src.services.monitoring.health import HTTPHealthCheck
+from src.services.monitoring.health import QdrantHealthCheck
+from src.services.monitoring.health import RedisHealthCheck
+from src.services.monitoring.health import SystemResourceHealthCheck
 
 
 class TestHealthStatus:
@@ -57,7 +56,7 @@ class TestHealthCheckResult:
             name="test_service",
             status=HealthStatus.HEALTHY,
             message="Service is running",
-            duration_ms=50.0
+            duration_ms=50.0,
         )
         assert result.name == "test_service"
         assert result.status == HealthStatus.HEALTHY
@@ -72,7 +71,7 @@ class TestHealthCheckResult:
             status=HealthStatus.UNHEALTHY,
             message="Service unavailable",
             duration_ms=5000.0,
-            metadata={"error": "Connection refused", "retries": 3}
+            metadata={"error": "Connection refused", "retries": 3},
         )
         assert result.status == HealthStatus.UNHEALTHY
         assert result.metadata["error"] == "Connection refused"
@@ -101,7 +100,7 @@ class TestQdrantHealthCheck:
     async def test_healthy_qdrant(self, health_check, mock_qdrant_client):
         """Test healthy Qdrant service."""
         result = await health_check.check()
-        
+
         assert result.name == "qdrant"
         assert result.status == HealthStatus.HEALTHY
         assert "cluster" in result.message
@@ -111,9 +110,9 @@ class TestQdrantHealthCheck:
     async def test_unhealthy_qdrant(self, health_check, mock_qdrant_client):
         """Test unhealthy Qdrant service."""
         mock_qdrant_client.get_cluster_info.side_effect = Exception("Connection failed")
-        
+
         result = await health_check.check()
-        
+
         assert result.name == "qdrant"
         assert result.status == HealthStatus.UNHEALTHY
         assert "Connection failed" in result.message
@@ -134,9 +133,9 @@ class TestRedisHealthCheck:
             mock_redis = AsyncMock()
             mock_redis.ping.return_value = True
             mock_from_url.return_value = mock_redis
-            
+
             result = await health_check.check()
-            
+
             assert result.name == "redis"
             assert result.status == HealthStatus.HEALTHY
             assert "responding" in result.message
@@ -148,9 +147,9 @@ class TestRedisHealthCheck:
             mock_redis = AsyncMock()
             mock_redis.ping.side_effect = Exception("Redis unavailable")
             mock_from_url.return_value = mock_redis
-            
+
             result = await health_check.check()
-            
+
             assert result.name == "redis"
             assert result.status == HealthStatus.UNHEALTHY
             assert "Redis unavailable" in result.message
@@ -165,12 +164,13 @@ class TestHTTPHealthCheck:
         return HTTPHealthCheck(
             "http://api.example.com/health",
             name="api_service",
-            headers={"Authorization": "Bearer token"}
+            headers={"Authorization": "Bearer token"},
         )
 
     @pytest.mark.asyncio
     async def test_healthy_http_service(self, health_check):
         """Test healthy HTTP service."""
+
         # Mock the internal _check method directly to avoid complex aiohttp mocking
         async def mock_check():
             return HealthCheckResult(
@@ -178,30 +178,35 @@ class TestHTTPHealthCheck:
                 status=HealthStatus.HEALTHY,
                 message="HTTP endpoint responding with status 200",
                 duration_ms=50.0,
-                metadata={"status_code": 200, "content_type": "application/json"}
+                metadata={"status_code": 200, "content_type": "application/json"},
             )
-        
-        with patch.object(health_check, '_execute_with_timeout', return_value=await mock_check()):
+
+        with patch.object(
+            health_check, "_execute_with_timeout", return_value=await mock_check()
+        ):
             result = await health_check.check()
-            
+
             assert result.name == "api_service"
             assert result.status == HealthStatus.HEALTHY
 
     @pytest.mark.asyncio
     async def test_unhealthy_http_service(self, health_check):
         """Test unhealthy HTTP service."""
+
         async def mock_check():
             return HealthCheckResult(
                 name="api_service",
                 status=HealthStatus.UNHEALTHY,
                 message="HTTP endpoint returned status 503, expected 200",
                 duration_ms=75.0,
-                metadata={"status_code": 503}
+                metadata={"status_code": 503},
             )
-        
-        with patch.object(health_check, '_execute_with_timeout', return_value=await mock_check()):
+
+        with patch.object(
+            health_check, "_execute_with_timeout", return_value=await mock_check()
+        ):
             result = await health_check.check()
-            
+
             assert result.name == "api_service"
             assert result.status == HealthStatus.UNHEALTHY
 
@@ -216,12 +221,13 @@ class TestSystemResourceHealthCheck:
             "system_resources",
             cpu_threshold=80.0,
             memory_threshold=85.0,
-            disk_threshold=90.0
+            disk_threshold=90.0,
         )
 
     @pytest.mark.asyncio
     async def test_healthy_system_resources(self, health_check):
         """Test healthy system resources."""
+
         async def mock_check():
             return HealthCheckResult(
                 name="system_resources",
@@ -233,19 +239,22 @@ class TestSystemResourceHealthCheck:
                     "memory_percent": 60.0,
                     "disk_percent": 70.0,
                     "memory_available_gb": 8.0,
-                    "disk_free_gb": 100.0
-                }
+                    "disk_free_gb": 100.0,
+                },
             )
-        
-        with patch.object(health_check, '_execute_with_timeout', return_value=await mock_check()):
+
+        with patch.object(
+            health_check, "_execute_with_timeout", return_value=await mock_check()
+        ):
             result = await health_check.check()
-            
+
             assert result.name == "system_resources"
             assert result.status == HealthStatus.HEALTHY
 
     @pytest.mark.asyncio
     async def test_degraded_system_resources(self, health_check):
         """Test degraded system resources."""
+
         async def mock_check():
             return HealthCheckResult(
                 name="system_resources",
@@ -257,13 +266,15 @@ class TestSystemResourceHealthCheck:
                     "memory_percent": 90.0,
                     "disk_percent": 95.0,
                     "memory_available_gb": 2.0,
-                    "disk_free_gb": 10.0
-                }
+                    "disk_free_gb": 10.0,
+                },
             )
-        
-        with patch.object(health_check, '_execute_with_timeout', return_value=await mock_check()):
+
+        with patch.object(
+            health_check, "_execute_with_timeout", return_value=await mock_check()
+        ):
             result = await health_check.check()
-            
+
             assert result.name == "system_resources"
             assert result.status == HealthStatus.DEGRADED
 
@@ -290,7 +301,7 @@ class TestHealthCheckManager:
             name="test_service",
             status=HealthStatus.HEALTHY,
             message="Service is healthy",
-            duration_ms=50.0
+            duration_ms=50.0,
         )
         return check
 
@@ -310,9 +321,9 @@ class TestHealthCheckManager:
     async def test_check_all(self, manager, mock_health_check):
         """Test checking all health checks."""
         manager.add_health_check(mock_health_check)
-        
+
         results = await manager.check_all()
-        
+
         assert len(results) == 1
         assert "test_service" in results
         assert results["test_service"].status == HealthStatus.HEALTHY
@@ -321,13 +332,19 @@ class TestHealthCheckManager:
         """Test overall status when all services are healthy."""
         manager._last_results = {
             "service1": HealthCheckResult(
-                name="service1", status=HealthStatus.HEALTHY, message="OK", duration_ms=50.0
+                name="service1",
+                status=HealthStatus.HEALTHY,
+                message="OK",
+                duration_ms=50.0,
             ),
             "service2": HealthCheckResult(
-                name="service2", status=HealthStatus.HEALTHY, message="OK", duration_ms=75.0
+                name="service2",
+                status=HealthStatus.HEALTHY,
+                message="OK",
+                duration_ms=75.0,
             ),
         }
-        
+
         status = manager.get_overall_status()
         assert status == HealthStatus.HEALTHY
 
@@ -335,13 +352,19 @@ class TestHealthCheckManager:
         """Test overall status with service failures."""
         manager._last_results = {
             "service1": HealthCheckResult(
-                name="service1", status=HealthStatus.HEALTHY, message="OK", duration_ms=50.0
+                name="service1",
+                status=HealthStatus.HEALTHY,
+                message="OK",
+                duration_ms=50.0,
             ),
             "service2": HealthCheckResult(
-                name="service2", status=HealthStatus.UNHEALTHY, message="Failed", duration_ms=5000.0
+                name="service2",
+                status=HealthStatus.UNHEALTHY,
+                message="Failed",
+                duration_ms=5000.0,
             ),
         }
-        
+
         status = manager.get_overall_status()
         assert status == HealthStatus.UNHEALTHY
 
@@ -349,7 +372,7 @@ class TestHealthCheckManager:
         """Test manager with health checks disabled."""
         config = HealthCheckConfig(enabled=False, interval=30.0, timeout=5.0)
         manager = HealthCheckManager(config)
-        
+
         assert manager.config.enabled is False
 
     @pytest.mark.asyncio
@@ -357,17 +380,22 @@ class TestHealthCheckManager:
         """Test health check timeout handling."""
         # Create a real health check instance that will timeout
         from src.services.monitoring.health import HTTPHealthCheck
-        
+
         # Use a slow/invalid URL that will timeout
-        slow_check = HTTPHealthCheck("http://192.0.2.1:9999/health", name="slow_service", timeout_seconds=0.1)
+        slow_check = HTTPHealthCheck(
+            "http://192.0.2.1:9999/health", name="slow_service", timeout_seconds=0.1
+        )
         manager.add_health_check(slow_check)
-        
+
         results = await manager.check_all()
-        
+
         # Should timeout and return unhealthy status
         assert "slow_service" in results
         assert results["slow_service"].status == HealthStatus.UNHEALTHY
-        assert "timed out" in results["slow_service"].message or "failed" in results["slow_service"].message
+        assert (
+            "timed out" in results["slow_service"].message
+            or "failed" in results["slow_service"].message
+        )
 
 
 class TestHealthCheckIntegration:
@@ -378,7 +406,7 @@ class TestHealthCheckIntegration:
         """Test complete health check lifecycle."""
         config = HealthCheckConfig(enabled=False, interval=1.0, timeout=5.0)
         manager = HealthCheckManager(config)
-        
+
         # Add multiple health checks
         mock_qdrant = AsyncMock()
         mock_cluster_info = MagicMock()
@@ -386,19 +414,19 @@ class TestHealthCheckIntegration:
         mock_cluster_info.peers = []
         mock_qdrant.get_cluster_info.return_value = mock_cluster_info
         qdrant_check = QdrantHealthCheck(mock_qdrant, "qdrant")
-        
+
         system_check = SystemResourceHealthCheck("system", cpu_threshold=90.0)
-        
+
         manager.add_health_check(qdrant_check)
         manager.add_health_check(system_check)
-        
+
         # Run health checks
         results = await manager.check_all()
-        
+
         assert len(results) == 2
         assert "qdrant" in results
         assert "system" in results
-        
+
         # Check overall status
         overall_status = manager.get_overall_status()
         assert overall_status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]
