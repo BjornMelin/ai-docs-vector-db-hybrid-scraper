@@ -1,23 +1,24 @@
 """Tests for content intelligence classifiers."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
+from unittest.mock import AsyncMock
 
+import pytest
 from src.services.content_intelligence.classifiers import ContentClassifier
-from src.services.content_intelligence.models import ContentClassification, ContentType
+from src.services.content_intelligence.models import ContentClassification
+from src.services.content_intelligence.models import ContentType
 
 
 @pytest.fixture
 def mock_embedding_manager():
     """Create mock embedding manager."""
     manager = AsyncMock()
-    
+
     # Create a mock embeddings result with proper structure for classifier
     def mock_generate_embeddings(*args, **kwargs):
         # Return different embeddings for different text types
-        texts = kwargs.get('texts', args[0] if args else [])
+        texts = kwargs.get("texts", args[0] if args else [])
         num_texts = len(texts)
-        
+
         # Generate mock embeddings based on content
         embeddings = []
         for i, text in enumerate(texts):
@@ -26,8 +27,12 @@ def mock_embedding_manager():
                 if "def " in content and "return" in content:
                     # Code content
                     embeddings.append([0.9, 0.1, 0.1])
-                elif "documentation" in content or "api" in content or "getting started" in content:
-                    # Documentation content  
+                elif (
+                    "documentation" in content
+                    or "api" in content
+                    or "getting started" in content
+                ):
+                    # Documentation content
                     embeddings.append([0.1, 0.9, 0.1])
                 elif "tutorial" in content or "step" in content or "guide" in content:
                     # Tutorial content
@@ -45,12 +50,9 @@ def mock_embedding_manager():
                     embeddings.append([0.05, 0.05, 0.95])  # Tutorial reference
                 else:
                     embeddings.append([0.1, 0.1, 0.1])  # Other reference
-        
-        return {
-            "success": True,
-            "embeddings": embeddings
-        }
-    
+
+        return {"success": True, "embeddings": embeddings}
+
     manager.generate_embeddings = AsyncMock(side_effect=mock_generate_embeddings)
     return manager
 
@@ -91,10 +93,10 @@ class TestContentClassifier:
         All requests should be made to the base URL: https://api.example.com
         """
         url = "https://docs.example.com/api"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert isinstance(result, ContentClassification)
         assert result.primary_type == ContentType.DOCUMENTATION
         assert ContentType.DOCUMENTATION in result.confidence_scores
@@ -121,10 +123,10 @@ class TestContentClassifier:
                 return self.data
         """
         url = "https://github.com/user/repo/blob/main/utils.py"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.CODE
         assert ContentType.CODE in result.confidence_scores
         assert result.confidence_scores[ContentType.CODE] > 0.5
@@ -147,10 +149,10 @@ class TestContentClassifier:
         A: Yes, our mobile app is available on both iOS and Android.
         """
         url = "https://example.com/faq"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.FAQ
         assert ContentType.FAQ in result.confidence_scores
 
@@ -189,10 +191,10 @@ class TestContentClassifier:
         Congratulations! You've created your first React app.
         """
         url = "https://blog.example.com/react-tutorial"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.TUTORIAL
         assert ContentType.TUTORIAL in result.confidence_scores
 
@@ -219,10 +221,10 @@ class TestContentClassifier:
         What do you think about these developments? Share your thoughts in the comments below.
         """
         url = "https://healthblog.example.com/ai-in-healthcare"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.BLOG
         assert ContentType.BLOG in result.confidence_scores
 
@@ -260,10 +262,10 @@ class TestContentClassifier:
         @expert_dev Thanks! That was exactly the issue. I was not handling the case where the function returns None.
         """
         url = "https://forum.example.com/thread/12345"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.FORUM
         assert ContentType.FORUM in result.confidence_scores
 
@@ -288,31 +290,37 @@ class TestContentClassifier:
         The company's stock price rose 5% following the announcement.
         """
         url = "https://news.example.com/tech-breakthrough"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         assert result.primary_type == ContentType.NEWS
         assert ContentType.NEWS in result.confidence_scores
 
     async def test_classify_with_url_hints(self, classifier):
         """Test that URL patterns influence classification."""
         content = "Some generic content that could be anything."
-        
+
         await classifier.initialize()
-        
+
         # Test documentation URL
-        doc_result = await classifier.classify_content(content, "https://docs.example.com/guide")
+        doc_result = await classifier.classify_content(
+            content, "https://docs.example.com/guide"
+        )
         # Should lean towards documentation due to URL
-        
+
         # Test GitHub URL
-        code_result = await classifier.classify_content(content, "https://github.com/user/repo/blob/main/file.py")
+        code_result = await classifier.classify_content(
+            content, "https://github.com/user/repo/blob/main/file.py"
+        )
         # Should lean towards code due to URL
-        
+
         # Test blog URL
-        blog_result = await classifier.classify_content(content, "https://blog.example.com/post")
+        blog_result = await classifier.classify_content(
+            content, "https://blog.example.com/post"
+        )
         # Should lean towards blog due to URL
-        
+
         assert isinstance(doc_result, ContentClassification)
         assert isinstance(code_result, ContentClassification)
         assert isinstance(blog_result, ContentClassification)
@@ -352,13 +360,16 @@ class TestContentClassifier:
         This middleware checks for a valid JWT token in the Authorization header.
         """
         url = "https://tutorial.example.com/api-auth"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         # Should classify as tutorial (primary) with code as secondary
         assert result.primary_type == ContentType.TUTORIAL
-        assert ContentType.CODE in result.secondary_types or ContentType.CODE in result.confidence_scores
+        assert (
+            ContentType.CODE in result.secondary_types
+            or ContentType.CODE in result.confidence_scores
+        )
 
     async def test_classify_programming_language_detection(self, classifier):
         """Test programming language detection in code content."""
@@ -374,7 +385,7 @@ class TestContentClassifier:
             calc = Calculator()
             print(calc.add(2, 3))
         """
-        
+
         javascript_content = """
         class Calculator {
             add(a, b) {
@@ -389,15 +400,19 @@ class TestContentClassifier:
         const calc = new Calculator();
         console.log(calc.add(2, 3));
         """
-        
+
         await classifier.initialize()
-        
-        python_result = await classifier.classify_content(python_content, "https://example.com/code.py")
-        javascript_result = await classifier.classify_content(javascript_content, "https://example.com/code.js")
-        
+
+        python_result = await classifier.classify_content(
+            python_content, "https://example.com/code.py"
+        )
+        javascript_result = await classifier.classify_content(
+            javascript_content, "https://example.com/code.js"
+        )
+
         assert python_result.primary_type == ContentType.CODE
         assert javascript_result.primary_type == ContentType.CODE
-        
+
         # Both should be classified as code but may have different language-specific metadata
 
     async def test_classify_unknown_content(self, classifier):
@@ -408,20 +423,23 @@ class TestContentClassifier:
         exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         """
         url = "https://example.com/random"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url)
-        
+
         # Should either classify as UNKNOWN or have low confidence scores
-        assert result.primary_type == ContentType.UNKNOWN or max(result.confidence_scores.values()) < 0.6
+        assert (
+            result.primary_type == ContentType.UNKNOWN
+            or max(result.confidence_scores.values()) < 0.6
+        )
 
     async def test_classify_empty_content(self, classifier):
         """Test classification with empty or minimal content."""
         await classifier.initialize()
-        
+
         result = await classifier.classify_content("", "https://example.com")
         assert result.primary_type == ContentType.UNKNOWN
-        
+
         result = await classifier.classify_content("   ", "https://example.com")
         assert result.primary_type == ContentType.UNKNOWN
 
@@ -430,10 +448,10 @@ class TestContentClassifier:
         content = "Some content here."
         url = "https://example.com/page"
         title = "API Reference Documentation"
-        
+
         await classifier.initialize()
         result = await classifier.classify_content(content, url, title)
-        
+
         # Title should influence classification towards REFERENCE/DOCUMENTATION
         assert result.primary_type in [ContentType.REFERENCE, ContentType.DOCUMENTATION]
         assert result.classification_reasoning is not None
@@ -445,11 +463,15 @@ class TestContentClassifier:
 
     async def test_embedding_generation_error(self, classifier, mock_embedding_manager):
         """Test handling of embedding generation errors."""
-        mock_embedding_manager.generate_embeddings.side_effect = Exception("Embedding error")
-        
+        mock_embedding_manager.generate_embeddings.side_effect = Exception(
+            "Embedding error"
+        )
+
         await classifier.initialize()
-        result = await classifier.classify_content("test content", "https://example.com")
-        
+        result = await classifier.classify_content(
+            "test content", "https://example.com"
+        )
+
         # Should fall back to heuristic classification
         assert isinstance(result, ContentClassification)
         assert result.primary_type is not None

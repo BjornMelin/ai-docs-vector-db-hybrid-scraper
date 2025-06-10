@@ -1,11 +1,10 @@
 """Tests for content intelligence quality assessor."""
 
-from unittest.mock import AsyncMock, MagicMock
-import pytest
-from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
-from src.services.content_intelligence.quality_assessor import QualityAssessor
+import pytest
 from src.services.content_intelligence.models import QualityScore
+from src.services.content_intelligence.quality_assessor import QualityAssessor
 
 
 @pytest.fixture
@@ -74,10 +73,10 @@ class TestQualityAssessor:
         
         This content was last updated on March 15, 2024.
         """
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(content)
-        
+
         assert isinstance(result, QualityScore)
         assert result.overall_score > 0.7  # High quality
         assert result.completeness > 0.8  # Well-structured and complete
@@ -92,10 +91,10 @@ class TestQualityAssessor:
         capitalization or punctuation and its very hard to read because its just one long 
         sentence that goes on and on without any breaks or formatting
         """
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(content)
-        
+
         assert isinstance(result, QualityScore)
         assert result.overall_score < 0.6  # Low quality
         assert result.structure_quality < 0.5  # Poor structure
@@ -106,12 +105,15 @@ class TestQualityAssessor:
     async def test_assess_incomplete_content(self, quality_assessor):
         """Test assessment of incomplete content."""
         content = "This is a very short"  # Incomplete sentence
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(content)
-        
+
         assert result.completeness < 0.5  # Low completeness
-        assert "incomplete" in str(result.quality_issues).lower() or "short" in str(result.quality_issues).lower()
+        assert (
+            "incomplete" in str(result.quality_issues).lower()
+            or "short" in str(result.quality_issues).lower()
+        )
 
     async def test_assess_with_confidence_threshold(self, quality_assessor):
         """Test assessment with different confidence thresholds."""
@@ -123,18 +125,24 @@ class TestQualityAssessor:
         
         The formatting is okay and it's readable, but not exceptional.
         """
-        
+
         await quality_assessor.initialize()
-        
+
         # Test with low threshold
-        result_low = await quality_assessor.assess_quality(content, confidence_threshold=0.5)
-        
+        result_low = await quality_assessor.assess_quality(
+            content, confidence_threshold=0.5
+        )
+
         # Test with high threshold
-        result_high = await quality_assessor.assess_quality(content, confidence_threshold=0.9)
-        
+        result_high = await quality_assessor.assess_quality(
+            content, confidence_threshold=0.9
+        )
+
         assert result_low.threshold == 0.5
         assert result_high.threshold == 0.9
-        assert result_low.meets_threshold != result_high.meets_threshold  # Different thresholds should give different results
+        assert (
+            result_low.meets_threshold != result_high.meets_threshold
+        )  # Different thresholds should give different results
 
     async def test_assess_with_query_context(self, quality_assessor):
         """Test assessment with query context for relevance scoring."""
@@ -161,27 +169,25 @@ class TestQualityAssessor:
         - Lists (list)
         - Dictionaries (dict)
         """
-        
+
         await quality_assessor.initialize()
-        
+
         # Test with relevant query
         result_relevant = await quality_assessor.assess_quality(
-            content, 
-            query_context="Python programming basics"
+            content, query_context="Python programming basics"
         )
-        
+
         # Test with irrelevant query
         result_irrelevant = await quality_assessor.assess_quality(
-            content, 
-            query_context="JavaScript web development"
+            content, query_context="JavaScript web development"
         )
-        
+
         assert result_relevant.relevance > result_irrelevant.relevance
 
     async def test_assess_with_extraction_metadata(self, quality_assessor):
         """Test assessment with extraction metadata."""
         content = "Content that was extracted successfully."
-        
+
         extraction_metadata = {
             "extraction_method": "crawl4ai",
             "success": True,
@@ -189,14 +195,15 @@ class TestQualityAssessor:
             "status_code": 200,
             "content_length": len(content),
         }
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(
-            content, 
-            extraction_metadata=extraction_metadata
+            content, extraction_metadata=extraction_metadata
         )
-        
-        assert result.confidence > 0.5  # Good extraction metadata should boost confidence
+
+        assert (
+            result.confidence > 0.5
+        )  # Good extraction metadata should boost confidence
 
     async def test_assess_freshness_scoring(self, quality_assessor):
         """Test freshness scoring based on content timestamps."""
@@ -209,7 +216,7 @@ class TestQualityAssessor:
         The latest developments in AI are happening rapidly...
         Last updated: March 15, 2024
         """
-        
+
         # Old content
         old_content = """
         # Web Development Guide
@@ -219,12 +226,12 @@ class TestQualityAssessor:
         This guide covers web development as of 2010...
         Last updated: January 1, 2010
         """
-        
+
         await quality_assessor.initialize()
-        
+
         recent_result = await quality_assessor.assess_quality(recent_content)
         old_result = await quality_assessor.assess_quality(old_content)
-        
+
         # Recent content should have higher freshness score
         assert recent_result.freshness > old_result.freshness
 
@@ -234,19 +241,18 @@ class TestQualityAssessor:
         This is some unique content that should be assessed for quality.
         It contains information that is not duplicated elsewhere.
         """
-        
+
         existing_content = [
             "This is some unique content that should be assessed for quality.",
             "Completely different content about something else.",
             "Another piece of unrelated content.",
         ]
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(
-            content, 
-            existing_content=existing_content
+            content, existing_content=existing_content
         )
-        
+
         # Should detect high similarity with first existing content
         assert result.duplicate_similarity > 0.7
 
@@ -282,18 +288,18 @@ class TestQualityAssessor:
         result = calculate_fibonacci(10)
         print(f"The 10th Fibonacci number is: {result}")
         """
-        
+
         bad_code = """
         def fib(n):
             if n<=1:return n
             return fib(n-1)+fib(n-2)
         """
-        
+
         await quality_assessor.initialize()
-        
+
         good_result = await quality_assessor.assess_quality(good_code)
         bad_result = await quality_assessor.assess_quality(bad_code)
-        
+
         # Good code should score higher on structure and readability
         assert good_result.structure_quality > bad_result.structure_quality
         assert good_result.readability > bad_result.readability
@@ -301,7 +307,7 @@ class TestQualityAssessor:
     async def test_assess_with_extraction_errors(self, quality_assessor):
         """Test assessment when extraction had errors."""
         content = "Partial content due to extraction issues..."
-        
+
         extraction_metadata = {
             "extraction_method": "crawl4ai",
             "success": False,
@@ -309,13 +315,12 @@ class TestQualityAssessor:
             "status_code": 408,
             "partial_content": True,
         }
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(
-            content, 
-            extraction_metadata=extraction_metadata
+            content, extraction_metadata=extraction_metadata
         )
-        
+
         # Poor extraction should reduce confidence
         assert result.confidence < 0.6
         assert "extraction" in str(result.quality_issues).lower()
@@ -327,15 +332,17 @@ class TestQualityAssessor:
         also it repeats the same words the same words over and over again
         it also contains some suspicious content like click here for amazing deals!!!
         """
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(problematic_content)
-        
+
         issues = [issue.lower() for issue in result.quality_issues]
-        
+
         # Should identify various issues
         assert any("structure" in issue or "formatting" in issue for issue in issues)
-        assert any("readability" in issue or "capitalization" in issue for issue in issues)
+        assert any(
+            "readability" in issue or "capitalization" in issue for issue in issues
+        )
         assert len(result.improvement_suggestions) > 0
 
     async def test_improvement_suggestions(self, quality_assessor):
@@ -345,28 +352,39 @@ class TestQualityAssessor:
         
         it has minimal structure and could use more detail
         """
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(improvable_content)
-        
-        suggestions = [suggestion.lower() for suggestion in result.improvement_suggestions]
-        
+
+        suggestions = [
+            suggestion.lower() for suggestion in result.improvement_suggestions
+        ]
+
         # Should provide actionable suggestions
         assert len(suggestions) > 0
-        assert any("structure" in suggestion or "detail" in suggestion or "formatting" in suggestion for suggestion in suggestions)
+        assert any(
+            "structure" in suggestion
+            or "detail" in suggestion
+            or "formatting" in suggestion
+            for suggestion in suggestions
+        )
 
     async def test_assess_not_initialized_error(self, quality_assessor):
         """Test that assessor raises error when not initialized."""
         with pytest.raises(RuntimeError, match="QualityAssessor not initialized"):
             await quality_assessor.assess_quality("test content")
 
-    async def test_embedding_error_handling(self, quality_assessor, mock_embedding_manager):
+    async def test_embedding_error_handling(
+        self, quality_assessor, mock_embedding_manager
+    ):
         """Test handling of embedding generation errors."""
-        mock_embedding_manager.generate_embeddings.side_effect = Exception("Embedding error")
-        
+        mock_embedding_manager.generate_embeddings.side_effect = Exception(
+            "Embedding error"
+        )
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality("test content")
-        
+
         # Should still return a valid QualityScore even with embedding errors
         assert isinstance(result, QualityScore)
         assert result.confidence < 0.8  # Confidence should be reduced due to error
@@ -401,10 +419,10 @@ class TestQualityAssessor:
         
         The conclusion summarizes key points effectively.
         """
-        
+
         await quality_assessor.initialize()
         result = await quality_assessor.assess_quality(content)
-        
+
         # Verify all metrics are calculated
         assert 0 <= result.completeness <= 1
         assert 0 <= result.relevance <= 1
@@ -412,12 +430,15 @@ class TestQualityAssessor:
         assert 0 <= result.structure_quality <= 1
         assert 0 <= result.readability <= 1
         assert 0 <= result.duplicate_similarity <= 1
-        
+
         # Overall score should be reasonable average
         calculated_average = (
-            result.completeness + result.relevance + result.confidence + 
-            result.structure_quality + result.readability
+            result.completeness
+            + result.relevance
+            + result.confidence
+            + result.structure_quality
+            + result.readability
         ) / 5
-        
+
         # Overall score should be close to the average of individual metrics
         assert abs(result.overall_score - calculated_average) < 0.2

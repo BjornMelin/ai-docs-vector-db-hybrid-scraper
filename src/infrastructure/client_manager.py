@@ -619,7 +619,9 @@ class ClientManager:
 
             async with self._service_locks["content_intelligence_service"]:
                 if self._content_intelligence_service is None:
-                    from src.services.content_intelligence.service import ContentIntelligenceService
+                    from src.services.content_intelligence.service import (
+                        ContentIntelligenceService,
+                    )
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()

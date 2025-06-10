@@ -108,7 +108,7 @@ async def search_documents_core(  # noqa: PLR0912
         search_results = []
         for result in results:
             payload = result["payload"]
-            
+
             # Base search result
             search_result_data = {
                 "content": payload.get("content", ""),
@@ -118,19 +118,21 @@ async def search_documents_core(  # noqa: PLR0912
                 "url": payload.get("url"),
                 "title": payload.get("title"),
             }
-            
+
             # Add content intelligence metadata if available
             if payload.get("content_intelligence_analyzed"):
-                search_result_data.update({
-                    "content_type": payload.get("content_type"),
-                    "content_confidence": payload.get("content_confidence"),
-                    "quality_overall": payload.get("quality_overall"),
-                    "quality_completeness": payload.get("quality_completeness"),
-                    "quality_relevance": payload.get("quality_relevance"),
-                    "quality_confidence": payload.get("quality_confidence"),
-                    "content_intelligence_analyzed": True,
-                })
-            
+                search_result_data.update(
+                    {
+                        "content_type": payload.get("content_type"),
+                        "content_confidence": payload.get("content_confidence"),
+                        "quality_overall": payload.get("quality_overall"),
+                        "quality_completeness": payload.get("quality_completeness"),
+                        "quality_relevance": payload.get("quality_relevance"),
+                        "quality_confidence": payload.get("quality_confidence"),
+                        "content_intelligence_analyzed": True,
+                    }
+                )
+
             search_results.append(SearchResult(**search_result_data))
 
         # Cache results

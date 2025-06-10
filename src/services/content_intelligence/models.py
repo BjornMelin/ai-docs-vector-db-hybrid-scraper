@@ -161,15 +161,11 @@ class ContentMetadata(BaseModel):
     tags: list[str] = Field(
         default_factory=list, description="Semantic tags and categories"
     )
-    keywords: list[str] = Field(
-        default_factory=list, description="Extracted keywords"
-    )
+    keywords: list[str] = Field(default_factory=list, description="Extracted keywords")
     entities: list[dict[str, Any]] = Field(
         default_factory=list, description="Named entities found in content"
     )
-    topics: list[str] = Field(
-        default_factory=list, description="Identified topics"
-    )
+    topics: list[str] = Field(default_factory=list, description="Identified topics")
 
     # Technical metadata
     content_hash: str | None = Field(
@@ -250,9 +246,7 @@ class AdaptationRecommendation(BaseModel):
         le=1.0,
         description="Confidence in recommendation (0-1)",
     )
-    reasoning: str = Field(
-        ..., description="Explanation for this recommendation"
-    )
+    reasoning: str = Field(..., description="Explanation for this recommendation")
 
     # Implementation details
     implementation_notes: str = Field(
@@ -340,7 +334,9 @@ class ContentAnalysisRequest(BaseModel):
     content: str = Field(..., description="Content to analyze", min_length=1)
     url: str = Field(..., description="Source URL")
     title: str | None = Field(default=None, description="Page title")
-    raw_html: str | None = Field(default=None, description="Raw HTML for metadata extraction")
+    raw_html: str | None = Field(
+        default=None, description="Raw HTML for metadata extraction"
+    )
     confidence_threshold: float = Field(
         default=0.8,
         ge=0.0,
@@ -371,9 +367,7 @@ class ContentAnalysisResponse(BaseModel):
         default=None, description="Enriched content with intelligence analysis"
     )
     error: str | None = Field(default=None, description="Error message if failed")
-    processing_time_ms: float = Field(
-        default=0.0, description="Total processing time"
-    )
+    processing_time_ms: float = Field(default=0.0, description="Total processing time")
     cache_hit: bool = Field(
         default=False, description="Whether result was retrieved from cache"
     )

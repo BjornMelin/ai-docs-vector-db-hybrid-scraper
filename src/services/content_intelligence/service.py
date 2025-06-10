@@ -260,6 +260,7 @@ class ContentIntelligenceService(BaseService):
             logger.error(f"Content classification failed: {e}")
             # Return unknown classification on failure
             from .models import ContentType
+
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,
                 secondary_types=[],
@@ -401,10 +402,12 @@ class ContentIntelligenceService(BaseService):
         # Perform content classification if enabled
         if request.enable_classification:
             try:
-                enriched_content.content_classification = await self.classify_content_type(
-                    content=request.content,
-                    url=request.url,
-                    title=request.title,
+                enriched_content.content_classification = (
+                    await self.classify_content_type(
+                        content=request.content,
+                        url=request.url,
+                        title=request.title,
+                    )
                 )
             except Exception as e:
                 logger.warning(f"Content classification failed: {e}")
@@ -420,17 +423,20 @@ class ContentIntelligenceService(BaseService):
 
                 # Check if content meets quality threshold
                 enriched_content.passes_quality_threshold = (
-                    enriched_content.quality_score.overall_score >= request.confidence_threshold
+                    enriched_content.quality_score.overall_score
+                    >= request.confidence_threshold
                 )
 
                 # Determine if reprocessing is needed
                 enriched_content.requires_reprocessing = (
-                    enriched_content.quality_score.overall_score < 0.3 or
-                    len(enriched_content.quality_score.quality_issues) > 3
+                    enriched_content.quality_score.overall_score < 0.3
+                    or len(enriched_content.quality_score.quality_issues) > 3
                 )
 
                 # Add validation errors from quality issues
-                enriched_content.validation_errors = enriched_content.quality_score.quality_issues
+                enriched_content.validation_errors = (
+                    enriched_content.quality_score.quality_issues
+                )
 
             except Exception as e:
                 logger.warning(f"Quality assessment failed: {e}")
@@ -449,9 +455,11 @@ class ContentIntelligenceService(BaseService):
         # Generate adaptation recommendations if enabled
         if request.enable_adaptations:
             try:
-                enriched_content.adaptation_recommendations = await self.recommend_adaptations(
-                    url=request.url,
-                    quality_score=enriched_content.quality_score,
+                enriched_content.adaptation_recommendations = (
+                    await self.recommend_adaptations(
+                        url=request.url,
+                        quality_score=enriched_content.quality_score,
+                    )
                 )
             except Exception as e:
                 logger.warning(f"Adaptation recommendations failed: {e}")

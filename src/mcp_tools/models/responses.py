@@ -17,7 +17,7 @@ class SearchResult(BaseModel):
     url: str | None = None
     title: str | None = None
     metadata: dict[str, Any] | None = None
-    
+
     # Content Intelligence fields
     content_type: str | None = None
     content_confidence: float | None = None
@@ -26,7 +26,7 @@ class SearchResult(BaseModel):
     quality_relevance: float | None = None
     quality_confidence: float | None = None
     content_intelligence_analyzed: bool | None = None
-    
+
     model_config = ConfigDict(extra="allow")
 
 

@@ -230,7 +230,9 @@ class ContentIntelligenceAnalysisRequest(BaseModel):
     content: str = Field(..., min_length=1, description="Content to analyze")
     url: str = Field(..., description="Source URL")
     title: str | None = Field(default=None, description="Optional page title")
-    raw_html: str | None = Field(default=None, description="Optional raw HTML for metadata extraction")
+    raw_html: str | None = Field(
+        default=None, description="Optional raw HTML for metadata extraction"
+    )
     confidence_threshold: float = Field(
         default=0.8, ge=0.0, le=1.0, description="Minimum confidence threshold"
     )

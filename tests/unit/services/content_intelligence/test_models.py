@@ -1,20 +1,19 @@
 """Tests for content intelligence Pydantic models."""
 
-import pytest
-from datetime import datetime, timezone
-from pydantic import ValidationError
+from datetime import UTC
+from datetime import datetime
 
-from src.services.content_intelligence.models import (
-    AdaptationRecommendation,
-    AdaptationStrategy,
-    ContentAnalysisRequest,
-    ContentAnalysisResponse,
-    ContentClassification,
-    ContentMetadata,
-    ContentType,
-    EnrichedContent,
-    QualityScore,
-)
+import pytest
+from pydantic import ValidationError
+from src.services.content_intelligence.models import AdaptationRecommendation
+from src.services.content_intelligence.models import AdaptationStrategy
+from src.services.content_intelligence.models import ContentAnalysisRequest
+from src.services.content_intelligence.models import ContentAnalysisResponse
+from src.services.content_intelligence.models import ContentClassification
+from src.services.content_intelligence.models import ContentMetadata
+from src.services.content_intelligence.models import ContentType
+from src.services.content_intelligence.models import EnrichedContent
+from src.services.content_intelligence.models import QualityScore
 
 
 class TestContentType:
@@ -73,10 +72,14 @@ class TestQualityScore:
         """Test QualityScore validation."""
         # Test invalid scores (outside 0-1 range)
         with pytest.raises(ValidationError):
-            QualityScore(overall_score=1.5, completeness=0.8, relevance=0.8, confidence=0.8)
-        
+            QualityScore(
+                overall_score=1.5, completeness=0.8, relevance=0.8, confidence=0.8
+            )
+
         with pytest.raises(ValidationError):
-            QualityScore(overall_score=0.8, completeness=-0.1, relevance=0.8, confidence=0.8)
+            QualityScore(
+                overall_score=0.8, completeness=-0.1, relevance=0.8, confidence=0.8
+            )
 
     def test_quality_score_threshold_calculation(self):
         """Test quality score threshold calculation."""
@@ -130,7 +133,10 @@ class TestContentClassification:
         classification = ContentClassification(
             primary_type=ContentType.DOCUMENTATION,
             secondary_types=[ContentType.TUTORIAL],
-            confidence_scores={ContentType.DOCUMENTATION: 0.9, ContentType.TUTORIAL: 0.7},
+            confidence_scores={
+                ContentType.DOCUMENTATION: 0.9,
+                ContentType.TUTORIAL: 0.7,
+            },
             classification_reasoning="Detected documentation patterns",
         )
         assert classification.primary_type == ContentType.DOCUMENTATION
@@ -188,7 +194,7 @@ class TestContentMetadata:
 
     def test_content_metadata_optional_fields(self):
         """Test ContentMetadata with optional fields."""
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         metadata = ContentMetadata(
             url="https://example.com/page",
             word_count=500,
@@ -251,7 +257,7 @@ class TestEnrichedContent:
             implementation_notes="Use .main-content selector",
             estimated_improvement=0.3,
         )
-        
+
         content = EnrichedContent(
             original_content="Test content",
             classification=ContentClassification(
@@ -274,7 +280,10 @@ class TestEnrichedContent:
             adaptation_recommendations=[adaptation],
         )
         assert len(content.adaptation_recommendations) == 1
-        assert content.adaptation_recommendations[0].strategy == AdaptationStrategy.EXTRACT_MAIN_CONTENT
+        assert (
+            content.adaptation_recommendations[0].strategy
+            == AdaptationStrategy.EXTRACT_MAIN_CONTENT
+        )
 
 
 class TestAdaptationRecommendation:

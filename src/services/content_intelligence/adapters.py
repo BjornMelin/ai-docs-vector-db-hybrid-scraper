@@ -20,7 +20,7 @@ class SiteAdapter:
     def __init__(self):
         """Initialize site adapter with pattern databases."""
         self._initialized = False
-        
+
         # Site-specific adaptation patterns
         self._site_patterns = {
             "github.com": {
@@ -40,7 +40,10 @@ class SiteAdapter:
                     "code_blocks": [".s-code-block", ".highlight"],
                     "metadata": [".vote-count-post", ".post-signature"],
                 },
-                "strategies": [AdaptationStrategy.FOLLOW_SCHEMA, AdaptationStrategy.EXTRACT_MAIN_CONTENT],
+                "strategies": [
+                    AdaptationStrategy.FOLLOW_SCHEMA,
+                    AdaptationStrategy.EXTRACT_MAIN_CONTENT,
+                ],
                 "confidence": 0.85,
                 "notes": "Stack Overflow uses consistent Q&A schema",
             },
@@ -49,7 +52,10 @@ class SiteAdapter:
                     "main_content": ["article[data-post-id]", ".postArticle-content"],
                     "metadata": [".postMetaInline", ".u-marginTop20"],
                 },
-                "strategies": [AdaptationStrategy.WAIT_FOR_LOAD, AdaptationStrategy.HANDLE_DYNAMIC],
+                "strategies": [
+                    AdaptationStrategy.WAIT_FOR_LOAD,
+                    AdaptationStrategy.HANDLE_DYNAMIC,
+                ],
                 "wait_conditions": ["article[data-post-id]", ".postArticle-content"],
                 "confidence": 0.75,
                 "notes": "Medium uses dynamic loading, requires waiting",
@@ -59,7 +65,10 @@ class SiteAdapter:
                     "main_content": ["[data-testid='post-content']", ".usertext-body"],
                     "comments": ["[data-testid='comment']", ".Comment"],
                 },
-                "strategies": [AdaptationStrategy.HANDLE_DYNAMIC, AdaptationStrategy.SCROLL_TO_LOAD],
+                "strategies": [
+                    AdaptationStrategy.HANDLE_DYNAMIC,
+                    AdaptationStrategy.SCROLL_TO_LOAD,
+                ],
                 "wait_conditions": ["[data-testid='post-content']"],
                 "confidence": 0.7,
                 "notes": "Reddit has dynamic content loading",
@@ -70,7 +79,10 @@ class SiteAdapter:
                     "navigation": [".sphinxsidebar", ".related"],
                     "code_blocks": [".highlight", ".code"],
                 },
-                "strategies": [AdaptationStrategy.EXTRACT_MAIN_CONTENT, AdaptationStrategy.FOLLOW_SCHEMA],
+                "strategies": [
+                    AdaptationStrategy.EXTRACT_MAIN_CONTENT,
+                    AdaptationStrategy.FOLLOW_SCHEMA,
+                ],
                 "confidence": 0.9,
                 "notes": "Sphinx documentation has consistent structure",
             },
@@ -80,7 +92,10 @@ class SiteAdapter:
                     "metadata": [".infobox", ".navbox"],
                     "references": [".references", ".reflist"],
                 },
-                "strategies": [AdaptationStrategy.EXTRACT_MAIN_CONTENT, AdaptationStrategy.BYPASS_NAVIGATION],
+                "strategies": [
+                    AdaptationStrategy.EXTRACT_MAIN_CONTENT,
+                    AdaptationStrategy.BYPASS_NAVIGATION,
+                ],
                 "confidence": 0.88,
                 "notes": "Wikipedia has consistent MediaWiki structure",
             },
@@ -89,20 +104,40 @@ class SiteAdapter:
         # Common pattern detection rules
         self._pattern_rules = {
             "spa_indicators": [
-                "react", "angular", "vue", "spa", "single-page",
-                "data-reactroot", "ng-app", "__nuxt", "_next"
+                "react",
+                "angular",
+                "vue",
+                "spa",
+                "single-page",
+                "data-reactroot",
+                "ng-app",
+                "__nuxt",
+                "_next",
             ],
             "infinite_scroll_indicators": [
-                "infinite-scroll", "lazy-load", "load-more",
-                "pagination", "scroll-to-load"
+                "infinite-scroll",
+                "lazy-load",
+                "load-more",
+                "pagination",
+                "scroll-to-load",
             ],
             "dynamic_content_indicators": [
-                "ajax", "xhr", "fetch", "dynamic", "async-load",
-                "data-src", "lazy", "skeleton"
+                "ajax",
+                "xhr",
+                "fetch",
+                "dynamic",
+                "async-load",
+                "data-src",
+                "lazy",
+                "skeleton",
             ],
             "paywall_indicators": [
-                "paywall", "subscription", "premium", "paid-content",
-                "member-only", "subscriber"
+                "paywall",
+                "subscription",
+                "premium",
+                "paid-content",
+                "member-only",
+                "subscriber",
             ],
         }
 
@@ -209,7 +244,7 @@ class SiteAdapter:
             parsed = urlparse(url)
             domain = parsed.netloc.lower()
             # Remove 'www.' prefix
-            if domain.startswith('www.'):
+            if domain.startswith("www."):
                 domain = domain[4:]
             return domain
         except Exception:
@@ -228,15 +263,24 @@ class SiteAdapter:
         content_lower = content.lower()
 
         # Check for SPA indicators
-        if any(indicator in content_lower for indicator in self._pattern_rules["spa_indicators"]):
+        if any(
+            indicator in content_lower
+            for indicator in self._pattern_rules["spa_indicators"]
+        ):
             patterns.append("spa_content")
 
         # Check for dynamic content indicators
-        if any(indicator in content_lower for indicator in self._pattern_rules["dynamic_content_indicators"]):
+        if any(
+            indicator in content_lower
+            for indicator in self._pattern_rules["dynamic_content_indicators"]
+        ):
             patterns.append("dynamic_content")
 
         # Check for paywall indicators
-        if any(indicator in content_lower for indicator in self._pattern_rules["paywall_indicators"]):
+        if any(
+            indicator in content_lower
+            for indicator in self._pattern_rules["paywall_indicators"]
+        ):
             patterns.append("paywall_detected")
 
         # Check content completeness indicators
@@ -274,7 +318,10 @@ class SiteAdapter:
             patterns.append("lazy_loading")
 
         # Check for infinite scroll
-        if any(indicator in html_lower for indicator in self._pattern_rules["infinite_scroll_indicators"]):
+        if any(
+            indicator in html_lower
+            for indicator in self._pattern_rules["infinite_scroll_indicators"]
+        ):
             patterns.append("infinite_scroll")
 
         # Check for schema markup
@@ -298,7 +345,11 @@ class SiteAdapter:
         url_lower = url.lower()
 
         # Check for common URL patterns (use if statements instead of elif to detect multiple patterns)
-        if "/api/" in url_lower or url_lower.startswith("https://api.") or url_lower.startswith("http://api."):
+        if (
+            "/api/" in url_lower
+            or url_lower.startswith("https://api.")
+            or url_lower.startswith("http://api.")
+        ):
             patterns.append("api_endpoint")
         if "/docs/" in url_lower or "/documentation/" in url_lower:
             patterns.append("documentation_site")
@@ -340,7 +391,9 @@ class SiteAdapter:
                 implementation_notes=site_config.get("notes", ""),
                 estimated_improvement=0.3,
                 site_domain=domain,
-                selector_patterns=site_config.get("selectors", {}).get("main_content", []),
+                selector_patterns=site_config.get("selectors", {}).get(
+                    "main_content", []
+                ),
                 wait_conditions=site_config.get("wait_conditions", []),
             )
             recommendations.append(recommendation)
@@ -364,7 +417,10 @@ class SiteAdapter:
         recommendations = []
 
         # SPA/React app recommendations
-        if any(p in patterns for p in ["spa_content", "react_app", "angular_app", "nextjs_app"]):
+        if any(
+            p in patterns
+            for p in ["spa_content", "react_app", "angular_app", "nextjs_app"]
+        ):
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.WAIT_FOR_LOAD,
@@ -373,7 +429,11 @@ class SiteAdapter:
                     reasoning="Single Page Application detected - content loads dynamically",
                     implementation_notes="Wait for content to be rendered by JavaScript",
                     estimated_improvement=0.4,
-                    wait_conditions=["[data-testid]", ".content-loaded", ".main-content"],
+                    wait_conditions=[
+                        "[data-testid]",
+                        ".content-loaded",
+                        ".main-content",
+                    ],
                     fallback_strategies=[AdaptationStrategy.HANDLE_DYNAMIC],
                 )
             )
@@ -464,7 +524,10 @@ class SiteAdapter:
         recommendations = []
 
         # Incomplete content issues
-        if any("incomplete" in issue.lower() or "short" in issue.lower() for issue in quality_issues):
+        if any(
+            "incomplete" in issue.lower() or "short" in issue.lower()
+            for issue in quality_issues
+        ):
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.EXTRACT_MAIN_CONTENT,
@@ -478,7 +541,10 @@ class SiteAdapter:
             )
 
         # Structure issues
-        if any("structure" in issue.lower() or "formatting" in issue.lower() for issue in quality_issues):
+        if any(
+            "structure" in issue.lower() or "formatting" in issue.lower()
+            for issue in quality_issues
+        ):
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.FOLLOW_SCHEMA,
@@ -491,7 +557,10 @@ class SiteAdapter:
             )
 
         # Loading issues
-        if any("loading" in issue.lower() or "dynamic" in issue.lower() for issue in quality_issues):
+        if any(
+            "loading" in issue.lower() or "dynamic" in issue.lower()
+            for issue in quality_issues
+        ):
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.WAIT_FOR_LOAD,

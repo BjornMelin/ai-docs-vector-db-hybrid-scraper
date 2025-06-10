@@ -21,9 +21,7 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.content_intelligence import ContentIntelligenceService
 from ...services.content_intelligence.models import ContentAnalysisRequest
-from ...services.content_intelligence.models import ContentAnalysisResponse
 from ...services.content_intelligence.models import ContentClassification
 from ...services.content_intelligence.models import ContentMetadata
 from ...services.content_intelligence.models import QualityScore
@@ -58,11 +56,13 @@ def register_tools(mcp, client_manager: ClientManager):
         - Duplicate content detection with similarity thresholds
         """
         try:
-            await ctx.info(f"Starting content intelligence analysis for URL: {request.url}")
+            await ctx.info(
+                f"Starting content intelligence analysis for URL: {request.url}"
+            )
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentIntelligenceResult(
@@ -136,10 +136,11 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 from ...services.content_intelligence.models import ContentType
+
                 return ContentClassification(
                     primary_type=ContentType.UNKNOWN,
                     secondary_types=[],
@@ -164,6 +165,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             await ctx.error(f"Content classification failed: {e}")
             from ...services.content_intelligence.models import ContentType
+
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,
                 secondary_types=[],
@@ -197,7 +199,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return QualityScore(
@@ -260,7 +262,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentMetadata(
@@ -327,7 +329,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return []
@@ -339,7 +341,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 quality_score=None,  # Could be enhanced to accept quality score
             )
 
-            await ctx.info(f"Generated {len(recommendations)} adaptation recommendations")
+            await ctx.info(
+                f"Generated {len(recommendations)} adaptation recommendations"
+            )
 
             # Convert to serializable format
             return [rec.model_dump() for rec in recommendations]
@@ -369,7 +373,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
-            
+
             if not content_service:
                 await ctx.warning("Content Intelligence Service not available")
                 return {

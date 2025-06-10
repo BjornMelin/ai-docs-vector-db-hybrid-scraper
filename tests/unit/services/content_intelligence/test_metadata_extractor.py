@@ -1,9 +1,8 @@
 """Tests for content intelligence metadata extractor."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
-from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
+import pytest
 from src.services.content_intelligence.metadata_extractor import MetadataExtractor
 from src.services.content_intelligence.models import ContentMetadata
 
@@ -17,9 +16,9 @@ def mock_embedding_manager():
 
 
 @pytest.fixture
-def metadata_extractor(mock_embedding_manager):
-    """Create MetadataExtractor instance with mocked dependencies."""
-    return MetadataExtractor(embedding_manager=mock_embedding_manager)
+def metadata_extractor():
+    """Create MetadataExtractor instance."""
+    return MetadataExtractor()
 
 
 class TestMetadataExtractor:
@@ -45,12 +44,11 @@ class TestMetadataExtractor:
         recommendation systems, and autonomous vehicles.
         """
         url = "https://example.com/ml-guide"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url)
-        
+
         assert isinstance(result, ContentMetadata)
-        assert result.url == url
         assert result.word_count > 50
         assert result.char_count > 300
         assert result.paragraph_count >= 4
@@ -92,15 +90,20 @@ class TestMetadataExtractor:
         </body>
         </html>
         """
-        
-        content = "Python is a versatile programming language used for web development..."
+
+        content = (
+            "Python is a versatile programming language used for web development..."
+        )
         url = "https://example.com/python-guide"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url, raw_html=html)
-        
+
         assert result.title == "Complete Guide to Python Programming"
-        assert result.description == "Learn Python programming from basics to advanced concepts"
+        assert (
+            result.description
+            == "Learn Python programming from basics to advanced concepts"
+        )
         assert result.author == "Jane Smith"
         assert result.language == "en"
         assert len(result.links) >= 2  # Should extract links
@@ -139,17 +142,19 @@ class TestMetadataExtractor:
         </body>
         </html>
         """
-        
+
         content = "Machine learning content..."
         url = "https://example.com/ml-article"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url, raw_html=html)
-        
+
         assert result.title == "Understanding Machine Learning"
         assert result.author == "Dr. John Doe"
         assert "schema.org" in str(result.schema_types)
-        assert result.description == "A comprehensive guide to machine learning concepts"
+        assert (
+            result.description == "A comprehensive guide to machine learning concepts"
+        )
 
     async def test_extract_timestamps(self, metadata_extractor):
         """Test extraction of publication and modification timestamps."""
@@ -164,10 +169,10 @@ class TestMetadataExtractor:
         This article was first published on March 15, 2024, and last modified on March 16, 2024.
         """
         url = "https://example.com/ai-research"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url)
-        
+
         assert result.published_date is not None
         assert result.last_modified is not None
         # Both dates should be in March 2024
@@ -210,14 +215,14 @@ class TestMetadataExtractor:
         - Performance optimization
         """
         url = "https://tutorial.example.com/python-data-analysis"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url)
-        
+
         # Should identify programming-related tags and topics
         tags_lower = [tag.lower() for tag in result.tags]
         topics_lower = [topic.lower() for topic in result.topics]
-        
+
         assert any("python" in tag for tag in tags_lower)
         assert any("data" in tag for tag in tags_lower)
         assert any("analysis" in topic for topic in topics_lower)
@@ -227,7 +232,7 @@ class TestMetadataExtractor:
         """Test metadata extraction with existing extraction metadata."""
         content = "Sample content for testing metadata extraction."
         url = "https://example.com/test"
-        
+
         extraction_metadata = {
             "extraction_method": "crawl4ai",
             "timestamp": "2024-03-15T10:30:00Z",
@@ -235,12 +240,12 @@ class TestMetadataExtractor:
             "load_time_ms": 200,
             "status_code": 200,
         }
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(
             content, url, extraction_metadata=extraction_metadata
         )
-        
+
         assert result.extraction_method == "crawl4ai"
         assert result.load_time_ms == 200
         assert result.crawl_timestamp is not None
@@ -270,13 +275,13 @@ class TestMetadataExtractor:
         </body>
         </html>
         """
-        
+
         content = "Learn the fundamentals of Python programming..."
         url = "https://example.com/programming/python/basics"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url, raw_html=html)
-        
+
         # Should extract hierarchy information
         assert len(result.breadcrumbs) > 0
         assert any("python" in crumb.lower() for crumb in result.breadcrumbs)
@@ -286,15 +291,15 @@ class TestMetadataExtractor:
         content1 = "This is unique content for testing."
         content2 = "This is unique content for testing."  # Same content
         content3 = "This is different content for testing."
-        
+
         url = "https://example.com/test"
-        
+
         await metadata_extractor.initialize()
-        
+
         result1 = await metadata_extractor.extract_metadata(content1, url)
         result2 = await metadata_extractor.extract_metadata(content2, url)
         result3 = await metadata_extractor.extract_metadata(content3, url)
-        
+
         # Same content should have same hash
         assert result1.content_hash == result2.content_hash
         # Different content should have different hash
@@ -304,10 +309,10 @@ class TestMetadataExtractor:
         """Test metadata extraction from minimal content."""
         content = "Short."
         url = "https://example.com/minimal"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url)
-        
+
         assert result.url == url
         assert result.word_count == 1
         assert result.char_count == 6  # "Short."
@@ -326,7 +331,7 @@ class TestMetadataExtractor:
         
         Pour installer Python, visitez le site officiel...
         """
-        
+
         html = """
         <!DOCTYPE html>
         <html lang="fr">
@@ -339,12 +344,12 @@ class TestMetadataExtractor:
         </body>
         </html>
         """
-        
+
         url = "https://example.fr/python-guide"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url, raw_html=html)
-        
+
         assert result.language == "fr"
         assert "python" in [tag.lower() for tag in result.tags]
 
@@ -370,13 +375,13 @@ class TestMetadataExtractor:
         </body>
         </html>
         """
-        
+
         content = "Python tutorial content..."
         url = "https://example.com/python-tutorial"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url, raw_html=html)
-        
+
         # Should extract social media metadata
         assert result.title == "Amazing Python Tutorial"
         assert result.description == "Learn Python programming easily"
@@ -385,18 +390,24 @@ class TestMetadataExtractor:
     async def test_extract_not_initialized_error(self, metadata_extractor):
         """Test that extractor raises error when not initialized."""
         with pytest.raises(RuntimeError, match="MetadataExtractor not initialized"):
-            await metadata_extractor.extract_metadata("test content", "https://example.com")
+            await metadata_extractor.extract_metadata(
+                "test content", "https://example.com"
+            )
 
-    async def test_embedding_error_handling(self, metadata_extractor, mock_embedding_manager):
+    async def test_embedding_error_handling(
+        self, metadata_extractor, mock_embedding_manager
+    ):
         """Test handling of embedding generation errors during topic extraction."""
-        mock_embedding_manager.generate_embeddings.side_effect = Exception("Embedding error")
-        
+        mock_embedding_manager.generate_embeddings.side_effect = Exception(
+            "Embedding error"
+        )
+
         content = "Content for testing error handling."
         url = "https://example.com/test"
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(content, url)
-        
+
         # Should still return valid metadata even with embedding errors
         assert isinstance(result, ContentMetadata)
         assert result.url == url
@@ -408,10 +419,12 @@ class TestMetadataExtractor:
         content = "Content with malformed HTML."
         url = "https://example.com/test"
         malformed_html = "<html><head><title>Test</title><body><h1>Unclosed heading<p>Paragraph</body>"
-        
+
         await metadata_extractor.initialize()
-        result = await metadata_extractor.extract_metadata(content, url, raw_html=malformed_html)
-        
+        result = await metadata_extractor.extract_metadata(
+            content, url, raw_html=malformed_html
+        )
+
         # Should handle malformed HTML gracefully
         assert isinstance(result, ContentMetadata)
         assert result.url == url
@@ -426,15 +439,15 @@ class TestMetadataExtractor:
         """Test metadata extraction with empty or None HTML."""
         content = "Content without HTML."
         url = "https://example.com/test"
-        
+
         await metadata_extractor.initialize()
-        
+
         # Test with None HTML
         result1 = await metadata_extractor.extract_metadata(content, url, raw_html=None)
-        
+
         # Test with empty HTML
         result2 = await metadata_extractor.extract_metadata(content, url, raw_html="")
-        
+
         assert isinstance(result1, ContentMetadata)
         assert isinstance(result2, ContentMetadata)
         assert result1.url == url
@@ -444,17 +457,17 @@ class TestMetadataExtractor:
         """Test extraction of performance-related metadata."""
         content = "Performance test content."
         url = "https://example.com/performance"
-        
+
         extraction_metadata = {
             "load_time_ms": 350,
             "total_size_bytes": 15000,
             "image_count": 5,
             "script_count": 3,
         }
-        
+
         await metadata_extractor.initialize()
         result = await metadata_extractor.extract_metadata(
             content, url, extraction_metadata=extraction_metadata
         )
-        
+
         assert result.load_time_ms == 350

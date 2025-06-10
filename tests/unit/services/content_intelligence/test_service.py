@@ -1,20 +1,19 @@
 """Tests for main Content Intelligence Service."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
+import pytest
+from src.services.content_intelligence.models import AdaptationRecommendation
+from src.services.content_intelligence.models import ContentAnalysisRequest
+from src.services.content_intelligence.models import ContentAnalysisResponse
+from src.services.content_intelligence.models import ContentClassification
+from src.services.content_intelligence.models import ContentMetadata
+from src.services.content_intelligence.models import ContentType
+from src.services.content_intelligence.models import EnrichedContent
+from src.services.content_intelligence.models import QualityScore
 from src.services.content_intelligence.service import ContentIntelligenceService
-from src.services.content_intelligence.models import (
-    ContentAnalysisRequest,
-    ContentAnalysisResponse,
-    ContentType,
-    ContentClassification,
-    QualityScore,
-    ContentMetadata,
-    EnrichedContent,
-    AdaptationRecommendation,
-    AdaptationStrategy,
-)
 
 
 @pytest.fixture
@@ -104,19 +103,22 @@ class TestContentIntelligenceService:
             enable_metadata_extraction=True,
             enable_adaptations=True,
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert isinstance(response, ContentAnalysisResponse)
         assert response.success is True
         assert response.enriched_content is not None
         assert response.processing_time_ms > 0
         assert response.error is None
-        
+
         enriched = response.enriched_content
         assert enriched.original_content == request.content
-        assert enriched.classification.primary_type in [ContentType.TUTORIAL, ContentType.DOCUMENTATION]
+        assert enriched.classification.primary_type in [
+            ContentType.TUTORIAL,
+            ContentType.DOCUMENTATION,
+        ]
         assert enriched.quality_score.overall_score > 0.5
         assert enriched.metadata.url == request.url
         assert len(enriched.adaptation_recommendations) >= 0
@@ -131,15 +133,17 @@ class TestContentIntelligenceService:
             enable_metadata_extraction=False,
             enable_adaptations=False,
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.success is True
         # Should still have basic enriched content even with features disabled
         assert response.enriched_content is not None
 
-    async def test_analyze_content_with_cache_hit(self, content_service, mock_cache_manager):
+    async def test_analyze_content_with_cache_hit(
+        self, content_service, mock_cache_manager
+    ):
         """Test content analysis with cache hit."""
         # Setup cache to return a cached result
         cached_result = ContentAnalysisResponse(
@@ -168,15 +172,15 @@ class TestContentIntelligenceService:
             cache_hit=True,
         )
         mock_cache_manager.get.return_value = cached_result
-        
+
         request = ContentAnalysisRequest(
             content="Content that should be cached",
             url="https://example.com/cached",
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.cache_hit is True
         assert response.processing_time_ms < 10  # Should be very fast due to cache
         mock_cache_manager.get.assert_called_once()
@@ -188,15 +192,17 @@ class TestContentIntelligenceService:
             "Another piece of existing content.",
             "Yet another existing document.",
         ]
-        
+
         request = ContentAnalysisRequest(
             content="This is some existing content in the system.",  # Duplicate
             url="https://example.com/duplicate",
         )
-        
+
         await content_service.initialize()
-        response = await content_service.analyze_content(request, existing_content=existing_content)
-        
+        response = await content_service.analyze_content(
+            request, existing_content=existing_content
+        )
+
         assert response.success is True
         # Should detect high duplicate similarity
         assert response.enriched_content.quality_score.duplicate_similarity > 0.7
@@ -217,10 +223,10 @@ class TestContentIntelligenceService:
                 return n * MathUtils.factorial(n-1)
         """
         url = "https://github.com/user/repo/blob/main/utils.py"
-        
+
         await content_service.initialize()
         result = await content_service.classify_content_type(content, url)
-        
+
         assert isinstance(result, ContentClassification)
         assert result.primary_type == ContentType.CODE
         assert ContentType.CODE in result.confidence_scores
@@ -246,13 +252,13 @@ class TestContentIntelligenceService:
         
         The conclusion effectively summarizes the key points and provides closure.
         """
-        
+
         await content_service.initialize()
         result = await content_service.assess_extraction_quality(
             content=content,
             confidence_threshold=0.8,
         )
-        
+
         assert isinstance(result, QualityScore)
         assert result.overall_score > 0.7
         assert result.completeness > 0.8
@@ -279,14 +285,14 @@ class TestContentIntelligenceService:
         </body>
         </html>
         """
-        
+
         await content_service.initialize()
         result = await content_service.extract_metadata(
             content=content,
             url=url,
             raw_html=raw_html,
         )
-        
+
         assert isinstance(result, ContentMetadata)
         assert result.url == url
         assert result.title == "Python Programming Guide"
@@ -298,34 +304,36 @@ class TestContentIntelligenceService:
         """Test adaptation recommendations."""
         url = "https://github.com/user/repo/blob/main/README.md"
         content_patterns = ["known_site:github.com", "documentation_site"]
-        
+
         await content_service.initialize()
         recommendations = await content_service.recommend_adaptations(
             url=url,
             content_patterns=content_patterns,
         )
-        
+
         assert isinstance(recommendations, list)
         assert len(recommendations) > 0
         assert all(isinstance(rec, AdaptationRecommendation) for rec in recommendations)
-        
+
         # Should have GitHub-specific recommendations
-        github_rec = next((r for r in recommendations if r.site_domain == "github.com"), None)
+        github_rec = next(
+            (r for r in recommendations if r.site_domain == "github.com"), None
+        )
         assert github_rec is not None
 
     async def test_get_performance_metrics(self, content_service):
         """Test performance metrics retrieval."""
         await content_service.initialize()
-        
+
         # Perform some analysis to generate metrics
         request = ContentAnalysisRequest(
             content="Test content for metrics",
             url="https://example.com/metrics-test",
         )
         await content_service.analyze_content(request)
-        
+
         metrics = content_service.get_performance_metrics()
-        
+
         assert isinstance(metrics, dict)
         assert "total_analyses" in metrics
         assert "average_processing_time_ms" in metrics
@@ -338,15 +346,17 @@ class TestContentIntelligenceService:
             content="Test content",
             url="https://example.com/test",
         )
-        
-        with pytest.raises(RuntimeError, match="ContentIntelligenceService not initialized"):
+
+        with pytest.raises(
+            RuntimeError, match="ContentIntelligenceService not initialized"
+        ):
             await content_service.analyze_content(request)
 
     async def test_component_initialization_error(self, content_service):
         """Test handling of component initialization errors."""
-        with patch.object(content_service, '_classifier') as mock_classifier:
+        with patch.object(content_service, "_classifier") as mock_classifier:
             mock_classifier.initialize.side_effect = Exception("Classifier init error")
-            
+
             with pytest.raises(Exception, match="Classifier init error"):
                 await content_service.initialize()
 
@@ -356,13 +366,17 @@ class TestContentIntelligenceService:
             content="Test content for error handling",
             url="https://example.com/error-test",
         )
-        
+
         await content_service.initialize()
-        
+
         # Mock classifier to raise an error
-        with patch.object(content_service._classifier, 'classify_content', side_effect=Exception("Classification error")):
+        with patch.object(
+            content_service._classifier,
+            "classify_content",
+            side_effect=Exception("Classification error"),
+        ):
             response = await content_service.analyze_content(request)
-            
+
             # Should still succeed with degraded functionality
             assert response.success is True
             # Classification might be missing or have default values
@@ -372,15 +386,15 @@ class TestContentIntelligenceService:
         """Test handling of cache errors."""
         mock_cache_manager.get.side_effect = Exception("Cache error")
         mock_cache_manager.set.side_effect = Exception("Cache error")
-        
+
         request = ContentAnalysisRequest(
             content="Test content for cache error",
             url="https://example.com/cache-error",
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         # Should still work despite cache errors
         assert response.success is True
         assert response.cache_hit is False
@@ -392,10 +406,10 @@ class TestContentIntelligenceService:
             url="https://example.com/ambiguous",
             confidence_threshold=0.95,  # Very high threshold
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.success is True
         # Quality score should reflect the high threshold
         assert response.enriched_content.quality_score.threshold == 0.95
@@ -404,26 +418,26 @@ class TestContentIntelligenceService:
         """Test that processing steps can be controlled individually."""
         content = "Test content for incremental processing"
         url = "https://example.com/incremental"
-        
+
         await content_service.initialize()
-        
+
         # Test individual components
         classification = await content_service.classify_content_type(content, url)
         assert isinstance(classification, ContentClassification)
-        
+
         quality = await content_service.assess_extraction_quality(content)
         assert isinstance(quality, QualityScore)
-        
+
         metadata = await content_service.extract_metadata(content, url)
         assert isinstance(metadata, ContentMetadata)
-        
+
         adaptations = await content_service.recommend_adaptations(url, [])
         assert isinstance(adaptations, list)
 
     async def test_concurrent_analysis(self, content_service):
         """Test concurrent content analysis."""
         import asyncio
-        
+
         requests = [
             ContentAnalysisRequest(
                 content=f"Test content {i}",
@@ -431,35 +445,37 @@ class TestContentIntelligenceService:
             )
             for i in range(3)
         ]
-        
+
         await content_service.initialize()
-        
+
         # Run analyses concurrently
-        responses = await asyncio.gather(*[
-            content_service.analyze_content(request) for request in requests
-        ])
-        
+        responses = await asyncio.gather(
+            *[content_service.analyze_content(request) for request in requests]
+        )
+
         # All should succeed
         assert len(responses) == 3
         assert all(response.success for response in responses)
-        
+
         # Each should have unique content
-        contents = [response.enriched_content.original_content for response in responses]
+        contents = [
+            response.enriched_content.original_content for response in responses
+        ]
         assert len(set(contents)) == 3
 
     async def test_large_content_handling(self, content_service):
         """Test handling of large content."""
         # Create large content (10KB+)
         large_content = "This is a very long article. " * 500  # ~15KB
-        
+
         request = ContentAnalysisRequest(
             content=large_content,
             url="https://example.com/large-content",
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.success is True
         assert response.enriched_content.metadata.word_count > 1000
         assert response.enriched_content.metadata.char_count > 10000
@@ -470,13 +486,15 @@ class TestContentIntelligenceService:
             content="",
             url="https://example.com/empty",
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.success is True
         # Should classify as unknown and have low quality scores
-        assert response.enriched_content.classification.primary_type == ContentType.UNKNOWN
+        assert (
+            response.enriched_content.classification.primary_type == ContentType.UNKNOWN
+        )
         assert response.enriched_content.quality_score.completeness < 0.5
 
     async def test_multilingual_content_support(self, content_service):
@@ -491,10 +509,10 @@ class TestContentIntelligenceService:
             url="https://example.fr/python-guide",
             raw_html='<html lang="fr"><head><title>Guide Python</title></head></html>',
         )
-        
+
         await content_service.initialize()
         response = await content_service.analyze_content(request)
-        
+
         assert response.success is True
         assert response.enriched_content.metadata.language == "fr"
 
@@ -502,5 +520,5 @@ class TestContentIntelligenceService:
         """Test service cleanup."""
         await content_service.initialize()
         await content_service.cleanup()
-        
+
         assert content_service._initialized is False
