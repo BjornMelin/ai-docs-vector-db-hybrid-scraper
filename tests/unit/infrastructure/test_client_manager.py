@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
@@ -233,15 +234,15 @@ class TestCircuitBreaker:
         async def failing_func():
             raise Exception("Test failure")
 
-        # Fail multiple times
-        for _ in range(3):
-            with pytest.raises(Exception):
+        # Fail multiple times - circuit breaker should pass through the original exception
+        for _ in range(3):  # Fixture failure threshold is 3
+            with pytest.raises(Exception, match="Test failure"):
                 await circuit_breaker.call(failing_func)
 
         # Circuit should be open now
         assert circuit_breaker._state == ClientState.FAILED
 
-        # Next call should fail immediately
+        # Next call should fail immediately with circuit breaker error
         with pytest.raises(APIError, match="Circuit breaker is open"):
             await circuit_breaker.call(failing_func)
 
@@ -606,3 +607,189 @@ class TestClientManagerIntegration:
         )
 
         ClientManager._instance = None
+
+
+class TestClientManagerAdvancedCoverage:
+    """Test advanced coverage scenarios for AB testing and service getters."""
+
+    @pytest.mark.asyncio
+    async def test_get_ab_testing_manager_creation(self):
+        """Test creation of AB testing manager."""
+        config = UnifiedConfig()
+        client_manager = ClientManager(config)
+
+        # Mock the ABTestingManager and its dependencies
+        with (
+            patch(
+                "src.services.deployment.ab_testing.ABTestingManager"
+            ) as mock_ab_class,
+            patch.object(client_manager, "get_qdrant_service") as mock_get_qdrant,
+            patch.object(client_manager, "get_cache_manager") as mock_get_cache,
+        ):
+            mock_ab_instance = Mock()
+            mock_ab_class.return_value = mock_ab_instance
+
+            mock_qdrant_service = Mock()
+            mock_cache_manager = Mock()
+            mock_get_qdrant.return_value = mock_qdrant_service
+            mock_get_cache.return_value = mock_cache_manager
+
+            # First call should create the manager
+            ab_manager = await client_manager.get_ab_testing_manager()
+
+            assert ab_manager is mock_ab_instance
+            mock_ab_class.assert_called_once_with(
+                qdrant_service=mock_qdrant_service, cache_manager=mock_cache_manager
+            )
+
+            # Second call should return the same instance (cached)
+            ab_manager2 = await client_manager.get_ab_testing_manager()
+            assert ab_manager2 is mock_ab_instance
+
+            # Should not create a new instance
+            mock_ab_class.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_qdrant_client_with_config(self):
+        """Test creation of Qdrant client with configuration."""
+        config = UnifiedConfig()
+        config.qdrant.url = "http://localhost:6333"
+        config.qdrant.api_key = "test-key"
+        config.qdrant.timeout = 30.0
+        config.qdrant.prefer_grpc = True
+
+        client_manager = ClientManager(config)
+
+        with patch(
+            "src.infrastructure.client_manager.AsyncQdrantClient"
+        ) as mock_qdrant_class:
+            mock_client = AsyncMock()
+            mock_client.get_collections = AsyncMock()
+            mock_qdrant_class.return_value = mock_client
+
+            # Call the private method directly
+            qdrant_client = await client_manager._create_qdrant_client()
+
+            assert qdrant_client is mock_client
+            mock_qdrant_class.assert_called_once_with(
+                url="http://localhost:6333",
+                api_key="test-key",
+                timeout=30.0,
+                prefer_grpc=True,
+            )
+
+            # Verify the validation call was made
+            mock_client.get_collections.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_qdrant_service_lazy_initialization(self):
+        """Test lazy initialization of QdrantService."""
+        config = UnifiedConfig()
+        client_manager = ClientManager(config)
+
+        with patch(
+            "src.services.vector_db.service.QdrantService"
+        ) as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service_class.return_value = mock_service
+
+            # First call should create the service
+            service1 = await client_manager.get_qdrant_service()
+            assert service1 == mock_service
+            mock_service.initialize.assert_called_once()
+
+            # Second call should return the same instance
+            service2 = await client_manager.get_qdrant_service()
+            assert service2 == service1
+            assert mock_service.initialize.call_count == 1  # Not called again
+
+    @pytest.mark.asyncio
+    async def test_get_hyde_engine_with_dependencies(self):
+        """Test HyDEEngine initialization with all dependencies."""
+        config = UnifiedConfig()
+        client_manager = ClientManager(config)
+
+        mock_hyde_engine = AsyncMock()
+        mock_embedding_manager = AsyncMock()
+        mock_qdrant_service = AsyncMock()
+        mock_cache_manager = AsyncMock()
+        mock_openai_client = AsyncMock()
+
+        with (
+            patch(
+                "src.services.hyde.engine.HyDEQueryEngine",
+                return_value=mock_hyde_engine,
+            ),
+            patch("src.services.hyde.config.HyDEConfig") as mock_config_class,
+            patch("src.services.hyde.config.HyDEPromptConfig"),
+            patch("src.services.hyde.config.HyDEMetricsConfig"),
+            patch.object(
+                client_manager,
+                "get_embedding_manager",
+                return_value=mock_embedding_manager,
+            ),
+            patch.object(
+                client_manager, "get_qdrant_service", return_value=mock_qdrant_service
+            ),
+            patch.object(
+                client_manager, "get_cache_manager", return_value=mock_cache_manager
+            ),
+            patch.object(
+                client_manager, "get_openai_client", return_value=mock_openai_client
+            ),
+        ):
+            service = await client_manager.get_hyde_engine()
+            assert service == mock_hyde_engine
+            mock_hyde_engine.initialize.assert_called_once()
+
+            # Verify HyDEConfig was created from unified config
+            mock_config_class.from_unified_config.assert_called_once_with(
+                client_manager.config.hyde
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_cache_manager_initialization(self):
+        """Test CacheManager initialization with config parameters."""
+        config = UnifiedConfig()
+        client_manager = ClientManager(config)
+
+        with patch("src.services.cache.manager.CacheManager") as mock_manager_class:
+            mock_manager = AsyncMock()
+            mock_manager_class.return_value = mock_manager
+
+            service = await client_manager.get_cache_manager()
+            assert service == mock_manager
+
+            # Verify initialization parameters
+            call_args = mock_manager_class.call_args
+            assert (
+                call_args.kwargs["dragonfly_url"]
+                == client_manager.config.cache.dragonfly_url
+            )
+            assert (
+                call_args.kwargs["enable_local_cache"]
+                == client_manager.config.cache.enable_local_cache
+            )
+            assert (
+                call_args.kwargs["enable_distributed_cache"]
+                == client_manager.config.cache.enable_dragonfly_cache
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_project_storage_initialization(self):
+        """Test ProjectStorage initialization."""
+        config = UnifiedConfig()
+        client_manager = ClientManager(config)
+
+        with patch(
+            "src.services.core.project_storage.ProjectStorage"
+        ) as mock_storage_class:
+            mock_storage = AsyncMock()
+            mock_storage_class.return_value = mock_storage
+
+            service = await client_manager.get_project_storage()
+            assert service == mock_storage
+
+            mock_storage_class.assert_called_once_with(
+                data_dir=client_manager.config.data_dir
+            )
