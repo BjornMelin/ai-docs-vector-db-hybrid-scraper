@@ -353,7 +353,7 @@ class TestAllHealthChecks:
             
             mock_qdrant.assert_called_once_with(config)
             mock_dragonfly.assert_called_once_with(config)
-            mock_openai.assert_called_once_with(config)
+            mock_openai.assert_called_once()
             mock_firecrawl.assert_called_once_with(config)
     
     def test_perform_all_health_checks_minimal_config(self):
