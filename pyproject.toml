@@ -104,6 +104,7 @@ Repository = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
 Issues = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues"
 
 [project.scripts]
+ai-docs = "src.cli.main:main"
 manage-db = "src.manage_vector_db:main"
 mcp-server = "src.unified_mcp_server:main"
 task-worker = "src.cli_worker:main"
