@@ -116,7 +116,7 @@ class TestUtilsPackagePathResolution:
         """Test that parent directory is calculated correctly."""
         # This tests the logic: parent_dir = Path(__file__).parent.parent
         init_file = Path("src/utils/__init__.py")
-        expected_parent = init_file.parent.parent  # Should be the project root
+        # expected_parent = init_file.parent.parent  # Should be the project root
 
         # Mock the Path calculation
         with patch("src.utils.Path") as mock_path_class:
