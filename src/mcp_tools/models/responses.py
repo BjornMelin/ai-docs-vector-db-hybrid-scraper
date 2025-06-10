@@ -344,3 +344,141 @@ class ContentIntelligenceResult(BaseModel):
     error: str | None = Field(default=None, description="Error message if failed")
 
     model_config = ConfigDict(extra="allow")
+
+
+# ---------------------------------------------------------------------------
+# Advanced Query Processing Responses
+# ---------------------------------------------------------------------------
+
+
+class QueryIntentResult(BaseModel):
+    """Result of query intent classification."""
+
+    primary_intent: str = Field(..., description="Primary detected intent")
+    secondary_intents: list[str] = Field(
+        default_factory=list, description="Secondary intents detected"
+    )
+    confidence_scores: dict[str, float] = Field(
+        default_factory=dict, description="Confidence scores for each intent"
+    )
+    complexity_level: str = Field(..., description="Query complexity assessment")
+    domain_category: str | None = Field(
+        default=None, description="Detected technical domain"
+    )
+    classification_reasoning: str = Field(
+        ..., description="Explanation of classification decision"
+    )
+    requires_context: bool = Field(
+        default=False, description="Whether query requires additional context"
+    )
+    suggested_followups: list[str] = Field(
+        default_factory=list, description="Suggested follow-up questions"
+    )
+
+
+class QueryPreprocessingResult(BaseModel):
+    """Result of query preprocessing."""
+
+    original_query: str = Field(..., description="Original query before processing")
+    processed_query: str = Field(..., description="Query after preprocessing")
+    corrections_applied: list[str] = Field(
+        default_factory=list, description="Spelling corrections applied"
+    )
+    expansions_added: list[str] = Field(
+        default_factory=list, description="Synonym expansions added"
+    )
+    normalization_applied: bool = Field(
+        default=False, description="Whether text normalization was applied"
+    )
+    context_extracted: dict[str, Any] = Field(
+        default_factory=dict, description="Contextual information extracted"
+    )
+    preprocessing_time_ms: float = Field(
+        default=0.0, description="Preprocessing time in milliseconds"
+    )
+
+
+class SearchStrategyResult(BaseModel):
+    """Result of search strategy selection."""
+
+    primary_strategy: str = Field(..., description="Selected primary strategy")
+    fallback_strategies: list[str] = Field(
+        default_factory=list, description="Fallback strategies in order"
+    )
+    matryoshka_dimension: int = Field(
+        ..., description="Selected Matryoshka embedding dimension"
+    )
+    confidence: float = Field(..., description="Confidence in strategy selection")
+    reasoning: str = Field(..., description="Reasoning for strategy choice")
+    estimated_quality: float = Field(..., description="Estimated result quality score")
+    estimated_latency_ms: float = Field(..., description="Estimated processing latency")
+
+
+class AdvancedQueryProcessingResponse(BaseModel):
+    """Complete response from advanced query processing pipeline."""
+
+    success: bool = Field(default=True, description="Whether processing succeeded")
+    results: list[SearchResult] = Field(
+        default_factory=list, description="Search results"
+    )
+    total_results: int = Field(default=0, description="Total number of results")
+
+    # Processing results
+    intent_classification: QueryIntentResult | None = Field(
+        default=None, description="Intent classification results"
+    )
+    preprocessing_result: QueryPreprocessingResult | None = Field(
+        default=None, description="Preprocessing results"
+    )
+    strategy_selection: SearchStrategyResult | None = Field(
+        default=None, description="Strategy selection results"
+    )
+
+    # Performance metrics
+    total_processing_time_ms: float = Field(
+        default=0.0, description="Total processing time"
+    )
+    search_time_ms: float = Field(default=0.0, description="Search execution time")
+    strategy_selection_time_ms: float = Field(
+        default=0.0, description="Strategy selection time"
+    )
+
+    # Quality indicators
+    confidence_score: float = Field(
+        default=0.0, description="Overall confidence in results"
+    )
+    quality_score: float = Field(default=0.0, description="Estimated result quality")
+
+    # Processing details
+    processing_steps: list[str] = Field(
+        default_factory=list, description="Steps taken during processing"
+    )
+    fallback_used: bool = Field(
+        default=False, description="Whether fallback strategy was used"
+    )
+    cache_hit: bool = Field(default=False, description="Whether result was cached")
+
+    # Error handling
+    error: str | None = Field(default=None, description="Error message if failed")
+
+    model_config = ConfigDict(extra="allow")
+
+
+class QueryAnalysisResponse(BaseModel):
+    """Response from query analysis without search execution."""
+
+    query: str = Field(..., description="Original query")
+    preprocessing_result: QueryPreprocessingResult | None = Field(
+        default=None, description="Preprocessing analysis"
+    )
+    intent_classification: QueryIntentResult | None = Field(
+        default=None, description="Intent classification analysis"
+    )
+    strategy_selection: SearchStrategyResult | None = Field(
+        default=None, description="Recommended strategy selection"
+    )
+    processing_time_ms: float = Field(
+        default=0.0, description="Analysis processing time"
+    )
+
+    model_config = ConfigDict(extra="allow")
