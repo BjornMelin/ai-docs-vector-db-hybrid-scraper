@@ -135,7 +135,7 @@ class PrometheusMiddleware:
                 )
 
             # Run all health checks
-            health_results = await self.health_manager.check_all()
+            await self.health_manager.check_all()
             overall_status = self.health_manager.get_overall_status()
 
             # Determine HTTP status code based on health
@@ -182,7 +182,7 @@ class PrometheusMiddleware:
                 )
 
             # Check critical dependencies only
-            health_results = await self.health_manager.check_all()
+            await self.health_manager.check_all()
             overall_status = self.health_manager.get_overall_status()
 
             # Ready only if all critical dependencies are healthy
@@ -239,7 +239,6 @@ class CustomMetricsMiddleware(BaseHTTPMiddleware):
         # Extract request metadata
         method = request.method
         path = request.url.path
-        user_agent = request.headers.get("user-agent", "unknown")
 
         # Process request
         response = await call_next(request)

@@ -13,16 +13,19 @@ from src.config.models import UnifiedConfig
 from .health import HealthCheckManager
 from .metrics import MetricsConfig
 from .metrics import MetricsRegistry
+from .metrics import initialize_metrics
 
 logger = logging.getLogger(__name__)
 
 
-async def initialize_monitoring(config: MonitoringConfig) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
+async def initialize_monitoring(
+    config: MonitoringConfig,
+) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
     """Initialize monitoring system.
-    
+
     Args:
         config: Monitoring configuration
-        
+
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager) or (None, None) if disabled
     """
@@ -32,22 +35,37 @@ async def initialize_monitoring(config: MonitoringConfig) -> tuple[MetricsRegist
 
     logger.info("Initializing monitoring system...")
 
+    # Create metrics config from monitoring config
+    metrics_config = MetricsConfig(
+        enabled=config.enabled,
+        export_port=config.metrics_port,
+        namespace=config.namespace,
+        include_system_metrics=config.include_system_metrics,
+        collection_interval=config.system_metrics_interval,
+    )
+
     # Initialize metrics registry
-    metrics_registry = MetricsRegistry(config.metrics)
+    metrics_registry = MetricsRegistry(metrics_config)
+
+    # Create health check config from monitoring config
+    from .health import HealthCheckConfig
+
+    health_config = HealthCheckConfig(
+        enabled=config.enabled, timeout=config.health_check_timeout
+    )
 
     # Initialize health check manager
-    health_manager = HealthCheckManager(config.health_checks)
+    health_manager = HealthCheckManager(health_config)
 
     logger.info("Monitoring system initialization complete")
     return metrics_registry, health_manager
 
 
 async def cleanup_monitoring(
-    metrics_registry: MetricsRegistry | None,
-    health_manager: HealthCheckManager | None
+    metrics_registry: MetricsRegistry | None, health_manager: HealthCheckManager | None
 ) -> None:
     """Clean up monitoring resources.
-    
+
     Args:
         metrics_registry: Metrics registry to clean up
         health_manager: Health manager to clean up
@@ -64,28 +82,28 @@ async def cleanup_monitoring(
 
 
 async def start_background_monitoring_tasks(
-    metrics_registry: MetricsRegistry | None,
-    health_manager: HealthCheckManager | None
+    metrics_registry: MetricsRegistry | None, health_manager: HealthCheckManager | None
 ) -> list[asyncio.Task]:
     """Start background monitoring tasks.
-    
+
     Args:
         metrics_registry: Metrics registry
         health_manager: Health manager
-        
+
     Returns:
         List of started tasks
     """
     tasks = []
 
     # Start system metrics collection if enabled
-    if (metrics_registry and
-        metrics_registry.config.enabled and
-        metrics_registry.config.collect_system_metrics):
+    if (
+        metrics_registry
+        and metrics_registry.config.enabled
+        and metrics_registry.config.include_system_metrics
+    ):
         task = asyncio.create_task(
             update_system_metrics_periodically(
-                metrics_registry,
-                metrics_registry.config.system_metrics_interval
+                metrics_registry, metrics_registry.config.collection_interval
             )
         )
         tasks.append(task)
@@ -94,10 +112,7 @@ async def start_background_monitoring_tasks(
     # Start health checks if enabled
     if health_manager and health_manager.config.enabled:
         task = asyncio.create_task(
-            run_periodic_health_checks(
-                health_manager,
-                health_manager.config.interval
-            )
+            run_periodic_health_checks(health_manager, health_manager.config.interval)
         )
         tasks.append(task)
         logger.info("Started periodic health checks task")
@@ -107,7 +122,7 @@ async def start_background_monitoring_tasks(
 
 async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
     """Stop background monitoring tasks.
-    
+
     Args:
         tasks: List of tasks to stop
     """
@@ -157,7 +172,12 @@ def initialize_monitoring_system(
     metrics_registry = initialize_metrics(metrics_config)
 
     # Create health check manager
-    health_manager = HealthCheckManager(metrics_registry)
+    from .health import HealthCheckConfig
+    health_config = HealthCheckConfig(
+        enabled=config.monitoring.enabled, 
+        timeout=config.monitoring.health_check_timeout
+    )
+    health_manager = HealthCheckManager(health_config, metrics_registry)
 
     # Add system resource checks
     health_manager.add_system_resource_check(
@@ -253,7 +273,7 @@ def setup_fastmcp_monitoring(
                     )
 
                 # Run all health checks
-                health_results = await health_manager.check_all()
+                await health_manager.check_all()
                 overall_status = health_manager.get_overall_status()
 
                 # Determine HTTP status code based on health
@@ -312,7 +332,7 @@ def setup_fastmcp_monitoring(
                     )
 
                 # Check critical dependencies only
-                health_results = await health_manager.check_all()
+                await health_manager.check_all()
                 overall_status = health_manager.get_overall_status()
 
                 # Ready only if all critical dependencies are healthy
@@ -355,8 +375,6 @@ async def run_periodic_health_checks(
         health_manager: Health check manager
         interval_seconds: Interval between health checks
     """
-    import asyncio
-
     if not health_manager:
         return
 
@@ -381,8 +399,6 @@ async def update_system_metrics_periodically(
         metrics_registry: Metrics registry
         interval_seconds: Interval between updates
     """
-    import asyncio
-
     if not metrics_registry or not metrics_registry.config.include_system_metrics:
         return
 
@@ -400,48 +416,6 @@ async def update_system_metrics_periodically(
         await asyncio.sleep(interval_seconds)
 
 
-async def run_periodic_health_checks(
-    health_manager: HealthCheckManager,
-    interval_seconds: float
-) -> None:
-    """Run periodic health checks.
-    
-    Args:
-        health_manager: Health check manager
-        interval_seconds: Interval between checks
-    """
-    logger.info(f"Starting periodic health checks (interval: {interval_seconds}s)")
-
-    while True:
-        try:
-            await health_manager.get_overall_health()
-            logger.debug("Completed periodic health check")
-        except Exception as e:
-            logger.error(f"Error in periodic health check: {e}")
-
-        await asyncio.sleep(interval_seconds)
-
-
-async def update_system_metrics_periodically(
-    metrics_registry: MetricsRegistry,
-    interval_seconds: float
-) -> None:
-    """Update system metrics periodically.
-    
-    Args:
-        metrics_registry: Metrics registry
-        interval_seconds: Interval between updates
-    """
-    logger.info(f"Starting periodic system metrics updates (interval: {interval_seconds}s)")
-
-    while True:
-        try:
-            metrics_registry.update_system_metrics()
-            logger.debug("Updated system metrics")
-        except Exception as e:
-            logger.error(f"Error updating system metrics: {e}")
-
-        await asyncio.sleep(interval_seconds)
 
 
 async def update_cache_metrics_periodically(
@@ -454,8 +428,6 @@ async def update_cache_metrics_periodically(
         cache_manager: Cache manager instance to collect stats from
         interval_seconds: Interval between updates
     """
-    import asyncio
-
     if not metrics_registry or not cache_manager:
         return
 

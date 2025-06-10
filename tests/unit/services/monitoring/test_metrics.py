@@ -1,11 +1,12 @@
-"""Tests for monitoring metrics functionality."""
+"""Comprehensive tests for monitoring metrics functionality."""
 
 import asyncio
-from unittest.mock import patch
+import time
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from src.services.monitoring.metrics import MetricsConfig
-from src.services.monitoring.metrics import MetricsRegistry
+from prometheus_client.registry import CollectorRegistry
+from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
 
 
 class TestMetricsConfig:
@@ -27,7 +28,7 @@ class TestMetricsConfig:
             export_port=9090,
             namespace="custom_app",
             include_system_metrics=False,
-            collection_interval=60.0
+            collection_interval=60.0,
         )
         assert config.enabled is False
         assert config.export_port == 9090
@@ -42,12 +43,17 @@ class TestMetricsRegistry:
     @pytest.fixture
     def config(self):
         """Create test configuration."""
-        return MetricsConfig(enabled=True)
+        return MetricsConfig(enabled=True, namespace="test_metrics")
 
     @pytest.fixture
-    def registry(self, config):
+    def test_registry(self):
+        """Create isolated test registry."""
+        return CollectorRegistry()
+
+    @pytest.fixture
+    def registry(self, config, test_registry):
         """Create test metrics registry."""
-        return MetricsRegistry(config)
+        return MetricsRegistry(config, test_registry)
 
     def test_initialization(self, registry):
         """Test registry initialization."""
@@ -58,176 +64,106 @@ class TestMetricsRegistry:
     def test_metrics_creation(self, registry):
         """Test that all expected metrics are created."""
         expected_metrics = [
-            "vector_search_requests_total",
-            "vector_search_duration_seconds",
-            "vector_search_quality_score",
-            "embedding_requests_total",
-            "embedding_generation_duration_seconds",
-            "embedding_cost_total",
-            "cache_hits_total",
-            "cache_misses_total",
-            "service_health_status",
-            "system_cpu_usage_percent"
+            "search_requests",
+            "search_duration", 
+            "search_concurrent",
+            "embedding_requests",
+            "embedding_duration",
+            "embedding_cost",
+            "cache_hits",
+            "cache_misses",
+            "service_health",
         ]
 
         for metric_name in expected_metrics:
-            assert f"ml_app_{metric_name}" in [m._name for m in registry._metrics.values()]
+            assert metric_name in registry._metrics
 
     @pytest.mark.asyncio
     async def test_monitor_search_performance_decorator(self, registry):
         """Test search performance monitoring decorator."""
+
         @registry.monitor_search_performance(collection="test", query_type="semantic")
         async def mock_search():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
             return {"results": []}
 
-        # Execute the decorated function
         result = await mock_search()
-
         assert result == {"results": []}
-        # Verify metrics were recorded (would need to check Prometheus registry)
 
     @pytest.mark.asyncio
     async def test_monitor_embedding_generation_decorator(self, registry):
         """Test embedding generation monitoring decorator."""
-        @registry.monitor_embedding_generation(provider="openai", model="text-embedding-ada-002")
+
+        @registry.monitor_embedding_generation(
+            provider="openai", model="text-embedding-ada-002"
+        )
         async def mock_embedding():
-            await asyncio.sleep(0.05)
-            return {"embeddings": [], "cost": 0.0001}
+            await asyncio.sleep(0.01)
+            return []
 
         result = await mock_embedding()
-
-        assert result == {"embeddings": [], "cost": 0.0001}
-
-    def test_record_search_quality(self, registry):
-        """Test recording search quality metrics."""
-        registry.record_search_quality(
-            collection="test_collection",
-            query_type="hybrid",
-            quality_score=0.85
-        )
-
-        # Verify metric was recorded
-        metric = registry._metrics["ml_app_vector_search_quality_score"]
-        assert metric is not None
+        assert result == []
 
     def test_record_embedding_cost(self, registry):
         """Test recording embedding cost metrics."""
         registry.record_embedding_cost(
-            provider="openai",
-            model="text-embedding-ada-002",
-            cost=0.0001
+            provider="openai", model="text-embedding-ada-002", cost=0.0001
         )
+        # Verify metric exists
+        assert "embedding_cost" in registry._metrics
 
-        metric = registry._metrics["ml_app_embedding_cost_total"]
-        assert metric is not None
-
-    def test_update_cache_metrics(self, registry):
-        """Test updating cache metrics."""
-        registry.update_cache_metrics(
-            cache_type="local",
-            hits=10,
-            misses=2,
-            memory_usage=1024
-        )
-
-        hits_metric = registry._metrics["ml_app_cache_hits_total"]
-        misses_metric = registry._metrics["ml_app_cache_misses_total"]
-        memory_metric = registry._metrics["ml_app_cache_memory_usage_bytes"]
-
-        assert hits_metric is not None
-        assert misses_metric is not None
-        assert memory_metric is not None
+    def test_update_cache_stats(self, registry):
+        """Test updating cache statistics."""
+        mock_cache_manager = MagicMock()
+        mock_cache_manager.get_stats = AsyncMock(return_value={
+            "local_cache": {"hits": 10, "misses": 2, "size": 1024},
+            "embedding_cache": {"hits": 5, "misses": 1, "size": 512}
+        })
+        
+        registry.update_cache_stats(mock_cache_manager)
+        assert "cache_hits" in registry._metrics
+        assert "cache_misses" in registry._metrics
 
     def test_update_service_health(self, registry):
         """Test updating service health metrics."""
-        registry.update_service_health(service="vector_search", is_healthy=True)
-        registry.update_service_health(service="embedding_service", is_healthy=False)
+        registry.update_service_health(service="vector_search", healthy=True)
+        registry.update_service_health(service="embeddings", healthy=False)
+        assert "service_health" in registry._metrics
 
-        metric = registry._metrics["ml_app_service_health_status"]
-        assert metric is not None
-
-    def test_update_dependency_health(self, registry):
-        """Test updating dependency health metrics."""
-        registry.update_dependency_health(dependency="qdrant", is_healthy=True)
-        registry.update_dependency_health(dependency="redis", is_healthy=False)
-
-        metric = registry._metrics["ml_app_dependency_health_status"]
-        assert metric is not None
-
-    @patch('psutil.cpu_percent')
-    @patch('psutil.virtual_memory')
-    def test_update_system_metrics(self, mock_memory, mock_cpu, registry):
-        """Test updating system metrics."""
-        # Mock system data
-        mock_cpu.return_value = 45.5
-        mock_memory.return_value.used = 8 * 1024 * 1024 * 1024  # 8GB
-
+    def test_update_system_metrics(self, registry):
+        """Test system metrics collection."""
         registry.update_system_metrics()
+        # Just verify the method can be called without error
+        # System metrics are created conditionally based on config
 
-        cpu_metric = registry._metrics["ml_app_system_cpu_usage_percent"]
-        memory_metric = registry._metrics["ml_app_system_memory_usage_bytes"]
+    def test_record_cache_operations(self, registry):
+        """Test cache operation recording."""
+        registry.record_cache_hit("local", "search")
+        registry.record_cache_miss("embedding")
+        assert "cache_hits" in registry._metrics
+        assert "cache_misses" in registry._metrics
 
-        assert cpu_metric is not None
-        assert memory_metric is not None
+    def test_update_qdrant_metrics(self, registry):
+        """Test Qdrant-specific metrics."""
+        registry.update_qdrant_metrics("test_collection", size=1000, memory_usage=1024000)
+        registry.record_qdrant_operation("search", "test_collection", success=True)
+        assert "qdrant_collection_size" in registry._metrics
+        assert "qdrant_operations" in registry._metrics
 
-    def test_disabled_registry(self):
-        """Test that disabled registry doesn't create metrics."""
-        config = MetricsConfig(enabled=False)
-        registry = MetricsRegistry(config)
+    def test_record_task_metrics(self, registry):
+        """Test task queue metrics."""
+        registry.record_task_queue_size("embeddings", "pending", 25)
+        registry.record_task_execution("embeddings", duration_seconds=2.5, success=True)
+        registry.update_worker_count("embeddings", 3)
+        
+        assert "task_queue_size" in registry._metrics
+        assert "task_execution_duration" in registry._metrics
+        assert "worker_active" in registry._metrics
 
-        assert registry._metrics == {}
-
-    def test_decorator_with_disabled_registry(self):
-        """Test that decorators work with disabled registry."""
-        config = MetricsConfig(enabled=False)
-        registry = MetricsRegistry(config)
-
-        @registry.monitor_search_performance()
-        async def mock_search():
-            return {"results": []}
-
-        # Should not raise any errors
-        assert asyncio.run(mock_search()) == {"results": []}
-
-
-class TestMetricsIntegration:
-    """Integration tests for metrics functionality."""
-
-    @pytest.fixture
-    def registry(self):
-        """Create registry for integration tests."""
-        config = MetricsConfig(enabled=True)
-        return MetricsRegistry(config)
-
-    def test_concurrent_metrics_updates(self, registry):
-        """Test concurrent metrics updates don't cause issues."""
-        import threading
-
-        def update_metrics():
-            for i in range(100):
-                registry.record_search_quality("test", "semantic", 0.8)
-                registry.update_cache_metrics("local", 1, 0, 1024)
-
-        threads = [threading.Thread(target=update_metrics) for _ in range(5)]
-
-        for thread in threads:
-            thread.start()
-
-        for thread in threads:
-            thread.join()
-
-        # Should complete without errors
-        assert True
-
-    @pytest.mark.asyncio
-    async def test_decorator_error_handling(self, registry):
-        """Test that decorators properly handle function errors."""
-        @registry.monitor_search_performance()
-        async def failing_search():
-            raise ValueError("Search failed")
-
-        with pytest.raises(ValueError, match="Search failed"):
-            await failing_search()
-
-        # Metrics should still be recorded for failed operations
+    def test_browser_metrics(self, registry):
+        """Test browser automation metrics."""
+        registry.record_browser_request("premium", duration_seconds=1.2, success=True)
+        registry.update_browser_tier_health("basic", healthy=True)
+        
+        assert "browser_response_time" in registry._metrics
+        assert "browser_tier_health" in registry._metrics

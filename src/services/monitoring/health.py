@@ -28,11 +28,17 @@ class HealthCheckConfig(BaseModel):
     """Configuration for health check system."""
 
     enabled: bool = Field(default=True, description="Enable health checks")
-    interval: float = Field(default=30.0, description="Health check interval in seconds")
+    interval: float = Field(
+        default=30.0, description="Health check interval in seconds"
+    )
     timeout: float = Field(default=10.0, description="Health check timeout in seconds")
     max_retries: int = Field(default=3, description="Maximum retry attempts")
-    qdrant_url: str = Field(default="http://localhost:6333", description="Qdrant URL for health checks")
-    redis_url: str = Field(default="redis://localhost:6379", description="Redis URL for health checks")
+    qdrant_url: str = Field(
+        default="http://localhost:6333", description="Qdrant URL for health checks"
+    )
+    redis_url: str = Field(
+        default="redis://localhost:6379", description="Redis URL for health checks"
+    )
 
 
 class HealthStatus(str, Enum):
@@ -152,6 +158,7 @@ class QdrantHealthCheck(HealthCheck):
                         name=self.name,
                         status=HealthStatus.HEALTHY,
                         message="Qdrant cluster is operational",
+                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
                         metadata={
                             "cluster_status": str(cluster_info.status),
                             "peer_count": len(cluster_info.peers)
@@ -164,6 +171,7 @@ class QdrantHealthCheck(HealthCheck):
                         name=self.name,
                         status=HealthStatus.DEGRADED,
                         message="Qdrant responding but cluster info unavailable",
+                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
                     )
 
             except UnexpectedResponse as e:
@@ -171,6 +179,7 @@ class QdrantHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"Qdrant API error: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
             except Exception as e:
@@ -178,6 +187,7 @@ class QdrantHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"Qdrant connection failed: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
         return await self._execute_with_timeout(_check())
@@ -221,6 +231,7 @@ class RedisHealthCheck(HealthCheck):
                         name=self.name,
                         status=HealthStatus.HEALTHY,
                         message="Redis server is responding",
+                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
                         metadata={
                             "redis_version": info.get("redis_version", "unknown"),
                             "connected_clients": info.get("connected_clients", 0),
@@ -234,6 +245,7 @@ class RedisHealthCheck(HealthCheck):
                         name=self.name,
                         status=HealthStatus.UNHEALTHY,
                         message="Redis ping failed",
+                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
                     )
 
             except redis.ConnectionError as e:
@@ -241,6 +253,7 @@ class RedisHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"Redis connection failed: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
             except Exception as e:
@@ -248,6 +261,7 @@ class RedisHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"Redis health check error: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
             finally:
@@ -298,13 +312,16 @@ class HTTPHealthCheck(HealthCheck):
         async def _check():
             try:
                 timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.get(self.url, headers=self.headers) as response:
+                async with (
+                    aiohttp.ClientSession(timeout=timeout) as session,
+                    session.get(self.url, headers=self.headers) as response,
+                ):
                         if response.status == self.expected_status:
                             return HealthCheckResult(
                                 name=self.name,
                                 status=HealthStatus.HEALTHY,
                                 message=f"HTTP endpoint responding with status {response.status}",
+                                duration_ms=0.0,  # Will be updated by _execute_with_timeout
                                 metadata={
                                     "status_code": response.status,
                                     "content_type": response.headers.get(
@@ -317,6 +334,7 @@ class HTTPHealthCheck(HealthCheck):
                                 name=self.name,
                                 status=HealthStatus.UNHEALTHY,
                                 message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+                                duration_ms=0.0,  # Will be updated by _execute_with_timeout
                                 metadata={"status_code": response.status},
                             )
 
@@ -325,6 +343,7 @@ class HTTPHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"HTTP request failed: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
             except Exception as e:
@@ -332,6 +351,7 @@ class HTTPHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"HTTP health check error: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
         return await self._execute_with_timeout(_check())
@@ -411,6 +431,7 @@ class SystemResourceHealthCheck(HealthCheck):
                     name=self.name,
                     status=status,
                     message=message,
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                     metadata={
                         "cpu_percent": cpu_percent,
                         "memory_percent": memory_percent,
@@ -425,6 +446,7 @@ class SystemResourceHealthCheck(HealthCheck):
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"System resource check failed: {e!s}",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
         return await self._execute_with_timeout(_check())
@@ -433,7 +455,9 @@ class SystemResourceHealthCheck(HealthCheck):
 class HealthCheckManager:
     """Manager for coordinating multiple health checks."""
 
-    def __init__(self, config: HealthCheckConfig, metrics_registry: MetricsRegistry | None = None):
+    def __init__(
+        self, config: HealthCheckConfig, metrics_registry: MetricsRegistry | None = None
+    ):
         """Initialize health check manager.
 
         Args:
@@ -447,11 +471,15 @@ class HealthCheckManager:
 
         # Add default health checks if enabled
         if config.enabled:
-            self.health_checks.extend([
-                QdrantHealthCheck(config.qdrant_url),
-                RedisHealthCheck(config.redis_url),
-                SystemResourceHealthCheck()
-            ])
+            # Create Qdrant client for health check
+            qdrant_client = AsyncQdrantClient(url=config.qdrant_url)
+            self.health_checks.extend(
+                [
+                    QdrantHealthCheck(qdrant_client),
+                    RedisHealthCheck(config.redis_url),
+                    SystemResourceHealthCheck(),
+                ]
+            )
 
     def add_health_check(self, health_check: HealthCheck) -> None:
         """Add a health check to the manager.

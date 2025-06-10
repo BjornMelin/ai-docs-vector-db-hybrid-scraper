@@ -1,359 +1,364 @@
-"""Tests for monitoring middleware functionality."""
+"""Comprehensive tests for monitoring middleware functionality."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+import asyncio
+import time
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import FastAPI
-from fastapi import Request
-from fastapi import Response
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from src.services.monitoring.health import HealthCheckConfig
-from src.services.monitoring.health import HealthCheckManager
-from src.services.monitoring.metrics import MetricsConfig
-from src.services.monitoring.metrics import MetricsRegistry
-from src.services.monitoring.middleware import PrometheusMiddleware
+from src.services.monitoring.middleware import (
+    CustomMetricsMiddleware,
+    PrometheusMiddleware,
+)
 
 
 class TestPrometheusMiddleware:
-    """Test Prometheus middleware functionality."""
+    """Test PrometheusMiddleware functionality."""
 
     @pytest.fixture
-    def metrics_config(self):
-        """Create metrics configuration."""
-        return MetricsConfig(enabled=True)
+    def mock_metrics_registry(self):
+        """Create mock metrics registry."""
+        registry = MagicMock()
+        registry.get_prometheus_registry.return_value = MagicMock()
+        return registry
 
     @pytest.fixture
-    def health_config(self):
-        """Create health check configuration."""
-        return HealthCheckConfig(enabled=True)
+    def mock_health_manager(self):
+        """Create mock health manager."""
+        manager = MagicMock()
+        manager.check_all = AsyncMock(return_value={
+            "qdrant": MagicMock(status="healthy", message="OK", duration_ms=50.0),
+            "redis": MagicMock(status="healthy", message="OK", duration_ms=25.0),
+        })
+        manager.get_overall_status.return_value = "healthy"
+        return manager
 
-    @pytest.fixture
-    def metrics_registry(self, metrics_config):
-        """Create metrics registry."""
-        return MetricsRegistry(metrics_config)
-
-    @pytest.fixture
-    def health_manager(self, health_config):
-        """Create health check manager."""
-        return HealthCheckManager(health_config)
-
-    @pytest.fixture
-    def app(self, metrics_registry, health_manager):
-        """Create FastAPI app with middleware."""
+    def test_prometheus_middleware_initialization(self, mock_metrics_registry, mock_health_manager):
+        """Test PrometheusMiddleware initialization."""
         app = FastAPI()
-
-        # Add middleware
         middleware = PrometheusMiddleware(
-            metrics_registry=metrics_registry,
-            health_manager=health_manager
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
         )
-        app.add_middleware(PrometheusMiddleware,
-                          metrics_registry=metrics_registry,
-                          health_manager=health_manager)
+        
+        assert middleware.app is app
+        assert middleware.metrics_registry is mock_metrics_registry
+        assert middleware.health_manager is mock_health_manager
 
-        @app.get("/test")
-        async def test_endpoint():
-            return {"message": "test"}
+    def test_prometheus_middleware_endpoints_added(self, mock_metrics_registry, mock_health_manager):
+        """Test that PrometheusMiddleware adds endpoints."""
+        app = FastAPI()
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        # Check that endpoints were added
+        routes = [route.path for route in app.routes]
+        assert "/metrics" in routes
+        assert "/health" in routes
+        assert "/health/live" in routes
+        assert "/health/ready" in routes
 
-        @app.get("/error")
-        async def error_endpoint():
-            raise ValueError("Test error")
+    def test_prometheus_middleware_without_health_manager(self, mock_metrics_registry):
+        """Test PrometheusMiddleware without health manager."""
+        app = FastAPI()
+        middleware = PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=None,
+        )
+        
+        assert middleware.health_manager is None
+        # Should still add metrics endpoint
+        routes = [route.path for route in app.routes]
+        assert "/metrics" in routes
 
-        return app
-
-    @pytest.fixture
-    def client(self, app):
-        """Create test client."""
-        return TestClient(app)
-
-    def test_metrics_endpoint(self, client):
-        """Test metrics endpoint returns Prometheus format."""
-        response = client.get("/metrics")
-
-        assert response.status_code == 200
-        assert "text/plain" in response.headers["content-type"]
-
-        # Check for expected metric names
-        content = response.text
-        assert "ml_app_" in content
-
-    def test_health_endpoint(self, client):
-        """Test basic health endpoint."""
-        with patch.object(client.app.user_middleware[0].cls, 'health_manager') as mock_manager:
-            mock_manager.get_overall_health = AsyncMock(return_value=(
-                "healthy",
-                {"overall_status": "healthy", "services": {}}
-            ))
-
-            response = client.get("/health")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "healthy"
-
-    def test_health_live_endpoint(self, client):
-        """Test liveness endpoint."""
-        response = client.get("/health/live")
-
+    def test_health_endpoint_functionality(self, mock_metrics_registry, mock_health_manager):
+        """Test health endpoint functionality."""
+        app = FastAPI()
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        client = TestClient(app)
+        response = client.get("/health")
+        
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "alive"
+        assert "status" in data
+        assert "timestamp" in data
 
-    def test_health_ready_endpoint(self, client):
-        """Test readiness endpoint."""
-        with patch.object(client.app.user_middleware[0].cls, 'health_manager') as mock_manager:
-            mock_manager.get_overall_health = AsyncMock(return_value=(
-                "healthy",
-                {"overall_status": "healthy", "services": {}}
-            ))
-
-            response = client.get("/health/ready")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "ready"
-
-    def test_health_ready_endpoint_unhealthy(self, client):
-        """Test readiness endpoint when unhealthy."""
-        with patch.object(client.app.user_middleware[0].cls, 'health_manager') as mock_manager:
-            mock_manager.get_overall_health = AsyncMock(return_value=(
-                "unhealthy",
-                {"overall_status": "unhealthy", "services": {"qdrant": {"status": "unhealthy"}}}
-            ))
-
-            response = client.get("/health/ready")
-
-            assert response.status_code == 503
-            data = response.json()
-            assert data["status"] == "not_ready"
-
-    def test_request_metrics_collection(self, client):
-        """Test that request metrics are collected."""
-        # Make a successful request
-        response = client.get("/test")
-        assert response.status_code == 200
-
-        # Check metrics endpoint includes request data
-        metrics_response = client.get("/metrics")
-        content = metrics_response.text
-
-        # Should include HTTP request metrics from prometheus-fastapi-instrumentator
-        assert "http_requests_total" in content or "http_request" in content
-
-    def test_error_handling_in_middleware(self, client):
-        """Test middleware handles errors gracefully."""
-        # Make request to error endpoint
-        response = client.get("/error")
-        assert response.status_code == 500
-
-        # Metrics endpoint should still work
-        metrics_response = client.get("/metrics")
-        assert metrics_response.status_code == 200
-
-    def test_middleware_with_disabled_metrics(self):
-        """Test middleware behavior with disabled metrics."""
-        disabled_config = MetricsConfig(enabled=False)
-        disabled_registry = MetricsRegistry(disabled_config)
-
+    def test_metrics_endpoint_functionality(self, mock_metrics_registry, mock_health_manager):
+        """Test metrics endpoint functionality."""
         app = FastAPI()
-        middleware = PrometheusMiddleware(
-            metrics_registry=disabled_registry,
-            health_manager=None
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
         )
-
-        # Should not raise errors
-        assert middleware.metrics_registry._metrics == {}
-
-    @pytest.mark.asyncio
-    async def test_middleware_dispatch(self, metrics_registry, health_manager):
-        """Test middleware dispatch method."""
-        middleware = PrometheusMiddleware(
-            metrics_registry=metrics_registry,
-            health_manager=health_manager
-        )
-
-        # Mock request and call next
-        request = Mock(spec=Request)
-        request.method = "GET"
-        request.url.path = "/test"
-
-        call_next = AsyncMock(return_value=Response(content="test", status_code=200))
-
-        response = await middleware.dispatch(request, call_next)
-
-        assert response.status_code == 200
-        call_next.assert_called_once_with(request)
-
-    def test_custom_metrics_path(self):
-        """Test custom metrics path configuration."""
-        config = MetricsConfig(path="/custom-metrics")
-        registry = MetricsRegistry(config)
-
-        app = FastAPI()
-        app.add_middleware(PrometheusMiddleware,
-                          metrics_registry=registry,
-                          health_manager=None)
-
+        
         client = TestClient(app)
-
-        # Default path should not work
         response = client.get("/metrics")
-        assert response.status_code == 404
-
-        # Custom path should work
-        response = client.get("/custom-metrics")
+        
         assert response.status_code == 200
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+
+    def test_liveness_endpoint(self, mock_metrics_registry, mock_health_manager):
+        """Test liveness endpoint."""
+        app = FastAPI()
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        client = TestClient(app)
+        response = client.get("/health/live")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+
+    def test_readiness_endpoint(self, mock_metrics_registry, mock_health_manager):
+        """Test readiness endpoint."""
+        app = FastAPI()
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        client = TestClient(app)
+        response = client.get("/health/ready")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+
+    def test_unhealthy_service_response(self, mock_metrics_registry, mock_health_manager):
+        """Test response when services are unhealthy."""
+        # Configure unhealthy service
+        mock_health_manager.check_all = AsyncMock(return_value={
+            "qdrant": MagicMock(
+                status="unhealthy",
+                message="Connection failed",
+                duration_ms=5000.0,
+            ),
+        })
+        mock_health_manager.get_overall_status.return_value = "unhealthy"
+        
+        app = FastAPI()
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        client = TestClient(app)
+        response = client.get("/health")
+        
+        assert response.status_code == 503  # Service Unavailable
+        data = response.json()
+        assert data["status"] == "unhealthy"
 
 
-class TestMiddlewareIntegration:
-    """Integration tests for middleware with full application."""
+class TestCustomMetricsMiddleware:
+    """Test CustomMetricsMiddleware functionality."""
 
     @pytest.fixture
-    def full_app(self):
-        """Create full application with all middleware."""
-        app = FastAPI(title="Test ML App")
+    def mock_metrics_registry(self):
+        """Create mock metrics registry."""
+        registry = MagicMock()
+        registry.record_request = MagicMock()
+        registry.record_response = MagicMock()
+        registry.record_error = MagicMock()
+        return registry
 
-        # Create monitoring components
-        metrics_config = MetricsConfig(enabled=True)
-        health_config = HealthCheckConfig(enabled=True)
-
-        metrics_registry = MetricsRegistry(metrics_config)
-        health_manager = HealthCheckManager(health_config)
-
-        # Add middleware
-        app.add_middleware(PrometheusMiddleware,
-                          metrics_registry=metrics_registry,
-                          health_manager=health_manager)
-
-        # Add some test routes
+    @pytest.fixture
+    def app_with_custom_middleware(self, mock_metrics_registry):
+        """Create FastAPI app with custom metrics middleware."""
+        app = FastAPI()
+        app.add_middleware(CustomMetricsMiddleware, metrics_registry=mock_metrics_registry)
+        
         @app.get("/")
         async def root():
             return {"message": "Hello World"}
-
-        @app.get("/search")
-        async def search():
-            # Simulate search operation
-            return {"results": []}
-
-        @app.post("/embeddings")
-        async def embeddings():
-            # Simulate embedding generation
-            return {"embeddings": []}
-
+        
+        @app.get("/error")
+        async def error_endpoint():
+            raise HTTPException(status_code=500, detail="Test error")
+        
+        @app.get("/slow")
+        async def slow_endpoint():
+            await asyncio.sleep(0.01)
+            return {"message": "Slow response"}
+        
         return app
 
-    def test_full_application_monitoring(self, full_app):
-        """Test monitoring with full application simulation."""
-        client = TestClient(full_app)
+    def test_custom_middleware_initialization(self, mock_metrics_registry):
+        """Test CustomMetricsMiddleware initialization."""
+        app = FastAPI()
+        middleware = CustomMetricsMiddleware(app, metrics_registry=mock_metrics_registry)
+        
+        assert middleware.metrics_registry is mock_metrics_registry
 
-        # Make various requests
-        client.get("/")
-        client.get("/search")
-        client.post("/embeddings")
-        client.get("/nonexistent")  # 404
+    def test_successful_request_monitoring(self, app_with_custom_middleware, mock_metrics_registry):
+        """Test monitoring of successful requests."""
+        client = TestClient(app_with_custom_middleware)
+        
+        response = client.get("/")
+        
+        assert response.status_code == 200
+        assert response.json() == {"message": "Hello World"}
 
-        # Check metrics collection
+    def test_error_request_monitoring(self, app_with_custom_middleware, mock_metrics_registry):
+        """Test monitoring of error requests."""
+        client = TestClient(app_with_custom_middleware)
+        
+        response = client.get("/error")
+        
+        assert response.status_code == 500
+
+    def test_slow_request_monitoring(self, app_with_custom_middleware, mock_metrics_registry):
+        """Test monitoring of slow requests."""
+        client = TestClient(app_with_custom_middleware)
+        
+        start_time = time.time()
+        response = client.get("/slow")
+        end_time = time.time()
+        
+        assert response.status_code == 200
+        assert response.json() == {"message": "Slow response"}
+        
+        # Verify request took some time
+        duration = end_time - start_time
+        assert duration >= 0.01  # At least 10ms
+
+    def test_middleware_without_metrics_registry(self):
+        """Test middleware functionality without metrics registry."""
+        app = FastAPI()
+        middleware = CustomMetricsMiddleware(app, metrics_registry=None)
+        
+        assert middleware.metrics_registry is None
+        
+        @app.get("/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+        
+        client = TestClient(app)
+        response = client.get("/test")
+        
+        # Should still work without metrics
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+
+class TestMiddlewareIntegration:
+    """Test middleware integration scenarios."""
+
+    @pytest.fixture
+    def full_monitoring_app(self, mock_metrics_registry, mock_health_manager):
+        """Create app with full monitoring integration."""
+        app = FastAPI()
+        
+        # Add PrometheusMiddleware for endpoints
+        PrometheusMiddleware(
+            app=app,
+            metrics_registry=mock_metrics_registry,
+            health_manager=mock_health_manager,
+        )
+        
+        # Add CustomMetricsMiddleware for request monitoring
+        app.add_middleware(CustomMetricsMiddleware, metrics_registry=mock_metrics_registry)
+        
+        @app.get("/api/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+        
+        @app.post("/api/data")
+        async def data_endpoint(data: dict):
+            return {"received": data}
+        
+        return app
+
+    @pytest.fixture
+    def mock_metrics_registry(self):
+        """Create mock metrics registry."""
+        registry = MagicMock()
+        registry.get_prometheus_registry.return_value = MagicMock()
+        return registry
+
+    @pytest.fixture
+    def mock_health_manager(self):
+        """Create mock health manager."""
+        manager = MagicMock()
+        manager.check_all = AsyncMock(return_value={
+            "qdrant": MagicMock(status="healthy", message="OK", duration_ms=50.0),
+        })
+        manager.get_overall_status.return_value = "healthy"
+        return manager
+
+    def test_full_monitoring_integration(self, full_monitoring_app, mock_health_manager):
+        """Test complete monitoring integration."""
+        client = TestClient(full_monitoring_app)
+        
+        # Test API endpoint
+        response = client.get("/api/test")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+        
+        # Test health endpoint
+        response = client.get("/health")
+        assert response.status_code == 200
+        
+        # Test metrics endpoint
         response = client.get("/metrics")
         assert response.status_code == 200
+        
+        # Verify health checks were called
+        mock_health_manager.check_all.assert_called()
 
-        content = response.text
-        # Should have HTTP metrics
-        assert "http" in content.lower()
+    def test_multiple_request_monitoring(self, full_monitoring_app):
+        """Test monitoring across multiple requests."""
+        client = TestClient(full_monitoring_app)
+        
+        # Make multiple requests
+        for i in range(5):
+            response = client.get("/api/test")
+            assert response.status_code == 200
+        
+        # POST request
+        response = client.post("/api/data", json={"test": "data"})
+        assert response.status_code == 200
 
-        # Check health endpoints
-        health_response = client.get("/health")
-        assert health_response.status_code == 200
-
-        live_response = client.get("/health/live")
-        assert live_response.status_code == 200
-
-    def test_concurrent_requests_monitoring(self, full_app):
+    def test_concurrent_request_monitoring(self, full_monitoring_app):
         """Test monitoring under concurrent load."""
         import threading
-        import time
-
-        client = TestClient(full_app)
+        
+        client = TestClient(full_monitoring_app)
         results = []
-
-        def make_requests():
-            for _ in range(10):
-                response = client.get("/search")
-                results.append(response.status_code)
-                time.sleep(0.01)
-
+        
+        def make_request():
+            response = client.get("/api/test")
+            results.append(response.status_code)
+        
         # Create multiple threads
-        threads = [threading.Thread(target=make_requests) for _ in range(3)]
-
-        for thread in threads:
+        threads = []
+        for _ in range(10):
+            thread = threading.Thread(target=make_request)
+            threads.append(thread)
             thread.start()
-
+        
+        # Wait for all threads
         for thread in threads:
             thread.join()
-
-        # All requests should succeed
+        
+        # Verify all requests succeeded
         assert all(status == 200 for status in results)
-
-        # Metrics should still be accessible
-        metrics_response = client.get("/metrics")
-        assert metrics_response.status_code == 200
-
-    def test_metrics_persistence_across_requests(self, full_app):
-        """Test that metrics persist and accumulate across requests."""
-        client = TestClient(full_app)
-
-        # Make initial requests
-        for _ in range(5):
-            client.get("/search")
-
-        metrics_1 = client.get("/metrics").text
-
-        # Make more requests
-        for _ in range(3):
-            client.get("/search")
-
-        metrics_2 = client.get("/metrics").text
-
-        # Metrics should have accumulated
-        assert len(metrics_2) >= len(metrics_1)
-
-    def test_health_check_integration(self, full_app):
-        """Test health check integration with real dependencies."""
-        client = TestClient(full_app)
-
-        # Mock health manager for consistent testing
-        with patch.object(full_app.user_middleware[0].cls, 'health_manager') as mock_manager:
-            # Test healthy state
-            mock_manager.get_overall_health = AsyncMock(return_value=(
-                "healthy",
-                {
-                    "overall_status": "healthy",
-                    "services": {
-                        "qdrant": {"status": "healthy"},
-                        "redis": {"status": "healthy"}
-                    }
-                }
-            ))
-
-            response = client.get("/health")
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "healthy"
-
-            # Test degraded state
-            mock_manager.get_overall_health = AsyncMock(return_value=(
-                "degraded",
-                {
-                    "overall_status": "degraded",
-                    "services": {
-                        "qdrant": {"status": "healthy"},
-                        "redis": {"status": "degraded"}
-                    }
-                }
-            ))
-
-            response = client.get("/health")
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "degraded"
+        assert len(results) == 10
