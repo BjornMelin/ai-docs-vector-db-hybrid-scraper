@@ -21,7 +21,7 @@ from ...infrastructure.client_manager import ClientManager
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register utility tools with the MCP server."""
 
     from ..models.responses import ConfigValidationResponse
@@ -94,7 +94,7 @@ def register_tools(mcp, client_manager: ClientManager):
             raise
 
     @mcp.tool()
-    async def validate_configuration(ctx: Context = None) -> ConfigValidationResponse:
+    async def validate_configuration(ctx: Context = None) -> ConfigValidationResponse:  # noqa: PLR0912
         """
         Validate system configuration and API keys.
 

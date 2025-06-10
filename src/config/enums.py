@@ -120,6 +120,54 @@ class VectorType(str, Enum):
     HYDE = "hyde"  # Hypothetical document embeddings
 
 
+class QueryType(str, Enum):
+    """Query types for adaptive search optimization."""
+
+    CODE = "code"  # Code search queries
+    DOCUMENTATION = "documentation"  # Documentation queries
+    CONCEPTUAL = "conceptual"  # Conceptual/tutorial queries
+    API_REFERENCE = "api_reference"  # API reference queries
+    TROUBLESHOOTING = "troubleshooting"  # Problem-solving queries
+    MULTIMODAL = "multimodal"  # Multi-modal queries
+
+
+class QueryComplexity(str, Enum):
+    """Query complexity levels for adaptive optimization."""
+
+    SIMPLE = "simple"  # Single-hop, direct queries
+    MODERATE = "moderate"  # Multi-step queries
+    COMPLEX = "complex"  # Multi-hop, reasoning-intensive queries
+
+
+class ModelType(str, Enum):
+    """Embedding model types for dynamic selection."""
+
+    GENERAL_PURPOSE = "general_purpose"  # General semantic embeddings
+    CODE_SPECIALIZED = "code_specialized"  # Code-specific embeddings
+    DOMAIN_SPECIFIC = "domain_specific"  # Domain-specific embeddings
+    MULTIMODAL = "multimodal"  # Multi-modal embeddings
+    SPARSE = "sparse"  # Sparse vector models (SPLADE)
+
+
+class OptimizationStrategy(str, Enum):
+    """Optimization strategies for adaptive search."""
+
+    SPEED_OPTIMIZED = "speed_optimized"  # Prioritize response time
+    QUALITY_OPTIMIZED = "quality_optimized"  # Prioritize result quality
+    BALANCED = "balanced"  # Balance speed and quality
+    COST_OPTIMIZED = "cost_optimized"  # Prioritize cost efficiency
+
+
+class ABTestVariant(str, Enum):
+    """A/B test variants for fusion strategies."""
+
+    CONTROL = "control"  # Current baseline implementation
+    RRF_OPTIMIZED = "rrf_optimized"  # Optimized RRF fusion
+    DBSF_OPTIMIZED = "dbsf_optimized"  # Optimized DBSF fusion
+    ADAPTIVE_FUSION = "adaptive_fusion"  # Adaptive weight tuning
+    MULTI_MODEL = "multi_model"  # Multi-model ensemble
+
+
 class HttpStatus(int, Enum):
     """HTTP status codes for API responses."""
 
@@ -145,6 +193,7 @@ class CacheType(str, Enum):
 
 # Re-export commonly used enums for backward compatibility
 __all__ = [
+    "ABTestVariant",
     "CacheType",
     "ChunkingStrategy",
     "CollectionStatus",
@@ -156,7 +205,11 @@ __all__ = [
     "FusionAlgorithm",
     "HttpStatus",
     "LogLevel",
+    "ModelType",
+    "OptimizationStrategy",
     "QualityTier",
+    "QueryComplexity",
+    "QueryType",
     "SearchAccuracy",
     "SearchStrategy",
     "VectorType",

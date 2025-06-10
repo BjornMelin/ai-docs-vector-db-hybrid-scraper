@@ -34,7 +34,7 @@ from ..models.responses import ContentIntelligenceResult
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register content intelligence tools with the MCP server."""
 
     @mcp.tool()
@@ -297,7 +297,11 @@ def register_tools(mcp, client_manager: ClientManager):
         url: str,
         content_patterns: list[str] | None = None,
         quality_issues: list[str] | None = None,
+<<<<<<< HEAD
         ctx: Context | None = None,
+=======
+        ctx: Context = None,
+>>>>>>> main
     ) -> list[dict]:
         """
         Generate site-specific optimization and adaptation recommendations.

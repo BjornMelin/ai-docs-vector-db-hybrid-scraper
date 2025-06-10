@@ -35,7 +35,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     from ..models.responses import ProjectInfo
 
     @mcp.tool()
-    async def create_project(
+    async def create_project(  # noqa: PLR0912
         request: ProjectRequest, ctx: Context = None
     ) -> ProjectInfo:
         """

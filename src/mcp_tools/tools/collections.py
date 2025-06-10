@@ -21,7 +21,7 @@ from ...infrastructure.client_manager import ClientManager
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     """Register collection management tools with the MCP server."""
 
     from ..models.responses import CollectionInfo

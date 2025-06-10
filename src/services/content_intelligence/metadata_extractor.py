@@ -328,9 +328,7 @@ class MetadataExtractor:
                         metadata.tags.append(match.strip())
 
         # Remove duplicates and clean tags
-        metadata.tags = list(
-            set([tag for tag in metadata.tags if tag and len(tag) > 1])
-        )
+        metadata.tags = list({tag for tag in metadata.tags if tag and len(tag) > 1})
         metadata.topics = list(set(metadata.topics))
 
     async def _extract_technical_metadata(
@@ -363,12 +361,11 @@ class MetadataExtractor:
         parsed_url = urlparse(url)
         if parsed_url.path:
             path_parts = [part for part in parsed_url.path.split("/") if part]
-            if len(path_parts) > 1:
+            if len(path_parts) > 1 and len(path_parts) >= 2:
                 # Use path structure to infer relationships
-                if len(path_parts) >= 2:
-                    metadata.parent_url = (
-                        f"{parsed_url.scheme}://{parsed_url.netloc}/{path_parts[0]}/"
-                    )
+                metadata.parent_url = (
+                    f"{parsed_url.scheme}://{parsed_url.netloc}/{path_parts[0]}/"
+                )
 
     async def _extract_hierarchy_metadata(
         self, metadata: ContentMetadata, content: str, url: str
@@ -388,29 +385,30 @@ class MetadataExtractor:
         related_urls = []
         for found_url in found_urls:
             # Handle markdown links
+            processed_url = found_url
             if found_url.startswith("[") and "](" in found_url:
                 url_match = re.search(r"\]\(([^)]+)\)", found_url)
                 if url_match:
-                    found_url = url_match.group(1)
+                    processed_url = url_match.group(1)
 
             # Add protocol if missing
-            if found_url.startswith("www."):
-                found_url = "https://" + found_url
+            if processed_url.startswith("www."):
+                processed_url = "https://" + processed_url
 
             # Filter out same domain if different page
             parsed_current = urlparse(url)
-            parsed_found = urlparse(found_url)
+            parsed_found = urlparse(processed_url)
 
             if (
                 parsed_found.netloc
                 and parsed_found.netloc != parsed_current.netloc
-                and found_url not in related_urls
+                and processed_url not in related_urls
             ):
-                related_urls.append(found_url)
+                related_urls.append(processed_url)
 
         metadata.related_urls = related_urls[:MAX_RELATED_URLS]
 
-    async def _extract_structured_data(
+    async def _extract_structured_data(  # noqa: PLR0912
         self, metadata: ContentMetadata, html: str
     ) -> None:
         """Extract structured data and schema information.

@@ -359,7 +359,7 @@ class TestMiddlewareIntegration:
         client = TestClient(full_monitoring_app)
 
         # Make multiple requests
-        for i in range(5):
+        for _i in range(5):
             response = client.get("/api/test")
             assert response.status_code == 200
 

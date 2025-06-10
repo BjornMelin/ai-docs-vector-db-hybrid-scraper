@@ -1,6 +1,7 @@
 """Comprehensive tests for monitoring system initialization."""
 
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -251,10 +252,8 @@ class TestBackgroundMonitoringTasks:
 
         # Cancel and cleanup
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
         # Verify metrics were updated
         assert mock_metrics_registry.update_system_metrics.call_count > 0
@@ -269,10 +268,8 @@ class TestBackgroundMonitoringTasks:
         await asyncio.sleep(0.05)
 
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
         assert mock_health_manager.check_all.call_count > 0
 
@@ -299,10 +296,8 @@ class TestBackgroundMonitoringTasks:
         await asyncio.sleep(0.05)
 
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
         # Task should continue running despite error
         assert mock_metrics_registry.update_system_metrics.call_count >= 2
@@ -368,7 +363,7 @@ class TestMonitoringIntegration:
     @pytest.mark.asyncio
     async def test_monitoring_with_custom_intervals(self):
         """Test monitoring with custom intervals."""
-        config = MonitoringConfig(
+        MonitoringConfig(
             enabled=True,
             include_system_metrics=True,
             system_metrics_interval=0.05,  # 50ms
@@ -384,10 +379,8 @@ class TestMonitoringIntegration:
         await asyncio.sleep(0.2)  # Let it run for 200ms
 
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
         # Should have called multiple times with 50ms interval
         assert mock_metrics.update_system_metrics.call_count >= 3
@@ -470,10 +463,8 @@ class TestFastMCPIntegration:
         await asyncio.sleep(0.1)
 
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
         # The function should have called the metrics registry to update cache stats
         assert mock_metrics.update_cache_stats.call_count > 0

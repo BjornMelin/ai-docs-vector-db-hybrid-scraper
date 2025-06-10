@@ -31,33 +31,33 @@ from .production_server import create_production_server
 from .production_server import run_production_server_async
 
 __all__ = [
+    # Background tasks
+    "BackgroundTaskManager",
     # Middleware components
     "CompressionMiddleware",
+    # Middleware management
+    "MiddlewareManager",
     "PerformanceMiddleware",
+    # Production server
+    "ProductionMCPServer",
     "SecurityMiddleware",
     "TimeoutMiddleware",
     "TracingMiddleware",
-    "get_correlation_id",
-    # Middleware management
-    "MiddlewareManager",
+    "cleanup_dependencies",
+    "cleanup_task_manager",
     "create_middleware_manager",
+    "create_production_server",
+    "get_cache_manager",
+    "get_config",
+    "get_correlation_id",
+    "get_embedding_manager",
+    "get_fastapi_config",
+    "get_health_checker",
+    "get_task_manager",
+    "get_vector_service",
     # Dependency injection
     "initialize_dependencies",
-    "cleanup_dependencies",
-    "get_config",
-    "get_fastapi_config",
-    "get_vector_service",
-    "get_embedding_manager",
-    "get_cache_manager",
-    "get_health_checker",
-    # Background tasks
-    "BackgroundTaskManager",
-    "get_task_manager",
     "initialize_task_manager",
-    "cleanup_task_manager",
-    "submit_managed_task",
-    # Production server
-    "ProductionMCPServer",
-    "create_production_server",
     "run_production_server_async",
+    "submit_managed_task",
 ]

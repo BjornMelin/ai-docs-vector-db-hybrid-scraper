@@ -56,25 +56,24 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
 
         # Check rate limiting
-        if self.config.enable_rate_limiting:
-            if not self._check_rate_limit(client_ip):
-                logger.warning(
-                    "Rate limit exceeded",
-                    extra={
-                        "client_ip": client_ip,
-                        "method": request.method,
-                        "path": request.url.path,
-                        "user_agent": request.headers.get("user-agent"),
-                    },
-                )
-                return JSONResponse(
-                    status_code=429,
-                    content={
-                        "error": "Rate limit exceeded",
-                        "retry_after": self.config.rate_limit_window,
-                    },
-                    headers={"Retry-After": str(self.config.rate_limit_window)},
-                )
+        if self.config.enable_rate_limiting and not self._check_rate_limit(client_ip):
+            logger.warning(
+                "Rate limit exceeded",
+                extra={
+                    "client_ip": client_ip,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "user_agent": request.headers.get("user-agent"),
+                },
+            )
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Rate limit exceeded",
+                    "retry_after": self.config.rate_limit_window,
+                },
+                headers={"Retry-After": str(self.config.rate_limit_window)},
+            )
 
         # Process the request
         response = await call_next(request)

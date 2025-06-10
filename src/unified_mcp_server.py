@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from contextlib import suppress
 
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
@@ -213,10 +214,8 @@ async def lifespan():
         # Cancel monitoring tasks
         for task in monitoring_tasks:
             task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
         if hasattr(lifespan, "client_manager"):
             await lifespan.client_manager.cleanup()

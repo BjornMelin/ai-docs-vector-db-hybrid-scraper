@@ -55,10 +55,10 @@ def function_{i}():
 
 class Class_{i}:
     '''Class {i} documentation.'''
-    
+
     def __init__(self):
         self.value = {i}
-    
+
     def method_{i}(self):
         return self.value * 2
 """,
@@ -160,10 +160,10 @@ def hello_world():
 
 class Greeter:
     '''A simple greeter class.'''
-    
+
     def __init__(self, name):
         self.name = name
-    
+
     def greet(self):
         return f"Hello, {self.name}!"
 """
@@ -190,13 +190,13 @@ def complex_function(data):
 
 class DataProcessor:
     '''A data processing class.'''
-    
+
     def __init__(self):
         self.processors = {}
-    
+
     def register_processor(self, name, func):
         self.processors[name] = func
-    
+
     def process(self, name, data):
         if name in self.processors:
             return self.processors[name](data)

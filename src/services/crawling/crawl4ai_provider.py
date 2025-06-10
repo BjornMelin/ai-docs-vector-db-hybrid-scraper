@@ -130,8 +130,16 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         try:
             # Initialize Memory-Adaptive Dispatcher if enabled
             if self.use_memory_dispatcher and self.dispatcher:
-                await self.dispatcher.initialize()
-                self.logger.info("MemoryAdaptiveDispatcher initialized successfully")
+                # Check if dispatcher has initialize method
+                if hasattr(self.dispatcher, "initialize"):
+                    await self.dispatcher.initialize()
+                    self.logger.info(
+                        "MemoryAdaptiveDispatcher initialized successfully"
+                    )
+                else:
+                    self.logger.info(
+                        "MemoryAdaptiveDispatcher ready (no initialize method)"
+                    )
 
             # Create crawler with enhanced configuration
             crawler_config = self.browser_config
@@ -395,43 +403,39 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     ) -> dict[str, object]:
         """Scrape URL using Memory-Adaptive Dispatcher."""
         try:
-            # Get session from dispatcher (handles memory-adaptive concurrency)
-            async with self.dispatcher.get_session() as session:
-                # Get site-specific JavaScript if not provided
-                if not js_code:
-                    js_code = self.js_executor.get_js_for_site(url)
+            # Get site-specific JavaScript if not provided
+            if not js_code:
+                js_code = self.js_executor.get_js_for_site(url)
 
-                # Create extraction strategy and run configuration
-                extraction_strategy = self._create_extraction_strategy(extraction_type)
-                run_config = self._create_run_config(
-                    wait_for, js_code, extraction_strategy
+            # Create extraction strategy and run configuration
+            extraction_strategy = self._create_extraction_strategy(extraction_type)
+            run_config = self._create_run_config(wait_for, js_code, extraction_strategy)
+
+            # Enable streaming in run config if requested
+            if enable_streaming:
+                run_config.stream = True
+
+            # Crawl the URL (MemoryAdaptiveDispatcher handles concurrency internally)
+            if enable_streaming:
+                # Stream processing for real-time results
+                return await self._process_streaming_crawl(
+                    url, run_config, extraction_type, None
                 )
+            else:
+                # Standard crawl
+                result = await self._crawler.arun(url=url, config=run_config)
 
-                # Enable streaming in run config if requested
-                if enable_streaming:
-                    run_config.stream = True
-
-                # Crawl the URL with session
-                if enable_streaming:
-                    # Stream processing for real-time results
-                    return await self._process_streaming_crawl(
-                        url, run_config, extraction_type, session
+                if result.success:
+                    success_result = self._build_success_result(
+                        url, result, extraction_type
                     )
+                    success_result["metadata"]["dispatcher_stats"] = (
+                        self._get_dispatcher_stats()
+                    )
+                    return success_result
                 else:
-                    # Standard crawl
-                    result = await self._crawler.arun(url=url, config=run_config)
-
-                    if result.success:
-                        success_result = self._build_success_result(
-                            url, result, extraction_type
-                        )
-                        success_result["metadata"]["dispatcher_stats"] = (
-                            self._get_dispatcher_stats()
-                        )
-                        return success_result
-                    else:
-                        error_msg = getattr(result, "error_message", "Crawl failed")
-                        return self._build_error_result(url, error_msg, extraction_type)
+                    error_msg = getattr(result, "error_message", "Crawl failed")
+                    return self._build_error_result(url, error_msg, extraction_type)
 
         except Exception as e:
             error_result = self._build_error_result(url, e, extraction_type)
@@ -478,7 +482,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         url: str,
         run_config: CrawlerRunConfig,
         extraction_type: str,
-        session: object,
+        session: object | None,
     ) -> dict[str, object]:
         """Process crawl with streaming for real-time results."""
         try:
@@ -565,31 +569,26 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             raise CrawlServiceError("Streaming requires Memory-Adaptive Dispatcher")
 
         try:
-            async with self.dispatcher.get_session():
-                # Get site-specific JavaScript if not provided
-                if not js_code:
-                    js_code = self.js_executor.get_js_for_site(url)
+            # Get site-specific JavaScript if not provided
+            if not js_code:
+                js_code = self.js_executor.get_js_for_site(url)
 
-                # Create extraction strategy and run configuration
-                extraction_strategy = self._create_extraction_strategy(extraction_type)
-                run_config = self._create_run_config(
-                    wait_for, js_code, extraction_strategy
-                )
-                run_config.stream = True
+            # Create extraction strategy and run configuration
+            extraction_strategy = self._create_extraction_strategy(extraction_type)
+            run_config = self._create_run_config(wait_for, js_code, extraction_strategy)
+            run_config.stream = True
 
-                # Stream crawl results
-                async for chunk in self._crawler.arun_stream(
-                    url=url, config=run_config
-                ):
-                    if chunk:
-                        yield {
-                            "url": url,
-                            "chunk": chunk,
-                            "timestamp": asyncio.get_event_loop().time(),
-                            "extraction_type": extraction_type,
-                            "provider": "crawl4ai",
-                            "streaming": True,
-                        }
+            # Stream crawl results (MemoryAdaptiveDispatcher handles concurrency internally)
+            async for chunk in self._crawler.arun_stream(url=url, config=run_config):
+                if chunk:
+                    yield {
+                        "url": url,
+                        "chunk": chunk,
+                        "timestamp": asyncio.get_event_loop().time(),
+                        "extraction_type": extraction_type,
+                        "provider": "crawl4ai",
+                        "streaming": True,
+                    }
 
         except Exception as e:
             yield self._build_error_result(url, e, extraction_type)

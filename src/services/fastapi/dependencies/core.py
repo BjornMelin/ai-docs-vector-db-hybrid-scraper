@@ -145,7 +145,6 @@ def get_container() -> DependencyContainer:
     Raises:
         RuntimeError: If container is not initialized
     """
-    global _container
     if _container is None:
         raise RuntimeError(
             "Dependency container not initialized. Call initialize_dependencies() first."
@@ -159,7 +158,7 @@ async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
     Args:
         config: Application configuration
     """
-    global _container
+    global _container  # noqa: PLW0603
     if _container is None:
         _container = DependencyContainer()
     await _container.initialize(config)
@@ -167,7 +166,7 @@ async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container
+    global _container  # noqa: PLW0603
     if _container:
         await _container.cleanup()
         _container = None
@@ -183,15 +182,6 @@ def get_config() -> UnifiedConfig:
         Unified configuration instance
     """
     return get_container().config
-
-
-def get_fastapi_config() -> FastAPIProductionConfig:
-    """FastAPI dependency for FastAPI production configuration.
-
-    Returns:
-        FastAPI production configuration instance
-    """
-    return get_container().fastapi_config
 
 
 async def get_vector_service() -> QdrantService:
@@ -216,7 +206,7 @@ async def get_vector_service() -> QdrantService:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        )
+        ) from e
 
 
 async def get_embedding_manager() -> EmbeddingManager:
@@ -241,7 +231,7 @@ async def get_embedding_manager() -> EmbeddingManager:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
-        )
+        ) from e
 
 
 async def get_cache_manager() -> CacheManager:
@@ -266,7 +256,7 @@ async def get_cache_manager() -> CacheManager:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
-        )
+        ) from e
 
 
 def get_correlation_id_dependency(request: Request) -> str:
