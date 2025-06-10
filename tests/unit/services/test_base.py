@@ -5,9 +5,7 @@ for service lifecycle management, error handling, and configuration.
 """
 
 import asyncio
-from unittest.mock import AsyncMock
 from unittest.mock import Mock
-from unittest.mock import patch
 
 import pytest
 from src.config import UnifiedConfig
@@ -181,115 +179,9 @@ class TestBaseService:
         assert service._initialized is False
 
 
-class TestRetryWithBackoff:
-    """Test cases for _retry_with_backoff method."""
-
-    @pytest.mark.asyncio
-    async def test_retry_success_first_attempt(self):
-        """Test successful execution on first attempt."""
-        service = ConcreteService()
-        mock_func = AsyncMock(return_value="success")
-
-        result = await service._retry_with_backoff(mock_func, "arg1", kwarg1="val1")
-
-        assert result == "success"
-        mock_func.assert_called_once_with("arg1", kwarg1="val1")
-
-    @pytest.mark.asyncio
-    async def test_retry_success_after_failures(self):
-        """Test successful execution after some failures."""
-        service = ConcreteService()
-        mock_func = AsyncMock(
-            side_effect=[ValueError("fail1"), ValueError("fail2"), "success"]
-        )
-
-        with patch("asyncio.sleep") as mock_sleep:
-            result = await service._retry_with_backoff(
-                mock_func, max_retries=3, base_delay=0.1
-            )
-
-        assert result == "success"
-        assert mock_func.call_count == 3
-        assert mock_sleep.call_count == 2
-        mock_sleep.assert_any_call(0.1)  # First retry delay
-        mock_sleep.assert_any_call(0.2)  # Second retry delay
-
-    @pytest.mark.asyncio
-    async def test_retry_all_attempts_fail(self):
-        """Test when all retry attempts fail."""
-        service = ConcreteService()
-        mock_func = AsyncMock(side_effect=ValueError("persistent error"))
-
-        with (
-            patch("asyncio.sleep") as mock_sleep,
-            pytest.raises(APIError, match="API call failed after 3 attempts"),
-        ):
-            await service._retry_with_backoff(mock_func, max_retries=3, base_delay=0.1)
-
-        assert mock_func.call_count == 3
-        assert mock_sleep.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_retry_exponential_backoff(self):
-        """Test exponential backoff calculation."""
-        service = ConcreteService()
-        mock_func = AsyncMock(side_effect=ValueError("error"))
-
-        with patch("asyncio.sleep") as mock_sleep, pytest.raises(APIError):
-            await service._retry_with_backoff(mock_func, max_retries=4, base_delay=1.0)
-
-        expected_delays = [1.0, 2.0, 4.0]  # 1.0 * 2^0, 1.0 * 2^1, 1.0 * 2^2
-        actual_delays = [call.args[0] for call in mock_sleep.call_args_list]
-        assert actual_delays == expected_delays
-
-    @pytest.mark.asyncio
-    async def test_retry_custom_parameters(self):
-        """Test retry with custom parameters."""
-        service = ConcreteService()
-        mock_func = AsyncMock(side_effect=ValueError("error"))
-
-        with patch("asyncio.sleep") as mock_sleep, pytest.raises(APIError):
-            await service._retry_with_backoff(
-                mock_func, max_retries=2, base_delay=0.5, custom_arg="test"
-            )
-
-        assert mock_func.call_count == 2
-        mock_func.assert_called_with(custom_arg="test")
-        mock_sleep.assert_called_once_with(0.5)
-
-    @pytest.mark.asyncio
-    async def test_retry_with_positional_and_keyword_args(self):
-        """Test retry with both positional and keyword arguments."""
-        service = ConcreteService()
-        mock_func = AsyncMock(return_value="success")
-
-        result = await service._retry_with_backoff(
-            mock_func, "pos1", "pos2", kw1="val1", kw2="val2"
-        )
-
-        assert result == "success"
-        mock_func.assert_called_once_with("pos1", "pos2", kw1="val1", kw2="val2")
-
-    @pytest.mark.asyncio
-    @patch("src.services.base.logger")
-    async def test_retry_logging(self, mock_logger):
-        """Test logging during retry attempts."""
-        service = ConcreteService()
-        mock_func = AsyncMock(side_effect=ValueError("test error"))
-
-        with patch("asyncio.sleep"), pytest.raises(APIError):
-            await service._retry_with_backoff(mock_func, max_retries=2)
-
-        # Check warning logs for retry attempts
-        assert mock_logger.warning.call_count == 1
-        warning_call = mock_logger.warning.call_args[0][0]
-        assert "API call failed (attempt 1/2)" in warning_call
-        assert "test error" in warning_call
-
-        # Check error log for final failure
-        mock_logger.error.assert_called_once()
-        error_call = mock_logger.error.call_args[0][0]
-        assert "API call failed after 2 attempts" in error_call
+# NOTE: TestRetryWithBackoff class has been removed as the _retry_with_backoff
+# method has been replaced with the @retry_async decorator from src.services.errors.
+# Retry functionality tests are now covered by error handling decorator tests.
 
 
 class TestValidateInitialized:
@@ -394,22 +286,8 @@ class TestServiceIntegration:
             assert service.config is config
             assert service.config.some_setting == "test_value"
 
-    @pytest.mark.asyncio
-    async def test_retry_integration_with_service(self):
-        """Test retry functionality integration with service operations."""
-        service = ConcreteService()
-
-        # Mock an async operation that fails then succeeds
-        async def flaky_operation():
-            if not hasattr(flaky_operation, "called"):
-                flaky_operation.called = True
-                raise ValueError("First call fails")
-            return "success"
-
-        with patch("asyncio.sleep"):
-            result = await service._retry_with_backoff(flaky_operation)
-
-        assert result == "success"
+    # NOTE: Retry integration test removed as _retry_with_backoff method
+    # has been replaced with @retry_async decorator from src.services.errors.
 
     @pytest.mark.asyncio
     async def test_service_cleanup_on_exception(self):
