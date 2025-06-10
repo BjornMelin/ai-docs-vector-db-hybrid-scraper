@@ -297,11 +297,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
         url: str,
         content_patterns: list[str] | None = None,
         quality_issues: list[str] | None = None,
-<<<<<<< HEAD
         ctx: Context | None = None,
-=======
-        ctx: Context = None,
->>>>>>> main
     ) -> list[dict]:
         """
         Generate site-specific optimization and adaptation recommendations.

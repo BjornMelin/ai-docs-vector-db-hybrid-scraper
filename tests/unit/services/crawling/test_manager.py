@@ -97,7 +97,7 @@ class TestCrawlManager:
         config = MagicMock(spec=UnifiedConfig)
 
         with patch(
-            "src.services.crawling.manager.UnifiedBrowserManager"
+            "src.services.browser.unified_manager.UnifiedBrowserManager"
         ) as mock_unified_manager:
             mock_unified_instance = AsyncMock()
             mock_unified_manager.return_value = mock_unified_instance
@@ -116,7 +116,7 @@ class TestCrawlManager:
         config = MagicMock(spec=UnifiedConfig)
 
         with patch(
-            "src.services.crawling.manager.UnifiedBrowserManager"
+            "src.services.browser.unified_manager.UnifiedBrowserManager"
         ) as mock_unified_manager:
             mock_unified_instance = AsyncMock()
             mock_unified_manager.return_value = mock_unified_instance

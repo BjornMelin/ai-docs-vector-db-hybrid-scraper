@@ -673,12 +673,26 @@ class QueryIntentClassifier:
                 return {}
 
             embeddings = result["embeddings"]
+            
+            # Defensive check: ensure we have the expected number of embeddings
+            expected_count = len(reference_queries) + 1  # +1 for the query
+            if len(embeddings) != expected_count:
+                logger.error(
+                    f"Expected {expected_count} embeddings but got {len(embeddings)}"
+                )
+                return {}
+            
             query_embedding = embeddings[0]
             reference_embeddings = embeddings[1:]
 
             # Calculate cosine similarity scores
             scores = {}
             for i, (intent, _) in enumerate(reference_queries.items()):
+                if i >= len(reference_embeddings):
+                    logger.error(
+                        f"Index {i} out of range for reference_embeddings of length {len(reference_embeddings)}"
+                    )
+                    break
                 similarity = self._cosine_similarity(
                     query_embedding, reference_embeddings[i]
                 )

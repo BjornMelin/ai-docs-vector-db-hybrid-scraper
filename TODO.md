@@ -47,9 +47,9 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 #### **[BJO-85](https://linear.app/bjorn-dev/issue/BJO-85)** - Advanced CLI Interface
 
-- **Status**: 🔴 Not Started
+- **Status**: ✅ **COMPLETED**
 - **Priority**: High
-- **Effort**: 4-5 days
+- **Effort**: 4-5 days (Completed)
 - **Description**: Rich console, configuration wizard, auto-completion, batch operations
 
 #### **[BJO-86](https://linear.app/bjorn-dev/issue/BJO-86)** - Example Scripts & Tutorials  
@@ -91,9 +91,9 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 #### **[BJO-94](https://linear.app/bjorn-dev/issue/BJO-94)** - Advanced Hybrid Search Optimization
 
-- **Status**: 🔴 Not Started  
+- **Status**: ✅ **COMPLETED**
 - **Priority**: Medium
-- **Effort**: 4-5 days
+- **Effort**: 4-5 days (Completed)
 - **Description**: Qdrant Query API with prefetch, RRF/DBSF fusion, adaptive weight tuning
 
 #### **[BJO-95](https://linear.app/bjorn-dev/issue/BJO-95)** - Intelligent Search Features
