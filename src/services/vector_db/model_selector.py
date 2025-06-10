@@ -153,7 +153,9 @@ class ModelSelector:
                 model["model_id"]
                 for model in sorted(
                     scored_candidates, key=lambda x: x["total_score"], reverse=True
-                )[1:3]  # Top 2 alternatives
+                )[
+                    1:3
+                ]  # Top 2 alternatives
             ]
 
             # Calculate ensemble weights if using multiple models
@@ -184,27 +186,48 @@ class ModelSelector:
         for model_id, model_info in self.model_registry.items():
             specializations = model_info["specializations"]
 
+            # Map QueryTypes to the properties that make a model suitable.
+            QUERY_TYPE_REQUIREMENTS = {
+                QueryType.CODE: {
+                    "specializations": {"code"},
+                    "model_types": {ModelType.CODE_SPECIALIZED},
+                },
+                QueryType.MULTIMODAL: {
+                    "specializations": {"multimodal"},
+                    "model_types": {ModelType.MULTIMODAL},
+                },
+                QueryType.CONCEPTUAL: {
+                    "specializations": {"general", "conceptual"},
+                    "model_types": set(),  # No specific model type required
+                },
+                QueryType.DOCUMENTATION: {
+                    "specializations": {"general", "conceptual"},
+                    "model_types": set(),
+                },
+                QueryType.API_REFERENCE: {
+                    "specializations": {"api", "technical"},
+                    "model_types": set(),
+                },
+            }
+
             # Check if model is suitable for query type
-            if query_classification.query_type == QueryType.CODE:
-                if (
-                    "code" in specializations
-                    or model_info["type"] == ModelType.CODE_SPECIALIZED
-                ):
-                    candidates.append(model_id)
-            elif query_classification.query_type == QueryType.MULTIMODAL:
-                if (
-                    "multimodal" in specializations
-                    or model_info["type"] == ModelType.MULTIMODAL
-                ):
-                    candidates.append(model_id)
-            elif query_classification.query_type in [
-                QueryType.CONCEPTUAL,
-                QueryType.DOCUMENTATION,
-            ]:
-                if "general" in specializations or "conceptual" in specializations:
-                    candidates.append(model_id)
-            elif query_classification.query_type == QueryType.API_REFERENCE:
-                if "api" in specializations or "technical" in specializations:
+            current_query_type = query_classification.query_type
+
+            # Get the requirements for the current query type
+            requirements = QUERY_TYPE_REQUIREMENTS.get(current_query_type)
+
+            if requirements:
+                # A model is a candidate if its type matches OR it has a required specialization.
+                # set.isdisjoint() checks for overlap. `not isdisjoint` means there is an overlap.
+                has_required_specialization = not set(specializations).isdisjoint(
+                    requirements["specializations"]
+                )
+
+                has_required_model_type = (
+                    model_info["type"] in requirements["model_types"]
+                )
+
+                if has_required_specialization or has_required_model_type:
                     candidates.append(model_id)
 
         # Always include general-purpose models as fallbacks
@@ -313,17 +336,20 @@ class ModelSelector:
                 score += 0.2
 
         # Complexity alignment
-        if query_classification.complexity_level == QueryComplexity.COMPLEX:
-            if "complex" in specializations or model_info["dimensions"] > 1000:
-                score += 0.1
-        elif query_classification.complexity_level == QueryComplexity.SIMPLE:
-            if "fast" in specializations or model_info["latency_ms"] < 50:
-                score += 0.1
+        if (
+            query_classification.complexity_level == QueryComplexity.COMPLEX
+            and ("complex" in specializations or model_info["dimensions"] > 1000)
+        ) or (
+            query_classification.complexity_level == QueryComplexity.SIMPLE
+            and ("fast" in specializations or model_info["latency_ms"] < 50)
+        ):
+            score += 0.1
 
         # Programming language alignment
-        if query_classification.programming_language:
-            if "code" in specializations or "programming" in specializations:
-                score += 0.15
+        if query_classification.programming_language and (
+            "code" in specializations or "programming" in specializations
+        ):
+            score += 0.15
 
         return min(score, 1.0)
 

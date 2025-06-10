@@ -249,13 +249,13 @@ class BackgroundTaskManager:
             await self._task_queue.put(task_id)
             logger.debug(f"Task {task_id} submitted successfully")
             return task_id
-        except asyncio.QueueFull:
+        except asyncio.QueueFull as e:
             # Remove from storage if queue is full
             with self._task_lock:
                 del self._tasks[task_id]
                 del self._results[task_id]
                 self._total_tasks -= 1
-            raise ValueError("Task queue is full")
+            raise ValueError("Task queue is full") from e
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.
@@ -448,7 +448,11 @@ class BackgroundTaskManager:
             )
 
             # Schedule retry
-            asyncio.create_task(self._schedule_retry(task.task_id, delay))
+            retry_task = asyncio.create_task(self._schedule_retry(task.task_id, delay))
+            # Store reference to prevent task from being garbage collected
+            self._retry_tasks = getattr(self, '_retry_tasks', set())
+            self._retry_tasks.add(retry_task)
+            retry_task.add_done_callback(self._retry_tasks.discard)
         else:
             # Max retries reached
             with self._task_lock:

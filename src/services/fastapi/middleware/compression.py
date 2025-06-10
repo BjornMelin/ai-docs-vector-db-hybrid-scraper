@@ -7,6 +7,7 @@ thresholds and compression levels for optimal performance.
 import gzip
 import logging
 from collections.abc import Callable
+from typing import ClassVar
 
 from src.config.fastapi import CompressionConfig
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,7 +29,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
     """
 
     # Content types that benefit from compression
-    COMPRESSIBLE_TYPES = {
+    COMPRESSIBLE_TYPES: ClassVar[set[str]] = {
         "text/",
         "application/json",
         "application/javascript",
@@ -40,7 +41,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
     }
 
     # Content types to never compress
-    INCOMPRESSIBLE_TYPES = {
+    INCOMPRESSIBLE_TYPES: ClassVar[set[str]] = {
         "image/jpeg",
         "image/png",
         "image/gif",

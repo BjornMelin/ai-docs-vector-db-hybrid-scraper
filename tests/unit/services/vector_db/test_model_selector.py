@@ -396,7 +396,11 @@ class TestModelSelector:
         """Test error handling during model selection."""
         # Mock an error in candidate selection
         original_method = selector._get_candidate_models
-        selector._get_candidate_models = lambda x: [][0]  # Trigger IndexError
+
+        def raise_index_error(x):
+            raise IndexError("Test error")
+
+        selector._get_candidate_models = raise_index_error
 
         try:
             selection = await selector.select_optimal_model(sample_query_classification)

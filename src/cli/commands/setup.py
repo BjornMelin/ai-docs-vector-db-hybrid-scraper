@@ -305,7 +305,7 @@ def setup(ctx: click.Context, output: Path | None, config_format: str):
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-        raise click.Abort()
+        raise click.Abort() from None
     except Exception as e:
         console.print(f"\n[red]Setup failed: {e}[/red]")
-        raise click.Abort()
+        raise click.Abort() from e

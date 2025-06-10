@@ -517,7 +517,7 @@ class QualityAssessor:
             sentence_lengths = [len(s.split()) for s in sentences]
             avg_length = sum(sentence_lengths) / len(sentence_lengths)
             length_variance = sum(
-                (l - avg_length) ** 2 for l in sentence_lengths
+                (length - avg_length) ** 2 for length in sentence_lengths
             ) / len(sentence_lengths)
 
             # Prefer moderate sentence length with reasonable variation
@@ -811,11 +811,10 @@ class QualityAssessor:
             )
 
         # Check for missing elements
-        if not re.search(r"```", content):
-            if "code" in content.lower() or "function" in content.lower():
-                suggestions.append(
-                    "Consider adding code examples for better illustration"
-                )
+        if not re.search(r"```", content) and (
+            "code" in content.lower() or "function" in content.lower()
+        ):
+            suggestions.append("Consider adding code examples for better illustration")
 
         if not re.search(r"^#{1,6}\s", content, re.MULTILINE):
             suggestions.append("Add section headings to improve content organization")

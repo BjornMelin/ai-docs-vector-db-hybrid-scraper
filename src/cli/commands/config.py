@@ -97,7 +97,7 @@ def create_example(
 
         except Exception as e:
             rich_cli.show_error("Failed to create configuration", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
 
 @config.command("validate")
@@ -141,7 +141,7 @@ def validate_config(ctx: click.Context, config_file: Path | None, health_check: 
 
         except Exception as e:
             rich_cli.show_error("Configuration validation failed", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Display validation results
     validation_text = Text()
@@ -386,4 +386,4 @@ def convert_config(
 
         except Exception as e:
             rich_cli.show_error("Configuration conversion failed", str(e))
-            raise click.Abort()
+            raise click.Abort() from e

@@ -463,10 +463,10 @@ class ContentClassifier:
                 semantic_scores = await self._semantic_classification(content)
                 # Blend semantic scores with rule-based scores
                 blend_ratio = CLASSIFICATION_WEIGHTS["semantic_blend_ratio"]
-                for content_type in type_scores:
+                for content_type, score in type_scores.items():
                     if content_type in semantic_scores:
                         type_scores[content_type] = (
-                            type_scores[content_type] * (1.0 - blend_ratio)
+                            score * (1.0 - blend_ratio)
                             + semantic_scores[content_type] * blend_ratio
                         )
                 reasoning_parts.append("semantic analysis applied")
@@ -912,8 +912,8 @@ class ContentClassifier:
                 type_scores[ContentType.TUTORIAL] += 0.2
 
         # Ensure scores don't exceed 1.0
-        for content_type in type_scores:
-            type_scores[content_type] = min(type_scores[content_type], 1.0)
+        for content_type, score in type_scores.items():
+            type_scores[content_type] = min(score, 1.0)
 
         return type_scores
 

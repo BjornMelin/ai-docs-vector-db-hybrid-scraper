@@ -185,13 +185,6 @@ def get_config() -> UnifiedConfig:
     return get_container().config
 
 
-def get_fastapi_config() -> FastAPIProductionConfig:
-    """FastAPI dependency for FastAPI production configuration.
-
-    Returns:
-        FastAPI production configuration instance
-    """
-    return get_container().fastapi_config
 
 
 async def get_vector_service() -> QdrantService:
@@ -216,7 +209,7 @@ async def get_vector_service() -> QdrantService:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        )
+        ) from e
 
 
 async def get_embedding_manager() -> EmbeddingManager:
@@ -241,7 +234,7 @@ async def get_embedding_manager() -> EmbeddingManager:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
-        )
+        ) from e
 
 
 async def get_cache_manager() -> CacheManager:
@@ -266,7 +259,7 @@ async def get_cache_manager() -> CacheManager:
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
-        )
+        ) from e
 
 
 def get_correlation_id_dependency(request: Request) -> str:

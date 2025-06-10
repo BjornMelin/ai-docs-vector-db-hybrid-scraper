@@ -4,6 +4,7 @@ This module provides a comprehensive metrics collection system using Prometheus
 with support for vector search, embeddings, cache, and ML model performance monitoring.
 """
 
+import asyncio
 import functools
 import time
 from collections.abc import Callable
@@ -779,9 +780,6 @@ class MetricsRegistry:
         """
         return self._metrics.get(name)
 
-
-# Need to import asyncio at module level for iscoroutinefunction check
-import asyncio
 
 # Global metrics registry instance
 _global_registry: MetricsRegistry | None = None

@@ -117,7 +117,7 @@ def list_collections(ctx: click.Context, output_format: str):
 
         except Exception as e:
             rich_cli.show_error("Failed to list collections", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     if output_format == "table":
         _display_collections_table(collections, rich_cli)
@@ -237,7 +237,7 @@ def create_collection(
                         f"Collection '{collection_name}' already exists",
                         "Use --force to overwrite",
                     )
-                    raise click.Abort()
+                    raise click.Abort() from None
 
             # Delete existing if force
             if force and collection_name in asyncio.run(db_manager.list_collections()):
@@ -261,7 +261,7 @@ def create_collection(
 
         except Exception as e:
             rich_cli.show_error("Failed to create collection", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Success message
     success_text = Text()
@@ -315,7 +315,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
 
         except Exception as e:
             rich_cli.show_error("Failed to delete collection", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     rich_cli.console.print(f"✅ Collection '{collection_name}' deleted successfully.")
 
@@ -345,7 +345,7 @@ def collection_info(ctx: click.Context, collection_name: str):
 
             if not info:
                 rich_cli.show_error(f"Collection '{collection_name}' not found")
-                raise click.Abort()
+                raise click.Abort() from None
 
             # Convert to expected format
             info_dict = {
@@ -361,7 +361,7 @@ def collection_info(ctx: click.Context, collection_name: str):
 
         except Exception as e:
             rich_cli.show_error("Failed to get collection info", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Display collection information
     info_table = Table(title=f"Collection: {collection_name}", show_header=True)
@@ -435,7 +435,7 @@ def search_collection(
 
         except Exception as e:
             rich_cli.show_error("Search failed", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Display search results
     if not results:
@@ -511,7 +511,7 @@ def database_stats(ctx: click.Context):
 
         except Exception as e:
             rich_cli.show_error("Failed to get database stats", str(e))
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Database overview
     stats_table = Table(title="Database Statistics", show_header=True)
