@@ -55,7 +55,7 @@ class TestModelSelector:
 
     async def test_model_registry_structure(self, selector):
         """Test model registry structure and required fields."""
-        for model_id, model_info in selector.model_registry.items():
+        for _model_id, model_info in selector.model_registry.items():
             # Check required fields
             assert "type" in model_info
             assert "dimensions" in model_info
@@ -69,9 +69,9 @@ class TestModelSelector:
             # Check data types
             assert isinstance(model_info["type"], ModelType)
             assert isinstance(model_info["dimensions"], int)
-            assert isinstance(model_info["cost_per_1k_tokens"], (int, float))
-            assert isinstance(model_info["latency_ms"], (int, float))
-            assert isinstance(model_info["quality_score"], (int, float))
+            assert isinstance(model_info["cost_per_1k_tokens"], int | float)
+            assert isinstance(model_info["latency_ms"], int | float)
+            assert isinstance(model_info["quality_score"], int | float)
             assert isinstance(model_info["specializations"], list)
 
     @pytest.mark.parametrize(
@@ -294,7 +294,7 @@ class TestModelSelector:
 
         # Filter by type
         general_models = selector.list_available_models(ModelType.GENERAL_PURPOSE)
-        code_models = selector.list_available_models(ModelType.CODE_SPECIALIZED)
+        selector.list_available_models(ModelType.CODE_SPECIALIZED)
 
         assert len(general_models) > 0
         for model in general_models:
@@ -424,7 +424,7 @@ class TestModelSelector:
         selection = await selector.select_optimal_model(sample_query_classification)
 
         assert hasattr(selection, "cost_efficiency")
-        assert isinstance(selection.cost_efficiency, (int, float))
+        assert isinstance(selection.cost_efficiency, int | float)
         assert selection.cost_efficiency >= 0
 
     async def test_programming_language_specific_selection(self, selector):

@@ -219,7 +219,7 @@ class MiddlewareManager:
         timeout_middleware = self.get_middleware_instance("timeout")
         if timeout_middleware:
             circuit_stats = timeout_middleware.get_circuit_stats()
-            for endpoint in circuit_stats.keys():
+            for endpoint in circuit_stats:
                 timeout_middleware.reset_circuit(endpoint)
             logger.info("Circuit breaker states reset")
 

@@ -73,7 +73,7 @@ def create_example(
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task(f"Generating {template} configuration...", total=None)
+        progress.add_task(f"Generating {template} configuration...", total=None)
 
         try:
             # Use existing implementation from config CLI
@@ -361,7 +361,7 @@ def convert_config(
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task("Converting configuration...", total=None)
+        progress.add_task("Converting configuration...", total=None)
 
         try:
             from src.config.cli import convert_config_format

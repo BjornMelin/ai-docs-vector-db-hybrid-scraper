@@ -161,8 +161,8 @@ class SPLADEProvider:
 
         # Filter out very short tokens and numbers (unless they're important)
         filtered_tokens = []
-        for token in tokens:
-            token = token.strip()
+        for original_token in tokens:
+            token = original_token.strip()
             if len(token) >= 2 or token in [
                 "a",
                 "i",
@@ -335,8 +335,8 @@ class SPLADEProvider:
             "stack": 35,
             "tree": 36,
             "graph": 37,
-            "table": 38,
-            "index": 39,
+            "heap": 38,
+            "hash": 39,
             # Programming languages
             "python": 50,
             "javascript": 51,

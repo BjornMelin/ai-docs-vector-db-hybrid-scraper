@@ -76,7 +76,7 @@ class TestSPLADEProvider:
         assert "what" in vocab
 
         # All values should be integers (token IDs)
-        for token, token_id in vocab.items():
+        for _token, token_id in vocab.items():
             assert isinstance(token_id, int)
             assert token_id > 0
 
@@ -90,7 +90,7 @@ class TestSPLADEProvider:
         assert len(sparse_vector) > 0
 
         # All keys should be integers (token IDs)
-        for token_id in sparse_vector.keys():
+        for token_id in sparse_vector:
             assert isinstance(token_id, int)
 
         # All values should be floats (weights)

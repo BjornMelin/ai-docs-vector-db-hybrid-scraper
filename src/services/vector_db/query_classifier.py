@@ -281,12 +281,11 @@ class QueryClassifier:
         if any(
             term in query_lower
             for term in ["api", "reference", "documentation", "docs"]
+        ) and any(
+            term in query_lower
+            for term in ["endpoint", "method", "parameter", "response"]
         ):
-            if any(
-                term in query_lower
-                for term in ["endpoint", "method", "parameter", "response"]
-            ):
-                return QueryType.API_REFERENCE
+            return QueryType.API_REFERENCE
 
         # Documentation indicators
         if any(

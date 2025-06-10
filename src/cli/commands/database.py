@@ -86,7 +86,7 @@ def list_collections(ctx: click.Context, output_format: str):
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task("Loading collections...", total=None)
+        progress.add_task("Loading collections...", total=None)
 
         try:
             # Use the existing VectorDBManager pattern
@@ -209,12 +209,11 @@ def create_collection(
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation for force creation
-    if force:
-        if not Confirm.ask(
-            f"Delete existing collection '{collection_name}' if it exists?"
-        ):
-            rich_cli.console.print("[yellow]Creation cancelled.[/yellow]")
-            return
+    if force and not Confirm.ask(
+        f"Delete existing collection '{collection_name}' if it exists?"
+    ):
+        rich_cli.console.print("[yellow]Creation cancelled.[/yellow]")
+        return
 
     with Progress(
         SpinnerColumn(),
@@ -290,12 +289,11 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation prompt
-    if not yes:
-        if not Confirm.ask(
-            f"Delete collection '{collection_name}'? This cannot be undone."
-        ):
-            rich_cli.console.print("[yellow]Deletion cancelled.[/yellow]")
-            return
+    if not yes and not Confirm.ask(
+        f"Delete collection '{collection_name}'? This cannot be undone."
+    ):
+        rich_cli.console.print("[yellow]Deletion cancelled.[/yellow]")
+        return
 
     with Progress(
         SpinnerColumn(),
@@ -303,9 +301,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task(
-            f"Deleting collection '{collection_name}'...", total=None
-        )
+        progress.add_task(f"Deleting collection '{collection_name}'...", total=None)
 
         try:
             client_manager = ClientManager(config)
@@ -338,7 +334,7 @@ def collection_info(ctx: click.Context, collection_name: str):
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task("Loading collection info...", total=None)
+        progress.add_task("Loading collection info...", total=None)
 
         try:
             client_manager = ClientManager(config)
@@ -481,7 +477,7 @@ def database_stats(ctx: click.Context):
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task("Gathering database statistics...", total=None)
+        progress.add_task("Gathering database statistics...", total=None)
 
         try:
             client_manager = ClientManager(config)

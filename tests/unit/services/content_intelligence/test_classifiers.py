@@ -17,7 +17,7 @@ def mock_embedding_manager():
     def mock_generate_embeddings(*args, **kwargs):
         # Return different embeddings for different text types
         texts = kwargs.get("texts", args[0] if args else [])
-        num_texts = len(texts)
+        len(texts)
 
         # Generate mock embeddings based on content
         embeddings = []
@@ -75,21 +75,21 @@ class TestContentClassifier:
         """Test classification of documentation content."""
         content = """
         # API Documentation
-        
+
         ## Getting Started
-        
+
         This guide will help you get started with our API.
-        
+
         ### Authentication
-        
+
         To authenticate, include your API key in the header:
-        
+
         ```
         Authorization: Bearer your-api-key
         ```
-        
+
         ### Making Requests
-        
+
         All requests should be made to the base URL: https://api.example.com
         """
         url = "https://docs.example.com/api"
@@ -110,12 +110,12 @@ class TestContentClassifier:
             if n <= 1:
                 return n
             return calculate_fibonacci(n-1) + calculate_fibonacci(n-2)
-        
+
         class DataProcessor:
             def __init__(self, config):
                 self.config = config
                 self.data = []
-            
+
             def process(self, input_data):
                 # Process the input data
                 for item in input_data:
@@ -135,16 +135,16 @@ class TestContentClassifier:
         """Test classification of FAQ content."""
         content = """
         # Frequently Asked Questions
-        
+
         ## Q: How do I reset my password?
         A: Click on "Forgot Password" on the login page and follow the instructions.
-        
+
         ## Q: What payment methods do you accept?
         A: We accept credit cards, PayPal, and bank transfers.
-        
+
         ## Q: How can I contact support?
         A: You can reach our support team at support@example.com or through the chat widget.
-        
+
         ## Q: Is there a mobile app available?
         A: Yes, our mobile app is available on both iOS and Android.
         """
@@ -160,34 +160,34 @@ class TestContentClassifier:
         """Test classification of tutorial content."""
         content = """
         # Step-by-Step Guide: Building Your First React App
-        
+
         In this tutorial, we'll walk through creating a simple React application.
-        
+
         ## Step 1: Set up your development environment
-        
+
         First, make sure you have Node.js installed on your computer.
-        
+
         ## Step 2: Create a new React project
-        
+
         Run the following command in your terminal:
         ```
         npx create-react-app my-first-app
         ```
-        
+
         ## Step 3: Navigate to your project directory
-        
+
         Change into the project directory:
         ```
         cd my-first-app
         ```
-        
+
         ## Step 4: Start the development server
-        
+
         Run the development server:
         ```
         npm start
         ```
-        
+
         Congratulations! You've created your first React app.
         """
         url = "https://blog.example.com/react-tutorial"
@@ -202,22 +202,22 @@ class TestContentClassifier:
         """Test classification of blog content."""
         content = """
         # The Future of Artificial Intelligence in Healthcare
-        
+
         Published on March 15, 2024 by Dr. Jane Smith
-        
-        Artificial Intelligence is revolutionizing the healthcare industry in ways we never imagined. 
+
+        Artificial Intelligence is revolutionizing the healthcare industry in ways we never imagined.
         From diagnostic imaging to drug discovery, AI is making healthcare more precise, efficient, and accessible.
-        
+
         In this post, I'll explore the latest developments and share my thoughts on what lies ahead.
-        
+
         ## Current Applications
-        
+
         AI is already being used in several areas of healthcare:
         - Medical imaging analysis
         - Drug discovery and development
         - Personalized treatment plans
         - Predictive analytics for patient outcomes
-        
+
         What do you think about these developments? Share your thoughts in the comments below.
         """
         url = "https://healthblog.example.com/ai-in-healthcare"
@@ -232,33 +232,33 @@ class TestContentClassifier:
         """Test classification of forum content."""
         content = """
         **Topic: Need help with Python error - TypeError: 'NoneType' object is not subscriptable**
-        
+
         Posted by user123 - 2 hours ago
-        
+
         Hi everyone, I'm getting this error in my Python code and can't figure out what's wrong:
-        
+
         ```
         TypeError: 'NoneType' object is not subscriptable
         ```
-        
+
         Here's my code:
         ```python
         def get_data():
             # some code here
             return result[0]
         ```
-        
+
         ---
-        
+
         **Reply by expert_dev - 1 hour ago**
-        
-        This error occurs when you're trying to access an element of a variable that is None. 
+
+        This error occurs when you're trying to access an element of a variable that is None.
         Check if your `result` variable is actually returning data.
-        
+
         ---
-        
+
         **Reply by user123 - 30 minutes ago**
-        
+
         @expert_dev Thanks! That was exactly the issue. I was not handling the case where the function returns None.
         """
         url = "https://forum.example.com/thread/12345"
@@ -273,20 +273,20 @@ class TestContentClassifier:
         """Test classification of news content."""
         content = """
         # Tech Giant Announces Breakthrough in Quantum Computing
-        
-        NEW YORK, March 15, 2024 - A major technology company announced today that it has achieved 
-        a significant breakthrough in quantum computing, potentially bringing quantum computers 
+
+        NEW YORK, March 15, 2024 - A major technology company announced today that it has achieved
+        a significant breakthrough in quantum computing, potentially bringing quantum computers
         closer to mainstream adoption.
-        
-        The announcement was made during the company's annual developer conference, where CEO John Doe 
-        revealed that their new quantum processor can perform certain calculations 1000 times faster 
+
+        The announcement was made during the company's annual developer conference, where CEO John Doe
+        revealed that their new quantum processor can perform certain calculations 1000 times faster
         than traditional computers.
-        
+
         "This represents a major milestone in our quantum computing research," said Doe during his keynote speech.
-        
-        Industry experts are calling this development a game-changer for fields including cryptography, 
+
+        Industry experts are calling this development a game-changer for fields including cryptography,
         drug discovery, and financial modeling.
-        
+
         The company's stock price rose 5% following the announcement.
         """
         url = "https://news.example.com/tech-breakthrough"
@@ -329,26 +329,26 @@ class TestContentClassifier:
         """Test classification of content with mixed characteristics."""
         content = """
         # How to Implement Authentication in Your API
-        
+
         This tutorial will show you how to add authentication to your REST API.
-        
+
         ## Step 1: Install the required packages
-        
+
         ```bash
         npm install jsonwebtoken bcryptjs
         ```
-        
+
         ## Step 2: Create the authentication middleware
-        
+
         ```javascript
         const jwt = require('jsonwebtoken');
-        
+
         function authenticateToken(req, res, next) {
             const authHeader = req.headers['authorization'];
             const token = authHeader && authHeader.split(' ')[1];
-            
+
             if (token == null) return res.sendStatus(401);
-            
+
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
                 if (err) return res.sendStatus(403);
                 req.user = user;
@@ -356,7 +356,7 @@ class TestContentClassifier:
             });
         }
         ```
-        
+
         This middleware checks for a valid JWT token in the Authorization header.
         """
         url = "https://tutorial.example.com/api-auth"
@@ -377,10 +377,10 @@ class TestContentClassifier:
         class Calculator:
             def add(self, a, b):
                 return a + b
-                
+
             def multiply(self, a, b):
                 return a * b
-        
+
         if __name__ == "__main__":
             calc = Calculator()
             print(calc.add(2, 3))
@@ -391,12 +391,12 @@ class TestContentClassifier:
             add(a, b) {
                 return a + b;
             }
-            
+
             multiply(a, b) {
                 return a * b;
             }
         }
-        
+
         const calc = new Calculator();
         console.log(calc.add(2, 3));
         """
@@ -418,8 +418,8 @@ class TestContentClassifier:
     async def test_classify_unknown_content(self, classifier):
         """Test classification of content that doesn't fit clear categories."""
         content = """
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
-        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
         exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         """
         url = "https://example.com/random"

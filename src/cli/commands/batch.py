@@ -124,7 +124,7 @@ class OperationQueue:
                 "Executing operations...", total=len(self.operations)
             )
 
-            for i, op in enumerate(self.operations):
+            for _i, op in enumerate(self.operations):
                 progress.update(task, description=f"Executing: {op.name}")
 
                 try:
@@ -202,7 +202,7 @@ def index_documents(
 
     try:
         client_manager = ClientManager(config)
-        db_manager = VectorDBManager(client_manager)
+        VectorDBManager(client_manager)
 
         with Progress(
             SpinnerColumn(),
@@ -249,7 +249,7 @@ def index_documents(
 
     except Exception as e:
         rich_cli.show_error("Batch indexing failed", str(e))
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 def _show_indexing_preview(

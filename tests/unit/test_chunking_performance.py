@@ -55,10 +55,10 @@ def function_{i}():
 
 class Class_{i}:
     '''Class {i} documentation.'''
-    
+
     def __init__(self):
         self.value = {i}
-    
+
     def method_{i}(self):
         return self.value * 2
 """,
@@ -160,10 +160,10 @@ def hello_world():
 
 class Greeter:
     '''A simple greeter class.'''
-    
+
     def __init__(self, name):
         self.name = name
-    
+
     def greet(self):
         return f"Hello, {self.name}!"
 """
@@ -190,13 +190,13 @@ def complex_function(data):
 
 class DataProcessor:
     '''A data processing class.'''
-    
+
     def __init__(self):
         self.processors = {}
-    
+
     def register_processor(self, name, func):
         self.processors[name] = func
-    
+
     def process(self, name, data):
         if name in self.processors:
             return self.processors[name](data)
@@ -211,20 +211,20 @@ class DataProcessor:
             + """
 class AdvancedProcessor(DataProcessor):
     '''An advanced data processor with many methods.'''
-    
+
     def __init__(self):
         super().__init__()
         self.cache = {}
-    
+
     def cached_process(self, name, data):
         key = (name, str(data))
         if key in self.cache:
             return self.cache[key]
-        
+
         result = self.process(name, data)
         self.cache[key] = result
         return result
-    
+
     def batch_process(self, operations):
         results = []
         for name, data in operations:
@@ -234,7 +234,7 @@ class AdvancedProcessor(DataProcessor):
             except Exception as e:
                 results.append(f"Error: {e}")
         return results
-    
+
     def clear_cache(self):
         self.cache.clear()
 """
@@ -465,17 +465,17 @@ def function_{i}(param1: str, param2: int = {i}) -> Optional[str]:
             complex_code += f"""
 class Class_{i}:
     '''Class {i} with multiple methods.'''
-    
+
     def __init__(self, value: int = {i}):
         self.value = value
         self.data: Dict[str, Any] = {{}}
-    
+
     def method_{i}_a(self) -> int:
         return self.value * 2
-    
+
     def method_{i}_b(self, factor: float) -> float:
         return self.value * factor
-    
+
     def method_{i}_c(self, items: List[str]) -> List[str]:
         return [item + str(self.value) for item in items]
 """

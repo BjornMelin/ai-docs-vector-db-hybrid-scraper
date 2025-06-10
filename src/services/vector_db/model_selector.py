@@ -257,9 +257,13 @@ class ModelSelector:
                 optimization_strategy,
             )
 
-            # Cost efficiency calculation
-            cost_efficiency = quality_score / max(
+            # Cost efficiency calculation (normalized to 0-1 range)
+            raw_cost_efficiency = quality_score / max(
                 model_info["cost_per_1k_tokens"], 0.00001
+            )
+            # Normalize using a sigmoid-like function to keep within 0-1 range
+            cost_efficiency = min(
+                1.0, raw_cost_efficiency / (raw_cost_efficiency + 10.0)
             )
 
             # Generate rationale

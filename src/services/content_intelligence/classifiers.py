@@ -574,7 +574,7 @@ class ContentClassifier:
 
         try:
             # Get embeddings for content and reference texts
-            all_texts = [content] + list(reference_texts.values())
+            all_texts = [content, *list(reference_texts.values())]
 
             # Use embedding manager to generate embeddings
             result = await self.embedding_manager.generate_embeddings(

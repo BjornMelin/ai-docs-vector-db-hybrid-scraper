@@ -79,7 +79,6 @@ class ConfigurationWizard:
         embedding_config = {}
 
         # Provider selection
-        providers = ["OpenAI", "FastEmbed (Local)", "Both"]
         provider_table = Table(title="Available Embedding Providers")
         provider_table.add_column("Option", style="cyan")
         provider_table.add_column("Provider", style="")

@@ -194,7 +194,7 @@ class AdvancedHybridSearchBenchmark:
         ]
 
         queries = []
-        for query_text, query_category in test_data:
+        for query_text, _query_category in test_data:
             request = AdvancedHybridSearchRequest(
                 query=query_text,
                 collection_name="benchmark_collection",

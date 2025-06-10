@@ -335,7 +335,7 @@ class QualityAssessor:
 
             # Check for extraction quality indicators
             quality_score = extraction_metadata.get("quality_score", 0.5)
-            if isinstance(quality_score, (int, float)):
+            if isinstance(quality_score, int | float):
                 base_confidence = (base_confidence + quality_score) / 2
 
             # Check for tier/method used
@@ -638,7 +638,7 @@ class QualityAssessor:
         try:
             # Use semantic similarity if embedding manager is available
             if self.embedding_manager and len(existing_content) > 0:
-                all_texts = [content] + existing_content
+                all_texts = [content, *existing_content]
 
                 result = await self.embedding_manager.generate_embeddings(
                     texts=all_texts, quality_tier=None, auto_select=True

@@ -280,7 +280,7 @@ class MetricsCollector:
         Returns:
             Dictionary mapping metric names to summaries
         """
-        metric_names = set(p.metric_name for p in self.metric_points)
+        metric_names = {p.metric_name for p in self.metric_points}
         summaries = {}
 
         for metric_name in metric_names:
@@ -325,7 +325,7 @@ class MetricsCollector:
             "collection_metadata": {
                 "start_time": self.collection_start_time,
                 "unique_metrics": len(summaries),
-                "unique_sources": len(set(p.source for p in self.metric_points)),
+                "unique_sources": len({p.source for p in self.metric_points}),
             },
         }
 
@@ -419,7 +419,7 @@ class MetricsCollector:
         current_time = time.time()
 
         # Add to all windows
-        for window_name, window_deque in self.real_time_windows.items():
+        for _window_name, window_deque in self.real_time_windows.items():
             window_deque.append(point)
 
         # Clean old points from windows
@@ -534,7 +534,7 @@ class MetricsCollector:
             "collection_active": self.collection_active,
             "collection_start_time": self.collection_start_time,
             "total_points": len(self.metric_points),
-            "unique_metrics": len(set(p.metric_name for p in self.metric_points)),
+            "unique_metrics": len({p.metric_name for p in self.metric_points}),
             "memory_usage_points": len(self.metric_points),
             "buffer_usage": {
                 name: len(buffer) for name, buffer in self.metric_buffers.items()

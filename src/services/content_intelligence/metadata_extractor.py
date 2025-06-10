@@ -328,9 +328,7 @@ class MetadataExtractor:
                         metadata.tags.append(match.strip())
 
         # Remove duplicates and clean tags
-        metadata.tags = list(
-            set([tag for tag in metadata.tags if tag and len(tag) > 1])
-        )
+        metadata.tags = list({tag for tag in metadata.tags if tag and len(tag) > 1})
         metadata.topics = list(set(metadata.topics))
 
     async def _extract_technical_metadata(

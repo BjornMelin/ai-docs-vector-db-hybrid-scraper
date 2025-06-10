@@ -91,12 +91,12 @@ class BenchmarkReporter:
                 {latency_data}
                 {throughput_data}
             </div>
-            
+
             <div class="summary-card">
                 <h3>💾 Resource Usage</h3>
                 {resource_data}
             </div>
-            
+
             <div class="summary-card">
                 <h3>🎯 ML Accuracy</h3>
                 {accuracy_data}
@@ -368,11 +368,11 @@ class BenchmarkReporter:
             .summary-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .charts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .report-metadata {
                 grid-template-columns: 1fr;
             }
@@ -578,7 +578,6 @@ class BenchmarkReporter:
 
             total_requests = result_dict.get("total_requests", 0)
             successful_requests = result_dict.get("successful_requests", 0)
-            error_rate = result_dict.get("error_rate", 0) * 100
             avg_response_time = result_dict.get("avg_response_time_ms", 0)
             requests_per_second = result_dict.get("requests_per_second", 0)
 
@@ -787,7 +786,7 @@ class BenchmarkReporter:
         return "\n".join(csv_lines)
 
     async def save_reports(
-        self, results: Any, output_dir: Path, formats: list[str] = ["html", "json"]
+        self, results: Any, output_dir: Path, formats: list[str] | None = None
     ) -> dict[str, str]:
         """Save benchmark reports in multiple formats.
 
@@ -799,6 +798,9 @@ class BenchmarkReporter:
         Returns:
             Dictionary mapping format to file path
         """
+        if formats is None:
+            formats = ["html", "json"]
+
         output_dir.mkdir(parents=True, exist_ok=True)
         saved_files = {}
 
