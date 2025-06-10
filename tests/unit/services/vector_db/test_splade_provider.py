@@ -121,7 +121,8 @@ class TestSPLADEProvider:
         tokens = provider._tokenize_text(code_text)
 
         assert "def" in tokens
-        assert "calculatesum" in tokens  # Should be lowercased
+        assert "calculate" in tokens  # camelCase should be split
+        assert "sum" in tokens
         assert "return" in tokens
         assert "(" in tokens
         assert ")" in tokens
@@ -407,7 +408,7 @@ class TestSPLADEProvider:
             ("async def process():", ["async", "def", "process"]),
             ("import numpy as np", ["import", "numpy", "np"]),
             ("for item in list:", ["for", "item", "in", "list"]),
-            ("class MyClass(object):", ["class", "myclass", "object"]),
+            ("class MyClass(object):", ["class", "my", "class", "object"]),
         ],
     )
     async def test_specific_tokenization_cases(self, provider, text, expected_features):
