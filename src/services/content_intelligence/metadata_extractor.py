@@ -408,7 +408,7 @@ class MetadataExtractor:
 
         metadata.related_urls = related_urls[:MAX_RELATED_URLS]
 
-    async def _extract_structured_data(
+    async def _extract_structured_data(  # noqa: PLR0912
         self, metadata: ContentMetadata, html: str
     ) -> None:
         """Extract structured data and schema information.

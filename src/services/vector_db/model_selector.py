@@ -153,9 +153,7 @@ class ModelSelector:
                 model["model_id"]
                 for model in sorted(
                     scored_candidates, key=lambda x: x["total_score"], reverse=True
-                )[
-                    1:3
-                ]  # Top 2 alternatives
+                )[1:3]  # Top 2 alternatives
             ]
 
             # Calculate ensemble weights if using multiple models

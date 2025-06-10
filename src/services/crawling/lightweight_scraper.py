@@ -105,7 +105,7 @@ class LightweightScraper(CrawlProvider):
 
         return False
 
-    async def _analyze_url(self, url: str) -> str:
+    async def _analyze_url(self, url: str) -> str:  # noqa: PLR0911
         """Analyze URL with HEAD request to determine tier recommendation.
 
         Args:

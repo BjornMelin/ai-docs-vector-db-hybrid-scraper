@@ -109,7 +109,7 @@ async def run_benchmark_suite(
     return results
 
 
-def print_benchmark_summary(results: BenchmarkResults) -> None:
+def print_benchmark_summary(results: BenchmarkResults) -> None:  # noqa: PLR0912
     """Print benchmark summary to console.
 
     Args:

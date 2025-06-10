@@ -41,7 +41,7 @@ def register_tools(mcp, client_manager: ClientManager):
         return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
-    async def search_similar(
+    async def search_similar(  # noqa: PLR0912
         query_id: str,
         collection: str = "documentation",
         limit: int = 10,

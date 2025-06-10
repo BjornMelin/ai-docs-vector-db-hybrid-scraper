@@ -158,7 +158,7 @@ async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
     Args:
         config: Application configuration
     """
-    global _container
+    global _container  # noqa: PLW0603
     if _container is None:
         _container = DependencyContainer()
     await _container.initialize(config)
@@ -166,7 +166,7 @@ async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container
+    global _container  # noqa: PLW0603
     if _container:
         await _container.cleanup()
         _container = None
@@ -182,8 +182,6 @@ def get_config() -> UnifiedConfig:
         Unified configuration instance
     """
     return get_container().config
-
-
 
 
 async def get_vector_service() -> QdrantService:

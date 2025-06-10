@@ -450,7 +450,7 @@ class BackgroundTaskManager:
             # Schedule retry
             retry_task = asyncio.create_task(self._schedule_retry(task.task_id, delay))
             # Store reference to prevent task from being garbage collected
-            self._retry_tasks = getattr(self, '_retry_tasks', set())
+            self._retry_tasks = getattr(self, "_retry_tasks", set())
             self._retry_tasks.add(retry_task)
             retry_task.add_done_callback(self._retry_tasks.discard)
         else:
@@ -541,7 +541,7 @@ def get_task_manager() -> BackgroundTaskManager:
     Returns:
         Background task manager instance
     """
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager is None:
         _task_manager = BackgroundTaskManager()
     return _task_manager
@@ -556,7 +556,7 @@ async def initialize_task_manager(
         max_workers: Maximum number of concurrent workers
         max_queue_size: Maximum size of task queue
     """
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager is None:
         _task_manager = BackgroundTaskManager(max_workers, max_queue_size)
     await _task_manager.start()
@@ -564,7 +564,7 @@ async def initialize_task_manager(
 
 async def cleanup_task_manager() -> None:
     """Clean up the global background task manager."""
-    global _task_manager
+    global _task_manager  # noqa: PLW0603
     if _task_manager:
         await _task_manager.stop()
         _task_manager = None

@@ -173,6 +173,22 @@ class SPLADEProvider:
                 "of",
                 "in",
                 "on",
+                # Programming symbols
+                "(",
+                ")",
+                "{",
+                "}",
+                "[",
+                "]",
+                "=",
+                "+",
+                "-",
+                "*",
+                "/",
+                ".",
+                ",",
+                ";",
+                ":",
             ]:
                 filtered_tokens.append(token)
 
@@ -193,7 +209,8 @@ class SPLADEProvider:
         total_tokens = len(tokens)
         for token, count in token_counts.items():
             tf = count / total_tokens
-            tf_scores[token] = 1 + np.log(tf) if tf > 0 else 0
+            # Ensure positive weights by using max with small epsilon
+            tf_scores[token] = max(1 + np.log(tf), 0.1) if tf > 0 else 0.1
 
         return tf_scores
 

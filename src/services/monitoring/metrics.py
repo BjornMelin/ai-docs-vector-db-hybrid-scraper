@@ -810,6 +810,6 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
     Returns:
         Initialized MetricsRegistry instance
     """
-    global _global_registry
+    global _global_registry  # noqa: PLW0603
     _global_registry = MetricsRegistry(config)
     return _global_registry

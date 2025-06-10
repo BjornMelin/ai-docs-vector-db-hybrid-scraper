@@ -36,7 +36,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
     from ..models.responses import DocumentBatchResponse
 
     @mcp.tool()
-    async def add_document(
+    async def add_document(  # noqa: PLR0912, PLR0915
         request: DocumentRequest, ctx: Context
     ) -> AddDocumentResponse:
         """
