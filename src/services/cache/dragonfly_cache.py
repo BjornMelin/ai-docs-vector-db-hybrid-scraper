@@ -15,6 +15,14 @@ from .base import CacheInterface
 
 logger = logging.getLogger(__name__)
 
+# Import monitoring registry for metrics integration
+try:
+    from ..monitoring.metrics import get_metrics_registry
+
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
+
 
 class DragonflyCache(CacheInterface[Any]):
     """High-performance cache using DragonflyDB with Redis compatibility."""
@@ -76,6 +84,15 @@ class DragonflyCache(CacheInterface[Any]):
 
         self._client: redis.Redis | None = None
 
+        # Initialize metrics registry if available
+        self.metrics_registry = None
+        if MONITORING_AVAILABLE:
+            try:
+                self.metrics_registry = get_metrics_registry()
+                logger.debug("DragonflyDB cache monitoring enabled")
+            except Exception as e:
+                logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
+
     @property
     async def client(self) -> redis.Redis:
         """Get DragonflyDB client with lazy initialization."""
@@ -123,6 +140,21 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def get(self, key: str) -> Any | None:
         """Get value from DragonflyDB."""
+        # Monitor cache operations with Prometheus if available
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_cache_performance(
+                cache_type="dragonfly", operation="get"
+            )
+
+            async def _monitored_get():
+                return await self._execute_get(key)
+
+            return await decorator(_monitored_get)()
+        else:
+            return await self._execute_get(key)
+
+    async def _execute_get(self, key: str) -> Any | None:
+        """Execute the actual get operation."""
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -146,6 +178,28 @@ class DragonflyCache(CacheInterface[Any]):
         xx: bool = False,
     ) -> bool:
         """Set value in DragonflyDB with TTL and conditional options."""
+        # Monitor cache operations with Prometheus if available
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_cache_performance(
+                cache_type="dragonfly", operation="set"
+            )
+
+            async def _monitored_set():
+                return await self._execute_set(key, value, ttl, nx, xx)
+
+            return await decorator(_monitored_set)()
+        else:
+            return await self._execute_set(key, value, ttl, nx, xx)
+
+    async def _execute_set(
+        self,
+        key: str,
+        value: Any,
+        ttl: int | None = None,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> bool:
+        """Execute the actual set operation."""
         try:
             client = await self.client
             full_key = self._make_key(key)

@@ -9,6 +9,7 @@ from . import advanced_search
 from . import analytics
 from . import cache
 from . import collections
+from . import content_intelligence
 from . import deployment
 from . import documents
 from . import embeddings
@@ -23,6 +24,7 @@ __all__ = [
     "analytics",
     "cache",
     "collections",
+    "content_intelligence",
     "deployment",
     "documents",
     "embeddings",

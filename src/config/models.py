@@ -1203,6 +1203,78 @@ class TaskQueueConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MonitoringConfig(BaseModel):
+    """Monitoring and observability configuration."""
+
+    # Enable/disable monitoring
+    enabled: bool = Field(
+        default=True, description="Enable monitoring and metrics collection"
+    )
+
+    # Prometheus metrics settings
+    metrics_port: int = Field(
+        default=8001,
+        ge=1024,
+        le=65535,
+        description="Port for Prometheus metrics endpoint",
+    )
+    metrics_path: str = Field(
+        default="/metrics", description="Path for Prometheus metrics endpoint"
+    )
+    namespace: str = Field(default="ml_app", description="Metrics namespace prefix")
+
+    # Health check settings
+    health_path: str = Field(
+        default="/health", description="Path for health check endpoint"
+    )
+    health_check_timeout: float = Field(
+        default=5.0, gt=0, description="Health check timeout in seconds"
+    )
+
+    # System metrics
+    include_system_metrics: bool = Field(
+        default=True, description="Include system CPU/memory/disk metrics"
+    )
+    system_metrics_interval: float = Field(
+        default=30.0, gt=0, description="System metrics collection interval in seconds"
+    )
+
+    # Performance monitoring
+    enable_performance_monitoring: bool = Field(
+        default=True, description="Enable detailed performance monitoring"
+    )
+    enable_cost_tracking: bool = Field(
+        default=True, description="Enable cost tracking for embedding providers"
+    )
+
+    # External services for health checks
+    external_services: dict[str, str] = Field(
+        default_factory=dict, description="External service URLs for health checking"
+    )
+
+    # Alerting thresholds
+    cpu_threshold: float = Field(
+        default=90.0,
+        ge=50.0,
+        le=100.0,
+        description="CPU usage threshold for alerts (%)",
+    )
+    memory_threshold: float = Field(
+        default=90.0,
+        ge=50.0,
+        le=100.0,
+        description="Memory usage threshold for alerts (%)",
+    )
+    disk_threshold: float = Field(
+        default=90.0,
+        ge=50.0,
+        le=100.0,
+        description="Disk usage threshold for alerts (%)",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class UnifiedConfig(BaseSettings):
     """Unified configuration for the AI Documentation Vector DB system.
 
@@ -1277,6 +1349,10 @@ class UnifiedConfig(BaseSettings):
     hyde: HyDEConfig = Field(default_factory=HyDEConfig, description="HyDE settings")
     task_queue: TaskQueueConfig = Field(
         default_factory=TaskQueueConfig, description="Task queue (ARQ) settings"
+    )
+    monitoring: MonitoringConfig = Field(
+        default_factory=MonitoringConfig,
+        description="Monitoring and observability settings",
     )
 
     # Documentation sites

@@ -16,6 +16,7 @@ from ...config.enums import SearchAccuracy
 from ...config.enums import VectorType
 from ...models.vector_search import PrefetchConfig
 from ..errors import QdrantServiceError
+from ..monitoring.metrics import get_metrics_registry
 from .utils import build_filter
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,18 @@ class QdrantSearch:
         self.client = client
         self.config = config
         self.prefetch_config = PrefetchConfig()
+
+        # Initialize metrics if monitoring is enabled
+        try:
+            if config.monitoring.enabled:
+                self.metrics_registry = get_metrics_registry()
+            else:
+                self.metrics_registry = None
+        except Exception:
+            logger.warning(
+                "Metrics registry not available - search monitoring disabled"
+            )
+            self.metrics_registry = None
 
     async def hybrid_search(
         self,
@@ -65,6 +78,47 @@ class QdrantSearch:
         Raises:
             QdrantServiceError: If search fails
         """
+        # Monitor search performance
+        if self.metrics_registry:
+            # Use the monitoring decorator manually
+            decorator = self.metrics_registry.monitor_search_performance(
+                collection=collection_name, query_type="hybrid"
+            )
+
+            async def _monitored_search():
+                return await self._execute_hybrid_search(
+                    collection_name,
+                    query_vector,
+                    sparse_vector,
+                    limit,
+                    score_threshold,
+                    fusion_type,
+                    search_accuracy,
+                )
+
+            return await decorator(_monitored_search)()
+        else:
+            return await self._execute_hybrid_search(
+                collection_name,
+                query_vector,
+                sparse_vector,
+                limit,
+                score_threshold,
+                fusion_type,
+                search_accuracy,
+            )
+
+    async def _execute_hybrid_search(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        sparse_vector: dict[int, float] | None = None,
+        limit: int = 10,
+        score_threshold: float = 0.0,
+        fusion_type: str = "rrf",
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """Execute the actual hybrid search operation."""
         try:
             # Build prefetch queries with optimized limits
             prefetch_queries = []
@@ -184,6 +238,32 @@ class QdrantSearch:
         Raises:
             QdrantServiceError: If search fails
         """
+        # Monitor search performance
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_search_performance(
+                collection=collection_name, query_type="multi_stage"
+            )
+
+            async def _monitored_search():
+                return await self._execute_multi_stage_search(
+                    collection_name, stages, limit, fusion_algorithm, search_accuracy
+                )
+
+            return await decorator(_monitored_search)()
+        else:
+            return await self._execute_multi_stage_search(
+                collection_name, stages, limit, fusion_algorithm, search_accuracy
+            )
+
+    async def _execute_multi_stage_search(
+        self,
+        collection_name: str,
+        stages: list[dict[str, Any]],
+        limit: int = 10,
+        fusion_algorithm: str = "rrf",
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """Execute the actual multi-stage search operation."""
         # Validate input parameters
         if not stages:
             raise ValueError("Stages list cannot be empty")
@@ -284,6 +364,46 @@ class QdrantSearch:
         Raises:
             QdrantServiceError: If search fails
         """
+        # Monitor search performance
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_search_performance(
+                collection=collection_name, query_type="hyde"
+            )
+
+            async def _monitored_search():
+                return await self._execute_hyde_search(
+                    collection_name,
+                    query,
+                    query_embedding,
+                    hypothetical_embeddings,
+                    limit,
+                    fusion_algorithm,
+                    search_accuracy,
+                )
+
+            return await decorator(_monitored_search)()
+        else:
+            return await self._execute_hyde_search(
+                collection_name,
+                query,
+                query_embedding,
+                hypothetical_embeddings,
+                limit,
+                fusion_algorithm,
+                search_accuracy,
+            )
+
+    async def _execute_hyde_search(
+        self,
+        collection_name: str,
+        query: str,
+        query_embedding: list[float],
+        hypothetical_embeddings: list[list[float]],
+        limit: int = 10,
+        fusion_algorithm: str = "rrf",
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """Execute the actual HyDE search operation."""
         try:
             # Average hypothetical embeddings for wider retrieval
             hypothetical_vector = np.mean(hypothetical_embeddings, axis=0).tolist()
@@ -369,6 +489,32 @@ class QdrantSearch:
         Raises:
             QdrantServiceError: If search fails
         """
+        # Monitor search performance
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_search_performance(
+                collection=collection_name, query_type="filtered"
+            )
+
+            async def _monitored_search():
+                return await self._execute_filtered_search(
+                    collection_name, query_vector, filters, limit, search_accuracy
+                )
+
+            return await decorator(_monitored_search)()
+        else:
+            return await self._execute_filtered_search(
+                collection_name, query_vector, filters, limit, search_accuracy
+            )
+
+    async def _execute_filtered_search(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        filters: dict[str, Any],
+        limit: int = 10,
+        search_accuracy: str = "balanced",
+    ) -> list[dict[str, Any]]:
+        """Execute the actual filtered search operation."""
         # Validate input parameters
         if not isinstance(query_vector, list):
             raise ValueError("query_vector must be a list")

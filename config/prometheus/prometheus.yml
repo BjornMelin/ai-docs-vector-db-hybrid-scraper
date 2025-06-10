@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # ML Application metrics
+  - job_name: 'ml-app'
+    static_configs:
+      - targets: ['ml-app:8000']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+      
+  # Qdrant metrics
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['qdrant:6333']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    
+  # Redis/DragonflyDB metrics (if available)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: '/metrics'

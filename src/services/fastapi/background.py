@@ -185,7 +185,7 @@ class BackgroundTaskManager:
                         worker.cancel()
 
         # Shutdown thread pool
-        self._executor.shutdown(wait=True, timeout=timeout)
+        self._executor.shutdown(wait=True)
 
         self._workers.clear()
         logger.info("Background task manager stopped")

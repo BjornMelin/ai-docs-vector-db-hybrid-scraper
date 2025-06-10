@@ -14,6 +14,7 @@ except ImportError:
     SparseTextEmbedding = None
 
 from ..errors import EmbeddingServiceError
+from ..monitoring.metrics import get_metrics_registry
 from .base import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,15 @@ class FastEmbedProvider(EmbeddingProvider):
         # Default sparse model for hybrid search
         self._sparse_model_name = "prithvida/Splade_PP_en_v1"
 
+        # Initialize metrics if available
+        try:
+            self.metrics_registry = get_metrics_registry()
+        except Exception:
+            logger.warning(
+                "Metrics registry not available - embedding monitoring disabled"
+            )
+            self.metrics_registry = None
+
     async def initialize(self) -> None:
         """Initialize FastEmbed model."""
         if self._initialized:
@@ -136,6 +146,23 @@ class FastEmbedProvider(EmbeddingProvider):
         Returns:
             List of embedding vectors
         """
+        # Monitor embedding generation
+        if self.metrics_registry:
+            decorator = self.metrics_registry.monitor_embedding_generation(
+                provider="fastembed", model=self.model_name
+            )
+
+            async def _monitored_generation():
+                return await self._execute_embedding_generation(texts, batch_size)
+
+            return await decorator(_monitored_generation)()
+        else:
+            return await self._execute_embedding_generation(texts, batch_size)
+
+    async def _execute_embedding_generation(
+        self, texts: list[str], batch_size: int | None = None
+    ) -> list[list[float]]:
+        """Execute the actual embedding generation."""
         if not self._initialized:
             raise EmbeddingServiceError("Provider not initialized")
 

@@ -79,6 +79,12 @@ dependencies = [
     "tomli-w>=1.0.0", # For TOML writing
     "jsonschema2md>=1.5.2",
     "fastmcp>=2.5.2",
+    # Web framework
+    "fastapi>=0.115.6",
+    # Monitoring & observability
+    "prometheus-client>=0.21.1",
+    "prometheus-fastapi-instrumentator>=7.0.0",
+    "psutil>=6.1.1", # For system metrics
 ]
 
 [project.optional-dependencies]
