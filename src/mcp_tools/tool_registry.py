@@ -56,6 +56,9 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.advanced_search.register_tools(mcp, client_manager)
     registered_tools.append("advanced_search")
 
+    tools.query_processing.register_tools(mcp, client_manager)
+    registered_tools.append("query_processing")
+
     tools.payload_indexing.register_tools(mcp, client_manager)
     registered_tools.append("payload_indexing")
 

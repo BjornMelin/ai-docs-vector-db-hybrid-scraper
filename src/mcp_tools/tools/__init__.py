@@ -16,6 +16,7 @@ from . import embeddings
 from . import lightweight_scrape
 from . import payload_indexing
 from . import projects
+from . import query_processing
 from . import search
 from . import utilities
 
@@ -31,6 +32,7 @@ __all__ = [
     "lightweight_scrape",
     "payload_indexing",
     "projects",
+    "query_processing",
     "search",
     "utilities",
 ]
