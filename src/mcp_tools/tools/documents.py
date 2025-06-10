@@ -79,16 +79,50 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 await ctx.error(f"Failed to scrape {request.url}")
                 raise ValueError(f"Failed to scrape {request.url}")
 
-            # Configure chunking
+            # Apply Content Intelligence analysis
+            enriched_content = None
+            content_intelligence_service = await client_manager.get_content_intelligence_service()
+            if content_intelligence_service:
+                await ctx.debug(f"Analyzing content intelligence for document {doc_id}")
+                try:
+                    analysis_result = await content_intelligence_service.analyze_content(
+                        content=crawl_result["content"],
+                        url=request.url,
+                        title=crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
+                        raw_html=crawl_result.get("raw_html"),
+                        confidence_threshold=0.7,
+                    )
+                    if analysis_result.success:
+                        enriched_content = analysis_result.enriched_content
+                        await ctx.info(
+                            f"Content intelligence analysis completed for {doc_id}: "
+                            f"type={enriched_content.classification.primary_type.value}, "
+                            f"quality={enriched_content.quality_score.overall_score:.2f}"
+                        )
+                    else:
+                        await ctx.warning(f"Content intelligence analysis failed for {doc_id}")
+                except Exception as e:
+                    await ctx.warning(f"Content intelligence analysis error for {doc_id}: {e}")
+            else:
+                await ctx.debug("Content Intelligence Service not available")
+
+            # Configure chunking (enhanced with content intelligence insights)
             chunk_config = ChunkingConfig(
                 strategy=request.chunk_strategy,
                 chunk_size=request.chunk_size,
                 chunk_overlap=request.chunk_overlap,
             )
+            
+            # Optimize chunking strategy based on content type
+            if enriched_content and enriched_content.classification:
+                content_type = enriched_content.classification.primary_type.value
+                if content_type in ["code", "reference"] and request.chunk_strategy == ChunkingStrategy.BASIC:
+                    chunk_config.strategy = ChunkingStrategy.SEMANTIC
+                    await ctx.debug(f"Upgraded chunking strategy to SEMANTIC for {content_type} content")
 
             # Chunk the document
             await ctx.debug(
-                f"Chunking document {doc_id} with strategy {request.chunk_strategy}"
+                f"Chunking document {doc_id} with strategy {chunk_config.strategy}"
             )
             chunker = EnhancedChunker(chunk_config)
             chunks = chunker.chunk_content(
@@ -110,20 +144,49 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
             for i, (chunk, embedding) in enumerate(
                 zip(chunks, embeddings, strict=False)
             ):
+                # Base payload
+                payload = {
+                    "content": chunk["content"],
+                    "url": request.url,
+                    "title": crawl_result["title"]
+                    or crawl_result["metadata"].get("title", ""),
+                    "chunk_index": i,
+                    "total_chunks": len(chunks),
+                    "tier_used": crawl_result.get("tier_used", "unknown"),
+                    "quality_score": crawl_result.get("quality_score", 0.0),
+                    **chunk.get("metadata", {}),
+                }
+                
+                # Enhance with content intelligence metadata if available
+                if enriched_content:
+                    payload.update({
+                        "content_type": enriched_content.classification.primary_type.value,
+                        "content_confidence": enriched_content.classification.confidence_scores.get(
+                            enriched_content.classification.primary_type, 0.0
+                        ),
+                        "quality_overall": enriched_content.quality_score.overall_score,
+                        "quality_completeness": enriched_content.quality_score.completeness,
+                        "quality_relevance": enriched_content.quality_score.relevance,
+                        "quality_confidence": enriched_content.quality_score.confidence,
+                        "ci_word_count": enriched_content.metadata.word_count,
+                        "ci_char_count": enriched_content.metadata.char_count,
+                        "ci_language": enriched_content.metadata.language,
+                        "ci_semantic_tags": enriched_content.metadata.semantic_tags,
+                        "content_intelligence_analyzed": True,
+                    })
+                    
+                    # Add secondary content types if available
+                    if enriched_content.classification.secondary_types:
+                        payload["secondary_content_types"] = [
+                            ct.value for ct in enriched_content.classification.secondary_types
+                        ]
+                else:
+                    payload["content_intelligence_analyzed"] = False
+                
                 point = {
                     "id": str(uuid4()),
                     "vector": embedding,
-                    "payload": {
-                        "content": chunk["content"],
-                        "url": request.url,
-                        "title": crawl_result["title"]
-                        or crawl_result["metadata"].get("title", ""),
-                        "chunk_index": i,
-                        "total_chunks": len(chunks),
-                        "tier_used": crawl_result.get("tier_used", "unknown"),
-                        "quality_score": crawl_result.get("quality_score", 0.0),
-                        **chunk.get("metadata", {}),
-                    },
+                    "payload": payload,
                 }
                 points.append(point)
 
@@ -144,24 +207,41 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 points=points,
             )
 
-            # Prepare response
-            result = AddDocumentResponse(
-                url=request.url,
-                title=crawl_result["title"]
+            # Prepare response with content intelligence insights
+            response_kwargs = {
+                "url": request.url,
+                "title": crawl_result["title"]
                 or crawl_result["metadata"].get("title", ""),
-                chunks_created=len(chunks),
-                collection=request.collection,
-                chunking_strategy=request.chunk_strategy.value,
-                embedding_dimensions=len(embeddings[0]),
-            )
+                "chunks_created": len(chunks),
+                "collection": request.collection,
+                "chunking_strategy": request.chunk_strategy.value,
+                "embedding_dimensions": len(embeddings[0]),
+            }
+            
+            # Add content intelligence metadata to response if available
+            if enriched_content:
+                response_kwargs.update({
+                    "content_type": enriched_content.classification.primary_type.value,
+                    "quality_score": enriched_content.quality_score.overall_score,
+                    "content_intelligence_analyzed": True,
+                })
+            
+            result = AddDocumentResponse(**response_kwargs)
 
             # Cache result
             await cache_manager.set(cache_key, result.model_dump(), ttl=86400)
 
-            await ctx.info(
+            # Enhanced completion message with content intelligence info
+            completion_msg = (
                 f"Document {doc_id} processed successfully: "
                 f"{len(chunks)} chunks created in collection {request.collection}"
             )
+            if enriched_content:
+                completion_msg += (
+                    f" (type: {enriched_content.classification.primary_type.value}, "
+                    f"quality: {enriched_content.quality_score.overall_score:.2f})"
+                )
+            await ctx.info(completion_msg)
 
             return result
 

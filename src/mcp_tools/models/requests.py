@@ -219,3 +219,67 @@ class SearchStageRequest(BaseModel):
     filters: dict[str, Any] | None = Field(
         None, description="Optional filters for this stage"
     )
+
+
+# Content Intelligence Request Models
+
+
+class ContentIntelligenceAnalysisRequest(BaseModel):
+    """Request for comprehensive content intelligence analysis"""
+
+    content: str = Field(..., min_length=1, description="Content to analyze")
+    url: str = Field(..., description="Source URL")
+    title: str | None = Field(default=None, description="Optional page title")
+    raw_html: str | None = Field(default=None, description="Optional raw HTML for metadata extraction")
+    confidence_threshold: float = Field(
+        default=0.8, ge=0.0, le=1.0, description="Minimum confidence threshold"
+    )
+    enable_classification: bool = Field(
+        default=True, description="Enable content type classification"
+    )
+    enable_quality_assessment: bool = Field(
+        default=True, description="Enable quality assessment"
+    )
+    enable_metadata_extraction: bool = Field(
+        default=True, description="Enable metadata enrichment"
+    )
+    enable_adaptations: bool = Field(
+        default=True, description="Enable adaptation recommendations"
+    )
+    existing_content: list[str] | None = Field(
+        default=None, description="Optional existing content for duplicate detection"
+    )
+
+
+class ContentIntelligenceClassificationRequest(BaseModel):
+    """Request for content type classification"""
+
+    content: str = Field(..., min_length=1, description="Content to classify")
+    url: str = Field(..., description="Source URL for additional context")
+    title: str | None = Field(default=None, description="Optional page title")
+
+
+class ContentIntelligenceQualityRequest(BaseModel):
+    """Request for content quality assessment"""
+
+    content: str = Field(..., min_length=1, description="Content to assess")
+    confidence_threshold: float = Field(
+        default=0.8, ge=0.0, le=1.0, description="Minimum confidence threshold"
+    )
+    query_context: str | None = Field(
+        default=None, description="Optional query context for relevance scoring"
+    )
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional extraction metadata"
+    )
+
+
+class ContentIntelligenceMetadataRequest(BaseModel):
+    """Request for metadata extraction and enrichment"""
+
+    content: str = Field(..., min_length=1, description="Content to analyze")
+    url: str = Field(..., description="Source URL")
+    raw_html: str | None = Field(default=None, description="Optional raw HTML")
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional extraction metadata"
+    )

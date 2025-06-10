@@ -17,6 +17,17 @@ class SearchResult(BaseModel):
     url: str | None = None
     title: str | None = None
     metadata: dict[str, Any] | None = None
+    
+    # Content Intelligence fields
+    content_type: str | None = None
+    content_confidence: float | None = None
+    quality_overall: float | None = None
+    quality_completeness: float | None = None
+    quality_relevance: float | None = None
+    quality_confidence: float | None = None
+    content_intelligence_analyzed: bool | None = None
+    
+    model_config = ConfigDict(extra="allow")
 
 
 class CrawlResult(BaseModel):
@@ -310,3 +321,26 @@ class HyDEAdvancedResponse(BaseModel):
     results: list[dict[str, Any]]
     metrics: SearchMetrics
     ab_test_results: dict[str, Any] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Content Intelligence
+# ---------------------------------------------------------------------------
+
+
+class ContentIntelligenceResult(BaseModel):
+    """Response from content intelligence analysis."""
+
+    success: bool = Field(default=True, description="Whether analysis succeeded")
+    enriched_content: Any | None = Field(
+        default=None, description="Enriched content with intelligence analysis"
+    )
+    processing_time_ms: float = Field(
+        default=0.0, description="Total processing time in milliseconds"
+    )
+    cache_hit: bool = Field(
+        default=False, description="Whether result was retrieved from cache"
+    )
+    error: str | None = Field(default=None, description="Error message if failed")
+
+    model_config = ConfigDict(extra="allow")

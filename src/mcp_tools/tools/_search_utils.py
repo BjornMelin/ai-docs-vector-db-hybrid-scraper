@@ -104,18 +104,34 @@ async def search_documents_core(  # noqa: PLR0912
             # For now, we'll skip reranking
             pass
 
-        # Convert to response format
+        # Convert to response format with content intelligence metadata
         search_results = []
         for result in results:
-            search_results.append(
-                SearchResult(
-                    content=result["payload"].get("content", ""),
-                    metadata=result["payload"].get("metadata", {}),
-                    score=result["score"],
-                    id=str(result["id"]),
-                    collection=request.collection,
-                )
-            )
+            payload = result["payload"]
+            
+            # Base search result
+            search_result_data = {
+                "content": payload.get("content", ""),
+                "metadata": payload.get("metadata", {}),
+                "score": result["score"],
+                "id": str(result["id"]),
+                "url": payload.get("url"),
+                "title": payload.get("title"),
+            }
+            
+            # Add content intelligence metadata if available
+            if payload.get("content_intelligence_analyzed"):
+                search_result_data.update({
+                    "content_type": payload.get("content_type"),
+                    "content_confidence": payload.get("content_confidence"),
+                    "quality_overall": payload.get("quality_overall"),
+                    "quality_completeness": payload.get("quality_completeness"),
+                    "quality_relevance": payload.get("quality_relevance"),
+                    "quality_confidence": payload.get("quality_confidence"),
+                    "content_intelligence_analyzed": True,
+                })
+            
+            search_results.append(SearchResult(**search_result_data))
 
         # Cache results
         if search_results:

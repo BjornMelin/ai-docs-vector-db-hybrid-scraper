@@ -73,6 +73,11 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.utilities.register_tools(mcp, client_manager)
     registered_tools.append("utilities")
 
+    # Content Intelligence
+    logger.info("Registering content intelligence tools...")
+    tools.content_intelligence.register_tools(mcp, client_manager)
+    registered_tools.append("content_intelligence")
+
     logger.info(
         f"Successfully registered {len(registered_tools)} tool modules: {', '.join(registered_tools)}"
     )
