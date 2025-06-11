@@ -184,7 +184,7 @@ def sample_vector_points() -> list[PointStruct]:
 def enhanced_db_config():
     """Enhanced SQLAlchemy configuration for testing."""
     from src.config.models import SQLAlchemyConfig
-    
+
     return SQLAlchemyConfig(
         database_url="sqlite+aiosqlite:///:memory:",
         pool_size=5,
@@ -205,9 +205,11 @@ def enhanced_db_config():
 @pytest.fixture()
 def mock_predictive_load_monitor():
     """Mock PredictiveLoadMonitor for testing."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock
+    from unittest.mock import Mock
+
     from src.infrastructure.database.predictive_monitor import LoadPrediction
-    
+
     monitor = Mock()
     monitor.start = AsyncMock()
     monitor.stop = AsyncMock()
@@ -240,9 +242,11 @@ def mock_predictive_load_monitor():
 @pytest.fixture()
 def mock_multi_level_circuit_breaker():
     """Mock MultiLevelCircuitBreaker for testing."""
-    from unittest.mock import Mock, AsyncMock
-    from src.infrastructure.database.enhanced_circuit_breaker import CircuitState, FailureType
-    
+    from unittest.mock import AsyncMock
+    from unittest.mock import Mock
+
+    from src.infrastructure.database.enhanced_circuit_breaker import CircuitState
+
     breaker = Mock()
     breaker.state = CircuitState.CLOSED
     breaker.execute = AsyncMock()
@@ -269,8 +273,9 @@ def mock_multi_level_circuit_breaker():
 @pytest.fixture()
 def mock_connection_affinity_manager():
     """Mock ConnectionAffinityManager for testing."""
-    from unittest.mock import Mock, AsyncMock
-    
+    from unittest.mock import AsyncMock
+    from unittest.mock import Mock
+
     manager = Mock()
     manager.get_optimal_connection = AsyncMock(return_value="conn_123")
     manager.register_connection = AsyncMock()
@@ -296,9 +301,11 @@ def mock_connection_affinity_manager():
 @pytest.fixture()
 def mock_adaptive_config_manager():
     """Mock AdaptiveConfigManager for testing."""
-    from unittest.mock import Mock, AsyncMock
-    from src.infrastructure.database.adaptive_config import AdaptationStrategy, SystemLoadLevel
-    
+    from unittest.mock import AsyncMock
+    from unittest.mock import Mock
+
+    from src.infrastructure.database.adaptive_config import AdaptationStrategy
+
     manager = Mock()
     manager.strategy = AdaptationStrategy.MODERATE
     manager.start_monitoring = AsyncMock()
@@ -331,8 +338,9 @@ def mock_adaptive_config_manager():
 def sample_load_metrics():
     """Sample load metrics for testing."""
     import time
+
     from src.infrastructure.database.load_monitor import LoadMetrics
-    
+
     return [
         LoadMetrics(
             concurrent_requests=5,

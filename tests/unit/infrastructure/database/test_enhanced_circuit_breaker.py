@@ -657,7 +657,6 @@ class TestCircuitBreakerEdgeCases:
 
         # Mock numpy import failure in response time stats
         with pytest.raises(ImportError):
-
             raise ImportError("Mocked numpy failure")
 
         # Should not crash the circuit breaker

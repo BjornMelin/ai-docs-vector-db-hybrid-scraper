@@ -11,7 +11,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from contextlib import suppress
 from typing import Any
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -21,8 +20,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from ...config.models import SQLAlchemyConfig
 from ...infrastructure.shared import CircuitBreaker
-from .adaptive_config import AdaptiveConfigManager
 from .adaptive_config import AdaptationStrategy
+from .adaptive_config import AdaptiveConfigManager
 from .connection_affinity import ConnectionAffinityManager
 from .connection_affinity import QueryType
 from .enhanced_circuit_breaker import FailureType
@@ -73,13 +72,13 @@ class AsyncConnectionManager:
             adaptation_strategy: Strategy for adaptive configuration changes
         """
         self.config = config
-        
+
         # Enhanced monitoring components
         if enable_predictive_monitoring:
             self.load_monitor = PredictiveLoadMonitor(LoadMonitorConfig())
         else:
             self.load_monitor = load_monitor or LoadMonitor(LoadMonitorConfig())
-            
+
         self.query_monitor = query_monitor or QueryMonitor(
             QueryMonitorConfig(
                 enabled=config.enable_query_monitoring,
@@ -92,29 +91,27 @@ class AsyncConnectionManager:
             self.circuit_breaker = circuit_breaker
         else:
             from .enhanced_circuit_breaker import CircuitBreakerConfig
+
             cb_config = CircuitBreakerConfig(
                 connection_threshold=3,
                 timeout_threshold=5,
                 query_threshold=10,
                 transaction_threshold=5,
-                recovery_timeout=60.0
+                recovery_timeout=60.0,
             )
             self.circuit_breaker = MultiLevelCircuitBreaker(cb_config)
 
         # Connection affinity manager for query optimization
-        self.connection_affinity: Optional[ConnectionAffinityManager] = None
+        self.connection_affinity: ConnectionAffinityManager | None = None
         if enable_connection_affinity:
             self.connection_affinity = ConnectionAffinityManager(
-                max_patterns=1000,
-                max_connections=config.max_pool_size
+                max_patterns=1000, max_connections=config.max_pool_size
             )
 
         # Adaptive configuration manager
-        self.adaptive_config: Optional[AdaptiveConfigManager] = None
+        self.adaptive_config: AdaptiveConfigManager | None = None
         if enable_adaptive_config:
-            self.adaptive_config = AdaptiveConfigManager(
-                strategy=adaptation_strategy
-            )
+            self.adaptive_config = AdaptiveConfigManager(strategy=adaptation_strategy)
 
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker[AsyncSession] | None = None
@@ -240,11 +237,11 @@ class AsyncConnectionManager:
             await self.load_monitor.record_request_end(response_time_ms)
 
     async def execute_query(
-        self, 
-        query: str, 
+        self,
+        query: str,
         parameters: dict[str, Any] | None = None,
         query_type: QueryType = QueryType.READ,
-        timeout: Optional[float] = None
+        timeout: float | None = None,
     ) -> Any:
         """Execute a query with advanced monitoring and optimization.
 
@@ -264,44 +261,48 @@ class AsyncConnectionManager:
             # Get optimal connection using affinity manager if available
             optimal_connection_id = None
             if self.connection_affinity:
-                optimal_connection_id = await self.connection_affinity.get_optimal_connection(
-                    query, query_type
+                optimal_connection_id = (
+                    await self.connection_affinity.get_optimal_connection(
+                        query, query_type
+                    )
                 )
                 if optimal_connection_id:
-                    logger.debug(f"Using affinity-optimized connection {optimal_connection_id}")
+                    logger.debug(
+                        f"Using affinity-optimized connection {optimal_connection_id}"
+                    )
 
             # Determine appropriate failure type for circuit breaker
             failure_type = self._map_query_type_to_failure_type(query_type)
-            
+
             # Get timeout from adaptive config if available
             execution_timeout = timeout
             if not execution_timeout and self.adaptive_config:
                 config_state = await self.adaptive_config.get_current_configuration()
-                execution_timeout = config_state['current_settings']['timeout_ms'] / 1000.0
+                execution_timeout = (
+                    config_state["current_settings"]["timeout_ms"] / 1000.0
+                )
 
             # Execute query with circuit breaker protection
             async def _execute_query():
                 async with self.get_session() as session:
                     # Wrap string queries in text() for SQLAlchemy
                     sql_query = text(query) if isinstance(query, str) else query
-                    
+
                     if execution_timeout:
                         result = await asyncio.wait_for(
                             session.execute(sql_query, parameters or {}),
-                            timeout=execution_timeout
+                            timeout=execution_timeout,
                         )
                     else:
                         result = await session.execute(sql_query, parameters or {})
-                    
+
                     await session.commit()
                     return result
 
             # Execute with circuit breaker protection
             if isinstance(self.circuit_breaker, MultiLevelCircuitBreaker):
                 result = await self.circuit_breaker.execute(
-                    _execute_query,
-                    failure_type=failure_type,
-                    timeout=execution_timeout
+                    _execute_query, failure_type=failure_type, timeout=execution_timeout
                 )
             else:
                 # Fallback for legacy circuit breaker
@@ -316,12 +317,14 @@ class AsyncConnectionManager:
             # Track performance in connection affinity manager
             if self.connection_affinity and optimal_connection_id:
                 await self.connection_affinity.track_query_performance(
-                    optimal_connection_id, query, execution_time_ms, query_type, success=True
+                    optimal_connection_id,
+                    query,
+                    execution_time_ms,
+                    query_type,
+                    success=True,
                 )
 
-            logger.debug(
-                f"Query executed in {execution_time:.2f}ms: {query[:100]}..."
-            )
+            logger.debug(f"Query executed in {execution_time:.2f}ms: {query[:100]}...")
 
             return result
 
@@ -329,11 +332,15 @@ class AsyncConnectionManager:
             # Record failed query
             execution_time_ms = (time.time() - start_time) * 1000
             await self.query_monitor.end_query(query_id, query, success=False)
-            
+
             # Track failure in connection affinity manager
             if self.connection_affinity and optimal_connection_id:
                 await self.connection_affinity.track_query_performance(
-                    optimal_connection_id, query, execution_time_ms, query_type, success=False
+                    optimal_connection_id,
+                    query,
+                    execution_time_ms,
+                    query_type,
+                    success=False,
                 )
 
             logger.error(f"Query execution failed: {e}")
@@ -351,19 +358,17 @@ class AsyncConnectionManager:
         return mapping.get(query_type, FailureType.QUERY)
 
     async def register_connection(
-        self, 
-        connection_id: str, 
-        specialization: Optional[str] = None
+        self, connection_id: str, specialization: str | None = None
     ) -> None:
         """Register a connection with the affinity manager.
-        
+
         Args:
             connection_id: Unique connection identifier
             specialization: Optional specialization type
         """
         if self.connection_affinity:
             from .connection_affinity import ConnectionSpecialization
-            
+
             # Map string specialization to enum
             spec_mapping = {
                 "read": ConnectionSpecialization.READ_OPTIMIZED,
@@ -371,13 +376,13 @@ class AsyncConnectionManager:
                 "analytics": ConnectionSpecialization.ANALYTICS_OPTIMIZED,
                 "transaction": ConnectionSpecialization.TRANSACTION_OPTIMIZED,
             }
-            
+
             spec = spec_mapping.get(specialization, ConnectionSpecialization.GENERAL)
             await self.connection_affinity.register_connection(connection_id, spec)
 
     async def unregister_connection(self, connection_id: str) -> None:
         """Unregister a connection from the affinity manager.
-        
+
         Args:
             connection_id: Connection identifier to remove
         """
@@ -442,7 +447,9 @@ class AsyncConnectionManager:
         # Add connection affinity stats
         if self.connection_affinity:
             try:
-                affinity_report = await self.connection_affinity.get_performance_report()
+                affinity_report = (
+                    await self.connection_affinity.get_performance_report()
+                )
                 stats["connection_affinity"] = affinity_report
             except Exception as e:
                 logger.debug(f"Failed to get connection affinity stats: {e}")
@@ -451,7 +458,9 @@ class AsyncConnectionManager:
         # Add adaptive configuration stats
         if self.adaptive_config:
             try:
-                adaptive_config_info = await self.adaptive_config.get_current_configuration()
+                adaptive_config_info = (
+                    await self.adaptive_config.get_current_configuration()
+                )
                 stats["adaptive_config"] = adaptive_config_info
             except Exception as e:
                 logger.debug(f"Failed to get adaptive config stats: {e}")

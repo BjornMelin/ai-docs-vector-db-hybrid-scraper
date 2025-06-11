@@ -276,6 +276,441 @@ SECURITY_HEADERS = {
 }
 ```
 
+## Enhanced Database Connection Pool Security (BJO-134)
+
+### ML Model Security Considerations
+
+#### 1. ML Model Data Protection
+
+```python
+# Security configuration for ML model data
+ML_MODEL_SECURITY = {
+    "data_encryption": {
+        "training_data_encryption": True,
+        "model_weights_encryption": True,
+        "prediction_cache_encryption": True,
+        "encryption_algorithm": "AES-256-GCM"
+    },
+    "access_control": {
+        "model_training_rbac": True,
+        "prediction_access_control": True,
+        "model_versioning_audit": True
+    },
+    "privacy": {
+        "differential_privacy": True,
+        "privacy_budget": 1.0,
+        "noise_scale": 0.1,
+        "feature_anonymization": True
+    }
+}
+```
+
+#### 2. Training Data Security
+
+```bash
+#!/bin/bash
+# Secure ML model training data handling
+echo "=== ML Model Training Data Security ==="
+
+# 1. Encrypt training data at rest
+echo "Encrypting ML training data..."
+uv run python -c "
+from src.infrastructure.database.security import MLDataEncryption
+
+encryptor = MLDataEncryption()
+encryptor.encrypt_training_data('/data/ml_training/')
+print('✓ Training data encrypted')
+"
+
+# 2. Validate data integrity
+echo "Validating training data integrity..."
+uv run python scripts/validate_ml_data_integrity.py
+
+# 3. Apply differential privacy
+echo "Applying differential privacy to training data..."
+uv run python -c "
+from src.infrastructure.database.privacy import DifferentialPrivacy
+
+privacy_engine = DifferentialPrivacy(privacy_budget=1.0)
+privacy_engine.apply_noise_to_training_data()
+print('✓ Differential privacy applied')
+"
+
+# 4. Audit training data access
+echo "Setting up training data access audit..."
+uv run python scripts/setup_ml_data_audit.py
+```
+
+#### 3. Model Inference Security
+
+```python
+class SecureMLInference:
+    """Secure ML model inference for connection pool optimization."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.rate_limiter = self._setup_rate_limiting()
+        self.access_control = self._setup_access_control()
+        
+    def secure_predict(self, features: Dict[str, float], 
+                      user_context: Dict[str, str]) -> Dict[str, Any]:
+        """Perform secure ML prediction with access controls."""
+        
+        # 1. Validate user permissions
+        if not self.access_control.can_access_ml_predictions(user_context):
+            raise SecurityError("Insufficient permissions for ML predictions")
+            
+        # 2. Apply rate limiting
+        if not self.rate_limiter.allow_request(user_context['user_id']):
+            raise SecurityError("ML prediction rate limit exceeded")
+            
+        # 3. Sanitize input features
+        sanitized_features = self._sanitize_features(features)
+        
+        # 4. Perform prediction with audit logging
+        prediction = self._predict_with_audit(sanitized_features, user_context)
+        
+        # 5. Apply output filtering
+        filtered_prediction = self._filter_sensitive_outputs(prediction)
+        
+        return filtered_prediction
+```
+
+### Circuit Breaker Security
+
+#### 1. Security-Aware Circuit Breaker Configuration
+
+```json
+{
+  "circuit_breaker": {
+    "security_features": {
+      "failure_analysis": {
+        "detect_security_failures": true,
+        "security_failure_threshold": 2,
+        "security_failure_types": [
+          "authentication_failure",
+          "authorization_failure", 
+          "suspicious_query_pattern",
+          "rate_limit_violation"
+        ]
+      },
+      "isolation": {
+        "isolate_suspicious_connections": true,
+        "quarantine_duration_minutes": 30,
+        "security_event_logging": true
+      },
+      "recovery": {
+        "security_validation_on_recovery": true,
+        "mandatory_security_scan": true,
+        "recovery_approval_required": true
+      }
+    }
+  }
+}
+```
+
+#### 2. Security Event Integration
+
+```python
+class SecurityAwareCircuitBreaker:
+    """Circuit breaker with security event integration."""
+    
+    def __init__(self, security_monitor):
+        self.security_monitor = security_monitor
+        self.security_metrics = SecurityMetrics()
+        
+    async def execute_with_security_checks(self, operation, context):
+        """Execute operation with security monitoring."""
+        
+        # Pre-execution security check
+        security_risk = await self.security_monitor.assess_risk(context)
+        if security_risk.level == "HIGH":
+            self.security_metrics.record_blocked_operation(context)
+            raise SecurityError("Operation blocked due to high security risk")
+            
+        try:
+            result = await operation()
+            self.security_metrics.record_successful_operation(context)
+            return result
+            
+        except SecurityException as e:
+            self.security_metrics.record_security_failure(context, e)
+            await self.security_monitor.report_security_event(e)
+            raise
+```
+
+### Connection Affinity Security
+
+#### 1. Query Pattern Security Analysis
+
+```python
+class SecureConnectionAffinity:
+    """Connection affinity with security pattern analysis."""
+    
+    def __init__(self):
+        self.pattern_analyzer = SecurityPatternAnalyzer()
+        self.access_control = ConnectionAccessControl()
+        
+    async def analyze_query_security(self, query: str, 
+                                   user_context: Dict[str, str]) -> Dict[str, Any]:
+        """Analyze query for security patterns."""
+        
+        security_analysis = {
+            "query_hash": self._hash_query(query),
+            "security_score": 0.0,
+            "risk_factors": [],
+            "recommended_action": "allow"
+        }
+        
+        # 1. SQL injection detection
+        if self.pattern_analyzer.detect_sql_injection(query):
+            security_analysis["risk_factors"].append("sql_injection_risk")
+            security_analysis["security_score"] += 0.8
+            
+        # 2. Privilege escalation attempts
+        if self.pattern_analyzer.detect_privilege_escalation(query):
+            security_analysis["risk_factors"].append("privilege_escalation")
+            security_analysis["security_score"] += 0.9
+            
+        # 3. Data exfiltration patterns
+        if self.pattern_analyzer.detect_data_exfiltration(query):
+            security_analysis["risk_factors"].append("data_exfiltration")
+            security_analysis["security_score"] += 0.7
+            
+        # 4. Determine action based on security score
+        if security_analysis["security_score"] > 0.5:
+            security_analysis["recommended_action"] = "block"
+            
+        return security_analysis
+```
+
+#### 2. Connection Security Isolation
+
+```bash
+#!/bin/bash
+# Secure connection isolation for affinity management
+echo "=== Connection Security Isolation Setup ==="
+
+# 1. Configure connection-level security
+echo "Setting up connection-level security..."
+uv run python -c "
+from src.infrastructure.database.security import ConnectionSecurity
+
+security = ConnectionSecurity()
+security.configure_connection_isolation()
+security.setup_query_sanitization()
+security.enable_connection_monitoring()
+print('✓ Connection security configured')
+"
+
+# 2. Setup query pattern monitoring
+echo "Configuring query pattern security monitoring..."
+uv run python scripts/setup_query_security_monitoring.py
+
+# 3. Configure security-aware connection pooling
+echo "Configuring security-aware connection pools..."
+uv run python -c "
+from src.infrastructure.database.connection_manager import SecureConnectionManager
+
+manager = SecureConnectionManager()
+manager.configure_security_policies()
+manager.setup_threat_detection()
+print('✓ Security-aware connection pooling configured')
+"
+```
+
+### Adaptive Configuration Security
+
+#### 1. Secure Configuration Changes
+
+```python
+class SecureAdaptiveConfig:
+    """Secure adaptive configuration with change validation."""
+    
+    def __init__(self):
+        self.change_validator = ConfigChangeValidator()
+        self.audit_logger = SecurityAuditLogger()
+        self.approval_system = ChangeApprovalSystem()
+        
+    async def apply_configuration_change(self, 
+                                       change: Dict[str, Any],
+                                       user_context: Dict[str, str]) -> bool:
+        """Apply configuration change with security validation."""
+        
+        # 1. Validate change permissions
+        if not self._validate_change_permissions(change, user_context):
+            await self.audit_logger.log_unauthorized_change_attempt(
+                change, user_context
+            )
+            raise SecurityError("Insufficient permissions for configuration change")
+            
+        # 2. Security impact assessment
+        security_impact = await self.change_validator.assess_security_impact(change)
+        if security_impact.risk_level == "HIGH":
+            # Require approval for high-risk changes
+            approval_required = True
+            await self.approval_system.request_approval(change, security_impact)
+            
+        # 3. Validate configuration integrity
+        if not self.change_validator.validate_integrity(change):
+            raise SecurityError("Configuration change failed integrity validation")
+            
+        # 4. Apply change with audit logging
+        try:
+            await self._apply_change_with_rollback(change)
+            await self.audit_logger.log_successful_change(change, user_context)
+            return True
+            
+        except Exception as e:
+            await self.audit_logger.log_failed_change(change, user_context, e)
+            raise
+```
+
+#### 2. Configuration Security Monitoring
+
+```bash
+#!/bin/bash
+# Monitor configuration changes for security implications
+echo "=== Configuration Security Monitoring ==="
+
+# 1. Monitor configuration file integrity
+echo "Setting up configuration file integrity monitoring..."
+uv run python -c "
+from src.infrastructure.database.security import ConfigIntegrityMonitor
+
+monitor = ConfigIntegrityMonitor()
+monitor.setup_file_integrity_monitoring()
+monitor.calculate_configuration_checksums()
+print('✓ Configuration integrity monitoring enabled')
+"
+
+# 2. Setup configuration change alerts
+echo "Configuring configuration change alerts..."
+uv run python scripts/setup_config_change_alerts.py
+
+# 3. Audit configuration access
+echo "Setting up configuration access auditing..."
+uv run python -c "
+from src.infrastructure.database.audit import ConfigAccessAuditor
+
+auditor = ConfigAccessAuditor()
+auditor.enable_access_logging()
+auditor.setup_suspicious_access_detection()
+print('✓ Configuration access auditing enabled')
+"
+```
+
+### Enhanced Database Security Monitoring
+
+#### 1. Security Metrics Collection
+
+```python
+# Enhanced database security metrics
+DATABASE_SECURITY_METRICS = {
+    "ml_model_security": {
+        "training_data_access_attempts": Counter("ml_training_data_access_total"),
+        "model_inference_requests": Counter("ml_model_inference_total"),
+        "differential_privacy_applications": Counter("ml_differential_privacy_total"),
+        "model_security_violations": Counter("ml_security_violations_total")
+    },
+    "circuit_breaker_security": {
+        "security_based_trips": Counter("circuit_breaker_security_trips_total"),
+        "suspicious_pattern_detections": Counter("circuit_breaker_suspicious_patterns_total"),
+        "security_recovery_attempts": Counter("circuit_breaker_security_recovery_total")
+    },
+    "connection_affinity_security": {
+        "query_security_analysis": Histogram("connection_affinity_query_security_score"),
+        "blocked_suspicious_queries": Counter("connection_affinity_blocked_queries_total"),
+        "connection_isolation_events": Counter("connection_affinity_isolation_events_total")
+    },
+    "adaptive_config_security": {
+        "configuration_change_requests": Counter("adaptive_config_change_requests_total"),
+        "security_validated_changes": Counter("adaptive_config_security_validated_total"),
+        "high_risk_changes_blocked": Counter("adaptive_config_high_risk_blocked_total")
+    }
+}
+```
+
+#### 2. Security Alert Configuration
+
+```yaml
+# Enhanced database security alerts
+groups:
+  - name: enhanced_database_security_alerts
+    rules:
+      - alert: MLModelSecurityViolation
+        expr: increase(ml_security_violations_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML model security violation detected"
+          description: "Security violation in ML model operations detected"
+
+      - alert: SuspiciousQueryPatternDetected
+        expr: increase(connection_affinity_blocked_queries_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Suspicious query patterns detected"
+          description: "Multiple suspicious queries blocked by connection affinity"
+
+      - alert: HighRiskConfigurationChange
+        expr: increase(adaptive_config_high_risk_blocked_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High-risk configuration change blocked"
+          description: "High-risk adaptive configuration change was blocked"
+
+      - alert: CircuitBreakerSecurityTrip
+        expr: increase(circuit_breaker_security_trips_total[5m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker security-based trips"
+          description: "Multiple security-based circuit breaker trips detected"
+```
+
+### Security Best Practices for Enhanced Database Features
+
+#### 1. ML Model Security Checklist
+
+- [ ] Training data is encrypted at rest and in transit
+- [ ] Differential privacy is applied to training datasets
+- [ ] Model inference is rate-limited and access-controlled
+- [ ] Model weights and parameters are encrypted
+- [ ] Training data access is audited and logged
+- [ ] Model predictions are sanitized before output
+- [ ] Regular security assessments of ML pipeline
+
+#### 2. Circuit Breaker Security Checklist
+
+- [ ] Security failure types are properly configured
+- [ ] Security events trigger appropriate circuit breaker actions
+- [ ] Suspicious connections are isolated and quarantined
+- [ ] Security validation is required for recovery operations
+- [ ] Security event logging is comprehensive and tamper-proof
+
+#### 3. Connection Affinity Security Checklist
+
+- [ ] Query patterns are analyzed for security risks
+- [ ] SQL injection detection is active and tested
+- [ ] Privilege escalation attempts are detected and blocked
+- [ ] Data exfiltration patterns are monitored
+- [ ] Connection isolation is implemented for suspicious activity
+
+#### 4. Adaptive Configuration Security Checklist
+
+- [ ] Configuration changes require appropriate authorization
+- [ ] High-risk changes require approval workflows
+- [ ] Configuration integrity monitoring is active
+- [ ] Change audit logging is comprehensive
+- [ ] Rollback procedures are secure and tested
+
 ## Data Protection and Encryption
 
 ### Data Classification

@@ -423,6 +423,451 @@ export AI_DOCS__FIRECRAWL__API_KEY="${FIRECRAWL_API_KEY_PROD}"
 }
 ```
 
+## Enhanced Database Connection Pool Configuration (BJO-134)
+
+### Database Connection Pool Settings
+
+#### 1. Basic Connection Pool Configuration
+
+```json
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "ai_docs_db",
+    "connection_pool": {
+      "min_size": 5,
+      "max_size": 20,
+      "max_overflow": 10,
+      "pool_timeout": 30,
+      "pool_recycle": 3600,
+      "pool_pre_ping": true
+    }
+  }
+}
+```
+
+#### 2. Enhanced Features Configuration
+
+```json
+{
+  "database": {
+    "enhanced_features": {
+      "enable_predictive_monitoring": true,
+      "enable_connection_affinity": true,
+      "enable_adaptive_config": true,
+      "enable_ml_optimization": true
+    },
+    "predictive_monitoring": {
+      "model_type": "random_forest",
+      "training_interval_hours": 24,
+      "prediction_horizon_minutes": 15,
+      "feature_window_minutes": 60,
+      "min_training_samples": 1000,
+      "model_accuracy_threshold": 0.7,
+      "retrain_on_accuracy_drop": true
+    },
+    "circuit_breaker": {
+      "failure_threshold": 5,
+      "recovery_timeout_seconds": 60,
+      "half_open_max_calls": 3,
+      "failure_types": {
+        "connection": {"threshold": 3, "timeout": 30},
+        "query": {"threshold": 5, "timeout": 60},
+        "transaction": {"threshold": 2, "timeout": 120}
+      }
+    },
+    "connection_affinity": {
+      "max_patterns": 1000,
+      "max_connections": 50,
+      "pattern_ttl_hours": 24,
+      "min_pattern_executions": 5,
+      "affinity_score_threshold": 0.3,
+      "enable_query_normalization": true
+    },
+    "adaptive_config": {
+      "strategy": "moderate",
+      "adaptation_interval_minutes": 15,
+      "enable_auto_scaling": true,
+      "scaling_factors": {
+        "cpu_threshold": 0.8,
+        "memory_threshold": 0.85,
+        "connection_threshold": 0.9
+      }
+    }
+  }
+}
+```
+
+### Environment-Specific Database Configurations
+
+#### 1. Development Environment
+
+```json
+{
+  "database": {
+    "connection_pool": {
+      "min_size": 2,
+      "max_size": 5,
+      "max_overflow": 2
+    },
+    "enhanced_features": {
+      "enable_predictive_monitoring": false,
+      "enable_connection_affinity": true,
+      "enable_adaptive_config": false,
+      "enable_ml_optimization": false
+    },
+    "predictive_monitoring": {
+      "model_type": "simple_linear",
+      "training_interval_hours": 168
+    }
+  }
+}
+```
+
+#### 2. Production Environment
+
+```json
+{
+  "database": {
+    "connection_pool": {
+      "min_size": 10,
+      "max_size": 50,
+      "max_overflow": 20,
+      "pool_timeout": 30,
+      "pool_recycle": 1800
+    },
+    "enhanced_features": {
+      "enable_predictive_monitoring": true,
+      "enable_connection_affinity": true,
+      "enable_adaptive_config": true,
+      "enable_ml_optimization": true
+    },
+    "predictive_monitoring": {
+      "model_type": "random_forest",
+      "training_interval_hours": 6,
+      "prediction_horizon_minutes": 30,
+      "feature_window_minutes": 120,
+      "min_training_samples": 5000,
+      "model_accuracy_threshold": 0.8
+    },
+    "circuit_breaker": {
+      "failure_threshold": 3,
+      "recovery_timeout_seconds": 30,
+      "half_open_max_calls": 5
+    },
+    "connection_affinity": {
+      "max_patterns": 5000,
+      "max_connections": 100,
+      "pattern_ttl_hours": 168,
+      "min_pattern_executions": 10
+    }
+  }
+}
+```
+
+#### 3. High-Performance Environment
+
+```json
+{
+  "database": {
+    "connection_pool": {
+      "min_size": 20,
+      "max_size": 100,
+      "max_overflow": 50,
+      "pool_timeout": 15,
+      "pool_recycle": 900
+    },
+    "enhanced_features": {
+      "enable_predictive_monitoring": true,
+      "enable_connection_affinity": true,
+      "enable_adaptive_config": true,
+      "enable_ml_optimization": true
+    },
+    "predictive_monitoring": {
+      "model_type": "gradient_boosting",
+      "training_interval_hours": 2,
+      "prediction_horizon_minutes": 45,
+      "feature_window_minutes": 180,
+      "min_training_samples": 10000,
+      "model_accuracy_threshold": 0.85
+    },
+    "adaptive_config": {
+      "strategy": "aggressive",
+      "adaptation_interval_minutes": 5,
+      "enable_auto_scaling": true
+    }
+  }
+}
+```
+
+### Configuration Validation and Testing
+
+#### 1. Database Configuration Validation
+
+```bash
+#!/bin/bash
+# Validate enhanced database configuration
+echo "=== Enhanced Database Configuration Validation ==="
+
+# 1. Validate basic configuration structure
+uv run python -c "
+from src.config.loader import UnifiedConfig
+try:
+    config = UnifiedConfig.load_from_file('config.json')
+    print('✓ Configuration structure valid')
+    print(f'  Database host: {config.database.host}')
+    print(f'  Pool size: {config.database.connection_pool.min_size}-{config.database.connection_pool.max_size}')
+except Exception as e:
+    print(f'✗ Configuration validation failed: {e}')
+    exit(1)
+"
+
+# 2. Test database connectivity
+echo "Testing database connectivity..."
+uv run python -c "
+import asyncio
+from src.infrastructure.database.connection_manager import AsyncConnectionManager
+from src.config.loader import UnifiedConfig
+
+async def test_connection():
+    config = UnifiedConfig.load_from_file('config.json')
+    manager = AsyncConnectionManager(config.database)
+    try:
+        await manager.initialize()
+        print('✓ Database connection successful')
+        await manager.shutdown()
+    except Exception as e:
+        print(f'✗ Database connection failed: {e}')
+        return False
+    return True
+
+if not asyncio.run(test_connection()):
+    exit(1)
+"
+
+# 3. Validate enhanced features
+echo "Validating enhanced features..."
+uv run python scripts/validate_enhanced_db_config.py --config config.json
+
+echo "✓ Enhanced database configuration validation completed"
+```
+
+#### 2. Performance Configuration Testing
+
+```python
+#!/usr/bin/env python3
+"""Test enhanced database configuration performance."""
+
+import asyncio
+import time
+from typing import Dict, Any
+
+from src.config.loader import UnifiedConfig
+from src.infrastructure.database.connection_manager import AsyncConnectionManager
+
+class DatabaseConfigTester:
+    """Test database configuration performance."""
+    
+    def __init__(self, config_file: str):
+        self.config = UnifiedConfig.load_from_file(config_file)
+        
+    async def test_performance_targets(self) -> Dict[str, Any]:
+        """Test that configuration meets performance targets."""
+        manager = AsyncConnectionManager(self.config.database)
+        
+        try:
+            await manager.initialize()
+            
+            # Test connection pool performance
+            start_time = time.time()
+            tasks = []
+            for _ in range(20):
+                task = manager.execute_query("SELECT 1")
+                tasks.append(task)
+            
+            results = await asyncio.gather(*tasks)
+            end_time = time.time()
+            
+            avg_latency = (end_time - start_time) / len(tasks)
+            
+            # Performance targets
+            targets = {
+                'avg_latency_ms': avg_latency * 1000,
+                'target_latency_ms': 100,  # 100ms target
+                'meets_target': avg_latency < 0.1,
+                'pool_utilization': await self._get_pool_utilization(manager),
+                'enhanced_features_active': self._check_enhanced_features()
+            }
+            
+            return targets
+            
+        finally:
+            await manager.shutdown()
+    
+    def _check_enhanced_features(self) -> Dict[str, bool]:
+        """Check which enhanced features are enabled."""
+        features = self.config.database.enhanced_features
+        return {
+            'predictive_monitoring': features.enable_predictive_monitoring,
+            'connection_affinity': features.enable_connection_affinity,
+            'adaptive_config': features.enable_adaptive_config,
+            'ml_optimization': features.enable_ml_optimization
+        }
+
+if __name__ == "__main__":
+    import sys
+    
+    tester = DatabaseConfigTester(sys.argv[1] if len(sys.argv) > 1 else "config.json")
+    results = asyncio.run(tester.test_performance_targets())
+    
+    print("Performance Test Results:")
+    print(f"  Average Latency: {results['avg_latency_ms']:.2f}ms")
+    print(f"  Target Latency: {results['target_latency_ms']}ms")
+    print(f"  Meets Target: {'✓' if results['meets_target'] else '✗'}")
+    print(f"  Enhanced Features: {results['enhanced_features_active']}")
+    
+    if not results['meets_target']:
+        sys.exit(1)
+```
+
+### Configuration Migration and Upgrades
+
+#### 1. Migration to Enhanced Database Features
+
+```bash
+#!/bin/bash
+# Migrate existing configuration to enhanced database features
+echo "=== Enhanced Database Configuration Migration ==="
+
+# 1. Backup existing configuration
+cp config.json config.json.backup.$(date +%Y%m%d_%H%M%S)
+
+# 2. Create enhanced configuration
+uv run python -c "
+from src.config.loader import UnifiedConfig
+from src.config.migration import ConfigMigrator
+
+# Load existing config
+config = UnifiedConfig.load_from_file('config.json')
+
+# Apply enhanced database migration
+migrator = ConfigMigrator()
+enhanced_config = migrator.add_enhanced_database_features(config)
+
+# Save enhanced configuration
+enhanced_config.save_to_file('config.enhanced.json')
+print('✓ Enhanced configuration created: config.enhanced.json')
+"
+
+# 3. Validate enhanced configuration
+uv run python scripts/validate_enhanced_db_config.py --config config.enhanced.json
+
+# 4. Test performance with enhanced features
+echo "Testing enhanced configuration performance..."
+uv run python scripts/test_enhanced_db_performance.py --config config.enhanced.json
+
+# 5. Apply enhanced configuration
+if [ $? -eq 0 ]; then
+    mv config.enhanced.json config.json
+    echo "✓ Enhanced database configuration applied successfully"
+else
+    echo "✗ Enhanced configuration failed validation"
+    exit 1
+fi
+```
+
+#### 2. Environment Variable Override Support
+
+```bash
+# Enhanced database configuration environment variables
+
+# Basic connection pool settings
+export DB_CONNECTION_POOL_MIN_SIZE=10
+export DB_CONNECTION_POOL_MAX_SIZE=50
+export DB_CONNECTION_POOL_MAX_OVERFLOW=20
+
+# Enhanced features toggles
+export DB_ENABLE_PREDICTIVE_MONITORING=true
+export DB_ENABLE_CONNECTION_AFFINITY=true
+export DB_ENABLE_ADAPTIVE_CONFIG=true
+export DB_ENABLE_ML_OPTIMIZATION=true
+
+# ML model settings
+export DB_ML_MODEL_TYPE=random_forest
+export DB_ML_TRAINING_INTERVAL_HOURS=24
+export DB_ML_PREDICTION_HORIZON_MINUTES=15
+export DB_ML_MODEL_ACCURACY_THRESHOLD=0.7
+
+# Circuit breaker settings
+export DB_CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+export DB_CIRCUIT_BREAKER_RECOVERY_TIMEOUT=60
+export DB_CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS=3
+
+# Connection affinity settings
+export DB_CONNECTION_AFFINITY_MAX_PATTERNS=1000
+export DB_CONNECTION_AFFINITY_MAX_CONNECTIONS=50
+export DB_CONNECTION_AFFINITY_PATTERN_TTL_HOURS=24
+
+# Adaptive configuration settings
+export DB_ADAPTIVE_CONFIG_STRATEGY=moderate
+export DB_ADAPTIVE_CONFIG_INTERVAL_MINUTES=15
+export DB_ADAPTIVE_CONFIG_ENABLE_AUTO_SCALING=true
+```
+
+### Configuration Monitoring and Health Checks
+
+#### 1. Configuration Health Monitoring
+
+```python
+#!/usr/bin/env python3
+"""Monitor enhanced database configuration health."""
+
+import asyncio
+from typing import Dict, List
+
+from src.config.loader import UnifiedConfig
+from src.infrastructure.database.connection_manager import AsyncConnectionManager
+
+class ConfigHealthMonitor:
+    """Monitor configuration health and performance."""
+    
+    def __init__(self, config: UnifiedConfig):
+        self.config = config
+        
+    async def check_configuration_health(self) -> Dict[str, Any]:
+        """Comprehensive configuration health check."""
+        health_report = {
+            'overall_status': 'healthy',
+            'checks': {},
+            'recommendations': []
+        }
+        
+        # 1. Database connection health
+        health_report['checks']['database_connection'] = await self._check_database_connection()
+        
+        # 2. Enhanced features health
+        health_report['checks']['enhanced_features'] = await self._check_enhanced_features()
+        
+        # 3. Performance metrics validation
+        health_report['checks']['performance_metrics'] = await self._check_performance_metrics()
+        
+        # 4. Configuration consistency
+        health_report['checks']['config_consistency'] = self._check_config_consistency()
+        
+        # Generate recommendations
+        health_report['recommendations'] = self._generate_recommendations(health_report['checks'])
+        
+        # Determine overall status
+        failed_checks = [name for name, result in health_report['checks'].items() 
+                        if not result.get('healthy', False)]
+        if failed_checks:
+            health_report['overall_status'] = 'unhealthy'
+            health_report['failed_checks'] = failed_checks
+            
+        return health_report
+```
+
 ## Performance Tuning
 
 ### CPU-Optimized Configuration

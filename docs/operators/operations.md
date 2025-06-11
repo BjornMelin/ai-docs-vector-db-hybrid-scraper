@@ -1021,6 +1021,286 @@ docker-compose exec task-worker kill -TERM 1
 - Schedule: Based on deployment configuration
 - Monitoring: Track deployment progress and rollback triggers
 
+## Enhanced Database Connection Pool Management (BJO-134)
+
+### Database Connection Pool Operations
+
+#### 1. Connection Pool Health Monitoring
+
+```bash
+#!/bin/bash
+# Enhanced database connection pool health check
+echo "=== Enhanced Database Connection Pool Health Check ==="
+
+# 1. Check connection pool status
+POOL_STATUS=$(curl -s "http://localhost:8000/admin/db-stats" | jq -r '.connection_pool.status')
+echo "Connection Pool Status: $POOL_STATUS"
+
+# 2. Monitor connection utilization
+POOL_UTILIZATION=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_checked_out" | awk '{print $2}')
+POOL_SIZE=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_size" | awk '{print $2}')
+UTILIZATION_PERCENT=$(echo "scale=2; $POOL_UTILIZATION / $POOL_SIZE * 100" | bc)
+
+echo "Pool Utilization: $UTILIZATION_PERCENT% ($POOL_UTILIZATION/$POOL_SIZE)"
+
+# Alert if utilization is high
+if (( $(echo "$UTILIZATION_PERCENT > 80" | bc -l) )); then
+    echo "⚠️  WARNING: High connection pool utilization detected"
+    # Trigger alert
+    ./scripts/alert-high-pool-utilization.sh
+fi
+
+# 3. Check ML model performance
+ML_ACCURACY=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_ml_model_accuracy" | awk '{print $2}')
+echo "ML Model Accuracy: $(echo "scale=1; $ML_ACCURACY * 100" | bc)%"
+
+# 4. Monitor circuit breaker state
+CIRCUIT_BREAKER_STATE=$(curl -s "http://localhost:8000/metrics" | grep "db_circuit_breaker_state")
+echo "Circuit Breaker Status: $CIRCUIT_BREAKER_STATE"
+
+# 5. Check connection affinity performance
+AFFINITY_SCORE=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_affinity_performance_score" | awk '{print $2}')
+echo "Connection Affinity Score: $AFFINITY_SCORE"
+```
+
+#### 2. ML Model Retraining Procedures
+
+```bash
+#!/bin/bash
+# ML model retraining for predictive load monitoring
+echo "=== ML Model Retraining Procedure ==="
+
+# 1. Check if retraining is needed
+CURRENT_ACCURACY=$(curl -s "http://localhost:8000/api/admin/ml-model-stats" | jq -r '.accuracy')
+TRAINING_SAMPLES=$(curl -s "http://localhost:8000/api/admin/ml-model-stats" | jq -r '.training_samples')
+
+echo "Current model accuracy: $CURRENT_ACCURACY"
+echo "Training samples available: $TRAINING_SAMPLES"
+
+# 2. Trigger retraining if needed
+if (( $(echo "$CURRENT_ACCURACY < 0.7" | bc -l) )) || [ "$TRAINING_SAMPLES" -gt 5000 ]; then
+    echo "Triggering ML model retraining..."
+    
+    # Start retraining process
+    curl -X POST "http://localhost:8000/api/admin/retrain-ml-model" \
+        -H "Content-Type: application/json" \
+        -d '{"force": false, "background": true}'
+    
+    # Monitor retraining progress
+    echo "Monitoring retraining progress..."
+    while true; do
+        STATUS=$(curl -s "http://localhost:8000/api/admin/ml-model-training-status" | jq -r '.status')
+        echo "Training status: $STATUS"
+        
+        if [ "$STATUS" = "completed" ]; then
+            echo "✓ ML model retraining completed successfully"
+            break
+        elif [ "$STATUS" = "failed" ]; then
+            echo "✗ ML model retraining failed"
+            break
+        fi
+        
+        sleep 30
+    done
+else
+    echo "Model retraining not needed at this time"
+fi
+```
+
+#### 3. Circuit Breaker Manual Interventions
+
+```bash
+#!/bin/bash
+# Manual circuit breaker operations
+echo "=== Circuit Breaker Manual Operations ==="
+
+case "$1" in
+    "status")
+        echo "Checking circuit breaker status..."
+        curl -s "http://localhost:8000/api/admin/circuit-breaker-status" | jq '.'
+        ;;
+    
+    "reset")
+        echo "Manually resetting circuit breaker..."
+        curl -X POST "http://localhost:8000/api/admin/circuit-breaker-reset" \
+            -H "Content-Type: application/json" \
+            -d '{"failure_type": "all"}'
+        echo "✓ Circuit breaker reset completed"
+        ;;
+    
+    "test")
+        echo "Testing circuit breaker functionality..."
+        curl -X POST "http://localhost:8000/api/admin/circuit-breaker-test" \
+            -H "Content-Type: application/json" \
+            -d '{"test_type": "controlled_failure"}'
+        ;;
+    
+    "configure")
+        echo "Updating circuit breaker configuration..."
+        curl -X PUT "http://localhost:8000/api/admin/circuit-breaker-config" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "failure_threshold": '$2',
+                "recovery_timeout": '$3',
+                "half_open_max_calls": '$4'
+            }'
+        echo "✓ Configuration updated"
+        ;;
+    
+    *)
+        echo "Usage: $0 {status|reset|test|configure <threshold> <timeout> <max_calls>}"
+        exit 1
+        ;;
+esac
+```
+
+#### 4. Connection Affinity Management
+
+```bash
+#!/bin/bash
+# Connection affinity management operations
+echo "=== Connection Affinity Management ==="
+
+# 1. View current query patterns
+echo "Current query patterns:"
+curl -s "http://localhost:8000/api/admin/connection-affinity-patterns" | jq '.patterns[] | {pattern: .normalized_query, executions: .execution_count, avg_time: .avg_execution_time_ms}'
+
+# 2. Analyze connection performance
+echo "Connection performance analysis:"
+curl -s "http://localhost:8000/api/admin/connection-affinity-performance" | jq '.'
+
+# 3. Clear low-performing patterns
+echo "Clearing low-performing patterns..."
+curl -X DELETE "http://localhost:8000/api/admin/connection-affinity-patterns" \
+    -H "Content-Type: application/json" \
+    -d '{"min_performance_score": 0.3}'
+
+# 4. Optimize connection specializations
+echo "Optimizing connection specializations..."
+curl -X POST "http://localhost:8000/api/admin/optimize-connection-specializations" \
+    -H "Content-Type: application/json"
+
+echo "✓ Connection affinity optimization completed"
+```
+
+### Database Performance Troubleshooting
+
+#### 1. Performance Regression Investigation
+
+```bash
+#!/bin/bash
+# Investigate performance regressions in enhanced database features
+echo "=== Database Performance Regression Investigation ==="
+
+# 1. Compare current vs baseline performance
+CURRENT_LATENCY=$(curl -s "http://localhost:9090/api/v1/query?query=histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))" | jq -r '.data.result[0].value[1]')
+BASELINE_LATENCY=0.25  # 250ms baseline
+
+LATENCY_CHANGE=$(echo "scale=2; ($CURRENT_LATENCY - $BASELINE_LATENCY) / $BASELINE_LATENCY * 100" | bc)
+
+echo "Current 95th percentile latency: ${CURRENT_LATENCY}s"
+echo "Baseline latency: ${BASELINE_LATENCY}s"
+echo "Performance change: $LATENCY_CHANGE%"
+
+# 2. Check for specific issues
+if (( $(echo "$LATENCY_CHANGE > 25" | bc -l) )); then
+    echo "🚨 Performance regression detected!"
+    
+    # Check ML model performance
+    ML_ACCURACY=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_ml_model_accuracy" | awk '{print $2}')
+    if (( $(echo "$ML_ACCURACY < 0.7" | bc -l) )); then
+        echo "Issue: ML model accuracy degraded ($ML_ACCURACY)"
+        echo "Action: Schedule model retraining"
+    fi
+    
+    # Check circuit breaker state
+    CB_FAILURES=$(curl -s "http://localhost:8000/metrics" | grep "db_circuit_breaker_failures_total" | awk '{print $2}')
+    if [ "$CB_FAILURES" -gt 100 ]; then
+        echo "Issue: High circuit breaker failure rate ($CB_FAILURES)"
+        echo "Action: Investigate underlying database issues"
+    fi
+    
+    # Check connection affinity effectiveness
+    AFFINITY_SCORE=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_affinity_performance_score" | awk '{print $2}')
+    if (( $(echo "$AFFINITY_SCORE < 0.5" | bc -l) )); then
+        echo "Issue: Connection affinity performance poor ($AFFINITY_SCORE)"
+        echo "Action: Clear affinity cache and rebuild patterns"
+    fi
+fi
+```
+
+#### 2. Emergency Database Scaling
+
+```bash
+#!/bin/bash
+# Emergency database connection pool scaling
+echo "=== Emergency Database Connection Pool Scaling ==="
+
+CURRENT_LOAD=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_checked_out" | awk '{print $2}')
+POOL_SIZE=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_size" | awk '{print $2}')
+
+echo "Current pool usage: $CURRENT_LOAD/$POOL_SIZE"
+
+# Emergency scaling if needed
+if [ "$CURRENT_LOAD" -gt $((POOL_SIZE * 85 / 100)) ]; then
+    echo "🚨 Emergency scaling required!"
+    
+    # Increase pool size temporarily
+    NEW_POOL_SIZE=$((POOL_SIZE + 10))
+    curl -X PUT "http://localhost:8000/api/admin/connection-pool-config" \
+        -H "Content-Type: application/json" \
+        -d '{"pool_size": '$NEW_POOL_SIZE', "temporary": true}'
+    
+    echo "Pool size increased to $NEW_POOL_SIZE (temporary)"
+    
+    # Set alert to review scaling in 1 hour
+    echo "pool-scaling-review" | at now + 1 hour
+fi
+```
+
+### Enhanced Database Maintenance Tasks
+
+#### Weekly Database Health Review
+
+```bash
+#!/bin/bash
+# Weekly enhanced database health review
+echo "=== Weekly Enhanced Database Health Review ==="
+
+# 1. ML model performance trends
+echo "ML Model Performance (7 days):"
+curl -s "http://localhost:9090/api/v1/query_range?query=db_connection_pool_ml_model_accuracy&start=$(date -d '7 days ago' +%s)&end=$(date +%s)&step=3600" | jq -r '.data.result[0].values[] | "\(.[0]) \(.[1])"' | tail -10
+
+# 2. Circuit breaker incident summary
+echo "Circuit Breaker Incidents (7 days):"
+curl -s "http://localhost:9090/api/v1/query?query=increase(db_circuit_breaker_failures_total[7d])" | jq -r '.data.result[] | "\(.metric.failure_type): \(.[1]) failures"'
+
+# 3. Connection affinity effectiveness
+echo "Connection Affinity Effectiveness:"
+curl -s "http://localhost:8000/api/admin/connection-affinity-weekly-report" | jq '.'
+
+# 4. Performance improvements validation
+echo "Performance Improvements Validation:"
+CURRENT_P95=$(curl -s "http://localhost:9090/api/v1/query?query=histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[7d]))" | jq -r '.data.result[0].value[1]')
+THROUGHPUT=$(curl -s "http://localhost:9090/api/v1/query?query=rate(db_query_total[7d])" | jq -r '.data.result[0].value[1]')
+
+echo "7-day average P95 latency: ${CURRENT_P95}s"
+echo "7-day average throughput: $THROUGHPUT queries/sec"
+
+# Generate weekly report
+cat > /tmp/weekly-db-report.json <<EOF
+{
+  "week_ending": "$(date +%Y-%m-%d)",
+  "p95_latency": "$CURRENT_P95",
+  "throughput": "$THROUGHPUT",
+  "ml_model_accuracy": "$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_ml_model_accuracy" | awk '{print $2}')",
+  "circuit_breaker_health": "$(curl -s "http://localhost:8000/api/admin/circuit-breaker-health-summary" | jq -c '.')"
+}
+EOF
+
+echo "✓ Weekly database health report saved to /tmp/weekly-db-report.json"
+```
+
 ## Performance Management
 
 ### Performance Monitoring

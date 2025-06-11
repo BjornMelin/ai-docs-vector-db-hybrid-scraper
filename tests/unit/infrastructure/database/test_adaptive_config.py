@@ -162,7 +162,10 @@ class TestAdaptiveConfigManager:
         assert adaptive_manager.strategy == AdaptationStrategy.MODERATE
         assert isinstance(adaptive_manager.thresholds, PerformanceThresholds)
         assert isinstance(adaptive_manager.settings, AdaptiveSettings)
-        assert adaptive_manager.current_pool_size == adaptive_manager.settings.min_pool_size
+        assert (
+            adaptive_manager.current_pool_size
+            == adaptive_manager.settings.min_pool_size
+        )
         assert len(adaptive_manager.adaptation_history) == 0
         assert not adaptive_manager.is_monitoring
 
@@ -326,7 +329,9 @@ class TestAdaptiveConfigManager:
         assert "Test 4" in history[2]["reason"]  # Most recent (last)
 
     @pytest.mark.asyncio
-    async def test_get_performance_analysis(self, adaptive_manager, mock_system_metrics):
+    async def test_get_performance_analysis(
+        self, adaptive_manager, mock_system_metrics
+    ):
         """Test performance analysis generation."""
         # Add some metrics to recent history
         metrics = SystemMetrics(70.0, 80.0, 40.0, 30.0, 2.0, time.time())
@@ -349,13 +354,17 @@ class TestAdaptiveConfigManager:
 
         # Test scaling up for high load
         adaptive_manager.current_pool_size = 10
-        new_size = adaptive_manager._calculate_pool_size_adaptation(SystemLoadLevel.HIGH)
-        
+        new_size = adaptive_manager._calculate_pool_size_adaptation(
+            SystemLoadLevel.HIGH
+        )
+
         # Conservative should increase but be less than aggressive
         moderate_manager = AdaptiveConfigManager(strategy=AdaptationStrategy.MODERATE)
         moderate_manager.current_pool_size = 10
-        moderate_size = moderate_manager._calculate_pool_size_adaptation(SystemLoadLevel.HIGH)
-        
+        moderate_size = moderate_manager._calculate_pool_size_adaptation(
+            SystemLoadLevel.HIGH
+        )
+
         assert new_size > adaptive_manager.current_pool_size
         assert new_size <= moderate_size  # Conservative should be <= moderate
 
@@ -365,8 +374,10 @@ class TestAdaptiveConfigManager:
 
         # Test scaling up for critical load
         adaptive_manager.current_pool_size = 10
-        new_size = adaptive_manager._calculate_pool_size_adaptation(SystemLoadLevel.CRITICAL)
-        
+        new_size = adaptive_manager._calculate_pool_size_adaptation(
+            SystemLoadLevel.CRITICAL
+        )
+
         # Aggressive should make larger changes
         assert new_size > adaptive_manager.current_pool_size
         assert new_size >= adaptive_manager.current_pool_size + 3
@@ -376,9 +387,13 @@ class TestAdaptiveConfigManager:
         adaptive_manager.settings.adaptive_failure_thresholds = True
 
         # Test different load levels
-        low_threshold = adaptive_manager._calculate_failure_threshold_adaptation(SystemLoadLevel.LOW)
-        high_threshold = adaptive_manager._calculate_failure_threshold_adaptation(SystemLoadLevel.HIGH)
-        
+        low_threshold = adaptive_manager._calculate_failure_threshold_adaptation(
+            SystemLoadLevel.LOW
+        )
+        high_threshold = adaptive_manager._calculate_failure_threshold_adaptation(
+            SystemLoadLevel.HIGH
+        )
+
         # Higher load should have lower failure tolerance
         assert low_threshold > high_threshold
 
@@ -387,9 +402,13 @@ class TestAdaptiveConfigManager:
         adaptive_manager.settings.adaptive_timeouts = True
 
         # Test different load levels
-        low_timeout = adaptive_manager._calculate_timeout_adaptation(SystemLoadLevel.LOW)
-        critical_timeout = adaptive_manager._calculate_timeout_adaptation(SystemLoadLevel.CRITICAL)
-        
+        low_timeout = adaptive_manager._calculate_timeout_adaptation(
+            SystemLoadLevel.LOW
+        )
+        critical_timeout = adaptive_manager._calculate_timeout_adaptation(
+            SystemLoadLevel.CRITICAL
+        )
+
         # Critical load should have higher timeout
         assert critical_timeout > low_timeout
 
@@ -411,8 +430,9 @@ class TestAdaptiveConfigManager:
         """Test monitoring resilience to errors."""
         # Mock system monitoring to raise exceptions
         with patch.object(
-            adaptive_manager, "_collect_system_metrics",
-            side_effect=Exception("Monitoring failed")
+            adaptive_manager,
+            "_collect_system_metrics",
+            side_effect=Exception("Monitoring failed"),
         ):
             await adaptive_manager.start_monitoring()
 
@@ -445,9 +465,18 @@ class TestAdaptiveConfigManagerEdgeCases:
         for manager in managers:
             manager.current_pool_size = base_pool_size
 
-        conservative_increase = managers[0]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH) - base_pool_size
-        moderate_increase = managers[1]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH) - base_pool_size
-        aggressive_increase = managers[2]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH) - base_pool_size
+        conservative_increase = (
+            managers[0]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH)
+            - base_pool_size
+        )
+        moderate_increase = (
+            managers[1]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH)
+            - base_pool_size
+        )
+        aggressive_increase = (
+            managers[2]._calculate_pool_size_adaptation(SystemLoadLevel.HIGH)
+            - base_pool_size
+        )
 
         # Conservative should make smallest changes, aggressive should make largest
         assert conservative_increase <= moderate_increase <= aggressive_increase
@@ -458,8 +487,16 @@ class TestAdaptiveConfigManagerEdgeCases:
 
         # Test pool size bounds
         extreme_size = manager._calculate_pool_size_adaptation(SystemLoadLevel.CRITICAL)
-        assert manager.settings.min_pool_size <= extreme_size <= manager.settings.max_pool_size
+        assert (
+            manager.settings.min_pool_size
+            <= extreme_size
+            <= manager.settings.max_pool_size
+        )
 
         # Test timeout bounds
         timeout = manager._calculate_timeout_adaptation(SystemLoadLevel.CRITICAL)
-        assert manager.settings.min_timeout_ms <= timeout <= manager.settings.max_timeout_ms
+        assert (
+            manager.settings.min_timeout_ms
+            <= timeout
+            <= manager.settings.max_timeout_ms
+        )
