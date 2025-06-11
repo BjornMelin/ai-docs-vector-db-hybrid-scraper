@@ -191,6 +191,7 @@ markers = [
     "unit: marks tests as unit tests", 
     "performance: marks tests as performance tests",
     "asyncio: marks tests as async tests",
+    "benchmark: marks tests as benchmark tests",
 ]
 
 # Logging configuration for tests

@@ -255,8 +255,76 @@ class VectorSearchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class SQLAlchemyConfig(BaseModel):
+    """SQLAlchemy async database configuration with connection pool optimization."""
+
+    database_url: str = Field(
+        default="sqlite+aiosqlite:///data/app.db", description="Database connection URL"
+    )
+    echo_queries: bool = Field(default=False, description="Echo SQL queries to logs")
+
+    # Connection pool settings
+    pool_size: int = Field(
+        default=20,
+        gt=0,
+        le=100,
+        description="Number of connections to maintain in pool",
+    )
+    max_overflow: int = Field(
+        default=10, ge=0, le=50, description="Max overflow connections beyond pool_size"
+    )
+    pool_timeout: float = Field(
+        default=30.0, gt=0, description="Timeout to get connection from pool (seconds)"
+    )
+    pool_recycle: int = Field(
+        default=3600, gt=0, description="Recycle connections after N seconds"
+    )
+    pool_pre_ping: bool = Field(
+        default=True, description="Enable connection health checks"
+    )
+
+    # Dynamic pooling settings
+    adaptive_pool_sizing: bool = Field(
+        default=True, description="Enable dynamic pool size adjustment based on load"
+    )
+    min_pool_size: int = Field(
+        default=5, gt=0, description="Minimum pool size for dynamic sizing"
+    )
+    max_pool_size: int = Field(
+        default=50, gt=0, description="Maximum pool size for dynamic sizing"
+    )
+    pool_growth_factor: float = Field(
+        default=1.5,
+        gt=1.0,
+        le=3.0,
+        description="Growth factor for dynamic pool scaling",
+    )
+
+    # Query performance monitoring
+    enable_query_monitoring: bool = Field(
+        default=True, description="Enable query performance monitoring"
+    )
+    slow_query_threshold_ms: float = Field(
+        default=100.0, gt=0, description="Threshold for slow query detection (ms)"
+    )
+    query_histogram_buckets: list[float] = Field(
+        default_factory=lambda: [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0],
+        description="Histogram buckets for query latency metrics (seconds)",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        """Validate database URL format."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Database URL must be a non-empty string")
+        return v
+
+
 class QdrantConfig(BaseModel):
-    """Qdrant vector database configuration."""
+    """Qdrant vector database configuration with enhanced connection pooling."""
 
     url: str = Field(default="http://localhost:6333", description="Qdrant server URL")
     api_key: str | None = Field(default=None, description="Qdrant API key")
@@ -264,6 +332,23 @@ class QdrantConfig(BaseModel):
     prefer_grpc: bool = Field(default=False, description="Use gRPC instead of HTTP")
     collection_name: str = Field(
         default="documents", description="Default collection name"
+    )
+
+    # Enhanced connection pooling settings
+    max_connections: int = Field(
+        default=50, gt=0, description="Maximum total connections to Qdrant"
+    )
+    connection_pool_size: int = Field(
+        default=20, gt=0, description="Size of the connection pool"
+    )
+    keepalive_timeout: float = Field(
+        default=5.0, gt=0, description="Keep-alive timeout for connections (seconds)"
+    )
+    connection_retry_attempts: int = Field(
+        default=3, ge=0, le=10, description="Max connection retry attempts"
+    )
+    connection_retry_delay: float = Field(
+        default=1.0, gt=0, description="Base delay between connection retries (seconds)"
     )
 
     # Performance settings
@@ -810,6 +895,28 @@ class PerformanceConfig(BaseModel):
         default=True, description="Enable DragonflyDB native compression"
     )
 
+    # Circuit breaker settings
+    circuit_breaker_failure_threshold: int = Field(
+        default=5, gt=0, description="Number of failures before circuit breaker opens"
+    )
+    circuit_breaker_recovery_timeout: float = Field(
+        default=60.0,
+        gt=0,
+        description="Time to wait before attempting recovery (seconds)",
+    )
+    circuit_breaker_half_open_requests: int = Field(
+        default=1, gt=0, description="Number of test requests in half-open state"
+    )
+    max_consecutive_failures: int = Field(
+        default=3, gt=0, description="Max consecutive failures before marking unhealthy"
+    )
+    health_check_interval: float = Field(
+        default=30.0, gt=0, description="Health check interval (seconds)"
+    )
+    health_check_timeout: float = Field(
+        default=5.0, gt=0, description="Health check timeout (seconds)"
+    )
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("default_rate_limits")
@@ -1306,6 +1413,9 @@ class UnifiedConfig(BaseSettings):
     # Component configurations
     cache: CacheConfig = Field(
         default_factory=CacheConfig, description="Cache settings"
+    )
+    database: SQLAlchemyConfig = Field(
+        default_factory=SQLAlchemyConfig, description="SQLAlchemy database settings"
     )
     qdrant: QdrantConfig = Field(
         default_factory=QdrantConfig, description="Qdrant settings"
