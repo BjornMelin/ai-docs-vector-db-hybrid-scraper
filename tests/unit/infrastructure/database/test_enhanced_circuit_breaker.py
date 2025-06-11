@@ -179,7 +179,7 @@ class TestMultiLevelCircuitBreaker:
             raise Exception("Test failure")
 
         # Connection failures should open circuit at threshold 3
-        for i in range(3):
+        for _i in range(3):
             with pytest.raises(Exception):
                 await circuit_breaker.execute(
                     failing_func, failure_type=FailureType.CONNECTION
@@ -196,7 +196,7 @@ class TestMultiLevelCircuitBreaker:
             raise Exception("Test failure")
 
         # Query failures have threshold of 5
-        for i in range(5):
+        for _i in range(5):
             with pytest.raises(Exception):
                 await circuit_breaker.execute(
                     failing_func, failure_type=FailureType.QUERY
@@ -610,7 +610,7 @@ class TestCircuitBreakerEdgeCases:
         """Test state change timing accuracy."""
         breaker = MultiLevelCircuitBreaker()
 
-        start_time = time.time()
+        time.time()
         await breaker.force_open()
 
         status = breaker.get_health_status()

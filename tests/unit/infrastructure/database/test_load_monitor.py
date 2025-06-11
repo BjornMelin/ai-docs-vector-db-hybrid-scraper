@@ -401,7 +401,7 @@ class TestLoadMonitor:
         load_monitor._connection_errors = 5
 
         # Add enough metrics to trigger error reset (every 10 metrics)
-        for i in range(12):
+        for _i in range(12):
             metrics = LoadMetrics(
                 concurrent_requests=1,
                 memory_usage_percent=50.0,

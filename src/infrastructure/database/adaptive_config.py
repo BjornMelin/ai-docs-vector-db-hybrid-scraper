@@ -5,6 +5,7 @@ performance metrics, and operational patterns.
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from dataclasses import dataclass
@@ -157,10 +158,8 @@ class AdaptiveConfigManager:
         self.is_monitoring = False
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Stopped adaptive configuration monitoring")
 
     async def _monitoring_loop(self) -> None:

@@ -609,7 +609,7 @@ class ConnectionAffinityManager:
         """Select connection using round-robin load balancing."""
         available_connections = [
             conn_id
-            for conn_id in self.connection_stats.keys()
+            for conn_id in self.connection_stats
             if conn_id not in exclude_connections
             and await self._is_connection_available(conn_id)
         ]

@@ -119,7 +119,7 @@ class TestPredictiveLoadMonitor:
         features = predictive_monitor._extract_features_for_prediction()
 
         assert len(features) == 9  # Expected number of features
-        assert all(isinstance(f, (int, float)) for f in features)
+        assert all(isinstance(f, int | float) for f in features)
 
         # Test individual feature types
         avg_requests, peak_requests, memory_trend = features[:3]
@@ -532,7 +532,7 @@ class TestPredictiveLoadMonitor:
         features = predictive_monitor._extract_features_from_window(window_metrics)
 
         assert len(features) == 9
-        assert all(isinstance(f, (int, float)) for f in features)
+        assert all(isinstance(f, int | float) for f in features)
         assert not any(np.isnan(f) for f in features)  # No NaN values
 
     @pytest.mark.asyncio
@@ -605,7 +605,6 @@ class TestPredictiveLoadMonitorEdgeCases:
         monitor = PredictiveLoadMonitor(LoadMonitorConfig())
 
         # Test with zero variance
-        constant_values = [5.0] * 10
         volatility = monitor._calculate_volatility_index(
             [
                 LoadMetrics(
@@ -624,7 +623,7 @@ class TestPredictiveLoadMonitorEdgeCases:
     @pytest.mark.asyncio
     async def test_sklearn_not_available_fallback(self):
         """Test fallback behavior when sklearn is not available."""
-        monitor = PredictiveLoadMonitor(LoadMonitorConfig())
+        PredictiveLoadMonitor(LoadMonitorConfig())
 
         # Mock sklearn import failure
         with patch(

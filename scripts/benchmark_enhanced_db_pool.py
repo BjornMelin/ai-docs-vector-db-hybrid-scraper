@@ -126,7 +126,7 @@ class EnhancedMockConnectionManager:
     async def get_optimal_connection(self, query: str) -> MockConnection:
         """Get optimal connection using affinity and load balancing."""
         # Simulate connection affinity optimization
-        query_hash = hash(query) % len(self.connections)
+        hash(query) % len(self.connections)
 
         # Select connection based on efficiency score
         best_conn = None

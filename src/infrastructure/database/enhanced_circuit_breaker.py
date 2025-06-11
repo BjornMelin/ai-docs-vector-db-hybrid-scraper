@@ -278,9 +278,7 @@ class MultiLevelCircuitBreaker:
 
         elif self.state == CircuitState.HALF_OPEN:
             # Allow limited requests in half-open state
-            if self._half_open_requests < self.config.half_open_max_requests:
-                return False
-            return True
+            return not self._half_open_requests < self.config.half_open_max_requests
 
         return False
 

@@ -74,10 +74,13 @@ class AsyncConnectionManager:
         self.config = config
 
         # Enhanced monitoring components
-        if enable_predictive_monitoring:
+        if load_monitor is not None:
+            # Use provided load monitor (for testing)
+            self.load_monitor = load_monitor
+        elif enable_predictive_monitoring:
             self.load_monitor = PredictiveLoadMonitor(LoadMonitorConfig())
         else:
-            self.load_monitor = load_monitor or LoadMonitor(LoadMonitorConfig())
+            self.load_monitor = LoadMonitor(LoadMonitorConfig())
 
         self.query_monitor = query_monitor or QueryMonitor(
             QueryMonitorConfig(

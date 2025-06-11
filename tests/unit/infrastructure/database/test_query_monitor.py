@@ -225,7 +225,7 @@ class TestQueryMonitor:
         await query_monitor.record_query(query, execution_time)
 
         assert len(query_monitor._query_stats) == 1
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert stats.execution_count == 1
         assert stats.total_time_ms == execution_time
         assert stats.avg_time_ms == execution_time
@@ -247,7 +247,7 @@ class TestQueryMonitor:
         assert query_monitor._slow_queries == 1
 
         # Stats should reflect slow query
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert stats.slow_query_count == 1
 
     @pytest.mark.asyncio
@@ -265,7 +265,7 @@ class TestQueryMonitor:
         # Should be normalized to one pattern
         assert len(query_monitor._query_stats) == 1
 
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert stats.execution_count == 3
         assert stats.query_pattern == "SELECT * FROM users WHERE id = ?"
 
@@ -282,7 +282,7 @@ class TestQueryMonitor:
             await query_monitor.record_query(query, 30.0)
 
         assert len(query_monitor._query_stats) == 1
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert "?" in stats.query_pattern
 
     @pytest.mark.asyncio
@@ -297,7 +297,7 @@ class TestQueryMonitor:
             await query_monitor.record_query(query, 40.0)
 
         assert len(query_monitor._query_stats) == 1
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert "IN (?)" in stats.query_pattern
 
     @pytest.mark.asyncio
@@ -444,7 +444,7 @@ class TestQueryMonitor:
 
         assert len(query_monitor._query_stats) == 1
 
-        stats = list(query_monitor._query_stats.values())[0]
+        stats = next(iter(query_monitor._query_stats.values()))
         assert stats.execution_count == 5
         assert stats.total_time_ms == sum(execution_times)
         assert stats.min_time_ms == min(execution_times)
