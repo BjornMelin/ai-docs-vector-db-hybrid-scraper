@@ -23,7 +23,9 @@ from src.infrastructure.database.load_monitor import LoadMonitorConfig
 from src.infrastructure.database.predictive_monitor import PredictiveLoadMonitor
 from src.infrastructure.database.query_monitor import QueryMonitor
 from src.infrastructure.database.query_monitor import QueryMonitorConfig
-from src.infrastructure.database.enhanced_circuit_breaker import MultiLevelCircuitBreaker
+from src.infrastructure.database.enhanced_circuit_breaker import (
+    MultiLevelCircuitBreaker,
+)
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientState
 
@@ -278,11 +280,11 @@ class TestAsyncConnectionManager:
         mock_session.close = AsyncMock()
 
         connection_manager._session_factory = Mock(return_value=mock_session)
-        
+
         # Mock circuit breaker to actually call the function passed to it
         async def mock_call(func):
             return await func()
-        
+
         connection_manager.circuit_breaker.call = AsyncMock(side_effect=mock_call)
         connection_manager.circuit_breaker.execute = AsyncMock(side_effect=mock_call)
 
