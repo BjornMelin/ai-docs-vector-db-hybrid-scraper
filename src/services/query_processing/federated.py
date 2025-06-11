@@ -1036,9 +1036,9 @@ class FederatedSearchService:
                         prob = count / total_checked
                         diversity_score -= prob * (prob**0.5)  # Modified entropy calculation
 
-                # Normalize diversity score
+                # Normalize diversity score and ensure it's positive
                 max_possible_diversity = len(collection_counts) ** 0.5 if len(collection_counts) > 1 else 1.0
-                diversity_score = min(1.0, diversity_score / max_possible_diversity)
+                diversity_score = max(0.0, min(1.0, abs(diversity_score) / max_possible_diversity))
         else:
             diversity_score = 0.0
 

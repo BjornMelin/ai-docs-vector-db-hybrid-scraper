@@ -188,9 +188,9 @@ class ContentTypeCriteria(BaseModel):
             raise ValueError("Word count must be positive")
 
         # Check min <= max if both are provided
-        if info.field_name == "max_word_count" and info.data.get("min_word_count"):
-            if v < info.data["min_word_count"]:
-                raise ValueError("max_word_count must be >= min_word_count")
+        if (info.field_name == "max_word_count" and info.data.get("min_word_count")
+            and v < info.data["min_word_count"]):
+            raise ValueError("max_word_count must be >= min_word_count")
 
         return v
 
@@ -219,7 +219,7 @@ class ContentTypeFilter(BaseFilter):
         priority: int = 80
     ):
         """Initialize content type filter.
-        
+
         Args:
             name: Filter name
             description: Filter description
@@ -267,14 +267,14 @@ class ContentTypeFilter(BaseFilter):
         context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply content type filtering with semantic analysis.
-        
+
         Args:
             filter_criteria: Content type filter criteria
             context: Optional context with classification models and settings
-            
+
         Returns:
             FilterResult with Qdrant content type filter conditions
-            
+
         Raises:
             FilterError: If content type filter application fails
         """
@@ -393,7 +393,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["doc_type"],
-                    match=models.MatchExcept(except_=exclude_values)
+                    match=models.MatchExcept(**{"except": exclude_values})
                 )
             )
 
@@ -421,7 +421,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_category"],
-                    match=models.MatchExcept(except_=exclude_values)
+                    match=models.MatchExcept(**{"except": exclude_values})
                 )
             )
 
@@ -449,7 +449,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_intent"],
-                    match=models.MatchExcept(except_=exclude_values)
+                    match=models.MatchExcept(**{"except": exclude_values})
                 )
             )
 
@@ -588,7 +588,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["site_name"],
-                    match=models.MatchExcept(except_=criteria.exclude_sites)
+                    match=models.MatchExcept(**{"except": criteria.exclude_sites})
                 )
             )
 
@@ -673,11 +673,11 @@ class ContentTypeFilter(BaseFilter):
         metadata: dict[str, Any] | None = None
     ) -> ContentClassification:
         """Classify content type, category, intent, and quality.
-        
+
         Args:
             content: Text content to classify
             metadata: Optional metadata about the content
-            
+
         Returns:
             ContentClassification with analysis results
         """
@@ -703,7 +703,10 @@ class ContentTypeFilter(BaseFilter):
         # Extract features
         features.update({
             "word_count": len(content.split()),
-            "has_code": bool(re.search(r'```|<code>|<pre>', content)),
+            "has_code": bool(re.search(r'```|<code>|<pre>', content) or
+                           re.search(r'\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]', content) or
+                           re.search(r'import\s+\w+|from\s+\w+\s+import|#include\s*<', content) or
+                           re.search(r'return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]', content, re.MULTILINE)),
             "has_links": bool(re.search(r'http[s]?://|www\.', content)),
             "programming_languages": self._detect_languages(content_lower)
         })
@@ -724,20 +727,22 @@ class ContentTypeFilter(BaseFilter):
         self, content: str, metadata: dict[str, Any] | None = None
     ) -> DocumentType:
         """Classify document type based on content and metadata."""
-        if metadata:
-            # Check explicit type from metadata
-            if "doc_type" in metadata:
-                try:
-                    return DocumentType(metadata["doc_type"])
-                except ValueError:
-                    pass
+        if metadata and "doc_type" in metadata:
+            try:
+                return DocumentType(metadata["doc_type"])
+            except ValueError:
+                pass
 
         content_lower = content.lower()
 
         # Pattern-based classification
-        if re.search(r'```|<code>|<pre>', content):
+        # Look for code patterns first (most specific)
+        if (re.search(r'```|<code>|<pre>', content) or
+            re.search(r'\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]', content) or
+            re.search(r'import\s+\w+|from\s+\w+\s+import|#include\s*<', content) or
+            re.search(r'return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]', content, re.MULTILINE)):
             return DocumentType.CODE
-        elif re.search(r'#+\s+|^\*\s+|\[.*\]\(.*\)', content):
+        elif re.search(r'#+\s+|^\*\s+|\[.*\]\(.*\)', content, re.MULTILINE):
             return DocumentType.MARKDOWN
         elif re.search(r'<html>|<body>|<div>', content):
             return DocumentType.HTML
@@ -755,7 +760,7 @@ class ContentTypeFilter(BaseFilter):
     ) -> ContentCategory:
         """Classify content category."""
         # Check for programming/development indicators
-        if any(lang in content_lower for lang in self.language_patterns.keys()):
+        if any(lang in content_lower for lang in self.language_patterns):
             return ContentCategory.PROGRAMMING
 
         # Check for tutorial indicators

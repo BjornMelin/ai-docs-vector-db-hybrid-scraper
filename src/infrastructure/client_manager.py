@@ -97,6 +97,7 @@ class ClientManager:
         self._task_queue_manager: Any = None
         self._content_intelligence_service: Any = None
         self._database_manager: AsyncConnectionManager | None = None
+        self._advanced_search_orchestrator: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -578,6 +579,24 @@ class ClientManager:
                     logger.info("Initialized AsyncConnectionManager")
 
         return self._database_manager
+
+    async def get_advanced_search_orchestrator(self):
+        """Get or create AdvancedSearchOrchestrator instance."""
+        if self._advanced_search_orchestrator is None:
+            if "advanced_search_orchestrator" not in self._service_locks:
+                self._service_locks["advanced_search_orchestrator"] = asyncio.Lock()
+
+            async with self._service_locks["advanced_search_orchestrator"]:
+                if self._advanced_search_orchestrator is None:
+                    from src.services.query_processing import AdvancedSearchOrchestrator
+
+                    self._advanced_search_orchestrator = AdvancedSearchOrchestrator(
+                        enable_all_features=True,
+                        enable_performance_optimization=True
+                    )
+                    logger.info("Initialized AdvancedSearchOrchestrator")
+
+        return self._advanced_search_orchestrator
 
     async def _get_or_create_client(
         self,

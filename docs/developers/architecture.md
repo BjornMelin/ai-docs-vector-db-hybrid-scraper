@@ -499,7 +499,7 @@ flowchart TD
     class I,J,K storage
 ```
 
-### Search Pipeline
+### Enhanced Search Pipeline with Advanced Filtering
 
 ```mermaid
 flowchart TD
@@ -512,23 +512,42 @@ flowchart TD
     E -->|Hit| F["📤 Cached Results"]
     E -->|Miss| G["🗄️ Qdrant Query API<br/>Multi-stage retrieval<br/>Prefetch optimization"]
     
-    G --> H["📊 Fusion Algorithm<br/>Dense + Sparse fusion<br/>RRF scoring"]
-    H --> I["🎯 BGE Reranking<br/>Semantic reordering<br/>Relevance optimization"]
-    I --> J["💾 Cache Storage<br/>Smart TTL<br/>Result caching"]
-    J --> K["📋 Final Results"]
+    G --> H["🔧 Advanced Filtering Pipeline"]
+    H --> H1["📅 Temporal Filter<br/>Date-based + Freshness"]
+    H --> H2["📋 Content Type Filter<br/>Document classification"]
+    H --> H3["🏷️ Metadata Filter<br/>Boolean logic operations"]
+    H --> H4["🎯 Similarity Threshold<br/>Adaptive controls"]
+    H --> H5["🔗 Filter Composer<br/>Complex combinations"]
     
-    F --> L["📤 Response"]
-    K --> L
+    H1 --> I["📊 Result Fusion<br/>Dense + Sparse + Filtered"]
+    H2 --> I
+    H3 --> I
+    H4 --> I
+    H5 --> I
+    
+    I --> J["🎯 BGE Reranking<br/>Semantic reordering<br/>Relevance optimization"]
+    J --> K["👤 Personalized Ranking<br/>User-based optimization"]
+    K --> L["🗂️ Result Clustering<br/>HDBSCAN organization"]
+    L --> M["🔍 Query Expansion<br/>Synonym enhancement"]
+    M --> N["🌐 Federated Search<br/>Cross-collection results"]
+    N --> O["💾 Cache Storage<br/>Smart TTL<br/>Result caching"]
+    O --> P["📋 Final Results"]
+    
+    F --> Q["📤 Response"]
+    P --> Q
     
     classDef query fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef processing fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef cache fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef results fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef filtering fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef cache fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef results fill:#ffebee,stroke:#c62828,stroke-width:2px
     
     class A,B query
-    class C,D,G,H,I processing
-    class E,J cache
-    class F,K,L results
+    class C,D,G processing
+    class H,H1,H2,H3,H4,H5 filtering
+    class E,O cache
+    class F,P,Q results
+    class I,J,K,L,M,N processing
 ```
 
 ## 🗄️ Enhanced Database Connection Pool Architecture

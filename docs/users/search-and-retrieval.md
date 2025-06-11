@@ -160,6 +160,27 @@ query: "deployment strategies" filter: date>2024-01-01
 query: "configuration" filter: project=production
 ```
 
+### Federated Search (Cross-Collection)
+
+**New in this version**: Search across multiple collections simultaneously for comprehensive results.
+
+```text
+# Search across all available collections
+query: "microservices architecture" collections: all
+
+# Search specific collections with ranking
+query: "API authentication" collections: documentation,examples,tutorials
+
+# Weighted search across collections
+query: "performance optimization" weights: documentation=0.5,benchmarks=0.8,examples=0.3
+```
+
+**Benefits**:
+- **Comprehensive coverage**: Find information across all your data sources
+- **Intelligent ranking**: Results are ranked across collections for relevance
+- **Adaptive search modes**: System chooses optimal search strategy per collection
+- **Result fusion**: Advanced algorithms combine results from multiple sources
+
 ### Combining Search Types
 
 - **Broad + Specific**: Start broad ("web scraping"), then narrow ("browser automation headless mode")

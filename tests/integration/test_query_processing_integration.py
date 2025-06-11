@@ -8,7 +8,7 @@ from src.services.query_processing.models import QueryComplexity
 from src.services.query_processing.models import QueryIntent
 from src.services.query_processing.models import QueryProcessingRequest
 from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.orchestrator import QueryProcessingOrchestrator
+from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
 from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
@@ -125,7 +125,7 @@ async def complete_pipeline(
 ):
     """Create a complete query processing pipeline with all components."""
     # Create orchestrator with core dependencies
-    orchestrator = QueryProcessingOrchestrator(
+    orchestrator = AdvancedSearchOrchestrator(
         embedding_manager=mock_embedding_manager,
         qdrant_service=mock_qdrant_service,
         hyde_engine=mock_hyde_engine,

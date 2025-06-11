@@ -809,7 +809,9 @@ class ResultClusteringService:
                 similarity = np.dot(cluster_embeddings[i], cluster_embeddings[j])
                 similarities.append(similarity)
 
-        return float(np.mean(similarities)) if similarities else 0.0
+        # Ensure coherence score is bounded between 0 and 1
+        coherence = float(np.mean(similarities)) if similarities else 0.0
+        return max(0.0, min(1.0, coherence))
 
     def _calculate_cluster_confidence(
         self,

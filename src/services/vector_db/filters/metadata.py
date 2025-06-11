@@ -320,17 +320,24 @@ class MetadataFilter(BaseFilter):
         if criteria.exclude_matches:
             for field, value in criteria.exclude_matches.items():
                 if isinstance(value, list):
+                    # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
+                    exclude_values = [
+                        str(v) if isinstance(v, bool) or not isinstance(v, (str, int)) else v
+                        for v in value
+                    ]
                     conditions.append(
                         models.FieldCondition(
                             key=field,
-                            match=models.MatchExcept(except_=value)
+                            match=models.MatchExcept(**{"except": exclude_values})
                         )
                     )
                 else:
+                    # Convert value to string if it's not string/int (but exclude bool even though it's int)
+                    exclude_value = str(value) if isinstance(value, bool) or not isinstance(value, (str, int)) else value
                     conditions.append(
                         models.FieldCondition(
                             key=field,
-                            match=models.MatchExcept(except_=[value])
+                            match=models.MatchExcept(**{"except": [exclude_value]})
                         )
                     )
 
@@ -405,9 +412,11 @@ class MetadataFilter(BaseFilter):
                     match=models.MatchValue(value=value)
                 )
             elif operator == FieldOperator.NE:
+                # Convert value to string if it's not string/int (but exclude bool even though it's int)
+                exclude_value = str(value) if isinstance(value, bool) or not isinstance(value, (str, int)) else value
                 return models.FieldCondition(
                     key=field,
-                    match=models.MatchExcept(except_=[value])
+                    match=models.MatchExcept(**{"except": [exclude_value]})
                 )
 
             # Comparison operators
@@ -439,9 +448,14 @@ class MetadataFilter(BaseFilter):
                     match=models.MatchAny(any=values)
                 )
             elif operator == FieldOperator.NIN:
+                # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
+                exclude_values = [
+                    str(v) if isinstance(v, bool) or not isinstance(v, (str, int)) else v
+                    for v in values
+                ]
                 return models.FieldCondition(
                     key=field,
-                    match=models.MatchExcept(except_=values)
+                    match=models.MatchExcept(**{"except": exclude_values})
                 )
 
             # String operators (implemented as text search)

@@ -13,6 +13,7 @@ from . import content_intelligence
 from . import deployment
 from . import documents
 from . import embeddings
+from . import filtering_tools
 from . import lightweight_scrape
 from . import payload_indexing
 from . import projects
@@ -29,6 +30,7 @@ __all__ = [
     "deployment",
     "documents",
     "embeddings",
+    "filtering_tools",
     "lightweight_scrape",
     "payload_indexing",
     "projects",

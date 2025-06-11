@@ -51,11 +51,37 @@ mcp scrape --url "https://docs.framework.com" --auto-index
 # Add local documents  
 mcp add-documents --path "./company-docs" --collection "internal-knowledge"
 
-# Search across everything
+# Search across everything with federated search
 mcp search --query "authentication best practices" --collections "all"
+
+# Advanced federated search with weighting
+mcp search --query "production deployment" --federated \
+  --collections "docs,examples,tutorials" \
+  --weights "docs=0.6,examples=0.8,tutorials=0.4"
 ```
 
 **When to use**: Team knowledge management, research projects, documentation consolidation
+
+### Recipe 4: Cross-Collection Research
+
+**Goal**: Find comprehensive information across multiple specialized collections
+
+```bash
+# Set up specialized collections
+mcp scrape --url "https://api-docs.com" --collection "api-reference"
+mcp scrape --url "https://tutorials.com" --collection "tutorials"  
+mcp scrape --url "https://examples.com" --collection "code-examples"
+
+# Federated search with smart collection selection
+mcp search --query "payment gateway integration" --federated \
+  --strategy "smart_routing" --scope "comprehensive"
+
+# Performance-based federated search
+mcp search --query "database optimization" --federated \
+  --strategy "performance_based" --max-collections 3
+```
+
+**When to use**: Complex research requiring multiple perspectives, comprehensive analysis
 
 ## 📚 Content Research Examples
 
@@ -105,10 +131,13 @@ mcp search --query "API rate limits" --collection "comp-analysis"
 **Analysis Queries**:
 
 ```bash
-# Compare features across competitors
-mcp search --query "authentication methods supported"
-mcp search --query "enterprise features availability"
-mcp search --query "integration capabilities"
+# Compare features across competitors using federated search
+mcp search --query "authentication methods supported" --federated \
+  --collections "comp-analysis" --strategy "content_based"
+mcp search --query "enterprise features availability" --federated \
+  --collections "comp-analysis" --merging "diversity_optimized"
+mcp search --query "integration capabilities" --federated \
+  --collections "comp-analysis" --scope "comprehensive"
 ```
 
 ### Product Research
@@ -166,10 +195,13 @@ mcp search --query "webhook configuration setup"
 mcp scrape --url "https://solution-a.com/docs" --collection "evaluation"
 mcp scrape --url "https://solution-b.com/docs" --collection "evaluation"
 
-# Compare specific aspects
-mcp search --query "performance characteristics throughput" --collection "evaluation"
-mcp search --query "maintenance requirements support" --collection "evaluation"
-mcp search --query "cost structure pricing model" --collection "evaluation"
+# Compare specific aspects using federated search for comprehensive analysis
+mcp search --query "performance characteristics throughput" --federated \
+  --collections "evaluation" --merging "score_based" --scope "comprehensive"
+mcp search --query "maintenance requirements support" --federated \
+  --collections "evaluation" --strategy "smart_routing"
+mcp search --query "cost structure pricing model" --federated \
+  --collections "evaluation" --merging "temporal" --enable-dedup
 ```
 
 ### Problem-Solving Workflows
@@ -236,6 +268,128 @@ mcp scrape --url "https://competitor.com/resources" --save-metadata
 # Identify content themes
 mcp search --query "content topics popular themes"
 mcp search --query "content gaps opportunity areas"
+```
+
+## 🔍 Advanced Filtering Examples
+
+### Temporal Filtering for Time-Sensitive Content
+
+**Scenario**: Finding recent information and tracking content freshness
+
+```bash
+# Find content updated in the last month
+mcp search --query "API changes" --temporal-filter \
+  --date-range "2024-12-01:2024-12-31" --freshness-threshold 0.8
+
+# Search for the most recent deployment guides
+mcp search --query "deployment guide" --temporal-filter \
+  --freshness-decay 0.1 --prioritize-recent
+
+# Track content changes over time
+mcp search --query "security updates" --temporal-filter \
+  --date-range "2024-01-01:now" --group-by-month
+```
+
+### Content Type and Semantic Filtering  
+
+**Scenario**: Finding specific types of content with precision
+
+```bash
+# Search only API reference documents
+mcp search --query "authentication methods" --content-filter \
+  --document-types "api_reference,technical_spec"
+
+# Find code examples and implementations
+mcp search --query "database connection" --content-filter \
+  --semantic-categories "code_example,implementation" \
+  --confidence-threshold 0.7
+
+# Filter by content complexity level
+mcp search --query "getting started" --content-filter \
+  --semantic-categories "beginner,tutorial" --exclude-advanced
+```
+
+### Complex Metadata Filtering
+
+**Scenario**: Precise filtering using document metadata with boolean logic
+
+```bash
+# Find Python web framework content excluding deprecated
+mcp search --query "web framework tutorial" --metadata-filter \
+  --conditions "language=python AND framework IN (django,fastapi,flask) AND NOT deprecated=true"
+
+# Search for recent, high-quality content
+mcp search --query "machine learning guide" --metadata-filter \
+  --conditions "quality_score>=0.8 AND last_updated>2024-06-01 AND language=en"
+
+# Complex enterprise content filtering
+mcp search --query "deployment strategies" --metadata-filter \
+  --conditions "(category=enterprise OR category=production) AND security_level>=medium"
+```
+
+### Similarity Threshold Optimization
+
+**Scenario**: Fine-tuning search precision for different use cases
+
+```bash
+# High precision search for exact matches
+mcp search --query "specific error message" --similarity-threshold 0.9 \
+  --precision-mode
+
+# Broader exploratory search
+mcp search --query "general concepts" --similarity-threshold 0.6 \
+  --discovery-mode --adaptive-threshold
+
+# Dynamic threshold based on query complexity
+mcp search --query "complex architectural patterns" \
+  --adaptive-threshold --complexity-aware --target-results 15
+```
+
+### Filter Composition and Advanced Combinations
+
+**Scenario**: Combining multiple filter types for precise content discovery
+
+```bash
+# Comprehensive filtered search combining all filter types
+mcp search --query "production deployment best practices" \
+  --temporal-filter --date-range "2024-01-01:now" \
+  --content-filter --document-types "guide,best_practice" \
+  --metadata-filter --conditions "environment=production AND reviewed=true" \
+  --similarity-threshold 0.75 \
+  --compose-filters "AND"
+
+# Alternative content discovery with OR composition
+mcp search --query "API documentation" \
+  --content-filter --document-types "api_reference" \
+  --metadata-filter --conditions "language=python" \
+  --compose-filters "OR" --fallback-enabled
+
+# Complex enterprise search with weighted filters
+mcp search --query "security implementation" \
+  --temporal-filter --freshness-weight 0.3 \
+  --content-filter --semantic-weight 0.5 \
+  --metadata-filter --metadata-weight 0.7 \
+  --combine-weighted
+```
+
+### Personalized and Ranked Results
+
+**Scenario**: Customizing results based on user preferences and context
+
+```bash
+# Personalized search based on user profile
+mcp search --query "database optimization" --personalized \
+  --user-profile "experience=intermediate,languages=python,role=backend" \
+  --learning-enabled
+
+# Context-aware ranking with user preferences
+mcp search --query "testing strategies" --ranked \
+  --context "framework=django,project_size=large" \
+  --rank-strategy "hybrid" --preference-learning
+
+# Collaborative filtering based search
+mcp search --query "deployment tools" --personalized \
+  --similar-users-weight 0.4 --content-based-weight 0.6
 ```
 
 ## 🎯 Specialized Use Cases
@@ -368,8 +522,16 @@ mcp search --query "troubleshooting guide" &
 mcp search --query "best practices" &
 wait
 
-# Complex analysis workflows that were slow before
-mcp search --query "detailed technical analysis" --use-hyde --limit 20
+# Complex federated analysis workflows that benefit from enhanced performance
+mcp search --query "detailed technical analysis" --federated \
+  --collections "docs,examples,tutorials" --use-hyde --limit 20
+
+# Parallel federated searches across different collection groups
+mcp search --query "backend architecture" --federated \
+  --collections "api-docs,infrastructure" --mode "parallel" &
+mcp search --query "frontend patterns" --federated \
+  --collections "ui-docs,examples" --mode "parallel" &
+wait
 ```
 
 ### Efficient Scraping Workflows

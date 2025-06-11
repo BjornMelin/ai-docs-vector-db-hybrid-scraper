@@ -8,7 +8,7 @@ from src.services.query_processing.models import QueryIntent
 from src.services.query_processing.models import QueryProcessingRequest
 from src.services.query_processing.models import QueryProcessingResponse
 from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.orchestrator import QueryProcessingOrchestrator
+from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def mock_hyde_engine():
 @pytest.fixture
 def orchestrator(mock_embedding_manager, mock_qdrant_service, mock_hyde_engine):
     """Create an orchestrator instance."""
-    return QueryProcessingOrchestrator(
+    return AdvancedSearchOrchestrator(
         embedding_manager=mock_embedding_manager,
         qdrant_service=mock_qdrant_service,
         hyde_engine=mock_hyde_engine,
@@ -98,8 +98,8 @@ def sample_request():
     )
 
 
-class TestQueryProcessingOrchestrator:
-    """Test the QueryProcessingOrchestrator class."""
+class TestAdvancedSearchOrchestrator:
+    """Test the AdvancedSearchOrchestrator class."""
 
     def test_initialization(self, orchestrator):
         """Test orchestrator initialization."""
@@ -436,7 +436,7 @@ class TestQueryProcessingOrchestrator:
         """Test cache manager integration."""
         mock_cache_manager = AsyncMock()
 
-        orchestrator = QueryProcessingOrchestrator(
+        orchestrator = AdvancedSearchOrchestrator(
             embedding_manager=mock_embedding_manager,
             qdrant_service=mock_qdrant_service,
             hyde_engine=mock_hyde_engine,
