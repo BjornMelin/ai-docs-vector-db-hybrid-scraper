@@ -280,9 +280,9 @@ class SearchStrategySelector:
             and SearchStrategy.RERANKED not in adjusted["fallbacks"]
         ):
             # Add reranking as primary or fallback
-            adjusted["fallbacks"] = [SearchStrategy.RERANKED] + adjusted[
-                "fallbacks"
-            ][:2]
+            adjusted["fallbacks"] = [SearchStrategy.RERANKED] + adjusted["fallbacks"][
+                :2
+            ]
 
         # Limit fallback strategies based on complexity
         max_fallbacks = complexity_config["max_fallbacks"]
@@ -364,9 +364,9 @@ class SearchStrategySelector:
             not in [adjusted["primary"]] + adjusted["fallbacks"]
         ):
             # These languages have rich documentation, semantic search works well
-            adjusted["fallbacks"] = [SearchStrategy.SEMANTIC] + adjusted[
-                "fallbacks"
-            ][:2]
+            adjusted["fallbacks"] = [SearchStrategy.SEMANTIC] + adjusted["fallbacks"][
+                :2
+            ]
 
         # Framework context
         if (
@@ -376,15 +376,12 @@ class SearchStrategySelector:
             not in [adjusted["primary"]] + adjusted["fallbacks"]
         ):
             # Framework-specific queries often benefit from filtered search
-            adjusted["fallbacks"] = [SearchStrategy.FILTERED] + adjusted[
-                "fallbacks"
-            ][:2]
+            adjusted["fallbacks"] = [SearchStrategy.FILTERED] + adjusted["fallbacks"][
+                :2
+            ]
 
         # Error code context
-        if (
-            "error_code" in context
-            and adjusted["primary"] != SearchStrategy.FILTERED
-        ):
+        if "error_code" in context and adjusted["primary"] != SearchStrategy.FILTERED:
             # Error codes benefit from precise filtering
             adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][:1]
             adjusted["primary"] = SearchStrategy.FILTERED
