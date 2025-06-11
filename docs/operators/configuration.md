@@ -1293,6 +1293,797 @@ python -m src.manage_config validate-environment
 python -m src.manage_config show-config --format yaml
 ```
 
+## Advanced Configuration Management (BJO-87)
+
+### Configuration Management System Overview
+
+The system includes a comprehensive configuration management framework that provides:
+
+- **Interactive Configuration Wizard**: Guided setup with four modes (template, interactive, migration, import)
+- **Configuration Templates**: Five optimized templates for different deployment scenarios
+- **Backup and Restore System**: Git-like versioning with metadata and compression
+- **Migration Framework**: Automated schema upgrades with rollback support
+- **Enhanced Validation**: Beyond Pydantic with business rules and automatic fixes
+- **CLI Management**: Rich command-line interface for all configuration operations
+
+### Production Backup and Restore Procedures
+
+#### 1. Configuration Backup Management
+
+```bash
+#!/bin/bash
+# production-backup-procedure.sh
+# Production configuration backup procedure
+
+set -e
+
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+ENVIRONMENT="${DEPLOY_ENV:-production}"
+CONFIG_DIR="/app/config"
+BACKUP_DIR="/backup/config"
+
+echo "=== Configuration Backup Procedure ==="
+echo "Environment: $ENVIRONMENT"
+echo "Backup Date: $BACKUP_DATE"
+
+# 1. Create backup with metadata
+uv run python -m src.cli.main config backup create \
+  "$CONFIG_DIR/production.json" \
+  --description "Scheduled production backup - $(date)" \
+  --tags "production,scheduled,backup-$BACKUP_DATE" \
+  --compress \
+  --incremental
+
+# 2. Export backup for external storage
+BACKUP_ID=$(uv run python -c "
+from src.config.backup_restore import ConfigBackupManager
+manager = ConfigBackupManager()
+backups = manager.list_backups(limit=1)
+print(backups[0].backup_id if backups else '')
+")
+
+if [ -n "$BACKUP_ID" ]; then
+    # Export to external storage
+    uv run python -m src.cli.main config backup export \
+      "$BACKUP_ID" \
+      --output "$BACKUP_DIR/production-backup-$BACKUP_DATE.json.gz"
+    
+    echo "✓ Backup exported to: $BACKUP_DIR/production-backup-$BACKUP_DATE.json.gz"
+    
+    # Verify backup integrity
+    uv run python -m src.cli.main config backup verify "$BACKUP_ID"
+    echo "✓ Backup integrity verified"
+else
+    echo "✗ Failed to create backup"
+    exit 1
+fi
+
+# 3. Clean up old backups (keep last 30 days)
+uv run python -m src.cli.main config backup cleanup \
+  --config-name production \
+  --keep-days 30 \
+  --keep-count 50
+
+echo "✓ Production backup completed successfully"
+```
+
+#### 2. Disaster Recovery Restore Procedure
+
+```bash
+#!/bin/bash
+# disaster-recovery-restore.sh
+# Production disaster recovery restore procedure
+
+set -e
+
+RESTORE_SOURCE=${1:-"latest"}
+ENVIRONMENT=${2:-"production"}
+CONFIG_PATH="/app/config/production.json"
+
+echo "=== Disaster Recovery Configuration Restore ==="
+echo "Restore Source: $RESTORE_SOURCE"
+echo "Target Environment: $ENVIRONMENT"
+
+# 1. List available backups
+echo "Available backups:"
+uv run python -m src.cli.main config backup list \
+  --config-name production \
+  --environment production \
+  --limit 10
+
+# 2. Restore from backup
+if [ "$RESTORE_SOURCE" = "latest" ]; then
+    # Get latest backup ID
+    BACKUP_ID=$(uv run python -c "
+from src.config.backup_restore import ConfigBackupManager
+manager = ConfigBackupManager()
+backups = manager.list_backups(config_name='production', limit=1)
+print(backups[0].backup_id if backups else '')
+")
+else
+    BACKUP_ID="$RESTORE_SOURCE"
+fi
+
+if [ -n "$BACKUP_ID" ]; then
+    echo "Restoring from backup: $BACKUP_ID"
+    
+    # Create pre-restore backup
+    uv run python -m src.cli.main config backup create \
+      "$CONFIG_PATH" \
+      --description "Pre-disaster-recovery backup" \
+      --tags "pre-restore,disaster-recovery" \
+      --force
+    
+    # Perform restore
+    uv run python -m src.cli.main config backup restore \
+      "$BACKUP_ID" \
+      --target "$CONFIG_PATH" \
+      --create-pre-restore-backup \
+      --force
+    
+    echo "✓ Configuration restored from backup"
+    
+    # 3. Validate restored configuration
+    echo "Validating restored configuration..."
+    uv run python -m src.cli.main config validate \
+      "$CONFIG_PATH" \
+      --health-check \
+      --comprehensive
+    
+    # 4. Test service connections
+    echo "Testing service connections..."
+    if uv run python -m src.cli.main config validate \
+         "$CONFIG_PATH" --health-check --exit-on-error; then
+        echo "✓ Disaster recovery completed successfully"
+    else
+        echo "✗ Service validation failed after restore"
+        exit 1
+    fi
+else
+    echo "✗ No backup found for restore"
+    exit 1
+fi
+```
+
+#### 3. Backup Retention and Cleanup Policies
+
+```bash
+#!/bin/bash
+# backup-retention-policy.sh
+# Automated backup retention and cleanup
+
+# Production backup retention policy
+PRODUCTION_KEEP_DAYS=90
+PRODUCTION_KEEP_COUNT=100
+
+# Staging backup retention policy  
+STAGING_KEEP_DAYS=30
+STAGING_KEEP_COUNT=50
+
+# Development backup retention policy
+DEVELOPMENT_KEEP_DAYS=7
+DEVELOPMENT_KEEP_COUNT=20
+
+echo "=== Backup Retention Policy Enforcement ==="
+
+# Apply production retention policy
+echo "Applying production backup retention policy..."
+DELETED_PROD=$(uv run python -m src.cli.main config backup cleanup \
+  --config-name production \
+  --keep-days "$PRODUCTION_KEEP_DAYS" \
+  --keep-count "$PRODUCTION_KEEP_COUNT" \
+  --dry-run=false \
+  --output-json | jq '.deleted_count')
+
+echo "Production: Cleaned up $DELETED_PROD old backups"
+
+# Apply staging retention policy
+echo "Applying staging backup retention policy..."
+DELETED_STAGING=$(uv run python -m src.cli.main config backup cleanup \
+  --config-name staging \
+  --keep-days "$STAGING_KEEP_DAYS" \
+  --keep-count "$STAGING_KEEP_COUNT" \
+  --dry-run=false \
+  --output-json | jq '.deleted_count')
+
+echo "Staging: Cleaned up $DELETED_STAGING old backups"
+
+# Apply development retention policy
+echo "Applying development backup retention policy..."
+DELETED_DEV=$(uv run python -m src.cli.main config backup cleanup \
+  --config-name development \
+  --keep-days "$DEVELOPMENT_KEEP_DAYS" \
+  --keep-count "$DEVELOPMENT_KEEP_COUNT" \
+  --dry-run=false \
+  --output-json | jq '.deleted_count')
+
+echo "Development: Cleaned up $DELETED_DEV old backups"
+
+# Generate retention report
+cat > /tmp/backup-retention-report.json << EOF
+{
+  "retention_policy_run": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "policies_applied": {
+    "production": {
+      "keep_days": $PRODUCTION_KEEP_DAYS,
+      "keep_count": $PRODUCTION_KEEP_COUNT,
+      "deleted_count": $DELETED_PROD
+    },
+    "staging": {
+      "keep_days": $STAGING_KEEP_DAYS,
+      "keep_count": $STAGING_KEEP_COUNT,
+      "deleted_count": $DELETED_STAGING
+    },
+    "development": {
+      "keep_days": $DEVELOPMENT_KEEP_DAYS,
+      "keep_count": $DEVELOPMENT_KEEP_COUNT,
+      "deleted_count": $DELETED_DEV
+    }
+  },
+  "total_deleted": $((DELETED_PROD + DELETED_STAGING + DELETED_DEV))
+}
+EOF
+
+echo "✓ Backup retention policy enforcement completed"
+echo "Report saved to: /tmp/backup-retention-report.json"
+```
+
+### Production Migration Operations
+
+#### 1. Schema Migration Planning and Execution
+
+```bash
+#!/bin/bash
+# production-migration-procedure.sh
+# Production configuration schema migration procedure
+
+set -e
+
+TARGET_VERSION=${1:-"latest"}
+CONFIG_PATH="/app/config/production.json"
+ENVIRONMENT="production"
+
+echo "=== Production Configuration Migration ==="
+echo "Target Version: $TARGET_VERSION"
+echo "Configuration: $CONFIG_PATH"
+
+# 1. Pre-migration backup
+echo "Creating pre-migration backup..."
+PRE_MIGRATION_BACKUP=$(uv run python -m src.cli.main config backup create \
+  "$CONFIG_PATH" \
+  --description "Pre-migration backup for version $TARGET_VERSION" \
+  --tags "pre-migration,version-$TARGET_VERSION,production" \
+  --compress \
+  --output-json | jq -r '.backup_id')
+
+echo "✓ Pre-migration backup created: $PRE_MIGRATION_BACKUP"
+
+# 2. Create and validate migration plan
+echo "Creating migration plan..."
+uv run python -m src.cli.main config migrate plan \
+  "$CONFIG_PATH" \
+  "$TARGET_VERSION" \
+  --output-json > /tmp/migration-plan.json
+
+# Validate migration plan
+PLAN_VALID=$(jq '.is_valid' /tmp/migration-plan.json)
+REQUIRES_DOWNTIME=$(jq '.requires_downtime' /tmp/migration-plan.json)
+ESTIMATED_DURATION=$(jq -r '.estimated_duration' /tmp/migration-plan.json)
+
+if [ "$PLAN_VALID" != "true" ]; then
+    echo "✗ Migration plan validation failed"
+    jq '.validation_errors[]' /tmp/migration-plan.json
+    exit 1
+fi
+
+echo "✓ Migration plan validated"
+echo "  Requires downtime: $REQUIRES_DOWNTIME"
+echo "  Estimated duration: $ESTIMATED_DURATION"
+
+# 3. Execute migration with monitoring
+if [ "$REQUIRES_DOWNTIME" = "true" ]; then
+    echo "⚠️  This migration requires downtime"
+    echo "Proceeding with service maintenance window..."
+    
+    # Put system in maintenance mode
+    # kubectl scale deployment ai-docs-api --replicas=0
+fi
+
+echo "Executing migration..."
+MIGRATION_RESULT=$(uv run python -m src.cli.main config migrate apply \
+  "$CONFIG_PATH" \
+  "$TARGET_VERSION" \
+  --force \
+  --output-json)
+
+MIGRATION_SUCCESS=$(echo "$MIGRATION_RESULT" | jq '.success')
+
+if [ "$MIGRATION_SUCCESS" = "true" ]; then
+    echo "✓ Migration completed successfully"
+    
+    # 4. Post-migration validation
+    echo "Performing post-migration validation..."
+    uv run python -m src.cli.main config validate \
+      "$CONFIG_PATH" \
+      --health-check \
+      --comprehensive
+    
+    # 5. Test system functionality
+    echo "Testing system functionality..."
+    if ./scripts/health-check.sh; then
+        echo "✓ Post-migration health checks passed"
+        
+        # Remove maintenance mode
+        if [ "$REQUIRES_DOWNTIME" = "true" ]; then
+            # kubectl scale deployment ai-docs-api --replicas=3
+            echo "✓ Service restored from maintenance mode"
+        fi
+        
+        echo "✓ Production migration completed successfully"
+    else
+        echo "✗ Post-migration health checks failed"
+        echo "Initiating rollback procedure..."
+        
+        # Rollback to pre-migration backup
+        uv run python -m src.cli.main config backup restore \
+          "$PRE_MIGRATION_BACKUP" \
+          --target "$CONFIG_PATH" \
+          --force
+        
+        echo "✓ Rollback to pre-migration backup completed"
+        exit 1
+    fi
+else
+    echo "✗ Migration failed"
+    echo "$MIGRATION_RESULT" | jq '.errors[]'
+    
+    # Automatic rollback
+    echo "Performing automatic rollback..."
+    uv run python -m src.cli.main config backup restore \
+      "$PRE_MIGRATION_BACKUP" \
+      --target "$CONFIG_PATH" \
+      --force
+    
+    exit 1
+fi
+```
+
+#### 2. Multi-Environment Migration Coordination
+
+```bash
+#!/bin/bash
+# multi-environment-migration.sh
+# Coordinate migrations across multiple environments
+
+set -e
+
+TARGET_VERSION=${1:-"latest"}
+ENVIRONMENTS=("development" "staging" "production")
+
+echo "=== Multi-Environment Migration Coordination ==="
+echo "Target Version: $TARGET_VERSION"
+
+# 1. Validate migration on development first
+echo "Step 1: Development environment migration..."
+./scripts/environment-migration.sh development "$TARGET_VERSION"
+
+if [ $? -ne 0 ]; then
+    echo "✗ Development migration failed - stopping rollout"
+    exit 1
+fi
+
+echo "✓ Development migration successful"
+
+# 2. Migrate staging environment
+echo "Step 2: Staging environment migration..."
+./scripts/environment-migration.sh staging "$TARGET_VERSION"
+
+if [ $? -ne 0 ]; then
+    echo "✗ Staging migration failed - stopping rollout"
+    exit 1
+fi
+
+echo "✓ Staging migration successful"
+
+# 3. Production migration with additional safeguards
+echo "Step 3: Production environment migration..."
+echo "⚠️  Production migration requires manual confirmation"
+read -p "Proceed with production migration? (yes/no): " CONFIRM
+
+if [ "$CONFIRM" = "yes" ]; then
+    ./scripts/production-migration-procedure.sh "$TARGET_VERSION"
+    
+    if [ $? -eq 0 ]; then
+        echo "✓ Production migration successful"
+        echo "✓ Multi-environment migration rollout completed"
+    else
+        echo "✗ Production migration failed"
+        exit 1
+    fi
+else
+    echo "Production migration cancelled by operator"
+    exit 1
+fi
+```
+
+#### 3. Migration Rollback Procedures
+
+```bash
+#!/bin/bash
+# migration-rollback-procedure.sh
+# Production migration rollback procedure
+
+set -e
+
+MIGRATION_ID=${1:-"latest"}
+CONFIG_PATH="/app/config/production.json"
+
+echo "=== Migration Rollback Procedure ==="
+echo "Migration ID: $MIGRATION_ID"
+echo "Configuration: $CONFIG_PATH"
+
+# 1. Identify migration to rollback
+if [ "$MIGRATION_ID" = "latest" ]; then
+    # Get last applied migration
+    MIGRATION_ID=$(uv run python -c "
+from src.config.migrations import ConfigMigrationManager
+manager = ConfigMigrationManager()
+history = manager.get_migration_history('$CONFIG_PATH')
+print(history[-1]['migration_id'] if history else '')
+")
+fi
+
+if [ -z "$MIGRATION_ID" ]; then
+    echo "✗ No migration found to rollback"
+    exit 1
+fi
+
+echo "Rolling back migration: $MIGRATION_ID"
+
+# 2. Create pre-rollback backup
+echo "Creating pre-rollback backup..."
+PRE_ROLLBACK_BACKUP=$(uv run python -m src.cli.main config backup create \
+  "$CONFIG_PATH" \
+  --description "Pre-rollback backup for migration $MIGRATION_ID" \
+  --tags "pre-rollback,migration-$MIGRATION_ID,production" \
+  --compress \
+  --output-json | jq -r '.backup_id')
+
+echo "✓ Pre-rollback backup created: $PRE_ROLLBACK_BACKUP"
+
+# 3. Execute rollback
+echo "Executing migration rollback..."
+ROLLBACK_RESULT=$(uv run python -m src.cli.main config migrate rollback \
+  "$CONFIG_PATH" \
+  "$MIGRATION_ID" \
+  --force \
+  --output-json)
+
+ROLLBACK_SUCCESS=$(echo "$ROLLBACK_RESULT" | jq '.success')
+
+if [ "$ROLLBACK_SUCCESS" = "true" ]; then
+    echo "✓ Migration rollback completed"
+    
+    # 4. Validate rolled-back configuration
+    echo "Validating rolled-back configuration..."
+    uv run python -m src.cli.main config validate \
+      "$CONFIG_PATH" \
+      --health-check \
+      --comprehensive
+    
+    # 5. Test system functionality
+    echo "Testing system functionality after rollback..."
+    if ./scripts/health-check.sh; then
+        echo "✓ Post-rollback health checks passed"
+        echo "✓ Migration rollback completed successfully"
+    else
+        echo "✗ Post-rollback health checks failed"
+        echo "System may require manual intervention"
+        exit 1
+    fi
+else
+    echo "✗ Migration rollback failed"
+    echo "$ROLLBACK_RESULT" | jq '.errors[]'
+    exit 1
+fi
+```
+
+### Configuration Template Management
+
+#### 1. Template Deployment and Customization
+
+```bash
+#!/bin/bash
+# template-deployment.sh
+# Deploy and customize configuration templates
+
+set -e
+
+TEMPLATE_NAME=${1:-"production"}
+ENVIRONMENT=${2:-"production"}
+OUTPUT_PATH=${3:-"config/${ENVIRONMENT}.json"}
+
+echo "=== Configuration Template Deployment ==="
+echo "Template: $TEMPLATE_NAME"
+echo "Environment: $ENVIRONMENT"
+echo "Output: $OUTPUT_PATH"
+
+# 1. Apply base template
+echo "Applying base template..."
+uv run python -m src.cli.main config template apply \
+  "$TEMPLATE_NAME" \
+  --output "$OUTPUT_PATH"
+
+# 2. Apply environment-specific overrides
+case "$ENVIRONMENT" in
+    "production")
+        echo "Applying production optimizations..."
+        # High-performance settings
+        export AI_DOCS__PERFORMANCE__MAX_CONCURRENT_REQUESTS=50
+        export AI_DOCS__CRAWL4AI__MEMORY_THRESHOLD_PERCENT=80.0
+        export AI_DOCS__CRAWL4AI__MAX_SESSION_PERMIT=50
+        export AI_DOCS__CACHE__REDIS_POOL_SIZE=50
+        ;;
+        
+    "staging")
+        echo "Applying staging configurations..."
+        # Moderate settings for staging
+        export AI_DOCS__PERFORMANCE__MAX_CONCURRENT_REQUESTS=20
+        export AI_DOCS__CRAWL4AI__MEMORY_THRESHOLD_PERCENT=75.0
+        export AI_DOCS__CRAWL4AI__MAX_SESSION_PERMIT=25
+        ;;
+        
+    "development")
+        echo "Applying development configurations..."
+        # Conservative settings for development
+        export AI_DOCS__DEBUG=true
+        export AI_DOCS__LOG_LEVEL=DEBUG
+        export AI_DOCS__PERFORMANCE__MAX_CONCURRENT_REQUESTS=10
+        export AI_DOCS__CRAWL4AI__MEMORY_THRESHOLD_PERCENT=70.0
+        export AI_DOCS__CRAWL4AI__MAX_SESSION_PERMIT=10
+        ;;
+esac
+
+# 3. Validate customized configuration
+echo "Validating customized configuration..."
+uv run python -m src.cli.main config validate \
+  "$OUTPUT_PATH" \
+  --health-check
+
+echo "✓ Template deployment completed: $OUTPUT_PATH"
+```
+
+#### 2. Custom Template Creation
+
+```bash
+#!/bin/bash
+# create-custom-template.sh
+# Create custom configuration template from existing configuration
+
+set -e
+
+SOURCE_CONFIG=${1:-"config/production.json"}
+TEMPLATE_NAME=${2:-"custom_template"}
+TEMPLATE_DESC=${3:-"Custom template based on production"}
+
+echo "=== Custom Template Creation ==="
+echo "Source: $SOURCE_CONFIG"
+echo "Template: $TEMPLATE_NAME"
+
+# 1. Validate source configuration
+echo "Validating source configuration..."
+uv run python -m src.cli.main config validate "$SOURCE_CONFIG"
+
+# 2. Create template from configuration
+echo "Creating custom template..."
+uv run python -c "
+from src.config.templates import ConfigurationTemplates, ConfigurationTemplate, TemplateMetadata
+from src.config.loader import UnifiedConfig
+import json
+
+# Load source configuration
+with open('$SOURCE_CONFIG', 'r') as f:
+    config_data = json.load(f)
+
+# Create template metadata
+metadata = TemplateMetadata(
+    name='$TEMPLATE_NAME',
+    description='$TEMPLATE_DESC',
+    use_case='Custom template based on proven configuration',
+    environment='production',
+    tags=['custom', 'production-based', 'validated']
+)
+
+# Create template
+template = ConfigurationTemplate(
+    metadata=metadata,
+    configuration=config_data,
+    overrides={
+        'development': {
+            'debug': True,
+            'log_level': 'DEBUG',
+            'performance.max_concurrent_requests': 10
+        },
+        'staging': {
+            'debug': False,
+            'log_level': 'INFO',
+            'performance.max_concurrent_requests': 25
+        }
+    }
+)
+
+# Save template
+templates = ConfigurationTemplates()
+templates.save_template(template, '$TEMPLATE_NAME')
+print('✓ Custom template created: $TEMPLATE_NAME')
+"
+
+# 3. Test template application
+echo "Testing template application..."
+uv run python -m src.cli.main config template apply \
+  "$TEMPLATE_NAME" \
+  --output "/tmp/test-${TEMPLATE_NAME}.json"
+
+# 4. Validate generated configuration
+uv run python -m src.cli.main config validate \
+  "/tmp/test-${TEMPLATE_NAME}.json"
+
+echo "✓ Custom template validated and ready for use"
+```
+
+### Configuration Monitoring and Health Checks
+
+#### 1. Automated Configuration Health Monitoring
+
+```bash
+#!/bin/bash
+# config-health-monitor.sh
+# Continuous configuration health monitoring
+
+set -e
+
+CONFIG_PATH=${1:-"config/production.json"}
+CHECK_INTERVAL=${2:-300}  # 5 minutes
+ALERT_THRESHOLD=${3:-3}   # Alert after 3 consecutive failures
+
+FAILURE_COUNT=0
+
+echo "=== Configuration Health Monitor Started ==="
+echo "Configuration: $CONFIG_PATH"
+echo "Check Interval: ${CHECK_INTERVAL}s"
+echo "Alert Threshold: $ALERT_THRESHOLD failures"
+
+while true; do
+    echo "$(date): Performing configuration health check..."
+    
+    # Comprehensive health check
+    if uv run python -m src.cli.main config validate \
+         "$CONFIG_PATH" \
+         --health-check \
+         --comprehensive \
+         --quiet; then
+        
+        echo "$(date): ✓ Configuration health check passed"
+        FAILURE_COUNT=0
+        
+        # Reset any alerts
+        if [ -f "/tmp/config-health-alert" ]; then
+            rm "/tmp/config-health-alert"
+            echo "$(date): Alert cleared - configuration healthy"
+        fi
+        
+    else
+        FAILURE_COUNT=$((FAILURE_COUNT + 1))
+        echo "$(date): ✗ Configuration health check failed (attempt $FAILURE_COUNT/$ALERT_THRESHOLD)"
+        
+        # Trigger alert if threshold reached
+        if [ $FAILURE_COUNT -ge $ALERT_THRESHOLD ]; then
+            if [ ! -f "/tmp/config-health-alert" ]; then
+                echo "$(date): 🚨 ALERT: Configuration health check failing repeatedly"
+                
+                # Generate detailed diagnostic report
+                uv run python -m src.cli.main config validate \
+                  "$CONFIG_PATH" \
+                  --health-check \
+                  --comprehensive \
+                  --output-report "/tmp/config-health-report-$(date +%Y%m%d_%H%M%S).json"
+                
+                # Create alert marker
+                touch "/tmp/config-health-alert"
+                
+                # Send alert (integrate with your alerting system)
+                # ./scripts/send-alert.sh "Configuration health check failing" "See /tmp/config-health-report-*.json"
+            fi
+        fi
+    fi
+    
+    sleep "$CHECK_INTERVAL"
+done
+```
+
+#### 2. Configuration Drift Detection
+
+```bash
+#!/bin/bash
+# config-drift-detection.sh
+# Detect configuration drift from baseline
+
+set -e
+
+CURRENT_CONFIG=${1:-"config/production.json"}
+BASELINE_CONFIG=${2:-"config/baseline/production.json"}
+
+echo "=== Configuration Drift Detection ==="
+echo "Current: $CURRENT_CONFIG"
+echo "Baseline: $BASELINE_CONFIG"
+
+# 1. Generate configuration hashes
+CURRENT_HASH=$(uv run python -c "
+from src.config.utils import ConfigVersioning
+import json
+with open('$CURRENT_CONFIG', 'r') as f:
+    config = json.load(f)
+print(ConfigVersioning.generate_config_hash(config))
+")
+
+BASELINE_HASH=$(uv run python -c "
+from src.config.utils import ConfigVersioning
+import json
+with open('$BASELINE_CONFIG', 'r') as f:
+    config = json.load(f)
+print(ConfigVersioning.generate_config_hash(config))
+")
+
+# 2. Compare configurations
+if [ "$CURRENT_HASH" = "$BASELINE_HASH" ]; then
+    echo "✓ No configuration drift detected"
+    echo "  Current hash: $CURRENT_HASH"
+    echo "  Baseline hash: $BASELINE_HASH"
+else
+    echo "⚠️  Configuration drift detected"
+    echo "  Current hash: $CURRENT_HASH"
+    echo "  Baseline hash: $BASELINE_HASH"
+    
+    # 3. Generate detailed diff report
+    echo "Generating detailed drift report..."
+    uv run python -c "
+import json
+import difflib
+
+# Load configurations
+with open('$CURRENT_CONFIG', 'r') as f:
+    current = json.load(f)
+with open('$BASELINE_CONFIG', 'r') as f:
+    baseline = json.load(f)
+
+# Generate readable diff
+current_str = json.dumps(current, indent=2, sort_keys=True).splitlines()
+baseline_str = json.dumps(baseline, indent=2, sort_keys=True).splitlines()
+
+diff = list(difflib.unified_diff(
+    baseline_str, 
+    current_str,
+    fromfile='baseline',
+    tofile='current',
+    lineterm=''
+))
+
+if diff:
+    print('Configuration Differences:')
+    for line in diff:
+        print(line)
+else:
+    print('No structural differences found')
+"
+    
+    # 4. Check for unauthorized changes
+    echo "Checking for unauthorized configuration changes..."
+    # Implement your change authorization validation logic here
+    
+    exit 1
+fi
+```
+
 ## Best Practices
 
 ### 1. Environment Separation
@@ -1301,21 +2092,35 @@ python -m src.manage_config show-config --format yaml
 - Never share production secrets with development
 - Use environment-specific resource limits
 - Implement proper secret management
+- **Leverage configuration templates** for consistent environment setup
+- **Use backup and restore** for environment synchronization
 
 ```bash
-# Directory structure
+# Enhanced directory structure with advanced config management
 config/
 ├── environments/
 │   ├── production.json
 │   ├── staging.json
 │   ├── development.json
 │   └── testing.json
-├── secrets/
-│   ├── production.env
-│   ├── staging.env
-│   └── development.env
-└── templates/
-    └── default.json
+├── templates/           # BJO-87: Configuration templates
+│   ├── production.json
+│   ├── development.json
+│   ├── high_performance.json
+│   ├── memory_optimized.json
+│   └── distributed.json
+├── backups/            # BJO-87: Configuration backups
+│   ├── production/
+│   ├── staging/
+│   └── development/
+├── migrations/         # BJO-87: Schema migrations
+│   ├── v1.0.0_to_v1.1.0.py
+│   ├── v1.1.0_to_v2.0.0.py
+│   └── migration_registry.json
+└── secrets/
+    ├── production.env
+    ├── staging.env
+    └── development.env
 ```
 
 ### 2. Secret Management
@@ -1329,6 +2134,43 @@ export AI_DOCS__FIRECRAWL__API_KEY=$(vault kv get -field=api_key secret/firecraw
 kubectl create secret generic ai-docs-secrets \
   --from-literal=openai-api-key="sk-your-key" \
   --from-literal=firecrawl-api-key="fc-your-key"
+```
+
+### 3. Configuration Change Management
+
+```bash
+# Use configuration wizard for guided changes
+uv run python -m src.cli.main config wizard \
+  --config-path config/production.json
+
+# Always create backups before changes
+uv run python -m src.cli.main config backup create \
+  config/production.json \
+  --description "Pre-change backup - $(date)" \
+  --tags "pre-change,$(whoami)"
+
+# Validate changes before deployment
+uv run python -m src.cli.main config validate \
+  config/production.json \
+  --health-check \
+  --comprehensive
+```
+
+### 4. Migration Best Practices
+
+```bash
+# Always test migrations in development first
+uv run python -m src.cli.main config migrate plan \
+  config/development.json v2.0.0 \
+  --dry-run
+
+# Use staged rollouts for production migrations
+./scripts/multi-environment-migration.sh v2.0.0
+
+# Keep rollback plans ready
+uv run python -m src.cli.main config migrate rollback \
+  config/production.json migration_id \
+  --dry-run
 ```
 
 ### 3. Configuration Testing

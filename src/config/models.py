@@ -1396,6 +1396,15 @@ class UnifiedConfig(BaseSettings):
     debug: bool = Field(default=False, description="Debug mode")
     log_level: LogLevel = Field(default=LogLevel.INFO, description="Logging level")
 
+    # Advanced configuration management metadata (optional fields)
+    config_version: str = Field(default="1.0.0", description="Configuration version")
+    config_hash: str | None = Field(default=None, description="Configuration hash for change tracking")
+    template_source: str | None = Field(default=None, description="Source template used to generate this config")
+    migration_version: str = Field(default="1.0.0", description="Schema migration version")
+    last_migrated: str | None = Field(default=None, description="Last migration timestamp")
+    created_at: str | None = Field(default=None, description="Configuration creation timestamp")
+    schema_version: str = Field(default="2025.1.0", description="Schema version for compatibility")
+
     # Application settings
     app_name: str = Field(
         default="AI Documentation Vector DB", description="Application name"
@@ -1620,6 +1629,66 @@ class UnifiedConfig(BaseSettings):
             issues.append(f"Qdrant connection failed: {e}")
 
         return issues
+
+    def apply_template(self, template_data: dict[str, Any], template_name: str) -> "UnifiedConfig":
+        """Apply a configuration template to create a new configuration.
+        
+        Args:
+            template_data: Template configuration data
+            template_name: Name of the template being applied
+            
+        Returns:
+            New configuration instance with template applied
+        """
+        from .utils import ConfigMerger
+        from .utils import ConfigVersioning
+        from .utils import generate_timestamp
+
+        # Merge template with current config
+        current_data = self.model_dump(exclude={"config_hash", "created_at", "template_source"})
+        merged_data = ConfigMerger.deep_merge(current_data, template_data)
+
+        # Add metadata
+        config_hash = ConfigVersioning.generate_config_hash(merged_data)
+        merged_data.update({
+            "config_hash": config_hash,
+            "template_source": template_name,
+            "created_at": generate_timestamp(),
+            "config_version": "1.0.0"
+        })
+
+        return self.__class__(**merged_data)
+
+    def validate_with_suggestions(self, environment: str | None = None) -> "ValidationReport":
+        """Perform enhanced validation with suggestions.
+        
+        Args:
+            environment: Target environment for validation
+            
+        Returns:
+            Detailed validation report with suggestions
+        """
+        from .enhanced_validators import ConfigurationValidator
+
+        validator = ConfigurationValidator(environment or str(self.environment))
+        return validator.validate_configuration(self)
+
+    def get_metadata_summary(self) -> dict[str, Any]:
+        """Get configuration metadata summary.
+        
+        Returns:
+            Dictionary containing configuration metadata
+        """
+        return {
+            "version": self.config_version,
+            "config_hash": self.config_hash,
+            "template_source": self.template_source,
+            "migration_version": self.migration_version,
+            "last_migrated": self.last_migrated,
+            "created_at": self.created_at,
+            "schema_version": self.schema_version,
+            "environment": str(self.environment)
+        }
 
 
 # Singleton instance

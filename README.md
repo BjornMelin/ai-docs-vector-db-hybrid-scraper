@@ -39,6 +39,7 @@ This system implements a sophisticated vector-based Retrieval-Augmented Generati
 
 - **Multi-Tier Browser Automation**: Five-tier routing system (httpx → Crawl4AI → Enhanced → browser-use → Playwright)
 - **Enhanced Database Connection Pool**: ML-based predictive scaling with 50.9% latency reduction and 887.9% throughput increase
+- **Advanced Configuration Management**: Interactive wizard, templates, backup/restore, and migration system
 - **Hybrid Vector Search**: Dense + sparse embeddings with reciprocal rank fusion
 - **Query Enhancement**: HyDE (Hypothetical Document Embeddings) implementation
 - **Advanced Reranking**: Cross-encoder reranking with BGE-reranker-v2-m3
@@ -295,11 +296,34 @@ redis-cli -p 6379 ping  # Should return "PONG"
 
 ## Configuration
 
+### Interactive Configuration Setup
+
+Get started quickly with the configuration wizard:
+
+```bash
+# Launch interactive setup wizard
+uv run python -m src.cli.main config wizard
+
+# Create configuration from template
+uv run python -m src.cli.main config template apply production -o config.json
+
+# Backup current configuration
+uv run python -m src.cli.main config backup create config.json --description "Production backup"
+
+# Validate configuration
+uv run python -m src.cli.main config validate config.json --health-check
+```
+
 ### Advanced System Configuration
 
 ```python
 from src.config import get_config
 from src.config.models import EmbeddingConfig, VectorSearchStrategy
+from src.config.wizard import ConfigurationWizard
+
+# Interactive configuration setup
+wizard = ConfigurationWizard()
+config_path = wizard.run_setup_wizard()
 
 # Get unified configuration with validation
 config = get_config()
@@ -316,6 +340,27 @@ embedding_config = EmbeddingConfig(
     batch_size=32,
     max_tokens_per_chunk=512
 )
+```
+
+### Configuration Templates
+
+Five optimized templates are available for different deployment scenarios:
+
+```bash
+# Development environment
+uv run python -m src.cli.main config template apply development
+
+# Production with security hardening
+uv run python -m src.cli.main config template apply production
+
+# High-performance for maximum throughput
+uv run python -m src.cli.main config template apply high_performance
+
+# Memory-optimized for resource-constrained environments
+uv run python -m src.cli.main config template apply memory_optimized
+
+# Distributed multi-node deployment
+uv run python -m src.cli.main config template apply distributed
 ```
 
 ### Crawling Configuration
