@@ -6,9 +6,8 @@ mocked dependencies, Rich console capturing, and async testing support.
 
 import asyncio
 from io import StringIO
-from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from click.testing import CliRunner
@@ -38,23 +37,23 @@ def mock_config():
     config.qdrant.api_key = None
     config.qdrant.timeout = 30
     config.qdrant.prefer_grpc = True
-    
+
     config.openai = MagicMock()
     config.openai.api_key = "test-api-key"
     config.openai.model = "text-embedding-ada-002"
-    
+
     config.cache = MagicMock()
     config.cache.enabled = True
     config.cache.redis_url = "redis://localhost:6379"
-    
+
     config.browser = MagicMock()
     config.browser.automation_enabled = True
     config.browser.tier = "lightweight"
-    
+
     config.performance = MagicMock()
     config.performance.max_workers = 4
     config.performance.batch_size = 100
-    
+
     return config
 
 
@@ -80,29 +79,33 @@ def mock_client_manager():
 def mock_vector_db_manager():
     """Mock the VectorDBManager class with async methods."""
     mock_manager = AsyncMock()
-    
+
     # Mock collection operations
-    mock_manager.list_collections.return_value = ["collection1", "collection2", "test_collection"]
+    mock_manager.list_collections.return_value = [
+        "collection1",
+        "collection2",
+        "test_collection",
+    ]
     mock_manager.create_collection.return_value = True
     mock_manager.delete_collection.return_value = True
     mock_manager.get_collection_info.return_value = {
         "name": "test_collection",
         "vectors_count": 1000,
         "segments": 2,
-        "status": "active"
+        "status": "active",
     }
-    
+
     # Mock document operations
     mock_manager.add_documents.return_value = {"ids": ["doc1", "doc2"], "success": True}
     mock_manager.search_documents.return_value = [
         {"id": "doc1", "score": 0.95, "payload": {"title": "Test Document 1"}},
-        {"id": "doc2", "score": 0.88, "payload": {"title": "Test Document 2"}}
+        {"id": "doc2", "score": 0.88, "payload": {"title": "Test Document 2"}},
     ]
     mock_manager.delete_documents.return_value = {"deleted": 2, "success": True}
-    
+
     # Mock cleanup
     mock_manager.cleanup.return_value = None
-    
+
     return mock_manager
 
 
@@ -113,7 +116,7 @@ def mock_health_checker():
     mock_checker.perform_all_health_checks.return_value = {
         "qdrant": {"connected": True, "version": "1.7.0"},
         "redis": {"connected": True, "version": "7.0.0"},
-        "openai": {"connected": True, "model": "text-embedding-ada-002"}
+        "openai": {"connected": True, "model": "text-embedding-ada-002"},
     }
     return mock_checker
 
@@ -169,18 +172,18 @@ def sample_collection_data():
             "payload": {
                 "title": "Test Document 1",
                 "url": "https://example.com/doc1",
-                "content": "This is test content for document 1"
-            }
+                "content": "This is test content for document 1",
+            },
         },
         {
-            "id": "doc2", 
+            "id": "doc2",
             "vector": [0.2, 0.3, 0.4, 0.5],
             "payload": {
-                "title": "Test Document 2", 
+                "title": "Test Document 2",
                 "url": "https://example.com/doc2",
-                "content": "This is test content for document 2"
-            }
-        }
+                "content": "This is test content for document 2",
+            },
+        },
     ]
 
 
@@ -188,13 +191,13 @@ def sample_collection_data():
 def sample_batch_files(tmp_path):
     """Create sample files for batch processing tests."""
     files = []
-    
+
     # Create test files
     for i in range(3):
         file_path = tmp_path / f"test_file_{i}.txt"
         file_path.write_text(f"This is test content for file {i}\nLine 2 of file {i}")
         files.append(str(file_path))
-    
+
     return files
 
 
@@ -202,11 +205,11 @@ def sample_batch_files(tmp_path):
 def mock_completion_items():
     """Mock completion items for auto-completion testing."""
     from click.shell_completion import CompletionItem
-    
+
     return [
         CompletionItem("collection1", help="Collection: collection1"),
         CompletionItem("collection2", help="Collection: collection2"),
-        CompletionItem("test_collection", help="Collection: test_collection")
+        CompletionItem("test_collection", help="Collection: test_collection"),
     ]
 
 
@@ -221,47 +224,48 @@ def event_loop():
 @pytest.fixture
 def rich_output_capturer():
     """Helper fixture to capture and analyze Rich console output."""
+
     class RichOutputCapturer:
         def __init__(self):
             self.string_io = StringIO()
             self.console = Console(file=self.string_io, width=80, force_terminal=True)
-        
+
         def get_output(self) -> str:
             """Get the captured output as a string."""
             return self.string_io.getvalue()
-        
+
         def reset(self):
             """Reset the output buffer."""
             self.string_io = StringIO()
             self.console = Console(file=self.string_io, width=80, force_terminal=True)
-        
+
         def assert_contains(self, text: str):
             """Assert that the output contains the specified text."""
             output = self.get_output()
             assert text in output, f"'{text}' not found in output: {output}"
-        
+
         def assert_not_contains(self, text: str):
             """Assert that the output does not contain the specified text."""
             output = self.get_output()
             assert text not in output, f"'{text}' found in output: {output}"
-        
-        def get_lines(self) -> List[str]:
+
+        def get_lines(self) -> list[str]:
             """Get the output as a list of lines."""
-            return self.get_output().split('\n')
-    
+            return self.get_output().split("\n")
+
     return RichOutputCapturer()
 
 
 # Async testing utilities
 class AsyncContextManager:
     """Helper for testing async context managers."""
-    
+
     def __init__(self, return_value=None):
         self.return_value = return_value
-    
+
     async def __aenter__(self):
         return self.return_value
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
