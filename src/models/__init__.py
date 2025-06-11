@@ -91,11 +91,17 @@ from .validators import validate_vector_dimensions
 # Vector search models
 from .vector_search import AdaptiveSearchParams
 from .vector_search import CollectionStats
+from .vector_search import ContentTypeSearchCriteria
+from .vector_search import EnhancedFilteredSearchRequest
+from .vector_search import EnhancedSearchResponse
+from .vector_search import EnhancedSearchResult
 from .vector_search import FilteredSearchRequest
 from .vector_search import FusionConfig
 from .vector_search import HybridSearchRequest
 from .vector_search import HyDESearchRequest
 from .vector_search import IndexingRequest
+from .vector_search import IntegratedSearchRequest
+from .vector_search import MetadataSearchCriteria
 from .vector_search import MultiStageSearchRequest
 from .vector_search import OptimizationRequest
 from .vector_search import PrefetchConfig
@@ -104,7 +110,10 @@ from .vector_search import SearchParams
 from .vector_search import SearchResponse
 from .vector_search import SearchResult
 from .vector_search import SearchStage
+from .vector_search import SimilarityThresholdCriteria
+from .vector_search import TemporalSearchCriteria
 from .vector_search import VectorSearchConfig
+from .vector_search import VectorSearchIntegrationConfig
 
 # Commonly used exports
 __all__ = [
@@ -134,6 +143,7 @@ __all__ = [
     "CollectionResponse",
     "CollectionStats",
     "ContentFilter",
+    "ContentTypeSearchCriteria",
     "Crawl4AIConfig",
     "DocumentBatch",
     "DocumentMetadata",
@@ -141,6 +151,9 @@ __all__ = [
     "DocumentResponse",
     "DocumentationSite",
     "EmbeddingConfig",
+    "EnhancedFilteredSearchRequest",
+    "EnhancedSearchResponse",
+    "EnhancedSearchResult",
     "ErrorResponse",
     "FastEmbedConfig",
     "FilteredSearchRequest",
@@ -152,9 +165,11 @@ __all__ = [
     "HyDESearchRequest",
     "HybridSearchRequest",
     "IndexingRequest",
+    "IntegratedSearchRequest",
     "ListCollectionsResponse",
     "MCPRequest",
     "MCPResponse",
+    "MetadataSearchCriteria",
     "MetricData",
     "ModelBenchmark",
     "MultiStageSearchRequest",
@@ -177,12 +192,15 @@ __all__ = [
     "SearchResultItem",
     "SearchStage",
     "SecurityConfig",
+    "SimilarityThresholdCriteria",
     "SmartSelectionConfig",
+    "TemporalSearchCriteria",
     "UnifiedConfig",
     "ValidationRequest",
     "ValidationResponse",
     "VectorMetrics",
     "VectorSearchConfig",
+    "VectorSearchIntegrationConfig",
     "firecrawl_api_key_validator",
     "get_config",
     "openai_api_key_validator",
