@@ -246,7 +246,10 @@ class TestSearchStrategySelector:
             )
 
             # Should include the expected strategy in primary or fallbacks
-            all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
+            all_strategies = [
+                selection.primary_strategy,
+                *selection.fallback_strategies,
+            ]
             if expected_strategy_type == SearchStrategy.SEMANTIC:
                 assert SearchStrategy.SEMANTIC in all_strategies
             elif expected_strategy_type == SearchStrategy.FILTERED:

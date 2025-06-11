@@ -261,9 +261,7 @@ class QueryPreprocessor:
                     best_expansion = expansions[0]
                     if best_expansion not in query_lower:
                         expanded_parts.append(best_expansion)
-                        expansions_added.append(
-                            f"{abbreviation} → {best_expansion}"
-                        )
+                        expansions_added.append(f"{abbreviation} → {best_expansion}")
 
         # Combine original query with expansions
         if expanded_parts:
