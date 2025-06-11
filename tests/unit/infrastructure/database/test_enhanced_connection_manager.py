@@ -110,9 +110,7 @@ class TestEnhancedAsyncConnectionManager:
 
             # Test query execution with enhanced circuit breaker
             query = "SELECT * FROM users"
-            await enhanced_manager.execute_query(
-                query, query_type=QueryType.READ
-            )
+            await enhanced_manager.execute_query(query, query_type=QueryType.READ)
 
             # Verify circuit breaker was called with correct failure type
             enhanced_manager.circuit_breaker.execute.assert_called()
