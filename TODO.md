@@ -11,6 +11,14 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 ### Core V1 Features (Release Blockers)
 
+#### **[BJO-129](https://linear.app/bjorn-dev/issue/BJO-129)** - Fix Failing Tests and Complete Missing MCP Tool Implementations
+
+- **Status**: 🔴 Not Started
+- **Priority**: Urgent (V1 Blocker) 
+- **Effort**: 2-3 days
+- **Description**: Fix 5 CrawlManager test failures, 1 Client Manager flaky test, complete 3 missing MCP tool implementations
+- **Critical**: Cannot release V1 with failing tests or broken core functionality
+
 #### **[BJO-82](https://linear.app/bjorn-dev/issue/BJO-82)** - Content Intelligence Service
 
 - **Status**: ✅ COMPLETED  
@@ -38,12 +46,29 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **Priority**: Urgent (V1 Blocker)
 - **Effort**: 3-4 days  
 - **Description**: Code review, performance optimization, security audit, release documentation
+- **Note**: Configuration management (BJO-87) is production-ready; scope reduced to focus on remaining components
 
 ---
 
 ## 📋 MEDIUM PRIORITY - V1 ENHANCEMENTS
 
 ### User Experience & Production Features
+
+#### **[BJO-68](https://linear.app/bjorn-dev/issue/BJO-68)** - V1 Documentation Review & BJO-87 Integration
+
+- **Status**: 🔴 Not Started
+- **Priority**: High (V1 Enhancement)
+- **Effort**: 3-4 days
+- **Description**: Review and update all V1 documentation, integrate BJO-87 configuration management documentation
+- **Includes**: Template system docs, wizard workflows, backup/restore procedures, CLI reference
+
+#### **[BJO-69](https://linear.app/bjorn-dev/issue/BJO-69)** - V1 Release Preparation & Configuration Validation
+
+- **Status**: 🔴 Not Started
+- **Priority**: High (V1 Enhancement)
+- **Effort**: 2-3 days
+- **Description**: Complete V1 release preparation checklist including BJO-87 configuration system validation
+- **Includes**: Template validation, wizard testing, backup/restore verification, migration framework testing
 
 #### **[BJO-85](https://linear.app/bjorn-dev/issue/BJO-85)** - Advanced CLI Interface
 
@@ -52,19 +77,25 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **Effort**: 4-5 days (Completed)
 - **Description**: Rich console, configuration wizard, auto-completion, batch operations
 
-#### **[BJO-86](https://linear.app/bjorn-dev/issue/BJO-86)** - Example Scripts & Tutorials  
+#### **[BJO-86](https://linear.app/bjorn-dev/issue/BJO-86)** - Advanced Configuration Management Examples & Integration Tutorials
 
 - **Status**: 🔴 Not Started
 - **Priority**: High
 - **Effort**: 4-5 days
-- **Description**: Quick start examples, bulk indexing, MCP integration, benchmarking
+- **Description**: Advanced configuration management examples, CI/CD integration, automation scripts, template customization
+- **Note**: Scope updated - basic setup now automated by BJO-87 wizard; focus on advanced usage patterns
 
 #### **[BJO-87](https://linear.app/bjorn-dev/issue/BJO-87)** - Advanced Configuration Management
 
-- **Status**: 🔴 Not Started  
+- **Status**: ✅ **COMPLETED**
 - **Priority**: High
-- **Effort**: 4-5 days
-- **Description**: Templates, validation, environment-specific configs, migration tools
+- **Effort**: 4-5 days (Completed)
+- **Description**: Interactive configuration wizard, backup/restore system, migration framework, template system, enhanced validation, Rich CLI interface
+- **Quality Results**:
+  - 🚀 **88.79% test coverage** (exceeded 80% target)
+  - 🎯 **380+ configuration tests** with comprehensive module coverage
+  - ✅ Complete documentation across user, developer, and operator guides
+  - 🖥️ Rich CLI with 6 new command groups (wizard, template, backup, migrate, validate, show/convert)
 
 #### **[BJO-134](https://linear.app/bjorn-dev/issue/BJO-134)** - Enhanced Database Connection Pool Optimization
 
@@ -109,19 +140,13 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **Effort**: 2-3 days (Completed)
 - **Description**: Added comprehensive documentation for all new features including Content Intelligence Service, Advanced CLI Interface, Query API optimization with RRF/DBSF fusion, benchmarking suite, and 14-category intent classification
 
-#### **[BJO-96](https://linear.app/bjorn-dev/issue/BJO-96)** - Advanced Query Processing Extensions
-
-- **Status**: 🔴 Not Started
-- **Priority**: Medium
-- **Effort**: 5-6 days
-- **Description**: Query expansion, result clustering, personalized ranking, federated search
-
 #### **[BJO-96](https://linear.app/bjorn-dev/issue/BJO-96)** - Advanced Filtering Capabilities
 
-- **Status**: 🔴 Not Started
+- **Status**: 🟡 In Review (PR #123)
 - **Priority**: Medium  
 - **Effort**: 4-5 days
 - **Description**: Temporal filtering, content type filtering, custom metadata filters
+- **Note**: Updated to leverage BJO-87 template system for filter configurations
 
 ---
 
@@ -146,6 +171,7 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **Status**: 🔴 Not Started  
 - **Priority**: Low (V2)
 - **Description**: Data migration tools, backup/restore, configuration management
+- **Note**: Foundation exists with BJO-87 backup/restore system; focus on data export vs configuration
 
 #### **[BJO-76](https://linear.app/bjorn-dev/issue/BJO-76)** - Advanced Query Processing Completion
 
@@ -166,16 +192,29 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 ### V1 Timeline Summary
 
-- **HIGH PRIORITY**: 1 remaining issue, 3-4 days total (3 completed: BJO-82, BJO-83, BJO-84)
-- **MEDIUM PRIORITY**: 6 remaining issues, 27-34 days total (2 completed: BJO-89, BJO-134)  
-- **TOTAL V1 EFFORT**: 34-42 days
+- **HIGH PRIORITY**: 2 remaining issues, 5-7 days total (3 completed: BJO-82, BJO-83, BJO-84)
+  - BJO-129: Fix failing tests (2-3 days) - **CRITICAL**
+  - BJO-90: V1 final polish (3-4 days)
+- **MEDIUM PRIORITY**: 4 remaining issues, 13-19 days total (3 completed: BJO-87, BJO-89, BJO-134)
+  - BJO-68: Documentation review with BJO-87 integration (3-4 days)
+  - BJO-69: Release preparation with config validation (2-3 days)
+  - BJO-86: Advanced configuration examples (4-5 days)
+  - BJO-96: Advanced filtering (4-5 days, In Review)
+- **TOTAL V1 EFFORT**: 18-26 days remaining
 
 ### Linear Issue Status
 
-- **Total Issues**: 15 active + 12 completed = 27 total
-- **V1 Issues**: 6 remaining (5 completed: BJO-82, BJO-83, BJO-84, BJO-89, BJO-134)
+- **Total Issues**: 17 active + 13 completed = 30 total
+- **V1 Issues**: 6 remaining (6 completed: BJO-82, BJO-83, BJO-84, BJO-87, BJO-89, BJO-134)
 - **V2 Issues**: 5 remaining  
-- **Completed**: 12 DONE
+- **Completed**: 13 DONE
+
+### Critical Path for V1 Release
+
+1. **BJO-129** (URGENT): Fix failing tests - blocks all other work
+2. **BJO-90** (HIGH): V1 final polish and production readiness
+3. **BJO-68** (MEDIUM): Documentation integration for BJO-87
+4. **BJO-69** (MEDIUM): Release preparation with configuration validation
 
 ### Next Actions
 
@@ -193,6 +232,7 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - ✅ **[BJO-83](https://linear.app/bjorn-dev/issue/BJO-83)**: Basic Observability & Monitoring Infrastructure
 - ✅ **[BJO-84](https://linear.app/bjorn-dev/issue/BJO-84)**: FastAPI Production Enhancements
 - ✅ **[BJO-89](https://linear.app/bjorn-dev/issue/BJO-89)**: Complete Advanced Query Processing
+- ✅ **[BJO-87](https://linear.app/bjorn-dev/issue/BJO-87)**: Advanced Configuration Management System
 - ✅ **[BJO-134](https://linear.app/bjorn-dev/issue/BJO-134)**: Enhanced Database Connection Pool Optimization
 - ✅ **[BJO-91](https://linear.app/bjorn-dev/issue/BJO-91)**: Enhanced Anti-Detection System Implementation
 - ✅ **[BJO-92](https://linear.app/bjorn-dev/issue/BJO-92)**: Documentation Optimization Implementation  
