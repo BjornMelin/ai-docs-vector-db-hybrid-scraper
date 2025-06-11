@@ -449,15 +449,13 @@ class TestSetupCommand:
 
     @patch("rich.prompt.Confirm.ask")
     @patch("src.cli.commands.setup.ConfigurationWizard")
-    def test_setup_command_basic(
-        self, mock_wizard_class, mock_confirm, cli_runner
-    ):
+    def test_setup_command_basic(self, mock_wizard_class, mock_confirm, cli_runner):
         """Test basic setup command execution."""
         # Mock wizard instance
         mock_wizard = MagicMock()
         mock_wizard.run_setup.return_value = Path("/tmp/config.json")
         mock_wizard_class.return_value = mock_wizard
-        
+
         # Mock user declining validation
         mock_confirm.return_value = False
 
@@ -477,7 +475,7 @@ class TestSetupCommand:
         mock_wizard = MagicMock()
         mock_wizard.run_setup.return_value = Path("/tmp/custom_config.yaml")
         mock_wizard_class.return_value = mock_wizard
-        
+
         # Mock user declining validation
         mock_confirm.return_value = False
 
@@ -540,9 +538,7 @@ class TestSetupCommand:
         # Validation should not be imported/called
 
     @patch("src.cli.commands.setup.ConfigurationWizard")
-    def test_setup_command_keyboard_interrupt(
-        self, mock_wizard_class, cli_runner
-    ):
+    def test_setup_command_keyboard_interrupt(self, mock_wizard_class, cli_runner):
         """Test setup command with keyboard interrupt."""
         # Mock wizard raising KeyboardInterrupt
         mock_wizard = MagicMock()
@@ -555,9 +551,7 @@ class TestSetupCommand:
         assert "Setup cancelled by user" in result.output
 
     @patch("src.cli.commands.setup.ConfigurationWizard")
-    def test_setup_command_general_exception(
-        self, mock_wizard_class, cli_runner
-    ):
+    def test_setup_command_general_exception(self, mock_wizard_class, cli_runner):
         """Test setup command with general exception."""
         # Mock wizard raising general exception
         mock_wizard = MagicMock()

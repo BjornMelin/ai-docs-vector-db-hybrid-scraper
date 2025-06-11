@@ -123,6 +123,446 @@ class UnifiedConfig(BaseSettings):
 
 ## 🔧 Component Configuration
 
+### Enhanced Database Connection Pool Configuration (BJO-134)
+
+#### ML-Based Predictive Load Monitoring
+
+The enhanced database connection pool includes machine learning-based load prediction for optimal performance:
+
+```python
+class DatabaseConfig(BaseModel):
+    # Core connection pool settings
+    connection_pool: ConnectionPoolConfig = Field(default_factory=ConnectionPoolConfig)
+    
+    # Enhanced features
+    enable_predictive_monitoring: bool = True
+    enable_connection_affinity: bool = True
+    enable_adaptive_configuration: bool = True
+    enable_circuit_breaker: bool = True
+
+class ConnectionPoolConfig(BaseModel):
+    # Dynamic pool sizing (5-50 connections)
+    min_size: int = 5
+    max_size: int = 50
+    
+    # Connection management
+    max_overflow: int = 10
+    pool_pre_ping: bool = True
+    pool_recycle: int = 3600  # 1 hour
+    
+    # Performance optimization
+    enable_ml_scaling: bool = True
+    prediction_window_minutes: int = 15
+    scaling_factor: float = 1.2
+    
+    # Circuit breaker thresholds
+    connection_failure_threshold: int = 3
+    timeout_failure_threshold: int = 5
+    query_failure_threshold: int = 10
+    recovery_timeout_seconds: int = 60
+```
+
+#### Production Database Configuration
+
+```python
+# Production environment with enhanced features
+production_db_config = DatabaseConfig(
+    connection_pool=ConnectionPoolConfig(
+        min_size=10,
+        max_size=50,
+        max_overflow=20,
+        pool_recycle=1800,  # 30 minutes for production
+        
+        # Enhanced features enabled
+        enable_ml_scaling=True,
+        prediction_window_minutes=10,  # More responsive
+        scaling_factor=1.5,  # Aggressive scaling
+        
+        # Production circuit breaker settings
+        connection_failure_threshold=5,
+        timeout_failure_threshold=8,
+        query_failure_threshold=15,
+        recovery_timeout_seconds=30
+    ),
+    
+    # Enable all enhanced features
+    enable_predictive_monitoring=True,
+    enable_connection_affinity=True,
+    enable_adaptive_configuration=True,
+    enable_circuit_breaker=True
+)
+```
+
+#### Development Database Configuration
+
+```python
+# Development environment with moderate settings
+development_db_config = DatabaseConfig(
+    connection_pool=ConnectionPoolConfig(
+        min_size=5,
+        max_size=20,
+        max_overflow=5,
+        pool_recycle=7200,  # 2 hours for development
+        
+        # ML features for testing
+        enable_ml_scaling=True,
+        prediction_window_minutes=5,
+        scaling_factor=1.1,  # Conservative scaling
+        
+        # Relaxed circuit breaker settings
+        connection_failure_threshold=2,
+        timeout_failure_threshold=3,
+        query_failure_threshold=5,
+        recovery_timeout_seconds=120
+    ),
+    
+    # Selective feature enablement
+    enable_predictive_monitoring=True,
+    enable_connection_affinity=False,  # Disabled for simplicity
+    enable_adaptive_configuration=True,
+    enable_circuit_breaker=True
+)
+```
+
+#### Load Testing Database Configuration
+
+```python
+# High-performance configuration for load testing
+load_test_db_config = DatabaseConfig(
+    connection_pool=ConnectionPoolConfig(
+        min_size=25,
+        max_size=100,  # Higher for load testing
+        max_overflow=50,
+        pool_recycle=600,  # 10 minutes - faster cycling
+        
+        # Aggressive ML scaling
+        enable_ml_scaling=True,
+        prediction_window_minutes=3,  # Very responsive
+        scaling_factor=2.0,  # Maximum scaling
+        
+        # Strict circuit breaker for reliability
+        connection_failure_threshold=8,
+        timeout_failure_threshold=12,
+        query_failure_threshold=25,
+        recovery_timeout_seconds=15
+    ),
+    
+    # All features enabled
+    enable_predictive_monitoring=True,
+    enable_connection_affinity=True,
+    enable_adaptive_configuration=True,
+    enable_circuit_breaker=True
+)
+```
+
+#### ML Model Configuration
+
+```python
+class MLModelConfig(BaseModel):
+    # Model selection
+    primary_model: str = "random_forest"
+    fallback_model: str = "linear_regression"
+    
+    # Training parameters
+    max_training_samples: int = 10000
+    training_interval_hours: int = 6
+    min_accuracy_threshold: float = 0.7
+    
+    # Feature engineering
+    feature_window_minutes: int = 60
+    lag_features: List[int] = [1, 5, 10, 30]  # Minutes
+    seasonal_features: bool = True
+    
+    # Prediction parameters
+    prediction_confidence_threshold: float = 0.8
+    prediction_update_interval_seconds: int = 30
+    
+    # Model performance
+    retrain_accuracy_threshold: float = 0.65
+    max_prediction_error_rate: float = 0.3
+```
+
+#### Circuit Breaker Configuration
+
+```python
+class CircuitBreakerConfig(BaseModel):
+    # Failure type thresholds
+    failure_thresholds: Dict[str, int] = {
+        "CONNECTION": 3,
+        "TIMEOUT": 5,
+        "QUERY": 10,
+        "TRANSACTION": 7,
+        "RESOURCE": 4
+    }
+    
+    # Recovery settings
+    half_open_max_calls: int = 5
+    half_open_timeout_seconds: int = 60
+    recovery_timeout_seconds: int = 120
+    
+    # Monitoring
+    failure_rate_threshold: float = 0.5
+    slow_call_duration_threshold_ms: int = 5000
+    slow_call_rate_threshold: float = 0.8
+    
+    # State transition delays
+    open_to_half_open_delay_seconds: int = 60
+    half_open_to_closed_success_threshold: int = 3
+```
+
+#### Connection Affinity Configuration
+
+```python
+class ConnectionAffinityConfig(BaseModel):
+    # Pattern recognition
+    max_patterns: int = 1000
+    pattern_expiry_minutes: int = 60
+    min_pattern_frequency: int = 5
+    
+    # Connection specialization
+    max_connections_per_type: int = 20
+    affinity_score_threshold: float = 0.7
+    
+    # Query type classification
+    query_type_mapping: Dict[str, str] = {
+        "SELECT": "READ",
+        "INSERT": "WRITE", 
+        "UPDATE": "WRITE",
+        "DELETE": "WRITE",
+        "CREATE": "MAINTENANCE",
+        "ALTER": "MAINTENANCE",
+        "EXPLAIN": "ANALYTICS"
+    }
+    
+    # Performance tracking
+    performance_window_minutes: int = 30
+    min_performance_improvement: float = 0.1
+```
+
+#### Adaptive Configuration Management
+
+```python
+class AdaptiveConfigConfig(BaseModel):
+    # Adaptation strategies
+    adaptation_strategy: str = "moderate"  # conservative, moderate, aggressive
+    
+    # Strategy definitions
+    strategies: Dict[str, Dict[str, float]] = {
+        "conservative": {
+            "scaling_factor": 1.1,
+            "adaptation_frequency_minutes": 10,
+            "threshold_sensitivity": 0.3
+        },
+        "moderate": {
+            "scaling_factor": 1.3,
+            "adaptation_frequency_minutes": 5,
+            "threshold_sensitivity": 0.5
+        },
+        "aggressive": {
+            "scaling_factor": 1.8,
+            "adaptation_frequency_minutes": 2,
+            "threshold_sensitivity": 0.8
+        }
+    }
+    
+    # Adaptation limits
+    max_pool_size_change_per_cycle: int = 5
+    min_adaptation_interval_seconds: int = 30
+    max_adaptations_per_hour: int = 10
+    
+    # Monitoring integration
+    enable_prometheus_metrics: bool = True
+    enable_grafana_alerts: bool = True
+```
+
+#### Complete Enhanced Database Configuration Example
+
+```json
+{
+  "database": {
+    "connection_pool": {
+      "min_size": 10,
+      "max_size": 50,
+      "max_overflow": 20,
+      "pool_pre_ping": true,
+      "pool_recycle": 1800,
+      "enable_ml_scaling": true,
+      "prediction_window_minutes": 10,
+      "scaling_factor": 1.5,
+      "connection_failure_threshold": 5,
+      "timeout_failure_threshold": 8,
+      "query_failure_threshold": 15,
+      "recovery_timeout_seconds": 30
+    },
+    
+    "ml_model": {
+      "primary_model": "random_forest",
+      "fallback_model": "linear_regression",
+      "max_training_samples": 10000,
+      "training_interval_hours": 6,
+      "min_accuracy_threshold": 0.75,
+      "feature_window_minutes": 60,
+      "lag_features": [1, 5, 10, 30],
+      "prediction_confidence_threshold": 0.8,
+      "prediction_update_interval_seconds": 30
+    },
+    
+    "circuit_breaker": {
+      "failure_thresholds": {
+        "CONNECTION": 5,
+        "TIMEOUT": 8,
+        "QUERY": 15,
+        "TRANSACTION": 10,
+        "RESOURCE": 6
+      },
+      "half_open_max_calls": 5,
+      "recovery_timeout_seconds": 60,
+      "failure_rate_threshold": 0.5,
+      "slow_call_duration_threshold_ms": 5000
+    },
+    
+    "connection_affinity": {
+      "max_patterns": 1000,
+      "pattern_expiry_minutes": 60,
+      "max_connections_per_type": 20,
+      "affinity_score_threshold": 0.7,
+      "performance_window_minutes": 30
+    },
+    
+    "adaptive_config": {
+      "adaptation_strategy": "moderate",
+      "max_pool_size_change_per_cycle": 5,
+      "min_adaptation_interval_seconds": 30,
+      "enable_prometheus_metrics": true,
+      "enable_grafana_alerts": true
+    },
+    
+    "enable_predictive_monitoring": true,
+    "enable_connection_affinity": true,
+    "enable_adaptive_configuration": true,
+    "enable_circuit_breaker": true
+  }
+}
+```
+
+#### Environment-Specific Enhanced Database Configurations
+
+##### High-Load Production Environment
+
+```bash
+# Enhanced database configuration for high-load production
+export AI_DOCS__DATABASE__CONNECTION_POOL__MIN_SIZE=20
+export AI_DOCS__DATABASE__CONNECTION_POOL__MAX_SIZE=100
+export AI_DOCS__DATABASE__CONNECTION_POOL__SCALING_FACTOR=2.0
+export AI_DOCS__DATABASE__ML_MODEL__PREDICTION_WINDOW_MINUTES=5
+export AI_DOCS__DATABASE__ADAPTIVE_CONFIG__ADAPTATION_STRATEGY=aggressive
+export AI_DOCS__DATABASE__CIRCUIT_BREAKER__FAILURE_THRESHOLDS='{"CONNECTION": 8, "TIMEOUT": 12, "QUERY": 25}'
+```
+
+##### Memory-Constrained Environment
+
+```bash
+# Conservative settings for memory-constrained systems
+export AI_DOCS__DATABASE__CONNECTION_POOL__MIN_SIZE=3
+export AI_DOCS__DATABASE__CONNECTION_POOL__MAX_SIZE=15
+export AI_DOCS__DATABASE__CONNECTION_POOL__SCALING_FACTOR=1.1
+export AI_DOCS__DATABASE__ML_MODEL__MAX_TRAINING_SAMPLES=5000
+export AI_DOCS__DATABASE__ADAPTIVE_CONFIG__ADAPTATION_STRATEGY=conservative
+export AI_DOCS__DATABASE__CONNECTION_AFFINITY__MAX_PATTERNS=500
+```
+
+#### Usage Examples
+
+##### Basic Enhanced Connection Manager Usage
+
+```python
+from src.infrastructure.database import AsyncConnectionManager
+from src.config import get_config
+
+# Initialize enhanced connection manager
+config = get_config()
+connection_manager = AsyncConnectionManager(
+    config=config.database,
+    enable_predictive_monitoring=True,
+    enable_connection_affinity=True,
+    enable_adaptive_config=True
+)
+
+# Start the manager (initializes ML models and monitoring)
+await connection_manager.start()
+
+# Use the connection manager
+async with connection_manager.get_connection() as conn:
+    result = await conn.execute("SELECT * FROM documents LIMIT 10")
+    
+# Monitor performance
+metrics = await connection_manager.get_performance_metrics()
+print(f"Current pool size: {metrics['current_pool_size']}")
+print(f"ML model accuracy: {metrics['ml_model_accuracy']:.2%}")
+print(f"Affinity hit rate: {metrics['affinity_hit_rate']:.2%}")
+```
+
+##### Advanced Query Pattern Optimization
+
+```python
+# Query with connection affinity hints
+async with connection_manager.get_connection(
+    query_type="READ",
+    expected_duration="FAST",
+    priority="HIGH"
+) as conn:
+    # This will use a read-optimized connection
+    results = await conn.execute("SELECT * FROM documents WHERE category = ?", ("tech",))
+
+# Batch operations with optimized connections
+async with connection_manager.get_connection(
+    query_type="WRITE",
+    expected_duration="LONG",
+    batch_size=1000
+) as conn:
+    # This will use a write-optimized connection with transaction handling
+    await conn.execute_many("INSERT INTO documents (content) VALUES (?)", batch_data)
+```
+
+#### Performance Monitoring and Alerting
+
+```python
+# Monitor enhanced database connection pool performance
+class EnhancedDatabaseMonitor:
+    def __init__(self, connection_manager):
+        self.connection_manager = connection_manager
+        
+    async def get_performance_report(self):
+        metrics = await self.connection_manager.get_performance_metrics()
+        
+        return {
+            "pool_utilization": {
+                "current_size": metrics["current_pool_size"],
+                "max_size": metrics["max_pool_size"],
+                "utilization_percent": metrics["pool_utilization_percent"]
+            },
+            "ml_performance": {
+                "model_accuracy": metrics["ml_model_accuracy"],
+                "prediction_confidence": metrics["avg_prediction_confidence"],
+                "training_samples": metrics["training_sample_count"]
+            },
+            "connection_affinity": {
+                "hit_rate": metrics["affinity_hit_rate"],
+                "pattern_count": metrics["active_pattern_count"],
+                "performance_improvement": metrics["affinity_performance_gain"]
+            },
+            "circuit_breaker": {
+                "state": metrics["circuit_breaker_state"],
+                "failure_rate": metrics["failure_rate"],
+                "recovery_attempts": metrics["recovery_attempt_count"]
+            },
+            "performance_gains": {
+                "latency_reduction_percent": metrics["latency_reduction_percent"],
+                "throughput_increase_percent": metrics["throughput_increase_percent"]
+            }
+        }
+```
+
 ### Cache Configuration
 
 #### Redis/DragonflyDB Cache Setup

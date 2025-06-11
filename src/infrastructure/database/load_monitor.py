@@ -7,6 +7,7 @@ to enable dynamic adjustment of database connection pool sizes.
 import asyncio
 import logging
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -89,10 +90,8 @@ class LoadMonitor:
         self._is_monitoring = False
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Load monitoring stopped")
 
     async def get_current_load(self) -> LoadMetrics:

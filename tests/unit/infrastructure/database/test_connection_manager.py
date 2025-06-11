@@ -20,8 +20,10 @@ from src.infrastructure.database.connection_manager import AsyncConnectionManage
 from src.infrastructure.database.load_monitor import LoadMetrics
 from src.infrastructure.database.load_monitor import LoadMonitor
 from src.infrastructure.database.load_monitor import LoadMonitorConfig
+from src.infrastructure.database.predictive_monitor import PredictiveLoadMonitor
 from src.infrastructure.database.query_monitor import QueryMonitor
 from src.infrastructure.database.query_monitor import QueryMonitorConfig
+from src.infrastructure.database.enhanced_circuit_breaker import MultiLevelCircuitBreaker
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientState
 
@@ -93,6 +95,7 @@ class TestAsyncConnectionManager:
         breaker.state = ClientState.HEALTHY
         breaker._failure_count = 0
         breaker.call = AsyncMock()
+        breaker.execute = AsyncMock()
         return breaker
 
     @pytest.fixture
@@ -111,6 +114,7 @@ class TestAsyncConnectionManager:
     ):
         """Test connection manager initialization."""
         assert connection_manager.config == config
+        # When mocks are provided, they should be used
         assert connection_manager.load_monitor == load_monitor
         assert connection_manager.query_monitor == query_monitor
         assert connection_manager.circuit_breaker == circuit_breaker
@@ -124,9 +128,9 @@ class TestAsyncConnectionManager:
         manager = AsyncConnectionManager(config)
 
         assert manager.config == config
-        assert isinstance(manager.load_monitor, LoadMonitor)
+        assert isinstance(manager.load_monitor, PredictiveLoadMonitor)
         assert isinstance(manager.query_monitor, QueryMonitor)
-        assert isinstance(manager.circuit_breaker, CircuitBreaker)
+        assert isinstance(manager.circuit_breaker, MultiLevelCircuitBreaker)
 
     @pytest.mark.asyncio
     @patch("src.infrastructure.database.connection_manager.create_async_engine")
@@ -274,7 +278,13 @@ class TestAsyncConnectionManager:
         mock_session.close = AsyncMock()
 
         connection_manager._session_factory = Mock(return_value=mock_session)
-        connection_manager.circuit_breaker.call = AsyncMock(return_value=mock_session)
+        
+        # Mock circuit breaker to actually call the function passed to it
+        async def mock_call(func):
+            return await func()
+        
+        connection_manager.circuit_breaker.call = AsyncMock(side_effect=mock_call)
+        connection_manager.circuit_breaker.execute = AsyncMock(side_effect=mock_call)
 
         await connection_manager.initialize()
 

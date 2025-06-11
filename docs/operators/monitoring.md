@@ -308,6 +308,52 @@ groups:
           summary: "Collection alias operation failures"
           description: "Collection alias operations are failing"
 
+      # Enhanced Database Connection Pool Alerts (BJO-134)
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_checked_out / db_connection_pool_size > 0.9
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Connection pool utilization is above 90% for 2 minutes"
+
+      - alert: DatabaseConnectionPoolMLModelDegraded
+        expr: db_connection_pool_ml_model_accuracy < 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ML model accuracy degraded"
+          description: "Connection pool ML model accuracy below 70%"
+
+      - alert: DatabaseCircuitBreakerOpen
+        expr: db_circuit_breaker_state{state="open"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database circuit breaker is open"
+          description: "Circuit breaker {{ $labels.failure_type }} is open, blocking requests"
+
+      - alert: DatabaseConnectionAffinityDegraded
+        expr: avg(db_connection_affinity_performance_score) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connection affinity performance degraded"
+          description: "Average connection affinity performance score below 50%"
+
+      - alert: DatabaseQueryLatencyRegression
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 0.25
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database query latency regression"
+          description: "95th percentile query latency above 250ms (regression threshold)"
+
   - name: vector_db_alerts
     rules:
       - alert: QdrantDown
@@ -535,6 +581,110 @@ collection_alias_errors = Counter(
     'collection_alias_errors_total',
     'Collection alias operation errors',
     ['operation', 'error_type']
+)
+
+# Enhanced Database Connection Pool Metrics (BJO-134)
+db_connection_pool_size = Gauge(
+    'db_connection_pool_size',
+    'Current database connection pool size'
+)
+
+db_connection_pool_checked_out = Gauge(
+    'db_connection_pool_checked_out',
+    'Number of checked out connections'
+)
+
+db_connection_pool_checked_in = Gauge(
+    'db_connection_pool_checked_in', 
+    'Number of checked in connections'
+)
+
+db_connection_pool_overflow = Gauge(
+    'db_connection_pool_overflow',
+    'Number of overflow connections'
+)
+
+db_connection_pool_invalidated = Gauge(
+    'db_connection_pool_invalidated',
+    'Number of invalidated connections'
+)
+
+db_connection_create_duration = Histogram(
+    'db_connection_create_duration_seconds',
+    'Time to create new database connections'
+)
+
+db_connection_errors = Counter(
+    'db_connection_errors_total',
+    'Total database connection errors',
+    ['error_type']
+)
+
+db_query_duration = Histogram(
+    'db_query_duration_seconds',
+    'Database query execution time',
+    ['query_type', 'success']
+)
+
+db_slow_queries = Counter(
+    'db_slow_queries_total',
+    'Total slow database queries',
+    ['query_pattern']
+)
+
+# ML Model Performance Tracking
+db_load_prediction_accuracy = Gauge(
+    'db_load_prediction_accuracy',
+    'ML model accuracy for load prediction'
+)
+
+db_load_prediction_mae = Gauge(
+    'db_load_prediction_mae',
+    'Mean absolute error of load predictions'
+)
+
+db_adaptive_config_changes = Counter(
+    'db_adaptive_config_changes_total',
+    'Total adaptive configuration changes',
+    ['config_type', 'adaptation_strategy']
+)
+
+# Circuit Breaker Metrics
+db_circuit_breaker_state = Gauge(
+    'db_circuit_breaker_state',
+    'Circuit breaker state (0=closed, 1=open, 2=half_open)',
+    ['failure_type']
+)
+
+db_circuit_breaker_failures = Counter(
+    'db_circuit_breaker_failures_total',
+    'Circuit breaker failure count',
+    ['failure_type']
+)
+
+db_circuit_breaker_recoveries = Counter(
+    'db_circuit_breaker_recoveries_total',
+    'Circuit breaker recovery count',
+    ['failure_type']
+)
+
+# Connection Affinity Metrics
+db_connection_affinity_hits = Counter(
+    'db_connection_affinity_hits_total',
+    'Connection affinity cache hits',
+    ['query_type']
+)
+
+db_connection_affinity_misses = Counter(
+    'db_connection_affinity_misses_total',
+    'Connection affinity cache misses',
+    ['query_type']
+)
+
+db_connection_affinity_performance_gain = Gauge(
+    'db_connection_affinity_performance_gain_percent',
+    'Performance gain from connection affinity',
+    ['query_type']
 )
 
 class V1MetricsCollector:
@@ -2201,6 +2351,242 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
 3. Focus on critical system alerts
 4. Fix underlying issues
 5. Gradually re-enable alerts
+
+## 📊 Enhanced Database Connection Pool Dashboards (BJO-134)
+
+### 1. Database Connection Pool Dashboard
+
+Create `config/grafana/dashboards/database-connection-pool.json`:
+
+```json
+{
+  "dashboard": {
+    "title": "Database Connection Pool - Enhanced (BJO-134)",
+    "panels": [
+      {
+        "title": "Connection Pool Utilization",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "db_connection_pool_checked_out / db_connection_pool_size * 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "ML Model Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "db_connection_pool_ml_model_accuracy",
+            "legendFormat": "Model Accuracy"
+          },
+          {
+            "expr": "db_connection_pool_ml_prediction_confidence",
+            "legendFormat": "Prediction Confidence"
+          }
+        ]
+      },
+      {
+        "title": "Circuit Breaker Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "db_circuit_breaker_state"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "Closed", "color": "green"}}},
+              {"options": {"1": {"text": "Open", "color": "red"}}},
+              {"options": {"2": {"text": "Half-Open", "color": "yellow"}}}
+            ]
+          }
+        }
+      },
+      {
+        "title": "Connection Affinity Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(db_connection_affinity_performance_score) by (query_type)",
+            "legendFormat": "Affinity Score - {{query_type}}"
+          },
+          {
+            "expr": "rate(db_connection_affinity_hits_total[5m])",
+            "legendFormat": "Affinity Hits/sec"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 2. Query Performance Analysis Dashboard
+
+```json
+{
+  "dashboard": {
+    "title": "Enhanced Query Performance Analysis",
+    "panels": [
+      {
+        "title": "Query Latency Percentiles",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile"
+          }
+        ]
+      },
+      {
+        "title": "Query Types Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (query_type) (rate(db_query_total[5m]))"
+          }
+        ]
+      },
+      {
+        "title": "Connection Specialization Performance",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "rate(db_connection_affinity_performance_gain_percent[5m])"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 3. Predictive Load Monitoring Dashboard
+
+```json
+{
+  "dashboard": {
+    "title": "Predictive Load Monitoring (BJO-134)",
+    "panels": [
+      {
+        "title": "Load Predictions vs Actual",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "db_connection_pool_ml_predicted_load",
+            "legendFormat": "Predicted Load"
+          },
+          {
+            "expr": "db_connection_pool_current_load_factor",
+            "legendFormat": "Actual Load"
+          }
+        ]
+      },
+      {
+        "title": "Prediction Accuracy Over Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "avg_over_time(db_connection_pool_ml_model_accuracy[1h])"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 85}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Feature Importance",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "db_connection_pool_ml_feature_importance"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 4. Dashboard Setup Commands
+
+```bash
+# Create dashboard directory
+mkdir -p config/grafana/dashboards
+
+# Copy dashboard configurations
+cp config/grafana/dashboards/database-connection-pool.json \
+   /var/lib/grafana/dashboards/
+
+# Import dashboards via API
+curl -X POST \
+  http://admin:admin@localhost:3000/api/dashboards/db \
+  -H 'Content-Type: application/json' \
+  -d @config/grafana/dashboards/database-connection-pool.json
+
+# Restart Grafana to load new dashboards
+docker restart grafana
+```
+
+### 5. Custom Monitoring Queries
+
+**Performance Regression Detection**:
+
+```promql
+# Detect 50.9% performance improvement regression
+(
+  histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) - 
+  histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m] offset 1w))
+) / histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m] offset 1w)) * 100 > 25
+```
+
+**Throughput Monitoring**:
+
+```promql
+# Monitor 887.9% throughput improvement
+rate(db_query_total[5m]) / rate(db_query_total[5m] offset 1w) > 8
+```
+
+**Connection Pool Efficiency**:
+
+```promql
+# Connection pool efficiency score
+(
+  db_connection_pool_successful_queries_total / 
+  db_connection_pool_total_queries_total
+) * 100
+```
 
 ---
 

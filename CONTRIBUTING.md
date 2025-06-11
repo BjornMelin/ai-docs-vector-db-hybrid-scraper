@@ -299,6 +299,7 @@ uv run mkdocs build
 - **Vector Quantization**: Explore advanced quantization techniques
 - **Hybrid Search**: Improve sparse-dense fusion algorithms
 - **Reranking**: Experiment with new cross-encoder models
+- **Database Optimization Research**: Contribute to ML-based connection pool optimization (see [Database Optimization Research](#database-optimization-research))
 
 #### ⚡ Performance Improvements
 
@@ -306,6 +307,7 @@ uv run mkdocs build
 - **Parallel Processing**: Improve concurrent operations
 - **Caching**: Implement intelligent caching strategies
 - **Batch Processing**: Optimize batch sizes and operations
+- **Database Connection Pooling**: Improve connection management and scaling algorithms
 
 #### 🤖 MCP Integration
 
@@ -472,6 +474,128 @@ All contributions are valued and will be appropriately attributed in project doc
 4. **Test Thoroughly**: Ensure your changes work reliably
 5. **Document**: Help others understand your contributions
 
+---
+
+## 🗄️ Database Optimization Research
+
+### Performance Research Achievements
+
+Our community has achieved remarkable database optimization results:
+
+- **50.9% latency reduction** for complex queries
+- **887.9% throughput increase** for concurrent operations
+- **Dynamic connection scaling** based on ML-driven load prediction
+- **Adaptive pool sizing** with real-time performance monitoring
+
+### Contributing to Database Research
+
+#### Research Areas
+
+**Connection Pool Optimization**
+- Machine learning models for predicting optimal pool sizes
+- Adaptive scaling algorithms based on workload patterns
+- Performance monitoring and automatic tuning
+- Load balancing strategies for distributed deployments
+
+**Query Performance Analysis**
+- Query pattern recognition and optimization
+- Caching strategies for frequently accessed data
+- Index optimization recommendations
+- Memory usage pattern analysis
+
+**Benchmarking and Metrics**
+- Performance regression detection
+- Comparative analysis across different configurations
+- Real-world workload simulation
+- Cost-performance optimization
+
+#### How to Contribute Research
+
+1. **Performance Improvements**
+   ```bash
+   # Run performance benchmarks
+   uv run python scripts/benchmark_query_api.py
+   
+   # Test database connection optimization
+   uv run pytest tests/integration/test_database_connection_pool_optimization.py -v
+   
+   # Profile specific components
+   uv run python -m cProfile -o profile.stats your_optimization.py
+   ```
+
+2. **ML Model Enhancements**
+   - Contribute new prediction models for connection scaling
+   - Improve feature engineering for workload classification
+   - Experiment with different optimization algorithms
+   - Submit performance analysis and comparisons
+
+3. **Benchmarking Contributions**
+   ```bash
+   # Run comprehensive benchmarks
+   uv run python scripts/run_advanced_hybrid_search_benchmark.py
+   
+   # Generate performance reports
+   uv run python scripts/benchmark_lightweight_tier.py --output-report
+   ```
+
+4. **Documentation of Findings**
+   - Share benchmark results and analysis
+   - Document optimization techniques and their impact
+   - Contribute to research papers and technical reports
+   - Create tutorials for implementing optimizations
+
+#### Research Collaboration Guidelines
+
+**Sharing Results**
+- Include complete benchmark data and methodology
+- Provide reproducible test cases
+- Document hardware/software configurations
+- Share raw performance metrics alongside analysis
+
+**Proposing Optimizations**
+- Start with performance analysis of current state
+- Clearly describe the optimization approach
+- Provide evidence of improvement (benchmarks/profiling)
+- Consider edge cases and failure scenarios
+
+**Code Contributions**
+- Follow TDD approach for optimization features
+- Include comprehensive performance tests
+- Document performance characteristics in docstrings
+- Provide configuration examples and usage guides
+
+#### Research Issue Labels
+
+When contributing research-related issues, use these labels:
+- `research`: General research contributions
+- `performance`: Performance improvement proposals
+- `database-optimization`: Database-specific optimizations
+- `ml-enhancement`: Machine learning model improvements
+- `benchmarking`: Benchmark results and analysis
+
+#### Getting Started with Research
+
+1. **Set up benchmarking environment**
+   ```bash
+   # Install additional research dependencies
+   uv add pytest-benchmark memory-profiler line-profiler
+   
+   # Run baseline benchmarks
+   uv run python scripts/benchmark_query_api.py --baseline
+   ```
+
+2. **Explore current optimizations**
+   - Review `src/infrastructure/database/connection_manager.py`
+   - Study the ML models in `src/infrastructure/database/load_monitor.py`
+   - Examine performance tests in `tests/integration/`
+
+3. **Join research discussions**
+   - Comment on research-related GitHub issues
+   - Share your performance findings and analyses
+   - Propose new optimization approaches
+
+---
+
 ## Thank you for helping make this project better! 🎉
 
-Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation processing.
+Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation processing. Join our research community to push the boundaries of database optimization and ML-driven performance enhancements!
