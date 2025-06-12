@@ -130,23 +130,19 @@ class TestCrawlManager:
 
     @pytest.mark.asyncio
     async def test_initialize_failure_both_providers(self):
-        """Test initialization failure when both providers fail."""
+        """Test initialization failure when UnifiedBrowserManager fails."""
         config = MagicMock(spec=UnifiedConfig)
         config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_key"
 
-        with (
-            patch("src.services.crawling.manager.Crawl4AIProvider") as mock_crawl4ai,
-            patch("src.services.crawling.manager.FirecrawlProvider") as mock_firecrawl,
-        ):
-            mock_crawl4ai.side_effect = Exception("Crawl4AI init failed")
-            mock_firecrawl.side_effect = Exception("Firecrawl init failed")
+        with patch("src.services.browser.unified_manager.UnifiedBrowserManager") as mock_ubm:
+            mock_ubm.side_effect = Exception("UnifiedBrowserManager init failed")
 
             manager = CrawlManager(config)
 
             with pytest.raises(
-                CrawlServiceError, match="No crawling providers available"
+                CrawlServiceError, match="Failed to initialize crawl manager"
             ):
                 await manager.initialize()
 
