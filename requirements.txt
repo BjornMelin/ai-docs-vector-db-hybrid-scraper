@@ -62,7 +62,7 @@ botocore==1.38.28
     #   s3transfer
 brotli==1.1.0
     # via crawl4ai
-browser-use==0.2.5
+browser-use==0.2.6
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 cachetools==5.5.2
     # via google-auth
