@@ -1,6 +1,7 @@
 # 🤝 Contributing to Advanced AI Documentation Scraper
 
-We welcome contributions to make this project even better! This guide will help you get started with contributing to our research-backed advanced documentation scraping system.
+We welcome contributions to make this project even better! This guide will help you get started with
+contributing to our research-backed advanced documentation scraping system.
 
 ## 🚀 Quick Start for Contributors
 
@@ -454,11 +455,13 @@ All contributors are recognized in our:
 
 ### Contributor License Agreement
 
-By contributing to this project, you agree that your contributions will be licensed under the same [MIT License](LICENSE) as the project.
+By contributing to this project, you agree that your contributions will be licensed under
+the same [MIT License](LICENSE) as the project.
 
 ### Code of Conduct
 
-We are committed to providing a welcoming and inclusive experience for everyone. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+We are committed to providing a welcoming and inclusive experience for everyone.
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ### Attribution
 
@@ -491,19 +494,22 @@ Our community has achieved remarkable database optimization results:
 
 #### Research Areas
 
-**Connection Pool Optimization**
+##### Connection Pool Optimization
+
 - Machine learning models for predicting optimal pool sizes
 - Adaptive scaling algorithms based on workload patterns
 - Performance monitoring and automatic tuning
 - Load balancing strategies for distributed deployments
 
-**Query Performance Analysis**
+##### Query Performance Analysis
+
 - Query pattern recognition and optimization
 - Caching strategies for frequently accessed data
 - Index optimization recommendations
 - Memory usage pattern analysis
 
-**Benchmarking and Metrics**
+##### Benchmarking and Metrics
+
 - Performance regression detection
 - Comparative analysis across different configurations
 - Real-world workload simulation
@@ -512,6 +518,7 @@ Our community has achieved remarkable database optimization results:
 #### How to Contribute Research
 
 1. **Performance Improvements**
+
    ```bash
    # Run performance benchmarks
    uv run python scripts/benchmark_query_api.py
@@ -530,6 +537,7 @@ Our community has achieved remarkable database optimization results:
    - Submit performance analysis and comparisons
 
 3. **Benchmarking Contributions**
+
    ```bash
    # Run comprehensive benchmarks
    uv run python scripts/run_advanced_hybrid_search_benchmark.py
@@ -546,19 +554,22 @@ Our community has achieved remarkable database optimization results:
 
 #### Research Collaboration Guidelines
 
-**Sharing Results**
+##### Sharing Results
+
 - Include complete benchmark data and methodology
 - Provide reproducible test cases
 - Document hardware/software configurations
 - Share raw performance metrics alongside analysis
 
-**Proposing Optimizations**
+##### Proposing Optimizations
+
 - Start with performance analysis of current state
 - Clearly describe the optimization approach
 - Provide evidence of improvement (benchmarks/profiling)
 - Consider edge cases and failure scenarios
 
-**Code Contributions**
+##### Code Contributions
+
 - Follow TDD approach for optimization features
 - Include comprehensive performance tests
 - Document performance characteristics in docstrings
@@ -567,6 +578,7 @@ Our community has achieved remarkable database optimization results:
 #### Research Issue Labels
 
 When contributing research-related issues, use these labels:
+
 - `research`: General research contributions
 - `performance`: Performance improvement proposals
 - `database-optimization`: Database-specific optimizations
@@ -576,6 +588,7 @@ When contributing research-related issues, use these labels:
 #### Getting Started with Research
 
 1. **Set up benchmarking environment**
+
    ```bash
    # Install additional research dependencies
    uv add pytest-benchmark memory-profiler line-profiler
@@ -598,4 +611,5 @@ When contributing research-related issues, use these labels:
 
 ## Thank you for helping make this project better! 🎉
 
-Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation processing. Join our research community to push the boundaries of database optimization and ML-driven performance enhancements!
+Every contribution, no matter how small, helps advance the performance and capabilities of AI documentation
+processing. Join our research community to push the boundaries of database optimization and ML-driven performance enhancements!
