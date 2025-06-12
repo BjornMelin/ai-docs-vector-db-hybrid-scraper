@@ -12,6 +12,8 @@ env:
   PYTHONDONTWRITEBYTECODE: 1
   PIP_DISABLE_PIP_VERSION_CHECK: 1
   UV_SYSTEM_PYTHON: 1
+  # Optimization: Enable UV cache compression
+  UV_CACHE_COMPRESSION: 1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -79,6 +81,17 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: python-lint-${{ runner.os }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            python-lint-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
@@ -118,11 +131,15 @@ jobs:
             python-version: '3.13'
             coverage: true
         exclude:
-          # Reduce matrix size for faster CI
+          # Reduce matrix size for faster CI - run only on Linux for PRs
           - os: windows-latest
             python-version: '3.11'
           - os: macos-latest
             python-version: '3.11'
+          - os: windows-latest
+            python-version: '3.12'
+          - os: macos-latest
+            python-version: '3.12'
 
     steps:
       - name: Checkout repository

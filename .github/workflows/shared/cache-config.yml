@@ -1,0 +1,72 @@
+# Shared cache configuration for workflows
+# This file defines optimized caching strategies for different workflow types
+
+# Python dependency caching (uv-specific)
+python-deps:
+  key: python-deps-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}
+  paths:
+    - ~/.cache/uv
+    - .venv
+  restore-keys:
+    - python-deps-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-
+    - python-deps-${{ runner.os }}-
+
+# Ruff linting cache
+ruff:
+  key: ruff-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'ruff.toml', '.ruff.toml') }}
+  paths:
+    - ~/.cache/ruff
+  restore-keys:
+    - ruff-${{ runner.os }}-
+
+# Playwright browser cache
+playwright:
+  key: playwright-${{ runner.os }}-${{ hashFiles('**/uv.lock') }}
+  paths:
+    - ~/.cache/ms-playwright
+    - ~/Library/Caches/ms-playwright
+    - "%USERPROFILE%\\AppData\\Local\\ms-playwright"
+  restore-keys:
+    - playwright-${{ runner.os }}-
+
+# Docker layer cache
+docker:
+  key: docker-${{ runner.os }}-${{ hashFiles('docker/**', 'Dockerfile*') }}
+  paths:
+    - /tmp/.buildx-cache
+  restore-keys:
+    - docker-${{ runner.os }}-
+
+# Node.js dependency cache (for markdown tools)
+node:
+  key: node-${{ runner.os }}-${{ hashFiles('package*.json') }}
+  paths:
+    - ~/.npm
+    - node_modules
+  restore-keys:
+    - node-${{ runner.os }}-
+
+# Sphinx documentation build cache
+sphinx:
+  key: sphinx-${{ runner.os }}-${{ hashFiles('src/**/*.py', 'docs/**/*.rst', 'docs/**/*.md') }}
+  paths:
+    - docs/_build
+  restore-keys:
+    - sphinx-${{ runner.os }}-
+
+# MkDocs site build cache
+mkdocs:
+  key: mkdocs-${{ runner.os }}-${{ hashFiles('docs/**', 'mkdocs.yml', 'docs/build-config/mkdocs.yml') }}
+  paths:
+    - site
+  restore-keys:
+    - mkdocs-${{ runner.os }}-
+
+# Pytest cache
+pytest:
+  key: pytest-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-${{ hashFiles('tests/**/*.py') }}
+  paths:
+    - .pytest_cache
+  restore-keys:
+    - pytest-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-
+    - pytest-${{ runner.os }}-

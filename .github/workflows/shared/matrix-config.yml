@@ -1,0 +1,42 @@
+# Shared matrix configuration for workflows
+# This file defines optimized test matrices to reduce CI time while maintaining coverage
+
+# Fast matrix for pull requests (minimal but effective coverage)
+fast-matrix:
+  os: [ubuntu-latest]
+  python-version: ['3.13']
+  include:
+    - os: ubuntu-latest
+      python-version: '3.13'
+      coverage: true
+      browser-tests: true
+
+# Full matrix for main branch (comprehensive testing)
+full-matrix:
+  os: [ubuntu-latest, windows-latest, macos-latest]
+  python-version: ['3.11', '3.12', '3.13']
+  exclude:
+    # Reduce matrix size while maintaining good coverage
+    - os: windows-latest
+      python-version: '3.11'
+    - os: macos-latest
+      python-version: '3.11'
+  include:
+    - os: ubuntu-latest
+      python-version: '3.13'
+      coverage: true
+      browser-tests: true
+    - os: ubuntu-latest
+      python-version: '3.12'
+      browser-tests: true
+
+# Minimal matrix for dependency updates (just check compatibility)
+dependency-matrix:
+  os: [ubuntu-latest]
+  python-version: ['3.13']
+
+# Browser testing matrix (only where needed)
+browser-matrix:
+  os: [ubuntu-latest]  # Only test browsers on Linux for speed
+  python-version: ['3.13']
+  browser: [chromium]  # Only test one browser for faster CI
