@@ -64,7 +64,7 @@ brotli==1.1.0
     # via crawl4ai
 browser-use==0.2.5
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-cachetools==5.5.2
+cachetools==6.0.0
     # via google-auth
 cbor==1.0.0
     # via trec-car-tools
