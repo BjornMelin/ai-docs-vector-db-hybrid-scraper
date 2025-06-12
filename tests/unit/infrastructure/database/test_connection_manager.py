@@ -285,9 +285,13 @@ class TestAsyncConnectionManager:
         # Simplify: mock the circuit breaker to just run the functions normally
         async def mock_circuit_breaker_call(func, **kwargs):
             return await func()
-        
-        connection_manager.circuit_breaker.call = AsyncMock(side_effect=mock_circuit_breaker_call)
-        connection_manager.circuit_breaker.execute = AsyncMock(side_effect=mock_circuit_breaker_call)
+
+        connection_manager.circuit_breaker.call = AsyncMock(
+            side_effect=mock_circuit_breaker_call
+        )
+        connection_manager.circuit_breaker.execute = AsyncMock(
+            side_effect=mock_circuit_breaker_call
+        )
 
         await connection_manager.initialize()
 
@@ -328,8 +332,10 @@ class TestAsyncConnectionManager:
                 return mock_session
             # Otherwise raise the expected exception
             raise Exception("Query failed")
-        
-        connection_manager.circuit_breaker.call = AsyncMock(side_effect=mock_circuit_breaker_call)
+
+        connection_manager.circuit_breaker.call = AsyncMock(
+            side_effect=mock_circuit_breaker_call
+        )
         connection_manager.circuit_breaker.execute = AsyncMock(
             side_effect=Exception("Query failed")
         )
