@@ -152,12 +152,65 @@ jobs:
           PYTHONUTF8: 1
         shell: bash
 
+      - name: Install browser dependencies
+        shell: bash
+        run: |
+          # Install Playwright browsers and system dependencies for testing
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            # Linux: Install Playwright browsers with system dependencies
+            uv run python -m playwright install --with-deps chromium
+            # Also run crawl4ai setup (browser install only, skip database setup)
+            export CRAWL4AI_SKIP_DB_INIT=1
+            uv run python -c "
+            import asyncio
+            import sys
+            from pathlib import Path
+            
+            async def setup_browsers():
+                try:
+                    # Install Playwright browsers for crawl4ai
+                    import subprocess
+                    result = subprocess.run([
+                        sys.executable, '-m', 'playwright', 'install', '--with-deps', 'chromium'
+                    ], capture_output=True, text=True)
+                    
+                    if result.returncode == 0:
+                        print('✅ Browser setup completed successfully')
+                    else:
+                        print(f'⚠️ Browser setup warning: {result.stderr}')
+                        # Try without deps as fallback
+                        fallback = subprocess.run([
+                            sys.executable, '-m', 'playwright', 'install', 'chromium'
+                        ], capture_output=True, text=True)
+                        if fallback.returncode == 0:
+                            print('✅ Browser setup completed (without system deps)')
+                        else:
+                            print(f'❌ Browser setup failed: {fallback.stderr}')
+                            sys.exit(1)
+                except Exception as e:
+                    print(f'❌ Browser setup error: {e}')
+                    sys.exit(1)
+            
+            asyncio.run(setup_browsers())
+            "
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            # macOS: Install Playwright browsers
+            uv run python -m playwright install chromium
+          elif [ "${{ runner.os }}" == "Windows" ]; then
+            # Windows: Install Playwright browsers
+            uv run python -m playwright install chromium
+          fi
+
       - name: Setup test environment
         shell: bash
         run: |
           # Create test directories (cross-platform)
           mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
           mkdir -p logs cache data
+          
+          # Set environment variables for headless testing
+          echo "PLAYWRIGHT_BROWSERS_PATH=0" >> $GITHUB_ENV
+          echo "CRAWL4AI_HEADLESS=true" >> $GITHUB_ENV
 
       - name: Run unit tests
         run: |

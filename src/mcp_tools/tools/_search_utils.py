@@ -11,7 +11,7 @@ from ..models.responses import SearchResult
 logger = logging.getLogger(__name__)
 
 
-async def search_documents_core(  # noqa: PLR0912
+async def search_documents_core(
     request: SearchRequest, client_manager: ClientManager, ctx=None
 ) -> list[SearchResult]:
     """

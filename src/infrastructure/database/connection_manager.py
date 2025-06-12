@@ -245,7 +245,7 @@ class AsyncConnectionManager:
             response_time_ms = (time.time() - start_time) * 1000
             await self.load_monitor.record_request_end(response_time_ms)
 
-    async def execute_query(  # noqa: PLR0915
+    async def execute_query(
         self,
         query: str,
         parameters: dict[str, Any] | None = None,

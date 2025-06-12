@@ -167,6 +167,7 @@ package = false
 line-length = 88
 target-version = "py313"
 src = ["src", "tests", "examples"]
+exclude = ["scripts"]
 
 [tool.ruff.lint]
 # Basic but comprehensive rule selection
@@ -190,7 +191,10 @@ ignore = [
     "D103",
     "D104",
     "D105",    # Missing docstrings
+    "PLR0911", # Too many return statements
+    "PLR0912", # Too many branches
     "PLR0913", # Too many arguments
+    "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison
     "E501",    # Line too long (handled by formatter)
 ]

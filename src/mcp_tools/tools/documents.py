@@ -29,14 +29,14 @@ from ..models.requests import DocumentRequest
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
+def register_tools(mcp, client_manager: ClientManager):
     """Register document management tools with the MCP server."""
 
     from ..models.responses import AddDocumentResponse
     from ..models.responses import DocumentBatchResponse
 
     @mcp.tool()
-    async def add_document(  # noqa: PLR0912, PLR0915
+    async def add_document(
         request: DocumentRequest, ctx: Context
     ) -> AddDocumentResponse:
         """

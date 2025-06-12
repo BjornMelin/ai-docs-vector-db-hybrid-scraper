@@ -71,31 +71,9 @@ jobs:
           npm install -g markdownlint-cli2
           npm install -g markdown-link-check
 
-      - name: Create markdownlint config
-        run: |
-          cat > .markdownlint-cli2.jsonc << 'EOF'
-          {
-            "config": {
-              "default": true,
-              "MD013": false,
-              "MD033": false,
-              "MD041": false,
-              "MD003": { "style": "atx" },
-              "MD007": { "indent": 2 },
-              "MD030": { "ul_single": 1, "ol_single": 1 }
-            },
-            "ignores": [
-              "node_modules/",
-              "htmlcov*/",
-              "cache/",
-              "logs/"
-            ]
-          }
-          EOF
-
       - name: Lint markdown files
         run: |
-          markdownlint-cli2 "**/*.md" "!node_modules" "!htmlcov*" "!cache" "!logs"
+          markdownlint-cli2 --config .markdownlint.json "**/*.md" "!node_modules" "!htmlcov*" "!cache" "!logs" "!.github/badges/*" "!.venv" "!.reference"
 
       - name: Check markdown links
         run: |

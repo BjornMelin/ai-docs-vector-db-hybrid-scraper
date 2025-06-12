@@ -268,7 +268,7 @@ class ConfigValidator:
         return True, ""
 
     @staticmethod
-    def validate_env_var_value(  # noqa: PLR0911
+    def validate_env_var_value(
         var_name: str, value: str, expected_type: type
     ) -> tuple[bool, Any, str]:
         """Validate and convert environment variable value to expected type.
