@@ -4,8 +4,6 @@ This test file covers the configuration template system that provides
 pre-configured templates for different deployment scenarios.
 """
 
-from unittest.mock import patch
-
 from src.config.templates import ConfigurationTemplate
 from src.config.templates import ConfigurationTemplates
 from src.config.templates import TemplateMetadata
@@ -21,7 +19,7 @@ class TestTemplateMetadata:
             description="Development configuration",
             use_case="Local development and testing",
             environment="development",
-            tags=["dev", "local"]
+            tags=["dev", "local"],
         )
 
         assert metadata.name == "development"
@@ -36,7 +34,7 @@ class TestTemplateMetadata:
             name="basic",
             description="Basic template",
             use_case="development",
-            environment="development"
+            environment="development",
         )
 
         assert metadata.use_case == "development"
@@ -50,7 +48,7 @@ class TestTemplateMetadata:
             description="Production template",
             use_case="Production deployment",
             environment="production",
-            tags=["prod", "secure"]
+            tags=["prod", "secure"],
         )
 
         # Should be serializable to dict
@@ -74,19 +72,16 @@ class TestConfigurationTemplate:
             name="test",
             description="Test template",
             use_case="testing",
-            environment="test"
+            environment="test",
         )
 
         config_data = {
             "environment": "development",
             "debug": True,
-            "log_level": "DEBUG"
+            "log_level": "DEBUG",
         }
 
-        template = ConfigurationTemplate(
-            metadata=metadata,
-            configuration=config_data
-        )
+        template = ConfigurationTemplate(metadata=metadata, configuration=config_data)
 
         assert template.metadata.name == "test"
         assert template.configuration["environment"] == "development"
@@ -94,13 +89,12 @@ class TestConfigurationTemplate:
 
     def test_configuration_template_serialization(self):
         """Test ConfigurationTemplate serialization."""
-        metadata = TemplateMetadata(name="test", description="Test", use_case="testing", environment="test")
+        metadata = TemplateMetadata(
+            name="test", description="Test", use_case="testing", environment="test"
+        )
         config_data = {"environment": "test"}
 
-        template = ConfigurationTemplate(
-            metadata=metadata,
-            configuration=config_data
-        )
+        template = ConfigurationTemplate(metadata=metadata, configuration=config_data)
 
         # Should be serializable
         data = template.model_dump()
@@ -120,8 +114,8 @@ class TestConfigurationTemplates:
     def test_templates_initialization(self):
         """Test ConfigurationTemplates initialization."""
         templates = ConfigurationTemplates()
-        assert hasattr(templates, 'path_manager')
-        assert hasattr(templates, 'get_template')
+        assert hasattr(templates, "path_manager")
+        assert hasattr(templates, "get_template")
 
     def test_list_available_templates(self):
         """Test listing available templates."""
@@ -130,8 +124,11 @@ class TestConfigurationTemplates:
         assert isinstance(available, list)
         # Should have the expected template names
         expected_templates = [
-            "development", "production", "high_performance",
-            "memory_optimized", "distributed"
+            "development",
+            "production",
+            "high_performance",
+            "memory_optimized",
+            "distributed",
         ]
 
         for template_name in expected_templates:
@@ -152,8 +149,8 @@ class TestConfigurationTemplates:
 
         assert template is None
 
-    def test_get_template_existing(self):
-        """Test getting existing template."""
+    def test_get_template_with_structure(self):
+        """Test getting existing template with structure validation."""
         template = self.templates.get_template("development")
 
         assert template is not None
@@ -162,8 +159,8 @@ class TestConfigurationTemplates:
         assert template.configuration["environment"] == "development"
         assert template.configuration["debug"] is True
 
-    def test_get_template_nonexistent(self):
-        """Test getting non-existent template."""
+    def test_get_template_none_for_missing(self):
+        """Test getting non-existent template returns None."""
         template = self.templates.get_template("nonexistent")
 
         assert template is None
@@ -310,8 +307,7 @@ class TestConfigurationTemplates:
         """Test applying template with environment overrides."""
         # Note: This test assumes the template supports environment overrides
         config_data = self.templates.apply_template_to_config(
-            "development",
-            environment_overrides="staging"
+            "development", environment_overrides="staging"
         )
 
         assert config_data is not None
@@ -331,7 +327,9 @@ class TestConfigurationTemplates:
 
             config = template.configuration
             for field in required_fields:
-                assert field in config, f"Template {template_name} missing field {field}"
+                assert field in config, (
+                    f"Template {template_name} missing field {field}"
+                )
 
     def test_template_metadata_consistency(self):
         """Test that template metadata is consistent with configuration."""
@@ -346,7 +344,10 @@ class TestConfigurationTemplates:
 
             # If metadata specifies environment, config should match
             if template.metadata.environment:
-                assert template.configuration["environment"] == template.metadata.environment
+                assert (
+                    template.configuration["environment"]
+                    == template.metadata.environment
+                )
 
     def test_template_configuration_validity(self):
         """Test that all template configurations are valid."""
@@ -407,7 +408,11 @@ class TestConfigurationTemplates:
                 cache = config["cache"]
 
                 # Boolean flags should be booleans
-                bool_fields = ["enable_caching", "enable_local_cache", "enable_dragonfly_cache"]
+                bool_fields = [
+                    "enable_caching",
+                    "enable_local_cache",
+                    "enable_dragonfly_cache",
+                ]
                 for field in bool_fields:
                     if field in cache:
                         assert isinstance(cache[field], bool)
@@ -438,8 +443,9 @@ class TestConfigurationTemplates:
                 assert "://" in db_url
 
                 # Should be either sqlite or postgresql
-                assert any(scheme in db_url.lower() for scheme in ["sqlite", "postgresql"])
-
+                assert any(
+                    scheme in db_url.lower() for scheme in ["sqlite", "postgresql"]
+                )
 
     def test_template_tags_are_meaningful(self):
         """Test that template tags provide meaningful categorization."""
@@ -468,7 +474,9 @@ class TestConfigurationTemplates:
             metadata = template.metadata
             # Use case should be descriptive
             if metadata.use_case:
-                assert len(metadata.use_case.strip()) > 10  # Should be reasonably descriptive
+                assert (
+                    len(metadata.use_case.strip()) > 10
+                )  # Should be reasonably descriptive
 
     def test_template_descriptions_informative(self):
         """Test that template descriptions are informative."""
@@ -481,8 +489,10 @@ class TestConfigurationTemplates:
             metadata = template.metadata
             # Description should be informative
             assert len(metadata.description.strip()) > 5
-            assert template_name.lower() in metadata.description.lower() or \
-                   any(word in metadata.description.lower() for word in template_name.split('_'))
+            assert template_name.lower() in metadata.description.lower() or any(
+                word in metadata.description.lower()
+                for word in template_name.split("_")
+            )
 
     def test_production_templates_security_hardened(self):
         """Test that production templates have appropriate security settings."""

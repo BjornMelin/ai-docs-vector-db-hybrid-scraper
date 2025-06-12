@@ -39,7 +39,7 @@ class TestCORSConfig:
             allow_methods=["GET", "POST"],
             allow_headers=["Content-Type"],
             allow_credentials=False,
-            max_age=7200
+            max_age=7200,
         )
 
         assert cors.enabled is False
@@ -73,9 +73,7 @@ class TestCompressionConfig:
     def test_compression_config_custom_values(self):
         """Test CompressionConfig with custom values."""
         compression = CompressionConfig(
-            enabled=False,
-            minimum_size=500,
-            compression_level=9
+            enabled=False, minimum_size=500, compression_level=9
         )
 
         assert compression.enabled is False
@@ -127,7 +125,7 @@ class TestSecurityConfig:
             x_frame_options="SAMEORIGIN",
             strict_transport_security=None,
             enable_rate_limiting=False,
-            rate_limit_requests=50
+            rate_limit_requests=50,
         )
 
         assert security.enabled is False
@@ -170,7 +168,7 @@ class TestTracingConfig:
             enabled=False,
             correlation_id_header="X-Request-ID",
             generate_correlation_id=False,
-            log_responses=True
+            log_responses=True,
         )
 
         assert tracing.enabled is False
@@ -199,7 +197,7 @@ class TestTimeoutConfig:
             enabled=False,
             request_timeout=10.0,
             enable_circuit_breaker=False,
-            failure_threshold=3
+            failure_threshold=3,
         )
 
         assert timeout.enabled is False
@@ -243,9 +241,7 @@ class TestPerformanceConfig:
     def test_performance_config_custom_values(self):
         """Test PerformanceConfig with custom values."""
         performance = PerformanceConfig(
-            enabled=False,
-            track_memory_usage=True,
-            slow_request_threshold=0.5
+            enabled=False, track_memory_usage=True, slow_request_threshold=0.5
         )
 
         assert performance.enabled is False
@@ -293,7 +289,7 @@ class TestFastAPIProductionConfig:
             debug=True,
             server_name="Custom Server",
             workers=8,
-            max_requests=2000
+            max_requests=2000,
         )
 
         assert config.environment == Environment.PRODUCTION
@@ -354,6 +350,7 @@ class TestFastAPIProductionConfig:
     def test_fastapi_config_workers_validation(self):
         """Test worker count validation."""
         import os
+
         cpu_count = os.cpu_count() or 1
 
         # Valid worker count
@@ -373,7 +370,7 @@ class TestFastAPIProductionConfig:
         config = FastAPIProductionConfig(
             cors=CORSConfig(enabled=False),
             security=SecurityConfig(enable_rate_limiting=False),
-            performance=PerformanceConfig(track_memory_usage=True)
+            performance=PerformanceConfig(track_memory_usage=True),
         )
 
         assert config.cors.enabled is False
@@ -426,11 +423,11 @@ class TestFastAPIConfigIntegration:
         # Security should be enabled with appropriate settings
         assert config.security.enabled is True
         assert config.security.enable_rate_limiting is True
-        
+
         # Performance monitoring should be enabled
         assert config.performance.enabled is True
         assert config.performance.track_response_time is True
-        
+
         # Circuit breaker should be enabled
         assert config.timeout.enable_circuit_breaker is True
 
@@ -451,12 +448,12 @@ class TestFastAPIConfigIntegration:
         config = FastAPIProductionConfig()
 
         # All sections should be accessible and have expected types
-        assert hasattr(config, 'cors')
-        assert hasattr(config, 'compression')
-        assert hasattr(config, 'security')
-        assert hasattr(config, 'tracing')
-        assert hasattr(config, 'timeout')
-        assert hasattr(config, 'performance')
+        assert hasattr(config, "cors")
+        assert hasattr(config, "compression")
+        assert hasattr(config, "security")
+        assert hasattr(config, "tracing")
+        assert hasattr(config, "timeout")
+        assert hasattr(config, "performance")
 
         # Each section should be properly configured
         assert config.cors.enabled is True

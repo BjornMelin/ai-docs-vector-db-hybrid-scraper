@@ -47,7 +47,7 @@ class TestConfigVersioning:
         config = {
             "database": {"host": "localhost", "port": 5432},
             "cache": {"enabled": True, "ttl": 3600},
-            "list": [1, 2, 3]
+            "list": [1, 2, 3],
         }
 
         hash_value = ConfigVersioning.generate_config_hash(config)
@@ -95,7 +95,7 @@ class TestConfigVersioning:
             config_hash,
             template_source="development",
             migration_version="1.2.0",
-            environment="production"
+            environment="production",
         )
 
         assert metadata["config_hash"] == config_hash
@@ -204,26 +204,26 @@ class TestConfigPathManager:
         """Test listing backup files with specific config name."""
         manager = ConfigPathManager(temp_dir)
         manager.ensure_directories()
-        
+
         # Create some test backup files
         (manager.backups_dir / "myconfig_backup1.json").touch()
         (manager.backups_dir / "myconfig_backup2.json").touch()
         (manager.backups_dir / "otherconfig_backup1.json").touch()
-        
+
         # Test finding backups for specific config
         backups = manager.list_backups("myconfig")
         assert len(backups) == 2
         assert all("myconfig" in str(f) for f in backups)
-        
+
     def test_list_backups_without_config_name(self, temp_dir):
         """Test listing all backup files when no config name specified."""
         manager = ConfigPathManager(temp_dir)
         manager.ensure_directories()
-        
+
         # Create some test backup files
         (manager.backups_dir / "config1_backup.json").touch()
         (manager.backups_dir / "config2_backup.json").touch()
-        
+
         # Test finding all backups
         backups = manager.list_backups(None)
         assert len(backups) == 2
@@ -246,11 +246,11 @@ class TestConfigMerger:
         """Test deep merge with nested dictionaries."""
         base = {
             "database": {"host": "localhost", "port": 5432},
-            "cache": {"enabled": True}
+            "cache": {"enabled": True},
         }
         override = {
             "database": {"port": 3306, "name": "testdb"},
-            "logging": {"level": "DEBUG"}
+            "logging": {"level": "DEBUG"},
         }
 
         result = ConfigMerger.deep_merge(base, override)
@@ -258,7 +258,7 @@ class TestConfigMerger:
         expected = {
             "database": {"host": "localhost", "port": 3306, "name": "testdb"},
             "cache": {"enabled": True},
-            "logging": {"level": "DEBUG"}
+            "logging": {"level": "DEBUG"},
         }
         assert result == expected
 
@@ -312,14 +312,11 @@ class TestConfigMerger:
 
     def test_apply_environment_overrides_basic(self):
         """Test environment-specific override applying."""
-        base_config = {
-            "debug": False,
-            "database": {"host": "localhost"}
-        }
+        base_config = {"debug": False, "database": {"host": "localhost"}}
 
         env_overrides = {
             "development": {"debug": True},
-            "production": {"database": {"host": "prod.db.com"}}
+            "production": {"database": {"host": "prod.db.com"}},
         }
 
         # Test development environment
@@ -371,7 +368,7 @@ class TestValidationHelper:
             "https://api.example.com",
             "redis://localhost:6379",
             "postgresql://localhost/test",
-            "sqlite:///path/to/db.sqlite"
+            "sqlite:///path/to/db.sqlite",
         ]
 
         for url in valid_urls:
@@ -382,9 +379,9 @@ class TestValidationHelper:
         invalid_urls = [
             "not-a-url",
             "ftp://invalid.com",  # FTP not supported
-            "localhost:8000",     # Missing scheme
-            "",                   # Empty string
-            None                  # None value
+            "localhost:8000",  # Missing scheme
+            "",  # Empty string
+            None,  # None value
         ]
 
         for url in invalid_urls:
@@ -424,7 +421,7 @@ class TestValidationHelper:
         """Test fix suggestions for port range error."""
         error = "Port out of range"
         field = "server_port"
-        
+
         suggestion = ValidationHelper.suggest_fix_for_error(error, field)
         assert suggestion is not None
 
@@ -449,11 +446,7 @@ class TestValidationHelper:
 
     def test_categorize_validation_error_missing_required(self):
         """Test categorization of missing required field errors."""
-        errors = [
-            "Field is required",
-            "Value is missing",
-            "None value not allowed"
-        ]
+        errors = ["Field is required", "Value is missing", "None value not allowed"]
 
         for error in errors:
             category = ValidationHelper.categorize_validation_error(error)
@@ -463,8 +456,8 @@ class TestValidationHelper:
         """Test categorization of format errors."""
         errors = [
             "Format is incorrect",
-            "URL pattern invalid", 
-            "Pattern validation failed"
+            "URL pattern invalid",
+            "Pattern validation failed",
         ]
 
         for error in errors:
@@ -476,7 +469,7 @@ class TestValidationHelper:
         errors = [
             "Value must be greater than 0",
             "Must be between 1 and 100",
-            "Value less than minimum"
+            "Value less than minimum",
         ]
 
         for error in errors:
@@ -487,7 +480,7 @@ class TestValidationHelper:
         """Test categorization of environment constraint errors."""
         errors = [
             "Production environment requires SSL",
-            "Environment-specific validation failed"
+            "Environment-specific validation failed",
         ]
 
         for error in errors:
@@ -512,17 +505,20 @@ class TestUtilityFunctions:
         assert isinstance(timestamp, str)
         assert len(timestamp) == 15  # YYYYMMDD_HHMMSS = 15 characters
         assert "_" in timestamp
-        
+
         # Should match the expected pattern
         import re
-        assert re.match(r'\d{8}_\d{6}', timestamp)
+
+        assert re.match(r"\d{8}_\d{6}", timestamp)
 
     def test_generate_timestamp_uniqueness(self):
         """Test that generated timestamps are unique."""
         import time
 
         timestamp1 = generate_timestamp()
-        time.sleep(1.1)  # Longer delay to ensure different timestamps (since format is seconds)
+        time.sleep(
+            1.1
+        )  # Longer delay to ensure different timestamps (since format is seconds)
         timestamp2 = generate_timestamp()
 
         assert timestamp1 != timestamp2

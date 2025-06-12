@@ -4,20 +4,10 @@ This test file covers the validation functions used throughout the configuration
 including API key validators, URL validators, and configuration validators.
 """
 
-import json
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
-
 import pytest
 from src.config.validators import ConfigValidator
 from src.config.validators import validate_api_key_common
 from src.config.validators import validate_chunk_sizes
-from src.config.validators import validate_model_benchmark_consistency
-from src.config.validators import validate_rate_limit_config
-from src.config.validators import validate_scoring_weights
 from src.config.validators import validate_url_format
 
 
@@ -65,7 +55,9 @@ class TestValidateChunkSizes:
 
     def test_validate_chunk_sizes_overlap_too_large(self):
         """Test chunk overlap that's too large."""
-        with pytest.raises(ValueError, match="chunk_overlap must be less than chunk_size"):
+        with pytest.raises(
+            ValueError, match="chunk_overlap must be less than chunk_size"
+        ):
             validate_chunk_sizes(1000, 1000, 100, 2000)
 
 
@@ -85,6 +77,8 @@ class TestConfigValidator:
 
     def test_validate_api_key_openai_valid(self):
         """Test valid OpenAI API key validation."""
-        is_valid, error = ConfigValidator.validate_api_key("sk-abcdef1234567890abcdef1234567890abcdef12", "openai")
+        is_valid, error = ConfigValidator.validate_api_key(
+            "sk-abcdef1234567890abcdef1234567890abcdef12", "openai"
+        )
         assert is_valid is True
         assert error == ""
