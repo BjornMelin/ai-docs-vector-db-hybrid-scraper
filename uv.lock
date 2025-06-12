@@ -83,9 +83,11 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
+    { name = "pytest-mock" },
 ]
 
 [package.metadata]
@@ -146,9 +148,11 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "coverage", specifier = ">=7.6.0" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
+    { name = "pytest-mock", specifier = ">=3.14.1" },
 ]
 
 [[package]]
