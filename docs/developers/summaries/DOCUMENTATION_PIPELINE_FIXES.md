@@ -11,8 +11,8 @@ This document summarizes all the fixes implemented to resolve documentation gene
 **Root Cause**: `uv tool install` creates isolated environments without access to project modules, causing `ModuleNotFoundError` when trying to generate API documentation.
 
 **Solution**:
-- Created `/docs/requirements.txt` with all documentation dependencies
-- Updated GitHub Actions workflow to use `uv pip install -r docs/requirements.txt` instead of `uv tool install`
+- Created `/pyproject.toml [docs] optional dependency group` with all documentation dependencies
+- Updated GitHub Actions workflow to use `uv pip install -e ".[docs]"` instead of `uv tool install`
 - Configured proper Python path and dependency mocking in Sphinx configuration
 
 ### 2. ✅ API Documentation Generation Fixes
@@ -20,7 +20,7 @@ This document summarizes all the fixes implemented to resolve documentation gene
 **Problem**: pdoc3 and sphinx couldn't import source modules due to missing dependencies.
 
 **Solution**:
-- Created comprehensive Sphinx configuration (`/docs/conf.py`) with:
+- Created comprehensive Sphinx configuration (`/docs/build-config/conf.py`) with:
   - Mock imports for problematic dependencies (qdrant_client, crawl4ai, etc.)
   - Proper Python path configuration
   - Google-style docstring support via Napoleon
@@ -31,10 +31,10 @@ This document summarizes all the fixes implemented to resolve documentation gene
 ### 3. 📚 Modern Documentation Infrastructure
 
 **Created modern documentation setup**:
-- **MkDocs configuration** (`/mkdocs.yml`) with Material theme
-- **Sphinx configuration** (`/docs/conf.py`) with RTD theme
+- **MkDocs configuration** (`/docs/build-config/mkdocs.yml`) with Material theme
+- **Sphinx configuration** (`/docs/build-config/conf.py`) with RTD theme
 - **Modern homepage** (`/docs/index.md`) with tabbed navigation and Mermaid diagrams
-- **Sphinx RST index** (`/docs/index.rst`) for traditional documentation
+- **Sphinx RST index** (`/docs/build-config/index.rst`) for traditional documentation
 
 ### 4. 🔧 GitHub Actions Workflow Improvements
 
@@ -48,11 +48,11 @@ This document summarizes all the fixes implemented to resolve documentation gene
 ## Files Created/Modified
 
 ### New Configuration Files
-- `/docs/requirements.txt` - Documentation tool dependencies
-- `/docs/conf.py` - Sphinx configuration with mock imports
-- `/mkdocs.yml` - MkDocs Material theme configuration
+- `/pyproject.toml [docs] optional dependency group` - Documentation tool dependencies
+- `/docs/build-config/conf.py` - Sphinx configuration with mock imports
+- `/docs/build-config/mkdocs.yml` - MkDocs Material theme configuration
 - `/docs/index.md` - Modern documentation homepage
-- `/docs/index.rst` - Sphinx documentation index
+- `/docs/build-config/index.rst` - Sphinx documentation index
 
 ### Modified Files
 - `.github/workflows/docs.yml` - Fixed documentation pipeline
@@ -98,14 +98,14 @@ This document summarizes all the fixes implemented to resolve documentation gene
 
 ```bash
 # Install documentation dependencies
-uv pip install -r docs/requirements.txt
+uv pip install -e ".[docs]"
 
 # Build MkDocs site
 uv run mkdocs build
 
 # Generate and build Sphinx documentation
 uv run sphinx-apidoc -o docs/api src --force
-PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html docs docs/_build/html
+PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html -c docs/build-config docs docs/_build/html
 
 # Check docstring coverage
 uv run interrogate src/ --fail-under=70 --generate-badge docs/
@@ -138,9 +138,9 @@ autodoc_mock_imports = [
 ## Future Maintenance
 
 ### Documentation Updates
-- MkDocs navigation in `/mkdocs.yml` should be updated when adding new documentation files
-- Sphinx mock imports in `/docs/conf.py` should be updated when adding new dependencies
-- Documentation requirements in `/docs/requirements.txt` should be kept up to date
+- MkDocs navigation in `/docs/build-config/mkdocs.yml` should be updated when adding new documentation files
+- Sphinx mock imports in `/docs/build-config/conf.py` should be updated when adding new dependencies
+- Documentation requirements in `/pyproject.toml [docs] optional dependency group` should be kept up to date
 
 ### Monitoring
 - GitHub Actions will now successfully build and deploy documentation

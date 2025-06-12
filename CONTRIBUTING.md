@@ -165,7 +165,7 @@ change: code
    uv run mypy src/
    
    # Documentation build test
-   uv run mkdocs build
+   uv run mkdocs build -f docs/build-config/mkdocs.yml
    ```
 
 4. **Submit Pull Request**
@@ -281,13 +281,13 @@ uv run pytest --benchmark-only
 
 ```bash
 # Install documentation dependencies
-uv add mkdocs mkdocs-material
+uv pip install -e ".[docs]"
 
 # Serve documentation locally
-uv run mkdocs serve
+uv run mkdocs serve -f docs/build-config/mkdocs.yml
 
 # Build documentation
-uv run mkdocs build
+uv run mkdocs build -f docs/build-config/mkdocs.yml
 ```
 
 ## 🎯 Contribution Areas
