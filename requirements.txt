@@ -322,7 +322,7 @@ markdownify==1.1.0
     # via browser-use
 markupsafe==3.0.2
     # via jinja2
-mcp==1.9.2
+mcp==1.9.3
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   fastmcp
