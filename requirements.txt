@@ -367,7 +367,7 @@ numpy==2.2.6
     #   scipy
     #   transformers
     #   trec-car-tools
-nvidia-cublas-cu12==12.6.4.1
+nvidia-cublas-cu12==12.9.1.4
     # via
     #   nvidia-cudnn-cu12
     #   nvidia-cusolver-cu12
