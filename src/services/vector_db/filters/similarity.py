@@ -639,8 +639,8 @@ class SimilarityThresholdManager(BaseFilter):
                 if label != -1:  # Exclude noise
                     cluster_scores = [
                         scores_array[i][0]
-                        for i, l in enumerate(cluster_labels)
-                        if l == label
+                        for i, cluster_label in enumerate(cluster_labels)
+                        if cluster_label == label
                     ]
                     cluster_centers.append(statistics.mean(cluster_scores))
 

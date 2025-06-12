@@ -342,9 +342,9 @@ class FilterComposer(BaseFilter):
                 else:
                     self._logger.warning(f"Filter {name} timed out")
 
-        except TimeoutError:
+        except TimeoutError as e:
             self._logger.error("Filter composition timed out")
-            raise FilterError("Filter composition execution timed out")
+            raise FilterError("Filter composition execution timed out") from e
 
         return results
 

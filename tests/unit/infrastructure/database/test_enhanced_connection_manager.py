@@ -718,12 +718,14 @@ class TestEnhancedConnectionManagerIntegration:
         manager.adaptive_config = mock_real_components["adaptive_config"]
 
         try:
-            with patch(
-                "src.infrastructure.database.connection_manager.create_async_engine"
-            ) as mock_create_engine:
-                with patch(
+            with (
+                patch(
+                    "src.infrastructure.database.connection_manager.create_async_engine"
+                ) as mock_create_engine,
+                patch(
                     "src.infrastructure.database.connection_manager.async_sessionmaker"
-                ) as mock_sessionmaker:
+                ) as mock_sessionmaker,
+            ):
                     mock_create_engine.return_value = mock_engine
                     mock_sessionmaker.return_value = mock_session_factory
 

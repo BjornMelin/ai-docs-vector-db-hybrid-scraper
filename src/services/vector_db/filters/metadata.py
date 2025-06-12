@@ -82,11 +82,10 @@ class FieldConditionModel(BaseModel):
     @classmethod
     def validate_values_for_operator(cls, v, info):
         """Validate values list is provided for appropriate operators."""
-        if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN]:
-            if not v:
-                raise ValueError(
-                    f"values list required for {info.data['operator']} operator"
-                )
+        if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN] and not v:
+            raise ValueError(
+                f"values list required for {info.data['operator']} operator"
+            )
         return v
 
     @model_validator(mode="after")
@@ -604,8 +603,8 @@ class MetadataFilter(BaseFilter):
 
         try:
             operator = BooleanOperator(operator_key)
-        except ValueError:
-            raise ValueError(f"Invalid boolean operator: {operator_key}")
+        except ValueError as e:
+            raise ValueError(f"Invalid boolean operator: {operator_key}") from e
 
         # Parse conditions
         parsed_conditions = []
