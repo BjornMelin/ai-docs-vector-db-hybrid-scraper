@@ -5,123 +5,118 @@ intent classification, strategy selection, coordinated search orchestration,
 query expansion, and result clustering capabilities.
 """
 
-from .clustering import (
-    ClusterGroup,
-    ClusteringMethod,
-    ClusteringScope,
-    OutlierResult,
-    ResultClusteringRequest,
-    ResultClusteringResult,
-    ResultClusteringService,
-    SearchResult,
-    SimilarityMetric,
-)
-from .expansion import (
-    ExpandedTerm,
-    ExpansionScope,
-    ExpansionStrategy,
-    QueryExpansionRequest,
-    QueryExpansionResult,
-    QueryExpansionService,
-    TermRelationType,
-)
-from .federated import (
-    CollectionMetadata,
-    CollectionSearchResult,
-    CollectionSelectionStrategy,
-    FederatedSearchRequest,
-    FederatedSearchResult,
-    FederatedSearchScope,
-    FederatedSearchService,
-    ResultMergingStrategy,
-    SearchMode as FederatedSearchMode,
-)
-from .ranking import (
-    InteractionEvent,
-    InteractionType,
-    PersonalizedRankingRequest,
-    PersonalizedRankingResult,
-    PersonalizedRankingService,
-    RankedResult,
-    RankingStrategy,
-    UserPreference,
-    UserProfile,
-)
+from .clustering import ClusterGroup
+from .clustering import ClusteringMethod
+from .clustering import ClusteringScope
+from .clustering import OutlierResult
+from .clustering import ResultClusteringRequest
+from .clustering import ResultClusteringResult
+from .clustering import ResultClusteringService
+from .clustering import SearchResult
+from .clustering import SimilarityMetric
+from .expansion import ExpandedTerm
+from .expansion import ExpansionScope
+from .expansion import ExpansionStrategy
+from .expansion import QueryExpansionRequest
+from .expansion import QueryExpansionResult
+from .expansion import QueryExpansionService
+from .expansion import TermRelationType
+from .federated import CollectionMetadata
+from .federated import CollectionSearchResult
+from .federated import CollectionSelectionStrategy
+from .federated import FederatedSearchRequest
+from .federated import FederatedSearchResult
+from .federated import FederatedSearchScope
+from .federated import FederatedSearchService
+from .federated import ResultMergingStrategy
+from .federated import SearchMode as FederatedSearchMode
 from .intent_classifier import QueryIntentClassifier
 from .models import QueryIntent
 from .models import QueryProcessingRequest
 from .models import QueryProcessingResponse
-from .orchestrator import (
-    AdvancedSearchOrchestrator,
-    AdvancedSearchRequest,
-    AdvancedSearchResult,
-    ProcessingStage,
-    SearchMode,
-    SearchPipeline,
-    StageResult,
-)
+from .orchestrator import AdvancedSearchOrchestrator
+from .orchestrator import AdvancedSearchRequest
+from .orchestrator import AdvancedSearchResult
+from .orchestrator import ProcessingStage
+from .orchestrator import SearchMode
+from .orchestrator import SearchPipeline
+from .orchestrator import StageResult
 from .pipeline import QueryProcessingPipeline
 from .preprocessor import QueryPreprocessor
+from .ranking import InteractionEvent
+from .ranking import InteractionType
+from .ranking import PersonalizedRankingRequest
+from .ranking import PersonalizedRankingResult
+from .ranking import PersonalizedRankingService
+from .ranking import RankedResult
+from .ranking import RankingStrategy
+from .ranking import UserPreference
+from .ranking import UserProfile
 from .strategy_selector import SearchStrategySelector
 
 __all__ = [
-    # Core query processing
-    "QueryIntent",
-    "QueryIntentClassifier",
-    "QueryPreprocessor", 
-    "QueryProcessingPipeline",
-    "QueryProcessingRequest",
-    "QueryProcessingResponse",
-    "SearchStrategySelector",
-    
     # Advanced search orchestrator
     "AdvancedSearchOrchestrator",
     "AdvancedSearchRequest",
     "AdvancedSearchResult",
-    "ProcessingStage",
-    "SearchMode",
-    "SearchPipeline",
-    "StageResult",
-    
-    # Query expansion
-    "QueryExpansionService",
-    "QueryExpansionRequest",
-    "QueryExpansionResult",
-    "ExpandedTerm",
-    "ExpansionStrategy",
-    "ExpansionScope",
-    "TermRelationType",
-    
     # Result clustering
-    "ResultClusteringService",
-    "ResultClusteringRequest", 
-    "ResultClusteringResult",
     "ClusterGroup",
-    "OutlierResult",
-    "SearchResult",
     "ClusteringMethod",
     "ClusteringScope",
-    "SimilarityMetric",
-    
-    # Federated search
-    "FederatedSearchService",
-    "FederatedSearchRequest",
-    "FederatedSearchResult",
+    # Collection handling
     "CollectionMetadata",
     "CollectionSearchResult",
     "CollectionSelectionStrategy",
-    "FederatedSearchScope",
-    "ResultMergingStrategy",
+    # Query expansion
+    "ExpandedTerm",
+    "ExpansionScope",
+    "ExpansionStrategy",
+    # Federated search
     "FederatedSearchMode",
-    
-    # Personalized ranking
-    "PersonalizedRankingService",
-    "PersonalizedRankingRequest",
-    "PersonalizedRankingResult",
-    "RankedResult",
-    "RankingStrategy",
-    "UserProfile",
-    "UserPreference",
+    "FederatedSearchRequest",
+    "FederatedSearchResult",
+    "FederatedSearchScope",
+    "FederatedSearchService",
+    # Interaction handling
     "InteractionEvent",
     "InteractionType",
+    # Outlier detection
+    "OutlierResult",
+    # Personalized ranking
+    "PersonalizedRankingRequest",
+    "PersonalizedRankingResult",
+    "PersonalizedRankingService",
+    # Pipeline stages
+    "ProcessingStage",
+    # Core query processing
+    "QueryExpansionRequest",
+    "QueryExpansionResult",
+    "QueryExpansionService",
+    "QueryIntent",
+    "QueryIntentClassifier",
+    "QueryPreprocessor",
+    "QueryProcessingPipeline",
+    "QueryProcessingRequest",
+    "QueryProcessingResponse",
+    # Ranking
+    "RankedResult",
+    "RankingStrategy",
+    # Result processing
+    "ResultClusteringRequest",
+    "ResultClusteringResult",
+    "ResultClusteringService",
+    "ResultMergingStrategy",
+    # Search configuration
+    "SearchMode",
+    "SearchPipeline",
+    "SearchResult",
+    "SearchStrategySelector",
+    # Similarity metrics
+    "SimilarityMetric",
+    "StageResult",
+    # Term relationships
+    "TermRelationType",
+    # User profile
+    "UserPreference",
+    "UserProfile",
 ]

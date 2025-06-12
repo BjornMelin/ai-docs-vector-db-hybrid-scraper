@@ -67,17 +67,27 @@ class CollectionMetadata(BaseModel):
     # Collection characteristics
     document_count: int = Field(..., ge=0, description="Number of documents")
     vector_size: int = Field(..., ge=1, description="Vector dimensionality")
-    indexed_fields: list[str] = Field(default_factory=list, description="Indexed metadata fields")
+    indexed_fields: list[str] = Field(
+        default_factory=list, description="Indexed metadata fields"
+    )
 
     # Content metadata
-    content_types: list[str] = Field(default_factory=list, description="Document types in collection")
+    content_types: list[str] = Field(
+        default_factory=list, description="Document types in collection"
+    )
     domains: list[str] = Field(default_factory=list, description="Content domains")
-    languages: list[str] = Field(default_factory=list, description="Supported languages")
+    languages: list[str] = Field(
+        default_factory=list, description="Supported languages"
+    )
 
     # Performance characteristics
     avg_search_time_ms: float = Field(0.0, ge=0.0, description="Average search latency")
-    availability_score: float = Field(1.0, ge=0.0, le=1.0, description="Collection availability")
-    quality_score: float = Field(1.0, ge=0.0, le=1.0, description="Content quality score")
+    availability_score: float = Field(
+        1.0, ge=0.0, le=1.0, description="Collection availability"
+    )
+    quality_score: float = Field(
+        1.0, ge=0.0, le=1.0, description="Content quality score"
+    )
 
     # Search capabilities
     supports_hybrid_search: bool = Field(True, description="Supports hybrid search")
@@ -86,7 +96,9 @@ class CollectionMetadata(BaseModel):
 
     # Administrative metadata
     priority: int = Field(1, ge=1, le=10, description="Collection search priority")
-    last_updated: datetime = Field(default_factory=datetime.now, description="Last update time")
+    last_updated: datetime = Field(
+        default_factory=datetime.now, description="Last update time"
+    )
     access_restrictions: dict[str, Any] = Field(
         default_factory=dict, description="Access control metadata"
     )
@@ -101,7 +113,9 @@ class CollectionSearchResult(BaseModel):
     search_time_ms: float = Field(..., ge=0.0, description="Search execution time")
 
     # Quality metrics
-    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Result confidence")
+    confidence_score: float = Field(
+        ..., ge=0.0, le=1.0, description="Result confidence"
+    )
     coverage_score: float = Field(..., ge=0.0, le=1.0, description="Query coverage")
 
     # Search metadata
@@ -125,7 +139,9 @@ class FederatedSearchRequest(BaseModel):
 
     # Core search parameters
     query: str = Field(..., description="Search query")
-    vector: list[float] | None = Field(None, description="Query vector for similarity search")
+    vector: list[float] | None = Field(
+        None, description="Query vector for similarity search"
+    )
     limit: int = Field(10, ge=1, le=1000, description="Maximum results to return")
     offset: int = Field(0, ge=0, description="Result offset for pagination")
 
@@ -134,14 +150,17 @@ class FederatedSearchRequest(BaseModel):
         None, description="Specific collections to search"
     )
     collection_selection_strategy: CollectionSelectionStrategy = Field(
-        CollectionSelectionStrategy.SMART_ROUTING, description="Collection selection strategy"
+        CollectionSelectionStrategy.SMART_ROUTING,
+        description="Collection selection strategy",
     )
     max_collections: int | None = Field(
         None, ge=1, le=50, description="Maximum collections to search"
     )
 
     # Search execution
-    search_mode: SearchMode = Field(SearchMode.PARALLEL, description="Search execution mode")
+    search_mode: SearchMode = Field(
+        SearchMode.PARALLEL, description="Search execution mode"
+    )
     federated_scope: FederatedSearchScope = Field(
         FederatedSearchScope.EFFICIENT, description="Search scope"
     )
@@ -154,7 +173,9 @@ class FederatedSearchRequest(BaseModel):
     result_merging_strategy: ResultMergingStrategy = Field(
         ResultMergingStrategy.SCORE_BASED, description="Result merging strategy"
     )
-    enable_deduplication: bool = Field(True, description="Enable cross-collection deduplication")
+    enable_deduplication: bool = Field(
+        True, description="Enable cross-collection deduplication"
+    )
     deduplication_threshold: float = Field(
         0.9, ge=0.0, le=1.0, description="Similarity threshold for deduplication"
     )
@@ -200,7 +221,9 @@ class FederatedSearchResult(BaseModel):
     collection_results: list[CollectionSearchResult] = Field(
         ..., description="Per-collection search results"
     )
-    collections_searched: list[str] = Field(..., description="Collections that were searched")
+    collections_searched: list[str] = Field(
+        ..., description="Collections that were searched"
+    )
     collections_failed: list[str] = Field(
         default_factory=list, description="Collections that failed"
     )
@@ -216,8 +239,12 @@ class FederatedSearchResult(BaseModel):
 
     # Performance metrics
     total_search_time_ms: float = Field(..., ge=0.0, description="Total search time")
-    fastest_collection_ms: float = Field(..., ge=0.0, description="Fastest collection time")
-    slowest_collection_ms: float = Field(..., ge=0.0, description="Slowest collection time")
+    fastest_collection_ms: float = Field(
+        ..., ge=0.0, description="Fastest collection time"
+    )
+    slowest_collection_ms: float = Field(
+        ..., ge=0.0, description="Slowest collection time"
+    )
 
     # Quality metrics
     overall_confidence: float = Field(
@@ -254,10 +281,10 @@ class FederatedSearchService:
         enable_adaptive_load_balancing: bool = True,
         enable_result_caching: bool = True,
         cache_size: int = 1000,
-        max_concurrent_searches: int = 10
+        max_concurrent_searches: int = 10,
     ):
         """Initialize federated search service.
-        
+
         Args:
             enable_intelligent_routing: Enable smart collection routing
             enable_adaptive_load_balancing: Enable adaptive load balancing
@@ -265,7 +292,9 @@ class FederatedSearchService:
             cache_size: Size of result cache
             max_concurrent_searches: Maximum concurrent collection searches
         """
-        self._logger = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
+        self._logger = logging.getLogger(
+            f"{self.__class__.__module__}.{self.__class__.__name__}"
+        )
 
         # Configuration
         self.enable_intelligent_routing = enable_intelligent_routing
@@ -275,7 +304,7 @@ class FederatedSearchService:
 
         # Collection registry and metadata
         self.collection_registry = {}  # Collection name -> metadata
-        self.collection_clients = {}   # Collection name -> Qdrant client
+        self.collection_clients = {}  # Collection name -> Qdrant client
         self.collection_performance_stats = {}  # Performance tracking
 
         # Load balancing and routing
@@ -293,15 +322,15 @@ class FederatedSearchService:
             "avg_search_time": 0.0,
             "successful_searches": 0,
             "failed_searches": 0,
-            "collections_usage": {}
+            "collections_usage": {},
         }
 
     async def search(self, request: FederatedSearchRequest) -> FederatedSearchResult:
         """Execute federated search across multiple collections.
-        
+
         Args:
             request: Federated search request
-            
+
         Returns:
             FederatedSearchResult with merged results and metadata
         """
@@ -330,22 +359,24 @@ class FederatedSearchService:
 
             # Filter successful results
             successful_results = [
-                result for result in collection_results
-                if not result.has_errors and result.confidence_score >= request.min_collection_confidence
+                result
+                for result in collection_results
+                if not result.has_errors
+                and result.confidence_score >= request.min_collection_confidence
             ]
 
             # Check minimum collection requirement
-            if (request.require_minimum_collections and
-                len(successful_results) < request.require_minimum_collections):
+            if (
+                request.require_minimum_collections
+                and len(successful_results) < request.require_minimum_collections
+            ):
                 raise ValueError(
                     f"Only {len(successful_results)} collections succeeded, "
                     f"minimum required: {request.require_minimum_collections}"
                 )
 
             # Merge and deduplicate results
-            merged_results = await self._merge_results(
-                successful_results, request
-            )
+            merged_results = await self._merge_results(successful_results, request)
 
             # Calculate quality metrics
             quality_metrics = self._calculate_quality_metrics(
@@ -356,17 +387,23 @@ class FederatedSearchService:
 
             # Build federated result
             result = FederatedSearchResult(
-                results=merged_results[:request.limit],
+                results=merged_results[: request.limit],
                 total_results=len(merged_results),
                 collection_results=collection_results,
                 collections_searched=[r.collection_name for r in successful_results],
-                collections_failed=[r.collection_name for r in collection_results if r.has_errors],
+                collections_failed=[
+                    r.collection_name for r in collection_results if r.has_errors
+                ],
                 search_strategy=request.collection_selection_strategy,
                 merging_strategy=request.result_merging_strategy,
                 search_mode=request.search_mode,
                 total_search_time_ms=total_search_time,
-                fastest_collection_ms=min((r.search_time_ms for r in successful_results), default=0.0),
-                slowest_collection_ms=max((r.search_time_ms for r in successful_results), default=0.0),
+                fastest_collection_ms=min(
+                    (r.search_time_ms for r in successful_results), default=0.0
+                ),
+                slowest_collection_ms=max(
+                    (r.search_time_ms for r in successful_results), default=0.0
+                ),
                 overall_confidence=quality_metrics["overall_confidence"],
                 coverage_score=quality_metrics["coverage_score"],
                 diversity_score=quality_metrics["diversity_score"],
@@ -377,8 +414,11 @@ class FederatedSearchService:
                     "target_collections_count": len(target_collections),
                     "successful_collections_count": len(successful_results),
                     "total_hits": sum(r.total_hits for r in successful_results),
-                    "search_efficiency": len(successful_results) / len(target_collections) if target_collections else 0
-                }
+                    "search_efficiency": len(successful_results)
+                    / len(target_collections)
+                    if target_collections
+                    else 0,
+                },
             )
 
             # Cache result
@@ -415,17 +455,14 @@ class FederatedSearchService:
                 overall_confidence=0.0,
                 coverage_score=0.0,
                 diversity_score=0.0,
-                federated_metadata={"error": str(e)}
+                federated_metadata={"error": str(e)},
             )
 
     async def register_collection(
-        self,
-        collection_name: str,
-        metadata: CollectionMetadata,
-        client: Any = None
+        self, collection_name: str, metadata: CollectionMetadata, client: Any = None
     ) -> None:
         """Register a collection for federated search.
-        
+
         Args:
             collection_name: Unique collection identifier
             metadata: Collection metadata and capabilities
@@ -441,7 +478,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now()
+                "last_updated": datetime.now(),
             }
 
             self.collection_load_scores[collection_name] = 0.0
@@ -454,7 +491,7 @@ class FederatedSearchService:
 
     async def unregister_collection(self, collection_name: str) -> None:
         """Unregister a collection from federated search.
-        
+
         Args:
             collection_name: Collection to unregister
         """
@@ -467,25 +504,37 @@ class FederatedSearchService:
             self._logger.info(f"Unregistered collection: {collection_name}")
 
         except Exception as e:
-            self._logger.error(f"Failed to unregister collection {collection_name}: {e}")
+            self._logger.error(
+                f"Failed to unregister collection {collection_name}: {e}"
+            )
 
-    async def _select_collections(
-        self, request: FederatedSearchRequest
-    ) -> list[str]:
+    async def _select_collections(self, request: FederatedSearchRequest) -> list[str]:
         """Select collections to search based on strategy."""
-        if request.collection_selection_strategy == CollectionSelectionStrategy.EXPLICIT:
+        if (
+            request.collection_selection_strategy
+            == CollectionSelectionStrategy.EXPLICIT
+        ):
             return request.target_collections or []
 
         if request.collection_selection_strategy == CollectionSelectionStrategy.ALL:
             collections = list(self.collection_registry.keys())
 
-        elif request.collection_selection_strategy == CollectionSelectionStrategy.SMART_ROUTING:
+        elif (
+            request.collection_selection_strategy
+            == CollectionSelectionStrategy.SMART_ROUTING
+        ):
             collections = await self._smart_route_collections(request)
 
-        elif request.collection_selection_strategy == CollectionSelectionStrategy.CONTENT_BASED:
+        elif (
+            request.collection_selection_strategy
+            == CollectionSelectionStrategy.CONTENT_BASED
+        ):
             collections = self._select_by_content_type(request)
 
-        elif request.collection_selection_strategy == CollectionSelectionStrategy.PERFORMANCE_BASED:
+        elif (
+            request.collection_selection_strategy
+            == CollectionSelectionStrategy.PERFORMANCE_BASED
+        ):
             collections = self._select_by_performance(request)
 
         else:
@@ -497,9 +546,9 @@ class FederatedSearchService:
             sorted_collections = sorted(
                 collections,
                 key=lambda c: self.collection_registry[c].priority,
-                reverse=True
+                reverse=True,
             )
-            collections = sorted_collections[:request.max_collections]
+            collections = sorted_collections[: request.max_collections]
 
         return collections
 
@@ -552,7 +601,9 @@ class FederatedSearchService:
         query_lower = request.query.lower()
         detected_types = []
 
-        if any(term in query_lower for term in ["code", "programming", "function", "api"]):
+        if any(
+            term in query_lower for term in ["code", "programming", "function", "api"]
+        ):
             detected_types.append("code")
         if any(term in query_lower for term in ["documentation", "docs", "manual"]):
             detected_types.append("documentation")
@@ -561,7 +612,9 @@ class FederatedSearchService:
 
         for collection_name, metadata in self.collection_registry.items():
             # Check if collection supports detected content types
-            if not detected_types or any(dt in metadata.content_types for dt in detected_types):
+            if not detected_types or any(
+                dt in metadata.content_types for dt in detected_types
+            ):
                 selected_collections.append(collection_name)
 
         return selected_collections or list(self.collection_registry.keys())
@@ -579,7 +632,7 @@ class FederatedSearchService:
             # Performance score (lower time and higher success rate is better)
             performance_score = success_rate * metadata.availability_score
             if avg_time > 0:
-                performance_score /= (avg_time / 1000.0)  # Normalize to seconds
+                performance_score /= avg_time / 1000.0  # Normalize to seconds
 
             performance_ranked.append((collection_name, performance_score))
 
@@ -589,9 +642,7 @@ class FederatedSearchService:
         return [name for name, _ in performance_ranked]
 
     async def _execute_federated_search(
-        self,
-        request: FederatedSearchRequest,
-        target_collections: list[str]
+        self, request: FederatedSearchRequest, target_collections: list[str]
     ) -> list[CollectionSearchResult]:
         """Execute search across target collections."""
         if request.search_mode == SearchMode.PARALLEL:
@@ -604,30 +655,25 @@ class FederatedSearchService:
             return await self._execute_adaptive_search(request, target_collections)
 
     async def _execute_parallel_search(
-        self,
-        request: FederatedSearchRequest,
-        target_collections: list[str]
+        self, request: FederatedSearchRequest, target_collections: list[str]
     ) -> list[CollectionSearchResult]:
         """Execute searches in parallel across collections."""
         semaphore = asyncio.Semaphore(self.max_concurrent_searches)
 
         async def search_collection(collection_name: str) -> CollectionSearchResult:
             async with semaphore:
-                return await self._search_single_collection(
-                    collection_name, request
-                )
+                return await self._search_single_collection(collection_name, request)
 
         # Create tasks for all collections
         tasks = [
-            search_collection(collection_name)
-            for collection_name in target_collections
+            search_collection(collection_name) for collection_name in target_collections
         ]
 
         # Execute with timeout
         try:
             results = await asyncio.wait_for(
                 asyncio.gather(*tasks, return_exceptions=True),
-                timeout=request.timeout_ms / 1000.0
+                timeout=request.timeout_ms / 1000.0,
             )
 
             # Process results and handle exceptions
@@ -642,13 +688,15 @@ class FederatedSearchService:
             return collection_results
 
         except TimeoutError:
-            self._logger.warning(f"Parallel search timed out after {request.timeout_ms}ms")
-            return [self._create_error_result("Search timeout") for _ in target_collections]
+            self._logger.warning(
+                f"Parallel search timed out after {request.timeout_ms}ms"
+            )
+            return [
+                self._create_error_result("Search timeout") for _ in target_collections
+            ]
 
     async def _execute_sequential_search(
-        self,
-        request: FederatedSearchRequest,
-        target_collections: list[str]
+        self, request: FederatedSearchRequest, target_collections: list[str]
     ) -> list[CollectionSearchResult]:
         """Execute searches sequentially across collections."""
         results = []
@@ -657,30 +705,32 @@ class FederatedSearchService:
             try:
                 result = await asyncio.wait_for(
                     self._search_single_collection(collection_name, request),
-                    timeout=request.per_collection_timeout_ms / 1000.0
+                    timeout=request.per_collection_timeout_ms / 1000.0,
                 )
                 results.append(result)
 
             except TimeoutError:
                 self._logger.warning(f"Search timeout for collection {collection_name}")
-                results.append(self._create_error_result("Collection timeout", collection_name))
+                results.append(
+                    self._create_error_result("Collection timeout", collection_name)
+                )
             except Exception as e:
-                self._logger.error(f"Search failed for collection {collection_name}: {e}")
+                self._logger.error(
+                    f"Search failed for collection {collection_name}: {e}"
+                )
                 results.append(self._create_error_result(str(e), collection_name))
 
         return results
 
     async def _execute_prioritized_search(
-        self,
-        request: FederatedSearchRequest,
-        target_collections: list[str]
+        self, request: FederatedSearchRequest, target_collections: list[str]
     ) -> list[CollectionSearchResult]:
         """Execute searches with priority ordering."""
         # Sort collections by priority
         prioritized_collections = sorted(
             target_collections,
             key=lambda c: self.collection_registry[c].priority,
-            reverse=True
+            reverse=True,
         )
 
         # Execute high-priority collections first, then parallel for others
@@ -713,9 +763,7 @@ class FederatedSearchService:
         return results
 
     async def _execute_adaptive_search(
-        self,
-        request: FederatedSearchRequest,
-        target_collections: list[str]
+        self, request: FederatedSearchRequest, target_collections: list[str]
     ) -> list[CollectionSearchResult]:
         """Execute adaptive search based on conditions."""
         # Simple adaptive logic - use parallel for small sets, sequential for large
@@ -725,9 +773,7 @@ class FederatedSearchService:
             return await self._execute_sequential_search(request, target_collections)
 
     async def _search_single_collection(
-        self,
-        collection_name: str,
-        request: FederatedSearchRequest
+        self, collection_name: str, request: FederatedSearchRequest
     ) -> CollectionSearchResult:
         """Search a single collection."""
         import time
@@ -749,8 +795,8 @@ class FederatedSearchService:
                     "payload": {
                         "title": f"Result {i} from {collection_name}",
                         "content": f"Mock content from collection {collection_name}",
-                        "collection": collection_name
-                    }
+                        "collection": collection_name,
+                    },
                 }
                 for i in range(min(request.limit, 5))
             ]
@@ -770,7 +816,7 @@ class FederatedSearchService:
                 query_used=request.query,
                 filters_applied=request.global_filters,
                 search_metadata={"mock": True},
-                has_errors=False
+                has_errors=False,
             )
 
         except Exception as e:
@@ -786,20 +832,22 @@ class FederatedSearchService:
                 coverage_score=0.0,
                 query_used=request.query,
                 has_errors=True,
-                error_details={"error": str(e)}
+                error_details={"error": str(e)},
             )
 
     async def _merge_results(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results from multiple collections."""
         if request.result_merging_strategy == ResultMergingStrategy.SCORE_BASED:
             return self._merge_by_score(collection_results, request)
         elif request.result_merging_strategy == ResultMergingStrategy.ROUND_ROBIN:
             return self._merge_round_robin(collection_results, request)
-        elif request.result_merging_strategy == ResultMergingStrategy.COLLECTION_PRIORITY:
+        elif (
+            request.result_merging_strategy == ResultMergingStrategy.COLLECTION_PRIORITY
+        ):
             return self._merge_by_priority(collection_results, request)
         elif request.result_merging_strategy == ResultMergingStrategy.TEMPORAL:
             return self._merge_by_time(collection_results, request)
@@ -809,7 +857,7 @@ class FederatedSearchService:
     def _merge_by_score(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results by relevance score."""
         all_results = []
@@ -827,14 +875,16 @@ class FederatedSearchService:
 
         # Apply deduplication if enabled
         if request.enable_deduplication:
-            all_results = self._deduplicate_results(all_results, request.deduplication_threshold)
+            all_results = self._deduplicate_results(
+                all_results, request.deduplication_threshold
+            )
 
         return all_results
 
     def _merge_round_robin(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results using round-robin strategy."""
         merged_results = []
@@ -849,21 +899,23 @@ class FederatedSearchService:
                     merged_results.append(enhanced_item)
 
         if request.enable_deduplication:
-            merged_results = self._deduplicate_results(merged_results, request.deduplication_threshold)
+            merged_results = self._deduplicate_results(
+                merged_results, request.deduplication_threshold
+            )
 
         return merged_results
 
     def _merge_by_priority(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results by collection priority."""
         # Sort collections by priority
         sorted_results = sorted(
             collection_results,
             key=lambda r: self.collection_registry[r.collection_name].priority,
-            reverse=True
+            reverse=True,
         )
 
         merged_results = []
@@ -872,18 +924,22 @@ class FederatedSearchService:
                 enhanced_item = {**item}
                 enhanced_item["_collection"] = result.collection_name
                 enhanced_item["_collection_confidence"] = result.confidence_score
-                enhanced_item["_collection_priority"] = self.collection_registry[result.collection_name].priority
+                enhanced_item["_collection_priority"] = self.collection_registry[
+                    result.collection_name
+                ].priority
                 merged_results.append(enhanced_item)
 
         if request.enable_deduplication:
-            merged_results = self._deduplicate_results(merged_results, request.deduplication_threshold)
+            merged_results = self._deduplicate_results(
+                merged_results, request.deduplication_threshold
+            )
 
         return merged_results
 
     def _merge_by_time(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results by temporal order."""
         all_results = []
@@ -904,20 +960,19 @@ class FederatedSearchService:
                 all_results.append(enhanced_item)
 
         # Sort by timestamp (most recent first)
-        all_results.sort(
-            key=lambda x: x.get("_sort_timestamp", ""),
-            reverse=True
-        )
+        all_results.sort(key=lambda x: x.get("_sort_timestamp", ""), reverse=True)
 
         if request.enable_deduplication:
-            all_results = self._deduplicate_results(all_results, request.deduplication_threshold)
+            all_results = self._deduplicate_results(
+                all_results, request.deduplication_threshold
+            )
 
         return all_results
 
     def _merge_for_diversity(
         self,
         collection_results: list[CollectionSearchResult],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results optimizing for diversity."""
         all_results = []
@@ -950,14 +1005,14 @@ class FederatedSearchService:
                     diverse_results.append(remaining_results.pop(0))
 
         if request.enable_deduplication:
-            diverse_results = self._deduplicate_results(diverse_results, request.deduplication_threshold)
+            diverse_results = self._deduplicate_results(
+                diverse_results, request.deduplication_threshold
+            )
 
         return diverse_results
 
     def _deduplicate_results(
-        self,
-        results: list[dict[str, Any]],
-        threshold: float
+        self, results: list[dict[str, Any]], threshold: float
     ) -> list[dict[str, Any]]:
         """Remove duplicate results based on similarity threshold."""
         if threshold >= 1.0:
@@ -970,7 +1025,9 @@ class FederatedSearchService:
             result_content = str(result.get("payload", {}).get("content", "")).lower()
 
             for existing in deduplicated:
-                existing_content = str(existing.get("payload", {}).get("content", "")).lower()
+                existing_content = str(
+                    existing.get("payload", {}).get("content", "")
+                ).lower()
 
                 # Simple similarity check based on content overlap
                 if result_content and existing_content:
@@ -996,29 +1053,32 @@ class FederatedSearchService:
         self,
         collection_results: list[CollectionSearchResult],
         merged_results: list[dict[str, Any]],
-        request: FederatedSearchRequest
+        request: FederatedSearchRequest,
     ) -> dict[str, Any]:
         """Calculate quality metrics for federated search."""
         if not collection_results:
             return {
                 "overall_confidence": 0.0,
                 "coverage_score": 0.0,
-                "diversity_score": 0.0
+                "diversity_score": 0.0,
             }
 
         # Overall confidence (weighted by collection results)
         total_results = sum(len(r.results) for r in collection_results)
         if total_results > 0:
-            weighted_confidence = sum(
-                r.confidence_score * len(r.results) for r in collection_results
-            ) / total_results
+            weighted_confidence = (
+                sum(r.confidence_score * len(r.results) for r in collection_results)
+                / total_results
+            )
         else:
             weighted_confidence = 0.0
 
         # Coverage score (how many collections provided results)
         target_collections = len(self.collection_registry)
         searched_collections = len(collection_results)
-        coverage_score = searched_collections / target_collections if target_collections > 0 else 0.0
+        coverage_score = (
+            searched_collections / target_collections if target_collections > 0 else 0.0
+        )
 
         # Diversity score (collection representation in results)
         if merged_results:
@@ -1034,11 +1094,17 @@ class FederatedSearchService:
                 for count in collection_counts.values():
                     if count > 0:
                         prob = count / total_checked
-                        diversity_score -= prob * (prob**0.5)  # Modified entropy calculation
+                        diversity_score -= prob * (
+                            prob**0.5
+                        )  # Modified entropy calculation
 
                 # Normalize diversity score and ensure it's positive
-                max_possible_diversity = len(collection_counts) ** 0.5 if len(collection_counts) > 1 else 1.0
-                diversity_score = max(0.0, min(1.0, abs(diversity_score) / max_possible_diversity))
+                max_possible_diversity = (
+                    len(collection_counts) ** 0.5 if len(collection_counts) > 1 else 1.0
+                )
+                diversity_score = max(
+                    0.0, min(1.0, abs(diversity_score) / max_possible_diversity)
+                )
         else:
             diversity_score = 0.0
 
@@ -1048,14 +1114,12 @@ class FederatedSearchService:
             "diversity_score": diversity_score,
             "deduplication_stats": {
                 "original_count": sum(len(r.results) for r in collection_results),
-                "deduplicated_count": len(merged_results)
-            }
+                "deduplicated_count": len(merged_results),
+            },
         }
 
     def _create_error_result(
-        self,
-        error_message: str,
-        collection_name: str = "unknown"
+        self, error_message: str, collection_name: str = "unknown"
     ) -> CollectionSearchResult:
         """Create an error result for failed collection search."""
         return CollectionSearchResult(
@@ -1067,14 +1131,11 @@ class FederatedSearchService:
             coverage_score=0.0,
             query_used="",
             has_errors=True,
-            error_details={"error": error_message}
+            error_details={"error": error_message},
         )
 
     def _update_collection_performance(
-        self,
-        collection_name: str,
-        search_time_ms: float,
-        success: bool
+        self, collection_name: str, search_time_ms: float, success: bool
     ) -> None:
         """Update performance statistics for a collection."""
         if collection_name not in self.collection_performance_stats:
@@ -1082,7 +1143,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now()
+                "last_updated": datetime.now(),
             }
 
         stats = self.collection_performance_stats[collection_name]
@@ -1091,7 +1152,9 @@ class FederatedSearchService:
         # Update average response time
         total = stats["total_searches"]
         current_avg = stats["avg_response_time"]
-        stats["avg_response_time"] = (current_avg * (total - 1) + search_time_ms) / total
+        stats["avg_response_time"] = (
+            current_avg * (total - 1) + search_time_ms
+        ) / total
 
         # Update success rate
         if success:
@@ -1107,7 +1170,9 @@ class FederatedSearchService:
             load_score = min(1.0, search_time_ms / 5000.0)  # Normalize to 5 second max
             self.collection_load_scores[collection_name] = load_score
 
-    def _get_load_balancing_stats(self, target_collections: list[str]) -> dict[str, Any]:
+    def _get_load_balancing_stats(
+        self, target_collections: list[str]
+    ) -> dict[str, Any]:
         """Get load balancing statistics."""
         return {
             "target_collections": target_collections,
@@ -1115,10 +1180,12 @@ class FederatedSearchService:
                 collection: self.collection_load_scores.get(collection, 0.0)
                 for collection in target_collections
             },
-            "load_balancing_enabled": self.enable_adaptive_load_balancing
+            "load_balancing_enabled": self.enable_adaptive_load_balancing,
         }
 
-    def _get_cached_result(self, request: FederatedSearchRequest) -> FederatedSearchResult | None:
+    def _get_cached_result(
+        self, request: FederatedSearchRequest
+    ) -> FederatedSearchResult | None:
         """Get cached federated search result."""
         cache_key = self._generate_cache_key(request)
 
@@ -1129,7 +1196,9 @@ class FederatedSearchService:
         self.cache_stats["misses"] += 1
         return None
 
-    def _cache_result(self, request: FederatedSearchRequest, result: FederatedSearchResult) -> None:
+    def _cache_result(
+        self, request: FederatedSearchRequest, result: FederatedSearchResult
+    ) -> None:
         """Cache federated search result."""
         if len(self.federated_cache) >= self.cache_size:
             # Simple LRU eviction
@@ -1147,7 +1216,7 @@ class FederatedSearchService:
             request.collection_selection_strategy.value,
             request.result_merging_strategy.value,
             str(request.limit),
-            str(request.offset)
+            str(request.offset),
         ]
         return "|".join(key_components)
 
@@ -1155,7 +1224,7 @@ class FederatedSearchService:
         self,
         request: FederatedSearchRequest,
         result: FederatedSearchResult,
-        search_time_ms: float
+        search_time_ms: float,
     ) -> None:
         """Update overall performance statistics."""
         self.performance_stats["total_searches"] += 1
@@ -1169,8 +1238,8 @@ class FederatedSearchService:
         total = self.performance_stats["total_searches"]
         current_avg = self.performance_stats["avg_search_time"]
         self.performance_stats["avg_search_time"] = (
-            (current_avg * (total - 1) + search_time_ms) / total
-        )
+            current_avg * (total - 1) + search_time_ms
+        ) / total
 
         # Update collection usage stats
         for collection in result.collections_searched:
@@ -1189,8 +1258,8 @@ class FederatedSearchService:
             "collection_performance": self.collection_performance_stats,
             "load_balancing": {
                 "enabled": self.enable_adaptive_load_balancing,
-                "current_loads": self.collection_load_scores
-            }
+                "current_loads": self.collection_load_scores,
+            },
         }
 
     def clear_cache(self) -> None:

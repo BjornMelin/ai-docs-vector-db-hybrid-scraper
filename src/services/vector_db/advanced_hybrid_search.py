@@ -59,8 +59,7 @@ class AdvancedHybridSearchService:
 
         # Initialize the new orchestrator
         self.orchestrator = AdvancedSearchOrchestrator(
-            enable_all_features=True,
-            enable_performance_optimization=True
+            enable_all_features=True, enable_performance_optimization=True
         )
 
         # Initialize ML components for backward compatibility
@@ -138,7 +137,9 @@ class AdvancedHybridSearchService:
                     advanced_request.query_classification = query_classification
 
             # Handle model selection if enabled
-            if request.enable_model_selection and hasattr(advanced_request, 'query_classification'):
+            if request.enable_model_selection and hasattr(
+                advanced_request, "query_classification"
+            ):
                 model_selection = await self._select_model_with_timeout(
                     advanced_request.query_classification, request
                 )
@@ -156,7 +157,7 @@ class AdvancedHybridSearchService:
                     advanced_request.splade_config = {
                         "enabled": True,
                         "vector": sparse_vector,
-                        "config": request.splade_config
+                        "config": request.splade_config,
                     }
 
             # Execute search through new orchestrator
@@ -173,24 +174,34 @@ class AdvancedHybridSearchService:
                     total_time_ms=orchestrator_result.total_processing_time_ms,
                     results_count=len(orchestrator_result.results),
                     filtered_count=len(orchestrator_result.results),
-                    cache_hit=orchestrator_result.search_metadata.get("cache_hit", False),
+                    cache_hit=orchestrator_result.search_metadata.get(
+                        "cache_hit", False
+                    ),
                     hnsw_ef_used=request.search_params.hnsw_ef,
                 ),
-                query_classification=getattr(advanced_request, 'query_classification', None),
-                model_selection=getattr(advanced_request, 'model_selection', None),
+                query_classification=getattr(
+                    advanced_request, "query_classification", None
+                ),
+                model_selection=getattr(advanced_request, "model_selection", None),
                 optimization_applied=orchestrator_result.optimizations_applied != [],
                 # A/B test handling
-                ab_test_variant=self._assign_ab_test_variant(request) if request.ab_test_config else None,
+                ab_test_variant=self._assign_ab_test_variant(request)
+                if request.ab_test_config
+                else None,
             )
 
             # Handle adaptive fusion if enabled
-            if request.enable_adaptive_fusion and hasattr(advanced_request, 'query_classification'):
+            if request.enable_adaptive_fusion and hasattr(
+                advanced_request, "query_classification"
+            ):
                 # Get fusion weights from orchestrator metadata
-                fusion_metadata = orchestrator_result.search_metadata.get("fusion_weights")
+                fusion_metadata = orchestrator_result.search_metadata.get(
+                    "fusion_weights"
+                )
                 if fusion_metadata:
                     response.fusion_weights = fusion_metadata
-                    response.effectiveness_score = orchestrator_result.search_metadata.get(
-                        "effectiveness_score"
+                    response.effectiveness_score = (
+                        orchestrator_result.search_metadata.get("effectiveness_score")
                     )
 
             # Store for learning
@@ -207,7 +218,9 @@ class AdvancedHybridSearchService:
             else:
                 raise QdrantServiceError(f"Advanced hybrid search failed: {e}") from e
 
-    def _determine_search_mode(self, request: AdvancedHybridSearchRequest) -> SearchMode:
+    def _determine_search_mode(
+        self, request: AdvancedHybridSearchRequest
+    ) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
         if request.enable_adaptive_fusion and request.enable_query_classification:
             return SearchMode.INTELLIGENT
@@ -218,7 +231,9 @@ class AdvancedHybridSearchService:
         else:
             return SearchMode.SIMPLE
 
-    def _determine_pipeline(self, request: AdvancedHybridSearchRequest) -> SearchPipeline:
+    def _determine_pipeline(
+        self, request: AdvancedHybridSearchRequest
+    ) -> SearchPipeline:
         """Determine the appropriate pipeline based on request configuration."""
         if request.enable_adaptive_fusion:
             return SearchPipeline.COMPREHENSIVE
@@ -318,7 +333,7 @@ class AdvancedHybridSearchService:
                 score_threshold=request.score_threshold,
                 search_mode=SearchMode.SIMPLE,
                 pipeline=SearchPipeline.FAST,
-                enable_caching=True
+                enable_caching=True,
             )
 
             result = await self.orchestrator.search(fallback_request)
@@ -412,4 +427,3 @@ class AdvancedHybridSearchService:
             "splade_cache_stats": self.splade_provider.get_cache_stats(),
             "ab_test_assignments": dict(self.ab_test_assignments),
         }
-

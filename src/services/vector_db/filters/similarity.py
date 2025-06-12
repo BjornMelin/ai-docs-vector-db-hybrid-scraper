@@ -57,7 +57,9 @@ class ThresholdMetrics(BaseModel):
     recall: float = Field(..., ge=0.0, le=1.0, description="Recall score")
     f1_score: float = Field(..., ge=0.0, le=1.0, description="F1 score")
     result_count: int = Field(..., ge=0, description="Number of results")
-    avg_score: float = Field(..., ge=0.0, le=1.0, description="Average similarity score")
+    avg_score: float = Field(
+        ..., ge=0.0, le=1.0, description="Average similarity score"
+    )
     score_variance: float = Field(..., ge=0.0, description="Score variance")
     query_time_ms: float = Field(..., ge=0.0, description="Query execution time")
     user_satisfaction: float | None = Field(
@@ -68,9 +70,13 @@ class ThresholdMetrics(BaseModel):
 class ClusteringAnalysis(BaseModel):
     """Results of clustering analysis for threshold optimization."""
 
-    optimal_threshold: float = Field(..., ge=0.0, le=1.0, description="Optimal threshold")
+    optimal_threshold: float = Field(
+        ..., ge=0.0, le=1.0, description="Optimal threshold"
+    )
     cluster_count: int = Field(..., ge=0, description="Number of clusters found")
-    silhouette_score: float = Field(..., ge=-1.0, le=1.0, description="Silhouette score")
+    silhouette_score: float = Field(
+        ..., ge=-1.0, le=1.0, description="Silhouette score"
+    )
     density_ratio: float = Field(..., ge=0.0, le=1.0, description="Density ratio")
     separation_quality: float = Field(
         ..., ge=0.0, le=1.0, description="Cluster separation quality"
@@ -121,14 +127,10 @@ class SimilarityThresholdCriteria(BaseModel):
     target_precision: float = Field(
         0.8, ge=0.0, le=1.0, description="Target precision score"
     )
-    target_recall: float = Field(
-        0.7, ge=0.0, le=1.0, description="Target recall score"
-    )
+    target_recall: float = Field(0.7, ge=0.0, le=1.0, description="Target recall score")
 
     # Clustering settings
-    enable_clustering: bool = Field(
-        True, description="Enable clustering analysis"
-    )
+    enable_clustering: bool = Field(True, description="Enable clustering analysis")
     min_samples_for_clustering: int = Field(
         10, ge=5, description="Minimum samples needed for clustering"
     )
@@ -162,10 +164,10 @@ class SimilarityThresholdManager(BaseFilter):
         name: str = "similarity_threshold_manager",
         description: str = "Manage similarity thresholds with adaptive optimization",
         enabled: bool = True,
-        priority: int = 60
+        priority: int = 60,
     ):
         """Initialize similarity threshold manager.
-        
+
         Args:
             name: Filter name
             description: Filter description
@@ -189,19 +191,17 @@ class SimilarityThresholdManager(BaseFilter):
         self.adaptation_count = 0
 
     async def apply(
-        self,
-        filter_criteria: dict[str, Any],
-        context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply similarity threshold management.
-        
+
         Args:
             filter_criteria: Threshold management criteria
             context: Optional context with query info and historical data
-            
+
         Returns:
             FilterResult with optimized similarity threshold
-            
+
         Raises:
             FilterError: If threshold management fails
         """
@@ -225,18 +225,23 @@ class SimilarityThresholdManager(BaseFilter):
                     "base_threshold": criteria.base_threshold,
                     "optimal_threshold": optimal_threshold,
                     "context": criteria.context.value,
-                    "adaptation_applied": abs(optimal_threshold - criteria.base_threshold) > 0.01
+                    "adaptation_applied": abs(
+                        optimal_threshold - criteria.base_threshold
+                    )
+                    > 0.01,
                 },
                 "performance_targets": {
                     "target_result_count": criteria.target_result_count,
                     "target_precision": criteria.target_precision,
-                    "target_recall": criteria.target_recall
-                }
+                    "target_recall": criteria.target_recall,
+                },
             }
 
             # Add clustering analysis if available
             if self.last_clustering_analysis:
-                metadata["clustering_analysis"] = self.last_clustering_analysis.model_dump()
+                metadata["clustering_analysis"] = (
+                    self.last_clustering_analysis.model_dump()
+                )
 
             # Create score threshold filter condition
             filter_condition = None
@@ -257,7 +262,7 @@ class SimilarityThresholdManager(BaseFilter):
                 filter_conditions=filter_condition,
                 metadata=metadata,
                 confidence_score=0.85,
-                performance_impact=performance_impact
+                performance_impact=performance_impact,
             )
 
         except Exception as e:
@@ -267,14 +272,14 @@ class SimilarityThresholdManager(BaseFilter):
                 error_msg,
                 filter_name=self.name,
                 filter_criteria=filter_criteria,
-                underlying_error=e
+                underlying_error=e,
             ) from e
 
     async def _calculate_optimal_threshold(
         self,
         criteria: SimilarityThresholdCriteria,
         query_info: dict[str, Any],
-        historical_data: list[dict[str, Any]]
+        historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate optimal threshold based on strategy and context."""
         if criteria.strategy == ThresholdStrategy.STATIC:
@@ -284,7 +289,9 @@ class SimilarityThresholdManager(BaseFilter):
             return await self._adaptive_threshold(criteria, query_info, historical_data)
 
         elif criteria.strategy == ThresholdStrategy.CLUSTER_BASED:
-            return await self._cluster_based_threshold(criteria, query_info, historical_data)
+            return await self._cluster_based_threshold(
+                criteria, query_info, historical_data
+            )
 
         elif criteria.strategy == ThresholdStrategy.PERFORMANCE_BASED:
             return await self._performance_based_threshold(criteria, historical_data)
@@ -293,7 +300,9 @@ class SimilarityThresholdManager(BaseFilter):
             return await self._context_aware_threshold(criteria, query_info)
 
         elif criteria.strategy == ThresholdStrategy.ML_OPTIMIZED:
-            return await self._ml_optimized_threshold(criteria, query_info, historical_data)
+            return await self._ml_optimized_threshold(
+                criteria, query_info, historical_data
+            )
 
         else:
             self._logger.warning(f"Unknown strategy: {criteria.strategy}")
@@ -303,7 +312,7 @@ class SimilarityThresholdManager(BaseFilter):
         self,
         criteria: SimilarityThresholdCriteria,
         query_info: dict[str, Any],
-        historical_data: list[dict[str, Any]]
+        historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate adaptive threshold based on recent performance."""
         base_threshold = criteria.base_threshold
@@ -312,15 +321,23 @@ class SimilarityThresholdManager(BaseFilter):
             return base_threshold
 
         # Analyze recent performance
-        recent_data = self._get_recent_data(historical_data, criteria.history_window_days)
+        recent_data = self._get_recent_data(
+            historical_data, criteria.history_window_days
+        )
 
         if len(recent_data) < 3:
             return base_threshold
 
         # Calculate performance metrics
-        avg_result_count = statistics.mean([d.get("result_count", 0) for d in recent_data])
-        avg_precision = statistics.mean([d.get("precision", 0.5) for d in recent_data if "precision" in d])
-        avg_query_time = statistics.mean([d.get("query_time_ms", 0) for d in recent_data])
+        avg_result_count = statistics.mean(
+            [d.get("result_count", 0) for d in recent_data]
+        )
+        avg_precision = statistics.mean(
+            [d.get("precision", 0.5) for d in recent_data if "precision" in d]
+        )
+        avg_query_time = statistics.mean(
+            [d.get("query_time_ms", 0) for d in recent_data]
+        )
 
         # Adaptive adjustments
         threshold_adjustment = 0.0
@@ -356,14 +373,16 @@ class SimilarityThresholdManager(BaseFilter):
         self,
         criteria: SimilarityThresholdCriteria,
         query_info: dict[str, Any],
-        historical_data: list[dict[str, Any]]
+        historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate threshold based on clustering analysis."""
         if not criteria.enable_clustering:
             return criteria.base_threshold
 
         # Get similarity scores from recent queries
-        recent_data = self._get_recent_data(historical_data, criteria.history_window_days)
+        recent_data = self._get_recent_data(
+            historical_data, criteria.history_window_days
+        )
         similarity_scores = []
 
         for data in recent_data:
@@ -385,14 +404,16 @@ class SimilarityThresholdManager(BaseFilter):
             optimal_threshold = clustering_analysis.optimal_threshold
 
             # Ensure within bounds
-            return max(criteria.min_threshold, min(criteria.max_threshold, optimal_threshold))
+            return max(
+                criteria.min_threshold, min(criteria.max_threshold, optimal_threshold)
+            )
 
         return criteria.base_threshold
 
     async def _performance_based_threshold(
         self,
         criteria: SimilarityThresholdCriteria,
-        historical_data: list[dict[str, Any]]
+        historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate threshold based on performance optimization."""
         if not historical_data:
@@ -419,21 +440,39 @@ class SimilarityThresholdManager(BaseFilter):
                 continue
 
             # Calculate composite performance score
-            avg_precision = statistics.mean([d.get("precision", 0.5) for d in data_points if "precision" in d])
-            avg_recall = statistics.mean([d.get("recall", 0.5) for d in data_points if "recall" in d])
-            avg_f1 = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall) if (avg_precision + avg_recall) > 0 else 0
-            avg_result_count = statistics.mean([d.get("result_count", 0) for d in data_points])
-            avg_query_time = statistics.mean([d.get("query_time_ms", 1000) for d in data_points])
+            avg_precision = statistics.mean(
+                [d.get("precision", 0.5) for d in data_points if "precision" in d]
+            )
+            avg_recall = statistics.mean(
+                [d.get("recall", 0.5) for d in data_points if "recall" in d]
+            )
+            avg_f1 = (
+                2 * (avg_precision * avg_recall) / (avg_precision + avg_recall)
+                if (avg_precision + avg_recall) > 0
+                else 0
+            )
+            avg_result_count = statistics.mean(
+                [d.get("result_count", 0) for d in data_points]
+            )
+            avg_query_time = statistics.mean(
+                [d.get("query_time_ms", 1000) for d in data_points]
+            )
 
             # Composite score considering multiple factors
-            result_count_score = 1.0 if criteria.min_result_count <= avg_result_count <= criteria.max_result_count else 0.5
+            result_count_score = (
+                1.0
+                if criteria.min_result_count
+                <= avg_result_count
+                <= criteria.max_result_count
+                else 0.5
+            )
             time_score = max(0.0, 1.0 - (avg_query_time / criteria.max_query_time_ms))
 
             composite_score = (
-                0.4 * avg_f1 +
-                0.3 * result_count_score +
-                0.2 * time_score +
-                0.1 * min(1.0, avg_result_count / criteria.target_result_count)
+                0.4 * avg_f1
+                + 0.3 * result_count_score
+                + 0.2 * time_score
+                + 0.1 * min(1.0, avg_result_count / criteria.target_result_count)
             )
 
             if composite_score > best_score:
@@ -443,9 +482,7 @@ class SimilarityThresholdManager(BaseFilter):
         return max(criteria.min_threshold, min(criteria.max_threshold, best_threshold))
 
     async def _context_aware_threshold(
-        self,
-        criteria: SimilarityThresholdCriteria,
-        query_info: dict[str, Any]
+        self, criteria: SimilarityThresholdCriteria, query_info: dict[str, Any]
     ) -> float:
         """Calculate threshold based on query context."""
         context = criteria.context
@@ -459,7 +496,7 @@ class SimilarityThresholdManager(BaseFilter):
             QueryContext.REFERENCE: 0.04,  # Reference needs high precision
             QueryContext.RESEARCH: -0.01,  # Research can be more exploratory
             QueryContext.NEWS: -0.03,  # News can be more flexible
-            QueryContext.GENERAL: 0.0  # No adjustment for general queries
+            QueryContext.GENERAL: 0.0,  # No adjustment for general queries
         }
 
         base_threshold = criteria.base_threshold
@@ -490,7 +527,7 @@ class SimilarityThresholdManager(BaseFilter):
         self,
         criteria: SimilarityThresholdCriteria,
         query_info: dict[str, Any],
-        historical_data: list[dict[str, Any]]
+        historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate threshold using machine learning optimization."""
         # Simplified ML approach - in production, this would use more sophisticated models
@@ -514,7 +551,13 @@ class SimilarityThresholdManager(BaseFilter):
 
             # Target is the optimal threshold (based on performance)
             f1_score = data.get("f1_score", 0.5)
-            result_count_score = 1.0 if criteria.min_result_count <= data.get("result_count", 0) <= criteria.max_result_count else 0.5
+            result_count_score = (
+                1.0
+                if criteria.min_result_count
+                <= data.get("result_count", 0)
+                <= criteria.max_result_count
+                else 0.5
+            )
             performance_score = 0.7 * f1_score + 0.3 * result_count_score
 
             if performance_score > 0.6:  # Good performance
@@ -530,7 +573,7 @@ class SimilarityThresholdManager(BaseFilter):
             len(query_info.get("query", "").split()),
             query_info.get("has_technical_terms", 0),
             query_info.get("context_score", 0.5),
-            0.5  # Default user satisfaction
+            0.5,  # Default user satisfaction
         ]
 
         # Calculate similarity to historical queries
@@ -547,15 +590,17 @@ class SimilarityThresholdManager(BaseFilter):
         top_similarities = similarities[:5]  # Top 5 similar queries
 
         if top_similarities:
-            weighted_threshold = sum(sim * threshold for sim, threshold in top_similarities) / sum(sim for sim, _ in top_similarities)
-            return max(criteria.min_threshold, min(criteria.max_threshold, weighted_threshold))
+            weighted_threshold = sum(
+                sim * threshold for sim, threshold in top_similarities
+            ) / sum(sim for sim, _ in top_similarities)
+            return max(
+                criteria.min_threshold, min(criteria.max_threshold, weighted_threshold)
+            )
 
         return criteria.base_threshold
 
     async def _analyze_similarity_clusters(
-        self,
-        similarity_scores: list[float],
-        criteria: SimilarityThresholdCriteria
+        self, similarity_scores: list[float], criteria: SimilarityThresholdCriteria
     ) -> ClusteringAnalysis | None:
         """Analyze similarity score clusters to find optimal threshold."""
         if len(similarity_scores) < criteria.min_samples_for_clustering:
@@ -571,7 +616,9 @@ class SimilarityThresholdManager(BaseFilter):
 
             # Analyze clusters
             unique_labels = set(cluster_labels)
-            cluster_count = len(unique_labels) - (1 if -1 in unique_labels else 0)  # Exclude noise
+            cluster_count = len(unique_labels) - (
+                1 if -1 in unique_labels else 0
+            )  # Exclude noise
 
             if cluster_count < 2:
                 return None
@@ -590,7 +637,11 @@ class SimilarityThresholdManager(BaseFilter):
             cluster_centers = []
             for label in unique_labels:
                 if label != -1:  # Exclude noise
-                    cluster_scores = [scores_array[i][0] for i, l in enumerate(cluster_labels) if l == label]
+                    cluster_scores = [
+                        scores_array[i][0]
+                        for i, l in enumerate(cluster_labels)
+                        if l == label
+                    ]
                     cluster_centers.append(statistics.mean(cluster_scores))
 
             cluster_centers.sort()
@@ -599,7 +650,9 @@ class SimilarityThresholdManager(BaseFilter):
             if len(cluster_centers) >= 2:
                 optimal_threshold = (cluster_centers[-1] + cluster_centers[-2]) / 2
             else:
-                optimal_threshold = cluster_centers[0] if cluster_centers else criteria.base_threshold
+                optimal_threshold = (
+                    cluster_centers[0] if cluster_centers else criteria.base_threshold
+                )
 
             # Calculate separation quality
             if len(cluster_centers) >= 2:
@@ -616,7 +669,7 @@ class SimilarityThresholdManager(BaseFilter):
                 silhouette_score=silhouette_avg,
                 density_ratio=density_ratio,
                 separation_quality=separation_quality,
-                noise_ratio=noise_ratio
+                noise_ratio=noise_ratio,
             )
 
         except Exception as e:
@@ -634,7 +687,7 @@ class SimilarityThresholdManager(BaseFilter):
             timestamp = data.get("timestamp")
             if timestamp:
                 if isinstance(timestamp, str):
-                    timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
                 if timestamp >= cutoff_date:
                     recent_data.append(data)
@@ -642,17 +695,14 @@ class SimilarityThresholdManager(BaseFilter):
         return recent_data
 
     def record_performance(
-        self,
-        threshold: float,
-        metrics: ThresholdMetrics,
-        query_context: QueryContext
+        self, threshold: float, metrics: ThresholdMetrics, query_context: QueryContext
     ) -> None:
         """Record performance metrics for threshold learning."""
         performance_record = {
             "timestamp": datetime.utcnow(),
             "threshold": threshold,
             "context": query_context.value,
-            "metrics": metrics.model_dump()
+            "metrics": metrics.model_dump(),
         }
 
         self.performance_history.append(performance_record)
@@ -660,7 +710,8 @@ class SimilarityThresholdManager(BaseFilter):
         # Keep only recent history to prevent memory bloat
         cutoff_date = datetime.utcnow() - timedelta(days=30)
         self.performance_history = [
-            record for record in self.performance_history
+            record
+            for record in self.performance_history
             if record["timestamp"] >= cutoff_date
         ]
 
@@ -671,13 +722,14 @@ class SimilarityThresholdManager(BaseFilter):
         recommendations = {
             "static": 0.7,
             "context_aware": self.context_thresholds.get(context.value, 0.7),
-            "learned": 0.7
+            "learned": 0.7,
         }
 
         # Calculate learned threshold from performance history
         if self.performance_history:
             context_records = [
-                record for record in self.performance_history
+                record
+                for record in self.performance_history
                 if record["context"] == context.value
             ]
 
@@ -717,8 +769,13 @@ class SimilarityThresholdManager(BaseFilter):
     def get_supported_operators(self) -> list[str]:
         """Get supported threshold management operators."""
         return [
-            "base_threshold", "min_threshold", "max_threshold",
-            "strategy", "adaptation_rate", "context",
-            "target_result_count", "enable_clustering",
-            "enable_historical_learning"
+            "base_threshold",
+            "min_threshold",
+            "max_threshold",
+            "strategy",
+            "adaptation_rate",
+            "context",
+            "target_result_count",
+            "enable_clustering",
+            "enable_historical_learning",
         ]

@@ -1,18 +1,14 @@
 """Tests for the temporal filter implementation."""
 
-import math
-from datetime import datetime, timedelta
-from typing import Any
-from unittest.mock import MagicMock, patch
+from datetime import datetime
+from datetime import timedelta
 
 import pytest
-from qdrant_client import models
-
 from src.services.vector_db.filters.base import FilterError
 from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.temporal import TemporalFilter
-from src.services.vector_db.filters.temporal import TemporalCriteria
 from src.services.vector_db.filters.temporal import FreshnessScore
+from src.services.vector_db.filters.temporal import TemporalCriteria
+from src.services.vector_db.filters.temporal import TemporalFilter
 
 
 class TestTemporalCriteria:
@@ -21,7 +17,7 @@ class TestTemporalCriteria:
     def test_default_values(self):
         """Test default temporal criteria."""
         criteria = TemporalCriteria()
-        
+
         assert criteria.created_after is None
         assert criteria.created_before is None
         assert criteria.updated_after is None
@@ -41,13 +37,11 @@ class TestTemporalCriteria:
         now = datetime.utcnow()
         yesterday = now - timedelta(days=1)
         last_week = now - timedelta(days=7)
-        
+
         criteria = TemporalCriteria(
-            created_after=last_week,
-            created_before=yesterday,
-            updated_after=last_week
+            created_after=last_week, created_before=yesterday, updated_after=last_week
         )
-        
+
         assert criteria.created_after == last_week
         assert criteria.created_before == yesterday
         assert criteria.updated_after == last_week
@@ -55,11 +49,9 @@ class TestTemporalCriteria:
     def test_with_relative_dates(self):
         """Test criteria with relative date ranges."""
         criteria = TemporalCriteria(
-            created_within_days=7,
-            updated_within_days=3,
-            crawled_within_days=1
+            created_within_days=7, updated_within_days=3, crawled_within_days=1
         )
-        
+
         assert criteria.created_within_days == 7
         assert criteria.updated_within_days == 3
         assert criteria.crawled_within_days == 1
@@ -70,9 +62,9 @@ class TestTemporalCriteria:
             max_age_days=30,
             freshness_threshold=0.8,
             time_decay_factor=0.2,
-            boost_recent_content=True
+            boost_recent_content=True,
         )
-        
+
         assert criteria.max_age_days == 30
         assert criteria.freshness_threshold == 0.8
         assert criteria.time_decay_factor == 0.2
@@ -81,14 +73,14 @@ class TestTemporalCriteria:
     def test_validation_future_dates(self):
         """Test validation of future dates."""
         future_date = datetime.utcnow() + timedelta(days=1)
-        
+
         # Future dates should raise validation error for 'before' fields
         with pytest.raises(ValueError, match="cannot be in the future"):
             TemporalCriteria(created_before=future_date)
-            
+
         with pytest.raises(ValueError, match="cannot be in the future"):
             TemporalCriteria(updated_before=future_date)
-            
+
         with pytest.raises(ValueError, match="cannot be in the future"):
             TemporalCriteria(crawled_before=future_date)
 
@@ -97,7 +89,7 @@ class TestTemporalCriteria:
         # Zero or negative days should raise validation error
         with pytest.raises(ValueError):
             TemporalCriteria(created_within_days=0)
-            
+
         with pytest.raises(ValueError):
             TemporalCriteria(updated_within_days=-1)
 
@@ -106,14 +98,14 @@ class TestTemporalCriteria:
         # Valid range
         criteria1 = TemporalCriteria(freshness_threshold=0.0)
         assert criteria1.freshness_threshold == 0.0
-        
+
         criteria2 = TemporalCriteria(freshness_threshold=1.0)
         assert criteria2.freshness_threshold == 1.0
-        
+
         # Invalid range
         with pytest.raises(ValueError):
             TemporalCriteria(freshness_threshold=-0.1)
-            
+
         with pytest.raises(ValueError):
             TemporalCriteria(freshness_threshold=1.1)
 
@@ -123,11 +115,8 @@ class TestFreshnessScore:
 
     def test_default_values(self):
         """Test freshness score creation."""
-        score = FreshnessScore(
-            score=0.85,
-            age_days=10
-        )
-        
+        score = FreshnessScore(score=0.85, age_days=10)
+
         assert score.score == 0.85
         assert score.age_days == 10
         assert score.decay_function == "exponential"
@@ -136,12 +125,9 @@ class TestFreshnessScore:
     def test_with_custom_decay(self):
         """Test freshness score with custom decay."""
         score = FreshnessScore(
-            score=0.5,
-            age_days=60,
-            decay_function="linear",
-            half_life_days=45
+            score=0.5, age_days=60, decay_function="linear", half_life_days=45
         )
-        
+
         assert score.score == 0.5
         assert score.age_days == 60
         assert score.decay_function == "linear"
@@ -152,21 +138,21 @@ class TestFreshnessScore:
         # Valid score range
         score1 = FreshnessScore(score=0.0, age_days=100)
         assert score1.score == 0.0
-        
+
         score2 = FreshnessScore(score=1.0, age_days=0)
         assert score2.score == 1.0
-        
+
         # Invalid score range
         with pytest.raises(ValueError):
             FreshnessScore(score=-0.1, age_days=10)
-            
+
         with pytest.raises(ValueError):
             FreshnessScore(score=1.1, age_days=10)
-            
+
         # Invalid age
         with pytest.raises(ValueError):
             FreshnessScore(score=0.5, age_days=-1)
-            
+
         # Invalid half-life
         with pytest.raises(ValueError):
             FreshnessScore(score=0.5, age_days=10, half_life_days=0)
@@ -188,7 +174,7 @@ class TestTemporalFilter:
         assert temporal_filter.temporal_fields == {
             "created": "created_at",
             "updated": "last_updated",
-            "crawled": "crawl_timestamp"
+            "crawled": "crawl_timestamp",
         }
 
     def test_custom_initialization(self):
@@ -197,9 +183,9 @@ class TestTemporalFilter:
             name="custom_temporal",
             description="Custom temporal filter",
             enabled=False,
-            priority=100
+            priority=100,
         )
-        
+
         assert filter_obj.name == "custom_temporal"
         assert filter_obj.description == "Custom temporal filter"
         assert filter_obj.enabled is False
@@ -211,14 +197,11 @@ class TestTemporalFilter:
         now = datetime.utcnow()
         last_week = now - timedelta(days=7)
         yesterday = now - timedelta(days=1)
-        
-        criteria = {
-            "created_after": last_week,
-            "created_before": yesterday
-        }
-        
+
+        criteria = {"created_after": last_week, "created_before": yesterday}
+
         result = await temporal_filter.apply(criteria)
-        
+
         assert isinstance(result, FilterResult)
         assert result.filter_conditions is not None
         assert result.confidence_score == 0.95
@@ -227,13 +210,10 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_apply_relative_date_filter(self, temporal_filter):
         """Test applying relative date filters."""
-        criteria = {
-            "created_within_days": 7,
-            "updated_within_days": 3
-        }
-        
+        criteria = {"created_within_days": 7, "updated_within_days": 3}
+
         result = await temporal_filter.apply(criteria)
-        
+
         assert isinstance(result, FilterResult)
         assert result.filter_conditions is not None
         assert "relative_dates" in result.metadata["applied_filters"]
@@ -244,11 +224,11 @@ class TestTemporalFilter:
         criteria = {
             "freshness_threshold": 0.8,
             "boost_recent_content": True,
-            "time_decay_factor": 0.2
+            "time_decay_factor": 0.2,
         }
-        
+
         result = await temporal_filter.apply(criteria)
-        
+
         assert isinstance(result, FilterResult)
         assert "freshness" in result.metadata["applied_filters"]
         assert result.metadata["freshness_info"]["boost_enabled"] is True
@@ -257,12 +237,10 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_apply_max_age_filter(self, temporal_filter):
         """Test applying max age filter."""
-        criteria = {
-            "max_age_days": 30
-        }
-        
+        criteria = {"max_age_days": 30}
+
         result = await temporal_filter.apply(criteria)
-        
+
         assert isinstance(result, FilterResult)
         assert result.filter_conditions is not None
         assert "relative_dates" in result.metadata["applied_filters"]
@@ -271,7 +249,7 @@ class TestTemporalFilter:
     async def test_apply_empty_criteria(self, temporal_filter):
         """Test applying with empty criteria."""
         result = await temporal_filter.apply({})
-        
+
         assert isinstance(result, FilterResult)
         assert result.filter_conditions is None
         assert result.metadata["applied_filters"] == []
@@ -280,22 +258,23 @@ class TestTemporalFilter:
     async def test_apply_with_context(self, temporal_filter):
         """Test applying filter with context."""
         current_time = datetime(2024, 1, 15, 12, 0, 0)
-        
+
         criteria = {
             "created_within_days": 7,
-            "boost_recent_content": True  # Need this to enable freshness info
+            "boost_recent_content": True,  # Need this to enable freshness info
         }
-        
-        context = {
-            "current_time": current_time
-        }
-        
+
+        context = {"current_time": current_time}
+
         result = await temporal_filter.apply(criteria, context)
-        
+
         assert isinstance(result, FilterResult)
         # Only check current_time if freshness info exists
         if "freshness_info" in result.metadata:
-            assert result.metadata["freshness_info"]["current_time"] == current_time.isoformat()
+            assert (
+                result.metadata["freshness_info"]["current_time"]
+                == current_time.isoformat()
+            )
 
     @pytest.mark.asyncio
     async def test_validate_criteria(self, temporal_filter):
@@ -303,24 +282,22 @@ class TestTemporalFilter:
         # Valid criteria
         valid_criteria = {
             "created_after": datetime.utcnow() - timedelta(days=7),
-            "max_age_days": 30
+            "max_age_days": 30,
         }
-        
+
         is_valid = await temporal_filter.validate_criteria(valid_criteria)
         assert is_valid is True
-        
+
         # Invalid criteria (future date)
-        invalid_criteria = {
-            "created_before": datetime.utcnow() + timedelta(days=1)
-        }
-        
+        invalid_criteria = {"created_before": datetime.utcnow() + timedelta(days=1)}
+
         is_valid = await temporal_filter.validate_criteria(invalid_criteria)
         assert is_valid is False
 
     def test_get_supported_operators(self, temporal_filter):
         """Test getting supported operators."""
         operators = temporal_filter.get_supported_operators()
-        
+
         assert isinstance(operators, list)
         assert "created_after" in operators
         assert "created_before" in operators
@@ -337,42 +314,33 @@ class TestTemporalFilter:
     def test_calculate_freshness_score_exponential(self, temporal_filter):
         """Test calculating freshness score with exponential decay."""
         current_time = datetime.utcnow()
-        
+
         # Fresh content (0 days old)
         content_date = current_time
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="exponential",
-            half_life_days=30
+            content_date, current_time, decay_function="exponential", half_life_days=30
         )
-        
+
         assert score.score == 1.0
         assert score.age_days == 0
         assert score.decay_function == "exponential"
-        
+
         # 30 days old (half-life)
         content_date = current_time - timedelta(days=30)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="exponential",
-            half_life_days=30
+            content_date, current_time, decay_function="exponential", half_life_days=30
         )
-        
+
         # e^(-1) ≈ 0.368, not 0.5
         assert score.score == pytest.approx(0.368, 0.01)
         assert score.age_days == 30
-        
+
         # 60 days old
         content_date = current_time - timedelta(days=60)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="exponential",
-            half_life_days=30
+            content_date, current_time, decay_function="exponential", half_life_days=30
         )
-        
+
         # e^(-2) ≈ 0.135, not 0.25
         assert score.score == pytest.approx(0.135, 0.01)
         assert score.age_days == 60
@@ -380,108 +348,90 @@ class TestTemporalFilter:
     def test_calculate_freshness_score_linear(self, temporal_filter):
         """Test calculating freshness score with linear decay."""
         current_time = datetime.utcnow()
-        
+
         # Fresh content
         content_date = current_time
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="linear",
-            half_life_days=30
+            content_date, current_time, decay_function="linear", half_life_days=30
         )
-        
+
         assert score.score == 1.0
         assert score.decay_function == "linear"
-        
+
         # 30 days old
         content_date = current_time - timedelta(days=30)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="linear",
-            half_life_days=30
+            content_date, current_time, decay_function="linear", half_life_days=30
         )
-        
+
         # Linear decay over 3x half-life (90 days)
         expected_score = 1.0 - (30 / 90)
         assert score.score == pytest.approx(expected_score, 0.01)
-        
+
         # 90 days old (should be 0)
         content_date = current_time - timedelta(days=90)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="linear",
-            half_life_days=30
+            content_date, current_time, decay_function="linear", half_life_days=30
         )
-        
+
         assert score.score == 0.0
 
     def test_calculate_freshness_score_step(self, temporal_filter):
         """Test calculating freshness score with step decay."""
         current_time = datetime.utcnow()
-        
+
         # Within half-life
         content_date = current_time - timedelta(days=25)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="step",
-            half_life_days=30
+            content_date, current_time, decay_function="step", half_life_days=30
         )
-        
+
         assert score.score == 1.0
-        
+
         # Between 1x and 2x half-life
         content_date = current_time - timedelta(days=45)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="step",
-            half_life_days=30
+            content_date, current_time, decay_function="step", half_life_days=30
         )
-        
+
         assert score.score == 0.5
-        
+
         # Beyond 2x half-life
         content_date = current_time - timedelta(days=70)
         score = temporal_filter.calculate_freshness_score(
-            content_date,
-            current_time,
-            decay_function="step",
-            half_life_days=30
+            content_date, current_time, decay_function="step", half_life_days=30
         )
-        
+
         assert score.score == 0.1
 
     def test_parse_relative_date(self, temporal_filter):
         """Test parsing relative date strings."""
         # Test various relative date formats
         current_time = datetime.utcnow()
-        
+
         # Last N days
         result = temporal_filter.parse_relative_date("last 7 days")
         assert result is not None
         expected = current_time - timedelta(days=7)
         assert abs((result - expected).total_seconds()) < 60  # Within 1 minute
-        
+
         # Past week
         result = temporal_filter.parse_relative_date("past week")
         assert result is not None
         expected = current_time - timedelta(weeks=1)
         assert abs((result - expected).total_seconds()) < 60
-        
+
         # Yesterday
         result = temporal_filter.parse_relative_date("yesterday")
         assert result is not None
         expected = current_time - timedelta(days=1)
         assert abs((result - expected).total_seconds()) < 60
-        
+
         # Today
         result = temporal_filter.parse_relative_date("today")
         assert result is not None
         assert result.date() == current_time.date()
-        
+
         # Invalid format
         result = temporal_filter.parse_relative_date("invalid format")
         assert result is None
@@ -493,20 +443,18 @@ class TestTemporalFilter:
         criteria = {}
         result = await temporal_filter.apply(criteria)
         assert result.performance_impact == "none"
-        
+
         # Few conditions
-        criteria = {
-            "created_after": datetime.utcnow() - timedelta(days=7)
-        }
+        criteria = {"created_after": datetime.utcnow() - timedelta(days=7)}
         result = await temporal_filter.apply(criteria)
         assert result.performance_impact == "low"
-        
+
         # Multiple conditions
         criteria = {
             "created_after": datetime.utcnow() - timedelta(days=7),
             "created_before": datetime.utcnow(),
             "updated_within_days": 3,
-            "freshness_threshold": 0.8
+            "freshness_threshold": 0.8,
         }
         result = await temporal_filter.apply(criteria)
         assert result.performance_impact in ["medium", "high"]
@@ -517,7 +465,7 @@ class TestTemporalFilter:
         # Invalid criteria type
         with pytest.raises(FilterError) as exc_info:
             await temporal_filter.apply("not a dict")
-            
+
         error = exc_info.value
         assert error.filter_name == "temporal_filter"
         assert "Failed to apply temporal filter" in str(error)
@@ -526,7 +474,7 @@ class TestTemporalFilter:
     async def test_complex_temporal_query(self, temporal_filter):
         """Test complex temporal query with multiple criteria."""
         now = datetime.utcnow()
-        
+
         criteria = {
             "created_after": now - timedelta(days=30),
             "created_before": now - timedelta(days=1),
@@ -534,11 +482,11 @@ class TestTemporalFilter:
             "max_age_days": 60,
             "freshness_threshold": 0.7,
             "boost_recent_content": True,
-            "time_decay_factor": 0.15
+            "time_decay_factor": 0.15,
         }
-        
+
         result = await temporal_filter.apply(criteria)
-        
+
         assert isinstance(result, FilterResult)
         assert result.filter_conditions is not None
         assert len(result.metadata["applied_filters"]) >= 3

@@ -434,7 +434,7 @@ class TestQueryExpansionService:
 
         assert result.expansion_strategy == ExpansionStrategy.HYBRID
         # Should combine multiple sources
-        sources = set(term.source for term in result.expanded_terms)
+        sources = {term.source for term in result.expanded_terms}
         # May include synonym_dictionary, semantic_model, context_analysis
         assert len(sources) >= 0  # Could be empty if no expansions found
 

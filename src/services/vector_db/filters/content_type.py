@@ -145,18 +145,12 @@ class ContentTypeCriteria(BaseModel):
     )
 
     # Content characteristics
-    min_word_count: int | None = Field(
-        None, ge=1, description="Minimum word count"
-    )
-    max_word_count: int | None = Field(
-        None, ge=1, description="Maximum word count"
-    )
+    min_word_count: int | None = Field(None, ge=1, description="Minimum word count")
+    max_word_count: int | None = Field(None, ge=1, description="Maximum word count")
     has_code_examples: bool | None = Field(
         None, description="Filter for content with code examples"
     )
-    has_images: bool | None = Field(
-        None, description="Filter for content with images"
-    )
+    has_images: bool | None = Field(None, description="Filter for content with images")
     has_links: bool | None = Field(
         None, description="Filter for content with external links"
     )
@@ -165,12 +159,8 @@ class ContentTypeCriteria(BaseModel):
     site_names: list[str] | None = Field(
         None, description="Filter by specific site names"
     )
-    exclude_sites: list[str] | None = Field(
-        None, description="Exclude specific sites"
-    )
-    crawl_sources: list[str] | None = Field(
-        None, description="Filter by crawl sources"
-    )
+    exclude_sites: list[str] | None = Field(None, description="Exclude specific sites")
+    crawl_sources: list[str] | None = Field(None, description="Filter by crawl sources")
 
     # Semantic filtering
     semantic_similarity_threshold: float | None = Field(
@@ -188,8 +178,11 @@ class ContentTypeCriteria(BaseModel):
             raise ValueError("Word count must be positive")
 
         # Check min <= max if both are provided
-        if (info.field_name == "max_word_count" and info.data.get("min_word_count")
-            and v < info.data["min_word_count"]):
+        if (
+            info.field_name == "max_word_count"
+            and info.data.get("min_word_count")
+            and v < info.data["min_word_count"]
+        ):
             raise ValueError("max_word_count must be >= min_word_count")
 
         return v
@@ -202,7 +195,9 @@ class ContentClassification(BaseModel):
     category: ContentCategory = Field(..., description="Content category")
     intent: ContentIntent = Field(..., description="Content intent")
     quality_level: QualityLevel = Field(..., description="Quality assessment")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Classification confidence")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Classification confidence"
+    )
     features: dict[str, Any] = Field(
         default_factory=dict, description="Extracted content features"
     )
@@ -216,7 +211,7 @@ class ContentTypeFilter(BaseFilter):
         name: str = "content_type_filter",
         description: str = "Filter documents by type, category, intent, and semantic characteristics",
         enabled: bool = True,
-        priority: int = 80
+        priority: int = 80,
     ):
         """Initialize content type filter.
 
@@ -242,7 +237,7 @@ class ContentTypeFilter(BaseFilter):
             "has_code": "has_code_examples",
             "has_images": "has_images",
             "content_category": "content_category",
-            "content_intent": "content_intent"
+            "content_intent": "content_intent",
         }
 
         # Programming language patterns
@@ -262,9 +257,7 @@ class ContentTypeFilter(BaseFilter):
         }
 
     async def apply(
-        self,
-        filter_criteria: dict[str, Any],
-        context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply content type filtering with semantic analysis.
 
@@ -345,8 +338,9 @@ class ContentTypeFilter(BaseFilter):
                 # Add classification metadata
                 metadata["classification_info"] = {
                     "total_conditions": len(conditions),
-                    "semantic_enabled": criteria.semantic_similarity_threshold is not None,
-                    "quality_filtering": criteria.min_quality_score is not None
+                    "semantic_enabled": criteria.semantic_similarity_threshold
+                    is not None,
+                    "quality_filtering": criteria.min_quality_score is not None,
                 }
 
             self._logger.info(
@@ -358,7 +352,7 @@ class ContentTypeFilter(BaseFilter):
                 filter_conditions=final_filter,
                 metadata=metadata,
                 confidence_score=0.90,
-                performance_impact=performance_impact
+                performance_impact=performance_impact,
             )
 
         except Exception as e:
@@ -368,7 +362,7 @@ class ContentTypeFilter(BaseFilter):
                 error_msg,
                 filter_name=self.name,
                 filter_criteria=filter_criteria,
-                underlying_error=e
+                underlying_error=e,
             ) from e
 
     def _build_document_type_filters(
@@ -383,7 +377,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["doc_type"],
-                    match=models.MatchAny(any=doc_type_values)
+                    match=models.MatchAny(any=doc_type_values),
                 )
             )
 
@@ -393,7 +387,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["doc_type"],
-                    match=models.MatchExcept(**{"except": exclude_values})
+                    match=models.MatchExcept(**{"except": exclude_values}),
                 )
             )
 
@@ -411,7 +405,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_category"],
-                    match=models.MatchAny(any=category_values)
+                    match=models.MatchAny(any=category_values),
                 )
             )
 
@@ -421,7 +415,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_category"],
-                    match=models.MatchExcept(**{"except": exclude_values})
+                    match=models.MatchExcept(**{"except": exclude_values}),
                 )
             )
 
@@ -439,7 +433,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_intent"],
-                    match=models.MatchAny(any=intent_values)
+                    match=models.MatchAny(any=intent_values),
                 )
             )
 
@@ -449,7 +443,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["content_intent"],
-                    match=models.MatchExcept(**{"except": exclude_values})
+                    match=models.MatchExcept(**{"except": exclude_values}),
                 )
             )
 
@@ -466,7 +460,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["language"],
-                    match=models.MatchAny(any=criteria.programming_languages)
+                    match=models.MatchAny(any=criteria.programming_languages),
                 )
             )
 
@@ -475,7 +469,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["framework"],
-                    match=models.MatchAny(any=criteria.frameworks)
+                    match=models.MatchAny(any=criteria.frameworks),
                 )
             )
 
@@ -492,7 +486,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["quality_score"],
-                    range=models.Range(gte=criteria.min_quality_score)
+                    range=models.Range(gte=criteria.min_quality_score),
                 )
             )
 
@@ -501,8 +495,7 @@ class ContentTypeFilter(BaseFilter):
             quality_values = [ql.value for ql in criteria.quality_levels]
             conditions.append(
                 models.FieldCondition(
-                    key="quality_level",
-                    match=models.MatchAny(any=quality_values)
+                    key="quality_level", match=models.MatchAny(any=quality_values)
                 )
             )
 
@@ -519,7 +512,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["word_count"],
-                    range=models.Range(gte=criteria.min_word_count)
+                    range=models.Range(gte=criteria.min_word_count),
                 )
             )
 
@@ -527,7 +520,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["word_count"],
-                    range=models.Range(lte=criteria.max_word_count)
+                    range=models.Range(lte=criteria.max_word_count),
                 )
             )
 
@@ -536,7 +529,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["has_code"],
-                    match=models.MatchValue(value=criteria.has_code_examples)
+                    match=models.MatchValue(value=criteria.has_code_examples),
                 )
             )
 
@@ -544,7 +537,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["has_images"],
-                    match=models.MatchValue(value=criteria.has_images)
+                    match=models.MatchValue(value=criteria.has_images),
                 )
             )
 
@@ -553,8 +546,7 @@ class ContentTypeFilter(BaseFilter):
                 # Has links: links_count > 0
                 conditions.append(
                     models.FieldCondition(
-                        key=self.content_fields["links_count"],
-                        range=models.Range(gt=0)
+                        key=self.content_fields["links_count"], range=models.Range(gt=0)
                     )
                 )
             else:
@@ -562,7 +554,7 @@ class ContentTypeFilter(BaseFilter):
                 conditions.append(
                     models.FieldCondition(
                         key=self.content_fields["links_count"],
-                        match=models.MatchValue(value=0)
+                        match=models.MatchValue(value=0),
                     )
                 )
 
@@ -579,7 +571,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["site_name"],
-                    match=models.MatchAny(any=criteria.site_names)
+                    match=models.MatchAny(any=criteria.site_names),
                 )
             )
 
@@ -588,7 +580,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["site_name"],
-                    match=models.MatchExcept(**{"except": criteria.exclude_sites})
+                    match=models.MatchExcept(**{"except": criteria.exclude_sites}),
                 )
             )
 
@@ -597,7 +589,7 @@ class ContentTypeFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.content_fields["crawl_source"],
-                    match=models.MatchAny(any=criteria.crawl_sources)
+                    match=models.MatchAny(any=criteria.crawl_sources),
                 )
             )
 
@@ -620,16 +612,13 @@ class ContentTypeFilter(BaseFilter):
             for keyword in criteria.semantic_keywords:
                 keyword_conditions.append(
                     models.FieldCondition(
-                        key="content_preview",
-                        match=models.MatchText(text=keyword)
+                        key="content_preview", match=models.MatchText(text=keyword)
                     )
                 )
 
             # Use OR logic for keywords (should match at least one)
             if keyword_conditions:
-                conditions.append(
-                    models.Filter(should=keyword_conditions)
-                )
+                conditions.append(models.Filter(should=keyword_conditions))
 
         return conditions
 
@@ -656,21 +645,30 @@ class ContentTypeFilter(BaseFilter):
     def get_supported_operators(self) -> list[str]:
         """Get supported content type operators."""
         return [
-            "document_types", "exclude_document_types",
-            "categories", "exclude_categories",
-            "intents", "exclude_intents",
-            "programming_languages", "frameworks",
-            "min_quality_score", "quality_levels",
-            "min_word_count", "max_word_count",
-            "has_code_examples", "has_images", "has_links",
-            "site_names", "exclude_sites", "crawl_sources",
-            "semantic_keywords", "semantic_similarity_threshold"
+            "document_types",
+            "exclude_document_types",
+            "categories",
+            "exclude_categories",
+            "intents",
+            "exclude_intents",
+            "programming_languages",
+            "frameworks",
+            "min_quality_score",
+            "quality_levels",
+            "min_word_count",
+            "max_word_count",
+            "has_code_examples",
+            "has_images",
+            "has_links",
+            "site_names",
+            "exclude_sites",
+            "crawl_sources",
+            "semantic_keywords",
+            "semantic_similarity_threshold",
         ]
 
     def classify_content(
-        self,
-        content: str,
-        metadata: dict[str, Any] | None = None
+        self, content: str, metadata: dict[str, Any] | None = None
     ) -> ContentClassification:
         """Classify content type, category, intent, and quality.
 
@@ -701,15 +699,28 @@ class ContentTypeFilter(BaseFilter):
         quality_level = self._assess_quality(content, metadata)
 
         # Extract features
-        features.update({
-            "word_count": len(content.split()),
-            "has_code": bool(re.search(r'```|<code>|<pre>', content) or
-                           re.search(r'\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]', content) or
-                           re.search(r'import\s+\w+|from\s+\w+\s+import|#include\s*<', content) or
-                           re.search(r'return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]', content, re.MULTILINE)),
-            "has_links": bool(re.search(r'http[s]?://|www\.', content)),
-            "programming_languages": self._detect_languages(content_lower)
-        })
+        features.update(
+            {
+                "word_count": len(content.split()),
+                "has_code": bool(
+                    re.search(r"```|<code>|<pre>", content)
+                    or re.search(
+                        r"\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]",
+                        content,
+                    )
+                    or re.search(
+                        r"import\s+\w+|from\s+\w+\s+import|#include\s*<", content
+                    )
+                    or re.search(
+                        r"return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]",
+                        content,
+                        re.MULTILINE,
+                    )
+                ),
+                "has_links": bool(re.search(r"http[s]?://|www\.", content)),
+                "programming_languages": self._detect_languages(content_lower),
+            }
+        )
 
         # Calculate confidence based on feature strength
         confidence = self._calculate_classification_confidence(features, metadata)
@@ -720,7 +731,7 @@ class ContentTypeFilter(BaseFilter):
             intent=intent,
             quality_level=quality_level,
             confidence=confidence,
-            features=features
+            features=features,
         )
 
     def _classify_document_type(
@@ -737,20 +748,26 @@ class ContentTypeFilter(BaseFilter):
 
         # Pattern-based classification
         # Look for code patterns first (most specific)
-        if (re.search(r'```|<code>|<pre>', content) or
-            re.search(r'\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]', content) or
-            re.search(r'import\s+\w+|from\s+\w+\s+import|#include\s*<', content) or
-            re.search(r'return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]', content, re.MULTILINE)):
+        if (
+            re.search(r"```|<code>|<pre>", content)
+            or re.search(
+                r"\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]", content
+            )
+            or re.search(r"import\s+\w+|from\s+\w+\s+import|#include\s*<", content)
+            or re.search(
+                r"return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]", content, re.MULTILINE
+            )
+        ):
             return DocumentType.CODE
-        elif re.search(r'#+\s+|^\*\s+|\[.*\]\(.*\)', content, re.MULTILINE):
+        elif re.search(r"#+\s+|^\*\s+|\[.*\]\(.*\)", content, re.MULTILINE):
             return DocumentType.MARKDOWN
-        elif re.search(r'<html>|<body>|<div>', content):
+        elif re.search(r"<html>|<body>|<div>", content):
             return DocumentType.HTML
-        elif re.search(r'# getting started|# installation|# tutorial', content_lower):
+        elif re.search(r"# getting started|# installation|# tutorial", content_lower):
             return DocumentType.TUTORIAL
-        elif re.search(r'# api|# reference|# documentation', content_lower):
+        elif re.search(r"# api|# reference|# documentation", content_lower):
             return DocumentType.REFERENCE
-        elif re.search(r'readme|read me', content_lower):
+        elif re.search(r"readme|read me", content_lower):
             return DocumentType.README
 
         return DocumentType.UNKNOWN
@@ -764,15 +781,15 @@ class ContentTypeFilter(BaseFilter):
             return ContentCategory.PROGRAMMING
 
         # Check for tutorial indicators
-        if re.search(r'tutorial|how to|step by step|guide', content_lower):
+        if re.search(r"tutorial|how to|step by step|guide", content_lower):
             return ContentCategory.TUTORIAL
 
         # Check for documentation indicators
-        if re.search(r'documentation|docs|reference|manual', content_lower):
+        if re.search(r"documentation|docs|reference|manual", content_lower):
             return ContentCategory.DOCUMENTATION
 
         # Check for troubleshooting
-        if re.search(r'error|troubleshoot|fix|problem|issue', content_lower):
+        if re.search(r"error|troubleshoot|fix|problem|issue", content_lower):
             return ContentCategory.TROUBLESHOOTING
 
         return ContentCategory.GENERAL
@@ -780,23 +797,23 @@ class ContentTypeFilter(BaseFilter):
     def _classify_intent(self, content_lower: str) -> ContentIntent:
         """Classify content intent."""
         # Learn intent
-        if re.search(r'learn|tutorial|introduction|getting started', content_lower):
+        if re.search(r"learn|tutorial|introduction|getting started", content_lower):
             return ContentIntent.LEARN
 
         # Reference intent
-        if re.search(r'reference|api|documentation|manual', content_lower):
+        if re.search(r"reference|api|documentation|manual", content_lower):
             return ContentIntent.REFERENCE
 
         # Troubleshoot intent
-        if re.search(r'troubleshoot|debug|fix|error|problem', content_lower):
+        if re.search(r"troubleshoot|debug|fix|error|problem", content_lower):
             return ContentIntent.TROUBLESHOOT
 
         # Implementation intent
-        if re.search(r'implement|build|create|develop|code', content_lower):
+        if re.search(r"implement|build|create|develop|code", content_lower):
             return ContentIntent.IMPLEMENT
 
         # Configuration intent
-        if re.search(r'configure|setup|install|deployment', content_lower):
+        if re.search(r"configure|setup|install|deployment", content_lower):
             return ContentIntent.CONFIGURE
 
         return ContentIntent.UNDERSTAND
@@ -816,8 +833,10 @@ class ContentTypeFilter(BaseFilter):
 
         # Simple heuristic-based quality assessment
         word_count = len(content.split())
-        has_structure = bool(re.search(r'#+\s+|<h[1-6]>', content))
-        has_examples = bool(re.search(r'```|example|for instance', content, re.IGNORECASE))
+        has_structure = bool(re.search(r"#+\s+|<h[1-6]>", content))
+        has_examples = bool(
+            re.search(r"```|example|for instance", content, re.IGNORECASE)
+        )
 
         quality_score = 0
         if word_count > 200:

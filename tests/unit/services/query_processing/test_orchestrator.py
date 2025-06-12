@@ -9,6 +9,10 @@ from src.services.query_processing.models import QueryProcessingRequest
 from src.services.query_processing.models import QueryProcessingResponse
 from src.services.query_processing.models import SearchStrategy
 from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
+from src.services.query_processing.orchestrator import AdvancedSearchRequest
+from src.services.query_processing.orchestrator import AdvancedSearchResult
+from src.services.query_processing.orchestrator import SearchMode
+from src.services.query_processing.orchestrator import SearchPipeline
 
 
 @pytest.fixture
@@ -71,13 +75,13 @@ def mock_hyde_engine():
 
 
 @pytest.fixture
-def orchestrator(mock_embedding_manager, mock_qdrant_service, mock_hyde_engine):
+def orchestrator():
     """Create an orchestrator instance."""
     return AdvancedSearchOrchestrator(
-        embedding_manager=mock_embedding_manager,
-        qdrant_service=mock_qdrant_service,
-        hyde_engine=mock_hyde_engine,
-        cache_manager=None,
+        enable_all_features=True,
+        enable_performance_optimization=True,
+        cache_size=100,
+        max_concurrent_stages=4,
     )
 
 
@@ -91,10 +95,12 @@ async def initialized_orchestrator(orchestrator):
 @pytest.fixture
 def sample_request():
     """Create a sample processing request."""
-    return QueryProcessingRequest(
+    return AdvancedSearchRequest(
         query="What is machine learning?",
         collection_name="documentation",
         limit=10,
+        search_mode=SearchMode.ENHANCED,
+        pipeline=SearchPipeline.BALANCED,
     )
 
 
@@ -104,9 +110,14 @@ class TestAdvancedSearchOrchestrator:
     def test_initialization(self, orchestrator):
         """Test orchestrator initialization."""
         assert orchestrator._initialized is False
-        assert orchestrator.embedding_manager is not None
-        assert orchestrator.qdrant_service is not None
-        assert orchestrator.hyde_engine is not None
+        assert orchestrator.enable_all_features is True
+        assert orchestrator.enable_performance_optimization is True
+        assert orchestrator.cache_size == 100
+        assert orchestrator.max_concurrent_stages == 4
+        # Check that services are initialized
+        assert hasattr(orchestrator, 'temporal_filter')
+        assert hasattr(orchestrator, 'query_expansion_service')
+        assert hasattr(orchestrator, 'clustering_service')
 
     async def test_initialize(self, orchestrator):
         """Test orchestrator initialization."""
@@ -117,10 +128,14 @@ class TestAdvancedSearchOrchestrator:
         self, initialized_orchestrator, sample_request
     ):
         """Test basic query processing flow."""
-        response = await initialized_orchestrator.process_query(sample_request)
+        # Mock the actual search to avoid external dependencies
+        initialized_orchestrator._test_search_failure = False
+        
+        response = await initialized_orchestrator.search(sample_request)
 
-        assert isinstance(response, QueryProcessingResponse)
-        assert response.success is True
+        assert isinstance(response, AdvancedSearchResult)
+        assert response.search_mode == SearchMode.ENHANCED
+        assert response.pipeline == SearchPipeline.BALANCED
         assert response.total_results >= 0  # May be 0 with mocked search
         assert response.total_processing_time_ms > 0
 

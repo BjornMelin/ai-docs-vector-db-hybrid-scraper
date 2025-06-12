@@ -33,19 +33,16 @@ __all__ = [
     "FilterError",
     "FilterRegistry",
     "filter_registry",
-
     # Core filter implementations
     "TemporalFilter",
     "ContentTypeFilter",
     "MetadataFilter",
     "SimilarityThresholdManager",
     "FilterComposer",
-
     # Composition framework
     "CompositionOperator",
     "FilterReference",
     "CompositionRule",
-
     # Enums and types
     "DocumentType",
     "ContentCategory",
@@ -53,5 +50,5 @@ __all__ = [
     "FieldOperator",
     "BooleanOperator",
     "ThresholdStrategy",
-    "QueryContext"
+    "QueryContext",
 ]

@@ -71,8 +71,12 @@ class FieldConditionModel(BaseModel):
     field: str = Field(..., description="Field name to filter on")
     operator: FieldOperator = Field(..., description="Comparison operator")
     value: Any = Field(None, description="Value to compare against")
-    values: list[Any] | None = Field(None, description="List of values for IN/NIN operators")
-    case_sensitive: bool = Field(True, description="Case sensitivity for string operations")
+    values: list[Any] | None = Field(
+        None, description="List of values for IN/NIN operators"
+    )
+    case_sensitive: bool = Field(
+        True, description="Case sensitivity for string operations"
+    )
 
     @field_validator("values")
     @classmethod
@@ -80,7 +84,9 @@ class FieldConditionModel(BaseModel):
         """Validate values list is provided for appropriate operators."""
         if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN]:
             if not v:
-                raise ValueError(f"values list required for {info.data['operator']} operator")
+                raise ValueError(
+                    f"values list required for {info.data['operator']} operator"
+                )
         return v
 
     @model_validator(mode="after")
@@ -115,7 +121,9 @@ class BooleanExpressionModel(BaseModel):
                 raise ValueError("NOT operator requires exactly one condition")
         elif operator in [BooleanOperator.AND, BooleanOperator.OR]:
             if len(v) < 2:
-                raise ValueError(f"{operator} operator requires at least two conditions")
+                raise ValueError(
+                    f"{operator} operator requires at least two conditions"
+                )
 
         return v
 
@@ -162,14 +170,16 @@ class MetadataFilterCriteria(BaseModel):
     @model_validator(mode="after")
     def validate_at_least_one_condition(self):
         """Ensure at least one filtering condition is provided."""
-        has_conditions = any([
-            self.field_conditions,
-            self.expression,
-            self.exact_matches,
-            self.exclude_matches,
-            self.range_filters,
-            self.text_searches
-        ])
+        has_conditions = any(
+            [
+                self.field_conditions,
+                self.expression,
+                self.exact_matches,
+                self.exclude_matches,
+                self.range_filters,
+                self.text_searches,
+            ]
+        )
 
         if not has_conditions:
             raise ValueError("At least one filtering condition must be provided")
@@ -185,10 +195,10 @@ class MetadataFilter(BaseFilter):
         name: str = "metadata_filter",
         description: str = "Filter documents using complex metadata conditions with boolean logic",
         enabled: bool = True,
-        priority: int = 70
+        priority: int = 70,
     ):
         """Initialize metadata filter.
-        
+
         Args:
             name: Filter name
             description: Filter description
@@ -204,23 +214,21 @@ class MetadataFilter(BaseFilter):
             "float": float,
             "boolean": bool,
             "list": list,
-            "dict": dict
+            "dict": dict,
         }
 
     async def apply(
-        self,
-        filter_criteria: dict[str, Any],
-        context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply metadata filtering with boolean logic.
-        
+
         Args:
             filter_criteria: Metadata filter criteria
             context: Optional context with field schemas and settings
-            
+
         Returns:
             FilterResult with Qdrant metadata filter conditions
-            
+
         Raises:
             FilterError: If metadata filter application fails
         """
@@ -240,13 +248,17 @@ class MetadataFilter(BaseFilter):
 
             # Process direct field conditions
             if criteria.field_conditions:
-                field_conditions = self._build_field_conditions(criteria.field_conditions, criteria)
+                field_conditions = self._build_field_conditions(
+                    criteria.field_conditions, criteria
+                )
                 conditions.extend(field_conditions)
                 metadata["applied_filters"].append("field_conditions")
 
             # Process complex boolean expression
             if criteria.expression:
-                expression_condition = self._build_boolean_expression(criteria.expression, criteria)
+                expression_condition = self._build_boolean_expression(
+                    criteria.expression, criteria
+                )
                 if expression_condition:
                     conditions.append(expression_condition)
                     metadata["applied_filters"].append("boolean_expression")
@@ -272,11 +284,13 @@ class MetadataFilter(BaseFilter):
                     final_filter = models.Filter(must=conditions)
 
                 # Add metadata about the filter structure
-                metadata["boolean_logic"].update({
-                    "total_conditions": len(conditions),
-                    "default_operator": criteria.default_boolean_operator.value,
-                    "case_insensitive": criteria.ignore_case
-                })
+                metadata["boolean_logic"].update(
+                    {
+                        "total_conditions": len(conditions),
+                        "default_operator": criteria.default_boolean_operator.value,
+                        "case_insensitive": criteria.ignore_case,
+                    }
+                )
 
             self._logger.info(
                 f"Applied metadata filter with {len(conditions)} conditions: "
@@ -287,7 +301,7 @@ class MetadataFilter(BaseFilter):
                 filter_conditions=final_filter,
                 metadata=metadata,
                 confidence_score=0.95,
-                performance_impact=performance_impact
+                performance_impact=performance_impact,
             )
 
         except Exception as e:
@@ -297,7 +311,7 @@ class MetadataFilter(BaseFilter):
                 error_msg,
                 filter_name=self.name,
                 filter_criteria=filter_criteria,
-                underlying_error=e
+                underlying_error=e,
             ) from e
 
     def _build_shorthand_conditions(
@@ -311,8 +325,7 @@ class MetadataFilter(BaseFilter):
             for field, value in criteria.exact_matches.items():
                 conditions.append(
                     models.FieldCondition(
-                        key=field,
-                        match=models.MatchValue(value=value)
+                        key=field, match=models.MatchValue(value=value)
                     )
                 )
 
@@ -322,22 +335,28 @@ class MetadataFilter(BaseFilter):
                 if isinstance(value, list):
                     # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                     exclude_values = [
-                        str(v) if isinstance(v, bool) or not isinstance(v, (str, int)) else v
+                        str(v)
+                        if isinstance(v, bool) or not isinstance(v, (str, int))
+                        else v
                         for v in value
                     ]
                     conditions.append(
                         models.FieldCondition(
                             key=field,
-                            match=models.MatchExcept(**{"except": exclude_values})
+                            match=models.MatchExcept(**{"except": exclude_values}),
                         )
                     )
                 else:
                     # Convert value to string if it's not string/int (but exclude bool even though it's int)
-                    exclude_value = str(value) if isinstance(value, bool) or not isinstance(value, (str, int)) else value
+                    exclude_value = (
+                        str(value)
+                        if isinstance(value, bool) or not isinstance(value, (str, int))
+                        else value
+                    )
                     conditions.append(
                         models.FieldCondition(
                             key=field,
-                            match=models.MatchExcept(**{"except": [exclude_value]})
+                            match=models.MatchExcept(**{"except": [exclude_value]}),
                         )
                     )
 
@@ -345,20 +364,14 @@ class MetadataFilter(BaseFilter):
         if criteria.range_filters:
             for field, range_params in criteria.range_filters.items():
                 conditions.append(
-                    models.FieldCondition(
-                        key=field,
-                        range=models.Range(**range_params)
-                    )
+                    models.FieldCondition(key=field, range=models.Range(**range_params))
                 )
 
         # Text searches
         if criteria.text_searches:
             for field, text in criteria.text_searches.items():
                 conditions.append(
-                    models.FieldCondition(
-                        key=field,
-                        match=models.MatchText(text=text)
-                    )
+                    models.FieldCondition(key=field, match=models.MatchText(text=text))
                 )
 
         return conditions
@@ -366,7 +379,7 @@ class MetadataFilter(BaseFilter):
     def _build_field_conditions(
         self,
         field_conditions: list[FieldConditionModel],
-        criteria: MetadataFilterCriteria
+        criteria: MetadataFilterCriteria,
     ) -> list[models.FieldCondition]:
         """Build Qdrant conditions from field condition models."""
         conditions = []
@@ -379,9 +392,7 @@ class MetadataFilter(BaseFilter):
         return conditions
 
     def _build_single_field_condition(
-        self,
-        condition: FieldConditionModel,
-        criteria: MetadataFilterCriteria
+        self, condition: FieldConditionModel, criteria: MetadataFilterCriteria
     ) -> models.FieldCondition | None:
         """Build a single Qdrant field condition."""
         field = condition.field
@@ -397,8 +408,7 @@ class MetadataFilter(BaseFilter):
             if operator == FieldOperator.EXISTS:
                 # For exists, we use a range that matches any value
                 return models.FieldCondition(
-                    key=field,
-                    range=models.Range(gte=float('-inf'), lte=float('inf'))
+                    key=field, range=models.Range(gte=float("-inf"), lte=float("inf"))
                 )
             elif operator == FieldOperator.NOT_EXISTS:
                 # For not exists, we use must_not with the exists condition
@@ -408,54 +418,44 @@ class MetadataFilter(BaseFilter):
             # Equality operators
             elif operator == FieldOperator.EQ:
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchValue(value=value)
+                    key=field, match=models.MatchValue(value=value)
                 )
             elif operator == FieldOperator.NE:
                 # Convert value to string if it's not string/int (but exclude bool even though it's int)
-                exclude_value = str(value) if isinstance(value, bool) or not isinstance(value, (str, int)) else value
+                exclude_value = (
+                    str(value)
+                    if isinstance(value, bool) or not isinstance(value, (str, int))
+                    else value
+                )
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchExcept(**{"except": [exclude_value]})
+                    key=field, match=models.MatchExcept(**{"except": [exclude_value]})
                 )
 
             # Comparison operators
             elif operator == FieldOperator.GT:
-                return models.FieldCondition(
-                    key=field,
-                    range=models.Range(gt=value)
-                )
+                return models.FieldCondition(key=field, range=models.Range(gt=value))
             elif operator == FieldOperator.GTE:
-                return models.FieldCondition(
-                    key=field,
-                    range=models.Range(gte=value)
-                )
+                return models.FieldCondition(key=field, range=models.Range(gte=value))
             elif operator == FieldOperator.LT:
-                return models.FieldCondition(
-                    key=field,
-                    range=models.Range(lt=value)
-                )
+                return models.FieldCondition(key=field, range=models.Range(lt=value))
             elif operator == FieldOperator.LTE:
-                return models.FieldCondition(
-                    key=field,
-                    range=models.Range(lte=value)
-                )
+                return models.FieldCondition(key=field, range=models.Range(lte=value))
 
             # Collection operators
             elif operator == FieldOperator.IN:
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchAny(any=values)
+                    key=field, match=models.MatchAny(any=values)
                 )
             elif operator == FieldOperator.NIN:
                 # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                 exclude_values = [
-                    str(v) if isinstance(v, bool) or not isinstance(v, (str, int)) else v
+                    str(v)
+                    if isinstance(v, bool) or not isinstance(v, (str, int))
+                    else v
                     for v in values
                 ]
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchExcept(**{"except": exclude_values})
+                    key=field, match=models.MatchExcept(**{"except": exclude_values})
                 )
 
             # String operators (implemented as text search)
@@ -463,7 +463,7 @@ class MetadataFilter(BaseFilter):
                 FieldOperator.CONTAINS,
                 FieldOperator.STARTS_WITH,
                 FieldOperator.ENDS_WITH,
-                FieldOperator.TEXT_MATCH
+                FieldOperator.TEXT_MATCH,
             ]:
                 # Convert to appropriate text search
                 if operator == FieldOperator.STARTS_WITH:
@@ -474,8 +474,7 @@ class MetadataFilter(BaseFilter):
                     search_text = str(value)
 
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchText(text=search_text)
+                    key=field, match=models.MatchText(text=search_text)
                 )
 
             # Regular expression (approximated with text search)
@@ -486,8 +485,7 @@ class MetadataFilter(BaseFilter):
                     f"Regex operator on field '{field}' approximated with text search"
                 )
                 return models.FieldCondition(
-                    key=field,
-                    match=models.MatchText(text=str(value))
+                    key=field, match=models.MatchText(text=str(value))
                 )
 
             else:
@@ -499,9 +497,7 @@ class MetadataFilter(BaseFilter):
             return None
 
     def _build_boolean_expression(
-        self,
-        expression: BooleanExpressionModel,
-        criteria: MetadataFilterCriteria
+        self, expression: BooleanExpressionModel, criteria: MetadataFilterCriteria
     ) -> models.Filter | models.FieldCondition | None:
         """Build Qdrant filter from boolean expression."""
         operator = expression.operator
@@ -511,7 +507,9 @@ class MetadataFilter(BaseFilter):
         for condition in expression.conditions:
             if isinstance(condition, FieldConditionModel):
                 # Single field condition
-                qdrant_condition = self._build_single_field_condition(condition, criteria)
+                qdrant_condition = self._build_single_field_condition(
+                    condition, criteria
+                )
                 if qdrant_condition:
                     conditions.append(qdrant_condition)
             elif isinstance(condition, BooleanExpressionModel):
@@ -575,15 +573,17 @@ class MetadataFilter(BaseFilter):
         """Get supported metadata operators."""
         return [op.value for op in FieldOperator] + [op.value for op in BooleanOperator]
 
-    def build_expression_from_dict(self, expression_dict: dict[str, Any]) -> BooleanExpressionModel:
+    def build_expression_from_dict(
+        self, expression_dict: dict[str, Any]
+    ) -> BooleanExpressionModel:
         """Build a boolean expression from a dictionary representation.
-        
+
         Args:
             expression_dict: Dictionary representation of boolean expression
-            
+
         Returns:
             BooleanExpressionModel instance
-            
+
         Example:
             {
                 "and": [
@@ -599,7 +599,9 @@ class MetadataFilter(BaseFilter):
         """
         # Find the boolean operator (should be the only key)
         if len(expression_dict) != 1:
-            raise ValueError("Expression dict must have exactly one boolean operator key")
+            raise ValueError(
+                "Expression dict must have exactly one boolean operator key"
+            )
 
         operator_key, conditions_list = next(iter(expression_dict.items()))
 
@@ -615,24 +617,25 @@ class MetadataFilter(BaseFilter):
                 # Check if it's a field condition or nested boolean expression
                 if "field" in condition and "operator" in condition:
                     # Field condition
-                    parsed_conditions.append(FieldConditionModel.model_validate(condition))
+                    parsed_conditions.append(
+                        FieldConditionModel.model_validate(condition)
+                    )
                 else:
                     # Nested boolean expression
                     parsed_conditions.append(self.build_expression_from_dict(condition))
             else:
                 raise ValueError(f"Invalid condition format: {condition}")
 
-        return BooleanExpressionModel(
-            operator=operator,
-            conditions=parsed_conditions
-        )
+        return BooleanExpressionModel(operator=operator, conditions=parsed_conditions)
 
-    def optimize_expression(self, expression: BooleanExpressionModel) -> BooleanExpressionModel:
+    def optimize_expression(
+        self, expression: BooleanExpressionModel
+    ) -> BooleanExpressionModel:
         """Optimize boolean expression for better performance.
-        
+
         Args:
             expression: Boolean expression to optimize
-            
+
         Returns:
             Optimized boolean expression
         """
@@ -649,8 +652,10 @@ class MetadataFilter(BaseFilter):
                 optimized_nested = self.optimize_expression(condition)
 
                 # Flatten if same operator
-                if (optimized_nested.operator == expression.operator and
-                    expression.operator in [BooleanOperator.AND, BooleanOperator.OR]):
+                if (
+                    optimized_nested.operator == expression.operator
+                    and expression.operator in [BooleanOperator.AND, BooleanOperator.OR]
+                ):
                     optimized_conditions.extend(optimized_nested.conditions)
                 else:
                     optimized_conditions.append(optimized_nested)
@@ -663,7 +668,11 @@ class MetadataFilter(BaseFilter):
 
         for condition in optimized_conditions:
             if isinstance(condition, FieldConditionModel):
-                condition_key = (condition.field, condition.operator, str(condition.value))
+                condition_key = (
+                    condition.field,
+                    condition.operator,
+                    str(condition.value),
+                )
                 if condition_key not in seen_field_conditions:
                     seen_field_conditions.add(condition_key)
                     unique_conditions.append(condition)
@@ -671,16 +680,15 @@ class MetadataFilter(BaseFilter):
                 unique_conditions.append(condition)
 
         return BooleanExpressionModel(
-            operator=expression.operator,
-            conditions=unique_conditions
+            operator=expression.operator, conditions=unique_conditions
         )
 
     def explain_filter(self, criteria: MetadataFilterCriteria) -> str:
         """Generate human-readable explanation of the filter criteria.
-        
+
         Args:
             criteria: Metadata filter criteria
-            
+
         Returns:
             Human-readable explanation string
         """
@@ -710,7 +718,9 @@ class MetadataFilter(BaseFilter):
 
         # Explain boolean expression
         if criteria.expression:
-            explanations.append(f"Boolean expression: {self._explain_expression(criteria.expression)}")
+            explanations.append(
+                f"Boolean expression: {self._explain_expression(criteria.expression)}"
+            )
 
         return f"Metadata filter: {' AND '.join(explanations)}"
 
@@ -724,7 +734,9 @@ class MetadataFilter(BaseFilter):
                     f"{condition.field} {condition.operator.value} {condition.value or condition.values}"
                 )
             elif isinstance(condition, BooleanExpressionModel):
-                condition_explanations.append(f"({self._explain_expression(condition)})")
+                condition_explanations.append(
+                    f"({self._explain_expression(condition)})"
+                )
 
         operator_word = expression.operator.value.upper()
         if expression.operator == BooleanOperator.NOT:

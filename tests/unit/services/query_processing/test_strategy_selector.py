@@ -508,7 +508,7 @@ class TestSearchStrategySelector:
         )
 
         # Should not add duplicate SEMANTIC strategy
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         semantic_count = sum(1 for s in all_strategies if s == SearchStrategy.SEMANTIC)
         assert semantic_count <= 2  # At most primary + one fallback
 
@@ -530,7 +530,7 @@ class TestSearchStrategySelector:
         )
 
         # Should include HYBRID in fallbacks for version-specific queries
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.HYBRID in all_strategies
 
     async def test_context_adjustments_urgency_with_fast_primary(
@@ -576,7 +576,11 @@ class TestSearchStrategySelector:
         )
 
         # Should switch to a faster strategy and include reasoning about latency
-        fast_strategies = [SearchStrategy.SEMANTIC, SearchStrategy.FILTERED, SearchStrategy.HYBRID]
+        fast_strategies = [
+            SearchStrategy.SEMANTIC,
+            SearchStrategy.FILTERED,
+            SearchStrategy.HYBRID,
+        ]
         assert selection.primary_strategy in fast_strategies
         assert "latency" in selection.reasoning.lower()
 
@@ -599,9 +603,14 @@ class TestSearchStrategySelector:
         )
 
         # Should switch to a higher quality strategy
-        high_quality_strategies = [SearchStrategy.HYDE, SearchStrategy.RERANKED, SearchStrategy.MULTI_STAGE]
-        assert (selection.primary_strategy in high_quality_strategies or
-                any(s in high_quality_strategies for s in selection.fallback_strategies))
+        high_quality_strategies = [
+            SearchStrategy.HYDE,
+            SearchStrategy.RERANKED,
+            SearchStrategy.MULTI_STAGE,
+        ]
+        assert selection.primary_strategy in high_quality_strategies or any(
+            s in high_quality_strategies for s in selection.fallback_strategies
+        )
         assert "quality" in selection.reasoning.lower()
 
     async def test_unknown_intent_fallback(self, initialized_selector):
@@ -652,7 +661,7 @@ class TestSearchStrategySelector:
             "framework": ["django"],
             "error_code": ["500"],
             "version": "3.2",
-            "urgency": "high"
+            "urgency": "high",
         }
 
         selection = await initialized_selector.select_strategy(
@@ -664,7 +673,7 @@ class TestSearchStrategySelector:
         assert len(selection.fallback_strategies) > 0
 
         # Error code context should prioritize FILTERED
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.FILTERED in all_strategies
 
     async def test_confidence_score_edge_cases(self, initialized_selector):
@@ -726,10 +735,12 @@ class TestSearchStrategySelector:
         selection = await initialized_selector.select_strategy(classification)
 
         # Should include RERANKED in primary or fallback strategies
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.RERANKED in all_strategies
 
-    async def test_programming_language_context_without_semantic(self, initialized_selector):
+    async def test_programming_language_context_without_semantic(
+        self, initialized_selector
+    ):
         """Test programming language context when SEMANTIC is not in strategies."""
         # Use an intent that doesn't have SEMANTIC in primary or fallbacks
         classification = QueryIntentClassification(
@@ -747,7 +758,7 @@ class TestSearchStrategySelector:
         )
 
         # Should add SEMANTIC to fallbacks for rich documentation languages
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.SEMANTIC in all_strategies
 
     async def test_version_context_without_hybrid(self, initialized_selector):
@@ -768,7 +779,7 @@ class TestSearchStrategySelector:
         )
 
         # Should add HYBRID to fallbacks for version-specific queries
-        all_strategies = [selection.primary_strategy] + selection.fallback_strategies
+        all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.HYBRID in all_strategies
 
     async def test_urgency_context_with_slow_primary(self, initialized_selector):

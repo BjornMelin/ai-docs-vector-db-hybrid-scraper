@@ -58,11 +58,11 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
 
     tools.query_processing.register_tools(mcp, client_manager)
     registered_tools.append("query_processing")
-    
+
     # New advanced filtering and query processing capabilities
     tools.filtering_tools.register_filtering_tools(mcp, client_manager)
     registered_tools.append("filtering_tools")
-    
+
     tools.query_processing_tools.register_query_processing_tools(mcp, client_manager)
     registered_tools.append("query_processing_tools")
 

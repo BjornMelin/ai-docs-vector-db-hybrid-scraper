@@ -591,8 +591,7 @@ class ClientManager:
                     from src.services.query_processing import AdvancedSearchOrchestrator
 
                     self._advanced_search_orchestrator = AdvancedSearchOrchestrator(
-                        enable_all_features=True,
-                        enable_performance_optimization=True
+                        enable_all_features=True, enable_performance_optimization=True
                     )
                     logger.info("Initialized AdvancedSearchOrchestrator")
 

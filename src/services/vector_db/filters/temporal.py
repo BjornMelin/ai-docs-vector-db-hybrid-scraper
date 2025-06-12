@@ -1,7 +1,7 @@
 """Temporal filtering for date-based filtering and content freshness analysis.
 
 This module provides sophisticated temporal filtering capabilities including
-absolute and relative date filtering, content freshness scoring, and 
+absolute and relative date filtering, content freshness scoring, and
 time-based content relevance analysis.
 """
 
@@ -110,13 +110,13 @@ class TemporalFilter(BaseFilter):
         name: str = "temporal_filter",
         description: str = "Filter documents based on temporal criteria and content freshness",
         enabled: bool = True,
-        priority: int = 90
+        priority: int = 90,
     ):
         """Initialize temporal filter.
-        
+
         Args:
             name: Filter name
-            description: Filter description  
+            description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
         """
@@ -126,7 +126,7 @@ class TemporalFilter(BaseFilter):
         self.temporal_fields = {
             "created": "created_at",
             "updated": "last_updated",
-            "crawled": "crawl_timestamp"
+            "crawled": "crawl_timestamp",
         }
 
         # Freshness calculation parameters
@@ -134,19 +134,17 @@ class TemporalFilter(BaseFilter):
         self.max_freshness_age_days = 365
 
     async def apply(
-        self,
-        filter_criteria: dict[str, Any],
-        context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply temporal filtering with freshness analysis.
-        
+
         Args:
             filter_criteria: Temporal filter criteria
             context: Optional context with current time and collection info
-            
+
         Returns:
             FilterResult with Qdrant temporal filter conditions
-            
+
         Raises:
             FilterError: If temporal filter application fails
         """
@@ -170,7 +168,9 @@ class TemporalFilter(BaseFilter):
                 metadata["applied_filters"].append("absolute_dates")
 
             # Process relative date filters
-            relative_conditions = self._build_relative_date_filters(criteria, current_time)
+            relative_conditions = self._build_relative_date_filters(
+                criteria, current_time
+            )
             conditions.extend(relative_conditions)
             if relative_conditions:
                 metadata["applied_filters"].append("relative_dates")
@@ -194,7 +194,7 @@ class TemporalFilter(BaseFilter):
                     metadata["freshness_info"] = {
                         "time_decay_factor": criteria.time_decay_factor,
                         "boost_enabled": True,
-                        "current_time": current_time.isoformat()
+                        "current_time": current_time.isoformat(),
                     }
 
             self._logger.info(
@@ -206,7 +206,7 @@ class TemporalFilter(BaseFilter):
                 filter_conditions=final_filter,
                 metadata=metadata,
                 confidence_score=0.95,
-                performance_impact=performance_impact
+                performance_impact=performance_impact,
             )
 
         except Exception as e:
@@ -216,7 +216,7 @@ class TemporalFilter(BaseFilter):
                 error_msg,
                 filter_name=self.name,
                 filter_criteria=filter_criteria,
-                underlying_error=e
+                underlying_error=e,
             ) from e
 
     def _build_absolute_date_filters(
@@ -230,7 +230,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["created"],
-                    range=models.Range(gte=criteria.created_after.timestamp())
+                    range=models.Range(gte=criteria.created_after.timestamp()),
                 )
             )
 
@@ -238,7 +238,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["created"],
-                    range=models.Range(lte=criteria.created_before.timestamp())
+                    range=models.Range(lte=criteria.created_before.timestamp()),
                 )
             )
 
@@ -247,7 +247,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["updated"],
-                    range=models.Range(gte=criteria.updated_after.timestamp())
+                    range=models.Range(gte=criteria.updated_after.timestamp()),
                 )
             )
 
@@ -255,7 +255,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["updated"],
-                    range=models.Range(lte=criteria.updated_before.timestamp())
+                    range=models.Range(lte=criteria.updated_before.timestamp()),
                 )
             )
 
@@ -264,7 +264,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["crawled"],
-                    range=models.Range(gte=criteria.crawled_after.timestamp())
+                    range=models.Range(gte=criteria.crawled_after.timestamp()),
                 )
             )
 
@@ -272,7 +272,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["crawled"],
-                    range=models.Range(lte=criteria.crawled_before.timestamp())
+                    range=models.Range(lte=criteria.crawled_before.timestamp()),
                 )
             )
 
@@ -290,7 +290,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["created"],
-                    range=models.Range(gte=cutoff_time.timestamp())
+                    range=models.Range(gte=cutoff_time.timestamp()),
                 )
             )
 
@@ -300,7 +300,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["updated"],
-                    range=models.Range(gte=cutoff_time.timestamp())
+                    range=models.Range(gte=cutoff_time.timestamp()),
                 )
             )
 
@@ -310,7 +310,7 @@ class TemporalFilter(BaseFilter):
             conditions.append(
                 models.FieldCondition(
                     key=self.temporal_fields["crawled"],
-                    range=models.Range(gte=cutoff_time.timestamp())
+                    range=models.Range(gte=cutoff_time.timestamp()),
                 )
             )
 
@@ -323,16 +323,16 @@ class TemporalFilter(BaseFilter):
                     should=[
                         models.FieldCondition(
                             key=self.temporal_fields["created"],
-                            range=models.Range(gte=cutoff_time.timestamp())
+                            range=models.Range(gte=cutoff_time.timestamp()),
                         ),
                         models.FieldCondition(
                             key=self.temporal_fields["updated"],
-                            range=models.Range(gte=cutoff_time.timestamp())
+                            range=models.Range(gte=cutoff_time.timestamp()),
                         ),
                         models.FieldCondition(
                             key=self.temporal_fields["crawled"],
-                            range=models.Range(gte=cutoff_time.timestamp())
-                        )
+                            range=models.Range(gte=cutoff_time.timestamp()),
+                        ),
                     ]
                 )
             )
@@ -352,10 +352,14 @@ class TemporalFilter(BaseFilter):
             import math
 
             half_life_days = self.default_half_life_days
-            max_age_for_threshold = -half_life_days * math.log(criteria.freshness_threshold)
+            max_age_for_threshold = -half_life_days * math.log(
+                criteria.freshness_threshold
+            )
 
             # Limit to reasonable maximum
-            max_age_for_threshold = min(max_age_for_threshold, self.max_freshness_age_days)
+            max_age_for_threshold = min(
+                max_age_for_threshold, self.max_freshness_age_days
+            )
 
             cutoff_time = current_time - timedelta(days=max_age_for_threshold)
 
@@ -365,12 +369,12 @@ class TemporalFilter(BaseFilter):
                     should=[
                         models.FieldCondition(
                             key=self.temporal_fields["updated"],
-                            range=models.Range(gte=cutoff_time.timestamp())
+                            range=models.Range(gte=cutoff_time.timestamp()),
                         ),
                         models.FieldCondition(
                             key=self.temporal_fields["crawled"],
-                            range=models.Range(gte=cutoff_time.timestamp())
-                        )
+                            range=models.Range(gte=cutoff_time.timestamp()),
+                        ),
                     ]
                 )
             )
@@ -400,10 +404,17 @@ class TemporalFilter(BaseFilter):
     def get_supported_operators(self) -> list[str]:
         """Get supported temporal operators."""
         return [
-            "created_after", "created_before", "created_within_days",
-            "updated_after", "updated_before", "updated_within_days",
-            "crawled_after", "crawled_before", "crawled_within_days",
-            "max_age_days", "freshness_threshold"
+            "created_after",
+            "created_before",
+            "created_within_days",
+            "updated_after",
+            "updated_before",
+            "updated_within_days",
+            "crawled_after",
+            "crawled_before",
+            "crawled_within_days",
+            "max_age_days",
+            "freshness_threshold",
         ]
 
     def calculate_freshness_score(
@@ -411,16 +422,16 @@ class TemporalFilter(BaseFilter):
         content_date: datetime,
         current_time: datetime | None = None,
         decay_function: str = "exponential",
-        half_life_days: int | None = None
+        half_life_days: int | None = None,
     ) -> FreshnessScore:
         """Calculate content freshness score.
-        
+
         Args:
             content_date: Date when content was created/updated
             current_time: Current time for calculation
             decay_function: Type of decay (exponential, linear, step)
             half_life_days: Half-life for exponential decay
-            
+
         Returns:
             FreshnessScore with calculated score and metadata
         """
@@ -437,15 +448,23 @@ class TemporalFilter(BaseFilter):
         # Calculate freshness score based on decay function
         if decay_function == "exponential":
             import math
+
             score = math.exp(-age_days / half_life_days)
         elif decay_function == "linear":
             max_age = half_life_days * 3  # Linear decay over 3x half-life
             score = max(0.0, 1.0 - (age_days / max_age))
         elif decay_function == "step":
-            score = 1.0 if age_days <= half_life_days else 0.5 if age_days <= half_life_days * 2 else 0.1
+            score = (
+                1.0
+                if age_days <= half_life_days
+                else 0.5
+                if age_days <= half_life_days * 2
+                else 0.1
+            )
         else:
             # Default to exponential
             import math
+
             score = math.exp(-age_days / half_life_days)
 
         # Ensure score is in valid range
@@ -455,15 +474,15 @@ class TemporalFilter(BaseFilter):
             score=score,
             age_days=age_days,
             decay_function=decay_function,
-            half_life_days=half_life_days
+            half_life_days=half_life_days,
         )
 
     def parse_relative_date(self, relative_date_str: str) -> datetime | None:
         """Parse relative date strings like 'last week', 'past month', etc.
-        
+
         Args:
             relative_date_str: Relative date string
-            
+
         Returns:
             Parsed datetime or None if parsing fails
         """
@@ -474,16 +493,27 @@ class TemporalFilter(BaseFilter):
 
         # Pattern matching for common relative dates
         patterns = [
-            (r'last (\d+) days?', lambda m: current_time - timedelta(days=int(m.group(1)))),
-            (r'past (\d+) days?', lambda m: current_time - timedelta(days=int(m.group(1)))),
-            (r'last week', lambda m: current_time - timedelta(weeks=1)),
-            (r'past week', lambda m: current_time - timedelta(weeks=1)),
-            (r'last month', lambda m: current_time - timedelta(days=30)),
-            (r'past month', lambda m: current_time - timedelta(days=30)),
-            (r'last year', lambda m: current_time - timedelta(days=365)),
-            (r'past year', lambda m: current_time - timedelta(days=365)),
-            (r'yesterday', lambda m: current_time - timedelta(days=1)),
-            (r'today', lambda m: current_time.replace(hour=0, minute=0, second=0, microsecond=0)),
+            (
+                r"last (\d+) days?",
+                lambda m: current_time - timedelta(days=int(m.group(1))),
+            ),
+            (
+                r"past (\d+) days?",
+                lambda m: current_time - timedelta(days=int(m.group(1))),
+            ),
+            (r"last week", lambda m: current_time - timedelta(weeks=1)),
+            (r"past week", lambda m: current_time - timedelta(weeks=1)),
+            (r"last month", lambda m: current_time - timedelta(days=30)),
+            (r"past month", lambda m: current_time - timedelta(days=30)),
+            (r"last year", lambda m: current_time - timedelta(days=365)),
+            (r"past year", lambda m: current_time - timedelta(days=365)),
+            (r"yesterday", lambda m: current_time - timedelta(days=1)),
+            (
+                r"today",
+                lambda m: current_time.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                ),
+            ),
         ]
 
         for pattern, calculator in patterns:
@@ -492,8 +522,12 @@ class TemporalFilter(BaseFilter):
                 try:
                     return calculator(match)
                 except Exception as e:
-                    self._logger.warning(f"Failed to calculate relative date for '{relative_date_str}': {e}")
+                    self._logger.warning(
+                        f"Failed to calculate relative date for '{relative_date_str}': {e}"
+                    )
                     return None
 
-        self._logger.warning(f"Unrecognized relative date format: '{relative_date_str}'")
+        self._logger.warning(
+            f"Unrecognized relative date format: '{relative_date_str}'"
+        )
         return None

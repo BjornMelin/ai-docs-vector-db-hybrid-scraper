@@ -21,6 +21,7 @@ else:
         async def warning(self, msg: str) -> None: ...
         async def error(self, msg: str) -> None: ...
 
+
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -42,8 +43,12 @@ class TemporalFilterRequest(BaseModel):
     query: str = Field(..., description="Search query")
     start_date: str | None = Field(None, description="Start date (ISO format)")
     end_date: str | None = Field(None, description="End date (ISO format)")
-    time_window: str | None = Field(None, description="Relative time window (e.g., '7d', '1M')")
-    freshness_weight: float = Field(0.1, ge=0.0, le=1.0, description="Weight for content freshness")
+    time_window: str | None = Field(
+        None, description="Relative time window (e.g., '7d', '1M')"
+    )
+    freshness_weight: float = Field(
+        0.1, ge=0.0, le=1.0, description="Weight for content freshness"
+    )
     enable_decay: bool = Field(True, description="Enable time decay scoring")
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
@@ -53,10 +58,18 @@ class ContentTypeFilterRequest(BaseModel):
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
-    allowed_types: list[str] = Field(default_factory=list, description="Allowed content types")
-    excluded_types: list[str] = Field(default_factory=list, description="Excluded content types")
-    semantic_classification: bool = Field(False, description="Enable semantic content classification")
-    confidence_threshold: float = Field(0.8, ge=0.0, le=1.0, description="Classification confidence threshold")
+    allowed_types: list[str] = Field(
+        default_factory=list, description="Allowed content types"
+    )
+    excluded_types: list[str] = Field(
+        default_factory=list, description="Excluded content types"
+    )
+    semantic_classification: bool = Field(
+        False, description="Enable semantic content classification"
+    )
+    confidence_threshold: float = Field(
+        0.8, ge=0.0, le=1.0, description="Classification confidence threshold"
+    )
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
@@ -68,7 +81,9 @@ class MetadataFilterRequest(BaseModel):
     filters: dict[str, Any] = Field(..., description="Key-value metadata filters")
     boolean_operator: str = Field("AND", description="Boolean operator (AND, OR)")
     enable_fuzzy_match: bool = Field(False, description="Enable fuzzy matching")
-    fuzzy_threshold: float = Field(0.8, ge=0.0, le=1.0, description="Fuzzy match threshold")
+    fuzzy_threshold: float = Field(
+        0.8, ge=0.0, le=1.0, description="Fuzzy match threshold"
+    )
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
@@ -78,7 +93,9 @@ class CompositeFilterRequest(BaseModel):
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
     filters: list[dict[str, Any]] = Field(..., description="List of filter conditions")
-    composition_logic: dict[str, Any] = Field(..., description="Boolean composition logic")
+    composition_logic: dict[str, Any] = Field(
+        ..., description="Boolean composition logic"
+    )
     enable_optimization: bool = Field(True, description="Enable filter optimization")
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
@@ -88,11 +105,19 @@ class AdaptiveThresholdRequest(BaseModel):
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
-    base_threshold: float = Field(0.6, ge=0.0, le=1.0, description="Base similarity threshold")
-    adaptive_mode: str = Field("dynamic", description="Adaptive mode (static, dynamic, auto)")
-    quality_target: float = Field(0.8, ge=0.0, le=1.0, description="Target quality score")
+    base_threshold: float = Field(
+        0.6, ge=0.0, le=1.0, description="Base similarity threshold"
+    )
+    adaptive_mode: str = Field(
+        "dynamic", description="Adaptive mode (static, dynamic, auto)"
+    )
+    quality_target: float = Field(
+        0.8, ge=0.0, le=1.0, description="Target quality score"
+    )
     min_results: int = Field(5, ge=1, description="Minimum results to return")
-    max_threshold_reduction: float = Field(0.3, ge=0.0, le=0.5, description="Maximum threshold reduction")
+    max_threshold_reduction: float = Field(
+        0.3, ge=0.0, le=0.5, description="Maximum threshold reduction"
+    )
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
@@ -101,18 +126,16 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
 
     # Initialize the orchestrator
     orchestrator = AdvancedSearchOrchestrator(
-        enable_all_features=True,
-        enable_performance_optimization=True
+        enable_all_features=True, enable_performance_optimization=True
     )
 
     @mcp.tool()
     async def search_with_temporal_filter(
-        request: TemporalFilterRequest,
-        ctx: Context
+        request: TemporalFilterRequest, ctx: Context
     ) -> list[SearchResult]:
         """
         Search with temporal filtering for date-based content.
-        
+
         Apply temporal filters to find content within specific date ranges,
         with support for relative time windows and content freshness scoring.
         """
@@ -126,7 +149,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 "end_date": request.end_date,
                 "time_window": request.time_window,
                 "freshness_weight": request.freshness_weight,
-                "enable_decay": request.enable_decay
+                "enable_decay": request.enable_decay,
             }
 
             # Create advanced search request
@@ -138,7 +161,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 pipeline=SearchPipeline.BALANCED,
                 temporal_criteria=temporal_criteria,
                 enable_expansion=True,
-                enable_caching=True
+                enable_caching=True,
             )
 
             # Execute search
@@ -147,18 +170,20 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             # Convert to SearchResult format
             search_results = []
             for res in result.results:
-                search_results.append(SearchResult(
-                    id=res.get("id", str(uuid4())),
-                    content=res.get("content", ""),
-                    score=res.get("score", 0.0),
-                    url=res.get("url"),
-                    title=res.get("title"),
-                    metadata={
-                        **res.get("metadata", {}),
-                        "temporal_relevance": res.get("temporal_relevance", 1.0),
-                        "published_date": res.get("published_date")
-                    }
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=res.get("id", str(uuid4())),
+                        content=res.get("content", ""),
+                        score=res.get("score", 0.0),
+                        url=res.get("url"),
+                        title=res.get("title"),
+                        metadata={
+                            **res.get("metadata", {}),
+                            "temporal_relevance": res.get("temporal_relevance", 1.0),
+                            "published_date": res.get("published_date"),
+                        },
+                    )
+                )
 
             await ctx.info(
                 f"Temporal filtered search {request_id} completed: "
@@ -173,12 +198,11 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def search_with_content_type_filter(
-        request: ContentTypeFilterRequest,
-        ctx: Context
+        request: ContentTypeFilterRequest, ctx: Context
     ) -> list[SearchResult]:
         """
         Search with content type filtering.
-        
+
         Filter search results by content type, with support for semantic
         content classification and type-specific ranking.
         """
@@ -191,7 +215,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 "allowed_types": request.allowed_types,
                 "excluded_types": request.excluded_types,
                 "semantic_classification": request.semantic_classification,
-                "confidence_threshold": request.confidence_threshold
+                "confidence_threshold": request.confidence_threshold,
             }
 
             # Create advanced search request
@@ -203,7 +227,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 pipeline=SearchPipeline.BALANCED,
                 content_type_criteria=content_type_criteria,
                 enable_expansion=True,
-                enable_caching=True
+                enable_caching=True,
             )
 
             # Execute search
@@ -212,19 +236,23 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             # Convert to SearchResult format
             search_results = []
             for res in result.results:
-                search_results.append(SearchResult(
-                    id=res.get("id", str(uuid4())),
-                    content=res.get("content", ""),
-                    score=res.get("score", 0.0),
-                    url=res.get("url"),
-                    title=res.get("title"),
-                    metadata={
-                        **res.get("metadata", {}),
-                        "content_type": res.get("content_type"),
-                        "content_type_match": res.get("content_type_match", 1.0),
-                        "classification_confidence": res.get("classification_confidence")
-                    }
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=res.get("id", str(uuid4())),
+                        content=res.get("content", ""),
+                        score=res.get("score", 0.0),
+                        url=res.get("url"),
+                        title=res.get("title"),
+                        metadata={
+                            **res.get("metadata", {}),
+                            "content_type": res.get("content_type"),
+                            "content_type_match": res.get("content_type_match", 1.0),
+                            "classification_confidence": res.get(
+                                "classification_confidence"
+                            ),
+                        },
+                    )
+                )
 
             await ctx.info(
                 f"Content type filtered search {request_id} completed: "
@@ -239,12 +267,11 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def search_with_metadata_filter(
-        request: MetadataFilterRequest,
-        ctx: Context
+        request: MetadataFilterRequest, ctx: Context
     ) -> list[SearchResult]:
         """
         Search with custom metadata filtering.
-        
+
         Apply flexible metadata filters with boolean logic, fuzzy matching,
         and field-specific boost values.
         """
@@ -257,7 +284,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 "filters": request.filters,
                 "boolean_operator": request.boolean_operator,
                 "enable_fuzzy_match": request.enable_fuzzy_match,
-                "fuzzy_threshold": request.fuzzy_threshold
+                "fuzzy_threshold": request.fuzzy_threshold,
             }
 
             # Create advanced search request
@@ -269,7 +296,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 pipeline=SearchPipeline.BALANCED,
                 metadata_criteria=metadata_criteria,
                 enable_expansion=True,
-                enable_caching=True
+                enable_caching=True,
             )
 
             # Execute search
@@ -278,18 +305,22 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             # Convert to SearchResult format
             search_results = []
             for res in result.results:
-                search_results.append(SearchResult(
-                    id=res.get("id", str(uuid4())),
-                    content=res.get("content", ""),
-                    score=res.get("score", 0.0),
-                    url=res.get("url"),
-                    title=res.get("title"),
-                    metadata={
-                        **res.get("metadata", {}),
-                        "metadata_match_score": res.get("metadata_match_score", 1.0),
-                        "matched_fields": res.get("matched_fields", [])
-                    }
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=res.get("id", str(uuid4())),
+                        content=res.get("content", ""),
+                        score=res.get("score", 0.0),
+                        url=res.get("url"),
+                        title=res.get("title"),
+                        metadata={
+                            **res.get("metadata", {}),
+                            "metadata_match_score": res.get(
+                                "metadata_match_score", 1.0
+                            ),
+                            "matched_fields": res.get("matched_fields", []),
+                        },
+                    )
+                )
 
             await ctx.info(
                 f"Metadata filtered search {request_id} completed: "
@@ -304,12 +335,11 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def search_with_composite_filters(
-        request: CompositeFilterRequest,
-        ctx: Context
+        request: CompositeFilterRequest, ctx: Context
     ) -> list[SearchResult]:
         """
         Search with composite filters using boolean logic.
-        
+
         Combine multiple filter types with AND, OR, and NOT operators
         for complex filtering scenarios.
         """
@@ -327,7 +357,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 filter_composition=request.composition_logic,
                 enable_expansion=True,
                 enable_clustering=True,
-                enable_caching=True
+                enable_caching=True,
             )
 
             # Process individual filters
@@ -337,11 +367,15 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 if filter_type == "temporal":
                     search_request.temporal_criteria = filter_def.get("criteria", {})
                 elif filter_type == "content_type":
-                    search_request.content_type_criteria = filter_def.get("criteria", {})
+                    search_request.content_type_criteria = filter_def.get(
+                        "criteria", {}
+                    )
                 elif filter_type == "metadata":
                     search_request.metadata_criteria = filter_def.get("criteria", {})
                 elif filter_type == "similarity":
-                    search_request.similarity_threshold_criteria = filter_def.get("criteria", {})
+                    search_request.similarity_threshold_criteria = filter_def.get(
+                        "criteria", {}
+                    )
 
             # Execute search
             result = await orchestrator.search(search_request)
@@ -349,18 +383,20 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             # Convert to SearchResult format
             search_results = []
             for res in result.results:
-                search_results.append(SearchResult(
-                    id=res.get("id", str(uuid4())),
-                    content=res.get("content", ""),
-                    score=res.get("score", 0.0),
-                    url=res.get("url"),
-                    title=res.get("title"),
-                    metadata={
-                        **res.get("metadata", {}),
-                        "filter_scores": res.get("filter_scores", {}),
-                        "composite_score": res.get("composite_score", 1.0)
-                    }
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=res.get("id", str(uuid4())),
+                        content=res.get("content", ""),
+                        score=res.get("score", 0.0),
+                        url=res.get("url"),
+                        title=res.get("title"),
+                        metadata={
+                            **res.get("metadata", {}),
+                            "filter_scores": res.get("filter_scores", {}),
+                            "composite_score": res.get("composite_score", 1.0),
+                        },
+                    )
+                )
 
             await ctx.info(
                 f"Composite filtered search {request_id} completed: "
@@ -376,12 +412,11 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def search_with_adaptive_threshold(
-        request: AdaptiveThresholdRequest,
-        ctx: Context
+        request: AdaptiveThresholdRequest, ctx: Context
     ) -> list[SearchResult]:
         """
         Search with adaptive similarity threshold management.
-        
+
         Dynamically adjust similarity thresholds based on result quality
         and quantity to ensure optimal retrieval performance.
         """
@@ -396,7 +431,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 "quality_target": request.quality_target,
                 "min_results": request.min_results,
                 "max_threshold_reduction": request.max_threshold_reduction,
-                "enable_feedback_learning": True
+                "enable_feedback_learning": True,
             }
 
             # Create advanced search request
@@ -410,7 +445,7 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
                 enable_expansion=True,
                 enable_personalization=True,
                 enable_caching=True,
-                quality_threshold=request.quality_target
+                quality_threshold=request.quality_target,
             )
 
             # Execute search
@@ -419,19 +454,21 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             # Convert to SearchResult format
             search_results = []
             for res in result.results:
-                search_results.append(SearchResult(
-                    id=res.get("id", str(uuid4())),
-                    content=res.get("content", ""),
-                    score=res.get("score", 0.0),
-                    url=res.get("url"),
-                    title=res.get("title"),
-                    metadata={
-                        **res.get("metadata", {}),
-                        "similarity_score": res.get("score", 0.0),
-                        "adjusted_threshold": res.get("adjusted_threshold"),
-                        "quality_score": result.quality_score
-                    }
-                ))
+                search_results.append(
+                    SearchResult(
+                        id=res.get("id", str(uuid4())),
+                        content=res.get("content", ""),
+                        score=res.get("score", 0.0),
+                        url=res.get("url"),
+                        title=res.get("title"),
+                        metadata={
+                            **res.get("metadata", {}),
+                            "similarity_score": res.get("score", 0.0),
+                            "adjusted_threshold": res.get("adjusted_threshold"),
+                            "quality_score": result.quality_score,
+                        },
+                    )
+                )
 
             await ctx.info(
                 f"Adaptive threshold search {request_id} completed: "
@@ -444,4 +481,3 @@ def register_filtering_tools(mcp, client_manager: ClientManager):
             await ctx.error(f"Adaptive threshold search {request_id} failed: {e}")
             logger.error(f"Adaptive threshold search failed: {e}")
             raise
-

@@ -500,7 +500,7 @@ class TestDatabaseConnectionPoolOptimizationIntegration:
             print(f"  Connections In Use: {results['pool_utilization']['checked_out']}")
 
         # Performance assertions
-        for user_count, results in benchmark_results.items():
+        for _user_count, results in benchmark_results.items():
             # All requests should succeed
             assert results["successful_requests"] == results["total_requests"]
 
