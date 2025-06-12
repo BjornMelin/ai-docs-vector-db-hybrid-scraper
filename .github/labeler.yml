@@ -17,6 +17,7 @@
     - 'config/**/*'
     - 'pyproject.toml'
     - 'requirements.txt'
+    - 'requirements-dev.txt'
     - 'uv.lock'
 
 # CLI components
@@ -134,6 +135,7 @@
   - any-glob-to-any-file:
     - 'pyproject.toml'
     - 'requirements.txt'
+    - 'requirements-dev.txt'
     - 'uv.lock'
     - '.github/dependabot.yml'
 

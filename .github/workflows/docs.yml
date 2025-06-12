@@ -203,7 +203,7 @@ jobs:
 
       - name: Install documentation tools
         run: |
-          uv pip install -r docs/requirements.txt
+          uv pip install -e ".[docs]"
 
       - name: Generate API documentation
         run: |
@@ -215,7 +215,7 @@ jobs:
           
           # Build Sphinx documentation
           echo "Building Sphinx HTML documentation..."
-          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html docs docs/_build/html
+          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html -c docs/build-config docs docs/_build/html
           
           # Also try pdoc3 as fallback (may fail but that's OK)
           echo "Attempting pdoc3 generation as fallback..."
@@ -276,7 +276,7 @@ jobs:
 
       - name: Install documentation tools
         run: |
-          uv pip install -r docs/requirements.txt
+          uv pip install -e ".[docs]"
           
       - name: Check docstring coverage
         run: |
@@ -390,17 +390,17 @@ jobs:
 
       - name: Install documentation tools
         run: |
-          uv pip install -r docs/requirements.txt
+          uv pip install -e ".[docs]"
 
       - name: Build MkDocs documentation site
         run: |
           echo "Building documentation with MkDocs..."
-          uv run mkdocs build
+          uv run mkdocs build -f docs/build-config/mkdocs.yml
           
           # Also build Sphinx documentation
           echo "Building Sphinx documentation..."
           uv run sphinx-apidoc -o docs/api src --force
-          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html docs docs/_build/html
+          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html -c docs/build-config docs docs/_build/html
           
           # Copy Sphinx docs to MkDocs site
           mkdir -p site/sphinx

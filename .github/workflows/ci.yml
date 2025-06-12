@@ -55,6 +55,7 @@ jobs:
               - '*.md'
             dependencies:
               - 'requirements.txt'
+              - 'requirements-dev.txt'
               - 'pyproject.toml'
               - 'uv.lock'
 
