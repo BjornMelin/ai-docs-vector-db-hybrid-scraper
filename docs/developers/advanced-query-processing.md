@@ -2,14 +2,19 @@
 
 ## Overview
 
-The Advanced Query Processing system provides intelligent query understanding, preprocessing, routing, and **advanced filtering capabilities** that dramatically improve search accuracy and relevance. This system represents a complete implementation of sophisticated query analysis with 14 intent categories, Matryoshka embeddings, centralized orchestration, and a comprehensive filtering architecture for precise content retrieval.
+The Advanced Query Processing system provides intelligent query understanding,
+preprocessing, routing, and **advanced filtering capabilities** that dramatically
+improve search accuracy and relevance. This system represents a complete
+implementation of sophisticated query analysis with 14 intent categories,
+Matryoshka embeddings, centralized orchestration, and a comprehensive
+filtering architecture for precise content retrieval.
 
 ## New in This Version: Advanced Filtering Architecture
 
 The system now includes a powerful filtering architecture that provides:
 
 - **Temporal Filtering**: Date-based filtering and content freshness evaluation
-- **Content Type Filtering**: Document type and semantic classification filtering  
+- **Content Type Filtering**: Document type and semantic classification filtering
 - **Metadata Filtering**: Boolean logic operations (AND, OR, NOT) on document metadata
 - **Similarity Threshold Management**: Adaptive threshold controls for vector similarity
 - **Filter Composition**: Complex filter combinations with boolean logic
@@ -27,14 +32,14 @@ graph TD
     B --> D[QueryIntentClassifier]
     B --> E[SearchStrategySelector]
     B --> F[QueryProcessingOrchestrator]
-    
+
     C --> |Enhanced Query| F
     D --> |Intent Classification| E
     E --> |Strategy Selection| F
-    
+
     F --> G[Search Execution]
     G --> H[Results]
-    
+
     F --> I[Fallback Strategies]
     I --> G
 ```
@@ -48,22 +53,22 @@ graph TD
     B --> D[Content Type Filter]
     B --> E[Metadata Filter]
     B --> F[Similarity Filter]
-    
+
     C --> G[Date Range Validation]
     C --> H[Content Freshness Scoring]
-    
+
     D --> I[Document Type Classification]
     D --> J[Semantic Content Analysis]
-    
+
     E --> K[Boolean Logic Engine]
     K --> L[AND Operations]
-    K --> M[OR Operations] 
+    K --> M[OR Operations]
     K --> N[NOT Operations]
-    
+
     F --> O[Adaptive Threshold Manager]
     O --> P[Dynamic Threshold Adjustment]
     O --> Q[Confidence Score Analysis]
-    
+
     G --> R[Combined Filter Results]
     H --> R
     I --> R
@@ -73,7 +78,7 @@ graph TD
     N --> R
     P --> R
     Q --> R
-    
+
     R --> S[Enhanced Search Results]
 ```
 
@@ -116,12 +121,14 @@ response = await pipeline.process(request)
 The system classifies queries into 14 distinct intent categories for optimal search strategy selection:
 
 #### Basic Categories
+
 - **conceptual**: High-level understanding questions
 - **procedural**: How-to and step-by-step queries
-- **factual**: Specific facts and data queries  
+- **factual**: Specific facts and data queries
 - **troubleshooting**: Problem-solving queries
 
-#### Advanced Categories  
+#### Advanced Categories
+
 - **comparative**: Technology/concept comparisons
 - **architectural**: System design and architecture queries
 - **performance**: Optimization and performance queries
@@ -152,7 +159,7 @@ queries = [
 Dynamic embedding dimension selection based on query complexity and performance requirements:
 
 - **Small (512)**: Simple factual queries, fast retrieval
-- **Medium (768)**: Standard conceptual queries, balanced performance  
+- **Medium (768)**: Standard conceptual queries, balanced performance
 - **Large (1536)**: Complex procedural/architectural queries, maximum accuracy
 
 ```python
@@ -160,7 +167,7 @@ from src.services.query_processing.models import MatryoshkaDimension
 
 # Dimension selection examples
 simple_query = "What is Python?"  # Uses SMALL (512)
-moderate_query = "How to implement caching?"  # Uses MEDIUM (768)  
+moderate_query = "How to implement caching?"  # Uses MEDIUM (768)
 complex_query = "Design microservices architecture"  # Uses LARGE (1536)
 ```
 
@@ -441,13 +448,13 @@ async def basic_query_processing():
     """Simple query processing example."""
     pipeline = QueryProcessingPipeline(orchestrator)
     await pipeline.initialize()
-    
+
     response = await pipeline.process(
         "How to debug memory leaks in Node.js?",
         collection_name="troubleshooting",
         limit=10
     )
-    
+
     print(f"Intent: {response.intent_classification.primary_intent}")
     print(f"Strategy: {response.strategy_selection.primary_strategy}")
     print(f"Results: {len(response.results)}")
@@ -473,9 +480,9 @@ async def advanced_query_processing():
         filters={"category": "web_frameworks"},
         max_processing_time_ms=2000
     )
-    
+
     response = await pipeline.process(request)
-    
+
     # Access detailed results
     print(f"Original query: {response.preprocessing_result.original_query}")
     print(f"Enhanced query: {response.preprocessing_result.processed_query}")
@@ -497,7 +504,7 @@ async def batch_query_processing():
             limit=5
         ),
         QueryProcessingRequest(
-            query="How to secure OAuth implementation?", 
+            query="How to secure OAuth implementation?",
             collection_name="security",
             limit=8
         ),
@@ -507,9 +514,9 @@ async def batch_query_processing():
             limit=10
         )
     ]
-    
+
     responses = await pipeline.process_batch(requests)
-    
+
     for i, response in enumerate(responses):
         print(f"Query {i+1}: {response.intent_classification.primary_intent}")
 ```
@@ -521,7 +528,7 @@ The advanced query processing system is fully integrated with the MCP (Model Con
 ### Available MCP Tools
 
 1. **advanced_query_processing**: Complete query processing with all features
-2. **analyze_query**: Deep query analysis without search execution  
+2. **analyze_query**: Deep query analysis without search execution
 3. **query_processing_health**: Health checks and system status
 4. **query_processing_metrics**: Performance metrics and statistics
 5. **query_processing_warmup**: System warm-up for optimal performance
@@ -533,7 +540,7 @@ The advanced query processing system is fully integrated with the MCP (Model Con
   "name": "advanced_query_processing",
   "arguments": {
     "query": "How to implement microservices architecture?",
-    "collection_name": "architecture", 
+    "collection_name": "architecture",
     "limit": 10,
     "enable_preprocessing": true,
     "enable_intent_classification": true,
@@ -559,12 +566,12 @@ simple_response = await pipeline.process("What is REST?")
 # - SEMANTIC strategy
 # - < 50ms processing time
 
-# Complex queries: Comprehensive analysis with full features  
+# Complex queries: Comprehensive analysis with full features
 complex_response = await pipeline.process(
     "Design scalable microservices architecture with event sourcing"
 )
 # - Full semantic classification
-# - LARGE Matryoshka dimension (1536) 
+# - LARGE Matryoshka dimension (1536)
 # - MULTI_STAGE strategy with fallbacks
 # - Advanced preprocessing and context extraction
 ```
@@ -626,23 +633,27 @@ print(f"Strategy usage: {metrics['strategy_usage']}")
 ## Best Practices
 
 ### 1. Query Formulation
+
 - Use specific, descriptive queries for better intent classification
 - Include context clues (programming language, framework, urgency)
 - Avoid overly broad or vague queries
 
 ### 2. Performance Optimization
+
 - Enable caching for repeated query patterns
 - Use appropriate collection targeting
 - Set reasonable processing time limits
 - Monitor metrics to identify optimization opportunities
 
 ### 3. Error Handling
+
 - Always check `response.success` before processing results
-- Handle fallback scenarios gracefully  
+- Handle fallback scenarios gracefully
 - Monitor `response.warnings` for potential issues
 - Use health checks to ensure system readiness
 
 ### 4. Integration Patterns
+
 - Use batch processing for multiple related queries
 - Leverage MCP tools for external integrations
 - Enable comprehensive logging for debugging
@@ -653,11 +664,13 @@ print(f"Strategy usage: {metrics['strategy_usage']}")
 ### Common Issues
 
 1. **Low Confidence Scores**
+
    - Ensure query is well-formed and specific
    - Check for typos that preprocessing might not catch
    - Verify appropriate collection targeting
 
-2. **Slow Processing Times** 
+2. **Slow Processing Times**
+
    - Enable caching for repeated patterns
    - Use simpler strategies for basic queries
    - Check system resource availability
@@ -679,7 +692,7 @@ analysis = await pipeline.analyze_query(
     "How to optimize database performance?"
 )
 print(f"Intent: {analysis['intent_classification']}")
-print(f"Preprocessing: {analysis['preprocessing']}")  
+print(f"Preprocessing: {analysis['preprocessing']}")
 print(f"Strategy: {analysis['strategy']}")
 
 # Check component health
@@ -691,6 +704,9 @@ for component, status in health['components'].items():
 
 ## Conclusion
 
-The Advanced Query Processing system provides production-ready, intelligent query understanding and routing capabilities. With 84% test coverage, comprehensive error handling, and optimized performance, it's ready for immediate deployment in production environments.
+The Advanced Query Processing system provides production-ready, intelligent
+query understanding and routing capabilities. With 84% test coverage,
+comprehensive error handling, and optimized performance, it's ready for
+immediate deployment in production environments.
 
 For additional support or advanced configuration options, refer to the API documentation or contact the development team.

@@ -4,7 +4,9 @@
 > **Audience**: System operators, administrators, and DevOps teams  
 > **Last Updated**: 2025-06-09
 
-This guide provides comprehensive operational procedures for maintaining, monitoring, and administering the AI Documentation Vector Database system. It covers daily operations, incident response, maintenance schedules, and best practices for system operators.
+This guide provides comprehensive operational procedures for maintaining, monitoring, and
+administering the AI Documentation Vector Database system. It covers daily operations,
+incident response, maintenance schedules, and best practices for system operators.
 
 ## Table of Contents
 
@@ -149,20 +151,20 @@ services:
       resources:
         limits:
           memory: 4G
-          cpus: '2.0'
+          cpus: "2.0"
         reservations:
           memory: 2G
-          cpus: '1.0'
-  
+          cpus: "1.0"
+
   dragonfly:
     deploy:
       resources:
         limits:
           memory: 2G
-          cpus: '1.0'
+          cpus: "1.0"
         reservations:
           memory: 1G
-          cpus: '0.5'
+          cpus: "0.5"
 ```
 
 ### User Session Management
@@ -477,14 +479,14 @@ roles:
       - manage_users
       - view_metrics
       - system_config
-  
+
   operator:
     permissions:
       - read_collections
       - view_metrics
       - restart_services
       - backup_restore
-  
+
   viewer:
     permissions:
       - read_collections
@@ -497,13 +499,13 @@ roles:
 # Middleware for permission checking
 async def check_permissions(user_id: str, required_permission: str) -> bool:
     """Check if user has required permission."""
-    
+
     user_data = await redis.hgetall(f"user:{user_id}")
     user_role = user_data.get("role")
-    
+
     if not user_role:
         return False
-    
+
     role_permissions = ROLE_PERMISSIONS.get(user_role, [])
     return required_permission in role_permissions
 ```
@@ -689,7 +691,7 @@ escalation_levels:
       - Initial assessment
       - Basic troubleshooting
       - Status updates
-  
+
   level_2:
     role: "Senior Operator"
     response_time: "30 minutes"
@@ -697,7 +699,7 @@ escalation_levels:
       - Advanced troubleshooting
       - Configuration changes
       - Vendor coordination
-  
+
   level_3:
     role: "System Architect"
     response_time: "1 hour"
@@ -780,16 +782,16 @@ thresholds:
   memory_critical: 90
   disk_warning: 80
   disk_critical: 95
-  
+
 alerts:
   cpu_high:
     condition: "cpu_usage > 85"
     action: "scale_up_workers"
-  
+
   memory_high:
     condition: "memory_usage > 90"
     action: "restart_services"
-  
+
   disk_full:
     condition: "disk_usage > 95"
     action: "emergency_cleanup"
@@ -930,7 +932,8 @@ echo "Configuration Security:"
 
 ### Task Queue Management
 
-The system uses ARQ (Async Redis Queue) for persistent background task execution. This section covers operational procedures for managing the task queue system.
+The system uses ARQ (Async Redis Queue) for persistent background task execution.
+This section covers operational procedures for managing the task queue system.
 
 **Worker Health Monitoring**:
 
@@ -1080,18 +1083,18 @@ echo "Training samples available: $TRAINING_SAMPLES"
 # 2. Trigger retraining if needed
 if (( $(echo "$CURRENT_ACCURACY < 0.7" | bc -l) )) || [ "$TRAINING_SAMPLES" -gt 5000 ]; then
     echo "Triggering ML model retraining..."
-    
+
     # Start retraining process
     curl -X POST "http://localhost:8000/api/admin/retrain-ml-model" \
         -H "Content-Type: application/json" \
         -d '{"force": false, "background": true}'
-    
+
     # Monitor retraining progress
     echo "Monitoring retraining progress..."
     while true; do
         STATUS=$(curl -s "http://localhost:8000/api/admin/ml-model-training-status" | jq -r '.status')
         echo "Training status: $STATUS"
-        
+
         if [ "$STATUS" = "completed" ]; then
             echo "✓ ML model retraining completed successfully"
             break
@@ -1099,7 +1102,7 @@ if (( $(echo "$CURRENT_ACCURACY < 0.7" | bc -l) )) || [ "$TRAINING_SAMPLES" -gt 
             echo "✗ ML model retraining failed"
             break
         fi
-        
+
         sleep 30
     done
 else
@@ -1119,7 +1122,7 @@ case "$1" in
         echo "Checking circuit breaker status..."
         curl -s "http://localhost:8000/api/admin/circuit-breaker-status" | jq '.'
         ;;
-    
+
     "reset")
         echo "Manually resetting circuit breaker..."
         curl -X POST "http://localhost:8000/api/admin/circuit-breaker-reset" \
@@ -1127,14 +1130,14 @@ case "$1" in
             -d '{"failure_type": "all"}'
         echo "✓ Circuit breaker reset completed"
         ;;
-    
+
     "test")
         echo "Testing circuit breaker functionality..."
         curl -X POST "http://localhost:8000/api/admin/circuit-breaker-test" \
             -H "Content-Type: application/json" \
             -d '{"test_type": "controlled_failure"}'
         ;;
-    
+
     "configure")
         echo "Updating circuit breaker configuration..."
         curl -X PUT "http://localhost:8000/api/admin/circuit-breaker-config" \
@@ -1146,7 +1149,7 @@ case "$1" in
             }'
         echo "✓ Configuration updated"
         ;;
-    
+
     *)
         echo "Usage: $0 {status|reset|test|configure <threshold> <timeout> <max_calls>}"
         exit 1
@@ -1205,21 +1208,21 @@ echo "Performance change: $LATENCY_CHANGE%"
 # 2. Check for specific issues
 if (( $(echo "$LATENCY_CHANGE > 25" | bc -l) )); then
     echo "🚨 Performance regression detected!"
-    
+
     # Check ML model performance
     ML_ACCURACY=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_pool_ml_model_accuracy" | awk '{print $2}')
     if (( $(echo "$ML_ACCURACY < 0.7" | bc -l) )); then
         echo "Issue: ML model accuracy degraded ($ML_ACCURACY)"
         echo "Action: Schedule model retraining"
     fi
-    
+
     # Check circuit breaker state
     CB_FAILURES=$(curl -s "http://localhost:8000/metrics" | grep "db_circuit_breaker_failures_total" | awk '{print $2}')
     if [ "$CB_FAILURES" -gt 100 ]; then
         echo "Issue: High circuit breaker failure rate ($CB_FAILURES)"
         echo "Action: Investigate underlying database issues"
     fi
-    
+
     # Check connection affinity effectiveness
     AFFINITY_SCORE=$(curl -s "http://localhost:8000/metrics" | grep "db_connection_affinity_performance_score" | awk '{print $2}')
     if (( $(echo "$AFFINITY_SCORE < 0.5" | bc -l) )); then
@@ -1244,15 +1247,15 @@ echo "Current pool usage: $CURRENT_LOAD/$POOL_SIZE"
 # Emergency scaling if needed
 if [ "$CURRENT_LOAD" -gt $((POOL_SIZE * 85 / 100)) ]; then
     echo "🚨 Emergency scaling required!"
-    
+
     # Increase pool size temporarily
     NEW_POOL_SIZE=$((POOL_SIZE + 10))
     curl -X PUT "http://localhost:8000/api/admin/connection-pool-config" \
         -H "Content-Type: application/json" \
         -d '{"pool_size": '$NEW_POOL_SIZE', "temporary": true}'
-    
+
     echo "Pool size increased to $NEW_POOL_SIZE (temporary)"
-    
+
     # Set alert to review scaling in 1 hour
     echo "pool-scaling-review" | at now + 1 hour
 fi
@@ -1348,24 +1351,24 @@ echo "Current load ratio: $LOAD_RATIO"
 
 if (( $(echo "$LOAD_RATIO > 0.8" | bc -l) )); then
   echo "High load detected, optimizing..."
-  
+
   # Reduce worker concurrency
   docker-compose scale worker=1
-  
+
   # Enable aggressive caching
   redis-cli config set maxmemory-policy allkeys-lru
-  
+
   # Optimize Qdrant settings
   curl -X PUT "http://localhost:6333/collections/documents" \
     -H "Content-Type: application/json" \
     -d '{"optimizers_config": {"max_segment_size": 200000}}'
-  
+
 elif (( $(echo "$LOAD_RATIO < 0.3" | bc -l) )); then
   echo "Low load detected, scaling back up..."
-  
+
   # Increase worker concurrency
   docker-compose scale worker=3
-  
+
   # Optimize for accuracy over speed
   curl -X PUT "http://localhost:6333/collections/documents" \
     -H "Content-Type: application/json" \
@@ -1468,14 +1471,14 @@ case "$FAILURE_TYPE" in
     sed -i 's/primary-db:6333/secondary-db:6333/g' docker-compose.yml
     docker-compose up -d
     ;;
-  
+
   "cache_cluster")
     echo "Failing over to backup cache..."
     # Switch to backup Redis instance
     export REDIS_URL="redis://backup-redis:6379"
     docker-compose restart api
     ;;
-  
+
   "complete_site")
     echo "Activating disaster recovery site..."
     ./scripts/activate-dr-site.sh
@@ -1656,11 +1659,12 @@ redis-cli -n 1 llen arq:queue:default
 ### Critical Thresholds
 
 - **CPU Usage**: >85% (critical)
-- **Memory Usage**: >90% (critical)  
+- **Memory Usage**: >90% (critical)
 - **Disk Usage**: >95% (critical)
 - **Search Latency**: >100ms (warning)
 - **Error Rate**: >1% (warning)
 
 ---
 
-> **Remember**: This guide should be updated regularly based on operational experience and system changes. Always test procedures in a staging environment before applying to production.
+> **Remember**: This guide should be updated regularly based on operational experience and system changes.
+> Always test procedures in a staging environment before applying to production.

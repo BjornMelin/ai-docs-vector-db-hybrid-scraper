@@ -5,7 +5,8 @@
 > **Purpose**: Complete development resources for the AI Documentation Vector DB system  
 > **Audience**: Software developers integrating with or contributing to the system
 
-Welcome to the developer hub! This section provides everything you need to build with, integrate, and contribute to the AI Documentation Vector DB system.
+Welcome to the developer hub! This section provides everything you need to build with,
+integrate, and contribute to the AI Documentation Vector DB system.
 
 ## 🚀 Quick Navigation
 
@@ -196,4 +197,6 @@ Building platforms or tools that incorporate our vector search capabilities.
 
 ---
 
-*🛠️ This developer hub consolidates all technical resources you need to build with and contribute to the AI Documentation Vector DB system. Choose your path above and start building!*
+_🛠️ This developer hub consolidates all technical resources you need to build with and
+contribute to the AI Documentation Vector DB system. Choose your path above and start
+building!_

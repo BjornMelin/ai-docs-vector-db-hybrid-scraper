@@ -3,19 +3,19 @@ info:
   title: Enhanced Database Connection Pool API
   description: |
     API specification for the enhanced database connection pool optimization system.
-    
+
     This API provides endpoints for:
     - ML-based predictive load monitoring
     - Connection affinity management  
     - Circuit breaker configuration
     - Adaptive pool configuration
     - Performance metrics and monitoring
-    
+
     **Performance Achievements:**
     - 50.9% P95 latency reduction
     - 887.9% throughput increase
     - 92.4% ML prediction accuracy
-    
+
   version: 1.0.0
   contact:
     name: Database Optimization Team
@@ -50,7 +50,7 @@ paths:
       summary: Predict database load
       description: |
         Use ML model to predict database load and get recommended pool configuration.
-        
+
         The prediction is based on current system metrics and returns:
         - Load level classification (HIGH/MEDIUM/LOW)
         - Confidence score (0.0-1.0)
@@ -62,7 +62,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SystemMetrics'
+              $ref: "#/components/schemas/SystemMetrics"
             example:
               cpu_usage_percent: 45.2
               memory_usage_percent: 62.8
@@ -72,12 +72,12 @@ paths:
               error_rate_percent: 0.5
               timestamp: "2025-01-10T15:30:00Z"
       responses:
-        '200':
+        "200":
           description: Load prediction successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadPrediction'
+                $ref: "#/components/schemas/LoadPrediction"
               example:
                 load_level: "MEDIUM"
                 confidence_score: 0.89
@@ -88,12 +88,12 @@ paths:
                   cpu_usage_percent: 0.31
                   memory_usage_percent: 0.28
                   active_connections: 0.22
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalError'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /database/connection-affinity/optimal-connection:
     post:
@@ -102,7 +102,7 @@ paths:
       summary: Get optimal connection for query
       description: |
         Determine the optimal database connection for a specific query pattern.
-        
+
         Uses connection affinity analysis to:
         - Analyze query patterns and types
         - Route to connection with best performance history
@@ -113,29 +113,29 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QueryRequest'
+              $ref: "#/components/schemas/QueryRequest"
             example:
               query: "SELECT * FROM documents WHERE created_at > ?"
               query_type: "READ"
               parameters: ["2025-01-01"]
               priority: "NORMAL"
       responses:
-        '200':
+        "200":
           description: Optimal connection identified
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionRecommendation'
+                $ref: "#/components/schemas/ConnectionRecommendation"
               example:
                 connection_id: "conn_pool_3"
                 confidence_score: 0.94
                 expected_latency_ms: 45
                 affinity_match_score: 0.87
                 routing_reason: "QUERY_PATTERN_MATCH"
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /database/connection-affinity/track-performance:
     post:
@@ -144,7 +144,7 @@ paths:
       summary: Track query performance
       description: |
         Record query execution performance for connection affinity optimization.
-        
+
         This data is used to:
         - Improve future connection routing decisions
         - Update connection performance profiles
@@ -155,7 +155,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PerformanceTrackingRequest'
+              $ref: "#/components/schemas/PerformanceTrackingRequest"
             example:
               connection_id: "conn_pool_3"
               query: "SELECT * FROM documents WHERE created_at > ?"
@@ -164,10 +164,10 @@ paths:
               success: true
               timestamp: "2025-01-10T15:30:00Z"
       responses:
-        '204':
+        "204":
           description: Performance data recorded successfully
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /database/circuit-breaker/status:
     get:
@@ -176,7 +176,7 @@ paths:
       summary: Get circuit breaker status
       description: |
         Get current status of all circuit breakers in the system.
-        
+
         Returns information about:
         - Circuit breaker states (CLOSED/OPEN/HALF_OPEN)
         - Failure counts by category
@@ -184,12 +184,12 @@ paths:
         - Recent failure patterns
       operationId: getCircuitBreakerStatus
       responses:
-        '200':
+        "200":
           description: Circuit breaker status retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CircuitBreakerStatus'
+                $ref: "#/components/schemas/CircuitBreakerStatus"
               example:
                 overall_state: "OPERATIONAL"
                 circuit_breakers:
@@ -210,7 +210,7 @@ paths:
       summary: Reset circuit breaker
       description: |
         Manually reset a specific circuit breaker or all circuit breakers.
-        
+
         **Use with caution:** Only reset circuit breakers when you're confident
         the underlying issue has been resolved.
       operationId: resetCircuitBreaker
@@ -228,7 +228,7 @@ paths:
               example:
                 failure_type: "CONNECTION"
       responses:
-        '200':
+        "200":
           description: Circuit breaker reset successful
           content:
             application/json:
@@ -242,8 +242,8 @@ paths:
                 example:
                   message: "Circuit breaker reset successfully"
                   reset_count: 1
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /database/adaptive-config/current:
     get:
@@ -258,12 +258,12 @@ paths:
         - Recent adaptation history
       operationId: getCurrentAdaptiveConfig
       responses:
-        '200':
+        "200":
           description: Current configuration retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdaptiveConfiguration'
+                $ref: "#/components/schemas/AdaptiveConfiguration"
               example:
                 strategy: "AUTO_SCALING"
                 current_load_level: "MEDIUM"
@@ -286,7 +286,7 @@ paths:
       summary: Update adaptive configuration
       description: |
         Update adaptive configuration parameters.
-        
+
         **Note:** Some parameters may be overridden by the ML-based adaptive system
         based on current load conditions.
       operationId: updateAdaptiveConfig
@@ -295,7 +295,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AdaptiveConfigurationUpdate'
+              $ref: "#/components/schemas/AdaptiveConfigurationUpdate"
             example:
               strategy: "AUTO_SCALING"
               min_pool_size: 5
@@ -303,14 +303,14 @@ paths:
               monitoring_interval_seconds: 30
               enable_predictive_scaling: true
       responses:
-        '200':
+        "200":
           description: Configuration updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdaptiveConfiguration'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                $ref: "#/components/schemas/AdaptiveConfiguration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /database/metrics/performance:
     get:
@@ -330,7 +330,7 @@ paths:
           description: Time range for metrics (e.g., '1h', '24h', '7d')
           schema:
             type: string
-            default: '1h'
+            default: "1h"
         - name: include_predictions
           in: query
           description: Include ML prediction accuracy metrics
@@ -338,12 +338,12 @@ paths:
             type: boolean
             default: true
       responses:
-        '200':
+        "200":
           description: Performance metrics retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PerformanceMetrics'
+                $ref: "#/components/schemas/PerformanceMetrics"
               example:
                 time_range: "1h"
                 connection_pool:
@@ -369,7 +369,7 @@ paths:
       summary: Database optimization system health check
       description: |
         Comprehensive health check for all database optimization components.
-        
+
         Returns health status for:
         - Connection pool management
         - ML prediction system
@@ -377,12 +377,12 @@ paths:
         - Connection affinity system
       operationId: getDatabaseHealth
       responses:
-        '200':
+        "200":
           description: System healthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
               example:
                 status: "HEALTHY"
                 components:
@@ -392,12 +392,12 @@ paths:
                   connection_affinity: "HEALTHY"
                 performance_score: 0.95
                 last_check: "2025-01-10T15:30:00Z"
-        '503':
+        "503":
           description: System unhealthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
 
 components:
   schemas:
@@ -534,7 +534,8 @@ components:
           description: How well the query matches connection patterns
         routing_reason:
           type: string
-          enum: [QUERY_PATTERN_MATCH, PERFORMANCE_HISTORY, LOAD_BALANCING, FALLBACK]
+          enum:
+            [QUERY_PATTERN_MATCH, PERFORMANCE_HISTORY, LOAD_BALANCING, FALLBACK]
           description: Reason for this connection recommendation
 
     PerformanceTrackingRequest:
@@ -761,7 +762,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "INVALID_PARAMETERS"
             message: "Missing required field: cpu_usage_percent"
@@ -771,7 +772,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "RATE_LIMITED"
             message: "API rate limit exceeded. Try again in 60 seconds."
@@ -781,7 +782,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "SERVICE_UNAVAILABLE"
             message: "Database optimization service is temporarily unavailable"
@@ -791,7 +792,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "INTERNAL_ERROR"
             message: "An unexpected error occurred"
@@ -803,7 +804,7 @@ components:
       bearerFormat: JWT
       description: |
         JWT bearer token authentication.
-        
+
         Include the token in the Authorization header:
         `Authorization: Bearer <token>`
 

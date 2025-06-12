@@ -5,7 +5,8 @@
 > **Purpose**: Solutions for common user issues and problems  
 > **Audience**: Users experiencing problems with search or scraping
 
-Quick solutions for the most common issues you might encounter. Most problems have simple fixes that don't require technical expertise.
+Quick solutions for the most common issues you might encounter.
+Most problems have simple fixes that don't require technical expertise.
 
 ## 🚨 Quick Fixes
 
@@ -130,6 +131,7 @@ mcp search --query "your terms" --limit 5
 #### **4. Database performance notes**
 
 **Good news**: Recent optimizations have dramatically improved search performance:
+
 - 50.9% faster response times on average
 - 887.9% higher throughput during peak usage
 - Automatic connection pooling that scales with demand
@@ -304,7 +306,8 @@ docker stop $(docker ps -q)
 
 ### System Running Slowly
 
-**Enhanced Performance Note**: Recent improvements have delivered 50.9% faster response times and 887.9% higher throughput. If you're still experiencing slowness, try these solutions:
+**Enhanced Performance Note**: Recent improvements have delivered 50.9% faster response times
+and 887.9% higher throughput. If you're still experiencing slowness, try these solutions:
 
 #### **1. Resource management**
 
@@ -402,6 +405,7 @@ The system now includes sophisticated database connection pool optimization that
 #### **Database Connection Errors**
 
 **Symptoms**:
+
 - "Connection pool exhausted" errors
 - Long delays before searches start
 - Timeouts during high-load periods
@@ -409,11 +413,13 @@ The system now includes sophisticated database connection pool optimization that
 **Solutions**:
 
 1. **Check connection pool status**:
+
    - Look for "AsyncConnectionManager initialized" in logs
    - Verify adaptive pool sizing is enabled (default: true)
    - Monitor automatic pool adjustments in logs
 
 2. **Verify configuration** (if customized):
+
    ```bash
    # Check current database settings
    echo "Pool size: $DATABASE_POOL_SIZE"
@@ -422,6 +428,7 @@ The system now includes sophisticated database connection pool optimization that
    ```
 
 3. **Restart with clean state**:
+
    ```bash
    # Stop services and restart
    ./scripts/start-services.sh
@@ -430,17 +437,20 @@ The system now includes sophisticated database connection pool optimization that
 #### **Slow Query Performance**
 
 **Symptoms**:
+
 - Individual searches taking longer than expected
 - "Slow query detected" warnings in logs
 - Inconsistent response times
 
 **Automatic Solutions** (happens behind the scenes):
+
 - System automatically identifies slow queries (>100ms threshold)
 - Connection pools scale up during high-load periods
 - Circuit breaker patterns prevent cascade failures
 - Query performance is continuously monitored and optimized
 
 **Manual Checks**:
+
 ```bash
 # Look for slow query warnings in logs
 tail -f logs/application.log | grep "Slow query detected"
@@ -452,12 +462,14 @@ tail -f logs/application.log | grep "Adjusting pool size"
 #### **Peak Load Issues**
 
 **What the system does automatically**:
+
 - Monitors CPU, memory, and concurrent request load
 - Dynamically scales connection pools from 5 to 50 connections
 - Applies circuit breaker patterns during temporary failures
 - Balances connection creation with system resources
 
 **If you still see issues during peak load**:
+
 1. Verify sufficient system RAM (8GB+ recommended)
 2. Check that no other applications are competing for database connections
 3. Monitor system resources during peak periods
@@ -473,7 +485,7 @@ Add these to your `.env` file only if you need to override the intelligent defau
 ```bash
 # Basic pool settings (auto-scaling overrides these during load)
 DATABASE_POOL_SIZE=20                    # Initial pool size
-DATABASE_MIN_POOL_SIZE=5                 # Minimum during low load  
+DATABASE_MIN_POOL_SIZE=5                 # Minimum during low load
 DATABASE_MAX_POOL_SIZE=50                # Maximum during high load
 
 # Advanced settings
@@ -493,13 +505,15 @@ DATABASE_SLOW_QUERY_THRESHOLD_MS=100.0   # Log queries slower than this
 ### Performance Benchmarks
 
 **Before optimization**:
+
 - Simple queries: ~500ms average
 - Complex queries: 3-5 seconds
 - Peak throughput: ~100 queries/minute
 
 **After optimization**:
+
 - Simple queries: ~245ms average (50.9% improvement)
-- Complex queries: 1-2.5 seconds (up to 50% improvement)  
+- Complex queries: 1-2.5 seconds (up to 50% improvement)
 - Peak throughput: ~987 queries/minute (887.9% improvement)
 
 ### When Database Optimization Isn't the Issue
@@ -518,11 +532,13 @@ If you're still experiencing performance problems despite these improvements:
 Before asking for help, try these:
 
 1. **Test with simple examples**
+
    - Try a basic search you know should work
    - Test scraping with a simple site like example.com
    - Verify the system works with known-good inputs
 
 2. **Check error messages**
+
    - Read any error messages carefully
    - Note the exact sequence of actions that caused the problem
    - Try to reproduce the issue consistently
@@ -572,4 +588,5 @@ Before asking for help, try these:
 
 ---
 
-*🔧 Most issues have simple solutions! Work through these steps systematically and you'll get back to productive searching and scraping quickly.*
+_🔧 Most issues have simple solutions! Work through these steps systematically
+and you'll get back to productive searching and scraping quickly._

@@ -1,6 +1,7 @@
 # Content Intelligence Service
 
-The Content Intelligence Service provides AI-powered content analysis, quality assessment, and adaptive extraction recommendations to optimize web scraping and content processing workflows.
+The Content Intelligence Service provides AI-powered content analysis, quality assessment,
+and adaptive extraction recommendations to optimize web scraping and content processing workflows.
 
 ## Overview
 
@@ -84,7 +85,7 @@ if result.success:
     classification = result.enriched_content.classification
     quality = result.enriched_content.quality_score
     metadata = result.enriched_content.metadata
-    
+
     print(f"Content Type: {classification.primary_type}")
     print(f"Quality Score: {quality.overall_score:.2f}")
     print(f"Word Count: {metadata.word_count}")
@@ -201,7 +202,7 @@ The Content Intelligence Service integrates seamlessly with MCP tools:
 
 - **analyze_content_intelligence**: Comprehensive content analysis
 - **classify_content_type**: Content type classification only
-- **assess_content_quality**: Quality assessment only  
+- **assess_content_quality**: Quality assessment only
 - **extract_content_metadata**: Metadata extraction only
 - **get_adaptation_recommendations**: Site-specific optimization
 - **get_content_intelligence_metrics**: Performance monitoring
@@ -209,18 +210,21 @@ The Content Intelligence Service integrates seamlessly with MCP tools:
 ## Best Practices
 
 ### Content Analysis
+
 - Always provide URL context for better classification
 - Include raw HTML when available for richer metadata extraction
 - Set appropriate confidence thresholds for your use case
 - Monitor quality scores to identify content issues
 
 ### Quality Assessment
+
 - Use query context to improve relevance scoring
 - Review quality issues and suggestions for optimization opportunities
 - Establish quality baselines for different content types
 - Track quality trends over time
 
 ### Site Optimization
+
 - Apply adaptation recommendations incrementally
 - Test optimization strategies on sample content first
 - Monitor extraction quality improvements after applying adaptations
@@ -230,19 +234,22 @@ The Content Intelligence Service integrates seamlessly with MCP tools:
 
 ### Common Issues
 
-**Low Quality Scores**
+#### Low Quality Scores
+
 - Check content length and structure
 - Verify extraction completeness
 - Review quality threshold settings
 - Consider site-specific adaptations
 
-**Classification Errors**
+#### Classification Errors
+
 - Provide more context (URL, title)
 - Check content language and encoding
 - Verify content is substantial enough for analysis
 - Review classification confidence scores
 
-**Performance Issues**
+#### Performance Issues
+
 - Enable result caching for repeated analyses
 - Use batch processing for multiple items
 - Monitor service metrics and resource usage

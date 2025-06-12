@@ -5,7 +5,9 @@
 > **Purpose**: Complete guide to effective searching and information retrieval  
 > **Audience**: Users who want to find information effectively
 
-Master the art of finding exactly what you need with our AI-enhanced search system. This guide covers everything from basic searches to advanced techniques that leverage artificial intelligence to understand your intent and deliver better results.
+Master the art of finding exactly what you need with our AI-enhanced search system.
+This guide covers everything from basic searches to advanced techniques that leverage
+artificial intelligence to understand your intent and deliver better results.
 
 ## How Our Search Works
 
@@ -33,7 +35,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ```text
 "how to optimize vector database performance"
-"troubleshooting slow search responses"  
+"troubleshooting slow search responses"
 "best practices for document indexing"
 "web scraping rate limiting strategies"
 ```
@@ -49,12 +51,12 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ### Query Writing Tips
 
-| Technique | Example | Why It Works |
-|-----------|---------|--------------|
-| **Be specific** | "configure OpenAI embeddings" vs "setup" | Targets exact needs |
-| **Include context** | "Python web scraping tutorial" vs "scraping" | Adds important details |
-| **Use natural language** | "Why are my searches slow?" | AI understands intent |
-| **Mention the outcome** | "reduce memory usage during indexing" | Focuses on goals |
+| Technique                | Example                                      | Why It Works           |
+| ------------------------ | -------------------------------------------- | ---------------------- |
+| **Be specific**          | "configure OpenAI embeddings" vs "setup"     | Targets exact needs    |
+| **Include context**      | "Python web scraping tutorial" vs "scraping" | Adds important details |
+| **Use natural language** | "Why are my searches slow?"                  | AI understands intent  |
+| **Mention the outcome**  | "reduce memory usage during indexing"        | Focuses on goals       |
 
 ### Search Strategies by Use Case
 
@@ -80,7 +82,8 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ### HyDE Enhancement (Automatic)
 
-**What it does**: Automatically generates hypothetical examples of what good results might look like, then searches for content similar to those examples.
+**What it does**: Automatically generates hypothetical examples of what good results
+might look like, then searches for content similar to those examples.
 
 **When it helps most**:
 
@@ -89,9 +92,10 @@ Our system uses multiple AI techniques working together to understand what you'r
 - Searching for best practices or patterns
 - Research-oriented questions
 
-**User experience**: You'll notice more relevant results appear higher in rankings, especially for conceptual searches.
+**User experience**: You'll notice more relevant results appear higher in rankings,
+especially for conceptual searches.
 
-### Semantic Reranking (Automatic)  
+### Semantic Reranking (Automatic)
 
 **What it does**: After finding potential matches, AI re-examines each result to determine true relevance to your query.
 
@@ -102,7 +106,8 @@ Our system uses multiple AI techniques working together to understand what you'r
 - Prioritizing comprehensive answers
 - Filtering out tangentially related content
 
-**User experience**: The first few results will be significantly more relevant than traditional keyword-based searches.
+**User experience**: The first few results will be significantly more relevant than
+traditional keyword-based searches.
 
 ### Multi-Stage Retrieval (Automatic)
 
@@ -111,7 +116,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 **Benefits for users**:
 
 - Faster initial response
-- Higher precision in final results  
+- Higher precision in final results
 - Balances speed with accuracy
 - Handles large document collections efficiently
 
@@ -153,7 +158,7 @@ The system now includes smart database optimization that:
 # Search within specific document types
 query: "API documentation" filter: type=reference
 
-# Search recent content only  
+# Search recent content only
 query: "deployment strategies" filter: date>2024-01-01
 
 # Search specific projects or collections
@@ -176,6 +181,7 @@ query: "performance optimization" weights: documentation=0.5,benchmarks=0.8,exam
 ```
 
 **Benefits**:
+
 - **Comprehensive coverage**: Find information across all your data sources
 - **Intelligent ranking**: Results are ranked across collections for relevance
 - **Adaptive search modes**: System chooses optimal search strategy per collection
@@ -303,4 +309,4 @@ query: "performance optimization" weights: documentation=0.5,benchmarks=0.8,exam
 
 ---
 
-*🔍 Master these techniques and you'll find exactly what you need, faster and more accurately than ever before.*
+_🔍 Master these techniques and you'll find exactly what you need, faster and more accurately than ever before._

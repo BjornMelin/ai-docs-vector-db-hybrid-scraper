@@ -5,7 +5,8 @@
 > **Purpose**: Complete setup guide for developers  
 > **Audience**: New developers joining the project
 
-Get your development environment set up and make your first contribution! This guide takes you from zero to productive development in about 30 minutes.
+Get your development environment set up and make your first contribution!
+This guide takes you from zero to productive development in about 30 minutes.
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -267,11 +268,11 @@ code .
 ```json
 // .vscode/settings.json (created automatically)
 {
-    "python.defaultInterpreterPath": ".venv/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
-    "python.formatting.provider": "ruff",
-    "editor.formatOnSave": true
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.formatting.provider": "ruff",
+  "editor.formatOnSave": true
 }
 ```
 
@@ -414,11 +415,11 @@ from src.models.api_contracts import SearchRequest
 
 class ExampleService:
     """Example service following project patterns."""
-    
+
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         self.logger = logging.getLogger(__name__)
-    
+
     async def process_request(
         self,
         request: SearchRequest,
@@ -426,14 +427,14 @@ class ExampleService:
         timeout: float = 30.0
     ) -> SearchResponse:
         """Process search request with proper typing and docs.
-        
+
         Args:
             request: Validated search request
             timeout: Request timeout in seconds
-            
+
         Returns:
             Search response with results
-            
+
         Raises:
             ValidationError: If request is invalid
             ServiceError: If processing fails
@@ -657,4 +658,7 @@ curl localhost:6333/health
 
 ---
 
-*🛠️ You're ready to start developing! The codebase is well-structured, thoroughly tested, and designed for easy contribution. Start with small changes to get familiar with the workflow, then tackle larger features as you build confidence.*
+_🛠️ You're ready to start developing! The codebase is well-structured,
+thoroughly tested, and designed for easy contribution.
+Start with small changes to get familiar with the workflow,
+then tackle larger features as you build confidence._

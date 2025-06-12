@@ -5,7 +5,9 @@
 > **Purpose**: Complete guide to intelligent web scraping and content extraction  
 > **Audience**: Users who need to collect information from websites
 
-Extract content from any website with our intelligent 5-tier scraping system. The system automatically chooses the best approach for each site, handling everything from simple static pages to complex dynamic applications.
+Extract content from any website with our intelligent 5-tier scraping system.
+The system automatically chooses the best approach for each site, handling
+everything from simple static pages to complex dynamic applications.
 
 ## How Our Scraping System Works
 
@@ -14,7 +16,7 @@ Extract content from any website with our intelligent 5-tier scraping system. Th
 Our system automatically analyzes each website and chooses the optimal scraping approach:
 
 - **Tier 0: Lightning Fast** - Simple HTTP for static content (10x faster)
-- **Tier 1: Smart Parsing** - Crawl4AI for modern websites  
+- **Tier 1: Smart Parsing** - Crawl4AI for modern websites
 - **Tier 2: Enhanced Processing** - Advanced content extraction
 - **Tier 3: AI-Powered** - Browser automation for complex interactions
 - **Tier 4: Ultimate Fallback** - Playwright + premium services
@@ -114,7 +116,7 @@ Our system automatically analyzes each website and chooses the optimal scraping 
 
 - **Triggers**: Dynamic content, complex layouts
 - **Best for**: Single-page applications, interactive sites
-- **Speed**: 3-8 seconds  
+- **Speed**: 3-8 seconds
 - **Example sites**: React/Vue apps, complex dashboards
 
 #### **🤖 Tier 3: AI Browser Automation**
@@ -374,7 +376,7 @@ Our system automatically analyzes each website and chooses the optimal scraping 
 ### When Scraping Isn't Working
 
 1. **Check site accessibility**: Visit the site manually to verify content exists
-2. **Review error messages**: Look for specific guidance in system responses  
+2. **Review error messages**: Look for specific guidance in system responses
 3. **Try simpler targets**: Test with known-working sites first
 4. **Check system status**: Ensure all scraping services are operational
 
@@ -394,4 +396,5 @@ Our system automatically analyzes each website and chooses the optimal scraping 
 
 ---
 
-*🌐 Scrape responsibly and effectively - the intelligent tier system handles the complexity while you focus on getting the content you need.*
+_🌐 Scrape responsibly and effectively - the intelligent tier system handles the
+complexity while you focus on getting the content you need._

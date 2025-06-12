@@ -1,15 +1,20 @@
 # Query API Optimization and Advanced Features
 
-This document covers the advanced Query API capabilities including prefetch optimization, RRF/DBSF fusion algorithms, and performance tuning strategies.
+This document covers the advanced Query API capabilities including prefetch
+optimization, RRF/DBSF fusion algorithms, and performance tuning strategies.
 
 ## Query API Overview
 
-The Query API provides high-performance search capabilities with intelligent prefetch optimization and advanced fusion algorithms for combining multiple search strategies.
+The Query API provides high-performance search capabilities with intelligent
+prefetch optimization and advanced fusion algorithms for combining multiple
+search strategies.
 
 ### Key Features
 
-- **Prefetch Optimization**: Intelligent candidate retrieval with vector-type-specific multipliers
-- **RRF/DBSF Fusion**: Advanced algorithms for combining dense and sparse search results
+- **Prefetch Optimization**: Intelligent candidate retrieval with
+  vector-type-specific multipliers
+- **RRF/DBSF Fusion**: Advanced algorithms for combining dense and sparse
+  search results
 - **Adaptive Strategies**: Dynamic selection of optimal search approaches
 - **Performance Monitoring**: Built-in metrics and optimization feedback
 
@@ -24,7 +29,7 @@ from src.config.models import VectorSearchConfig, VectorType
 vector_search_config = VectorSearchConfig(
     prefetch_multipliers={
         VectorType.DENSE: 2.0,   # Dense vectors: retrieve 2x candidates
-        VectorType.SPARSE: 5.0,  # Sparse vectors: retrieve 5x candidates  
+        VectorType.SPARSE: 5.0,  # Sparse vectors: retrieve 5x candidates
         VectorType.HYDE: 3.0,    # HyDE vectors: retrieve 3x candidates
     },
     max_prefetch_limits={
@@ -47,7 +52,7 @@ search_service = VectorSearchService(vector_search_config)
 # Automatic prefetch optimization
 results = await search_service.search_with_prefetch(
     query="How to implement microservices authentication",
-    collection_name="architecture_docs", 
+    collection_name="architecture_docs",
     limit=10,
     vector_type=VectorType.DENSE,
     accuracy=SearchAccuracy.BALANCED
@@ -71,7 +76,8 @@ results = await search_service.search_with_prefetch(
 
 ### Reciprocal Rank Fusion (RRF)
 
-RRF combines multiple search results by focusing on ranking positions rather than raw scores.
+RRF combines multiple search results by focusing on ranking positions rather
+than raw scores.
 
 ```python
 from src.services.vector_db.search import FusionAlgorithm
@@ -93,6 +99,7 @@ results = await search_service.hybrid_search(
 ```
 
 **RRF Benefits:**
+
 - **Rank-based**: Less sensitive to score distribution differences
 - **Robust**: Handles varying score ranges between search methods
 - **Proven**: Well-established algorithm with strong research backing
@@ -100,13 +107,14 @@ results = await search_service.hybrid_search(
 
 ### Distribution-Based Score Fusion (DBSF)
 
-DBSF normalizes score distributions before fusion to handle different scoring ranges.
+DBSF normalizes score distributions before fusion to handle different scoring
+ranges.
 
 ```python
 # DBSF fusion with score normalization
 results = await search_service.hybrid_search(
     query="FastAPI security implementation patterns",
-    collection_name="api_docs", 
+    collection_name="api_docs",
     dense_weight=0.7,
     sparse_weight=0.3,
     fusion_algorithm=FusionAlgorithm.DBSF,
@@ -122,6 +130,7 @@ results = await search_service.hybrid_search(
 ```
 
 **DBSF Benefits:**
+
 - **Distribution-aware**: Handles different score ranges intelligently
 - **Flexible normalization**: Supports z-score and min-max normalization
 - **Better calibration**: More accurate fusion when score ranges differ significantly
@@ -341,25 +350,29 @@ dev_config = VectorSearchConfig(
 
 ### Common Performance Issues
 
-**High Latency**
+#### High Latency
+
 - Reduce prefetch multipliers
 - Lower accuracy requirements
 - Enable result caching
 - Check HNSW parameter tuning
 
-**Poor Relevance**
+#### Poor Relevance
+
 - Increase prefetch limits
 - Experiment with fusion algorithms
 - Adjust vector type weights
 - Review query preprocessing
 
-**Memory Usage**
+#### Memory Usage
+
 - Reduce max prefetch limits
 - Enable vector quantization
 - Implement result streaming
 - Monitor cache size
 
-**Inconsistent Results**
+#### Inconsistent Results
+
 - Ensure stable fusion weights
 - Check score normalization settings
 - Verify vector index consistency
@@ -387,4 +400,6 @@ print(f"Score distributions: {debug_results['score_distributions']}")
 print(f"Reranking impact: {debug_results['reranking_metrics']}")
 ```
 
-For additional configuration options and advanced use cases, see the [API Reference](../developers/api-reference.md) and [Performance Benchmarking](../developers/benchmarking-and-performance.md) guides.
+For additional configuration options and advanced use cases,
+see the [API Reference](../developers/api-reference.md) and
+[Performance Benchmarking](../developers/benchmarking-and-performance.md) guides.

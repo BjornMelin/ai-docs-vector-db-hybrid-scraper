@@ -5,7 +5,8 @@
 > **Purpose**: 5-minute setup guide for new users  
 > **Audience**: Anyone wanting to start using the system immediately
 
-Get up and running with AI Documentation Vector DB in 5 minutes! This guide will have you searching documents and scraping websites quickly.
+Get up and running with AI Documentation Vector DB in 5 minutes!
+This guide will have you searching documents and scraping websites quickly.
 
 ## Prerequisites
 
@@ -63,7 +64,8 @@ curl localhost:6333/health
 uv run python src/unified_mcp_server.py
 ```
 
-The server will start on the default port and show available MCP tools. The system now includes enhanced database performance optimization with:
+The server will start on the default port and show available MCP tools.
+The system now includes enhanced database performance optimization with:
 
 - **50.9% faster search response times** through intelligent connection pooling
 - **887.9% higher throughput** during peak usage
@@ -119,25 +121,26 @@ mcp advanced-search --query "vector database optimization" --use-hyde
 
 ## Configuration Quick Reference
 
-| Setting | Purpose | Default |
-|---------|---------|---------|
-| `OPENAI_API_KEY` | Embedding generation | Required |
-| `QDRANT_HOST` | Vector database location | `localhost` |
-| `QDRANT_PORT` | Vector database port | `6333` |
-| `EMBEDDING_MODEL` | Model for embeddings | `text-embedding-3-small` |
-| `CHUNK_SIZE` | Document chunk size | `1000` |
+| Setting           | Purpose                  | Default                  |
+| ----------------- | ------------------------ | ------------------------ |
+| `OPENAI_API_KEY`  | Embedding generation     | Required                 |
+| `QDRANT_HOST`     | Vector database location | `localhost`              |
+| `QDRANT_PORT`     | Vector database port     | `6333`                   |
+| `EMBEDDING_MODEL` | Model for embeddings     | `text-embedding-3-small` |
+| `CHUNK_SIZE`      | Document chunk size      | `1000`                   |
 
 ### Database Performance Settings (Optional)
 
-The system includes intelligent database connection optimization that works automatically. For advanced users, these settings can be tuned:
+The system includes intelligent database connection optimization that works automatically.
+For advanced users, these settings can be tuned:
 
-| Setting | Purpose | Default |
-|---------|---------|---------|
-| `DATABASE_POOL_SIZE` | Initial connection pool size | `20` |
-| `DATABASE_MIN_POOL_SIZE` | Minimum pool size for auto-scaling | `5` |
-| `DATABASE_MAX_POOL_SIZE` | Maximum pool size for auto-scaling | `50` |
-| `DATABASE_ADAPTIVE_POOL_SIZING` | Enable smart pool scaling | `true` |
-| `DATABASE_ENABLE_QUERY_MONITORING` | Track query performance | `true` |
+| Setting                            | Purpose                            | Default |
+| ---------------------------------- | ---------------------------------- | ------- |
+| `DATABASE_POOL_SIZE`               | Initial connection pool size       | `20`    |
+| `DATABASE_MIN_POOL_SIZE`           | Minimum pool size for auto-scaling | `5`     |
+| `DATABASE_MAX_POOL_SIZE`           | Maximum pool size for auto-scaling | `50`    |
+| `DATABASE_ADAPTIVE_POOL_SIZING`    | Enable smart pool scaling          | `true`  |
+| `DATABASE_ENABLE_QUERY_MONITORING` | Track query performance            | `true`  |
 
 ## Troubleshooting
 
@@ -164,7 +167,7 @@ The system includes intelligent database connection optimization that works auto
 Once you're up and running:
 
 1. **[Search & Retrieval](./search-and-retrieval.md)** - Learn advanced search techniques
-2. **[Web Scraping](./web-scraping.md)** - Master the 5-tier scraping system  
+2. **[Web Scraping](./web-scraping.md)** - Master the 5-tier scraping system
 3. **[Examples & Recipes](./examples-and-recipes.md)** - Real-world use cases
 4. **[Troubleshooting](./troubleshooting.md)** - Solutions for common issues
 
@@ -177,4 +180,4 @@ Once you're up and running:
 
 ---
 
-*🎉 Congratulations! You now have a powerful AI-enhanced document search and web scraping system running locally.*
+_🎉 Congratulations! You now have a powerful AI-enhanced document search and web scraping system running locally._

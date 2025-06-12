@@ -5,7 +5,9 @@
 > **Purpose**: Complete integration patterns and implementation examples  
 > **Audience**: Developers integrating the system into their applications
 
-This guide shows you how to integrate the AI Documentation Vector DB system into your applications, whether you're building web apps, CLI tools, or enterprise systems.
+This guide shows you how to integrate the AI Documentation Vector DB system into
+your applications, whether you're building web apps, CLI tools, or enterprise
+systems.
 
 ## 🚀 Quick Integration Start
 
@@ -77,11 +79,11 @@ from ai_docs_vector_db import DocumentDB, SearchRequest
 class MyApplication:
     def __init__(self):
         self.db = DocumentDB(config)
-    
+
     async def initialize(self):
         """Initialize the document database."""
         await self.db.initialize()
-    
+
     async def search_documents(self, query: str, limit: int = 10):
         """Search documents with automatic relevance ranking."""
         request = SearchRequest(
@@ -90,9 +92,9 @@ class MyApplication:
             score_threshold=0.7,
             enable_hyde=True  # Enhanced query expansion
         )
-        
+
         results = await self.db.search(request)
-        
+
         return [
             {
                 "title": result.title,
@@ -103,7 +105,7 @@ class MyApplication:
             }
             for result in results.results
         ]
-    
+
     async def add_documentation_site(self, base_url: str):
         """Add entire documentation site to index."""
         return await self.db.crawl_site(
@@ -111,7 +113,7 @@ class MyApplication:
             max_pages=100,
             max_depth=3
         )
-    
+
     async def cleanup(self):
         """Cleanup resources."""
         await self.db.cleanup()
@@ -136,7 +138,7 @@ from ai_docs_vector_db import AdvancedSearchRequest, SearchStrategy
 
 async def advanced_search_integration(query: str):
     """Advanced search with multiple strategies and reranking."""
-    
+
     # Configure advanced search
     request = AdvancedSearchRequest(
         query=query,
@@ -153,14 +155,14 @@ async def advanced_search_integration(query: str):
             "language": "en"
         }
     )
-    
+
     # Execute search
     response = await db.advanced_search(request)
-    
+
     # Process results with confidence scoring
     high_confidence = [r for r in response.results if r.score > 0.85]
     medium_confidence = [r for r in response.results if 0.7 <= r.score <= 0.85]
-    
+
     return {
         "high_confidence": high_confidence,
         "medium_confidence": medium_confidence,
@@ -178,7 +180,7 @@ from ai_docs_vector_db import DocumentRequest, BulkDocumentRequest
 class DocumentManager:
     def __init__(self, db: DocumentDB):
         self.db = db
-    
+
     async def add_single_document(self, url: str, metadata: dict = None):
         """Add single document with metadata."""
         request = DocumentRequest(
@@ -188,9 +190,9 @@ class DocumentManager:
             metadata=metadata or {},
             force_recrawl=False
         )
-        
+
         response = await self.db.add_document(request)
-        
+
         if response.success:
             return {
                 "document_id": response.document_id,
@@ -200,7 +202,7 @@ class DocumentManager:
             }
         else:
             raise Exception(f"Failed to add document: {response.error}")
-    
+
     async def bulk_add_documents(self, urls: list[str]):
         """Efficiently add multiple documents."""
         request = BulkDocumentRequest(
@@ -209,23 +211,23 @@ class DocumentManager:
             collection_name="my_docs",
             force_recrawl=False
         )
-        
+
         response = await self.db.bulk_add_documents(request)
-        
+
         return {
             "successful": len([r for r in response.results if r.success]),
             "failed": len([r for r in response.results if not r.success]),
             "total_processing_time": sum(r.processing_time_ms for r in response.results),
             "details": response.results
         }
-    
+
     async def update_document_metadata(self, document_id: str, metadata: dict):
         """Update document metadata without re-processing content."""
         return await self.db.update_document(
             document_id=document_id,
             metadata=metadata
         )
-    
+
     async def remove_document(self, document_id: str):
         """Remove document from index."""
         return await self.db.delete_document(document_id)
@@ -241,23 +243,23 @@ from ai_docs_vector_db import UnifiedBrowserManager, UnifiedScrapingRequest
 class WebScrapingIntegration:
     def __init__(self, config):
         self.browser_manager = UnifiedBrowserManager(config)
-    
+
     async def initialize(self):
         await self.browser_manager.initialize()
-    
+
     async def scrape_with_smart_routing(self, url: str):
         """Scrape with automatic tier selection for optimal performance."""
-        
+
         # Analyze URL first for insights
         analysis = await self.browser_manager.analyze_url(url)
-        
+
         # Scrape with automatic optimization
         response = await self.browser_manager.scrape(
             url=url,
             tier="auto",  # Let system choose optimal tier
             extract_metadata=True
         )
-        
+
         return {
             "success": response.success,
             "content": response.content,
@@ -267,10 +269,10 @@ class WebScrapingIntegration:
             "recommended_tier": analysis["recommended_tier"],
             "metadata": response.metadata
         }
-    
+
     async def scrape_complex_spa(self, url: str, interactions: list):
         """Scrape complex single-page applications with custom interactions."""
-        
+
         request = UnifiedScrapingRequest(
             url=url,
             tier="browser_use",  # AI-powered interactions
@@ -280,32 +282,32 @@ class WebScrapingIntegration:
             wait_for_selector=".content-loaded",
             extract_metadata=True
         )
-        
+
         return await self.browser_manager.scrape(request)
-    
+
     async def batch_scrape_with_concurrency(self, urls: list[str]):
         """Efficiently scrape multiple URLs with concurrency control."""
         import asyncio
-        
+
         semaphore = asyncio.Semaphore(5)  # Limit concurrent requests
-        
+
         async def scrape_single(url):
             async with semaphore:
                 return await self.scrape_with_smart_routing(url)
-        
+
         tasks = [scrape_single(url) for url in urls]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         successful = [r for r in results if isinstance(r, dict) and r.get("success")]
         failed = [r for r in results if not (isinstance(r, dict) and r.get("success"))]
-        
+
         return {
             "successful_count": len(successful),
             "failed_count": len(failed),
             "results": successful,
             "errors": failed
         }
-    
+
     async def cleanup(self):
         await self.browser_manager.cleanup()
 
@@ -355,7 +357,7 @@ class APIClient:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}" if api_key else None
         }
-    
+
     def search_documents(self, query: str, **kwargs) -> Dict[str, Any]:
         """Synchronous document search."""
         payload = {
@@ -365,7 +367,7 @@ class APIClient:
             "collection_name": kwargs.get("collection", "documents"),
             "enable_hyde": kwargs.get("enable_hyde", False)
         }
-        
+
         response = requests.post(
             f"{self.base_url}/search",
             json=payload,
@@ -374,7 +376,7 @@ class APIClient:
         )
         response.raise_for_status()
         return response.json()
-    
+
     def add_document(self, url: str, **kwargs) -> Dict[str, Any]:
         """Add single document."""
         payload = {
@@ -384,7 +386,7 @@ class APIClient:
             "metadata": kwargs.get("metadata", {}),
             "force_recrawl": kwargs.get("force_recrawl", False)
         }
-        
+
         response = requests.post(
             f"{self.base_url}/documents",
             json=payload,
@@ -393,7 +395,7 @@ class APIClient:
         )
         response.raise_for_status()
         return response.json()
-    
+
     def list_collections(self) -> Dict[str, Any]:
         """List all collections."""
         response = requests.get(
@@ -439,14 +441,14 @@ class AsyncAPIClient:
         }
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
-    
+
     async def __aenter__(self):
         self.session = aiohttp.ClientSession(headers=self.headers)
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.session.close()
-    
+
     async def search_documents(self, query: str, **kwargs) -> Dict[str, Any]:
         """Async document search."""
         payload = {
@@ -456,7 +458,7 @@ class AsyncAPIClient:
             "collection_name": kwargs.get("collection", "documents"),
             "enable_hyde": kwargs.get("enable_hyde", False)
         }
-        
+
         async with self.session.post(
             f"{self.base_url}/search",
             json=payload,
@@ -464,7 +466,7 @@ class AsyncAPIClient:
         ) as response:
             response.raise_for_status()
             return await response.json()
-    
+
     async def bulk_add_documents(self, urls: List[str], **kwargs) -> Dict[str, Any]:
         """Async bulk document addition."""
         payload = {
@@ -473,7 +475,7 @@ class AsyncAPIClient:
             "collection_name": kwargs.get("collection", "documents"),
             "force_recrawl": kwargs.get("force_recrawl", False)
         }
-        
+
         async with self.session.post(
             f"{self.base_url}/documents/bulk",
             json=payload,
@@ -481,24 +483,24 @@ class AsyncAPIClient:
         ) as response:
             response.raise_for_status()
             return await response.json()
-    
+
     async def stream_search_results(self, query: str, batch_size: int = 10):
         """Stream search results in batches."""
         offset = 0
-        
+
         while True:
             results = await self.search_documents(
                 query=query,
                 limit=batch_size,
                 offset=offset
             )
-            
+
             if not results["results"]:
                 break
-                
+
             yield results["results"]
             offset += batch_size
-            
+
             if len(results["results"]) < batch_size:
                 break
 
@@ -511,14 +513,14 @@ async def main():
             limit=10,
             enable_hyde=True
         )
-        
+
         # Bulk add
         bulk_result = await client.bulk_add_documents([
             "https://docs.example1.com",
             "https://docs.example2.com",
             "https://docs.example3.com"
         ])
-        
+
         # Stream results
         async for batch in client.stream_search_results("machine learning", batch_size=5):
             for result in batch:
@@ -533,99 +535,115 @@ asyncio.run(main())
 
 ```javascript
 // api-client.js
-const axios = require('axios');
+const axios = require("axios");
 
 class DocumentDBClient {
-    constructor(baseUrl = 'http://localhost:8000/api/v1', apiKey = null) {
-        this.baseUrl = baseUrl;
-        this.client = axios.create({
-            baseURL: baseUrl,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
-            },
-            timeout: 30000
-        });
+  constructor(baseUrl = "http://localhost:8000/api/v1", apiKey = null) {
+    this.baseUrl = baseUrl;
+    this.client = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+      },
+      timeout: 30000,
+    });
+  }
+
+  async searchDocuments(query, options = {}) {
+    const payload = {
+      query,
+      limit: options.limit || 10,
+      score_threshold: options.scoreThreshold || 0.7,
+      collection_name: options.collection || "documents",
+      enable_hyde: options.enableHyde || false,
+    };
+
+    try {
+      const response = await this.client.post("/search", payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        `Search failed: ${error.response?.data?.error || error.message}`
+      );
     }
-    
-    async searchDocuments(query, options = {}) {
-        const payload = {
-            query,
-            limit: options.limit || 10,
-            score_threshold: options.scoreThreshold || 0.7,
-            collection_name: options.collection || 'documents',
-            enable_hyde: options.enableHyde || false
-        };
-        
-        try {
-            const response = await this.client.post('/search', payload);
-            return response.data;
-        } catch (error) {
-            throw new Error(`Search failed: ${error.response?.data?.error || error.message}`);
-        }
+  }
+
+  async addDocument(url, options = {}) {
+    const payload = {
+      url,
+      collection_name: options.collection || "documents",
+      doc_type: options.docType || "documentation",
+      metadata: options.metadata || {},
+      force_recrawl: options.forceRecrawl || false,
+    };
+
+    try {
+      const response = await this.client.post("/documents", payload, {
+        timeout: 120000, // 2 minutes for document processing
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        `Add document failed: ${error.response?.data?.error || error.message}`
+      );
     }
-    
-    async addDocument(url, options = {}) {
-        const payload = {
-            url,
-            collection_name: options.collection || 'documents',
-            doc_type: options.docType || 'documentation',
-            metadata: options.metadata || {},
-            force_recrawl: options.forceRecrawl || false
-        };
-        
-        try {
-            const response = await this.client.post('/documents', payload, {
-                timeout: 120000  // 2 minutes for document processing
-            });
-            return response.data;
-        } catch (error) {
-            throw new Error(`Add document failed: ${error.response?.data?.error || error.message}`);
-        }
+  }
+
+  async listCollections() {
+    try {
+      const response = await this.client.get("/collections");
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        `List collections failed: ${
+          error.response?.data?.error || error.message
+        }`
+      );
     }
-    
-    async listCollections() {
-        try {
-            const response = await this.client.get('/collections');
-            return response.data;
-        } catch (error) {
-            throw new Error(`List collections failed: ${error.response?.data?.error || error.message}`);
-        }
-    }
+  }
 }
 
 module.exports = DocumentDBClient;
 
 // Usage example
-const client = new DocumentDBClient('http://localhost:8000/api/v1', 'your-api-key');
+const client = new DocumentDBClient(
+  "http://localhost:8000/api/v1",
+  "your-api-key"
+);
 
 async function example() {
-    try {
-        // Search documents
-        const searchResults = await client.searchDocuments('authentication guide', {
-            limit: 5,
-            enableHyde: true
-        });
-        
-        console.log(`Found ${searchResults.results.length} results:`);
-        searchResults.results.forEach(result => {
-            console.log(`- ${result.title} (${result.score.toFixed(3)})`);
-        });
-        
-        // Add document
-        const addResult = await client.addDocument('https://docs.example.com/auth', {
-            metadata: { category: 'security', version: 'v2.0' }
-        });
-        
-        console.log(`Document added: ${addResult.document_id}`);
-        
-        // List collections
-        const collections = await client.listCollections();
-        console.log('Collections:', collections.collections.map(c => c.name));
-        
-    } catch (error) {
-        console.error('Error:', error.message);
-    }
+  try {
+    // Search documents
+    const searchResults = await client.searchDocuments("authentication guide", {
+      limit: 5,
+      enableHyde: true,
+    });
+
+    console.log(`Found ${searchResults.results.length} results:`);
+    searchResults.results.forEach((result) => {
+      console.log(`- ${result.title} (${result.score.toFixed(3)})`);
+    });
+
+    // Add document
+    const addResult = await client.addDocument(
+      "https://docs.example.com/auth",
+      {
+        metadata: { category: "security", version: "v2.0" },
+      }
+    );
+
+    console.log(`Document added: ${addResult.document_id}`);
+
+    // List collections
+    const collections = await client.listCollections();
+    console.log(
+      "Collections:",
+      collections.collections.map((c) => c.name)
+    );
+  } catch (error) {
+    console.error("Error:", error.message);
+  }
 }
 
 example();
@@ -635,119 +653,120 @@ example();
 
 ```jsx
 // hooks/useDocumentDB.js
-import { useState, useCallback } from 'react';
-import DocumentDBClient from '../api/client';
+import { useState, useCallback } from "react";
+import DocumentDBClient from "../api/client";
 
 export function useDocumentDB(apiKey) {
-    const [client] = useState(() => new DocumentDBClient(
-        process.env.REACT_APP_API_URL,
-        apiKey
-    ));
-    
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    
-    const searchDocuments = useCallback(async (query, options = {}) => {
-        setLoading(true);
-        setError(null);
-        
-        try {
-            const results = await client.searchDocuments(query, options);
-            return results;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    }, [client]);
-    
-    const addDocument = useCallback(async (url, options = {}) => {
-        setLoading(true);
-        setError(null);
-        
-        try {
-            const result = await client.addDocument(url, options);
-            return result;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    }, [client]);
-    
-    return {
-        searchDocuments,
-        addDocument,
-        loading,
-        error
-    };
+  const [client] = useState(
+    () => new DocumentDBClient(process.env.REACT_APP_API_URL, apiKey)
+  );
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const searchDocuments = useCallback(
+    async (query, options = {}) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const results = await client.searchDocuments(query, options);
+        return results;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client]
+  );
+
+  const addDocument = useCallback(
+    async (url, options = {}) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await client.addDocument(url, options);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client]
+  );
+
+  return {
+    searchDocuments,
+    addDocument,
+    loading,
+    error,
+  };
 }
 
 // components/DocumentSearch.jsx
-import React, { useState } from 'react';
-import { useDocumentDB } from '../hooks/useDocumentDB';
+import React, { useState } from "react";
+import { useDocumentDB } from "../hooks/useDocumentDB";
 
 function DocumentSearch({ apiKey }) {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const { searchDocuments, loading, error } = useDocumentDB(apiKey);
-    
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!query.trim()) return;
-        
-        try {
-            const searchResults = await searchDocuments(query, {
-                limit: 10,
-                enableHyde: true
-            });
-            setResults(searchResults.results);
-        } catch (err) {
-            console.error('Search failed:', err);
-        }
-    };
-    
-    return (
-        <div className="document-search">
-            <form onSubmit={handleSearch}>
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search documentation..."
-                    disabled={loading}
-                />
-                <button type="submit" disabled={loading || !query.trim()}>
-                    {loading ? 'Searching...' : 'Search'}
-                </button>
-            </form>
-            
-            {error && (
-                <div className="error">
-                    Error: {error}
-                </div>
-            )}
-            
-            <div className="results">
-                {results.map((result, index) => (
-                    <div key={index} className="result-item">
-                        <h3>
-                            <a href={result.url} target="_blank" rel="noopener noreferrer">
-                                {result.title}
-                            </a>
-                        </h3>
-                        <p>{result.content.substring(0, 200)}...</p>
-                        <div className="metadata">
-                            <span className="score">Score: {result.score.toFixed(3)}</span>
-                            <span className="type">{result.doc_type}</span>
-                        </div>
-                    </div>
-                ))}
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const { searchDocuments, loading, error } = useDocumentDB(apiKey);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    try {
+      const searchResults = await searchDocuments(query, {
+        limit: 10,
+        enableHyde: true,
+      });
+      setResults(searchResults.results);
+    } catch (err) {
+      console.error("Search failed:", err);
+    }
+  };
+
+  return (
+    <div className="document-search">
+      <form onSubmit={handleSearch}>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search documentation..."
+          disabled={loading}
+        />
+        <button type="submit" disabled={loading || !query.trim()}>
+          {loading ? "Searching..." : "Search"}
+        </button>
+      </form>
+
+      {error && <div className="error">Error: {error}</div>}
+
+      <div className="results">
+        {results.map((result, index) => (
+          <div key={index} className="result-item">
+            <h3>
+              <a href={result.url} target="_blank" rel="noopener noreferrer">
+                {result.title}
+              </a>
+            </h3>
+            <p>{result.content.substring(0, 200)}...</p>
+            <div className="metadata">
+              <span className="score">Score: {result.score.toFixed(3)}</span>
+              <span className="type">{result.doc_type}</span>
             </div>
-        </div>
-    );
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default DocumentSearch;
@@ -761,7 +780,7 @@ export default DocumentSearch;
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   ai-docs-vector-db:
@@ -785,7 +804,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  
+
   qdrant:
     image: qdrant/qdrant:latest
     ports:
@@ -801,7 +820,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  
+
   redis:
     image: dragonflydb/dragonfly:latest
     ports:
@@ -838,36 +857,36 @@ class DockerizedDocumentDB:
         self.base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
         self.api_key = os.getenv("API_KEY")
         self.client = None
-    
+
     @asynccontextmanager
     async def get_client(self):
         """Context manager for HTTP client with proper cleanup."""
         import aiohttp
-        
+
         connector = aiohttp.TCPConnector(
             limit=100,
             limit_per_host=30,
             ttl_dns_cache=300,
             use_dns_cache=True,
         )
-        
+
         timeout = aiohttp.ClientTimeout(
             total=30,
             connect=10,
             sock_read=10
         )
-        
+
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        
+
         async with aiohttp.ClientSession(
             connector=connector,
             timeout=timeout,
             headers=headers
         ) as session:
             yield session
-    
+
     async def health_check(self):
         """Check if the dockerized service is healthy."""
         async with self.get_client() as client:
@@ -876,7 +895,7 @@ class DockerizedDocumentDB:
                     return response.status == 200
             except Exception:
                 return False
-    
+
     async def wait_for_service(self, max_attempts=30, delay=2):
         """Wait for the dockerized service to become available."""
         for attempt in range(max_attempts):
@@ -884,7 +903,7 @@ class DockerizedDocumentDB:
                 return True
             await asyncio.sleep(delay)
         return False
-    
+
     async def search_with_retry(self, query: str, max_retries=3):
         """Search with automatic retry for transient failures."""
         for attempt in range(max_retries):
@@ -905,17 +924,17 @@ class DockerizedDocumentDB:
                     await asyncio.sleep(2 ** attempt)
                     continue
                 raise
-        
+
         raise Exception(f"Failed to search after {max_retries} attempts")
 
 # Usage
 async def main():
     db = DockerizedDocumentDB()
-    
+
     # Wait for service to be ready
     if not await db.wait_for_service():
         raise Exception("Service failed to start")
-    
+
     # Use the service
     results = await db.search_with_retry("vector database")
     print(f"Found {len(results['results'])} results")
@@ -947,39 +966,39 @@ spec:
         app: ai-docs-vector-db
     spec:
       containers:
-      - name: ai-docs-vector-db
-        image: ai-docs-vector-db:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: api-secrets
-              key: openai-api-key
-        - name: QDRANT_URL
-          value: "http://qdrant:6333"
-        - name: REDIS_URL
-          value: "redis://redis:6379"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: ai-docs-vector-db
+          image: ai-docs-vector-db:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: openai-api-key
+            - name: QDRANT_URL
+              value: "http://qdrant:6333"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 
 ---
 apiVersion: v1
@@ -990,9 +1009,9 @@ spec:
   selector:
     app: ai-docs-vector-db
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8000
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
   type: ClusterIP
 
 ---
@@ -1063,7 +1082,7 @@ async def handle_list_tools() -> list[types.Tool]:
                         "description": "Search query"
                     },
                     "collection": {
-                        "type": "string", 
+                        "type": "string",
                         "description": "Collection to search in",
                         "default": "documents"
                     },
@@ -1105,11 +1124,11 @@ async def handle_list_tools() -> list[types.Tool]:
 
 @server.call_tool()
 async def handle_call_tool(
-    name: str, 
+    name: str,
     arguments: dict | None
 ) -> list[types.TextContent]:
     """Handle tool calls."""
-    
+
     if name == "semantic_search":
         return await handle_semantic_search(arguments or {})
     elif name == "analyze_documentation_gaps":
@@ -1123,7 +1142,7 @@ async def handle_semantic_search(args: dict) -> list[types.TextContent]:
     collection = args.get("collection", "documents")
     threshold = args.get("semantic_threshold", 0.7)
     include_metadata = args.get("include_metadata", True)
-    
+
     # Use the services
     config = get_config()
     async with QdrantService(config) as qdrant:
@@ -1134,40 +1153,40 @@ async def handle_semantic_search(args: dict) -> list[types.TextContent]:
             score_threshold=threshold,
             limit=10
         )
-        
+
         results = await qdrant.search_vectors(
             collection_name=request.collection_name,
             query=request.query,
             limit=request.limit,
             score_threshold=request.score_threshold
         )
-        
+
         # Format results
         formatted_results = []
         for result in results:
             result_text = f"**{result.title}** (Score: {result.score:.3f})\n"
             result_text += f"URL: {result.url}\n"
             result_text += f"Content: {result.content[:300]}...\n"
-            
+
             if include_metadata and result.metadata:
                 result_text += f"Metadata: {result.metadata}\n"
-            
+
             formatted_results.append(result_text)
-        
+
         response_text = f"Found {len(results)} results for '{query}':\n\n"
         response_text += "\n---\n".join(formatted_results)
-        
+
         return [types.TextContent(type="text", text=response_text)]
 
 async def handle_gap_analysis(args: dict) -> list[types.TextContent]:
     """Analyze documentation gaps for specified topic areas."""
     collection = args.get("collection", "documents")
     topic_areas = args["topic_areas"]
-    
+
     config = get_config()
     async with QdrantService(config) as qdrant:
         gap_analysis = []
-        
+
         for topic in topic_areas:
             # Search for content in this topic area
             results = await qdrant.search_vectors(
@@ -1176,10 +1195,10 @@ async def handle_gap_analysis(args: dict) -> list[types.TextContent]:
                 limit=5,
                 score_threshold=0.5
             )
-            
+
             coverage_score = len(results) / 5.0  # Normalize to 0-1
             quality_score = sum(r.score for r in results) / len(results) if results else 0
-            
+
             gap_analysis.append({
                 "topic": topic,
                 "coverage_score": coverage_score,
@@ -1187,23 +1206,23 @@ async def handle_gap_analysis(args: dict) -> list[types.TextContent]:
                 "documents_found": len(results),
                 "top_documents": [r.title for r in results[:3]]
             })
-        
+
         # Generate report
         report = "# Documentation Gap Analysis\n\n"
-        
+
         for analysis in gap_analysis:
             status = "✅ Good" if analysis["coverage_score"] > 0.6 else "⚠️ Partial" if analysis["coverage_score"] > 0.2 else "❌ Poor"
-            
+
             report += f"## {analysis['topic']} - {status}\n"
             report += f"- Coverage: {analysis['coverage_score']:.1%}\n"
             report += f"- Quality: {analysis['quality_score']:.3f}\n"
             report += f"- Documents: {analysis['documents_found']}\n"
-            
+
             if analysis["top_documents"]:
                 report += f"- Top docs: {', '.join(analysis['top_documents'])}\n"
-            
+
             report += "\n"
-        
+
         return [types.TextContent(type="text", text=report)]
 
 # Run the server
@@ -1231,7 +1250,7 @@ class TestAPIIntegration:
         """Create API client for testing."""
         async with aiohttp.ClientSession() as session:
             yield session
-    
+
     @pytest.fixture
     async def document_db(self):
         """Create document DB instance for testing."""
@@ -1242,7 +1261,7 @@ class TestAPIIntegration:
             yield db
         finally:
             await db.cleanup()
-    
+
     async def test_search_integration(self, api_client):
         """Test search API integration."""
         payload = {
@@ -1250,45 +1269,45 @@ class TestAPIIntegration:
             "limit": 5,
             "score_threshold": 0.7
         }
-        
+
         async with api_client.post(
             "http://localhost:8000/api/v1/search",
             json=payload
         ) as response:
             assert response.status == 200
             data = await response.json()
-            
+
             assert data["success"] is True
             assert "results" in data
             assert "query_time_ms" in data
             assert len(data["results"]) <= 5
-    
+
     async def test_document_lifecycle(self, document_db):
         """Test complete document lifecycle."""
         # Add document
         add_result = await document_db.add_url("https://example.com/test-doc")
         assert add_result.success
         document_id = add_result.document_id
-        
+
         # Search for document
         search_results = await document_db.search("test document")
         assert any(r.id == document_id for r in search_results.results)
-        
+
         # Update metadata
         update_result = await document_db.update_document(
             document_id,
             metadata={"updated": True}
         )
         assert update_result.success
-        
+
         # Delete document
         delete_result = await document_db.delete_document(document_id)
         assert delete_result.success
-        
+
         # Verify deletion
         search_results = await document_db.search("test document")
         assert not any(r.id == document_id for r in search_results.results)
-    
+
     async def test_error_handling(self, api_client):
         """Test API error handling."""
         # Invalid request
@@ -1300,16 +1319,16 @@ class TestAPIIntegration:
             data = await response.json()
             assert data["success"] is False
             assert "error" in data
-    
+
     async def test_performance_requirements(self, document_db):
         """Test performance requirements are met."""
         import time
-        
+
         # Search should complete within 1 second for simple queries
         start_time = time.time()
         results = await document_db.search("quick test query")
         end_time = time.time()
-        
+
         assert end_time - start_time < 1.0
         assert results.query_time_ms < 1000
 ```
@@ -1332,7 +1351,7 @@ class TestBrowserIntegration:
             yield manager
         finally:
             await manager.cleanup()
-    
+
     async def test_tier_selection(self, browser_manager):
         """Test automatic tier selection works correctly."""
         # Static site should use lightweight tier
@@ -1342,7 +1361,7 @@ class TestBrowserIntegration:
         )
         assert static_response.success
         assert static_response.tier_used in ["lightweight", "crawl4ai"]
-        
+
         # Complex site might use higher tier
         complex_response = await browser_manager.scrape(
             url="https://docs.python.org/3/",
@@ -1350,7 +1369,7 @@ class TestBrowserIntegration:
         )
         assert complex_response.success
         assert complex_response.tier_used in ["crawl4ai", "crawl4ai_enhanced"]
-    
+
     async def test_custom_interactions(self, browser_manager):
         """Test custom interactions work correctly."""
         request = UnifiedScrapingRequest(
@@ -1362,11 +1381,11 @@ class TestBrowserIntegration:
                 {"type": "click", "selector": "button[type='submit']"}
             ]
         )
-        
+
         response = await browser_manager.scrape(request)
         assert response.success
         assert "test@example.com" in response.content
-    
+
     async def test_error_recovery(self, browser_manager):
         """Test error recovery and fallback mechanisms."""
         # Force a tier that might fail, should fallback
@@ -1374,7 +1393,7 @@ class TestBrowserIntegration:
             url="https://httpbin.org/status/503",  # Server error
             tier="auto"
         )
-        
+
         # Should either succeed with fallback or fail gracefully
         if not response.success:
             assert response.error is not None
@@ -1405,7 +1424,7 @@ class MetricPoint:
 class MetricsCollector:
     def __init__(self):
         self.metrics: List[MetricPoint] = []
-    
+
     def record_search_latency(self, latency_ms: float, collection: str):
         """Record search latency metric."""
         self.metrics.append(MetricPoint(
@@ -1414,7 +1433,7 @@ class MetricsCollector:
             timestamp=time.time(),
             tags={"collection": collection}
         ))
-    
+
     def record_document_processing_time(self, processing_ms: float, doc_type: str):
         """Record document processing time."""
         self.metrics.append(MetricPoint(
@@ -1423,7 +1442,7 @@ class MetricsCollector:
             timestamp=time.time(),
             tags={"doc_type": doc_type}
         ))
-    
+
     def record_cache_hit_rate(self, hit_rate: float, cache_type: str):
         """Record cache hit rate."""
         self.metrics.append(MetricPoint(
@@ -1432,22 +1451,22 @@ class MetricsCollector:
             timestamp=time.time(),
             tags={"cache_type": cache_type}
         ))
-    
+
     def get_metrics(self, since: Optional[float] = None) -> List[MetricPoint]:
         """Get metrics since timestamp."""
         if since is None:
             return self.metrics.copy()
         return [m for m in self.metrics if m.timestamp >= since]
-    
+
     def export_prometheus_format(self) -> str:
         """Export metrics in Prometheus format."""
         lines = []
-        
+
         for metric in self.metrics:
             tags_str = ",".join(f'{k}="{v}"' for k, v in metric.tags.items())
             line = f'{metric.name}{{{tags_str}}} {metric.value} {int(metric.timestamp * 1000)}'
             lines.append(line)
-        
+
         return "\n".join(lines)
 
 # Integration with DocumentDB
@@ -1455,26 +1474,26 @@ class MonitoredDocumentDB:
     def __init__(self, config, metrics_collector: MetricsCollector):
         self.db = DocumentDB(config)
         self.metrics = metrics_collector
-    
+
     async def initialize(self):
         await self.db.initialize()
-    
+
     async def search_with_metrics(self, query: str, **kwargs):
         """Search with automatic metrics collection."""
         start_time = time.time()
-        
+
         try:
             results = await self.db.search(query, **kwargs)
             latency_ms = (time.time() - start_time) * 1000
-            
+
             # Record metrics
             self.metrics.record_search_latency(
                 latency_ms=latency_ms,
                 collection=kwargs.get("collection", "documents")
             )
-            
+
             return results
-            
+
         except Exception as e:
             # Record error metrics
             self.metrics.record_search_latency(
@@ -1482,7 +1501,7 @@ class MonitoredDocumentDB:
                 collection=kwargs.get("collection", "documents")
             )
             raise
-    
+
     async def cleanup(self):
         await self.db.cleanup()
 
@@ -1515,7 +1534,7 @@ class HealthStatus(Enum):
 class HealthChecker:
     def __init__(self, base_url: str):
         self.base_url = base_url
-    
+
     async def check_api_health(self) -> Dict[str, Any]:
         """Check API endpoint health."""
         try:
@@ -1542,7 +1561,7 @@ class HealthChecker:
                 "error": str(e),
                 "details": {}
             }
-    
+
     async def check_search_functionality(self) -> Dict[str, Any]:
         """Check if search functionality works."""
         try:
@@ -1570,7 +1589,7 @@ class HealthChecker:
                 "status": HealthStatus.UNHEALTHY,
                 "error": f"Search check failed: {str(e)}"
             }
-    
+
     async def comprehensive_health_check(self) -> Dict[str, Any]:
         """Run comprehensive health checks."""
         checks = await asyncio.gather(
@@ -1578,27 +1597,27 @@ class HealthChecker:
             self.check_search_functionality(),
             return_exceptions=True
         )
-        
+
         api_health = checks[0] if not isinstance(checks[0], Exception) else {
             "status": HealthStatus.UNHEALTHY,
             "error": str(checks[0])
         }
-        
+
         search_health = checks[1] if not isinstance(checks[1], Exception) else {
             "status": HealthStatus.UNHEALTHY,
             "error": str(checks[1])
         }
-        
+
         # Determine overall status
         statuses = [api_health["status"], search_health["status"]]
-        
+
         if all(s == HealthStatus.HEALTHY for s in statuses):
             overall_status = HealthStatus.HEALTHY
         elif any(s == HealthStatus.UNHEALTHY for s in statuses):
             overall_status = HealthStatus.UNHEALTHY
         else:
             overall_status = HealthStatus.DEGRADED
-        
+
         return {
             "overall_status": overall_status,
             "timestamp": time.time(),
@@ -1640,30 +1659,30 @@ class LoadBalancedClient:
         self.endpoints = endpoints
         self.api_key = api_key
         self.endpoint_health = {endpoint: True for endpoint in endpoints}
-    
+
     def get_healthy_endpoint(self) -> str:
         """Get a healthy endpoint using round-robin."""
         healthy_endpoints = [ep for ep, healthy in self.endpoint_health.items() if healthy]
-        
+
         if not healthy_endpoints:
             # Fallback to any endpoint if all are marked unhealthy
             healthy_endpoints = self.endpoints
-        
+
         return random.choice(healthy_endpoints)
-    
+
     async def request_with_failover(self, path: str, method: str = "GET", **kwargs):
         """Make request with automatic failover."""
         last_exception = None
-        
+
         for attempt in range(len(self.endpoints)):
             endpoint = self.get_healthy_endpoint()
-            
+
             try:
                 headers = kwargs.get("headers", {})
                 if self.api_key:
                     headers["Authorization"] = f"Bearer {self.api_key}"
                 kwargs["headers"] = headers
-                
+
                 async with aiohttp.ClientSession() as session:
                     async with session.request(
                         method=method,
@@ -1682,16 +1701,16 @@ class LoadBalancedClient:
                                 history=response.history,
                                 status=response.status
                             )
-                            
+
             except Exception as e:
                 # Mark endpoint as unhealthy
                 self.endpoint_health[endpoint] = False
                 last_exception = e
                 continue
-        
+
         # All endpoints failed
         raise Exception(f"All endpoints failed. Last error: {last_exception}")
-    
+
     async def search(self, query: str, **kwargs) -> Dict[str, Any]:
         """Search with load balancing and failover."""
         payload = {
@@ -1699,7 +1718,7 @@ class LoadBalancedClient:
             "limit": kwargs.get("limit", 10),
             **kwargs
         }
-        
+
         return await self.request_with_failover(
             "/api/v1/search",
             method="POST",
@@ -1709,15 +1728,20 @@ class LoadBalancedClient:
 # Usage
 client = LoadBalancedClient([
     "http://api1.example.com",
-    "http://api2.example.com", 
+    "http://api2.example.com",
     "http://api3.example.com"
 ], api_key="your-api-key")
 
 results = await client.search("load balanced query")
 ```
 
-This comprehensive integration guide provides everything you need to integrate the AI Documentation Vector DB system into your applications. Choose the integration method that best fits your needs and follow the patterns shown for robust, production-ready implementations.
+This comprehensive integration guide provides everything you need to integrate
+the AI Documentation Vector DB system into your applications. Choose the
+integration method that best fits your needs and follow the patterns shown for
+robust, production-ready implementations.
 
 ---
 
-*🔗 Ready to integrate! Whether you're building web applications, CLI tools, or enterprise systems, these patterns provide a solid foundation for leveraging the full power of the AI Documentation Vector DB system.*
+_🔗 Ready to integrate! Whether you're building web applications, CLI tools, or
+enterprise systems, these patterns provide a solid foundation for leveraging the
+full power of the AI Documentation Vector DB system._

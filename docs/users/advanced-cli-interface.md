@@ -1,6 +1,7 @@
 # Advanced CLI Interface
 
-The Advanced CLI Interface provides a rich, interactive command-line experience with comprehensive configuration management, batch operations, and real-time monitoring capabilities.
+The Advanced CLI Interface provides a rich, interactive command-line experience with
+comprehensive configuration management, batch operations, and real-time monitoring capabilities.
 
 ## Overview
 
@@ -44,7 +45,7 @@ $ cli-tool config wizard
   Quality Tier: balanced [economy/balanced/premium]
   Description: AI-powered documentation search
 
-✓ Provider Settings  
+✓ Provider Settings
   Embedding Provider: fastembed [openai/fastembed]
   Crawl Provider: crawl4ai [crawl4ai/firecrawl]
   Browser Automation: 5-tier [enabled/disabled]
@@ -159,7 +160,7 @@ cli-tool batch process \
 
 # Example urls.txt format:
 # https://docs.example.com/guide1
-# https://docs.example.com/guide2  
+# https://docs.example.com/guide2
 # https://api.example.com/reference
 ```
 
@@ -201,7 +202,7 @@ $ cli-tool content add proj_123 --urls-file large-list.txt
 
 Processing URLs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:02:15
  • Crawled: 245/245 URLs
- • Processed: 243/245 documents  
+ • Processed: 243/245 documents
  • Errors: 2 URLs (see errors.log)
  • Quality: Avg 0.87, Min 0.45, Max 0.98
  • Cache Hits: 67/245 (27.3%)
@@ -217,7 +218,7 @@ $ cli-tool search --interactive
 
 ? Select project:
 ❯ API Documentation (proj_123) - 245 docs
-  User Guides (proj_456) - 89 docs  
+  User Guides (proj_456) - 89 docs
   Tutorials (proj_789) - 156 docs
 
 ? Search query: authentication examples
@@ -237,7 +238,7 @@ $ cli-tool monitor dashboard
 
 ┏━━━━━━━━━━━━━━━ System Status ━━━━━━━━━━━━━━━┓
 ┃ CPU Usage:     ████████░░ 80%          ┃
-┃ Memory:        ████████░░ 75%          ┃  
+┃ Memory:        ████████░░ 75%          ┃
 ┃ Disk I/O:      ███░░░░░░░ 30%          ┃
 ┃ Network:       ██████░░░░ 60%          ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
@@ -277,7 +278,7 @@ proj_123  proj_456  proj_789
 ### Zsh Completion
 
 ```bash
-# Install zsh completion  
+# Install zsh completion
 cli-tool completion zsh > ~/.zsh-completions/_cli-tool
 echo "fpath=(~/.zsh-completions $fpath)" >> ~/.zshrc
 ```

@@ -2,7 +2,11 @@
 
 ## Overview
 
-I have created comprehensive tests for the Advanced Search Orchestrator in `/tests/unit/services/query_processing/test_advanced_search_orchestrator.py`. This test suite provides extensive coverage for all aspects of the orchestrator including enums, models, search modes, processing stages, pipeline configurations, error handling, caching, and performance tracking.
+I have created comprehensive tests for the Advanced Search Orchestrator in
+`/tests/unit/services/query_processing/test_advanced_search_orchestrator.py`. This test
+suite provides extensive coverage for all aspects of the orchestrator including enums,
+models, search modes, processing stages, pipeline configurations, error handling, caching,
+and performance tracking.
 
 ## Test Coverage Breakdown
 
@@ -11,7 +15,7 @@ I have created comprehensive tests for the Advanced Search Orchestrator in `/tes
 #### 1. **Enums Testing (3 test methods)**
 
 - `TestEnums::test_search_mode_enum` - Tests all SearchMode enum values
-- `TestEnums::test_processing_stage_enum` - Tests all ProcessingStage enum values  
+- `TestEnums::test_processing_stage_enum` - Tests all ProcessingStage enum values
 - `TestEnums::test_search_pipeline_enum` - Tests all SearchPipeline enum values
 
 #### 2. **Models Testing (7 test methods)**
@@ -157,4 +161,6 @@ uv run pytest tests/unit/services/query_processing/test_advanced_search_orchestr
 uv run pytest tests/unit/services/query_processing/test_advanced_search_orchestrator.py::TestSearchModes -v
 ```
 
-The test suite provides **comprehensive coverage** for the Advanced Search Orchestrator with **≥90% feature coverage** as requested, following patterns from filter tests, and ensuring thorough integration testing for this critical orchestrator component.
+The test suite provides **comprehensive coverage** for the Advanced Search Orchestrator with
+**≥90% feature coverage** as requested, following patterns from filter tests, and ensuring thorough
+integration testing for this critical orchestrator component.

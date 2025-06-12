@@ -5,13 +5,15 @@
 > **Purpose**: Complete system architecture and design patterns  
 > **Audience**: Developers understanding system design and contributing to architecture
 
-This comprehensive guide covers the complete architecture of the AI Documentation Vector DB system, from high-level design to detailed implementation patterns.
+This comprehensive guide covers the complete architecture of the AI Documentation Vector DB system,
+from high-level design to detailed implementation patterns.
 
 ## 🏗️ High-Level Architecture
 
 ### System Overview
 
-AI Documentation Vector DB is a hybrid scraping and vector search system that combines intelligent browser automation, advanced vector search, and AI-powered query enhancement for high-performance documentation indexing and retrieval.
+AI Documentation Vector DB is a hybrid scraping and vector search system that combines intelligent browser automation,
+advanced vector search, and AI-powered query enhancement for high-performance documentation indexing and retrieval.
 
 ```mermaid
 flowchart LR
@@ -23,12 +25,12 @@ flowchart LR
     F --> G["⚡ DragonflyDB Cache"]
     G --> H["🔧 MCP Server"]
     H --> I["💻 Claude Desktop"]
-    
+
     classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef processing fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef storage fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     classDef output fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    
+
     class A input
     class B,C,D,F processing
     class E,G storage
@@ -44,23 +46,23 @@ architecture-beta
     group config(database)[Configuration Layer]
 
     service mcpserver(server)[FastMCP 2.0 + Tools] in api
-    
+
     service embedding(internet)[EmbeddingMgr + HyDE] in services
     service qdrant(database)[Qdrant + Query API] in services
     service automation(server)[5-Tier Browser System] in services
     service dragonfly(disk)[DragonflyDB Cache] in services
     service aliases(internet)[Collection Aliases] in services
     service security(shield)[Security Validation] in services
-    
+
     service pydantic(database)[Unified Configuration] in config
-    
+
     mcpserver:B --> embedding:T
     mcpserver:B --> qdrant:T
     mcpserver:B --> automation:T
     mcpserver:B --> dragonfly:T
     mcpserver:B --> aliases:T
     mcpserver:B --> security:T
-    
+
     embedding:B --> pydantic:T
     qdrant:B --> pydantic:T
     automation:B --> pydantic:T
@@ -93,14 +95,14 @@ classDiagram
         +load_from_env() Config
         +validate() bool
     }
-    
+
     class EmbeddingConfig {
         +provider: EmbeddingProvider
         +model: str
         +batch_size: int
         +timeout: float
     }
-    
+
     class QdrantConfig {
         +url: str
         +api_key: Optional[str]
@@ -108,14 +110,14 @@ classDiagram
         +max_retries: int
         +collection_name: str
     }
-    
+
     class SecurityConfig {
         +enable_url_validation: bool
         +allowed_domains: List[str]
         +blocked_domains: List[str]
         +max_request_size: int
     }
-    
+
     UnifiedConfig --> EmbeddingConfig
     UnifiedConfig --> QdrantConfig
     UnifiedConfig --> SecurityConfig
@@ -167,7 +169,7 @@ classDiagram
         +__aenter__() Self
         +__aexit__() None
     }
-    
+
     class EmbeddingManager {
         +provider: EmbeddingProvider
         +cache: EmbeddingCache
@@ -175,7 +177,7 @@ classDiagram
         +generate_sparse_embeddings(texts) List[Dict]
         +get_dimensions() int
     }
-    
+
     class QdrantService {
         +client: QdrantClient
         +query_api: QueryAPI
@@ -184,7 +186,7 @@ classDiagram
         +add_documents(docs, collection) bool
         +create_collection(name, config) bool
     }
-    
+
     class UnifiedBrowserManager {
         +router: AutomationRouter
         +tiers: Dict[str, BrowserTier]
@@ -192,7 +194,7 @@ classDiagram
         +analyze_url(url) AnalysisResult
         +get_system_status() SystemStatus
     }
-    
+
     BaseService <|-- EmbeddingManager
     BaseService <|-- QdrantService
     BaseService <|-- UnifiedBrowserManager
@@ -207,12 +209,12 @@ sequenceDiagram
     participant E as EmbeddingService
     participant Q as QdrantService
     participant B as BrowserService
-    
+
     C->>M: initialize_services()
     M->>E: initialize()
     M->>Q: initialize()
     M->>B: initialize()
-    
+
     C->>M: process_request(url)
     M->>B: scrape(url)
     B-->>M: content
@@ -221,7 +223,7 @@ sequenceDiagram
     M->>Q: store_vectors(vectors)
     Q-->>M: success
     M-->>C: result
-    
+
     Note over M: Services use dependency injection
     Note over E,Q,B: All services implement BaseService
 ```
@@ -236,25 +238,25 @@ The browser automation system implements an intelligent 5-tier hierarchy with au
 flowchart TD
     A["🌐 URL Request"] --> B["🎯 AutomationRouter"]
     B --> C{"Tier Selection"}
-    
+
     C -->|Tier 0| D1["⚡ Lightweight HTTP<br/>httpx + BeautifulSoup<br/>5-10x faster"]
     C -->|Tier 1| D2["🕷️ Crawl4AI Basic<br/>Standard automation<br/>Dynamic content"]
     C -->|Tier 2| D3["🔧 Crawl4AI Enhanced<br/>Custom JavaScript<br/>Interactive content"]
     C -->|Tier 3| D4["🤖 Browser-use AI<br/>Multi-LLM reasoning<br/>Complex interactions"]
     C -->|Tier 4| D5["🎭 Playwright + Firecrawl<br/>Maximum control<br/>Auth + workflows"]
-    
+
     D1 --> E["📄 Content Output"]
     D2 --> E
     D3 --> E
     D4 --> E
     D5 --> E
-    
+
     classDef tier0 fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef tier1 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef tier2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef tier3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef tier4 fill:#ffebee,stroke:#c62828,stroke-width:2px
-    
+
     class D1 tier0
     class D2 tier1
     class D3 tier2
@@ -268,24 +270,24 @@ flowchart TD
 class AutomationRouter:
     def select_tier(self, url: str, requirements: Dict) -> str:
         """Intelligent tier selection based on multiple factors."""
-        
+
         # 1. URL Pattern Analysis
         if self._is_static_content(url):
             return "lightweight"
-        
+
         # 2. Site-Specific Rules
         domain = urlparse(url).netloc
         if domain in self.browser_use_sites:
             return "browser_use"
-        
+
         # 3. Content Complexity Analysis
         if requirements.get("javascript_required"):
             return "crawl4ai_enhanced"
-        
+
         # 4. Performance-Based Learning
         best_tier = self._get_best_performing_tier(domain)
         return best_tier or "crawl4ai"
-    
+
     def _is_static_content(self, url: str) -> bool:
         """Detect static content that doesn't need browser automation."""
         static_extensions = {'.md', '.txt', '.json', '.xml', '.csv'}
@@ -303,18 +305,18 @@ stateDiagram-v2
     Executing --> ContentError: Content Issues
     Executing --> JSError: JavaScript Issues
     Executing --> BotDetected: Anti-bot Detection
-    
+
     NetworkError --> Retry: Same Tier
     Retry --> Success: Resolved
     Retry --> EscalateTier: Still Failing
-    
+
     ContentError --> EscalateTier: Higher Tier
     JSError --> EscalateTier: Browser Automation
     BotDetected --> EscalateTier: AI Automation
-    
+
     EscalateTier --> TierSelected: Try Next Tier
     EscalateTier --> Failed: All Tiers Exhausted
-    
+
     Success --> [*]
     Failed --> [*]
 ```
@@ -332,7 +334,7 @@ sequenceDiagram
     participant C as DragonflyDB Cache
     participant Q as QdrantService
     participant R as BGE Reranker
-    
+
     U->>S: Original Query
     S->>S: Validate & Sanitize
     S->>H: Validated Query
@@ -340,7 +342,7 @@ sequenceDiagram
     H->>E: Hypothetical Doc + Query
     E->>E: Create Enhanced Vector
     E->>C: Check Cache
-    
+
     alt Cache Hit
         C-->>U: ⚡ Cached Result (0.8ms)
     else Cache Miss
@@ -352,7 +354,7 @@ sequenceDiagram
         R->>C: Store in Cache
         C-->>U: 📋 Final Response
     end
-    
+
     Note over C,Q: Cache Miss Flow
     Note over U,C: Cache Hit: 0.8ms P99
     Note over Q,R: Multi-stage + Reranking
@@ -371,28 +373,28 @@ classDiagram
         +create_collection(config) bool
         +manage_aliases(operations) bool
     }
-    
+
     class QueryAPI {
         +prefetch_config: PrefetchConfig
         +fusion_config: FusionConfig
         +multi_stage_search(query) SearchResults
         +optimize_prefetch(params) PrefetchParams
     }
-    
+
     class CollectionManager {
         +aliases: Dict[str, str]
         +create_collection_with_alias(name) bool
         +atomic_switch(old, new) bool
         +zero_downtime_update(collection) bool
     }
-    
+
     class SearchOptimizer {
         +hnsw_config: HNSWConfig
         +payload_indexes: PayloadIndexes
         +optimize_hnsw(collection) bool
         +create_payload_indexes(fields) bool
     }
-    
+
     QdrantService --> QueryAPI
     QdrantService --> CollectionManager
     QdrantService --> SearchOptimizer
@@ -406,22 +408,22 @@ classDiagram
 flowchart TD
     A["📥 Request"] --> B["⚡ DragonflyDB Cache"]
     B --> C{"Cache Hit?"}
-    
+
     C -->|✅ Hit| D["📤 Return Cached<br/>⏱️ 0.8ms P99<br/>📊 900K ops/sec"]
-    
+
     C -->|❌ Miss| E["🧠 Processing Pipeline"]
     E --> F["🔍 Query Execution"]
     F --> G["📋 Results Processing"]
     G --> H["💾 Cache Storage<br/>🎯 Smart TTL<br/>📈 38% memory savings"]
     H --> I["📤 Return Fresh Result"]
-    
+
     J["🔄 Cache Management<br/>⏰ TTL: 1 hour<br/>🗑️ LRU eviction"] -.-> B
-    
+
     classDef fast fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef processing fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef cache fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
     classDef decision fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
+
     class D fast
     class E,F,G,H,I processing
     class B,J cache
@@ -435,29 +437,29 @@ class CacheManager:
     def __init__(self, dragonfly_url: str):
         self.client = DragonflyClient(dragonfly_url)
         self.ttl_strategy = SmartTTLStrategy()
-    
+
     async def get_or_compute(
-        self, 
-        key: str, 
+        self,
+        key: str,
         compute_fn: Callable,
         ttl: Optional[int] = None
     ):
         """Get from cache or compute and store."""
-        
+
         # Try cache first
         cached = await self.client.get(key)
         if cached:
             return self._deserialize(cached)
-        
+
         # Compute fresh value
         value = await compute_fn()
-        
+
         # Store with smart TTL
         ttl = ttl or self.ttl_strategy.calculate_ttl(key, value)
         await self.client.setex(key, ttl, self._serialize(value))
-        
+
         return value
-    
+
     def _calculate_cache_key(self, query: str, filters: Dict) -> str:
         """Generate deterministic cache key."""
         key_data = {
@@ -476,23 +478,23 @@ class CacheManager:
 flowchart TD
     A["🌐 URL Input"] --> B["🎯 AutomationRouter"]
     B --> C["🔍 Tier Selection<br/>Static → Tier 0<br/>Dynamic → Tier 1-4"]
-    
+
     C --> D["📄 Content Extraction"]
     D --> E["🔒 Security Validation<br/>URL sanitization<br/>Content filtering"]
     E --> F["✂️ Enhanced Chunking<br/>AST-based for code<br/>Semantic for text"]
-    
+
     F --> G["📝 Chunk Processing"]
     G --> H["🧮 Embedding Generation<br/>Dense + Sparse vectors<br/>Batch optimization"]
     H --> I["🗄️ Vector Storage<br/>Qdrant with payload indexing<br/>Collection aliases"]
-    
+
     I --> J["🏷️ Metadata Indexing<br/>Full-text search<br/>Filtered queries"]
     J --> K["✅ Completion"]
-    
+
     classDef input fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
     classDef router fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef processing fill:#f1f8e9,stroke:#388e3c,stroke-width:2px
     classDef storage fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
+
     class A input
     class B,C router
     class D,E,F,G,H processing
@@ -505,26 +507,26 @@ flowchart TD
 flowchart TD
     A["🔍 Search Query"] --> B["🛡️ Security Validation"]
     B --> C["🧠 HyDE Enhancement<br/>Generate hypothetical doc<br/>Expand query context"]
-    
+
     C --> D["🔢 Vector Generation<br/>Dense embeddings<br/>Sparse embeddings"]
     D --> E["⚡ Cache Check<br/>DragonflyDB lookup<br/>0.8ms P99 latency"]
-    
+
     E -->|Hit| F["📤 Cached Results"]
     E -->|Miss| G["🗄️ Qdrant Query API<br/>Multi-stage retrieval<br/>Prefetch optimization"]
-    
+
     G --> H["🔧 Advanced Filtering Pipeline"]
     H --> H1["📅 Temporal Filter<br/>Date-based + Freshness"]
     H --> H2["📋 Content Type Filter<br/>Document classification"]
     H --> H3["🏷️ Metadata Filter<br/>Boolean logic operations"]
     H --> H4["🎯 Similarity Threshold<br/>Adaptive controls"]
     H --> H5["🔗 Filter Composer<br/>Complex combinations"]
-    
+
     H1 --> I["📊 Result Fusion<br/>Dense + Sparse + Filtered"]
     H2 --> I
     H3 --> I
     H4 --> I
     H5 --> I
-    
+
     I --> J["🎯 BGE Reranking<br/>Semantic reordering<br/>Relevance optimization"]
     J --> K["👤 Personalized Ranking<br/>User-based optimization"]
     K --> L["🗂️ Result Clustering<br/>HDBSCAN organization"]
@@ -532,16 +534,16 @@ flowchart TD
     M --> N["🌐 Federated Search<br/>Cross-collection results"]
     N --> O["💾 Cache Storage<br/>Smart TTL<br/>Result caching"]
     O --> P["📋 Final Results"]
-    
+
     F --> Q["📤 Response"]
     P --> Q
-    
+
     classDef query fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef processing fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef filtering fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     classDef cache fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef results fill:#ffebee,stroke:#c62828,stroke-width:2px
-    
+
     class A,B query
     class C,D,G processing
     class H,H1,H2,H3,H4,H5 filtering
@@ -554,7 +556,8 @@ flowchart TD
 
 ### Overview
 
-The enhanced database connection pool implementation (BJO-134) provides intelligent, ML-driven database connection management with exceptional performance improvements:
+The enhanced database connection pool implementation (BJO-134) provides intelligent,
+ML-driven database connection management with exceptional performance improvements:
 
 - **50.9% latency reduction** at P95 percentile
 - **887.9% throughput increase** under high load
@@ -573,56 +576,56 @@ graph TB
         A --> D[Connection Affinity Manager]
         A --> E[Adaptive Config Manager]
         A --> F[Query Monitor]
-        
+
         B --> B1[ML Load Prediction]
         B1 --> B2[RandomForest Model]
         B1 --> B3[Linear Trend Model]
         B1 --> B4[Pattern Recognition]
-        
+
         C --> C1[Failure Categorization]
         C1 --> C2[Connection Failures]
-        C1 --> C3[Timeout Failures] 
+        C1 --> C3[Timeout Failures]
         C1 --> C4[Query Failures]
         C1 --> C5[Transaction Failures]
         C1 --> C6[Resource Failures]
-        
+
         D --> D1[Query Pattern Analysis]
         D1 --> D2[Connection Specialization]
         D2 --> D3[Read Optimized]
         D2 --> D4[Write Optimized]
         D2 --> D5[Analytics Optimized]
         D2 --> D6[Transaction Optimized]
-        
+
         E --> E1[Strategy Selection]
         E1 --> E2[Conservative Strategy]
         E1 --> E3[Moderate Strategy]
         E1 --> E4[Aggressive Strategy]
-        
+
         F --> F1[Performance Tracking]
         F1 --> F2[Slow Query Detection]
         F1 --> F3[Query Optimization]
     end
-    
+
     subgraph "Database Layer"
         A --> G[SQLAlchemy Engine]
         G --> H[Dynamic Connection Pool]
         H --> I[(PostgreSQL/Qdrant)]
     end
-    
+
     subgraph "Monitoring"
         J[Prometheus Metrics]
         K[Grafana Dashboards]
         L[Performance Alerts]
     end
-    
+
     A --> J
     J --> K
     J --> L
-    
+
     classDef enhanced fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
     classDef ml fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef monitoring fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    
+
     class A enhanced
     class B1,B2,B3,B4 ml
     class J,K,L monitoring
@@ -637,7 +640,7 @@ flowchart TD
     A[Historical Load Data] --> B[Feature Extraction]
     B --> C[Pattern Recognition]
     C --> D[ML Model Training]
-    
+
     subgraph "Feature Engineering"
         B --> E[Request Patterns]
         B --> F[Memory Trends]
@@ -645,29 +648,29 @@ flowchart TD
         B --> H[Error Rates]
         B --> I[Time Patterns]
     end
-    
+
     subgraph "ML Models"
         D --> J[RandomForest Regressor]
         D --> K[Linear Trend Model]
         D --> L[StandardScaler]
     end
-    
+
     J --> M[Load Prediction]
     K --> N[Trend Analysis]
     L --> O[Feature Normalization]
-    
+
     M --> P[Scaling Recommendations]
     N --> P
     O --> P
-    
+
     P --> Q[Pool Size Adjustment]
     P --> R[Resource Allocation]
     P --> S[Alerting]
-    
+
     classDef input fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef ml fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef output fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    
+
     class A,E,F,G,H,I input
     class J,K,L,C,D ml
     class Q,R,S output
@@ -679,7 +682,7 @@ flowchart TD
 @dataclass
 class PatternFeatures:
     """ML features for load prediction."""
-    
+
     avg_requests: float          # Average requests per minute
     peak_requests: float         # Peak request rate
     memory_trend: float         # Memory usage trend
@@ -698,15 +701,15 @@ class PatternFeatures:
 ```mermaid
 stateDiagram-v2
     [*] --> Closed: Normal Operation
-    
+
     Closed --> Half_Open: Failure Threshold Reached
     Closed --> Open: Critical Failures
-    
+
     Half_Open --> Closed: Recovery Successful
     Half_Open --> Open: Recovery Failed
-    
+
     Open --> Half_Open: Recovery Timer Expired
-    
+
     state Closed {
         [*] --> Connection_Monitoring
         Connection_Monitoring --> Timeout_Monitoring
@@ -714,13 +717,13 @@ stateDiagram-v2
         Query_Monitoring --> Transaction_Monitoring
         Transaction_Monitoring --> Resource_Monitoring
     }
-    
+
     state Half_Open {
         [*] --> Test_Requests
         Test_Requests --> Success_Tracking
         Success_Tracking --> Recovery_Decision
     }
-    
+
     state Open {
         [*] --> Fail_Fast
         Fail_Fast --> Timer_Waiting
@@ -734,19 +737,19 @@ stateDiagram-v2
 @dataclass
 class CircuitBreakerConfig:
     """Configuration for multi-level circuit breaker."""
-    
+
     # Failure thresholds per type
     connection_threshold: int = 3      # Connection failures
     timeout_threshold: int = 5         # Timeout failures
     query_threshold: int = 10          # Query failures
     transaction_threshold: int = 5     # Transaction failures
     resource_threshold: int = 3        # Resource failures
-    
+
     # Recovery settings
     recovery_timeout: float = 60.0     # Recovery attempt interval
     half_open_max_requests: int = 3    # Test requests in half-open
     half_open_success_threshold: int = 2 # Successes needed for recovery
-    
+
     # Failure rate thresholds
     failure_rate_threshold: float = 0.5  # 50% failure rate limit
     min_requests_for_rate: int = 10      # Min requests for rate calculation
@@ -763,7 +766,7 @@ graph LR
         B --> C[Query Classification]
         C --> D[Complexity Analysis]
     end
-    
+
     subgraph "Connection Selection"
         D --> E[Connection Pool]
         E --> F[Read Optimized]
@@ -772,7 +775,7 @@ graph LR
         E --> I[Transaction Optimized]
         E --> J[General Purpose]
     end
-    
+
     subgraph "Performance Tracking"
         F --> K[Execution Metrics]
         G --> K
@@ -782,13 +785,13 @@ graph LR
         K --> L[Pattern Learning]
         L --> M[Optimization]
     end
-    
+
     M --> B
-    
+
     classDef analysis fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef connection fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef tracking fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    
+
     class A,B,C,D analysis
     class E,F,G,H,I,J connection
     class K,L,M tracking
@@ -799,7 +802,7 @@ graph LR
 ```python
 class ConnectionSpecialization(Enum):
     """Connection optimization types."""
-    
+
     GENERAL = "general"                    # Default connections
     READ_OPTIMIZED = "read_optimized"      # SELECT queries
     WRITE_OPTIMIZED = "write_optimized"    # INSERT/UPDATE/DELETE
@@ -814,40 +817,40 @@ class ConnectionSpecialization(Enum):
 ```mermaid
 flowchart TD
     A[System Metrics] --> B[Strategy Selector]
-    
+
     B --> C[Conservative Strategy]
-    B --> D[Moderate Strategy] 
+    B --> D[Moderate Strategy]
     B --> E[Aggressive Strategy]
-    
+
     subgraph "Conservative"
         C --> C1[Gradual Changes]
         C1 --> C2[Low Risk]
         C2 --> C3[Stable Performance]
     end
-    
+
     subgraph "Moderate"
         D --> D1[Balanced Changes]
         D1 --> D2[Medium Risk]
         D2 --> D3[Good Performance]
     end
-    
+
     subgraph "Aggressive"
         E --> E1[Rapid Changes]
         E1 --> E2[Higher Risk]
         E2 --> E3[Maximum Performance]
     end
-    
+
     C3 --> F[Configuration Update]
     D3 --> F
     E3 --> F
-    
+
     F --> G[Pool Reconfiguration]
     F --> H[Timeout Adjustment]
     F --> I[Threshold Tuning]
-    
+
     classDef strategy fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef config fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    
+
     class C1,D1,E1 strategy
     class G,H,I config
 ```
@@ -857,7 +860,7 @@ flowchart TD
 ```python
 class AdaptationStrategy(Enum):
     """Configuration adaptation strategies."""
-    
+
     CONSERVATIVE = "conservative"  # 10% max change, 5min intervals
     MODERATE = "moderate"          # 25% max change, 2min intervals
     AGGRESSIVE = "aggressive"      # 50% max change, 30s intervals
@@ -870,7 +873,7 @@ class AdaptationStrategy(Enum):
 ```python
 class AsyncConnectionManager:
     """Enhanced async database connection manager."""
-    
+
     def __init__(
         self,
         config: SQLAlchemyConfig,
@@ -882,44 +885,44 @@ class AsyncConnectionManager:
         # ML-based predictive monitoring
         if enable_predictive_monitoring:
             self.load_monitor = PredictiveLoadMonitor(LoadMonitorConfig())
-        
+
         # Multi-level circuit breaker
         self.circuit_breaker = MultiLevelCircuitBreaker(CircuitBreakerConfig())
-        
+
         # Connection affinity manager
         if enable_connection_affinity:
             self.connection_affinity = ConnectionAffinityManager(
                 max_patterns=1000,
                 max_connections=config.max_pool_size
             )
-        
+
         # Adaptive configuration
         if enable_adaptive_config:
             self.adaptive_config = AdaptiveConfigManager(
                 strategy=adaptation_strategy
             )
-    
+
     async def execute_query(
-        self, 
-        query: str, 
+        self,
+        query: str,
         parameters: dict[str, Any] | None = None,
         query_type: QueryType = QueryType.READ,
         timeout: Optional[float] = None
     ) -> Any:
         """Execute query with full optimization and monitoring."""
-        
+
         # Get optimal connection using affinity
         optimal_connection = await self.connection_affinity.get_optimal_connection(
             query, query_type
         )
-        
+
         # Execute with circuit breaker protection
         result = await self.circuit_breaker.execute(
             self._execute_query,
             failure_type=self._map_query_type_to_failure_type(query_type),
             timeout=timeout
         )
-        
+
         return result
 ```
 
@@ -930,46 +933,46 @@ class AsyncConnectionManager:
 ```python
 class ServiceContainer:
     """Dependency injection container for services."""
-    
+
     def __init__(self, config: UnifiedConfig):
         self.config = config
         self._services = {}
         self._initialized = False
-    
+
     async def initialize(self):
         """Initialize all services in dependency order."""
         if self._initialized:
             return
-        
+
         # Initialize core services first
         self._services['cache'] = CacheManager(self.config.cache)
         await self._services['cache'].initialize()
-        
+
         self._services['embedding'] = EmbeddingManager(
             config=self.config.embedding,
             cache=self._services['cache']
         )
         await self._services['embedding'].initialize()
-        
+
         self._services['qdrant'] = QdrantService(
             config=self.config.qdrant,
             embedding_manager=self._services['embedding']
         )
         await self._services['qdrant'].initialize()
-        
+
         self._services['browser'] = UnifiedBrowserManager(
             config=self.config.browser
         )
         await self._services['browser'].initialize()
-        
+
         self._initialized = True
-    
+
     def get_service(self, name: str):
         """Get service by name."""
         if not self._initialized:
             raise RuntimeError("Container not initialized")
         return self._services.get(name)
-    
+
     async def cleanup(self):
         """Cleanup all services."""
         for service in reversed(list(self._services.values())):
@@ -984,14 +987,14 @@ class ServiceContainer:
 ```python
 class ServiceError(Exception):
     """Base exception for service errors."""
-    
+
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.details = details or {}
 
 class ErrorHandler:
     """Centralized error handling with retry logic."""
-    
+
     @staticmethod
     async def with_retry(
         operation: Callable,
@@ -1001,7 +1004,7 @@ class ErrorHandler:
     ):
         """Execute operation with exponential backoff retry."""
         last_exception = None
-        
+
         for attempt in range(max_retries + 1):
             try:
                 return await operation()
@@ -1009,12 +1012,12 @@ class ErrorHandler:
                 last_exception = e
                 if attempt == max_retries:
                     break
-                
+
                 wait_time = backoff_factor * (2 ** attempt)
                 await asyncio.sleep(wait_time)
-        
+
         raise last_exception
-    
+
     @staticmethod
     def handle_service_error(error: Exception, context: str) -> ServiceError:
         """Convert various errors to standardized service errors."""
@@ -1040,73 +1043,73 @@ class ErrorHandler:
 ```python
 class ConfigurationManager:
     """Advanced configuration management with validation and hot-reload."""
-    
+
     def __init__(self, config_path: Optional[str] = None):
         self.config_path = config_path
         self.config = None
         self.validators = []
         self.change_handlers = []
-    
+
     def add_validator(self, validator: Callable[[UnifiedConfig], bool]):
         """Add configuration validator."""
         self.validators.append(validator)
-    
+
     def add_change_handler(self, handler: Callable[[UnifiedConfig], None]):
         """Add configuration change handler."""
         self.change_handlers.append(handler)
-    
+
     def load_config(self) -> UnifiedConfig:
         """Load and validate configuration."""
         # Load from environment and files
         config_data = self._load_config_data()
-        
+
         # Create config object with validation
         config = UnifiedConfig(**config_data)
-        
+
         # Run custom validators
         for validator in self.validators:
             if not validator(config):
                 raise ConfigurationError("Configuration validation failed")
-        
+
         self.config = config
         return config
-    
+
     def _load_config_data(self) -> Dict[str, Any]:
         """Load configuration from multiple sources."""
         config_data = {}
-        
+
         # 1. Load defaults
         config_data.update(self._get_defaults())
-        
+
         # 2. Load from file
         if self.config_path and os.path.exists(self.config_path):
             config_data.update(self._load_from_file(self.config_path))
-        
+
         # 3. Load from environment
         config_data.update(self._load_from_env())
-        
+
         return config_data
-    
+
     async def watch_config_changes(self):
         """Watch for configuration changes and reload."""
         if not self.config_path:
             return
-        
+
         last_modified = os.path.getmtime(self.config_path)
-        
+
         while True:
             await asyncio.sleep(5)  # Check every 5 seconds
-            
+
             try:
                 current_modified = os.path.getmtime(self.config_path)
                 if current_modified > last_modified:
                     logger.info("Configuration file changed, reloading...")
                     new_config = self.load_config()
-                    
+
                     # Notify handlers
                     for handler in self.change_handlers:
                         await handler(new_config)
-                    
+
                     last_modified = current_modified
             except Exception as e:
                 logger.error(f"Error reloading configuration: {e}")
@@ -1137,11 +1140,11 @@ class ConfigurationManager:
 ```python
 class OptimizedServiceManager:
     """Service manager with optimized connection pooling."""
-    
+
     def __init__(self, config: UnifiedConfig):
         self.config = config
         self.connection_pools = {}
-    
+
     async def get_qdrant_client(self) -> QdrantClient:
         """Get optimized Qdrant client with connection pooling."""
         if 'qdrant' not in self.connection_pools:
@@ -1163,7 +1166,7 @@ class OptimizedServiceManager:
                 }
             )
         return self.connection_pools['qdrant']
-    
+
     async def get_dragonfly_client(self) -> redis.Redis:
         """Get optimized DragonflyDB client."""
         if 'dragonfly' not in self.connection_pools:
@@ -1185,26 +1188,26 @@ class OptimizedServiceManager:
 ```python
 class BatchProcessor:
     """Optimized batch processing for embeddings and storage."""
-    
+
     def __init__(self, embedding_manager: EmbeddingManager, qdrant_service: QdrantService):
         self.embedding_manager = embedding_manager
         self.qdrant_service = qdrant_service
         self.batch_size = 100
         self.max_concurrent = 5
-    
+
     async def process_documents_batch(self, documents: List[Document]) -> List[ProcessingResult]:
         """Process documents in optimized batches."""
         results = []
         semaphore = asyncio.Semaphore(self.max_concurrent)
-        
+
         async def process_batch(batch: List[Document]) -> List[ProcessingResult]:
             async with semaphore:
                 # Extract texts
                 texts = [doc.content for doc in batch]
-                
+
                 # Generate embeddings in batch
                 embeddings = await self.embedding_manager.generate_embeddings(texts)
-                
+
                 # Prepare Qdrant points
                 points = [
                     PointStruct(
@@ -1214,24 +1217,24 @@ class BatchProcessor:
                     )
                     for doc, embedding in zip(batch, embeddings)
                 ]
-                
+
                 # Store in Qdrant
                 await self.qdrant_service.upsert_points(points)
-                
+
                 return [ProcessingResult(success=True, document_id=doc.id) for doc in batch]
-        
+
         # Process in batches
         batches = [documents[i:i + self.batch_size] for i in range(0, len(documents), self.batch_size)]
         batch_tasks = [process_batch(batch) for batch in batches]
-        
+
         batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-        
+
         for batch_result in batch_results:
             if isinstance(batch_result, Exception):
                 logger.error(f"Batch processing failed: {batch_result}")
             else:
                 results.extend(batch_result)
-        
+
         return results
 ```
 
@@ -1246,16 +1249,16 @@ flowchart TD
     C --> D["📝 Content Filtering<br/>Size limits<br/>Format validation"]
     D --> E["🛡️ Security Scanning<br/>Malicious content<br/>Privacy protection"]
     E --> F["✅ Sanitized Output"]
-    
+
     B -->|Invalid| G["❌ Validation Error"]
     C -->|Blocked| H["❌ URL Blocked"]
     D -->|Too Large| I["❌ Content Rejected"]
     E -->|Malicious| J["❌ Security Block"]
-    
+
     classDef valid fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef invalid fill:#ffebee,stroke:#c62828,stroke-width:2px
     classDef process fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    
+
     class F valid
     class G,H,I,J invalid
     class A,B,C,D,E process
@@ -1266,30 +1269,30 @@ flowchart TD
 ```python
 class SecurityValidator:
     """Comprehensive security validation for all inputs."""
-    
+
     def __init__(self, config: SecurityConfig):
         self.config = config
         self.url_validator = URLValidator(config.url_validation)
         self.content_filter = ContentFilter(config.content_filtering)
-    
+
     async def validate_search_request(self, request: SearchRequest) -> SearchRequest:
         """Validate and sanitize search request."""
         # Query validation
         if not request.query or len(request.query.strip()) == 0:
             raise ValidationError("Query cannot be empty")
-        
+
         if len(request.query) > self.config.max_query_length:
             raise ValidationError("Query too long")
-        
+
         # Sanitize query
         sanitized_query = self._sanitize_query(request.query)
-        
+
         # Collection name validation
         if not self._is_valid_collection_name(request.collection_name):
             raise ValidationError("Invalid collection name")
-        
+
         return request.model_copy(update={"query": sanitized_query})
-    
+
     async def validate_url(self, url: str) -> str:
         """Validate URL for security and policy compliance."""
         # Basic URL format validation
@@ -1299,34 +1302,34 @@ class SecurityValidator:
                 raise ValidationError("Invalid URL format")
         except Exception:
             raise ValidationError("Invalid URL format")
-        
+
         # Check against blocked domains
         if parsed.netloc in self.config.blocked_domains:
             raise ValidationError("Domain is blocked")
-        
+
         # Check for localhost/private IPs
         if self._is_private_address(parsed.netloc):
             raise ValidationError("Private addresses not allowed")
-        
+
         # Check for allowed domains (if whitelist exists)
         if self.config.allowed_domains and parsed.netloc not in self.config.allowed_domains:
             raise ValidationError("Domain not in allowlist")
-        
+
         return url
-    
+
     def _sanitize_query(self, query: str) -> str:
         """Sanitize search query."""
         # Remove potential injection attempts
         sanitized = re.sub(r'[<>"\']', '', query)
-        
+
         # Limit special characters
         sanitized = re.sub(r'[^\w\s\-.,?!]', '', sanitized)
-        
+
         # Normalize whitespace
         sanitized = ' '.join(sanitized.split())
-        
+
         return sanitized.strip()
-    
+
     def _is_private_address(self, hostname: str) -> bool:
         """Check if hostname is a private address."""
         private_patterns = [
@@ -1336,7 +1339,7 @@ class SecurityValidator:
             r'^192\.168\.',
             r'^172\.(1[6-9]|2[0-9]|3[01])\.'
         ]
-        
+
         return any(re.match(pattern, hostname) for pattern in private_patterns)
 ```
 
@@ -1354,7 +1357,7 @@ classDiagram
         +handle_request(request) Response
         +start_server() None
     }
-    
+
     class MCPTool {
         <<abstract>>
         +name: str
@@ -1363,25 +1366,25 @@ classDiagram
         +execute(args)* Any
         +validate_input(args) bool
     }
-    
+
     class SearchTool {
         +name: "search_documents"
         +service: QdrantService
         +execute(args) SearchResponse
     }
-    
+
     class DocumentTool {
         +name: "add_url"
         +service: BrowserManager
         +execute(args) DocumentResponse
     }
-    
+
     class CollectionTool {
         +name: "manage_collections"
         +service: QdrantService
         +execute(args) CollectionResponse
     }
-    
+
     UnifiedMCPServer --> MCPTool
     MCPTool <|-- SearchTool
     MCPTool <|-- DocumentTool
@@ -1393,24 +1396,24 @@ classDiagram
 ```python
 class MCPToolRegistry:
     """Registry for MCP tools with automatic discovery."""
-    
+
     def __init__(self, services: ServiceContainer):
         self.services = services
         self.tools = {}
-    
+
     def register_tool(self, tool_class: Type[MCPTool]):
         """Register an MCP tool."""
         tool = tool_class(self.services)
         self.tools[tool.name] = tool
         return tool
-    
+
     def auto_discover_tools(self):
         """Automatically discover and register tools."""
         from src.mcp_tools.tools import (
             SearchTool, DocumentTool, CollectionTool,
             AnalyticsTool, CacheTool, SecurityTool
         )
-        
+
         # Register core tools
         self.register_tool(SearchTool)
         self.register_tool(DocumentTool)
@@ -1418,11 +1421,11 @@ class MCPToolRegistry:
         self.register_tool(AnalyticsTool)
         self.register_tool(CacheTool)
         self.register_tool(SecurityTool)
-    
+
     def get_tool(self, name: str) -> Optional[MCPTool]:
         """Get tool by name."""
         return self.tools.get(name)
-    
+
     def list_tools(self) -> List[Dict[str, Any]]:
         """List all registered tools with schemas."""
         return [
@@ -1447,32 +1450,32 @@ class SearchTool(MCPTool):
         },
         "required": ["query"]
     }
-    
+
     def __init__(self, services: ServiceContainer):
         self.qdrant_service = services.get_service('qdrant')
         self.security_validator = services.get_service('security')
-    
+
     async def execute(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Execute search with full validation and error handling."""
         try:
             # Validate input
             request = SearchRequest(**args)
             request = await self.security_validator.validate_search_request(request)
-            
+
             # Execute search
             results = await self.qdrant_service.search_vectors(
                 query=request.query,
                 collection_name=request.collection_name,
                 limit=request.limit
             )
-            
+
             return {
                 "success": True,
                 "results": [result.model_dump() for result in results],
                 "total_count": len(results),
                 "query_time_ms": results.query_time_ms
             }
-            
+
         except ValidationError as e:
             return {"success": False, "error": f"Validation failed: {str(e)}"}
         except Exception as e:
@@ -1489,19 +1492,19 @@ gantt
     title Zero-Downtime Deployment Timeline
     dateFormat X
     axisFormat %s
-    
+
     section Preparation
     Build New Index         :active, build, 0, 30
     Validate Index         :validate, after build, 10
-    
+
     section Deployment
     Blue-Green Switch      :crit, switch, after validate, 5
     Monitor Health         :monitor, after switch, 15
-    
+
     section Traffic Migration
     Gradual Traffic Shift  :traffic, after monitor, 20
     Complete Migration     :done, milestone, after traffic, 0
-    
+
     section Monitoring
     Health Checks          :health, 0, 70
     Performance Metrics    :metrics, 0, 70
@@ -1513,41 +1516,41 @@ gantt
 ```python
 class ZeroDowntimeDeployment:
     """Manage zero-downtime deployments using collection aliases."""
-    
+
     def __init__(self, qdrant_service: QdrantService):
         self.qdrant_service = qdrant_service
         self.alias_manager = CollectionAliasManager(qdrant_service)
-    
+
     async def deploy_new_index(
-        self, 
-        documents: List[Document], 
+        self,
+        documents: List[Document],
         alias_name: str = "documents"
     ) -> bool:
         """Deploy new index with zero downtime."""
-        
+
         # 1. Create new collection with timestamp
         timestamp = int(time.time())
         new_collection = f"{alias_name}_{timestamp}"
-        
+
         logger.info(f"Creating new collection: {new_collection}")
         await self.qdrant_service.create_collection(
             collection_name=new_collection,
             config=self._get_optimized_collection_config()
         )
-        
+
         # 2. Build index in background
         logger.info("Building index in background...")
         await self._build_index(new_collection, documents)
-        
+
         # 3. Validate new index
         logger.info("Validating new index...")
         if not await self._validate_index(new_collection):
             await self.qdrant_service.delete_collection(new_collection)
             raise DeploymentError("Index validation failed")
-        
+
         # 4. Get current collection
         current_collection = await self.alias_manager.get_collection_for_alias(alias_name)
-        
+
         # 5. Atomic switch using aliases
         logger.info(f"Switching alias {alias_name} to {new_collection}")
         await self.alias_manager.atomic_switch(
@@ -1555,7 +1558,7 @@ class ZeroDowntimeDeployment:
             new_collection=new_collection,
             old_collection=current_collection
         )
-        
+
         # 6. Monitor health for 5 minutes
         logger.info("Monitoring deployment health...")
         if not await self._monitor_deployment_health(alias_name, duration=300):
@@ -1567,23 +1570,23 @@ class ZeroDowntimeDeployment:
                 old_collection=new_collection
             )
             raise DeploymentError("Deployment health check failed")
-        
+
         # 7. Cleanup old collection (after delay)
         if current_collection:
             asyncio.create_task(self._cleanup_old_collection(current_collection, delay=3600))
-        
+
         logger.info(f"Deployment completed successfully: {new_collection}")
         return True
-    
+
     async def _build_index(self, collection_name: str, documents: List[Document]):
         """Build index with optimized batch processing."""
         batch_processor = BatchProcessor(
             embedding_manager=self.embedding_manager,
             qdrant_service=self.qdrant_service
         )
-        
+
         await batch_processor.process_documents_batch(documents)
-    
+
     async def _validate_index(self, collection_name: str) -> bool:
         """Validate index health and functionality."""
         try:
@@ -1591,14 +1594,14 @@ class ZeroDowntimeDeployment:
             info = await self.qdrant_service.get_collection_info(collection_name)
             if info.points_count == 0:
                 return False
-            
+
             # Perform test search
             test_results = await self.qdrant_service.search_vectors(
                 collection_name=collection_name,
                 query="test validation query",
                 limit=1
             )
-            
+
             return len(test_results) > 0
         except Exception as e:
             logger.error(f"Index validation failed: {e}")
@@ -1614,23 +1617,23 @@ flowchart TD
     A["📊 Application Metrics"] --> B["📈 Prometheus"]
     C["📝 Application Logs"] --> D["🔍 Elasticsearch"]
     E["🔍 Distributed Tracing"] --> F["🕸️ Jaeger"]
-    
+
     B --> G["📊 Grafana Dashboard"]
     D --> H["🔍 Kibana Dashboard"]
     F --> I["🕸️ Jaeger UI"]
-    
+
     G --> J["🚨 Alertmanager"]
     H --> J
     I --> J
-    
+
     J --> K["📧 Alert Notifications"]
-    
+
     classDef metrics fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef logs fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     classDef tracing fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef dashboards fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef alerts fill:#ffebee,stroke:#c62828,stroke-width:2px
-    
+
     class A,B,G metrics
     class C,D,H logs
     class E,F,I tracing
@@ -1642,29 +1645,29 @@ flowchart TD
 ```python
 class SystemHealthMonitor:
     """Comprehensive system health monitoring."""
-    
+
     def __init__(self, services: ServiceContainer):
         self.services = services
         self.health_checks = []
         self.metrics_collector = MetricsCollector()
-    
+
     def register_health_check(self, check: HealthCheck):
         """Register a health check."""
         self.health_checks.append(check)
-    
+
     async def get_system_health(self) -> SystemHealth:
         """Get comprehensive system health status."""
         check_results = await asyncio.gather(
             *[check.execute() for check in self.health_checks],
             return_exceptions=True
         )
-        
-        healthy_checks = sum(1 for result in check_results 
+
+        healthy_checks = sum(1 for result in check_results
                            if isinstance(result, HealthCheckResult) and result.healthy)
         total_checks = len(self.health_checks)
-        
+
         overall_status = self._determine_overall_status(check_results)
-        
+
         return SystemHealth(
             status=overall_status,
             healthy_checks=healthy_checks,
@@ -1674,13 +1677,13 @@ class SystemHealthMonitor:
             },
             timestamp=time.time()
         )
-    
+
     def _determine_overall_status(self, results: List) -> HealthStatus:
         """Determine overall system health status."""
-        healthy_count = sum(1 for r in results 
+        healthy_count = sum(1 for r in results
                           if isinstance(r, HealthCheckResult) and r.healthy)
         total_count = len(results)
-        
+
         if healthy_count == total_count:
             return HealthStatus.HEALTHY
         elif healthy_count >= total_count * 0.75:
@@ -1691,7 +1694,7 @@ class SystemHealthMonitor:
 # Health check implementations
 class QdrantHealthCheck(HealthCheck):
     name = "qdrant"
-    
+
     async def execute(self) -> HealthCheckResult:
         try:
             info = await self.qdrant_service.client.get_collections()
@@ -1709,7 +1712,7 @@ class QdrantHealthCheck(HealthCheck):
 
 class CacheHealthCheck(HealthCheck):
     name = "cache"
-    
+
     async def execute(self) -> HealthCheckResult:
         try:
             await self.cache_service.client.ping()
@@ -1727,8 +1730,13 @@ class CacheHealthCheck(HealthCheck):
             )
 ```
 
-This comprehensive architecture documentation provides a complete understanding of the AI Documentation Vector DB system's design, implementation patterns, and operational characteristics. The architecture is designed for high performance, reliability, and maintainability while supporting advanced features like intelligent browser automation, hybrid vector search, and zero-downtime deployments.
+This comprehensive architecture documentation provides a complete understanding of the
+AI Documentation Vector DB system's design, implementation patterns, and operational
+characteristics. The architecture is designed for high performance, reliability, and
+maintainability while supporting advanced features like intelligent browser automation,
+hybrid vector search, and zero-downtime deployments.
 
 ---
 
-*🏗️ This architecture supports high-performance document processing, intelligent search capabilities, and robust operational patterns. All components are designed with scalability, reliability, and maintainability in mind.*
+_🏗️ This architecture supports high-performance document processing, intelligent search capabilities,
+and robust operational patterns. All components are designed with scalability, reliability, and maintainability in mind._
