@@ -199,16 +199,17 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **HIGH PRIORITY**: 2 remaining issues, 5-7 days total (3 completed: BJO-82, BJO-83, BJO-84)
   - BJO-129: Fix failing tests (2-3 days) - **CRITICAL**
   - BJO-90: V1 final polish (3-4 days)
-- **MEDIUM PRIORITY**: 3 remaining issues, 9-12 days total (4 completed: BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
+- **MEDIUM PRIORITY**: 4 remaining issues, 13-17 days total (6 completed: BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
   - BJO-68: Documentation review with BJO-87 integration (3-4 days)
   - BJO-69: Release preparation with config validation (2-3 days)
   - BJO-86: Advanced configuration examples (4-5 days)
-- **TOTAL V1 EFFORT**: 14-19 days remaining
+  - BJO-93: Enhanced Security Assessment (4-5 days)
+- **TOTAL V1 EFFORT**: 18-24 days remaining
 
 ### Linear Issue Status
 
 - **Total Issues**: 15 active + 15 completed = 30 total
-- **V1 Issues**: 5 remaining (8 completed: BJO-82, BJO-83, BJO-84, BJO-85, BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
+- **V1 Issues**: 6 remaining (10 completed: BJO-82, BJO-83, BJO-84, BJO-85, BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
 - **V2 Issues**: 5 remaining  
 - **Completed**: 15 DONE
 
