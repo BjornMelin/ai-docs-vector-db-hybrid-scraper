@@ -36,6 +36,7 @@ class TestEnhancedAsyncConnectionManager:
             config=enhanced_db_config,
             load_monitor=mock_predictive_load_monitor,
             circuit_breaker=mock_multi_level_circuit_breaker,
+            adaptive_config=mock_adaptive_config_manager,
             enable_predictive_monitoring=True,
             enable_connection_affinity=True,
             enable_adaptive_config=True,
@@ -105,8 +106,9 @@ class TestEnhancedAsyncConnectionManager:
             mock_session.execute.return_value = mock_result
             mock_session.commit = AsyncMock()
 
-            # Mock circuit breaker to return the session
-            enhanced_manager.circuit_breaker.execute.return_value = mock_result
+            # Mock circuit breaker to return the session (make it awaitable)
+            enhanced_manager.circuit_breaker.execute = AsyncMock(return_value=mock_result)
+            enhanced_manager.circuit_breaker.call = AsyncMock(return_value=mock_result)
 
             # Test query execution with enhanced circuit breaker
             query = "SELECT * FROM users"

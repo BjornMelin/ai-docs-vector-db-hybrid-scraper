@@ -54,6 +54,7 @@ class AsyncConnectionManager:
         load_monitor: LoadMonitor | None = None,
         query_monitor: QueryMonitor | None = None,
         circuit_breaker: CircuitBreaker | None = None,
+        adaptive_config: AdaptiveConfigManager | None = None,
         enable_predictive_monitoring: bool = True,
         enable_connection_affinity: bool = True,
         enable_adaptive_config: bool = True,
@@ -66,6 +67,7 @@ class AsyncConnectionManager:
             load_monitor: Optional load monitor (creates default if None)
             query_monitor: Optional query monitor (creates default if None)
             circuit_breaker: Optional circuit breaker (creates default if None)
+            adaptive_config: Optional adaptive config manager (creates default if None)
             enable_predictive_monitoring: Enable ML-based predictive load monitoring
             enable_connection_affinity: Enable connection affinity for query optimization
             enable_adaptive_config: Enable adaptive configuration management
@@ -112,9 +114,14 @@ class AsyncConnectionManager:
             )
 
         # Adaptive configuration manager
-        self.adaptive_config: AdaptiveConfigManager | None = None
-        if enable_adaptive_config:
+        if adaptive_config is not None:
+            # Use provided adaptive config (for testing)
+            self.adaptive_config = adaptive_config
+        elif enable_adaptive_config:
+            # Create default adaptive config
             self.adaptive_config = AdaptiveConfigManager(strategy=adaptation_strategy)
+        else:
+            self.adaptive_config = None
 
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker[AsyncSession] | None = None

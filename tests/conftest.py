@@ -246,10 +246,12 @@ def mock_multi_level_circuit_breaker():
     from unittest.mock import Mock
 
     from src.infrastructure.database.enhanced_circuit_breaker import CircuitState
+    from src.infrastructure.database.enhanced_circuit_breaker import MultiLevelCircuitBreaker
 
-    breaker = Mock()
+    breaker = Mock(spec=MultiLevelCircuitBreaker)
     breaker.state = CircuitState.CLOSED
     breaker.execute = AsyncMock()
+    breaker.call = AsyncMock()  # Add legacy call method too
     breaker.get_health_status = Mock(
         return_value={
             "state": "closed",
