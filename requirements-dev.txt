@@ -1,22 +1,22 @@
 # AI Docs Vector DB Hybrid Scraper - Development Dependencies
 # Install with: pip install -r requirements-dev.txt
+# For uv users: use 'uv sync --dev' instead
 
-# Core dependencies
+# Core dependencies (includes browser automation + LLM integrations)
 -r requirements.txt
 
-# Testing framework
+# Development and testing tools
 pytest>=8.3.5,<9.0.0
 pytest-asyncio>=1.0.0,<2.0.0
 pytest-cov>=6.1.1,<7.0.0
 pytest-mock>=3.14.1,<4.0.0
 fakeredis>=2.29.0,<3.0.0
+coverage>=7.6.0,<8.0.0
 
-# Code quality & formatting
+# Code quality and formatting
 ruff>=0.11.12,<0.12.0
 black>=25.1.0,<26.0.0
 
-# Optional development dependencies (install manually if needed):
-# Browser automation: pip install playwright>=1.52.0 browser-use>=0.2.6
-# LangChain integrations: pip install langchain-openai>=0.3.11 langchain-anthropic>=0.3.0
-# Code parsing: pip install tree-sitter>=0.24.0 tree-sitter-python>=0.23.6
-# Documentation: pip install mkdocs>=1.6.0 mkdocs-material>=9.5.0
+# Additional test utilities
+iniconfig>=2.1.0,<3.0.0
+pluggy>=1.6.0,<2.0.0
