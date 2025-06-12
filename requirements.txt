@@ -59,3 +59,18 @@ sqlalchemy>=2.0.0,<3.0.0
 # Utility libraries
 tomli-w>=1.0.0,<2.0.0
 jsonschema2md>=1.5.2,<2.0.0
+
+# Browser automation (optional heavy dependencies)
+playwright>=1.52.0,<2.0.0
+browser-use>=0.2.6,<0.3.0
+
+# LangChain integrations (optional AI features)
+langchain-openai>=0.3.11,<1.0.0
+langchain-anthropic>=0.3.0,<1.0.0
+langchain-google-genai>=2.0.0,<3.0.0
+
+# Code parsing tools (optional development features)
+tree-sitter>=0.24.0,<0.25.0
+tree-sitter-python>=0.23.6,<0.24.0
+tree-sitter-javascript>=0.23.1,<0.24.0
+tree-sitter-typescript>=0.23.2,<0.24.0
