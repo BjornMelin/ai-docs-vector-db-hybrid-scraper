@@ -76,14 +76,16 @@ class TestConfigurationWizard:
 
     def test_wizard_default_initialization(self):
         """Test ConfigurationWizard with default base directory."""
-        with patch("src.config.wizard.ConfigPathManager") as mock_path_manager:
-            with patch("src.config.wizard.ConfigBackupManager"):
-                with patch("src.config.wizard.ConfigMigrationManager"):
-                    with patch("src.config.wizard.create_default_migrations"):
-                        ConfigurationWizard()
+        with (
+            patch("src.config.wizard.ConfigPathManager") as mock_path_manager,
+            patch("src.config.wizard.ConfigBackupManager"),
+            patch("src.config.wizard.ConfigMigrationManager"),
+            patch("src.config.wizard.create_default_migrations"),
+        ):
+            ConfigurationWizard()
 
-                        # Should use default config directory
-                        mock_path_manager.assert_called_with(Path("config"))
+            # Should use default config directory
+            mock_path_manager.assert_called_with(Path("config"))
 
     @patch("src.config.wizard.questionary.select")
     def test_choose_setup_mode(self, mock_select):
@@ -428,10 +430,12 @@ class TestConfigurationWizard:
             mock_backup.return_value = "backup_123"
 
             # Mock validation after fixes
-            with patch("src.config.wizard.UnifiedConfig.load_from_file"):
-                with patch(
+            with (
+                patch("src.config.wizard.UnifiedConfig.load_from_file"),
+                patch(
                     "src.config.wizard.ConfigurationValidator"
-                ) as mock_validator_class:
+                ) as mock_validator_class,
+            ):
                     mock_validator = MagicMock()
                     mock_validator_class.return_value = mock_validator
                     mock_validator.validate_configuration.return_value = (
@@ -642,8 +646,10 @@ class TestConfigurationWizard:
         with patch.object(self.wizard.backup_manager, "create_backup") as mock_backup:
             mock_backup.side_effect = Exception("Backup failed")
 
-            with patch("src.config.wizard.questionary.text") as mock_text:
-                with patch("src.config.wizard.questionary.confirm") as mock_confirm:
+            with (
+                patch("src.config.wizard.questionary.text") as mock_text,
+                patch("src.config.wizard.questionary.confirm") as mock_confirm,
+            ):
                     mock_text.return_value.ask.return_value = ""
                     mock_confirm.return_value.ask.return_value = False
 

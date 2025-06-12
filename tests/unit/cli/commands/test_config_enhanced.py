@@ -166,8 +166,10 @@ class TestValidateConfigCommand:
         """Test validate command with health checks."""
         runner = CliRunner()
 
-        with patch("src.cli.commands.config.ConfigLoader") as mock_loader:
-            with patch("src.cli.commands.config.ServiceHealthChecker") as mock_health:
+        with (
+            patch("src.cli.commands.config.ConfigLoader") as mock_loader,
+            patch("src.cli.commands.config.ServiceHealthChecker") as mock_health,
+        ):
                 mock_config = MagicMock()
                 mock_config.qdrant.host = "localhost"
                 mock_config.qdrant.port = 6333
@@ -424,10 +426,12 @@ class TestTemplateCommands:
         """Test successful template application."""
         runner = CliRunner()
 
-        with patch(
-            "src.cli.commands.config.ConfigurationTemplates"
-        ) as mock_templates_class:
-            with patch("src.cli.commands.config.UnifiedConfig") as mock_config_class:
+        with (
+            patch(
+                "src.cli.commands.config.ConfigurationTemplates"
+            ) as mock_templates_class,
+            patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
+        ):
                 mock_templates = MagicMock()
                 mock_templates.apply_template_to_config.return_value = {
                     "environment": "development",
@@ -471,10 +475,12 @@ class TestTemplateCommands:
         """Test template application with environment override."""
         runner = CliRunner()
 
-        with patch(
-            "src.cli.commands.config.ConfigurationTemplates"
-        ) as mock_templates_class:
-            with patch("src.cli.commands.config.UnifiedConfig") as mock_config_class:
+        with (
+            patch(
+                "src.cli.commands.config.ConfigurationTemplates"
+            ) as mock_templates_class,
+            patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
+        ):
                 mock_templates = MagicMock()
                 mock_templates.apply_template_to_config.return_value = {
                     "test": "config"

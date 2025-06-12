@@ -67,10 +67,10 @@ class TestConfigurationWizardSimpleCoverage:
         with (
             patch("src.config.wizard.questionary.text") as mock_text,
             patch("src.config.wizard.questionary.confirm") as mock_confirm,
+            patch.object(
+                wizard.backup_manager, "create_backup"
+            ) as mock_create,
         ):
-                with patch.object(
-                    wizard.backup_manager, "create_backup"
-                ) as mock_create:
                     # Mock backup creation failure
                     mock_create.side_effect = Exception("Backup failed")
 
@@ -117,11 +117,9 @@ class TestConfigurationWizardSimpleCoverage:
         with (
             patch("src.config.wizard.questionary.text") as mock_text,
             patch("src.config.wizard.questionary.select") as mock_select,
+            patch("src.config.wizard.questionary.confirm") as mock_confirm,
+            patch.object(wizard.backup_manager, "create_backup") as mock_create,
         ):
-                with (
-                    patch("src.config.wizard.questionary.confirm") as mock_confirm,
-                    patch.object(wizard.backup_manager, "create_backup") as mock_create,
-                ):
                         # Mock responses for description and tags
                         mock_text.return_value.ask.side_effect = [
                             "Test backup description",  # description
