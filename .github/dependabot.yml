@@ -1,0 +1,107 @@
+# Dependabot configuration for automated dependency updates
+version: 2
+
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "BjornMelin"
+    assignees:
+      - "BjornMelin"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      # Group development dependencies
+      development:
+        patterns:
+          - "pytest*"
+          - "ruff*"
+          - "black*"
+          - "mypy*"
+          - "coverage*"
+          - "pre-commit*"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Group core dependencies by ecosystem
+      web-framework:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "starlette*"
+          - "pydantic*"
+        update-types:
+          - "patch"
+      
+      ai-ml:
+        patterns:
+          - "openai*"
+          - "anthropic*"
+          - "langchain*"
+          - "fastembed*"
+          - "FlagEmbedding*"
+        update-types:
+          - "patch"
+      
+      scraping:
+        patterns:
+          - "crawl4ai*"
+          - "firecrawl*"
+          - "playwright*"
+          - "browser-use*"
+        update-types:
+          - "patch"
+      
+      data-processing:
+        patterns:
+          - "pandas*"
+          - "numpy*"
+          - "scipy*"
+        update-types:
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"

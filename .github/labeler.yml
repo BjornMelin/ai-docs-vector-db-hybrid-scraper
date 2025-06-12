@@ -1,0 +1,152 @@
+# Labeler configuration for auto-labeling PRs based on changed files
+
+# Core source code
+'area/core':
+  - 'src/core/**/*'
+  - 'src/models/**/*'
+  - 'src/utils.py'
+
+# Configuration management
+'area/config':
+  - 'src/config/**/*'
+  - 'config/**/*'
+  - 'pyproject.toml'
+  - 'requirements.txt'
+  - 'uv.lock'
+
+# CLI components
+'area/cli':
+  - 'src/cli/**/*'
+  - 'src/cli_worker.py'
+
+# MCP tools
+'area/mcp':
+  - 'src/mcp_tools/**/*'
+  - 'src/unified_mcp_server.py'
+
+# Services
+'area/services':
+  - 'src/services/**/*'
+
+# Infrastructure
+'area/infrastructure':
+  - 'src/infrastructure/**/*'
+  - 'docker-compose*.yml'
+  - 'Dockerfile*'
+
+# Browser automation
+'area/browser':
+  - 'src/services/browser/**/*'
+
+# Vector database
+'area/vector-db':
+  - 'src/services/vector_db/**/*'
+  - 'src/manage_vector_db.py'
+
+# Embeddings
+'area/embeddings':
+  - 'src/services/embeddings/**/*'
+  - 'src/crawl4ai_bulk_embedder.py'
+
+# Caching
+'area/cache':
+  - 'src/services/cache/**/*'
+
+# Crawling/Scraping
+'area/crawling':
+  - 'src/services/crawling/**/*'
+  - 'src/chunking.py'
+
+# Monitoring
+'area/monitoring':
+  - 'src/services/monitoring/**/*'
+  - 'config/prometheus/**/*'
+  - 'config/grafana/**/*'
+  - 'config/alertmanager/**/*'
+  - 'docker-compose.monitoring.yml'
+
+# Security
+'area/security':
+  - 'src/security.py'
+  - '.github/workflows/security.yml'
+  - '.gitleaks.toml'
+
+# Testing
+'testing':
+  - 'tests/**/*'
+  - 'scripts/test*.py'
+  - '.pre-commit-config.yaml'
+  - pytest.ini
+  - conftest.py
+
+# Documentation
+'documentation':
+  - 'docs/**/*'
+  - '*.md'
+  - '.github/workflows/docs*.yml'
+
+# CI/CD
+'ci/cd':
+  - '.github/workflows/**/*'
+  - '.github/**/*'
+  - 'scripts/**/*'
+
+# Performance
+'performance':
+  - 'src/benchmarks/**/*'
+  - 'scripts/benchmark_*.py'
+
+# Dependencies
+'dependencies':
+  - 'pyproject.toml'
+  - 'requirements.txt'
+  - 'uv.lock'
+  - '.github/dependabot.yml'
+
+# Docker
+'docker':
+  - 'Dockerfile*'
+  - 'docker-compose*.yml'
+  - '.dockerignore'
+
+# Configuration files
+'config-files':
+  - '*.toml'
+  - '*.yml'
+  - '*.yaml'
+  - '*.json'
+  - '*.ini'
+  - '*.cfg'
+
+# Scripts
+'scripts':
+  - 'scripts/**/*'
+  - 'setup.sh'
+
+# Database
+'area/database':
+  - 'src/infrastructure/database/**/*'
+
+# Query processing
+'area/query-processing':
+  - 'src/services/query_processing/**/*'
+
+# Task queue
+'area/task-queue':
+  - 'src/services/task_queue/**/*'
+
+# Content intelligence
+'area/content-intelligence':
+  - 'src/services/content_intelligence/**/*'
+
+# Deployment
+'area/deployment':
+  - 'src/services/deployment/**/*'
+
+# API/FastAPI
+'area/api':
+  - 'src/services/fastapi/**/*'
+
+# HyDE
+'area/hyde':
+  - 'src/services/hyde/**/*'
