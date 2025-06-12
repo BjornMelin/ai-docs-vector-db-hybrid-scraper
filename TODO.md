@@ -142,13 +142,14 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 
 #### **[BJO-96](https://linear.app/bjorn-dev/issue/BJO-96)** - Advanced Filtering and Query Processing Extensions
 
-- **Status**: ✅ COMPLETED
+- **Status**: ✅ **COMPLETED**
 - **Priority**: Medium
 - **Effort**: 5-6 days (Completed)
 - **Description**: Comprehensive advanced filtering capabilities and query processing extensions including:
   - **Advanced Filtering System**: TemporalFilter, ContentTypeFilter, MetadataFilter, SimilarityThresholdManager, FilterComposer
   - **Query Processing Pipeline**: QueryExpansionService, ResultClusteringService, PersonalizedRankingService, FederatedSearchService
   - **MCP Tools Integration**: Complete Model Context Protocol integration for external access
+  - **Template System Integration**: Updated to leverage BJO-87 template system for filter configurations
   - **100% Test Coverage**: Comprehensive test suite with ≥90% coverage for all components
 
 ---
@@ -198,19 +199,18 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - **HIGH PRIORITY**: 2 remaining issues, 5-7 days total (3 completed: BJO-82, BJO-83, BJO-84)
   - BJO-129: Fix failing tests (2-3 days) - **CRITICAL**
   - BJO-90: V1 final polish (3-4 days)
-- **MEDIUM PRIORITY**: 4 remaining issues, 13-19 days total (3 completed: BJO-87, BJO-89, BJO-134)
+- **MEDIUM PRIORITY**: 3 remaining issues, 9-12 days total (4 completed: BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
   - BJO-68: Documentation review with BJO-87 integration (3-4 days)
   - BJO-69: Release preparation with config validation (2-3 days)
   - BJO-86: Advanced configuration examples (4-5 days)
-  - BJO-96: Advanced filtering (4-5 days, In Review)
-- **TOTAL V1 EFFORT**: 18-26 days remaining
+- **TOTAL V1 EFFORT**: 14-19 days remaining
 
 ### Linear Issue Status
 
-- **Total Issues**: 17 active + 13 completed = 30 total
-- **V1 Issues**: 6 remaining (6 completed: BJO-82, BJO-83, BJO-84, BJO-87, BJO-89, BJO-134)
+- **Total Issues**: 15 active + 15 completed = 30 total
+- **V1 Issues**: 5 remaining (8 completed: BJO-82, BJO-83, BJO-84, BJO-85, BJO-87, BJO-89, BJO-94, BJO-95, BJO-96, BJO-134)
 - **V2 Issues**: 5 remaining  
-- **Completed**: 13 DONE
+- **Completed**: 15 DONE
 
 ### Critical Path for V1 Release
 
@@ -234,8 +234,12 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
 - ✅ **[BJO-82](https://linear.app/bjorn-dev/issue/BJO-82)**: Content Intelligence Service Implementation  
 - ✅ **[BJO-83](https://linear.app/bjorn-dev/issue/BJO-83)**: Basic Observability & Monitoring Infrastructure
 - ✅ **[BJO-84](https://linear.app/bjorn-dev/issue/BJO-84)**: FastAPI Production Enhancements
-- ✅ **[BJO-89](https://linear.app/bjorn-dev/issue/BJO-89)**: Complete Advanced Query Processing
+- ✅ **[BJO-85](https://linear.app/bjorn-dev/issue/BJO-85)**: Advanced CLI Interface
 - ✅ **[BJO-87](https://linear.app/bjorn-dev/issue/BJO-87)**: Advanced Configuration Management System
+- ✅ **[BJO-89](https://linear.app/bjorn-dev/issue/BJO-89)**: Complete Advanced Query Processing
+- ✅ **[BJO-94](https://linear.app/bjorn-dev/issue/BJO-94)**: Advanced Hybrid Search Optimization
+- ✅ **[BJO-95](https://linear.app/bjorn-dev/issue/BJO-95)**: Intelligent Search Features
+- ✅ **[BJO-96](https://linear.app/bjorn-dev/issue/BJO-96)**: Advanced Filtering and Query Processing Extensions
 - ✅ **[BJO-134](https://linear.app/bjorn-dev/issue/BJO-134)**: Enhanced Database Connection Pool Optimization
 - ✅ **[BJO-91](https://linear.app/bjorn-dev/issue/BJO-91)**: Enhanced Anti-Detection System Implementation
 - ✅ **[BJO-92](https://linear.app/bjorn-dev/issue/BJO-92)**: Documentation Optimization Implementation  
