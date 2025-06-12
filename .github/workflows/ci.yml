@@ -335,8 +335,8 @@ jobs:
       - name: Test Docker services
         if: hashFiles('docker-compose.yml') != ''
         run: |
-          # Test docker-compose configuration
-          docker-compose config
+          # Test docker compose configuration
+          docker compose config
 
   performance-test:
     name: Performance Tests
