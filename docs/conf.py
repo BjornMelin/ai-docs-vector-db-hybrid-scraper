@@ -2,9 +2,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
 import sys
-import inspect
 from pathlib import Path
 
 # Add the project root to Python path
