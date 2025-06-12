@@ -1,27 +1,83 @@
-# Dockerfile for ARQ task queue worker
+# syntax=docker/dockerfile:1
+# Multi-stage Dockerfile for ARQ task queue worker
 
-FROM python:3.13-slim
+# =========================================
+# Stage 1: Build Environment
+# =========================================
+FROM python:3.12 AS builder
+
+# Prevent Python from writing pyc files and buffer stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
+# Install system dependencies needed for building
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
     curl \
-    netcat-traditional \
+    git \
+    libssl-dev \
+    libffi-dev \
+    libpq-dev \
+    zlib1g-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    libwebp-dev \
+    tcl8.6-dev \
+    tk8.6-dev \
+    python3-tk \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libxcb1-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for faster Python package management
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
-
-# Copy requirements
+# Copy dependency files first for better layer caching
 COPY pyproject.toml requirements.txt ./
 
-# Install Python dependencies
-RUN uv pip install --system -r requirements.txt
+# Install Python dependencies to a virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip and install build tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install dependencies with increased timeout and retries
+RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
+
+# =========================================
+# Stage 2: Runtime Environment
+# =========================================
+FROM python:3.12-slim AS runtime
+
+# Prevent Python from writing pyc files and buffer stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /app
+
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    netcat-traditional \
+    curl \
+    ca-certificates \
+    libssl3 \
+    libffi8 \
+    libbz2-1.0 \
+    liblzma5 \
+    libreadline8 \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
 COPY src/ ./src/
@@ -30,8 +86,12 @@ COPY config/ ./config/
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Create non-root user
-RUN useradd -m -u 1000 worker && chown -R worker:worker /app
+# Create non-root user for security
+ARG UID=1000
+RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false worker \
+    && chown -R worker:worker /app
+
+# Switch to non-root user
 USER worker
 
 # Health check

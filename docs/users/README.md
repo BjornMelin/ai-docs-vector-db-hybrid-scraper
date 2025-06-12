@@ -11,6 +11,7 @@ Welcome to the user documentation! This section is designed for anyone who wants
 | Guide | Description | When to Use |
 |-------|-------------|-------------|
 | [**Quick Start**](./quick-start.md) | 5-minute setup and first search | New users, getting started |
+| [**Configuration Management**](./configuration-management.md) | Setup wizard, templates, backup/restore | Setting up and managing configurations |
 | [**Search & Retrieval**](./search-and-retrieval.md) | Advanced search, HyDE, reranking | Finding information effectively |
 | [**Web Scraping**](./web-scraping.md) | Browser automation, content extraction | Collecting data from websites |
 | [**Examples & Recipes**](./examples-and-recipes.md) | Common use cases and code examples | Real-world implementations |
@@ -18,11 +19,13 @@ Welcome to the user documentation! This section is designed for anyone who wants
 
 ## 💡 What You Can Do
 
+- **Set up configurations easily** with interactive wizard and templates
 - **Search intelligently** across documents with advanced retrieval
 - **Scrape web content** using 5-tier browser automation
 - **Extract information** from multiple sources simultaneously  
 - **Use AI-enhanced search** with hypothetical document embeddings
 - **Get ranked results** with semantic reranking
+- **Manage configurations safely** with backup, restore, and migration tools
 - **Access via simple tools** through MCP interface
 
 ## 🎯 Target Users

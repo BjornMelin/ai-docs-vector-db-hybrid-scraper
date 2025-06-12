@@ -1,0 +1,481 @@
+name: Documentation Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'src/**/*.py'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'src/**/*.py'
+  workflow_dispatch:
+
+env:
+  PYTHONUNBUFFERED: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-doc-changes:
+    name: Detect Documentation Changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs-changed: ${{ steps.changes.outputs.docs }}
+      code-changed: ${{ steps.changes.outputs.code }}
+      config-changed: ${{ steps.changes.outputs.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+              - '*.md'
+            code:
+              - 'src/**/*.py'
+            config:
+              - 'pyproject.toml'
+              - 'requirements.txt'
+
+  validate-markdown:
+    name: Validate Markdown
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.docs-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdown tools
+        run: |
+          npm install -g markdownlint-cli2
+          npm install -g markdown-link-check
+
+      - name: Create markdownlint config
+        run: |
+          cat > .markdownlint-cli2.jsonc << 'EOF'
+          {
+            "config": {
+              "default": true,
+              "MD013": false,
+              "MD033": false,
+              "MD041": false,
+              "MD003": { "style": "atx" },
+              "MD007": { "indent": 2 },
+              "MD030": { "ul_single": 1, "ol_single": 1 }
+            },
+            "ignores": [
+              "node_modules/",
+              "htmlcov*/",
+              "cache/",
+              "logs/"
+            ]
+          }
+          EOF
+
+      - name: Lint markdown files
+        run: |
+          markdownlint-cli2 "**/*.md" "!node_modules" "!htmlcov*" "!cache" "!logs"
+
+      - name: Check markdown links
+        run: |
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./htmlcov*/*" -not -path "./cache/*" -not -path "./logs/*" | \
+          xargs -I {} markdown-link-check {} --config .github/markdown-link-check-config.json || true
+        continue-on-error: true
+
+  validate-doc-links:
+    name: Validate Documentation Links
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.docs-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+          
+      - name: Install dependencies
+        run: |
+          uv sync --dev --frozen
+          
+      - name: Validate documentation links
+        run: |
+          if [ -f "scripts/validate_docs_links.py" ]; then
+            uv run python scripts/validate_docs_links.py --check-only
+          else
+            echo "⚠️ Link validation script not found, skipping"
+          fi
+
+  check-naming-convention:
+    name: Check File Naming Convention
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.docs-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check kebab-case naming
+        run: |
+          non_kebab_files=()
+          
+          while IFS= read -r -d '' file; do
+            filename=$(basename "$file" .md)
+            # Skip special files
+            if [[ "$filename" == "README" ]] || [[ "$filename" == "LICENSE" ]] || \
+               [[ "$filename" == "CONTRIBUTING" ]] || [[ "$filename" == "CHANGELOG" ]] || \
+               [[ "$filename" == "SECURITY" ]] || [[ "$filename" == "CLAUDE" ]] || \
+               [[ "$filename" =~ ^[A-Z_-]+$ ]]; then
+              continue
+            fi
+            
+            # Check if filename follows kebab-case (lowercase with hyphens)
+            if [[ ! "$filename" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+              non_kebab_files+=("$file")
+            fi
+          done < <(find docs -name "*.md" -print0 2>/dev/null || true)
+          
+          if [ ${#non_kebab_files[@]} -gt 0 ]; then
+            echo "❌ Files not following kebab-case convention:"
+            printf '%s\n' "${non_kebab_files[@]}"
+            echo ""
+            echo "Please rename files to follow kebab-case convention"
+            exit 1
+          else
+            echo "✅ All documentation files follow kebab-case naming convention"
+          fi
+
+  generate-api-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.code-changed == 'true' || needs.detect-doc-changes.outputs.config-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev --frozen
+
+      - name: Install documentation tools
+        run: |
+          uv pip install -r docs/requirements.txt
+
+      - name: Generate API documentation
+        run: |
+          mkdir -p docs/api
+          
+          # Generate API documentation with sphinx-apidoc
+          echo "Generating API docs with Sphinx..."
+          uv run sphinx-apidoc -o docs/api src --force
+          
+          # Build Sphinx documentation
+          echo "Building Sphinx HTML documentation..."
+          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html docs docs/_build/html
+          
+          # Also try pdoc3 as fallback (may fail but that's OK)
+          echo "Attempting pdoc3 generation as fallback..."
+          uv run pdoc --html --output-dir docs/api_pdoc src/ || echo "⚠️ pdoc3 generation failed (expected due to dependency isolation)"
+          
+          # Create API reference index
+          echo "# API Reference" > docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "This directory contains auto-generated API documentation." >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "## Generated Documentation" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "- **Sphinx HTML**: Available in \`_build/html/\` directory" >> docs/api/README.md
+          echo "- **API Modules**: Auto-generated RST files for all Python modules" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "## Available Modules" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          
+          find src -name "*.py" -type f | sort | while read -r file; do
+            module_path=$(echo "$file" | sed 's|src/||' | sed 's|\.py$||' | sed 's|/|.|g')
+            echo "- \`$module_path\`" >> docs/api/README.md
+          done
+
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation
+          path: |
+            docs/api/
+            docs/_build/html/
+            docs/api_pdoc/
+          retention-days: 30
+
+  check-doc-coverage:
+    name: Check Documentation Coverage
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.code-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev --frozen
+
+      - name: Install documentation tools
+        run: |
+          uv pip install -r docs/requirements.txt
+          
+      - name: Check docstring coverage
+        run: |
+          echo "# Documentation Coverage Report" > doc-coverage-report.md
+          echo "" >> doc-coverage-report.md
+          echo "## Docstring Coverage" >> doc-coverage-report.md
+          echo "" >> doc-coverage-report.md
+          
+          # Run interrogate and capture output
+          uv run interrogate -v src/ --fail-under=70 --generate-badge docs/ || true
+          uv run interrogate src/ > interrogate-output.txt 2>&1 || true
+          
+          echo '```' >> doc-coverage-report.md
+          cat interrogate-output.txt >> doc-coverage-report.md
+          echo '```' >> doc-coverage-report.md
+
+      - name: Upload documentation coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-coverage-report
+          path: |
+            doc-coverage-report.md
+            docs/interrogate_badge.svg
+          retention-days: 30
+
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    needs: detect-doc-changes
+    if: needs.detect-doc-changes.outputs.docs-changed == 'true'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install cspell
+        run: npm install -g cspell
+
+      - name: Create cspell config
+        run: |
+          cat > .cspell.json << 'EOF'
+          {
+            "version": "0.2",
+            "language": "en",
+            "words": [
+              "aiofiles",
+              "aiohttp",
+              "asyncio",
+              "crawl4ai",
+              "embeddings",
+              "fastembed",
+              "firecrawl",
+              "httpx",
+              "pydantic",
+              "qdrant",
+              "uv",
+              "vectordb",
+              "vectorized",
+              "bjornmelin",
+              "github",
+              "pytest",
+              "ruff",
+              "toml",
+              "yaml"
+            ],
+            "ignorePaths": [
+              "node_modules/**",
+              "htmlcov*/**",
+              "cache/**",
+              "logs/**",
+              "*.lock",
+              "*.log"
+            ]
+          }
+          EOF
+
+      - name: Run spell check
+        run: |
+          cspell "docs/**/*.md" "*.md" --no-progress --show-context || true
+        continue-on-error: true
+
+  build-docs-site:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    needs: [validate-markdown, validate-doc-links, check-naming-convention]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev --frozen
+
+      - name: Install documentation tools
+        run: |
+          uv pip install -r docs/requirements.txt
+
+      - name: Build MkDocs documentation site
+        run: |
+          echo "Building documentation with MkDocs..."
+          uv run mkdocs build
+          
+          # Also build Sphinx documentation
+          echo "Building Sphinx documentation..."
+          uv run sphinx-apidoc -o docs/api src --force
+          PYTHONPATH=$(pwd)/src:$(pwd) uv run sphinx-build -b html docs docs/_build/html
+          
+          # Copy Sphinx docs to MkDocs site
+          mkdir -p site/sphinx
+          cp -r docs/_build/html/* site/sphinx/ 2>/dev/null || echo "No Sphinx HTML found"
+
+      - name: Upload documentation site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  collect-doc-results:
+    name: Collect Documentation Results
+    runs-on: ubuntu-latest
+    needs: [validate-markdown, validate-doc-links, check-naming-convention, generate-api-docs, check-doc-coverage, spell-check]
+    if: always()
+    
+    steps:
+      - name: Check documentation results
+        run: |
+          echo "## Documentation Pipeline Results" > doc-results.md
+          echo "" >> doc-results.md
+          echo "| Check | Status |" >> doc-results.md
+          echo "|-------|--------|" >> doc-results.md
+          echo "| Markdown Validation | ${{ needs.validate-markdown.result == 'success' && '✅ Passed' || needs.validate-markdown.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> doc-results.md
+          echo "| Link Validation | ${{ needs.validate-doc-links.result == 'success' && '✅ Passed' || needs.validate-doc-links.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> doc-results.md
+          echo "| Naming Convention | ${{ needs.check-naming-convention.result == 'success' && '✅ Passed' || needs.check-naming-convention.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> doc-results.md
+          echo "| API Documentation | ${{ needs.generate-api-docs.result == 'success' && '✅ Generated' || needs.generate-api-docs.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> doc-results.md
+          echo "| Documentation Coverage | ${{ needs.check-doc-coverage.result == 'success' && '✅ Checked' || needs.check-doc-coverage.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> doc-results.md
+          echo "| Spell Check | ${{ needs.spell-check.result == 'success' && '✅ Passed' || needs.spell-check.result == 'skipped' && '⏭️ Skipped' || '⚠️ Issues Found' }} |" >> doc-results.md
+          
+          # Check if any critical doc job failed
+          if [[ "${{ needs.validate-markdown.result }}" == "failure" ]] || \
+             [[ "${{ needs.validate-doc-links.result }}" == "failure" ]] || \
+             [[ "${{ needs.check-naming-convention.result }}" == "failure" ]]; then
+            echo ""  >> doc-results.md
+            echo "❌ **Documentation pipeline failed** - please fix the issues above"  >> doc-results.md
+            echo "FAILED" > pipeline-status.txt
+          else
+            echo ""  >> doc-results.md
+            echo "✅ **Documentation pipeline passed**"  >> doc-results.md
+            echo "PASSED" > pipeline-status.txt
+          fi
+
+      - name: Upload documentation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-results
+          path: |
+            doc-results.md
+            pipeline-status.txt
+          retention-days: 30
+
+      - name: Comment documentation results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const results = fs.readFileSync('doc-results.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: results
+              });
+            } catch (error) {
+              console.log('Documentation results not found or error reading file');
+            }
+
+      - name: Fail pipeline if critical issues
+        run: |
+          if [ -f "pipeline-status.txt" ] && [ "$(cat pipeline-status.txt)" == "FAILED" ]; then
+            echo "❌ Documentation pipeline failed"
+            exit 1
+          else
+            echo "✅ Documentation pipeline passed"
+          fi

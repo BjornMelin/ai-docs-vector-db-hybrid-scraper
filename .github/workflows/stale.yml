@@ -1,0 +1,107 @@
+name: Mark Stale Issues and PRs
+
+on:
+  schedule:
+    # Run daily at 1 AM UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Issues configuration
+          stale-issue-message: |
+            👋 This issue has been automatically marked as stale because it has not had recent activity.
+            
+            **It will be closed in 7 days if no further activity occurs.**
+            
+            If this issue is still relevant, please:
+            - Add a comment to keep it open
+            - Add the `keep-open` label
+            - Provide any additional context or updates
+            
+            Thank you for your contributions! 🙏
+          
+          close-issue-message: |
+            🔒 This issue has been automatically closed due to inactivity.
+            
+            **Don't worry!** If this issue is still relevant, you can:
+            - Reopen it with a comment
+            - Create a new issue referencing this one
+            - Contact the maintainers directly
+            
+            Thank you for your understanding! 🙏
+          
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          
+          # Pull requests configuration  
+          stale-pr-message: |
+            👋 This pull request has been automatically marked as stale because it has not had recent activity.
+            
+            **It will be closed in 14 days if no further activity occurs.**
+            
+            If this PR is still relevant, please:
+            - Add a comment to keep it open
+            - Push new commits or address review feedback
+            - Add the `keep-open` label
+            
+            Thank you for your contributions! 🙏
+          
+          close-pr-message: |
+            🔒 This pull request has been automatically closed due to inactivity.
+            
+            **Don't worry!** If this PR is still relevant, you can:
+            - Reopen it with a comment
+            - Create a new PR with updated changes
+            - Contact the maintainers directly
+            
+            Thank you for your contributions! 🙏
+          
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+          
+          # Labels configuration
+          exempt-issue-labels: 'keep-open,priority-high,priority-critical,enhancement,good-first-issue,help-wanted,security'
+          exempt-pr-labels: 'keep-open,priority-high,priority-critical,work-in-progress,do-not-merge'
+          exempt-draft-pr: true
+          
+          # Additional configuration
+          operations-per-run: 100
+          remove-stale-when-updated: true
+          debug-only: false
+          ascending: true
+          
+          # Don't mark as stale if it has these labels
+          exempt-all-assignees: false
+          exempt-all-milestones: false
+          
+          # Custom messages for different scenarios
+          stale-issue-label: 'stale'
+          close-issue-label: 'auto-closed'
+          stale-pr-label: 'stale'
+          close-pr-label: 'auto-closed'
+
+  # Job to clean up old workflow runs
+  cleanup-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 30
+          keep_minimum_runs: 10

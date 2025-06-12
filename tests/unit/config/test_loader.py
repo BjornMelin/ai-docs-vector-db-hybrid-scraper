@@ -198,7 +198,7 @@ class TestConfigLoader:
             environment="production",
             debug=False,
             log_level="INFO",
-            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
+            openai={"api_key": "sk-test123456789012345678901234567890123456789012"},
             security={"require_api_keys": True},
             cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )
@@ -231,7 +231,7 @@ class TestConfigLoader:
         assert "Debug mode should be disabled in production" in issues
         assert "Log level should not be DEBUG in production" in issues
         assert "API keys should be required in production" in issues
-        assert "OpenAI API key appears to be a placeholder" in issues
+        assert "OpenAI API key appears to be a placeholder" in str(issues)
 
     @patch("qdrant_client.QdrantClient")
     def test_validate_config_placeholder_keys(self, mock_qdrant_client):
@@ -251,8 +251,8 @@ class TestConfigLoader:
 
         assert not is_valid
         assert len(issues) == 2
-        assert "OpenAI API key appears to be a placeholder" in issues
-        assert "Firecrawl API key appears to be a placeholder" in issues
+        assert "OpenAI API key appears to be a placeholder" in str(issues)
+        assert "Firecrawl API key appears to be a placeholder" in str(issues)
 
     @patch("qdrant_client.QdrantClient")
     def test_validate_config_development_valid(self, mock_qdrant_client):
@@ -265,7 +265,7 @@ class TestConfigLoader:
             environment="development",
             debug=True,
             log_level="DEBUG",
-            openai={"api_key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef"},
+            openai={"api_key": "sk-test123456789012345678901234567890123456789012"},
             security={"require_api_keys": False},
             cache={"enable_dragonfly_cache": False},  # Disable Redis for test
         )

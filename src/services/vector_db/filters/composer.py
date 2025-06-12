@@ -64,8 +64,7 @@ class CompositionRule(BaseModel):
         if operator == CompositionOperator.NOT:
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one filter")
-        elif operator in [CompositionOperator.AND, CompositionOperator.OR]:
-            if len(v) < 2:
+        elif operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2:
                 raise ValueError(f"{operator} operator requires at least two filters")
 
         return v
@@ -342,9 +341,9 @@ class FilterComposer(BaseFilter):
                 else:
                     self._logger.warning(f"Filter {name} timed out")
 
-        except TimeoutError:
+        except TimeoutError as e:
             self._logger.error("Filter composition timed out")
-            raise FilterError("Filter composition execution timed out")
+            raise FilterError("Filter composition execution timed out") from e
 
         return results
 
@@ -363,8 +362,7 @@ class FilterComposer(BaseFilter):
                 results[filter_ref.filter_instance.name] = result
 
                 # Check if this is a required filter that failed
-                if filter_ref.required and not result.filter_conditions:
-                    if criteria.fail_fast:
+                if filter_ref.required and not result.filter_conditions and criteria.fail_fast:
                         raise FilterError(
                             f"Required filter {filter_ref.filter_instance.name} failed"
                         )
@@ -650,7 +648,7 @@ class FilterComposer(BaseFilter):
 
         def explain_rule(rule: CompositionRule, indent: int = 0) -> str:
             prefix = "  " * indent
-            filter_names = [f.filter_instance.name for f in rule.filters]
+            [f.filter_instance.name for f in rule.filters]
 
             explanation = f"{prefix}{rule.operator.value.upper()}:\n"
             for filter_ref in rule.filters:
