@@ -73,7 +73,7 @@ jobs:
 
       - name: Lint markdown files
         run: |
-          markdownlint-cli2 --config .markdownlint.json "**/*.md" "!node_modules" "!htmlcov*" "!cache" "!logs" "!.github/badges/*" "!.venv" "!.reference"
+          markdownlint-cli2 --config .markdownlint.json "**/*.md" "!node_modules" "!.venv" "!htmlcov*" "!cache" "!logs" "!.github/badges" "!.reference"
 
       - name: Check markdown links
         run: |
