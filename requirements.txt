@@ -23,17 +23,14 @@ aiosqlite==0.21.0
     # via crawl4ai
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.52.2
-    # via langchain-anthropic
 anyio==4.9.0
     # via
-    #   anthropic
-    #   browser-use
     #   httpx
     #   mcp
     #   openai
     #   sse-starlette
     #   starlette
+    #   watchfiles
 arq==0.25.0
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 asyncio-throttle==1.0.2
@@ -47,25 +44,12 @@ attrs==25.3.0
     #   trio
 authlib==1.6.0
     # via fastmcp
-backoff==2.2.1
-    # via posthog
 beautifulsoup4==4.13.4
     # via
     #   crawl4ai
     #   ir-datasets
-    #   markdownify
-boto3==1.38.28
-    # via langchain-aws
-botocore==1.38.28
-    # via
-    #   boto3
-    #   s3transfer
 brotli==1.1.0
     # via crawl4ai
-browser-use==0.2.5
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-cachetools==5.5.2
-    # via google-auth
 cbor==1.0.0
     # via trec-car-tools
 certifi==2025.4.26
@@ -105,25 +89,20 @@ cssselect==1.3.0
     # via crawl4ai
 datasets==3.6.0
     # via flagembedding
-defusedxml==0.7.1
-    # via langchain-anthropic
 dill==0.3.8
     # via
     #   datasets
     #   multiprocess
 distro==1.9.0
-    # via
-    #   anthropic
-    #   openai
-    #   posthog
+    # via openai
 exceptiongroup==1.3.0
     # via fastmcp
-faiss-cpu==1.11.0
-    # via browser-use
 fake-http-header==0.3.5
     # via tf-playwright-stealth
 fake-useragent==2.2.0
     # via crawl4ai
+fastapi==0.115.12
+    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 fastembed==0.6.1
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
@@ -136,8 +115,6 @@ filelock==3.18.0
     #   huggingface-hub
     #   torch
     #   transformers
-filetype==1.2.0
-    # via langchain-google-genai
 firecrawl-py==2.7.1
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 flagembedding==1.3.5
@@ -153,32 +130,10 @@ fsspec==2025.3.0
     #   datasets
     #   huggingface-hub
     #   torch
-google-ai-generativelanguage==0.6.18
-    # via langchain-google-genai
-google-api-core==2.25.0
-    # via
-    #   browser-use
-    #   google-ai-generativelanguage
-google-auth==2.40.2
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
-googleapis-common-protos==1.70.0
-    # via
-    #   google-api-core
-    #   grpcio-status
 greenlet==3.2.2
-    # via
-    #   patchright
-    #   playwright
-    #   sqlalchemy
+    # via playwright
 grpcio==1.72.1
-    # via
-    #   google-api-core
-    #   grpcio-status
-    #   qdrant-client
-grpcio-status==1.72.1
-    # via google-api-core
+    # via qdrant-client
 h11==0.16.0
     # via
     #   httpcore
@@ -194,17 +149,14 @@ hpack==4.1.0
     # via h2
 httpcore==1.0.9
     # via httpx
+httptools==0.6.4
+    # via uvicorn
 httpx==0.28.1
     # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   anthropic
-    #   browser-use
     #   crawl4ai
     #   fastmcp
-    #   langsmith
     #   litellm
     #   mcp
-    #   ollama
     #   openai
     #   qdrant-client
 httpx-sse==0.4.0
@@ -244,65 +196,17 @@ jinja2==3.1.6
     #   litellm
     #   torch
 jiter==0.10.0
-    # via
-    #   anthropic
-    #   openai
-jmespath==1.0.1
-    # via
-    #   boto3
-    #   botocore
+    # via openai
 joblib==1.5.1
     # via
     #   nltk
     #   scikit-learn
-jsonpatch==1.33
-    # via langchain-core
-jsonpointer==3.0.0
-    # via jsonpatch
 jsonschema==4.24.0
     # via litellm
 jsonschema-specifications==2025.4.1
     # via jsonschema
 jsonschema2md==1.5.2
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-langchain==0.3.22
-    # via browser-use
-langchain-anthropic==0.3.3
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   browser-use
-langchain-aws==0.2.19
-    # via browser-use
-langchain-core==0.3.49
-    # via
-    #   browser-use
-    #   langchain
-    #   langchain-anthropic
-    #   langchain-aws
-    #   langchain-deepseek
-    #   langchain-google-genai
-    #   langchain-ollama
-    #   langchain-openai
-    #   langchain-text-splitters
-langchain-deepseek==0.1.3
-    # via browser-use
-langchain-google-genai==2.1.2
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   browser-use
-langchain-ollama==0.3.0
-    # via browser-use
-langchain-openai==0.3.11
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   browser-use
-    #   langchain-deepseek
-langchain-text-splitters==0.3.7
-    # via langchain
-langsmith==0.3.44
-    # via
-    #   langchain
-    #   langchain-core
 litellm==1.72.0
     # via crawl4ai
 loguru==0.7.3
@@ -318,8 +222,6 @@ markdown==3.7
     # via jsonschema2md
 markdown-it-py==3.0.0
     # via rich
-markdownify==1.1.0
-    # via browser-use
 markupsafe==3.0.2
     # via jinja2
 mcp==1.9.3
@@ -328,12 +230,8 @@ mcp==1.9.3
     #   fastmcp
 mdurl==0.1.2
     # via markdown-it-py
-mem0ai==0.1.93
-    # via browser-use
 mmh3==5.1.0
     # via fastembed
-monotonic==1.6
-    # via posthog
 mpmath==1.3.0
     # via sympy
 multidict==6.4.4
@@ -354,10 +252,8 @@ numpy==2.2.6
     #   accelerate
     #   crawl4ai
     #   datasets
-    #   faiss-cpu
     #   fastembed
     #   ir-datasets
-    #   langchain-aws
     #   onnxruntime
     #   pandas
     #   peft
@@ -404,20 +300,14 @@ nvidia-nvjitlink-cu12==12.6.85
     #   torch
 nvidia-nvtx-cu12==12.6.77
     # via torch
-ollama==0.5.1
-    # via langchain-ollama
 onnxruntime==1.22.0
     # via fastembed
 openai==1.83.0
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   langchain-openai
     #   litellm
-    #   mem0ai
 openapi-pydantic==0.5.1
     # via fastmcp
-orjson==3.10.18
-    # via langsmith
 outcome==1.3.0.post0
     # via
     #   trio
@@ -426,10 +316,7 @@ packaging==24.2
     # via
     #   accelerate
     #   datasets
-    #   faiss-cpu
     #   huggingface-hub
-    #   langchain-core
-    #   langsmith
     #   onnxruntime
     #   peft
     #   transformers
@@ -437,8 +324,6 @@ pandas==2.2.3
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   datasets
-patchright==1.52.4
-    # via browser-use
 peft==0.15.2
     # via flagembedding
 pillow==10.4.0
@@ -448,73 +333,49 @@ pillow==10.4.0
     #   sentence-transformers
 playwright==1.52.0
     # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   browser-use
     #   crawl4ai
     #   tf-playwright-stealth
 portalocker==2.10.1
     # via qdrant-client
-posthog==3.25.0
+prometheus-client==0.21.1
     # via
-    #   browser-use
-    #   mem0ai
+    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
+    #   prometheus-fastapi-instrumentator
+prometheus-fastapi-instrumentator==7.1.0
+    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
+prompt-toolkit==3.0.51
+    # via questionary
 propcache==0.3.1
     # via
     #   aiohttp
     #   yarl
-proto-plus==1.26.1
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
 protobuf==6.31.1
     # via
     #   flagembedding
-    #   google-ai-generativelanguage
-    #   google-api-core
-    #   googleapis-common-protos
-    #   grpcio-status
     #   onnxruntime
-    #   proto-plus
     #   qdrant-client
 psutil==7.0.0
     # via
+    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   accelerate
-    #   browser-use
     #   crawl4ai
     #   peft
-psycopg2-binary==2.9.10
-    # via mem0ai
 py-rust-stemmers==0.1.5
     # via fastembed
 pyarrow==20.0.0
     # via
     #   datasets
     #   ir-datasets
-pyasn1==0.6.1
-    # via
-    #   pyasn1-modules
-    #   rsa
-pyasn1-modules==0.4.2
-    # via google-auth
 pycparser==2.22
     # via cffi
 pydantic==2.10.6
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   anthropic
-    #   browser-use
     #   crawl4ai
+    #   fastapi
     #   firecrawl-py
-    #   langchain
-    #   langchain-anthropic
-    #   langchain-aws
-    #   langchain-core
-    #   langchain-google-genai
-    #   langsmith
     #   litellm
     #   mcp
-    #   mem0ai
-    #   ollama
     #   openai
     #   openapi-pydantic
     #   pydantic-settings
@@ -526,9 +387,7 @@ pydantic-settings==2.9.1
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   mcp
 pyee==13.0.0
-    # via
-    #   patchright
-    #   playwright
+    # via playwright
 pygments==2.19.1
     # via rich
 pyopenssl==25.1.0
@@ -536,33 +395,26 @@ pyopenssl==25.1.0
 pypdf2==3.0.1
     # via crawl4ai
 pyperclip==1.9.0
-    # via
-    #   browser-use
-    #   crawl4ai
+    # via crawl4ai
 pysocks==1.7.1
     # via urllib3
 python-dateutil==2.9.0.post0
-    # via
-    #   botocore
-    #   pandas
-    #   posthog
+    # via pandas
 python-dotenv==1.1.0
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   browser-use
     #   crawl4ai
     #   fastmcp
     #   firecrawl-py
     #   litellm
     #   pydantic-settings
+    #   uvicorn
 python-multipart==0.0.20
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   mcp
 pytz==2024.2
-    # via
-    #   mem0ai
-    #   pandas
+    # via pandas
 pyyaml==6.0.2
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
@@ -571,14 +423,13 @@ pyyaml==6.0.2
     #   huggingface-hub
     #   ir-datasets
     #   jsonschema2md
-    #   langchain
-    #   langchain-core
     #   peft
     #   transformers
+    #   uvicorn
 qdrant-client==1.14.2
-    # via
-    #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-    #   mem0ai
+    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
+questionary==2.1.0
+    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 rank-bm25==0.2.2
     # via crawl4ai
 redis==6.2.0
@@ -596,23 +447,15 @@ regex==2024.11.6
     #   transformers
 requests==2.32.4
     # via
-    #   browser-use
     #   crawl4ai
     #   datasets
     #   fastembed
     #   firecrawl-py
-    #   google-api-core
     #   huggingface-hub
     #   inscriptis
     #   ir-datasets
-    #   langchain
-    #   langsmith
-    #   posthog
-    #   requests-toolbelt
     #   tiktoken
     #   transformers
-requests-toolbelt==1.0.0
-    # via langsmith
 rich==14.0.0
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
@@ -623,10 +466,6 @@ rpds-py==0.25.1
     # via
     #   jsonschema
     #   referencing
-rsa==4.9.1
-    # via google-auth
-s3transfer==0.13.0
-    # via boto3
 safetensors==0.5.3
     # via
     #   accelerate
@@ -641,8 +480,6 @@ scipy==1.15.3
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   scikit-learn
     #   sentence-transformers
-screeninfo==0.8.1
-    # via browser-use
 selenium==4.33.0
     # via crawl4ai
 sentence-transformers==4.1.0
@@ -656,13 +493,9 @@ setuptools==80.9.0
 shellingham==1.5.4
     # via typer
 six==1.17.0
-    # via
-    #   markdownify
-    #   posthog
-    #   python-dateutil
+    # via python-dateutil
 sniffio==1.3.1
     # via
-    #   anthropic
     #   anyio
     #   openai
     #   trio
@@ -672,28 +505,23 @@ sortedcontainers==2.4.0
     # via trio
 soupsieve==2.7
     # via beautifulsoup4
-sqlalchemy==2.0.41
-    # via
-    #   langchain
-    #   mem0ai
 sse-starlette==2.3.6
     # via mcp
-starlette==0.47.0
-    # via mcp
+starlette==0.46.2
+    # via
+    #   fastapi
+    #   mcp
+    #   prometheus-fastapi-instrumentator
 sympy==1.14.0
     # via
     #   onnxruntime
     #   torch
-tenacity==9.1.2
-    # via langchain-core
 tf-playwright-stealth==1.1.2
     # via crawl4ai
 threadpoolctl==3.6.0
     # via scikit-learn
 tiktoken==0.9.0
-    # via
-    #   langchain-openai
-    #   litellm
+    # via litellm
 tokenizers==0.21.1
     # via
     #   crawl4ai
@@ -729,14 +557,6 @@ transformers==4.52.4
     #   sentence-transformers
 trec-car-tools==2.6
     # via ir-datasets
-tree-sitter==0.24.0
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-tree-sitter-javascript==0.23.1
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-tree-sitter-python==0.23.6
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
-tree-sitter-typescript==0.23.2
-    # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 trio==0.30.0
     # via
     #   selenium
@@ -750,19 +570,16 @@ typer==0.16.0
 typing-extensions==4.13.2
     # via
     #   aiosqlite
-    #   anthropic
     #   arq
     #   beautifulsoup4
-    #   browser-use
+    #   fastapi
     #   huggingface-hub
-    #   langchain-core
     #   openai
     #   pydantic
     #   pydantic-core
     #   pyee
     #   selenium
     #   sentence-transformers
-    #   sqlalchemy
     #   torch
     #   typer
     #   typing-inspection
@@ -774,26 +591,30 @@ unlzw3==0.2.3
     # via ir-datasets
 urllib3==2.4.0
     # via
-    #   botocore
     #   qdrant-client
     #   requests
     #   selenium
-uuid7==0.1.0
-    # via browser-use
 uvicorn==0.34.3
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   mcp
+uvloop==0.21.0
+    # via uvicorn
 warc3-wet==0.2.5
     # via ir-datasets
 warc3-wet-clueweb09==0.2.5
     # via ir-datasets
+watchfiles==1.0.5
+    # via uvicorn
+wcwidth==0.2.13
+    # via prompt-toolkit
 websocket-client==1.8.0
     # via selenium
 websockets==15.0.1
     # via
     #   fastmcp
     #   firecrawl-py
+    #   uvicorn
 wsproto==1.2.0
     # via trio-websocket
 xxhash==3.5.0
@@ -806,5 +627,3 @@ zipp==3.22.0
     # via importlib-metadata
 zlib-state==0.1.9
     # via ir-datasets
-zstandard==0.23.0
-    # via langsmith

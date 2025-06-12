@@ -457,7 +457,9 @@ class TestEnhancedMonitoring:
             "test_alias", duration_seconds=1, check_interval=1
         )
 
-    @pytest.mark.skip(reason="Test has timing/async issues with error count logic - needs refactoring")
+    @pytest.mark.skip(
+        reason="Test has timing/async issues with error count logic - needs refactoring"
+    )
     @pytest.mark.asyncio
     async def test_monitor_after_switch_too_many_errors(
         self, blue_green_deployment, mock_alias_manager

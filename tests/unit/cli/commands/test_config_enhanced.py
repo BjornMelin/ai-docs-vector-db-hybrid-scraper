@@ -170,30 +170,30 @@ class TestValidateConfigCommand:
             patch("src.cli.commands.config.ConfigLoader") as mock_loader,
             patch("src.cli.commands.config.ServiceHealthChecker") as mock_health,
         ):
-                mock_config = MagicMock()
-                mock_config.qdrant.host = "localhost"
-                mock_config.qdrant.port = 6333
-                mock_config.openai.api_key = "test_key"
-                mock_config.fastembed.enabled = True
-                mock_config.fastembed.model = "test_model"
-                mock_config.cache.redis.enabled = False
+            mock_config = MagicMock()
+            mock_config.qdrant.host = "localhost"
+            mock_config.qdrant.port = 6333
+            mock_config.openai.api_key = "test_key"
+            mock_config.fastembed.enabled = True
+            mock_config.fastembed.model = "test_model"
+            mock_config.cache.redis.enabled = False
 
-                mock_loader.from_file.return_value = mock_config
+            mock_loader.from_file.return_value = mock_config
 
-                health_results = {
-                    "qdrant": {"connected": True},
-                    "openai": {"connected": False, "error": "Invalid API key"},
-                }
-                mock_health.perform_all_health_checks.return_value = health_results
+            health_results = {
+                "qdrant": {"connected": True},
+                "openai": {"connected": False, "error": "Invalid API key"},
+            }
+            mock_health.perform_all_health_checks.return_value = health_results
 
-                result = runner.invoke(
-                    validate_config,
-                    [str(temp_config_file), "--health-check"],
-                    obj=mock_context.obj,
-                )
+            result = runner.invoke(
+                validate_config,
+                [str(temp_config_file), "--health-check"],
+                obj=mock_context.obj,
+            )
 
-                assert result.exit_code == 0
-                mock_health.perform_all_health_checks.assert_called_once()
+            assert result.exit_code == 0
+            mock_health.perform_all_health_checks.assert_called_once()
 
     def test_validate_config_default_loading(self, mock_context):
         """Test validate command with default config loading."""
@@ -432,27 +432,27 @@ class TestTemplateCommands:
             ) as mock_templates_class,
             patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
         ):
-                mock_templates = MagicMock()
-                mock_templates.apply_template_to_config.return_value = {
-                    "environment": "development",
-                    "debug": True,
-                }
-                mock_templates_class.return_value = mock_templates
+            mock_templates = MagicMock()
+            mock_templates.apply_template_to_config.return_value = {
+                "environment": "development",
+                "debug": True,
+            }
+            mock_templates_class.return_value = mock_templates
 
-                mock_config = MagicMock()
-                mock_config_class.return_value = mock_config
+            mock_config = MagicMock()
+            mock_config_class.return_value = mock_config
 
-                result = runner.invoke(
-                    apply_template,
-                    ["development", "--output", "dev_config.json"],
-                    obj=mock_context.obj,
-                )
+            result = runner.invoke(
+                apply_template,
+                ["development", "--output", "dev_config.json"],
+                obj=mock_context.obj,
+            )
 
-                assert result.exit_code == 0
-                mock_templates.apply_template_to_config.assert_called_once_with(
-                    "development", environment_overrides=None
-                )
-                mock_config.save_to_file.assert_called_once()
+            assert result.exit_code == 0
+            mock_templates.apply_template_to_config.assert_called_once_with(
+                "development", environment_overrides=None
+            )
+            mock_config.save_to_file.assert_called_once()
 
     def test_apply_template_not_found(self, mock_context):
         """Test template application with non-existent template."""
@@ -481,25 +481,23 @@ class TestTemplateCommands:
             ) as mock_templates_class,
             patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
         ):
-                mock_templates = MagicMock()
-                mock_templates.apply_template_to_config.return_value = {
-                    "test": "config"
-                }
-                mock_templates_class.return_value = mock_templates
+            mock_templates = MagicMock()
+            mock_templates.apply_template_to_config.return_value = {"test": "config"}
+            mock_templates_class.return_value = mock_templates
 
-                mock_config = MagicMock()
-                mock_config_class.return_value = mock_config
+            mock_config = MagicMock()
+            mock_config_class.return_value = mock_config
 
-                result = runner.invoke(
-                    apply_template,
-                    ["development", "--environment-override", "staging"],
-                    obj=mock_context.obj,
-                )
+            result = runner.invoke(
+                apply_template,
+                ["development", "--environment-override", "staging"],
+                obj=mock_context.obj,
+            )
 
-                assert result.exit_code == 0
-                mock_templates.apply_template_to_config.assert_called_once_with(
-                    "development", environment_overrides="staging"
-                )
+            assert result.exit_code == 0
+            mock_templates.apply_template_to_config.assert_called_once_with(
+                "development", environment_overrides="staging"
+            )
 
 
 class TestWizardCommand:
