@@ -1,7 +1,7 @@
-"""Advanced hybrid search service with ML-based optimization.
+"""Advanced hybrid search service - backward compatibility wrapper.
 
-This module implements the main orchestrator for advanced hybrid search that combines
-query classification, model selection, adaptive fusion, and SPLADE sparse vectors.
+This module provides a backward compatibility wrapper around the new AdvancedSearchOrchestrator.
+It maps the old AdvancedHybridSearchService API to the new unified orchestrator.
 """
 
 import asyncio
@@ -20,6 +20,10 @@ from ...models.vector_search import AdvancedSearchResponse
 from ...models.vector_search import RetrievalMetrics
 from ...models.vector_search import SearchResult
 from ..errors import QdrantServiceError
+from ..query_processing import AdvancedSearchOrchestrator
+from ..query_processing import AdvancedSearchRequest
+from ..query_processing import SearchMode
+from ..query_processing import SearchPipeline
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
 from .model_selector import ModelSelector
 from .query_classifier import QueryClassifier
@@ -30,7 +34,11 @@ logger = logging.getLogger(__name__)
 
 
 class AdvancedHybridSearchService:
-    """Advanced hybrid search service with ML-based optimization."""
+    """Backward compatibility wrapper for advanced hybrid search.
+
+    This class provides the same interface as the old AdvancedHybridSearchService
+    but delegates to the new AdvancedSearchOrchestrator for actual search operations.
+    """
 
     def __init__(
         self,
@@ -49,7 +57,12 @@ class AdvancedHybridSearchService:
         self.config = config
         self.qdrant_search = qdrant_search
 
-        # Initialize ML components
+        # Initialize the new orchestrator
+        self.orchestrator = AdvancedSearchOrchestrator(
+            enable_all_features=True, enable_performance_optimization=True
+        )
+
+        # Initialize ML components for backward compatibility
         self.query_classifier = QueryClassifier(config)
         self.adaptive_fusion_tuner = AdaptiveFusionTuner(config)
         self.model_selector = ModelSelector(config)
@@ -89,76 +102,109 @@ class AdvancedHybridSearchService:
         start_time = time.time()
         query_id = str(uuid.uuid4())
 
-        # Initialize response with defaults
-        response = AdvancedSearchResponse(
-            results=[], retrieval_metrics=RetrievalMetrics()
-        )
-
         try:
-            # Step 1: Query Classification
-            query_classification = None
+            # Map old request to new AdvancedSearchRequest
+            advanced_request = AdvancedSearchRequest(
+                query=request.query,
+                collection_name=request.collection_name,
+                limit=request.limit,
+                score_threshold=request.score_threshold,
+                user_id=request.user_id,
+                session_id=request.session_id,
+                # Select appropriate search mode based on enabled features
+                search_mode=self._determine_search_mode(request),
+                # Select appropriate pipeline based on optimization strategy
+                pipeline=self._determine_pipeline(request),
+                # Enable features based on request
+                enable_expansion=request.enable_adaptive_fusion,
+                enable_clustering=False,  # Not enabled in old API
+                enable_personalization=request.enable_adaptive_fusion,
+                enable_federation=False,  # Not enabled in old API
+                enable_caching=True,
+                # Pass through existing configurations
+                max_processing_time_ms=self.fallback_timeout_ms,
+                quality_threshold=0.7,
+            )
+
+            # Handle query classification if enabled
             if request.enable_query_classification:
                 query_classification = await self._classify_query_with_timeout(
                     request.query,
                     {"user_id": request.user_id, "session_id": request.session_id},
                 )
-                response.query_classification = query_classification
+                if query_classification:
+                    # Store classification for later use
+                    advanced_request.query_classification = query_classification
 
-            # Step 2: A/B Test Assignment
-            ab_test_variant = None
-            if request.ab_test_config:
-                ab_test_variant = self._assign_ab_test_variant(request)
-                response.ab_test_variant = ab_test_variant
-
-            # Step 3: Model Selection
-            model_selection = None
-            if request.enable_model_selection and query_classification:
+            # Handle model selection if enabled
+            if request.enable_model_selection and hasattr(
+                advanced_request, "query_classification"
+            ):
                 model_selection = await self._select_model_with_timeout(
-                    query_classification, request
+                    advanced_request.query_classification, request
                 )
-                response.model_selection = model_selection
+                if model_selection:
+                    # Pass model selection to orchestrator via context
+                    advanced_request.model_selection = model_selection
 
-            # Step 4: Generate Dense Vector
-            dense_vector = await self._generate_dense_vector(
-                request.query, model_selection
-            )
-
-            # Step 5: Generate Sparse Vector (SPLADE)
-            sparse_vector = None
+            # Handle SPLADE if enabled
             if request.enable_splade:
                 sparse_vector = await self._generate_sparse_vector_with_timeout(
                     request.query, request.splade_config
                 )
+                if sparse_vector:
+                    # Pass sparse vector configuration
+                    advanced_request.splade_config = {
+                        "enabled": True,
+                        "vector": sparse_vector,
+                        "config": request.splade_config,
+                    }
 
-            # Step 6: Execute Search Strategies
-            search_results = await self._execute_search_strategies(
-                request, dense_vector, sparse_vector, ab_test_variant
+            # Execute search through new orchestrator
+            orchestrator_result = await self.orchestrator.search(advanced_request)
+
+            # Map orchestrator result to old response format
+            response = AdvancedSearchResponse(
+                results=self._format_search_results(orchestrator_result.results),
+                retrieval_metrics=RetrievalMetrics(
+                    query_vector_time_ms=orchestrator_result.search_metadata.get(
+                        "vector_generation_time_ms", 50.0
+                    ),
+                    search_time_ms=orchestrator_result.total_processing_time_ms - 50.0,
+                    total_time_ms=orchestrator_result.total_processing_time_ms,
+                    results_count=len(orchestrator_result.results),
+                    filtered_count=len(orchestrator_result.results),
+                    cache_hit=orchestrator_result.search_metadata.get(
+                        "cache_hit", False
+                    ),
+                    hnsw_ef_used=request.search_params.hnsw_ef,
+                ),
+                query_classification=getattr(
+                    advanced_request, "query_classification", None
+                ),
+                model_selection=getattr(advanced_request, "model_selection", None),
+                optimization_applied=orchestrator_result.optimizations_applied != [],
+                # A/B test handling
+                ab_test_variant=self._assign_ab_test_variant(request)
+                if request.ab_test_config
+                else None,
             )
 
-            # Step 7: Adaptive Fusion (if enabled)
-            if request.enable_adaptive_fusion and query_classification:
-                optimized_results = await self._apply_adaptive_fusion(
-                    request, query_classification, search_results, query_id
+            # Handle adaptive fusion if enabled
+            if request.enable_adaptive_fusion and hasattr(
+                advanced_request, "query_classification"
+            ):
+                # Get fusion weights from orchestrator metadata
+                fusion_metadata = orchestrator_result.search_metadata.get(
+                    "fusion_weights"
                 )
-                response.fusion_weights = optimized_results.get("fusion_weights")
-                response.effectiveness_score = optimized_results.get(
-                    "effectiveness_score"
-                )
-                response.optimization_applied = True
-                final_results = optimized_results["results"]
-            else:
-                final_results = search_results
+                if fusion_metadata:
+                    response.fusion_weights = fusion_metadata
+                    response.effectiveness_score = (
+                        orchestrator_result.search_metadata.get("effectiveness_score")
+                    )
 
-            # Step 8: Format Results
-            response.results = self._format_search_results(final_results)
-
-            # Step 9: Calculate Metrics
-            end_time = time.time()
-            response.retrieval_metrics = self._calculate_retrieval_metrics(
-                start_time, end_time, len(response.results), request
-            )
-
-            # Step 10: Store for Learning
+            # Store for learning
             await self._store_search_for_learning(query_id, request, response)
 
             return response
@@ -166,20 +212,37 @@ class AdvancedHybridSearchService:
         except Exception as e:
             logger.error(f"Advanced hybrid search failed: {e}", exc_info=True)
 
-            # Fallback to basic hybrid search
+            # Fallback to basic search
             if self.enable_fallback:
-                response.fallback_reason = f"Advanced search failed: {e!s}"
-                fallback_results = await self._fallback_search(request)
-                response.results = self._format_search_results(fallback_results)
-
-                end_time = time.time()
-                response.retrieval_metrics = self._calculate_retrieval_metrics(
-                    start_time, end_time, len(response.results), request
-                )
-
-                return response
+                return await self._perform_fallback_search(request, start_time, str(e))
             else:
                 raise QdrantServiceError(f"Advanced hybrid search failed: {e}") from e
+
+    def _determine_search_mode(
+        self, request: AdvancedHybridSearchRequest
+    ) -> SearchMode:
+        """Determine the appropriate search mode based on request features."""
+        if request.enable_adaptive_fusion and request.enable_query_classification:
+            return SearchMode.INTELLIGENT
+        elif request.enable_model_selection:
+            return SearchMode.PERSONALIZED
+        elif request.enable_splade:
+            return SearchMode.ENHANCED
+        else:
+            return SearchMode.SIMPLE
+
+    def _determine_pipeline(
+        self, request: AdvancedHybridSearchRequest
+    ) -> SearchPipeline:
+        """Determine the appropriate pipeline based on request configuration."""
+        if request.enable_adaptive_fusion:
+            return SearchPipeline.COMPREHENSIVE
+        elif request.fusion_config.algorithm.value == "dbsf":
+            return SearchPipeline.PRECISION
+        elif request.search_params.accuracy_level.value == "fast":
+            return SearchPipeline.FAST
+        else:
+            return SearchPipeline.BALANCED
 
     async def _classify_query_with_timeout(
         self, query: str, context: dict[str, Any] | None
@@ -233,165 +296,6 @@ class AdvancedHybridSearchService:
             logger.warning(f"SPLADE generation failed: {e}")
             return None
 
-    async def _generate_dense_vector(
-        self, query: str, model_selection: Any
-    ) -> list[float]:
-        """Generate dense vector using selected model."""
-        # This would integrate with the embedding service
-        # For now, return a placeholder - in real implementation,
-        # this would call the appropriate embedding model
-
-        # Placeholder implementation
-        # In real implementation, this would:
-        # 1. Use the selected model from model_selection
-        # 2. Call the embedding service with the optimal model
-        # 3. Return the actual embedding vector
-
-        logger.debug(f"Generating dense vector for query: {query[:50]}...")
-
-        # Return placeholder vector (in real implementation, use actual embeddings)
-        import numpy as np
-
-        return np.random.random(1536).tolist()  # OpenAI embedding dimension
-
-    async def _execute_search_strategies(
-        self,
-        request: AdvancedHybridSearchRequest,
-        dense_vector: list[float],
-        sparse_vector: dict[int, float] | None,
-        ab_test_variant: ABTestVariant | None,
-    ) -> dict[str, Any]:
-        """Execute different search strategies based on configuration."""
-        search_results = {}
-
-        # Dense vector search
-        if dense_vector:
-            dense_results = await self.qdrant_search.filtered_search(
-                collection_name=request.collection_name,
-                query_vector=dense_vector,
-                filters={},
-                limit=request.limit * 2,  # Get more for fusion
-                search_accuracy=request.search_params.accuracy_level.value,
-            )
-            search_results["dense"] = dense_results
-
-        # Sparse vector search (if available)
-        if sparse_vector:
-            # Convert sparse vector to format expected by hybrid search
-            sparse_results = await self.qdrant_search.hybrid_search(
-                collection_name=request.collection_name,
-                query_vector=dense_vector,
-                sparse_vector=sparse_vector,
-                limit=request.limit * 2,
-                score_threshold=request.score_threshold,
-                fusion_type=request.fusion_config.algorithm.value,
-                search_accuracy=request.search_params.accuracy_level.value,
-            )
-            search_results["sparse"] = sparse_results
-
-        # Hybrid search (baseline)
-        hybrid_results = await self.qdrant_search.hybrid_search(
-            collection_name=request.collection_name,
-            query_vector=dense_vector,
-            sparse_vector=sparse_vector,
-            limit=request.limit,
-            score_threshold=request.score_threshold,
-            fusion_type=request.fusion_config.algorithm.value,
-            search_accuracy=request.search_params.accuracy_level.value,
-        )
-        search_results["hybrid"] = hybrid_results
-
-        return search_results
-
-    async def _apply_adaptive_fusion(
-        self,
-        request: AdvancedHybridSearchRequest,
-        query_classification: Any,
-        search_results: dict[str, Any],
-        query_id: str,
-    ) -> dict[str, Any]:
-        """Apply adaptive fusion to optimize results."""
-        try:
-            # Get adaptive weights
-            fusion_weights = await self.adaptive_fusion_tuner.compute_adaptive_weights(
-                query_classification=query_classification,
-                query_id=query_id,
-                dense_results=search_results.get("dense"),
-                sparse_results=search_results.get("sparse"),
-            )
-
-            # Apply fusion with optimized weights
-            fused_results = self._apply_weighted_fusion(
-                search_results, fusion_weights, request.limit
-            )
-
-            return {
-                "results": fused_results,
-                "fusion_weights": fusion_weights,
-                "effectiveness_score": fusion_weights.effectiveness_score,
-            }
-
-        except Exception as e:
-            logger.error(f"Adaptive fusion failed: {e}", exc_info=True)
-            # Fallback to baseline hybrid results
-            return {
-                "results": search_results.get("hybrid", []),
-                "fusion_weights": None,
-                "effectiveness_score": None,
-            }
-
-    def _apply_weighted_fusion(
-        self, search_results: dict[str, Any], fusion_weights: Any, limit: int
-    ) -> list[dict[str, Any]]:
-        """Apply weighted fusion to search results."""
-        # Simple weighted combination of results
-        # In production, this would be more sophisticated
-
-        dense_results = search_results.get("dense", [])
-        sparse_results = search_results.get("sparse", [])
-
-        if not dense_results and not sparse_results:
-            return search_results.get("hybrid", [])
-
-        # Create a combined ranking using fusion weights
-        combined_scores = {}
-
-        # Add dense results with weight
-        dense_weight = fusion_weights.dense_weight if fusion_weights else 0.7
-        for i, result in enumerate(dense_results[: limit * 2]):
-            doc_id = result["id"]
-            # Weight by position and fusion weight
-            position_score = 1.0 / (i + 1)
-            combined_scores[doc_id] = (
-                combined_scores.get(doc_id, 0) + dense_weight * position_score
-            )
-
-        # Add sparse results with weight
-        sparse_weight = fusion_weights.sparse_weight if fusion_weights else 0.3
-        for i, result in enumerate(sparse_results[: limit * 2]):
-            doc_id = result["id"]
-            position_score = 1.0 / (i + 1)
-            combined_scores[doc_id] = (
-                combined_scores.get(doc_id, 0) + sparse_weight * position_score
-            )
-
-        # Sort by combined score and return top results
-        sorted_results = sorted(
-            combined_scores.items(), key=lambda x: x[1], reverse=True
-        )
-
-        # Reconstruct result objects (simplified)
-        final_results = []
-        all_results = {r["id"]: r for r in dense_results + sparse_results}
-
-        for doc_id, score in sorted_results[:limit]:
-            if doc_id in all_results:
-                result = all_results[doc_id].copy()
-                result["score"] = float(score)  # Update with fusion score
-                final_results.append(result)
-
-        return final_results
-
     def _assign_ab_test_variant(
         self, request: AdvancedHybridSearchRequest
     ) -> ABTestVariant:
@@ -416,28 +320,44 @@ class AdvancedHybridSearchService:
 
         return ABTestVariant.CONTROL
 
-    async def _fallback_search(
-        self, request: AdvancedHybridSearchRequest
-    ) -> list[dict[str, Any]]:
+    async def _perform_fallback_search(
+        self, request: AdvancedHybridSearchRequest, start_time: float, error_msg: str
+    ) -> AdvancedSearchResponse:
         """Perform fallback search when advanced features fail."""
         try:
-            # Generate basic dense vector (placeholder)
-            dense_vector = await self._generate_dense_vector(request.query, None)
-
-            # Perform basic hybrid search
-            return await self.qdrant_search.hybrid_search(
+            # Use simple search through orchestrator
+            fallback_request = AdvancedSearchRequest(
+                query=request.query,
                 collection_name=request.collection_name,
-                query_vector=dense_vector,
-                sparse_vector=None,
                 limit=request.limit,
                 score_threshold=request.score_threshold,
-                fusion_type="rrf",  # Default fusion
-                search_accuracy="balanced",
+                search_mode=SearchMode.SIMPLE,
+                pipeline=SearchPipeline.FAST,
+                enable_caching=True,
+            )
+
+            result = await self.orchestrator.search(fallback_request)
+
+            end_time = time.time()
+            return AdvancedSearchResponse(
+                results=self._format_search_results(result.results),
+                retrieval_metrics=RetrievalMetrics(
+                    total_time_ms=(end_time - start_time) * 1000,
+                    results_count=len(result.results),
+                    filtered_count=len(result.results),
+                ),
+                fallback_reason=f"Advanced search failed: {error_msg}",
             )
 
         except Exception as e:
             logger.error(f"Fallback search also failed: {e}", exc_info=True)
-            return []
+            return AdvancedSearchResponse(
+                results=[],
+                retrieval_metrics=RetrievalMetrics(
+                    total_time_ms=(time.time() - start_time) * 1000,
+                ),
+                fallback_reason=f"All search attempts failed: {error_msg}",
+            )
 
     def _format_search_results(
         self, results: list[dict[str, Any]]
@@ -449,32 +369,12 @@ class AdvancedHybridSearchService:
             search_result = SearchResult(
                 id=str(result.get("id", "")),
                 score=float(result.get("score", 0.0)),
-                payload=result.get("payload", {}),
+                payload=result.get("payload", result),
                 vector=result.get("vector"),
             )
             formatted_results.append(search_result)
 
         return formatted_results
-
-    def _calculate_retrieval_metrics(
-        self,
-        start_time: float,
-        end_time: float,
-        results_count: int,
-        request: AdvancedHybridSearchRequest,
-    ) -> RetrievalMetrics:
-        """Calculate retrieval performance metrics."""
-        total_time_ms = (end_time - start_time) * 1000
-
-        return RetrievalMetrics(
-            query_vector_time_ms=50.0,  # Placeholder
-            search_time_ms=total_time_ms - 50.0,
-            total_time_ms=total_time_ms,
-            results_count=results_count,
-            filtered_count=results_count,
-            cache_hit=False,  # Would be determined by actual cache usage
-            hnsw_ef_used=request.search_params.hnsw_ef,
-        )
 
     async def _store_search_for_learning(
         self,
@@ -510,10 +410,6 @@ class AdvancedHybridSearchService:
         try:
             # This would update the adaptive fusion tuner and other components
             # with user feedback for continuous improvement
-
-            # Extract any stored weights for this query
-            # In production, this would retrieve from persistent storage
-
             logger.debug(f"Processing user feedback for query {query_id}")
 
         except Exception as e:

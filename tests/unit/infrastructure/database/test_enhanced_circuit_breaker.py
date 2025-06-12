@@ -334,7 +334,8 @@ class TestMultiLevelCircuitBreaker:
 
         result = await circuit_breaker.execute(test_func)
         assert result == "success"
-        assert circuit_breaker.state == CircuitState.HALF_OPEN
+        # With half_open_success_threshold=1, one success should close the circuit
+        assert circuit_breaker.state == CircuitState.CLOSED
 
     @pytest.mark.asyncio
     async def test_half_open_success_closes_circuit(self, circuit_breaker):
@@ -628,7 +629,7 @@ class TestCircuitBreakerEdgeCases:
             return f"{arg1}_{arg2}_{kwarg1}_{kwarg2}"
 
         result = await breaker.execute(
-            test_func, args=("a", "b"), kwargs={"kwarg1": "c", "kwarg2": "d"}
+            test_func, FailureType.QUERY, None, None, "a", "b", kwarg1="c", kwarg2="d"
         )
 
         assert result == "a_b_c_d"

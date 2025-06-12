@@ -1101,4 +1101,4 @@ class BJO134IntegrationTests:
         assert accuracy >= 0.95, f"Expected >=95% accuracy, got {accuracy*100:.1f}%"
 ```
 
-For detailed performance analysis and optimization strategies, see the [Developer API Reference](api-reference.md).
+For detailed performance analysis and optimization strategies, see the [Developer API Reference](../developers/api-reference.md).

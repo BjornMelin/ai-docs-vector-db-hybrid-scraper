@@ -387,4 +387,4 @@ print(f"Score distributions: {debug_results['score_distributions']}")
 print(f"Reranking impact: {debug_results['reranking_metrics']}")
 ```
 
-For additional configuration options and advanced use cases, see the [API Reference](api-reference.md) and [Performance Benchmarking](benchmarking-and-performance.md) guides.
+For additional configuration options and advanced use cases, see the [API Reference](../developers/api-reference.md) and [Performance Benchmarking](../developers/benchmarking-and-performance.md) guides.

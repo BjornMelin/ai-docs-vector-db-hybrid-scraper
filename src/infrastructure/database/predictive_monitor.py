@@ -5,8 +5,10 @@ to anticipate database load patterns and enable proactive connection pool scalin
 """
 
 import logging
+import re
 import time
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -19,6 +21,16 @@ from .load_monitor import LoadMonitor
 from .load_monitor import LoadMonitorConfig
 
 logger = logging.getLogger(__name__)
+
+
+class QueryTypeDB(Enum):
+    """Database query types for SQL query classification."""
+
+    READ = "READ"
+    WRITE = "WRITE"
+    ANALYTICS = "ANALYTICS"
+    TRANSACTION = "TRANSACTION"
+    MAINTENANCE = "MAINTENANCE"
 
 
 @dataclass
@@ -96,10 +108,13 @@ class PredictiveLoadMonitor(LoadMonitor):
         """
         # Check cache first
         cache_key = horizon_minutes
+        current_time = time.time()
         if cache_key in self.prediction_cache:
             cached_prediction = self.prediction_cache[cache_key]
             # Use cached prediction if it's less than 1 minute old
-            if time.time() - cached_prediction.time_horizon_minutes < 60:
+            # Note: We need to store creation time separately since time_horizon_minutes is the prediction horizon
+            cache_age = getattr(cached_prediction, "_cache_timestamp", 0)
+            if current_time - cache_age < 60:
                 return cached_prediction
 
         if not self.is_model_trained or len(self.pattern_history) < 10:
@@ -138,6 +153,9 @@ class PredictiveLoadMonitor(LoadMonitor):
                 feature_importance=feature_importance,
                 trend_direction=trend_direction,
             )
+
+            # Add cache timestamp to prediction object
+            prediction._cache_timestamp = current_time
 
             # Cache the prediction
             self.prediction_cache[cache_key] = prediction
@@ -224,9 +242,6 @@ class PredictiveLoadMonitor(LoadMonitor):
         Args:
             metrics: Load metrics to record
         """
-        # Call parent method
-        await super().record_load_metrics(metrics)
-
         # Add to pattern history
         self.pattern_history.append(metrics)
 
@@ -266,13 +281,15 @@ class PredictiveLoadMonitor(LoadMonitor):
         day_of_week = ((current_time // 86400) % 7) / 7  # Normalize to 0-1
 
         features = [
-            np.mean(requests),  # avg_requests
-            np.max(requests),  # peak_requests
+            float(np.mean(requests)),  # avg_requests
+            float(np.max(requests)),  # peak_requests
             self._calculate_trend(memory_usage),  # memory_trend
-            np.var(response_times) if response_times else 0.0,  # response_time_variance
-            np.mean(errors) if errors else 0.0,  # error_rate
-            time_of_day,  # time_of_day
-            day_of_week,  # day_of_week
+            float(
+                np.var(response_times) if response_times else 0.0
+            ),  # response_time_variance
+            float(np.mean(errors) if errors else 0.0),  # error_rate
+            float(time_of_day),  # time_of_day
+            float(day_of_week),  # day_of_week
             self._detect_cyclical_pattern(recent_metrics),  # cyclical_pattern
             self._calculate_volatility_index(recent_metrics),  # volatility_index
         ]
@@ -349,13 +366,13 @@ class PredictiveLoadMonitor(LoadMonitor):
         day_of_week = ((current_time // 86400) % 7) / 7
 
         return [
-            np.mean(requests),
-            np.max(requests),
+            float(np.mean(requests)),
+            float(np.max(requests)),
             self._calculate_trend(memory_usage),
-            np.var(response_times) if response_times else 0.0,
-            np.mean(errors) if errors else 0.0,
-            time_of_day,
-            day_of_week,
+            float(np.var(response_times) if response_times else 0.0),
+            float(np.mean(errors) if errors else 0.0),
+            float(time_of_day),
+            float(day_of_week),
             self._detect_cyclical_pattern(metrics_window),
             self._calculate_volatility_index(metrics_window),
         ]
@@ -517,7 +534,7 @@ class PredictiveLoadMonitor(LoadMonitor):
         else:
             predicted_load = 0.5  # Default moderate load
 
-        return LoadPrediction(
+        prediction = LoadPrediction(
             predicted_load=predicted_load,
             confidence_score=0.5,  # Low confidence for bootstrap
             recommendation="Insufficient data for accurate prediction - monitor patterns",
@@ -525,6 +542,11 @@ class PredictiveLoadMonitor(LoadMonitor):
             feature_importance={},
             trend_direction="unknown",
         )
+
+        # Add cache timestamp for consistency
+        prediction._cache_timestamp = time.time()
+
+        return prediction
 
     async def _validate_model_performance(
         self, X_scaled: np.ndarray, y: np.ndarray
@@ -578,3 +600,107 @@ class PredictiveLoadMonitor(LoadMonitor):
             "feature_importance": self.feature_importance_cache,
             "cache_size": len(self.prediction_cache),
         }
+
+    def _normalize_query(self, query: str) -> str:
+        """Normalize SQL query for pattern matching.
+
+        Args:
+            query: Raw SQL query
+
+        Returns:
+            Normalized query with literals replaced by placeholders
+        """
+        # Remove extra whitespace and normalize case
+        normalized = re.sub(r"\s+", " ", query.strip().upper())
+
+        # Replace numeric literals with placeholder
+        normalized = re.sub(r"\b\d+\b", "?", normalized)
+
+        # Replace string literals with placeholder
+        normalized = re.sub(r"'[^']*'", "'?'", normalized)
+        normalized = re.sub(r'"[^"]*"', '"?"', normalized)
+
+        return normalized
+
+    def _classify_query_type(self, query: str) -> QueryTypeDB:
+        """Classify SQL query type based on keywords.
+
+        Args:
+            query: SQL query to classify
+
+        Returns:
+            QueryTypeDB enum representing the query type
+        """
+        query_upper = query.upper().strip()
+
+        # Transaction queries
+        if any(
+            keyword in query_upper
+            for keyword in ["BEGIN", "COMMIT", "ROLLBACK", "START TRANSACTION"]
+        ):
+            return QueryTypeDB.TRANSACTION
+
+        # Maintenance queries
+        if any(
+            keyword in query_upper
+            for keyword in ["ANALYZE", "VACUUM", "REINDEX", "OPTIMIZE"]
+        ):
+            return QueryTypeDB.MAINTENANCE
+
+        # Analytics queries (aggregations)
+        if any(
+            keyword in query_upper
+            for keyword in ["COUNT(", "SUM(", "AVG(", "GROUP BY", "HAVING"]
+        ):
+            return QueryTypeDB.ANALYTICS
+
+        # Write operations
+        if any(
+            query_upper.startswith(keyword)
+            for keyword in ["INSERT", "UPDATE", "DELETE", "MERGE", "UPSERT"]
+        ):
+            return QueryTypeDB.WRITE
+
+        # Default to READ for SELECT and other queries
+        return QueryTypeDB.READ
+
+    def _calculate_query_complexity(self, query: str) -> float:
+        """Calculate complexity score for SQL query.
+
+        Args:
+            query: SQL query to analyze
+
+        Returns:
+            Complexity score between 0.0 and 1.0
+        """
+        query_upper = query.upper()
+        complexity_score = 0.0
+
+        # Base complexity factors
+        if "SELECT" in query_upper:
+            complexity_score += 0.1
+
+        # Join complexity
+        join_keywords = ["JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "INNER JOIN"]
+        join_count = sum(query_upper.count(keyword) for keyword in join_keywords)
+        complexity_score += min(join_count * 0.15, 0.4)
+
+        # Subquery complexity
+        subquery_count = query_upper.count("SELECT") - 1  # Main query doesn't count
+        complexity_score += min(subquery_count * 0.2, 0.3)
+
+        # Aggregation complexity
+        agg_keywords = ["GROUP BY", "HAVING", "ORDER BY", "DISTINCT"]
+        agg_count = sum(1 for keyword in agg_keywords if keyword in query_upper)
+        complexity_score += min(agg_count * 0.1, 0.2)
+
+        # Window functions
+        if "OVER(" in query_upper:
+            complexity_score += 0.15
+
+        # Common table expressions
+        if "WITH " in query_upper:
+            complexity_score += 0.1
+
+        # Clamp to valid range
+        return min(1.0, max(0.0, complexity_score))

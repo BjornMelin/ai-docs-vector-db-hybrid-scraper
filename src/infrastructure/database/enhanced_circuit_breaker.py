@@ -328,10 +328,11 @@ class MultiLevelCircuitBreaker:
                 # Any failure in half-open state opens the circuit
                 await self._transition_to_open()
 
-            elif self.state == CircuitState.CLOSED:
+            elif self.state == CircuitState.CLOSED and await self._should_open_circuit(
+                failure_type
+            ):
                 # Check if we should open the circuit
-                if await self._should_open_circuit(failure_type):
-                    await self._transition_to_open()
+                await self._transition_to_open()
 
     async def _should_open_circuit(self, failure_type: FailureType) -> bool:
         """Determine if circuit should be opened based on failures."""

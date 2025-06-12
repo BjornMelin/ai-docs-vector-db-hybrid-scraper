@@ -10,7 +10,7 @@ from typing import Any
 from ..base import BaseService
 from .models import QueryProcessingRequest
 from .models import QueryProcessingResponse
-from .orchestrator import QueryProcessingOrchestrator
+from .orchestrator import AdvancedSearchOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class QueryProcessingPipeline(BaseService):
     and search execution through the orchestrator.
     """
 
-    def __init__(self, orchestrator: QueryProcessingOrchestrator, config: Any = None):
+    def __init__(self, orchestrator: AdvancedSearchOrchestrator, config: Any = None):
         """Initialize the query processing pipeline.
 
         Args:
