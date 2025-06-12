@@ -1,152 +1,199 @@
 # Labeler configuration for auto-labeling PRs based on changed files
+# Compatible with actions/labeler@v5+ format
 
 # Core source code
 'area/core':
-  - 'src/core/**/*'
-  - 'src/models/**/*'
-  - 'src/utils.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/core/**/*'
+    - 'src/models/**/*'
+    - 'src/utils.py'
 
 # Configuration management
 'area/config':
-  - 'src/config/**/*'
-  - 'config/**/*'
-  - 'pyproject.toml'
-  - 'requirements.txt'
-  - 'uv.lock'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/config/**/*'
+    - 'config/**/*'
+    - 'pyproject.toml'
+    - 'requirements.txt'
+    - 'uv.lock'
 
 # CLI components
 'area/cli':
-  - 'src/cli/**/*'
-  - 'src/cli_worker.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/cli/**/*'
+    - 'src/cli_worker.py'
 
 # MCP tools
 'area/mcp':
-  - 'src/mcp_tools/**/*'
-  - 'src/unified_mcp_server.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/mcp_tools/**/*'
+    - 'src/unified_mcp_server.py'
 
 # Services
 'area/services':
-  - 'src/services/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/**/*'
 
 # Infrastructure
 'area/infrastructure':
-  - 'src/infrastructure/**/*'
-  - 'docker-compose*.yml'
-  - 'Dockerfile*'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/infrastructure/**/*'
+    - 'docker-compose*.yml'
+    - 'Dockerfile*'
 
 # Browser automation
 'area/browser':
-  - 'src/services/browser/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/browser/**/*'
 
 # Vector database
 'area/vector-db':
-  - 'src/services/vector_db/**/*'
-  - 'src/manage_vector_db.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/services/vector_db/**/*'
+    - 'src/manage_vector_db.py'
 
 # Embeddings
 'area/embeddings':
-  - 'src/services/embeddings/**/*'
-  - 'src/crawl4ai_bulk_embedder.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/services/embeddings/**/*'
+    - 'src/crawl4ai_bulk_embedder.py'
 
 # Caching
 'area/cache':
-  - 'src/services/cache/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/cache/**/*'
 
 # Crawling/Scraping
 'area/crawling':
-  - 'src/services/crawling/**/*'
-  - 'src/chunking.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/services/crawling/**/*'
+    - 'src/chunking.py'
 
 # Monitoring
 'area/monitoring':
-  - 'src/services/monitoring/**/*'
-  - 'config/prometheus/**/*'
-  - 'config/grafana/**/*'
-  - 'config/alertmanager/**/*'
-  - 'docker-compose.monitoring.yml'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/services/monitoring/**/*'
+    - 'config/prometheus/**/*'
+    - 'config/grafana/**/*'
+    - 'config/alertmanager/**/*'
+    - 'docker-compose.monitoring.yml'
 
 # Security
 'area/security':
-  - 'src/security.py'
-  - '.github/workflows/security.yml'
-  - '.gitleaks.toml'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/security.py'
+    - '.github/workflows/security.yml'
+    - '.gitleaks.toml'
 
 # Testing
 'testing':
-  - 'tests/**/*'
-  - 'scripts/test*.py'
-  - '.pre-commit-config.yaml'
-  - pytest.ini
-  - conftest.py
+- changed-files:
+  - any-glob-to-any-file:
+    - 'tests/**/*'
+    - 'scripts/test*.py'
+    - '.pre-commit-config.yaml'
+    - 'pytest.ini'
+    - 'conftest.py'
 
 # Documentation
 'documentation':
-  - 'docs/**/*'
-  - '*.md'
-  - '.github/workflows/docs*.yml'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'docs/**/*'
+    - '*.md'
+    - '.github/workflows/docs*.yml'
 
 # CI/CD
 'ci/cd':
-  - '.github/workflows/**/*'
-  - '.github/**/*'
-  - 'scripts/**/*'
+- changed-files:
+  - any-glob-to-any-file:
+    - '.github/workflows/**/*'
+    - '.github/**/*'
+    - 'scripts/**/*'
 
 # Performance
 'performance':
-  - 'src/benchmarks/**/*'
-  - 'scripts/benchmark_*.py'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/benchmarks/**/*'
+    - 'scripts/benchmark_*.py'
 
 # Dependencies
 'dependencies':
-  - 'pyproject.toml'
-  - 'requirements.txt'
-  - 'uv.lock'
-  - '.github/dependabot.yml'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'pyproject.toml'
+    - 'requirements.txt'
+    - 'uv.lock'
+    - '.github/dependabot.yml'
 
 # Docker
 'docker':
-  - 'Dockerfile*'
-  - 'docker-compose*.yml'
-  - '.dockerignore'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'Dockerfile*'
+    - 'docker-compose*.yml'
+    - '.dockerignore'
 
 # Configuration files
 'config-files':
-  - '*.toml'
-  - '*.yml'
-  - '*.yaml'
-  - '*.json'
-  - '*.ini'
-  - '*.cfg'
+- changed-files:
+  - any-glob-to-any-file:
+    - '*.toml'
+    - '*.yml'
+    - '*.yaml'
+    - '*.json'
+    - '*.ini'
+    - '*.cfg'
 
 # Scripts
 'scripts':
-  - 'scripts/**/*'
-  - 'setup.sh'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'scripts/**/*'
+    - 'setup.sh'
 
 # Database
 'area/database':
-  - 'src/infrastructure/database/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/infrastructure/database/**/*'
 
 # Query processing
 'area/query-processing':
-  - 'src/services/query_processing/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/query_processing/**/*'
 
 # Task queue
 'area/task-queue':
-  - 'src/services/task_queue/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/task_queue/**/*'
 
 # Content intelligence
 'area/content-intelligence':
-  - 'src/services/content_intelligence/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/content_intelligence/**/*'
 
 # Deployment
 'area/deployment':
-  - 'src/services/deployment/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/deployment/**/*'
 
 # API/FastAPI
 'area/api':
-  - 'src/services/fastapi/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/fastapi/**/*'
 
 # HyDE
 'area/hyde':
-  - 'src/services/hyde/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'src/services/hyde/**/*'

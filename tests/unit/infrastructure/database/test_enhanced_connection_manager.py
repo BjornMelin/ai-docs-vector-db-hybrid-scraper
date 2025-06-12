@@ -726,36 +726,36 @@ class TestEnhancedConnectionManagerIntegration:
                     "src.infrastructure.database.connection_manager.async_sessionmaker"
                 ) as mock_sessionmaker,
             ):
-                    mock_create_engine.return_value = mock_engine
-                    mock_sessionmaker.return_value = mock_session_factory
+                mock_create_engine.return_value = mock_engine
+                mock_sessionmaker.return_value = mock_session_factory
 
-                    # Initialize and test basic functionality
-                    await manager.initialize()
-                    assert manager._is_initialized
+                # Initialize and test basic functionality
+                await manager.initialize()
+                assert manager._is_initialized
 
-                    # Test query execution
-                    # The circuit breaker will call the function, which returns the mock_result from the session
-                    result = await manager.execute_query(
-                        "SELECT 1", query_type=QueryType.READ
-                    )
-                    # The result should be the mock_result from the session
-                    assert result == mock_result
-                    assert result.scalar() == 1
+                # Test query execution
+                # The circuit breaker will call the function, which returns the mock_result from the session
+                result = await manager.execute_query(
+                    "SELECT 1", query_type=QueryType.READ
+                )
+                # The result should be the mock_result from the session
+                assert result == mock_result
+                assert result.scalar() == 1
 
-                    # Test connection registration
-                    await manager.register_connection("test_conn", "read")
+                # Test connection registration
+                await manager.register_connection("test_conn", "read")
 
-                    # Test adaptive configuration
-                    config_state = await mock_real_components[
-                        "adaptive_config"
-                    ].get_current_configuration()
-                    assert "strategy" in config_state
-                    assert "current_settings" in config_state
+                # Test adaptive configuration
+                config_state = await mock_real_components[
+                    "adaptive_config"
+                ].get_current_configuration()
+                assert "strategy" in config_state
+                assert "current_settings" in config_state
 
-                    # Test comprehensive stats
-                    stats = await manager.get_connection_stats()
-                    assert "pool_size" in stats
-                    assert "enhanced_circuit_breaker" in stats
+                # Test comprehensive stats
+                stats = await manager.get_connection_stats()
+                assert "pool_size" in stats
+                assert "enhanced_circuit_breaker" in stats
 
         finally:
             await manager.shutdown()

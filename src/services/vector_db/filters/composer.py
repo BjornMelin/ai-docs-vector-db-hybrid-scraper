@@ -64,8 +64,7 @@ class CompositionRule(BaseModel):
         if operator == CompositionOperator.NOT:
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one filter")
-        elif operator in [CompositionOperator.AND, CompositionOperator.OR]:
-            if len(v) < 2:
+        elif operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2:
                 raise ValueError(f"{operator} operator requires at least two filters")
 
         return v
@@ -363,8 +362,7 @@ class FilterComposer(BaseFilter):
                 results[filter_ref.filter_instance.name] = result
 
                 # Check if this is a required filter that failed
-                if filter_ref.required and not result.filter_conditions:
-                    if criteria.fail_fast:
+                if filter_ref.required and not result.filter_conditions and criteria.fail_fast:
                         raise FilterError(
                             f"Required filter {filter_ref.filter_instance.name} failed"
                         )

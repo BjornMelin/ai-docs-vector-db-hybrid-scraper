@@ -354,7 +354,7 @@ class TestDatabaseConnectionPoolOptimizationIntegration:
                 try:
                     await manager.circuit_breaker.call(failing_function)
                 except Exception:
-                    pass  # Expected failures
+                    continue  # Expected failures
 
             # Circuit should be open now
             stats = await manager.get_connection_stats()

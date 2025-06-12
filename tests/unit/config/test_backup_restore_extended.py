@@ -253,7 +253,7 @@ class TestConfigBackupManagerErrorHandling:
         old_time = datetime.now() - timedelta(days=35)
         old_timestamp = old_time.strftime("%Y%m%d_%H%M%S")
 
-        for i, backup in enumerate(all_backups[:2]):
+        for backup in all_backups[:2]:
             self.backup_manager._metadata[backup.backup_id].created_at = old_timestamp
         self.backup_manager._save_metadata()
 

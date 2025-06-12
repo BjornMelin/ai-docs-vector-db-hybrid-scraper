@@ -671,8 +671,10 @@ class TestConfigurationWizard:
 
     def test_migration_setup_no_migration_path(self, sample_config_file):
         """Test migration setup when no migration path exists."""
-        with patch("src.config.wizard.questionary.path") as mock_path:
-            with patch("src.config.wizard.questionary.text") as mock_text:
+        with (
+            patch("src.config.wizard.questionary.path") as mock_path,
+            patch("src.config.wizard.questionary.text") as mock_text,
+        ):
                 mock_path.return_value.ask.return_value = str(sample_config_file)
                 mock_text.return_value.ask.return_value = "3.0.0"  # No path to 3.0.0
 
@@ -694,8 +696,10 @@ class TestConfigurationWizard:
         """Test import setup when validation fails and user cancels."""
         target_path = self.temp_dir / "imported_config.json"
 
-        with patch("src.config.wizard.questionary.path") as mock_path:
-            with patch("src.config.wizard.questionary.confirm") as mock_confirm:
+        with (
+            patch("src.config.wizard.questionary.path") as mock_path,
+            patch("src.config.wizard.questionary.confirm") as mock_confirm,
+        ):
                 mock_path.return_value.ask.side_effect = [
                     str(sample_config_file),
                     str(target_path),
@@ -752,8 +756,10 @@ class TestConfigurationWizard:
         with patch.object(self.wizard.backup_manager, "create_backup") as mock_backup:
             mock_backup.return_value = "backup_123"
 
-            with patch("builtins.open", mock_open(read_data='{"test": "config"}')):
-                with patch("src.config.wizard.json.load") as mock_json_load:
+            with (
+                patch("builtins.open", mock_open(read_data='{"test": "config"}')),
+                patch("src.config.wizard.json.load") as mock_json_load,
+            ):
                     mock_json_load.return_value = {"test": "config"}
 
                     result = self.wizard._attempt_fixes(sample_config_file, report)
@@ -767,8 +773,10 @@ class TestConfigurationWizard:
         ) as mock_apply:
             mock_apply.return_value = None  # Template loading failed
 
-            with patch("src.config.wizard.questionary.select") as mock_select:
-                with patch("src.config.wizard.questionary.confirm") as mock_confirm:
+            with (
+                patch("src.config.wizard.questionary.select") as mock_select,
+                patch("src.config.wizard.questionary.confirm") as mock_confirm,
+            ):
                     mock_select.return_value.ask.return_value = (
                         "🛠️  Development - Debug logging, local database, fast iteration"
                     )

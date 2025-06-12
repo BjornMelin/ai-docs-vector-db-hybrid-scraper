@@ -140,12 +140,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --dev --frozen
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            # Windows: Install with fallbacks for problematic native dependencies
+            uv sync --dev --frozen || uv pip install --no-deps -e . && uv pip install -r pyproject.toml
+          else
+            uv sync --dev --frozen
+          fi
+        env:
+          # Windows-specific environment variables for native dependencies
+          PYTHONUTF8: 1
+        shell: bash
 
       - name: Setup test environment
+        shell: bash
         run: |
-          # Create test directories
-          mkdir -p tests/fixtures/{cache,data,logs}
+          # Create test directories (cross-platform)
+          mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
           mkdir -p logs cache data
 
       - name: Run unit tests

@@ -11,17 +11,13 @@
     },
     {
       "pattern": "^https://127.0.0.1"
-    },
-    {
-      "pattern": "^mailto:"
     }
   ],
   "httpHeaders": [
     {
       "urls": ["https://github.com"],
       "headers": {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "User-Agent": "Mozilla/5.0 (compatible; markdown-link-check)"
+        "User-Agent": "markdown-link-check"
       }
     }
   ],

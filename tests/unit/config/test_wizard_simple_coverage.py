@@ -36,8 +36,8 @@ class TestConfigurationWizardSimpleCoverage:
         with (
             patch("src.config.wizard.UnifiedConfig.load_from_file"),
             patch("src.config.wizard.ConfigurationValidator") as mock_validator_class,
+            patch("src.config.wizard.questionary.confirm") as mock_confirm,
         ):
-            with patch("src.config.wizard.questionary.confirm") as mock_confirm:
                 mock_validator = MagicMock()
                 mock_validator_class.return_value = mock_validator
 
@@ -64,8 +64,10 @@ class TestConfigurationWizardSimpleCoverage:
 
     def test_backup_wizard_error_handling(self, wizard, sample_config_file):
         """Test backup wizard with error condition to cover error handling lines."""
-        with patch("src.config.wizard.questionary.text") as mock_text:
-            with patch("src.config.wizard.questionary.confirm") as mock_confirm:
+        with (
+            patch("src.config.wizard.questionary.text") as mock_text,
+            patch("src.config.wizard.questionary.confirm") as mock_confirm,
+        ):
                 with patch.object(
                     wizard.backup_manager, "create_backup"
                 ) as mock_create:
@@ -112,12 +114,14 @@ class TestConfigurationWizardSimpleCoverage:
 
     def test_backup_wizard_with_tags_and_description(self, wizard, sample_config_file):
         """Test backup wizard with tags and description to cover those code paths."""
-        with patch("src.config.wizard.questionary.text") as mock_text:
-            with patch("src.config.wizard.questionary.select") as mock_select:
-                with patch("src.config.wizard.questionary.confirm") as mock_confirm:
-                    with patch.object(
-                        wizard.backup_manager, "create_backup"
-                    ) as mock_create:
+        with (
+            patch("src.config.wizard.questionary.text") as mock_text,
+            patch("src.config.wizard.questionary.select") as mock_select,
+        ):
+                with (
+                    patch("src.config.wizard.questionary.confirm") as mock_confirm,
+                    patch.object(wizard.backup_manager, "create_backup") as mock_create,
+                ):
                         # Mock responses for description and tags
                         mock_text.return_value.ask.side_effect = [
                             "Test backup description",  # description

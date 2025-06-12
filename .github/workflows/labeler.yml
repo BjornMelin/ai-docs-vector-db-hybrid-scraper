@@ -26,6 +26,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/labeler.yml
+          sync-labels: true
 
       - name: Label PR based on size
         uses: codelytv/pr-size-labeler@v1

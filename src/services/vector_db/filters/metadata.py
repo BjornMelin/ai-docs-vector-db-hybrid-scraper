@@ -94,8 +94,7 @@ class FieldConditionModel(BaseModel):
         if self.operator in [FieldOperator.IN, FieldOperator.NIN]:
             if not self.values:
                 raise ValueError(f"values list required for {self.operator} operator")
-        elif self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS]:
-            if self.value is None:
+        elif self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS] and self.value is None:
                 raise ValueError(f"value required for {self.operator} operator")
 
         return self
@@ -118,8 +117,7 @@ class BooleanExpressionModel(BaseModel):
         if operator == BooleanOperator.NOT:
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one condition")
-        elif operator in [BooleanOperator.AND, BooleanOperator.OR]:
-            if len(v) < 2:
+        elif operator in [BooleanOperator.AND, BooleanOperator.OR] and len(v) < 2:
                 raise ValueError(
                     f"{operator} operator requires at least two conditions"
                 )

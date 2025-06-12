@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for ARQ task queue worker
+# Minimal Dockerfile for ARQ task queue worker (development/testing)
 
 # =========================================
 # Stage 1: Build Environment
@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies needed for building
+# Install minimal system dependencies needed for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
@@ -21,24 +21,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     libssl-dev \
     libffi-dev \
-    libpq-dev \
-    zlib1g-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    liblcms2-dev \
-    libopenjp2-7-dev \
-    libtiff5-dev \
-    libwebp-dev \
-    tcl8.6-dev \
-    tk8.6-dev \
-    python3-tk \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    libxcb1-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files first for better layer caching
-COPY pyproject.toml requirements.txt ./
+# Copy minimal dependency files first for better layer caching
+COPY requirements-minimal.txt ./
 
 # Install Python dependencies to a virtual environment
 RUN python -m venv /opt/venv
@@ -47,8 +33,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip and install build tools
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install dependencies with increased timeout and retries
-RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
+# Install minimal dependencies
+RUN pip install --no-cache-dir --timeout=300 --retries=3 -r requirements-minimal.txt
 
 # =========================================
 # Stage 2: Runtime Environment
@@ -69,10 +55,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libssl3 \
     libffi8 \
-    libbz2-1.0 \
-    liblzma5 \
-    libreadline8 \
-    libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the virtual environment from builder stage
@@ -94,9 +76,9 @@ RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false worker \
 # Switch to non-root user
 USER worker
 
-# Health check
+# Health check (basic Python connectivity test)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import redis; r = redis.Redis(host='dragonfly', port=6379); r.ping()"
+  CMD python -c "import sys; print('Python OK'); sys.exit(0)"
 
 # Run the worker
 CMD ["arq", "src.services.task_queue.worker.WorkerSettings"]

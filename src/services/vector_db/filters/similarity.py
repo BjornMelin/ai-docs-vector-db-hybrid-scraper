@@ -150,8 +150,7 @@ class SimilarityThresholdCriteria(BaseModel):
     @classmethod
     def validate_threshold_ranges(cls, v, info):
         """Validate threshold ranges."""
-        if info.field_name == "max_threshold" and info.data.get("min_threshold"):
-            if v <= info.data["min_threshold"]:
+        if info.field_name == "max_threshold" and info.data.get("min_threshold") and v <= info.data["min_threshold"]:
                 raise ValueError("max_threshold must be > min_threshold")
         return v
 

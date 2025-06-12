@@ -1,0 +1,104 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.cache
+nosetests.xml
+coverage.xml
+*.egg-info
+*.egg
+build
+dist
+.venv
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.vs/
+
+# Documentation and development files
+README.md
+*.md
+docs/
+documentation/
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+ROADMAP.md
+
+# Test files and configuration
+tests/
+test_*
+*_test.py
+pytest.ini
+tox.ini
+.pytest_cache/
+
+# Docker files (excluding needed Dockerfiles)
+docker-compose*.yml
+Dockerfile*
+!Dockerfile.worker
+
+# Logs and temporary files
+logs/
+*.log
+tmp/
+temp/
+.tmp/
+
+# CI/CD and deployment
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+deploy/
+
+# Cache and data directories
+cache/
+data/
+.qdrant_data/
+.dragonfly_data/
+
+# Coverage reports
+htmlcov*/
+coverage.json
+
+# Development scripts
+scripts/
+setup.sh
+
+# Backup and temporary files
+*.bak
+*.backup
+*.tmp
+*.swp
+
+# OS specific files
+Thumbs.db
+.DS_Store
+
+# Node modules (if any)
+node_modules/
+
+# Environment files (should be handled via ENV vars in deployment)
+.env*
+!.env.example
