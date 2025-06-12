@@ -686,7 +686,7 @@ sympy==1.14.0
     #   torch
 tenacity==9.1.2
     # via langchain-core
-tf-playwright-stealth==1.1.2
+tf-playwright-stealth==1.1.5
     # via crawl4ai
 threadpoolctl==3.6.0
     # via scikit-learn
