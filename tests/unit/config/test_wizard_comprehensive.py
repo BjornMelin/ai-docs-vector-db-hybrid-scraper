@@ -40,7 +40,7 @@ class TestConfigurationWizardInit:
         """Test that wizard creates necessary directories."""
         with tempfile.TemporaryDirectory() as temp_dir:
             base_dir = Path(temp_dir) / "new_config"
-            wizard = ConfigurationWizard(base_dir)
+            ConfigurationWizard(base_dir)
 
             assert base_dir.exists()
 

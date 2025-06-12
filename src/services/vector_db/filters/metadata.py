@@ -336,7 +336,7 @@ class MetadataFilter(BaseFilter):
                     # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                     exclude_values = [
                         str(v)
-                        if isinstance(v, bool) or not isinstance(v, (str, int))
+                        if isinstance(v, bool) or not isinstance(v, str | int)
                         else v
                         for v in value
                     ]
@@ -350,7 +350,7 @@ class MetadataFilter(BaseFilter):
                     # Convert value to string if it's not string/int (but exclude bool even though it's int)
                     exclude_value = (
                         str(value)
-                        if isinstance(value, bool) or not isinstance(value, (str, int))
+                        if isinstance(value, bool) or not isinstance(value, str | int)
                         else value
                     )
                     conditions.append(
@@ -401,7 +401,6 @@ class MetadataFilter(BaseFilter):
         values = condition.values
 
         # Apply global case sensitivity setting
-        case_sensitive = condition.case_sensitive and not criteria.ignore_case
 
         try:
             # Existence operators
@@ -424,7 +423,7 @@ class MetadataFilter(BaseFilter):
                 # Convert value to string if it's not string/int (but exclude bool even though it's int)
                 exclude_value = (
                     str(value)
-                    if isinstance(value, bool) or not isinstance(value, (str, int))
+                    if isinstance(value, bool) or not isinstance(value, str | int)
                     else value
                 )
                 return models.FieldCondition(
@@ -449,9 +448,7 @@ class MetadataFilter(BaseFilter):
             elif operator == FieldOperator.NIN:
                 # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                 exclude_values = [
-                    str(v)
-                    if isinstance(v, bool) or not isinstance(v, (str, int))
-                    else v
+                    str(v) if isinstance(v, bool) or not isinstance(v, str | int) else v
                     for v in values
                 ]
                 return models.FieldCondition(

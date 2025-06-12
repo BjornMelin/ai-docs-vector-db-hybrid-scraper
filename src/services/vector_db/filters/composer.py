@@ -650,7 +650,7 @@ class FilterComposer(BaseFilter):
 
         def explain_rule(rule: CompositionRule, indent: int = 0) -> str:
             prefix = "  " * indent
-            filter_names = [f.filter_instance.name for f in rule.filters]
+            [f.filter_instance.name for f in rule.filters]
 
             explanation = f"{prefix}{rule.operator.value.upper()}:\n"
             for filter_ref in rule.filters:

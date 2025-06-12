@@ -364,148 +364,193 @@ class ContentClassifier:
 
         Args:
             content: Text content to classify
-
-        Raises:
-            RuntimeError: If classifier not initialized
             url: Optional URL for additional context
             title: Optional title for additional context
             use_semantic_analysis: Whether to use semantic similarity analysis
 
         Returns:
             ContentClassification: Classification results with confidence scores
+
+        Raises:
+            RuntimeError: If classifier not initialized
         """
         if not self._initialized:
             raise RuntimeError("ContentClassifier not initialized")
 
         if not content.strip():
-            return ContentClassification(
-                primary_type=ContentType.UNKNOWN,
-                secondary_types=[],
-                confidence_scores={ContentType.UNKNOWN: 1.0},
-                classification_reasoning="Empty content provided",
+            return self._create_unknown_classification("Empty content provided")
+
+        # Calculate rule-based scores
+        type_scores, reasoning_parts = self._calculate_rule_based_scores(
+            content, url, title
+        )
+
+        # Apply semantic analysis if requested
+        if use_semantic_analysis and self.embedding_manager:
+            type_scores = await self._apply_semantic_analysis(
+                type_scores, content, reasoning_parts
             )
 
-        # Normalize inputs
+        # Apply contextual adjustments and special cases
+        type_scores = self._apply_contextual_adjustments(
+            type_scores, content, url, title
+        )
+        type_scores = self._handle_code_content_special_case(type_scores, content, url)
+
+        # Determine final classification results
+        return self._create_final_classification(type_scores, content, reasoning_parts)
+
+    def _create_unknown_classification(self, reason: str) -> ContentClassification:
+        """Create a classification result for unknown content."""
+        return ContentClassification(
+            primary_type=ContentType.UNKNOWN,
+            secondary_types=[],
+            confidence_scores={ContentType.UNKNOWN: 1.0},
+            classification_reasoning=reason,
+        )
+
+    def _calculate_rule_based_scores(
+        self, content: str, url: str | None, title: str | None
+    ) -> tuple[dict[ContentType, float], list[str]]:
+        """Calculate rule-based classification scores."""
         content_lower = content.lower()
         url_lower = url.lower() if url else ""
         title_lower = title.lower() if title else ""
 
-        # Calculate scores for each content type
         type_scores: dict[ContentType, float] = {}
         reasoning_parts = []
 
         for content_type, patterns in self._classification_patterns.items():
-            score = 0.0
-            type_reasoning = []
-
-            # Keyword matching in content
-            keyword_matches = sum(
-                1 for keyword in patterns["keywords"] if keyword in content_lower
+            score, type_reasoning = self._score_content_type(
+                content_lower, url_lower, title_lower, patterns
             )
-            if keyword_matches > 0:
-                keyword_score = min(keyword_matches / len(patterns["keywords"]), 1.0)
-                score += keyword_score * CLASSIFICATION_WEIGHTS["keyword_weight"]
-                type_reasoning.append(
-                    f"keywords: {keyword_matches}/{len(patterns['keywords'])}"
-                )
-
-            # URL pattern matching
-            if url:
-                url_matches = sum(
-                    1
-                    for pattern in patterns["url_patterns"]
-                    if re.search(pattern, url_lower)
-                )
-                if url_matches > 0:
-                    url_score = min(url_matches / len(patterns["url_patterns"]), 1.0)
-                    score += url_score * CLASSIFICATION_WEIGHTS["url_weight"]
-                    type_reasoning.append(f"URL patterns: {url_matches}")
-
-            # Title pattern matching
-            if title:
-                title_matches = sum(
-                    1
-                    for pattern in patterns.get("title_patterns", [])
-                    if re.search(pattern, title_lower)
-                )
-                if title_matches > 0:
-                    title_score = min(
-                        title_matches / len(patterns.get("title_patterns", [1])), 1.0
-                    )
-                    score += title_score * CLASSIFICATION_WEIGHTS["title_weight"]
-                    type_reasoning.append(f"title patterns: {title_matches}")
-
-            # Content indicator matching
-            indicator_matches = sum(
-                1
-                for indicator in patterns.get("content_indicators", [])
-                if indicator in content_lower
-            )
-            if indicator_matches > 0:
-                indicator_score = min(
-                    indicator_matches / len(patterns.get("content_indicators", [1])),
-                    1.0,
-                )
-                score += indicator_score * CLASSIFICATION_WEIGHTS["indicator_weight"]
-                type_reasoning.append(f"indicators: {indicator_matches}")
-
             type_scores[content_type] = score
-            if (
-                score > CLASSIFICATION_WEIGHTS["min_classification_score"]
-            ):  # Only include meaningful scores in reasoning
+
+            if score > CLASSIFICATION_WEIGHTS["min_classification_score"]:
                 reasoning_parts.append(
                     f"{content_type.value}: {score:.2f} ({', '.join(type_reasoning)})"
                 )
 
-        # Add semantic analysis if available and requested
-        if use_semantic_analysis and self.embedding_manager:
-            try:
-                semantic_scores = await self._semantic_classification(content)
-                # Blend semantic scores with rule-based scores
-                blend_ratio = CLASSIFICATION_WEIGHTS["semantic_blend_ratio"]
-                for content_type, score in type_scores.items():
-                    if content_type in semantic_scores:
-                        type_scores[content_type] = (
-                            score * (1.0 - blend_ratio)
-                            + semantic_scores[content_type] * blend_ratio
-                        )
-                reasoning_parts.append("semantic analysis applied")
-            except Exception as e:
-                logger.warning(f"Semantic analysis failed: {e}")
+        return type_scores, reasoning_parts
 
-        # Apply contextual adjustments
-        type_scores = self._apply_contextual_adjustments(
-            type_scores, content, url, title
+    def _score_content_type(
+        self, content_lower: str, url_lower: str, title_lower: str, patterns: dict
+    ) -> tuple[float, list[str]]:
+        """Score a single content type against patterns."""
+        score = 0.0
+        type_reasoning = []
+
+        # Keyword matching
+        keyword_matches = sum(
+            1 for keyword in patterns["keywords"] if keyword in content_lower
+        )
+        if keyword_matches > 0:
+            keyword_score = min(keyword_matches / len(patterns["keywords"]), 1.0)
+            score += keyword_score * CLASSIFICATION_WEIGHTS["keyword_weight"]
+            type_reasoning.append(
+                f"keywords: {keyword_matches}/{len(patterns['keywords'])}"
+            )
+
+        # URL pattern matching
+        if url_lower:
+            url_matches = sum(
+                1
+                for pattern in patterns["url_patterns"]
+                if re.search(pattern, url_lower)
+            )
+            if url_matches > 0:
+                url_score = min(url_matches / len(patterns["url_patterns"]), 1.0)
+                score += url_score * CLASSIFICATION_WEIGHTS["url_weight"]
+                type_reasoning.append(f"URL patterns: {url_matches}")
+
+        # Title pattern matching
+        if title_lower and patterns.get("title_patterns"):
+            title_matches = sum(
+                1
+                for pattern in patterns["title_patterns"]
+                if re.search(pattern, title_lower)
+            )
+            if title_matches > 0:
+                title_score = min(title_matches / len(patterns["title_patterns"]), 1.0)
+                score += title_score * CLASSIFICATION_WEIGHTS["title_weight"]
+                type_reasoning.append(f"title patterns: {title_matches}")
+
+        # Content indicator matching
+        if patterns.get("content_indicators"):
+            indicator_matches = sum(
+                1
+                for indicator in patterns["content_indicators"]
+                if indicator in content_lower
+            )
+            if indicator_matches > 0:
+                indicator_score = min(
+                    indicator_matches / len(patterns["content_indicators"]), 1.0
+                )
+                score += indicator_score * CLASSIFICATION_WEIGHTS["indicator_weight"]
+                type_reasoning.append(f"indicators: {indicator_matches}")
+
+        return score, type_reasoning
+
+    async def _apply_semantic_analysis(
+        self,
+        type_scores: dict[ContentType, float],
+        content: str,
+        reasoning_parts: list[str],
+    ) -> dict[ContentType, float]:
+        """Apply semantic analysis to enhance classification scores."""
+        try:
+            semantic_scores = await self._semantic_classification(content)
+            blend_ratio = CLASSIFICATION_WEIGHTS["semantic_blend_ratio"]
+
+            for content_type, score in type_scores.items():
+                if content_type in semantic_scores:
+                    type_scores[content_type] = (
+                        score * (1.0 - blend_ratio)
+                        + semantic_scores[content_type] * blend_ratio
+                    )
+            reasoning_parts.append("semantic analysis applied")
+        except Exception as e:
+            logger.warning(f"Semantic analysis failed: {e}")
+
+        return type_scores
+
+    def _handle_code_content_special_case(
+        self, type_scores: dict[ContentType, float], content: str, url: str | None
+    ) -> dict[ContentType, float]:
+        """Handle special case for pure code content classification."""
+        if not self._is_pure_code_content(content):
+            return type_scores
+
+        tutorial_url_boost = self._calculate_tutorial_url_boost(url)
+
+        # Only boost CODE if tutorial score is low or no strong tutorial URL signal
+        if type_scores.get(ContentType.TUTORIAL, 0) < 0.5 or tutorial_url_boost < 0.3:
+            type_scores[ContentType.CODE] = max(
+                type_scores.get(ContentType.CODE, 0),
+                CLASSIFICATION_WEIGHTS["code_boost_threshold"],
+            )
+
+        return type_scores
+
+    def _calculate_tutorial_url_boost(self, url: str | None) -> float:
+        """Calculate tutorial boost based on URL patterns."""
+        if not url:
+            return 0.0
+
+        url_lower = url.lower()
+        tutorial_patterns = ["/tutorial/", "/how-to/", "/walkthrough/", "tutorial."]
+
+        return (
+            0.4 if any(pattern in url_lower for pattern in tutorial_patterns) else 0.0
         )
 
-        # Special case: pure code content should be classified as CODE
-        # But respect tutorial context if URL strongly suggests tutorial
-        if self._is_pure_code_content(content):
-            tutorial_url_boost = 0.0
-            if url:
-                url_lower = url.lower()
-                if any(
-                    pattern in url_lower
-                    for pattern in [
-                        "/tutorial/",
-                        "/how-to/",
-                        "/walkthrough/",
-                        "tutorial.",
-                    ]
-                ):
-                    tutorial_url_boost = 0.4
-
-            # Only boost CODE if tutorial score is low or no strong tutorial URL signal
-            if (
-                type_scores.get(ContentType.TUTORIAL, 0) < 0.5
-                or tutorial_url_boost < 0.3
-            ):
-                type_scores[ContentType.CODE] = max(
-                    type_scores.get(ContentType.CODE, 0),
-                    CLASSIFICATION_WEIGHTS["code_boost_threshold"],
-                )
-
-        # Determine primary and secondary types
+    def _create_final_classification(
+        self,
+        type_scores: dict[ContentType, float],
+        content: str,
+        reasoning_parts: list[str],
+    ) -> ContentClassification:
+        """Create the final classification result."""
         sorted_types = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
 
         if (
@@ -516,24 +561,7 @@ class ContentClassifier:
             secondary_types = []
         else:
             primary_type = sorted_types[0][0]
-            # Include secondary types with score > threshold and within max difference of primary
-            secondary_types = [
-                content_type
-                for content_type, score in sorted_types[1:]
-                if (
-                    score > CLASSIFICATION_WEIGHTS["secondary_type_threshold"]
-                    and (sorted_types[0][1] - score)
-                    < CLASSIFICATION_WEIGHTS["secondary_type_max_difference"]
-                )
-            ]
-
-        # Detect code characteristics
-        has_code_blocks = self._detect_code_blocks(content)
-        programming_languages = self._detect_programming_languages(content)
-
-        # Determine tutorial/reference characteristics
-        is_tutorial_like = self._is_tutorial_like(content)
-        is_reference_like = self._is_reference_like(content)
+            secondary_types = self._determine_secondary_types(sorted_types)
 
         # Generate reasoning
         reasoning = f"Rule-based classification: {'; '.join(reasoning_parts[:3])}"
@@ -545,11 +573,25 @@ class ContentClassifier:
             secondary_types=secondary_types,
             confidence_scores=type_scores,
             classification_reasoning=reasoning,
-            has_code_blocks=has_code_blocks,
-            programming_languages=programming_languages,
-            is_tutorial_like=is_tutorial_like,
-            is_reference_like=is_reference_like,
+            has_code_blocks=self._detect_code_blocks(content),
+            programming_languages=self._detect_programming_languages(content),
+            is_tutorial_like=self._is_tutorial_like(content),
+            is_reference_like=self._is_reference_like(content),
         )
+
+    def _determine_secondary_types(
+        self, sorted_types: list[tuple[ContentType, float]]
+    ) -> list[ContentType]:
+        """Determine secondary content types from sorted scores."""
+        return [
+            content_type
+            for content_type, score in sorted_types[1:]
+            if (
+                score > CLASSIFICATION_WEIGHTS["secondary_type_threshold"]
+                and (sorted_types[0][1] - score)
+                < CLASSIFICATION_WEIGHTS["secondary_type_max_difference"]
+            )
+        ]
 
     async def _semantic_classification(self, content: str) -> dict[ContentType, float]:
         """Perform semantic classification using embeddings.

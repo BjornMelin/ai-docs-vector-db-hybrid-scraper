@@ -110,9 +110,8 @@ class InteractionEvent(BaseModel):
         if interaction_type == InteractionType.RATING:
             if v is not None and not (1.0 <= v <= 5.0):
                 raise ValueError("Rating must be between 1.0 and 5.0")
-        elif interaction_type == InteractionType.DWELL_TIME:
-            if v is not None and v < 0:
-                raise ValueError("Dwell time cannot be negative")
+        elif interaction_type == InteractionType.DWELL_TIME and v is not None and v < 0:
+            raise ValueError("Dwell time cannot be negative")
 
         return v
 
@@ -509,10 +508,7 @@ class PersonalizedRankingService:
             return False
 
         # Check strategy compatibility
-        if request.strategy == RankingStrategy.DEFAULT:
-            return False
-
-        return True
+        return request.strategy != RankingStrategy.DEFAULT
 
     async def _apply_personalized_ranking(
         self, request: PersonalizedRankingRequest, user_profile: UserProfile
@@ -915,10 +911,12 @@ class PersonalizedRankingService:
                     boost += min(0.1, frequency / 100.0)  # Normalize frequency
 
         # Exploration vs. exploitation
-        if user_profile.exploration_tendency > 0.7:
+        if (
+            user_profile.exploration_tendency > 0.7
+            and result.get("novelty_score", 0) > 0.8
+        ):
             # User likes exploring new content
-            if result.get("novelty_score", 0) > 0.8:
-                boost += 0.2
+            boost += 0.2
 
         return min(0.4, boost)
 
@@ -929,9 +927,12 @@ class PersonalizedRankingService:
         boost = 0.0
 
         # Session context
-        if "domain" in context and "domain" in result:
-            if context["domain"] == result["domain"]:
-                boost += 0.2
+        if (
+            "domain" in context
+            and "domain" in result
+            and context["domain"] == result["domain"]
+        ):
+            boost += 0.2
 
         # Temporal context
         if result.get("time_sensitive"):
@@ -939,9 +940,12 @@ class PersonalizedRankingService:
             boost += recency * 0.3
 
         # Device/platform context
-        if "platform" in context and "platform_optimized" in result:
-            if context["platform"] in result["platform_optimized"]:
-                boost += 0.1
+        if (
+            "platform" in context
+            and "platform_optimized" in result
+            and context["platform"] in result["platform_optimized"]
+        ):
+            boost += 0.1
 
         return min(0.3, boost)
 
@@ -1022,13 +1026,16 @@ class PersonalizedRankingService:
             if user in self.interaction_history:
                 interactions = self.interaction_history[user]
                 for interaction in interactions:
-                    if interaction.result_id == result_id:
-                        if interaction.interaction_type in [
+                    if (
+                        interaction.result_id == result_id
+                        and interaction.interaction_type
+                        in [
                             InteractionType.CLICK,
                             InteractionType.BOOKMARK,
                             InteractionType.SHARE,
-                        ]:
-                            positive_signals += 1
+                        ]
+                    ):
+                        positive_signals += 1
 
         if positive_signals > 0:
             boost = min(0.3, positive_signals / len(similar_users))

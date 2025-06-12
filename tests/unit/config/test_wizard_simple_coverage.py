@@ -33,34 +33,34 @@ class TestConfigurationWizardSimpleCoverage:
 
     def test_run_validation_wizard_with_errors_no_fix(self, wizard, sample_config_file):
         """Test validation wizard when user doesn't want to fix errors."""
-        with patch("src.config.wizard.UnifiedConfig.load_from_file") as mock_load:
-            with patch(
-                "src.config.wizard.ConfigurationValidator"
-            ) as mock_validator_class:
-                with patch("src.config.wizard.questionary.confirm") as mock_confirm:
-                    mock_validator = MagicMock()
-                    mock_validator_class.return_value = mock_validator
+        with (
+            patch("src.config.wizard.UnifiedConfig.load_from_file"),
+            patch("src.config.wizard.ConfigurationValidator") as mock_validator_class,
+        ):
+            with patch("src.config.wizard.questionary.confirm") as mock_confirm:
+                mock_validator = MagicMock()
+                mock_validator_class.return_value = mock_validator
 
-                    # Create error issues
-                    error_issue = ValidationIssue(
-                        field_path="api_key",
-                        message="API key required",
-                        severity=ValidationSeverity.ERROR,
-                        category="authentication",
-                    )
+                # Create error issues
+                error_issue = ValidationIssue(
+                    field_path="api_key",
+                    message="API key required",
+                    severity=ValidationSeverity.ERROR,
+                    category="authentication",
+                )
 
-                    mock_report = ValidationReport(
-                        issues=[error_issue], is_valid=False, config_hash="test_hash"
-                    )
-                    mock_validator.validate_configuration.return_value = mock_report
+                mock_report = ValidationReport(
+                    issues=[error_issue], is_valid=False, config_hash="test_hash"
+                )
+                mock_validator.validate_configuration.return_value = mock_report
 
-                    # User says no to fixing issues
-                    mock_confirm.return_value.ask.return_value = False
+                # User says no to fixing issues
+                mock_confirm.return_value.ask.return_value = False
 
-                    result = wizard.run_validation_wizard(sample_config_file)
+                result = wizard.run_validation_wizard(sample_config_file)
 
-                    # Should return False (line 116)
-                    assert result is False
+                # Should return False (line 116)
+                assert result is False
 
     def test_backup_wizard_error_handling(self, wizard, sample_config_file):
         """Test backup wizard with error condition to cover error handling lines."""
@@ -144,20 +144,20 @@ class TestConfigurationWizardSimpleCoverage:
 
     def test_validation_wizard_basic_coverage(self, wizard, sample_config_file):
         """Test basic validation wizard functionality to cover simple paths."""
-        with patch("src.config.wizard.UnifiedConfig.load_from_file") as mock_load:
-            with patch(
-                "src.config.wizard.ConfigurationValidator"
-            ) as mock_validator_class:
-                mock_validator = MagicMock()
-                mock_validator_class.return_value = mock_validator
+        with (
+            patch("src.config.wizard.UnifiedConfig.load_from_file"),
+            patch("src.config.wizard.ConfigurationValidator") as mock_validator_class,
+        ):
+            mock_validator = MagicMock()
+            mock_validator_class.return_value = mock_validator
 
-                # Create valid report
-                mock_report = ValidationReport(
-                    issues=[], is_valid=True, config_hash="test_hash"
-                )
-                mock_validator.validate_configuration.return_value = mock_report
+            # Create valid report
+            mock_report = ValidationReport(
+                issues=[], is_valid=True, config_hash="test_hash"
+            )
+            mock_validator.validate_configuration.return_value = mock_report
 
-                result = wizard.run_validation_wizard(sample_config_file)
+            result = wizard.run_validation_wizard(sample_config_file)
 
-                # Should return True for valid config
-                assert result is True
+            # Should return True for valid config
+            assert result is True

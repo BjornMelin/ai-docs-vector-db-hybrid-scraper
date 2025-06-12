@@ -428,7 +428,7 @@ class TestConfigurationWizard:
             mock_backup.return_value = "backup_123"
 
             # Mock validation after fixes
-            with patch("src.config.wizard.UnifiedConfig.load_from_file") as mock_load:
+            with patch("src.config.wizard.UnifiedConfig.load_from_file"):
                 with patch(
                     "src.config.wizard.ConfigurationValidator"
                 ) as mock_validator_class:
