@@ -124,6 +124,524 @@ class UnifiedConfig(BaseSettings):
     logs_dir: Path = Path("./logs")
 ```
 
+## 🧙‍♂️ Advanced Configuration Management (BJO-87)
+
+The system includes a comprehensive configuration management framework with interactive wizards, templates, backup/restore capabilities, and migration tools for safe configuration evolution.
+
+### Configuration Wizard System
+
+#### Interactive Setup Wizard
+
+```python
+from src.config.wizard import ConfigurationWizard
+
+# Initialize wizard
+wizard = ConfigurationWizard(base_dir=Path("config"))
+
+# Run complete setup wizard
+config_path = wizard.run_setup_wizard()
+
+# Run specific wizard functions
+wizard.run_validation_wizard(config_path)
+backup_id = wizard.run_backup_wizard(config_path)
+wizard.run_restore_wizard()
+```
+
+#### Wizard Modes
+
+The configuration wizard supports four setup modes:
+
+```python
+# 1. Template-based setup
+config_path = wizard._template_based_setup(
+    config_path=None  # Auto-generated path
+)
+
+# 2. Interactive step-by-step setup
+config_path = wizard._interactive_setup(
+    config_path=Path("custom_config.json")
+)
+
+# 3. Migration setup
+config_path = wizard._migration_setup(
+    config_path=Path("existing_config.json")
+)
+
+# 4. Import setup
+config_path = wizard._import_setup(
+    config_path=Path("imported_config.json")
+)
+```
+
+### Configuration Templates System
+
+#### Template Management
+
+```python
+from src.config.templates import ConfigurationTemplates
+
+# Initialize template manager
+templates = ConfigurationTemplates()
+
+# List available templates
+available = templates.list_available_templates()
+print(available)  # ['development', 'production', 'high_performance', ...]
+
+# Get specific template
+template = templates.get_template("production")
+print(template.metadata.description)
+print(template.configuration)
+
+# Apply template to create configuration
+config_data = templates.apply_template_to_config(
+    template_name="production",
+    base_config=existing_config,
+    environment_overrides="staging"
+)
+```
+
+#### Template Structure
+
+```python
+from src.config.templates import ConfigurationTemplate, TemplateMetadata
+
+# Define custom template
+custom_template = ConfigurationTemplate(
+    metadata=TemplateMetadata(
+        name="custom_api_server",
+        description="API server optimized for high-throughput",
+        use_case="REST API with heavy embedding workload",
+        environment="production",
+        tags=["api", "high-throughput", "embedding-optimized"]
+    ),
+    configuration={
+        "environment": "production",
+        "embedding_provider": "openai",
+        "performance": {
+            "max_concurrent_requests": 500,
+            "enable_batch_processing": True,
+            "batch_size": 100
+        },
+        "cache": {
+            "enable_caching": True,
+            "cache_ttl_seconds": {
+                "embeddings": 172800,  # 48 hours
+                "search": 7200        # 2 hours
+            }
+        }
+    },
+    overrides={
+        "development": {
+            "debug": True,
+            "performance.max_concurrent_requests": 50
+        },
+        "staging": {
+            "performance.max_concurrent_requests": 200
+        }
+    }
+)
+
+# Save custom template
+templates.save_template(custom_template, "custom_api_server")
+```
+
+#### Predefined Templates
+
+##### Development Template
+- **Purpose**: Local development and testing
+- **Features**: Debug logging, local database, fast iteration
+- **Resource Usage**: Conservative (5-20 connections, 500MB memory)
+
+##### Production Template  
+- **Purpose**: Production deployment with security hardening
+- **Features**: Security validation, performance optimization, monitoring
+- **Resource Usage**: Optimized (20-50 connections, 2GB memory)
+
+##### High Performance Template
+- **Purpose**: Maximum throughput for high-traffic applications
+- **Features**: Aggressive caching, large connection pools, minimal logging
+- **Resource Usage**: Intensive (50-100 connections, 4GB memory)
+
+##### Memory Optimized Template
+- **Purpose**: Resource-constrained environments
+- **Features**: Minimal memory usage, conservative settings
+- **Resource Usage**: Minimal (3-15 connections, 256MB memory)
+
+##### Distributed Template
+- **Purpose**: Multi-node cluster deployments
+- **Features**: Cluster configuration, load balancing, distributed caching
+- **Resource Usage**: Scalable (30-75 connections, variable memory)
+
+### Configuration Backup and Restore System
+
+#### Backup Management
+
+```python
+from src.config.backup_restore import ConfigBackupManager
+
+# Initialize backup manager
+backup_manager = ConfigBackupManager(base_dir=Path("config"))
+
+# Create backup
+backup_id = backup_manager.create_backup(
+    config_path=Path("config.json"),
+    description="Pre-deployment backup",
+    tags=["deployment", "production"],
+    compress=True,
+    incremental=False
+)
+
+print(f"Backup created: {backup_id}")
+```
+
+#### Backup Features
+
+```python
+# List backups with filtering
+backups = backup_manager.list_backups(
+    config_name="production",
+    environment="production", 
+    tags=["deployment"],
+    limit=10
+)
+
+# Get backup metadata
+metadata = backup_manager.get_backup_metadata(backup_id)
+print(f"Created: {metadata.created_at}")
+print(f"Size: {metadata.file_size} bytes")
+print(f"Compressed: {metadata.compressed}")
+
+# Export backup
+success = backup_manager.export_backup(
+    backup_id=backup_id,
+    export_path=Path("backups/exported_config.json.gz")
+)
+
+# Import external backup
+imported_id = backup_manager.import_backup(
+    backup_path=Path("external_backup.json"),
+    metadata_path=Path("external_backup.metadata.json")
+)
+```
+
+#### Restore Operations
+
+```python
+# Restore backup
+result = backup_manager.restore_backup(
+    backup_id=backup_id,
+    target_path=Path("restored_config.json"),
+    create_pre_restore_backup=True,
+    force=False
+)
+
+if result.success:
+    print(f"Restored to: {result.config_path}")
+    if result.pre_restore_backup:
+        print(f"Pre-restore backup: {result.pre_restore_backup}")
+else:
+    print("Restore failed:")
+    for warning in result.warnings:
+        print(f"  Warning: {warning}")
+    for conflict in result.conflicts:
+        print(f"  Conflict: {conflict}")
+```
+
+#### Backup Cleanup and Maintenance
+
+```python
+# Cleanup old backups
+deleted_backups = backup_manager.cleanup_old_backups(
+    config_name="production",
+    keep_count=10,      # Keep 10 most recent
+    keep_days=30        # Keep backups from last 30 days
+)
+
+print(f"Deleted {len(deleted_backups)} old backups")
+
+# Delete specific backup
+success = backup_manager.delete_backup(
+    backup_id=backup_id,
+    remove_file=True
+)
+```
+
+### Configuration Migration System
+
+#### Migration Management
+
+```python
+from src.config.migrations import ConfigMigrationManager
+
+# Initialize migration manager
+migration_manager = ConfigMigrationManager(base_dir=Path("config"))
+
+# Check current version
+current_version = migration_manager.get_current_version(
+    config_path=Path("config.json")
+)
+print(f"Current version: {current_version}")
+
+# Create migration plan
+plan = migration_manager.create_migration_plan(
+    current_version="1.0.0",
+    target_version="2.0.0"
+)
+
+if plan:
+    print(f"Migration path: {current_version} → {plan.target_version}")
+    print(f"Steps: {len(plan.migrations)}")
+    print(f"Estimated duration: {plan.estimated_duration}")
+    print(f"Requires downtime: {plan.requires_downtime}")
+```
+
+#### Applying Migrations
+
+```python
+# Apply migration plan
+results = migration_manager.apply_migration_plan(
+    plan=plan,
+    config_path=Path("config.json"),
+    dry_run=False,
+    force=False
+)
+
+# Check results
+for result in results:
+    if result.success:
+        print(f"✅ {result.migration_id}")
+        if result.backup_id:
+            print(f"   Backup: {result.backup_id}")
+        for change in result.changes_made:
+            print(f"   • {change}")
+    else:
+        print(f"❌ {result.migration_id}")
+        for error in result.errors:
+            print(f"   Error: {error}")
+```
+
+#### Custom Migrations
+
+```python
+# Register custom migration
+@migration_manager.register_migration(
+    from_version="1.0.0",
+    to_version="1.1.0", 
+    description="Add new caching configuration",
+    requires_backup=True,
+    tags=["cache", "performance"]
+)
+def add_cache_config(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Add enhanced cache configuration structure."""
+    changes = []
+    
+    if "cache" not in config:
+        config["cache"] = {}
+        changes.append("Added cache configuration section")
+    
+    cache_config = config["cache"]
+    
+    if "enable_warming" not in cache_config:
+        cache_config["enable_warming"] = True
+        changes.append("Enabled cache warming")
+    
+    if "cache_key_patterns" not in cache_config:
+        cache_config["cache_key_patterns"] = {
+            "embeddings": "embeddings:{model}:{hash}",
+            "search": "search:{query_hash}"
+        }
+        changes.append("Added cache key patterns")
+    
+    return config, changes
+
+# Register rollback function
+@migration_manager.register_rollback("1.0.0_to_1.1.0")
+def rollback_cache_config(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Remove enhanced cache configuration."""
+    changes = []
+    
+    if "cache" in config:
+        cache_config = config["cache"]
+        
+        if "enable_warming" in cache_config:
+            del cache_config["enable_warming"]
+            changes.append("Removed cache warming setting")
+        
+        if "cache_key_patterns" in cache_config:
+            del cache_config["cache_key_patterns"] 
+            changes.append("Removed cache key patterns")
+    
+    return config, changes
+```
+
+#### Migration Rollback
+
+```python
+# Rollback specific migration
+result = migration_manager.rollback_migration(
+    migration_id="1.0.0_to_1.1.0",
+    config_path=Path("config.json"),
+    dry_run=False
+)
+
+if result.success:
+    print(f"✅ Rollback successful: {result.migration_id}")
+    print(f"Version: {result.from_version} → {result.to_version}")
+    for change in result.changes_made:
+        print(f"  • {change}")
+else:
+    print(f"❌ Rollback failed: {result.migration_id}")
+    for error in result.errors:
+        print(f"  Error: {error}")
+```
+
+### Enhanced Configuration Validation
+
+#### Validation System
+
+```python
+from src.config.enhanced_validators import ConfigurationValidator
+
+# Initialize validator
+validator = ConfigurationValidator(environment="production")
+
+# Validate configuration
+report = validator.validate_configuration(config)
+
+# Check validation results
+if report.is_valid:
+    print("✅ Configuration is valid")
+else:
+    print("❌ Configuration has issues:")
+    
+    for error in report.errors:
+        print(f"  Error: {error}")
+        if error.suggestion:
+            print(f"    💡 {error.suggestion}")
+        if error.fix_command:
+            print(f"    🔧 {error.fix_command}")
+    
+    for warning in report.warnings:
+        print(f"  Warning: {warning}")
+```
+
+#### Custom Validation Rules
+
+```python
+from src.config.enhanced_validators import ValidationIssue, ValidationSeverity
+
+class CustomConfigValidator(ConfigurationValidator):
+    """Custom validator with additional business rules."""
+    
+    def validate_api_consistency(self, config) -> list[ValidationIssue]:
+        """Validate API provider consistency."""
+        issues = []
+        
+        # Check if OpenAI provider has API key
+        if (config.embedding_provider == "openai" and 
+            not config.openai.api_key):
+            issues.append(ValidationIssue(
+                field_path="openai.api_key",
+                message="OpenAI API key required when using OpenAI provider",
+                severity=ValidationSeverity.ERROR,
+                category="provider_config",
+                suggestion="Set OPENAI_API_KEY environment variable",
+                fix_command="export AI_DOCS__OPENAI__API_KEY=sk-your-key"
+            ))
+        
+        return issues
+    
+    def validate_performance_settings(self, config) -> list[ValidationIssue]:
+        """Validate performance configuration."""
+        issues = []
+        
+        # Check memory settings
+        if (config.performance.max_memory_mb > 8192 and 
+            config.environment == "development"):
+            issues.append(ValidationIssue(
+                field_path="performance.max_memory_mb",
+                message="High memory limit for development environment",
+                severity=ValidationSeverity.WARNING,
+                category="performance",
+                suggestion="Consider reducing to 2048MB for development"
+            ))
+        
+        return issues
+```
+
+### Configuration Utilities
+
+#### Path Management
+
+```python
+from src.config.utils import ConfigPathManager
+
+# Initialize path manager
+path_manager = ConfigPathManager(base_dir=Path("config"))
+
+# Ensure required directories exist
+path_manager.ensure_directories()
+
+# Get standardized paths
+config_path = path_manager.get_config_path("production")
+template_path = path_manager.get_template_path("custom_template")
+backup_path = path_manager.get_backup_path("backup_20250111")
+
+# Directory properties
+print(f"Config dir: {path_manager.config_dir}")
+print(f"Templates dir: {path_manager.templates_dir}")
+print(f"Backups dir: {path_manager.backups_dir}")
+print(f"Migrations dir: {path_manager.migrations_dir}")
+```
+
+#### Configuration Versioning
+
+```python
+from src.config.utils import ConfigVersioning
+
+# Generate configuration hash
+config_hash = ConfigVersioning.generate_config_hash(config_data)
+print(f"Config hash: {config_hash}")
+
+# Create version metadata
+metadata = ConfigVersioning.create_version_metadata(
+    config_hash=config_hash,
+    template_source="production",
+    migration_version="2.0.0"
+)
+
+# Compare configurations
+are_different = ConfigVersioning.configs_differ(config1, config2)
+if are_different:
+    changes = ConfigVersioning.get_config_changes(config1, config2)
+    for change in changes:
+        print(f"Changed: {change}")
+```
+
+#### Configuration Merging
+
+```python
+from src.config.utils import ConfigMerger
+
+# Deep merge configurations
+base_config = {"database": {"pool_size": 10}}
+override_config = {"database": {"max_overflow": 5}, "cache": {"enabled": True}}
+
+merged = ConfigMerger.deep_merge(base_config, override_config)
+print(merged)
+# Result: {
+#   "database": {"pool_size": 10, "max_overflow": 5},
+#   "cache": {"enabled": True}
+# }
+
+# Merge with conflict resolution
+merged_with_strategy = ConfigMerger.merge_with_strategy(
+    base_config,
+    override_config,
+    conflict_strategy="override"  # or "preserve", "merge"
+)
+```
+
 ## 🔧 Component Configuration
 
 ### Enhanced Database Connection Pool Configuration (BJO-134)

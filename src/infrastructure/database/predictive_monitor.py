@@ -463,22 +463,41 @@ class PredictiveLoadMonitor(LoadMonitor):
         if confidence < low_confidence_threshold:
             return "Monitor closely - prediction confidence is low"
 
-        if predicted_load > high_load_threshold:
-            if trend == "increasing":
-                return (
-                    "Scale up immediately - high load predicted with increasing trend"
-                )
-            else:
-                return "Prepare to scale up - high load predicted"
-        elif predicted_load > medium_load_threshold:
-            if trend == "increasing":
-                return "Consider scaling up - moderate load with increasing trend"
-            else:
-                return "Monitor - moderate load predicted"
+        recommendation = self._get_load_based_recommendation(
+            predicted_load, trend, high_load_threshold, medium_load_threshold
+        )
+        return recommendation
+
+    def _get_load_based_recommendation(
+        self,
+        predicted_load: float,
+        trend: str,
+        high_threshold: float,
+        medium_threshold: float,
+    ) -> str:
+        """Get recommendation based on predicted load and trend."""
+        if predicted_load > high_threshold:
+            return self._get_high_load_recommendation(trend)
+        elif predicted_load > medium_threshold:
+            return self._get_medium_load_recommendation(trend)
         elif trend == "decreasing" and predicted_load < 0.3:
             return "Consider scaling down - low load with decreasing trend"
         else:
             return "Maintain current capacity - low to moderate load predicted"
+
+    def _get_high_load_recommendation(self, trend: str) -> str:
+        """Get recommendation for high load scenarios."""
+        if trend == "increasing":
+            return "Scale up immediately - high load predicted with increasing trend"
+        else:
+            return "Prepare to scale up - high load predicted"
+
+    def _get_medium_load_recommendation(self, trend: str) -> str:
+        """Get recommendation for medium load scenarios."""
+        if trend == "increasing":
+            return "Consider scaling up - moderate load with increasing trend"
+        else:
+            return "Monitor - moderate load predicted"
 
     def _calculate_prediction_confidence(self, features: list[float]) -> float:
         """Calculate confidence score for prediction."""

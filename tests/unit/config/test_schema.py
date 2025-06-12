@@ -206,7 +206,7 @@ class TestConfigSchemaGeneratorMarkdown:
         assert "## Environment Variables" in markdown
         assert "AI_DOCS__" in markdown
         assert "export AI_DOCS__ENVIRONMENT=production" in markdown
-        assert "export AI_DOCS__OPENAI__API_KEY=sk-your-api-key" in markdown
+        assert "export AI_DOCS__OPENAI__API_KEY=sk-" in markdown
 
     @patch("jsonschema2md.Parser")
     def test_markdown_tool_success(self, mock_parser_class):

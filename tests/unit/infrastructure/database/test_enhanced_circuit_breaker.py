@@ -180,7 +180,7 @@ class TestMultiLevelCircuitBreaker:
 
         # Connection failures should open circuit at threshold 3
         for _i in range(3):
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="Test failure"):
                 await circuit_breaker.execute(
                     failing_func, failure_type=FailureType.CONNECTION
                 )
@@ -197,7 +197,7 @@ class TestMultiLevelCircuitBreaker:
 
         # Query failures have threshold of 5
         for _i in range(5):
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="Test failure"):
                 await circuit_breaker.execute(
                     failing_func, failure_type=FailureType.QUERY
                 )
@@ -364,7 +364,7 @@ class TestMultiLevelCircuitBreaker:
         async def failing_func():
             raise Exception("Half-open failure")
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Half-open failure"):
             await circuit_breaker.execute(failing_func)
 
         assert circuit_breaker.state == CircuitState.OPEN
@@ -570,9 +570,9 @@ class TestCircuitBreakerEdgeCases:
 
         # Any connection failure should immediately open circuit
         async def failing_func():
-            raise Exception("Connection error")
+            raise ConnectionError("Connection error")
 
-        with pytest.raises(Exception):
+        with pytest.raises(ConnectionError, match="Connection error"):
             await breaker.execute(failing_func, failure_type=FailureType.CONNECTION)
 
         # Circuit should be open immediately

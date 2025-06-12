@@ -1,0 +1,9 @@
+# Documentation tools requirements
+pdoc3>=0.11.6
+sphinx>=8.2.0
+sphinx-rtd-theme>=3.0.0
+interrogate>=1.7.0
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+mkdocstrings>=0.24.0
+mkdocstrings-python>=1.8.0

@@ -33,7 +33,13 @@ class ConfigJsonSchema(GenerateJsonSchema):
             # Add examples for specific fields
             field_name = kwargs.get("field_name", "")
             if field_name == "openai_api_key":
-                json_schema["examples"] = ["sk-your-openai-api-key-here"]
+                json_schema["examples"] = [
+                    "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                ]
+                json_schema["description"] = (
+                    json_schema.get("description", "")
+                    + " WARNING: Never expose real API keys in examples or templates!"
+                )
             elif field_name == "qdrant_url":
                 json_schema["examples"] = [
                     "http://localhost:6333",
@@ -42,7 +48,7 @@ class ConfigJsonSchema(GenerateJsonSchema):
             elif field_name == "redis_url":
                 json_schema["examples"] = [
                     "redis://localhost:6379",
-                    "redis://:password@redis.example.com:6380/0",
+                    "redis://:CHANGEME_REDIS_PASSWORD@redis.example.com:6380/0",
                 ]
 
         return json_schema
@@ -111,7 +117,7 @@ class ConfigSchemaGenerator:
                     "debug": False,
                     "embedding_provider": "openai",
                     "openai": {
-                        "api_key": "sk-your-openai-api-key-here",
+                        "api_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         "model": "text-embedding-3-small",
                     },
                 }
@@ -236,7 +242,7 @@ export interface UnifiedConfig {
                 "export AI_DOCS__ENVIRONMENT=production",
                 "",
                 "# Set nested values",
-                "export AI_DOCS__OPENAI__API_KEY=sk-your-api-key",
+                "export AI_DOCS__OPENAI__API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 "export AI_DOCS__CACHE__REDIS_URL=redis://redis.example.com:6379",
                 "```",
                 "",
@@ -278,7 +284,7 @@ All configuration values can be set via environment variables using the `AI_DOCS
 export AI_DOCS__ENVIRONMENT=production
 
 # Set nested values
-export AI_DOCS__OPENAI__API_KEY=sk-your-api-key
+export AI_DOCS__OPENAI__API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 export AI_DOCS__CACHE__REDIS_URL=redis://redis.example.com:6379
 ```
 

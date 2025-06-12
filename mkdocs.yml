@@ -1,0 +1,107 @@
+site_name: AI Docs Vector DB Hybrid Scraper
+site_description: A hybrid AI documentation scraping system with vector database integration
+site_author: BjornMelin
+site_url: https://bjornmelin.github.io/ai-docs-vector-db-hybrid-scraper/
+
+repo_name: BjornMelin/ai-docs-vector-db-hybrid-scraper
+repo_url: https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
+edit_uri: blob/main/docs/
+
+copyright: Copyright &copy; 2025 BjornMelin
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.annotate
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Users:
+    - Overview: users/README.md
+    - Quick Start: users/quick-start.md
+    - Configuration: users/configuration-management.md
+    - Examples: users/examples-and-recipes.md
+    - Troubleshooting: users/troubleshooting.md
+  - Developers:
+    - Overview: developers/README.md
+    - Getting Started: developers/getting-started.md
+    - Architecture: developers/architecture.md
+    - API Reference: developers/api-reference.md
+    - Integration Guide: developers/integration-guide.md
+    - Contributing: developers/contributing.md
+  - Operators:
+    - Overview: operators/README.md
+    - Deployment: operators/deployment.md
+    - Configuration: operators/configuration.md
+    - Monitoring: operators/monitoring.md
+    - Security: operators/security.md
+    - Operations: operators/operations.md
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - tables
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_bases: true
+            show_inheritance_diagram: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
+  version:
+    provider: mike
+
+strict: false

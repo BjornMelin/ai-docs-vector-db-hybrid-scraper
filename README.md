@@ -42,8 +42,8 @@ strategies to achieve superior performance compared to existing solutions.
 ### Core Features
 
 - **Multi-Tier Browser Automation**: Five-tier routing system (httpx → Crawl4AI → Enhanced → browser-use → Playwright)
-- **Enhanced Database Connection Pool**: ML-based predictive scaling with 50.9% latency reduction and
-  887.9% throughput increase
+- **Enhanced Database Connection Pool**: ML-based predictive scaling with 50.9% latency reduction and 887.9% throughput increase
+- **Advanced Configuration Management**: Interactive wizard, templates, backup/restore, and migration system
 - **Advanced Filtering Architecture**: Temporal, content type, metadata, and similarity filtering with boolean logic
 - **Federated Search**: Cross-collection search with intelligent ranking and result fusion
 - **Personalized Ranking**: User-based ranking with preference learning and collaborative filtering
@@ -60,20 +60,20 @@ strategies to achieve superior performance compared to existing solutions.
 
 ### Technology Stack
 
-| Component                    | Technology                       | Version  |
-| ---------------------------- | -------------------------------- | -------- |
-| **Web Crawling**             | Crawl4AI                         | 0.4.0+   |
-| **Browser Automation**       | Playwright + browser-use         | Latest   |
-| **Vector Database**          | Qdrant                           | 1.12+    |
-| **Cache Layer**              | DragonflyDB                      | Latest   |
-| **Database Connection Pool** | SQLAlchemy Async + ML Monitoring | Latest   |
-| **Machine Learning**         | scikit-learn + psutil            | Latest   |
-| **Embeddings**               | OpenAI + FastEmbed               | Latest   |
-| **Reranking**                | BGE-reranker-v2-m3               | 1.0+     |
-| **Web Framework**            | FastAPI                          | 0.115.0+ |
-| **Configuration**            | Pydantic                         | 2.0+     |
-| **Package Manager**          | uv                               | Latest   |
-| **Task Queue**               | ARQ                              | Latest   |
+| Component | Technology | Version |
+|-----------|------------|---------|
+| **Web Crawling** | Crawl4AI | 0.4.0+ |
+| **Browser Automation** | Playwright + browser-use | Latest |
+| **Vector Database** | Qdrant | 1.12+ |
+| **Cache Layer** | DragonflyDB | Latest |
+| **Database Connection Pool** | SQLAlchemy Async + ML Monitoring | Latest |
+| **Machine Learning** | scikit-learn + psutil | Latest |
+| **Embeddings** | OpenAI + FastEmbed | Latest |
+| **Reranking** | BGE-reranker-v2-m3 | 1.0+ |
+| **Web Framework** | FastAPI | 0.115.0+ |
+| **Configuration** | Pydantic | 2.0+ |
+| **Package Manager** | uv | Latest |
+| **Task Queue** | ARQ | Latest |
 
 ## Technical Architecture
 
@@ -182,42 +182,42 @@ flowchart TB
 
 ### Crawling Performance vs. Alternatives
 
-| Metric              | This System | Firecrawl   | Beautiful Soup | Improvement        |
-| ------------------- | ----------- | ----------- | -------------- | ------------------ |
-| **Average Latency** | 0.4s        | 2.5s        | 1.8s           | **6.25x faster**   |
-| **Success Rate**    | 97%         | 92%         | 85%            | **5.4% better**    |
-| **Memory Usage**    | 120MB       | 200MB       | 150MB          | **40% less**       |
-| **JS Rendering**    | ✅          | ✅          | ❌             | **Feature parity** |
-| **Cost**            | $0          | $0.005/page | $0             | **Zero cost**      |
+| Metric | This System | Firecrawl | Beautiful Soup | Improvement |
+|--------|-------------|-----------|----------------|-------------|
+| **Average Latency** | 0.4s | 2.5s | 1.8s | **6.25x faster** |
+| **Success Rate** | 97% | 92% | 85% | **5.4% better** |
+| **Memory Usage** | 120MB | 200MB | 150MB | **40% less** |
+| **JS Rendering** | ✅ | ✅ | ❌ | **Feature parity** |
+| **Cost** | $0 | $0.005/page | $0 | **Zero cost** |
 
 ### Embedding Model Performance Comparison
 
-| Model                      | MTEB Score | Cost (per 1M tokens) | Dimensions | Use Case             |
-| -------------------------- | ---------- | -------------------- | ---------- | -------------------- |
-| **text-embedding-3-small** | 62.3       | $0.02                | 1536       | **Recommended**      |
-| text-embedding-3-large     | 64.6       | $0.13                | 3072       | High accuracy        |
-| text-embedding-ada-002     | 61.0       | $0.10                | 1536       | Legacy compatibility |
-| BGE-M3 (local)             | 64.1       | Free                 | 1024       | Local deployment     |
+| Model | MTEB Score | Cost (per 1M tokens) | Dimensions | Use Case |
+|-------|------------|----------------------|------------|----------|
+| **text-embedding-3-small** | 62.3 | $0.02 | 1536 | **Recommended** |
+| text-embedding-3-large | 64.6 | $0.13 | 3072 | High accuracy |
+| text-embedding-ada-002 | 61.0 | $0.10 | 1536 | Legacy compatibility |
+| BGE-M3 (local) | 64.1 | Free | 1024 | Local deployment |
 
 ### Search Strategy Performance
 
-| Strategy               | Accuracy | P95 Latency | Storage Overhead | Complexity  |
-| ---------------------- | -------- | ----------- | ---------------- | ----------- |
-| Dense Only             | Baseline | 45ms        | 1x               | Low         |
-| Sparse Only            | -15%     | 40ms        | 1.5x             | Low         |
-| **Hybrid + Reranking** | **+30%** | 65ms        | 1.2x             | **Optimal** |
+| Strategy | Accuracy | P95 Latency | Storage Overhead | Complexity |
+|----------|----------|-------------|------------------|------------|
+| Dense Only | Baseline | 45ms | 1x | Low |
+| Sparse Only | -15% | 40ms | 1.5x | Low |
+| **Hybrid + Reranking** | **+30%** | 65ms | 1.2x | **Optimal** |
 
 ### Enhanced Database Connection Pool Performance
 
-| Metric                     | Baseline System | Enhanced System | Improvement           |
-| -------------------------- | --------------- | --------------- | --------------------- |
-| **P95 Latency**            | 820ms           | 402ms           | **50.9% reduction**   |
-| **P50 Latency**            | 450ms           | 198ms           | **56.0% reduction**   |
-| **P99 Latency**            | 1200ms          | 612ms           | **49.0% reduction**   |
-| **Throughput**             | 85 ops/sec      | 839 ops/sec     | **887.9% increase**   |
-| **Connection Utilization** | 65%             | 92%             | **41.5% improvement** |
-| **Failure Recovery Time**  | 12s             | 3.2s            | **73.3% faster**      |
-| **Memory Usage**           | 180MB           | 165MB           | **8.3% reduction**    |
+| Metric | Baseline System | Enhanced System | Improvement |
+|--------|-----------------|-----------------|-------------|
+| **P95 Latency** | 820ms | 402ms | **50.9% reduction** |
+| **P50 Latency** | 450ms | 198ms | **56.0% reduction** |
+| **P99 Latency** | 1200ms | 612ms | **49.0% reduction** |
+| **Throughput** | 85 ops/sec | 839 ops/sec | **887.9% increase** |
+| **Connection Utilization** | 65% | 92% | **41.5% improvement** |
+| **Failure Recovery Time** | 12s | 3.2s | **73.3% faster** |
+| **Memory Usage** | 180MB | 165MB | **8.3% reduction** |
 
 #### Key Features Delivered
 
@@ -306,11 +306,34 @@ redis-cli -p 6379 ping  # Should return "PONG"
 
 ## Configuration
 
+### Interactive Configuration Setup
+
+Get started quickly with the configuration wizard:
+
+```bash
+# Launch interactive setup wizard
+uv run python -m src.cli.main config wizard
+
+# Create configuration from template
+uv run python -m src.cli.main config template apply production -o config.json
+
+# Backup current configuration
+uv run python -m src.cli.main config backup create config.json --description "Production backup"
+
+# Validate configuration
+uv run python -m src.cli.main config validate config.json --health-check
+```
+
 ### Advanced System Configuration
 
 ```python
 from src.config import get_config
 from src.config.models import EmbeddingConfig, VectorSearchStrategy
+from src.config.wizard import ConfigurationWizard
+
+# Interactive configuration setup
+wizard = ConfigurationWizard()
+config_path = wizard.run_setup_wizard()
 
 # Get unified configuration with validation
 config = get_config()
@@ -327,6 +350,27 @@ embedding_config = EmbeddingConfig(
     batch_size=32,
     max_tokens_per_chunk=512
 )
+```
+
+### Configuration Templates
+
+Five optimized templates are available for different deployment scenarios:
+
+```bash
+# Development environment
+uv run python -m src.cli.main config template apply development
+
+# Production with security hardening
+uv run python -m src.cli.main config template apply production
+
+# High-performance for maximum throughput
+uv run python -m src.cli.main config template apply high_performance
+
+# Memory-optimized for resource-constrained environments
+uv run python -m src.cli.main config template apply memory_optimized
+
+# Distributed multi-node deployment
+uv run python -m src.cli.main config template apply distributed
 ```
 
 ### Crawling Configuration
@@ -763,16 +807,16 @@ Our documentation is organized by user role for efficient navigation and focused
 
 ### 🎯 Quick Navigation by Task
 
-| What you want to do         | Go to                                                       |
-| --------------------------- | ----------------------------------------------------------- |
-| **Set up the system**       | [Quick Start Guide](docs/users/quick-start.md)              |
-| **Integrate with your app** | [Integration Guide](docs/developers/integration-guide.md)   |
-| **Deploy to production**    | [Deployment Guide](docs/operators/deployment.md)            |
-| **Monitor performance**     | [Monitoring Guide](docs/operators/monitoring.md)            |
-| **Understand the API**      | [API Reference](docs/developers/api-reference.md)           |
-| **Configure the system**    | [Configuration Reference](docs/developers/configuration.md) |
-| **Secure your deployment**  | [Security Guide](docs/operators/security.md)                |
-| **Troubleshoot issues**     | [Operations Manual](docs/operators/operations.md)           |
+| What you want to do | Go to |
+|---------------------|-------|
+| **Set up the system** | [Quick Start Guide](docs/users/quick-start.md) |
+| **Integrate with your app** | [Integration Guide](docs/developers/integration-guide.md) |
+| **Deploy to production** | [Deployment Guide](docs/operators/deployment.md) |
+| **Monitor performance** | [Monitoring Guide](docs/operators/monitoring.md) |
+| **Understand the API** | [API Reference](docs/developers/api-reference.md) |
+| **Configure the system** | [Configuration Reference](docs/developers/configuration.md) |
+| **Secure your deployment** | [Security Guide](docs/operators/security.md) |
+| **Troubleshoot issues** | [Operations Manual](docs/operators/operations.md) |
 
 ## Contributing
 
