@@ -582,11 +582,17 @@ class TestBrowserUseAdapterIntegration:
     """Integration tests for BrowserUse adapter."""
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @patch("src.services.browser.browser_use_adapter.BrowserConfig")
     @patch("src.services.browser.browser_use_adapter.Browser")
     @patch("src.services.browser.browser_use_adapter.Agent")
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
     async def test_full_scraping_flow(
-        self, mock_chat_openai, mock_agent_class, mock_browser_class, basic_config
+        self,
+        mock_chat_openai,
+        mock_agent_class,
+        mock_browser_class,
+        mock_browser_config_class,
+        basic_config,
     ):
         """Test complete scraping flow from initialization to cleanup."""
         adapter = BrowserUseAdapter(basic_config)
@@ -594,6 +600,10 @@ class TestBrowserUseAdapterIntegration:
         # Mock LLM
         mock_llm = MagicMock()
         mock_chat_openai.return_value = mock_llm
+
+        # Mock BrowserConfig
+        mock_browser_config = MagicMock()
+        mock_browser_config_class.return_value = mock_browser_config
 
         # Mock browser
         mock_browser = AsyncMock()

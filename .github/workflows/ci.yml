@@ -328,9 +328,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build worker Docker image
-        if: hashFiles('Dockerfile.worker') != ''
+        if: hashFiles('docker/Dockerfile.worker') != ''
         run: |
-          docker build -f Dockerfile.worker -t test-worker .
+          docker build -f docker/Dockerfile.worker -t test-worker .
 
       - name: Test Docker services
         if: hashFiles('docker-compose.yml') != ''
