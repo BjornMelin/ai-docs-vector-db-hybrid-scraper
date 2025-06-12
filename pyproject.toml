@@ -123,9 +123,21 @@ parsing = [
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
 
+# Documentation tools (moved from docs/requirements.txt)
+docs = [
+    "mkdocs>=1.6.0,<2.0.0",
+    "mkdocs-material>=9.5.0,<10.0.0", 
+    "mkdocstrings>=0.24.0,<1.0.0",
+    "mkdocstrings-python>=1.8.0,<2.0.0",
+    "pdoc3>=0.11.6,<1.0.0",
+    "sphinx>=8.2.0,<9.0.0",
+    "sphinx-rtd-theme>=3.0.0,<4.0.0",
+    "interrogate>=1.7.0,<2.0.0",
+]
+
 # All optional dependencies combined
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,parsing]",
+    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,parsing,docs]",
 ]
 
 [project.urls]
