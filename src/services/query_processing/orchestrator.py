@@ -291,6 +291,7 @@ class AdvancedSearchOrchestrator(BaseService):
 
         # Testing support
         self._test_search_failure = False
+        self._test_empty_results = False
 
     def _initialize_services(self):
         """Initialize component services."""
@@ -858,23 +859,26 @@ class AdvancedSearchOrchestrator(BaseService):
             await asyncio.sleep(0.1)  # Simulate search latency
 
             # Mock search results
-            mock_results = [
-                {
-                    "id": f"result_{i}",
-                    "title": f"Search Result {i}",
-                    "content": f"Content for result {i} matching query: {query}",
-                    "score": 0.9 - (i * 0.1),
-                    "content_type": "documentation" if i % 2 == 0 else "code",
-                    "published_date": "2024-01-01T00:00:00Z",
-                    "metadata": {
-                        "source": "mock_search",
-                        "processing_stage": "core_search",
-                    },
-                }
-                for i in range(
-                    min(request.limit * 2, 20)
-                )  # Generate more than needed for processing
-            ]
+            if self._test_empty_results:
+                mock_results = []
+            else:
+                mock_results = [
+                    {
+                        "id": f"result_{i}",
+                        "title": f"Search Result {i}",
+                        "content": f"Content for result {i} matching query: {query}",
+                        "score": 0.9 - (i * 0.1),
+                        "content_type": "documentation" if i % 2 == 0 else "code",
+                        "published_date": "2024-01-01T00:00:00Z",
+                        "metadata": {
+                            "source": "mock_search",
+                            "processing_stage": "core_search",
+                        },
+                    }
+                    for i in range(
+                        min(request.limit * 2, 20)
+                    )  # Generate more than needed for processing
+                ]
 
             processing_time = (time.time() - start_time) * 1000
 
@@ -1584,8 +1588,12 @@ class AdvancedSearchOrchestrator(BaseService):
 
     def _create_preprocessing_result(
         self, request: QueryProcessingRequest, advanced_result: AdvancedSearchResult
-    ) -> QueryPreprocessingResult:
+    ) -> QueryPreprocessingResult | None:
         """Create preprocessing result from advanced search result."""
+        # Check if preprocessing was enabled
+        if not getattr(request, "enable_preprocessing", True):
+            return None
+
         # Extract preprocessing stage result if available
         preprocessing_stage = None
         for stage_result in advanced_result.stage_results:
@@ -1625,8 +1633,12 @@ class AdvancedSearchOrchestrator(BaseService):
 
     def _create_intent_classification(
         self, request: QueryProcessingRequest, advanced_result: AdvancedSearchResult
-    ) -> QueryIntentClassification:
+    ) -> QueryIntentClassification | None:
         """Create intent classification from query analysis."""
+        # Check if intent classification was enabled
+        if not getattr(request, "enable_intent_classification", True):
+            return None
+
         # Simple intent classification based on query patterns
         query_lower = request.query.lower()
 
@@ -1734,31 +1746,54 @@ class AdvancedSearchOrchestrator(BaseService):
 
     def _create_strategy_selection(
         self, request: QueryProcessingRequest, advanced_result: AdvancedSearchResult
-    ) -> SearchStrategySelection:
+    ) -> SearchStrategySelection | None:
         """Create strategy selection from query analysis."""
+        # Check if strategy selection was enabled
+        if not getattr(request, "enable_strategy_selection", True):
+            return None
+
+        # Check if a strategy was forced
+        forced_strategy = getattr(request, "force_strategy", None)
+        if forced_strategy:
+            return SearchStrategySelection(
+                primary_strategy=forced_strategy,
+                fallback_strategies=[SearchStrategy.SEMANTIC, SearchStrategy.FILTERED],
+                matryoshka_dimension=MatryoshkaDimension.MEDIUM,
+                confidence=1.0,  # High confidence since manually forced
+                reasoning=f"Strategy forced to {forced_strategy.value}",
+                estimated_quality=advanced_result.quality_score,
+                estimated_latency_ms=advanced_result.total_processing_time_ms,
+            )
+
         # Determine strategy based on intent classification
         intent_classification = self._create_intent_classification(
             request, advanced_result
         )
 
-        if intent_classification.primary_intent in {
-            QueryIntent.PROCEDURAL,
-            QueryIntent.TROUBLESHOOTING,
-        }:
-            primary_strategy = SearchStrategy.HYDE
-        elif intent_classification.primary_intent == QueryIntent.COMPARATIVE:
-            primary_strategy = SearchStrategy.MULTI_STAGE
-        elif intent_classification.complexity_level == QueryComplexity.COMPLEX:
-            primary_strategy = SearchStrategy.ADAPTIVE
-        else:
+        # If intent classification is disabled, use a default strategy
+        if intent_classification is None:
             primary_strategy = SearchStrategy.HYBRID
+            intent_value = "default"
+        else:
+            if intent_classification.primary_intent in {
+                QueryIntent.PROCEDURAL,
+                QueryIntent.TROUBLESHOOTING,
+            }:
+                primary_strategy = SearchStrategy.HYDE
+            elif intent_classification.primary_intent == QueryIntent.COMPARATIVE:
+                primary_strategy = SearchStrategy.MULTI_STAGE
+            elif intent_classification.complexity_level == QueryComplexity.COMPLEX:
+                primary_strategy = SearchStrategy.ADAPTIVE
+            else:
+                primary_strategy = SearchStrategy.HYBRID
+            intent_value = intent_classification.primary_intent.value
 
         return SearchStrategySelection(
             primary_strategy=primary_strategy,
             fallback_strategies=[SearchStrategy.SEMANTIC, SearchStrategy.FILTERED],
             matryoshka_dimension=MatryoshkaDimension.MEDIUM,
             confidence=0.8,
-            reasoning=f"Selected {primary_strategy.value} based on {intent_classification.primary_intent.value} intent",
+            reasoning=f"Selected {primary_strategy.value} based on {intent_value} intent",
             estimated_quality=advanced_result.quality_score,
             estimated_latency_ms=advanced_result.total_processing_time_ms,
         )
@@ -1774,4 +1809,6 @@ class AdvancedSearchOrchestrator(BaseService):
         # Check if many stages failed
         failed_stages = sum(1 for sr in advanced_result.stage_results if not sr.success)
         total_stages = len(advanced_result.stage_results)
-        return total_stages > 0 and failed_stages / total_stages > 0.3  # More than 30% failed
+        return (
+            total_stages > 0 and failed_stages / total_stages > 0.3
+        )  # More than 30% failed
