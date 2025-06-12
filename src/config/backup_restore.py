@@ -4,10 +4,12 @@ This module provides comprehensive backup and restore functionality for configur
 files with Git-like versioning, metadata tracking, and conflict resolution.
 """
 
+import contextlib
 import gzip
 import json
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -32,7 +34,9 @@ class BackupMetadata(BaseModel):
     compressed: bool = Field(default=False, description="Whether backup is compressed")
     tags: list[str] = Field(default_factory=list, description="Backup tags")
     description: str | None = Field(default=None, description="Backup description")
-    parent_backup: str | None = Field(default=None, description="Parent backup ID for incremental backups")
+    parent_backup: str | None = Field(
+        default=None, description="Parent backup ID for incremental backups"
+    )
 
 
 class RestoreResult(BaseModel):
@@ -41,9 +45,15 @@ class RestoreResult(BaseModel):
     success: bool = Field(description="Whether restore was successful")
     backup_id: str = Field(description="Backup ID that was restored")
     config_path: Path = Field(description="Path to restored configuration")
-    conflicts: list[str] = Field(default_factory=list, description="Conflicts encountered during restore")
-    warnings: list[str] = Field(default_factory=list, description="Warnings from restore operation")
-    pre_restore_backup: str | None = Field(default=None, description="Backup created before restore")
+    conflicts: list[str] = Field(
+        default_factory=list, description="Conflicts encountered during restore"
+    )
+    warnings: list[str] = Field(
+        default_factory=list, description="Warnings from restore operation"
+    )
+    pre_restore_backup: str | None = Field(
+        default=None, description="Backup created before restore"
+    )
 
 
 class ConfigBackupManager:
@@ -51,7 +61,7 @@ class ConfigBackupManager:
 
     def __init__(self, base_dir: Path | None = None):
         """Initialize backup manager.
-        
+
         Args:
             base_dir: Base directory for configuration management
         """
@@ -82,7 +92,7 @@ class ConfigBackupManager:
     def _save_metadata(self) -> None:
         """Save backup metadata to disk."""
         data = {k: v.model_dump() for k, v in self._metadata.items()}
-        with open(self.metadata_file, 'w') as f:
+        with open(self.metadata_file, "w") as f:
             json.dump(data, f, indent=2)
 
     def create_backup(
@@ -91,20 +101,20 @@ class ConfigBackupManager:
         description: str | None = None,
         tags: list[str] | None = None,
         compress: bool = True,
-        incremental: bool = False
+        incremental: bool = False,
     ) -> str:
         """Create a backup of a configuration file.
-        
+
         Args:
             config_path: Path to configuration file to backup
             description: Optional description for the backup
             tags: Optional tags for categorizing the backup
             compress: Whether to compress the backup
             incremental: Whether to create incremental backup
-            
+
         Returns:
             Backup ID
-            
+
         Raises:
             FileNotFoundError: If configuration file doesn't exist
         """
@@ -128,8 +138,10 @@ class ConfigBackupManager:
 
         # Check for existing backup with same hash
         for existing_id, metadata in self._metadata.items():
-            if (metadata.config_name == config_name and
-                metadata.config_hash == config_hash):
+            if (
+                metadata.config_name == config_name
+                and metadata.config_hash == config_hash
+            ):
                 return existing_id  # Return existing backup ID
 
         # Determine parent backup for incremental backups
@@ -145,7 +157,7 @@ class ConfigBackupManager:
         backup_path = self.path_manager.backups_dir / backup_filename
 
         if compress:
-            with gzip.open(backup_path, 'wt', encoding='utf-8') as f:
+            with gzip.open(backup_path, "wt", encoding="utf-8") as f:
                 f.write(config_content)
         else:
             shutil.copy2(config_path, backup_path)
@@ -163,7 +175,7 @@ class ConfigBackupManager:
             compressed=compress,
             tags=tags or [],
             description=description,
-            parent_backup=parent_backup
+            parent_backup=parent_backup,
         )
 
         # Store metadata
@@ -177,19 +189,19 @@ class ConfigBackupManager:
         backup_id: str,
         target_path: Path | None = None,
         create_pre_restore_backup: bool = True,
-        force: bool = False
+        force: bool = False,
     ) -> RestoreResult:
         """Restore a configuration from backup.
-        
+
         Args:
             backup_id: ID of backup to restore
             target_path: Target path for restored configuration
             create_pre_restore_backup: Whether to backup current config before restore
             force: Whether to force restore despite conflicts
-            
+
         Returns:
             RestoreResult with operation details
-            
+
         Raises:
             ValueError: If backup ID not found
         """
@@ -198,7 +210,7 @@ class ConfigBackupManager:
                 success=False,
                 backup_id=backup_id,
                 config_path=target_path or Path("/tmp/unknown"),
-                warnings=[f"Backup not found: {backup_id}"]
+                warnings=[f"Backup not found: {backup_id}"],
             )
 
         metadata = self._metadata[backup_id]
@@ -213,17 +225,19 @@ class ConfigBackupManager:
             pre_restore_backup = self.create_backup(
                 target_path,
                 description=f"Pre-restore backup before restoring {backup_id}",
-                tags=["pre-restore", "automatic"]
+                tags=["pre-restore", "automatic"],
             )
 
         # Find backup file
-        backup_files = list(self.path_manager.backups_dir.glob(f"{metadata.config_name}_{backup_id}.*"))
+        backup_files = list(
+            self.path_manager.backups_dir.glob(f"{metadata.config_name}_{backup_id}.*")
+        )
         if not backup_files:
             return RestoreResult(
                 success=False,
                 backup_id=backup_id,
                 config_path=target_path,
-                warnings=[f"Backup file not found for {backup_id}"]
+                warnings=[f"Backup file not found for {backup_id}"],
             )
 
         backup_path = backup_files[0]
@@ -233,8 +247,8 @@ class ConfigBackupManager:
         warnings = []
 
         try:
-            if backup_path.suffix == '.gz':
-                with gzip.open(backup_path, 'rt', encoding='utf-8') as f:
+            if backup_path.suffix == ".gz":
+                with gzip.open(backup_path, "rt", encoding="utf-8") as f:
                     config_content = f.read()
             else:
                 with open(backup_path) as f:
@@ -249,12 +263,12 @@ class ConfigBackupManager:
                         backup_id=backup_id,
                         config_path=target_path,
                         conflicts=conflicts,
-                        pre_restore_backup=pre_restore_backup
+                        pre_restore_backup=pre_restore_backup,
                     )
 
             # Write restored configuration
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(target_path, 'w') as f:
+            with open(target_path, "w") as f:
                 f.write(config_content)
 
             return RestoreResult(
@@ -263,7 +277,7 @@ class ConfigBackupManager:
                 config_path=target_path,
                 conflicts=conflicts,
                 warnings=warnings,
-                pre_restore_backup=pre_restore_backup
+                pre_restore_backup=pre_restore_backup,
             )
 
         except Exception as e:
@@ -272,7 +286,7 @@ class ConfigBackupManager:
                 backup_id=backup_id,
                 config_path=target_path,
                 warnings=[f"Restore failed: {e!s}"],
-                pre_restore_backup=pre_restore_backup
+                pre_restore_backup=pre_restore_backup,
             )
 
     def list_backups(
@@ -280,16 +294,16 @@ class ConfigBackupManager:
         config_name: str | None = None,
         environment: str | None = None,
         tags: list[str] | None = None,
-        limit: int | None = None
+        limit: int | None = None,
     ) -> list[BackupMetadata]:
         """List available backups with optional filtering.
-        
+
         Args:
             config_name: Filter by configuration name
             environment: Filter by environment
             tags: Filter by tags (any tag must match)
             limit: Limit number of results
-            
+
         Returns:
             List of backup metadata, sorted by creation time (newest first)
         """
@@ -316,10 +330,10 @@ class ConfigBackupManager:
 
     def get_backup_metadata(self, backup_id: str) -> BackupMetadata | None:
         """Get metadata for a specific backup.
-        
+
         Args:
             backup_id: ID of backup to get metadata for
-            
+
         Returns:
             BackupMetadata if found, None otherwise
         """
@@ -327,11 +341,11 @@ class ConfigBackupManager:
 
     def delete_backup(self, backup_id: str, remove_file: bool = True) -> bool:
         """Delete a backup.
-        
+
         Args:
             backup_id: ID of backup to delete
             remove_file: Whether to remove the backup file
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -342,12 +356,14 @@ class ConfigBackupManager:
 
         # Remove backup file if requested
         if remove_file:
-            backup_files = list(self.path_manager.backups_dir.glob(f"{metadata.config_name}_{backup_id}.*"))
+            backup_files = list(
+                self.path_manager.backups_dir.glob(
+                    f"{metadata.config_name}_{backup_id}.*"
+                )
+            )
             for backup_file in backup_files:
-                try:
+                with contextlib.suppress(Exception):
                     backup_file.unlink()
-                except Exception:
-                    pass
 
         # Remove metadata
         del self._metadata[backup_id]
@@ -356,18 +372,15 @@ class ConfigBackupManager:
         return True
 
     def cleanup_old_backups(
-        self,
-        config_name: str | None = None,
-        keep_count: int = 10,
-        keep_days: int = 30
+        self, config_name: str | None = None, keep_count: int = 10, keep_days: int = 30
     ) -> list[str]:
         """Clean up old backups based on retention policy.
-        
+
         Args:
             config_name: Configuration name to clean up (None for all)
             keep_count: Number of recent backups to keep per configuration
             keep_days: Number of days to keep backups
-            
+
         Returns:
             List of deleted backup IDs
         """
@@ -392,23 +405,24 @@ class ConfigBackupManager:
             config_backups.sort(key=lambda x: x[1].created_at, reverse=True)
 
             # Keep recent backups
-            keep_recent = config_backups[:keep_count]
+            config_backups[:keep_count]
             candidates_for_deletion = config_backups[keep_count:]
 
             # Delete old backups beyond retention period
             for backup_id, metadata in candidates_for_deletion:
-                if metadata.created_at < cutoff_timestamp:
-                    if self.delete_backup(backup_id):
-                        deleted_backups.append(backup_id)
+                if metadata.created_at < cutoff_timestamp and self.delete_backup(
+                    backup_id
+                ):
+                    deleted_backups.append(backup_id)
 
         return deleted_backups
 
     def get_backup_info(self, backup_id: str) -> BackupMetadata | None:
         """Get detailed information about a backup.
-        
+
         Args:
             backup_id: Backup ID to query
-            
+
         Returns:
             BackupMetadata or None if not found
         """
@@ -416,11 +430,11 @@ class ConfigBackupManager:
 
     def export_backup(self, backup_id: str, export_path: Path) -> bool:
         """Export a backup to a specific location.
-        
+
         Args:
             backup_id: Backup ID to export
             export_path: Target path for export
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -430,7 +444,9 @@ class ConfigBackupManager:
         metadata = self._metadata[backup_id]
 
         # Find backup file
-        backup_files = list(self.path_manager.backups_dir.glob(f"{metadata.config_name}_{backup_id}.*"))
+        backup_files = list(
+            self.path_manager.backups_dir.glob(f"{metadata.config_name}_{backup_id}.*")
+        )
         if not backup_files:
             return False
 
@@ -442,21 +458,23 @@ class ConfigBackupManager:
             shutil.copy2(backup_path, export_path)
 
             # Also export metadata
-            metadata_path = export_path.with_suffix('.metadata.json')
-            with open(metadata_path, 'w') as f:
+            metadata_path = export_path.with_suffix(".metadata.json")
+            with open(metadata_path, "w") as f:
                 json.dump(metadata.model_dump(), f, indent=2)
 
             return True
         except Exception:
             return False
 
-    def import_backup(self, backup_path: Path, metadata_path: Path | None = None) -> str | None:
+    def import_backup(
+        self, backup_path: Path, metadata_path: Path | None = None
+    ) -> str | None:
         """Import a backup from an external location.
-        
+
         Args:
             backup_path: Path to backup file
             metadata_path: Path to metadata file (optional)
-            
+
         Returns:
             Backup ID if successful, None otherwise
         """
@@ -480,8 +498,8 @@ class ConfigBackupManager:
 
             # Read backup content to generate hash
             try:
-                if backup_path.suffix == '.gz':
-                    with gzip.open(backup_path, 'rt', encoding='utf-8') as f:
+                if backup_path.suffix == ".gz":
+                    with gzip.open(backup_path, "rt", encoding="utf-8") as f:
                         content = f.read()
                 else:
                     with open(backup_path) as f:
@@ -498,8 +516,8 @@ class ConfigBackupManager:
                 config_hash=config_hash,
                 created_at=generate_timestamp(),
                 file_size=backup_path.stat().st_size,
-                compressed=backup_path.suffix == '.gz',
-                tags=["imported"]
+                compressed=backup_path.suffix == ".gz",
+                tags=["imported"],
             )
 
         # Copy backup file to backups directory
@@ -522,10 +540,10 @@ class ConfigBackupManager:
 
     def _find_latest_backup(self, config_name: str) -> str | None:
         """Find the latest backup for a configuration.
-        
+
         Args:
             config_name: Configuration name
-            
+
         Returns:
             Latest backup ID or None
         """
@@ -533,8 +551,10 @@ class ConfigBackupManager:
         latest_time = ""
 
         for backup_id, metadata in self._metadata.items():
-            if (metadata.config_name == config_name and
-                metadata.created_at > latest_time):
+            if (
+                metadata.config_name == config_name
+                and metadata.created_at > latest_time
+            ):
                 latest_backup = backup_id
                 latest_time = metadata.created_at
 
@@ -542,11 +562,11 @@ class ConfigBackupManager:
 
     def _detect_conflicts(self, current_path: Path, new_content: str) -> list[str]:
         """Detect conflicts between current configuration and restore content.
-        
+
         Args:
             current_path: Path to current configuration
             new_content: Content to be restored
-            
+
         Returns:
             List of conflict descriptions
         """
@@ -564,19 +584,25 @@ class ConfigBackupManager:
             current_env = current_config.get("environment", "unknown")
             new_env = new_config.get("environment", "unknown")
             if current_env != new_env:
-                conflicts.append(f"Environment mismatch: current={current_env}, restore={new_env}")
+                conflicts.append(
+                    f"Environment mismatch: current={current_env}, restore={new_env}"
+                )
 
             # Check for provider mismatches
             current_embedding = current_config.get("embedding_provider", "unknown")
             new_embedding = new_config.get("embedding_provider", "unknown")
             if current_embedding != new_embedding:
-                conflicts.append(f"Embedding provider mismatch: current={current_embedding}, restore={new_embedding}")
+                conflicts.append(
+                    f"Embedding provider mismatch: current={current_embedding}, restore={new_embedding}"
+                )
 
             # Check for schema version mismatches
             current_schema = current_config.get("schema_version", "unknown")
             new_schema = new_config.get("schema_version", "unknown")
             if current_schema != new_schema:
-                conflicts.append(f"Schema version mismatch: current={current_schema}, restore={new_schema}")
+                conflicts.append(
+                    f"Schema version mismatch: current={current_schema}, restore={new_schema}"
+                )
 
             # Check for database URL changes
             current_db = current_config.get("database", {}).get("database_url", "")
