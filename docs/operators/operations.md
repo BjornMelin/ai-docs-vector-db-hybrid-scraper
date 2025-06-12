@@ -247,6 +247,10 @@ apt update && apt upgrade -y
 
 # 3. Dependency updates
 docker-compose pull
+# Option 1: Update with uv (recommended)
+uv sync --upgrade
+
+# Option 2: Update with pip
 pip install --upgrade -r requirements.txt
 
 # 4. Performance analysis
