@@ -128,7 +128,7 @@ fastembed==0.6.1
     # via
     #   ai-docs-vector-db-hybrid-scraper (pyproject.toml)
     #   qdrant-client
-fastmcp==2.6.0
+fastmcp==2.8.0
     # via ai-docs-vector-db-hybrid-scraper (pyproject.toml)
 filelock==3.18.0
     # via
