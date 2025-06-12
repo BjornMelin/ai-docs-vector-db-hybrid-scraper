@@ -202,12 +202,14 @@ class TestAdaptiveConfigManager:
         """Test stopping system monitoring."""
         await adaptive_manager.start_monitoring()
         assert adaptive_manager.is_monitoring
+        assert adaptive_manager._monitoring_task is not None
+        assert not adaptive_manager._monitoring_task.done()
 
         await adaptive_manager.stop_monitoring()
 
         assert not adaptive_manager.is_monitoring
-        # Task is cancelled but not set to None in actual implementation
-        assert adaptive_manager._monitoring_task.cancelled()
+        # Task reference is cleared after proper cancellation and cleanup
+        assert adaptive_manager._monitoring_task is None
 
     @pytest.mark.asyncio
     async def test_double_start_monitoring(self, adaptive_manager, mock_system_metrics):
