@@ -105,22 +105,42 @@ class TestQueryPreprocessor:
 
     async def test_text_normalization(self, initialized_preprocessor):
         """Test text normalization functionality."""
-        test_cases = [
+        # Test cases where normalization actually changes the text
+        test_cases_with_changes = [
             ("What   is    Python???", "What is Python?"),
             ("JavaScript  w/  TypeScript", "JavaScript with TypeScript"),
             ("React  e.g.  for  UI", "React for example for UI"),
-            ("API-REST-GraphQL", "API-REST-GraphQL"),
+            ("What's  the  'best'  approach?", 'What\'s the "best" approach?'),
         ]
 
-        for input_query, _expected_pattern in test_cases:
+        for input_query, _expected_pattern in test_cases_with_changes:
             result = await initialized_preprocessor.preprocess_query(
-                input_query, enable_normalization=True
+                input_query, enable_normalization=True, enable_expansion=False
             )
 
-            # Check that normalization was applied
+            # Check that normalization was applied when text actually changes
             assert result.normalization_applied is True
             assert "  " not in result.processed_query  # No double spaces
             assert "???" not in result.processed_query  # No multiple punctuation
+
+        # Test cases where normalization doesn't change the text
+        no_change_cases = [
+            "API-REST-GraphQL",
+            "Simple query",
+            "Clean text already",
+        ]
+
+        for input_query in no_change_cases:
+            result = await initialized_preprocessor.preprocess_query(
+                input_query,
+                enable_normalization=True,
+                enable_expansion=False,
+                enable_spell_correction=False,
+                enable_context_extraction=False,
+            )
+
+            # Check that normalization was not marked as applied when text doesn't change
+            assert result.normalization_applied is False
 
     async def test_normalization_disabled(self, initialized_preprocessor):
         """Test disabling text normalization."""
@@ -233,6 +253,11 @@ class TestQueryPreprocessor:
             "Beginner guide to machine learning",
         ]
 
+        intermediate_queries = [
+            "Intermediate Python programming techniques",
+            "Some experience with React development",
+        ]
+
         advanced_queries = [
             "Advanced Python metaclass patterns",
             "Expert-level React performance optimization",
@@ -245,6 +270,13 @@ class TestQueryPreprocessor:
 
             if "experience_level" in context:
                 assert context["experience_level"] == "beginner"
+
+        for query in intermediate_queries:
+            result = await initialized_preprocessor.preprocess_query(query)
+            context = result.context_extracted
+
+            if "experience_level" in context:
+                assert context["experience_level"] == "intermediate"
 
         for query in advanced_queries:
             result = await initialized_preprocessor.preprocess_query(query)
@@ -370,3 +402,166 @@ class TestQueryPreprocessor:
         assert result.processed_query is not None
         assert len(result.processed_query) > 0
         # Note: actual expansion depends on implementation details
+
+    async def test_remove_stop_words_directly(self, initialized_preprocessor):
+        """Test the _remove_stop_words method directly for coverage."""
+        # Test with short query (should not remove stop words)
+        short_query = "the API"
+        result = initialized_preprocessor._remove_stop_words(short_query)
+        assert result == short_query
+
+        # Test with long query (should remove stop words)
+        long_query = "How to configure the database for a web application"
+        result = initialized_preprocessor._remove_stop_words(long_query)
+        # Should remove some stop words but keep important ones
+        assert "How" in result
+        assert "configure" in result
+        assert "database" in result
+        assert "web" in result
+        assert "application" in result
+        # Some stop words should be removed
+        assert len(result.split()) <= len(long_query.split())
+
+        # Test with important stop words that should be preserved
+        query_with_important_stops = "How to migrate from MySQL to PostgreSQL"
+        result = initialized_preprocessor._remove_stop_words(query_with_important_stops)
+        assert "from" in result  # important stop word
+        assert "to" in result  # important stop word
+
+        # Test with query containing only stop words
+        stop_words_only = "the a an is"
+        result = initialized_preprocessor._remove_stop_words(stop_words_only)
+        # Should return original since filtered result would be empty
+        assert result == stop_words_only
+
+        # Test with punctuation handling
+        query_with_punctuation = "What's the best way to handle this?"
+        result = initialized_preprocessor._remove_stop_words(query_with_punctuation)
+        assert "What's" in result
+        assert "best" in result
+        assert "way" in result
+        assert "handle" in result
+        assert "this?" in result
+
+    async def test_normalization_edge_cases(self, initialized_preprocessor):
+        """Test edge cases in text normalization."""
+        # Test empty string after strip
+        result = await initialized_preprocessor.preprocess_query(
+            "   ",
+            enable_normalization=True,
+            enable_expansion=False,
+            enable_spell_correction=False,
+            enable_context_extraction=False,
+        )
+        assert result.normalization_applied is False
+        assert result.processed_query == ""
+
+        # Test single character
+        result = await initialized_preprocessor.preprocess_query(
+            "a",
+            enable_normalization=True,
+            enable_expansion=False,
+            enable_spell_correction=False,
+            enable_context_extraction=False,
+        )
+        assert result.processed_query == "a"
+
+        # Test query with special unicode characters
+        unicode_query = "Pythön prögrämmîng"
+        result = await initialized_preprocessor.preprocess_query(
+            unicode_query,
+            enable_normalization=True,
+            enable_expansion=False,
+            enable_spell_correction=False,
+            enable_context_extraction=False,
+        )
+        assert result.processed_query == unicode_query
+
+    async def test_spell_correction_edge_cases(self, initialized_preprocessor):
+        """Test edge cases in spell correction."""
+        # Test case sensitivity
+        result = await initialized_preprocessor.preprocess_query(
+            "PHYTHON Programming",
+            enable_spell_correction=True,
+            enable_expansion=False,
+            enable_normalization=False,
+            enable_context_extraction=False,
+        )
+        assert "python" in result.processed_query.lower()
+        assert len(result.corrections_applied) > 0
+
+        # Test substring matches (will correct if misspelling is contained)
+        result = await initialized_preprocessor.preprocess_query(
+            "phythonic",
+            enable_spell_correction=True,
+            enable_expansion=False,
+            enable_normalization=False,
+            enable_context_extraction=False,
+        )
+        # Should correct since "phython" is in "phythonic"
+        assert result.processed_query == "pythonic"
+        assert len(result.corrections_applied) > 0
+
+    async def test_expansion_edge_cases(self, initialized_preprocessor):
+        """Test edge cases in synonym expansion."""
+        # Test expansion with already expanded terms
+        result = await initialized_preprocessor.preprocess_query(
+            "rest api development",
+            enable_expansion=True,
+            enable_spell_correction=False,
+            enable_normalization=False,
+            enable_context_extraction=False,
+        )
+        # Should not add redundant expansions
+        processed_lower = result.processed_query.lower()
+        rest_api_count = processed_lower.count("rest api")
+        assert rest_api_count <= 2  # Original + max one expansion
+
+    async def test_context_extraction_edge_cases(self, initialized_preprocessor):
+        """Test edge cases in context extraction."""
+        # Test empty query
+        result = await initialized_preprocessor.preprocess_query(
+            "",
+            enable_context_extraction=True,
+            enable_spell_correction=False,
+            enable_normalization=False,
+            enable_expansion=False,
+        )
+        assert result.context_extracted == {}
+
+        # Test query with multiple overlapping contexts
+        complex_query = "Python 3.9 Django REST API security architecture"
+        result = await initialized_preprocessor.preprocess_query(
+            complex_query,
+            enable_context_extraction=True,
+            enable_spell_correction=False,
+            enable_normalization=False,
+            enable_expansion=False,
+        )
+        context = result.context_extracted
+        assert "programming_language" in context
+        assert "framework" in context
+        assert "complexity_indicators" in context
+        assert "security" in context["complexity_indicators"]
+        assert "architectural" in context["complexity_indicators"]
+
+    async def test_error_handling(self, initialized_preprocessor):
+        """Test error handling and edge cases."""
+        # Test very long query processing
+        very_long_query = " ".join(["word"] * 100)
+        result = await initialized_preprocessor.preprocess_query(very_long_query)
+        assert result.processed_query is not None
+        assert result.preprocessing_time_ms >= 0
+
+        # Test query with only punctuation
+        punctuation_only = "!@#$%^&*()"
+        result = await initialized_preprocessor.preprocess_query(
+            punctuation_only, enable_normalization=True
+        )
+        assert result.processed_query is not None
+
+        # Test query with mixed encodings (if applicable)
+        mixed_query = "Python programming 编程"
+        result = await initialized_preprocessor.preprocess_query(mixed_query)
+        assert result.processed_query is not None
+        assert result.preprocessing_time_ms >= 0

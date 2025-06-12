@@ -39,14 +39,19 @@ class TestRegisterAllTools:
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
+            "lightweight_scrape": Mock(register_tools=Mock()),
             "collections": Mock(register_tools=Mock()),
             "projects": Mock(register_tools=Mock()),
             "advanced_search": Mock(register_tools=Mock()),
+            "query_processing": Mock(register_tools=Mock()),
+            "filtering_tools": Mock(register_filtering_tools=Mock()),
+            "query_processing_tools": Mock(register_query_processing_tools=Mock()),
             "payload_indexing": Mock(register_tools=Mock()),
             "deployment": Mock(register_tools=Mock()),
             "analytics": Mock(register_tools=Mock()),
             "cache": Mock(register_tools=Mock()),
             "utilities": Mock(register_tools=Mock()),
+            "content_intelligence": Mock(register_tools=Mock()),
         }
         return modules
 
@@ -61,20 +66,36 @@ class TestRegisterAllTools:
             search=mock_tool_modules["search"],
             documents=mock_tool_modules["documents"],
             embeddings=mock_tool_modules["embeddings"],
+            lightweight_scrape=mock_tool_modules["lightweight_scrape"],
             collections=mock_tool_modules["collections"],
             projects=mock_tool_modules["projects"],
             advanced_search=mock_tool_modules["advanced_search"],
+            query_processing=mock_tool_modules["query_processing"],
+            filtering_tools=mock_tool_modules["filtering_tools"],
+            query_processing_tools=mock_tool_modules["query_processing_tools"],
             payload_indexing=mock_tool_modules["payload_indexing"],
             deployment=mock_tool_modules["deployment"],
             analytics=mock_tool_modules["analytics"],
             cache=mock_tool_modules["cache"],
             utilities=mock_tool_modules["utilities"],
+            content_intelligence=mock_tool_modules["content_intelligence"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify each module's register_tools was called
-        for _module_name, module in mock_tool_modules.items():
-            module.register_tools.assert_called_once_with(mock_mcp, mock_client_manager)
+        for module_name, module in mock_tool_modules.items():
+            if module_name == "filtering_tools":
+                module.register_filtering_tools.assert_called_once_with(
+                    mock_mcp, mock_client_manager
+                )
+            elif module_name == "query_processing_tools":
+                module.register_query_processing_tools.assert_called_once_with(
+                    mock_mcp, mock_client_manager
+                )
+            else:
+                module.register_tools.assert_called_once_with(
+                    mock_mcp, mock_client_manager
+                )
 
     @pytest.mark.asyncio
     async def test_registration_order_is_logical(
@@ -95,14 +116,19 @@ class TestRegisterAllTools:
             search=mock_tool_modules["search"],
             documents=mock_tool_modules["documents"],
             embeddings=mock_tool_modules["embeddings"],
+            lightweight_scrape=mock_tool_modules["lightweight_scrape"],
             collections=mock_tool_modules["collections"],
             projects=mock_tool_modules["projects"],
             advanced_search=mock_tool_modules["advanced_search"],
+            query_processing=mock_tool_modules["query_processing"],
+            filtering_tools=mock_tool_modules["filtering_tools"],
+            query_processing_tools=mock_tool_modules["query_processing_tools"],
             payload_indexing=mock_tool_modules["payload_indexing"],
             deployment=mock_tool_modules["deployment"],
             analytics=mock_tool_modules["analytics"],
             cache=mock_tool_modules["cache"],
             utilities=mock_tool_modules["utilities"],
+            content_intelligence=mock_tool_modules["content_intelligence"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
@@ -150,7 +176,7 @@ class TestRegisterAllTools:
         assert any("Registering advanced tools" in msg for msg in log_messages)
         assert any("Registering utility tools" in msg for msg in log_messages)
         assert any(
-            "Successfully registered 14 tool modules" in msg for msg in log_messages
+            "Successfully registered 16 tool modules" in msg for msg in log_messages
         )
 
     @pytest.mark.asyncio
@@ -282,21 +308,33 @@ class TestRegisterAllTools:
             search=mock_tool_modules["search"],
             documents=mock_tool_modules["documents"],
             embeddings=mock_tool_modules["embeddings"],
+            lightweight_scrape=mock_tool_modules["lightweight_scrape"],
             collections=mock_tool_modules["collections"],
             projects=mock_tool_modules["projects"],
             advanced_search=mock_tool_modules["advanced_search"],
+            query_processing=mock_tool_modules["query_processing"],
+            filtering_tools=mock_tool_modules["filtering_tools"],
+            query_processing_tools=mock_tool_modules["query_processing_tools"],
             payload_indexing=mock_tool_modules["payload_indexing"],
             deployment=mock_tool_modules["deployment"],
             analytics=mock_tool_modules["analytics"],
             cache=mock_tool_modules["cache"],
             utilities=mock_tool_modules["utilities"],
+            content_intelligence=mock_tool_modules["content_intelligence"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify arguments for each module
-        for module in mock_tool_modules.values():
-            module.register_tools.assert_called_once()
-            args = module.register_tools.call_args[0]
+        for module_name, module in mock_tool_modules.items():
+            if module_name == "filtering_tools":
+                module.register_filtering_tools.assert_called_once()
+                args = module.register_filtering_tools.call_args[0]
+            elif module_name == "query_processing_tools":
+                module.register_query_processing_tools.assert_called_once()
+                args = module.register_query_processing_tools.call_args[0]
+            else:
+                module.register_tools.assert_called_once()
+                args = module.register_tools.call_args[0]
             assert args[0] is mock_mcp
             assert args[1] is mock_client_manager
 
@@ -322,14 +360,19 @@ class TestToolRegistryIntegration:
             "search": Mock(spec=["register_tools"]),
             "documents": Mock(spec=["register_tools"]),
             "embeddings": Mock(spec=["register_tools"]),
+            "lightweight_scrape": Mock(spec=["register_tools"]),
             "collections": Mock(spec=["register_tools"]),
             "projects": Mock(spec=["register_tools"]),
             "advanced_search": Mock(spec=["register_tools"]),
+            "query_processing": Mock(spec=["register_tools"]),
+            "filtering_tools": Mock(spec=["register_filtering_tools"]),
+            "query_processing_tools": Mock(spec=["register_query_processing_tools"]),
             "payload_indexing": Mock(spec=["register_tools"]),
             "deployment": Mock(spec=["register_tools"]),
             "analytics": Mock(spec=["register_tools"]),
             "cache": Mock(spec=["register_tools"]),
             "utilities": Mock(spec=["register_tools"]),
+            "content_intelligence": Mock(spec=["register_tools"]),
         }
 
         with patch.multiple(
@@ -337,20 +380,30 @@ class TestToolRegistryIntegration:
             search=mock_modules["search"],
             documents=mock_modules["documents"],
             embeddings=mock_modules["embeddings"],
+            lightweight_scrape=mock_modules["lightweight_scrape"],
             collections=mock_modules["collections"],
             projects=mock_modules["projects"],
             advanced_search=mock_modules["advanced_search"],
+            query_processing=mock_modules["query_processing"],
+            filtering_tools=mock_modules["filtering_tools"],
+            query_processing_tools=mock_modules["query_processing_tools"],
             payload_indexing=mock_modules["payload_indexing"],
             deployment=mock_modules["deployment"],
             analytics=mock_modules["analytics"],
             cache=mock_modules["cache"],
             utilities=mock_modules["utilities"],
+            content_intelligence=mock_modules["content_intelligence"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify all modules were called
-        for module in mock_modules.values():
-            module.register_tools.assert_called_once()
+        for module_name, module in mock_modules.items():
+            if module_name == "filtering_tools":
+                module.register_filtering_tools.assert_called_once()
+            elif module_name == "query_processing_tools":
+                module.register_query_processing_tools.assert_called_once()
+            else:
+                module.register_tools.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_type_checking_compatibility(self):
@@ -383,6 +436,29 @@ class TestModuleRegistrationPatterns:
         return AsyncMock(spec=["get_qdrant_client", "get_openai_client"])
 
     @pytest.fixture
+    def mock_tool_modules(self):
+        """Create mock tool modules with register_tools functions."""
+        modules = {
+            "search": Mock(register_tools=Mock()),
+            "documents": Mock(register_tools=Mock()),
+            "embeddings": Mock(register_tools=Mock()),
+            "lightweight_scrape": Mock(register_tools=Mock()),
+            "collections": Mock(register_tools=Mock()),
+            "projects": Mock(register_tools=Mock()),
+            "advanced_search": Mock(register_tools=Mock()),
+            "query_processing": Mock(register_tools=Mock()),
+            "filtering_tools": Mock(register_filtering_tools=Mock()),
+            "query_processing_tools": Mock(register_query_processing_tools=Mock()),
+            "payload_indexing": Mock(register_tools=Mock()),
+            "deployment": Mock(register_tools=Mock()),
+            "analytics": Mock(register_tools=Mock()),
+            "cache": Mock(register_tools=Mock()),
+            "utilities": Mock(register_tools=Mock()),
+            "content_intelligence": Mock(register_tools=Mock()),
+        }
+        return modules
+
+    @pytest.fixture
     def sample_tool_module(self):
         """Create a sample tool module with typical structure."""
         module = Mock()
@@ -399,14 +475,30 @@ class TestModuleRegistrationPatterns:
 
     @pytest.mark.asyncio
     async def test_module_registers_multiple_tools(
-        self, mock_mcp, mock_client_manager, sample_tool_module
+        self, mock_mcp, mock_client_manager, sample_tool_module, mock_tool_modules
     ):
         """Test that modules can register multiple tools."""
-        mock_modules = {"search": sample_tool_module}
+        # Replace search with our custom sample module
+        mock_tool_modules["search"] = sample_tool_module
 
         with patch.multiple(
             tools,
-            search=mock_modules["search"],
+            search=mock_tool_modules["search"],
+            documents=mock_tool_modules["documents"],
+            embeddings=mock_tool_modules["embeddings"],
+            lightweight_scrape=mock_tool_modules["lightweight_scrape"],
+            collections=mock_tool_modules["collections"],
+            projects=mock_tool_modules["projects"],
+            advanced_search=mock_tool_modules["advanced_search"],
+            query_processing=mock_tool_modules["query_processing"],
+            filtering_tools=mock_tool_modules["filtering_tools"],
+            query_processing_tools=mock_tool_modules["query_processing_tools"],
+            payload_indexing=mock_tool_modules["payload_indexing"],
+            deployment=mock_tool_modules["deployment"],
+            analytics=mock_tool_modules["analytics"],
+            cache=mock_tool_modules["cache"],
+            utilities=mock_tool_modules["utilities"],
+            content_intelligence=mock_tool_modules["content_intelligence"],
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
@@ -437,14 +529,19 @@ class TestErrorScenarios:
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
+            "lightweight_scrape": Mock(register_tools=Mock()),
             "collections": Mock(register_tools=Mock()),
             "projects": Mock(register_tools=Mock()),
             "advanced_search": Mock(register_tools=Mock()),
+            "query_processing": Mock(register_tools=Mock()),
+            "filtering_tools": Mock(register_filtering_tools=Mock()),
+            "query_processing_tools": Mock(register_query_processing_tools=Mock()),
             "payload_indexing": Mock(register_tools=Mock()),
             "deployment": Mock(register_tools=Mock()),
             "analytics": Mock(register_tools=Mock()),
             "cache": Mock(register_tools=Mock()),
             "utilities": Mock(register_tools=Mock()),
+            "content_intelligence": Mock(register_tools=Mock()),
         }
         return modules
 
@@ -516,14 +613,19 @@ class TestLoggingBehavior:
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
+            "lightweight_scrape": Mock(register_tools=Mock()),
             "collections": Mock(register_tools=Mock()),
             "projects": Mock(register_tools=Mock()),
             "advanced_search": Mock(register_tools=Mock()),
+            "query_processing": Mock(register_tools=Mock()),
+            "filtering_tools": Mock(register_filtering_tools=Mock()),
+            "query_processing_tools": Mock(register_query_processing_tools=Mock()),
             "payload_indexing": Mock(register_tools=Mock()),
             "deployment": Mock(register_tools=Mock()),
             "analytics": Mock(register_tools=Mock()),
             "cache": Mock(register_tools=Mock()),
             "utilities": Mock(register_tools=Mock()),
+            "content_intelligence": Mock(register_tools=Mock()),
         }
         return modules
 
@@ -557,22 +659,28 @@ class TestLoggingBehavior:
 
     @pytest.mark.asyncio
     async def test_registration_count_is_accurate(
-        self, mock_mcp, mock_client_manager, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
     ):
         """Test that the reported registration count is accurate."""
-        # Create a subset of modules
-        mock_modules = {
-            "search": Mock(register_tools=Mock()),
-            "documents": Mock(register_tools=Mock()),
-            "embeddings": Mock(register_tools=Mock()),
-        }
-
         with (
             patch.multiple(
                 tools,
-                search=mock_modules["search"],
-                documents=mock_modules["documents"],
-                embeddings=mock_modules["embeddings"],
+                search=mock_tool_modules["search"],
+                documents=mock_tool_modules["documents"],
+                embeddings=mock_tool_modules["embeddings"],
+                lightweight_scrape=mock_tool_modules["lightweight_scrape"],
+                collections=mock_tool_modules["collections"],
+                projects=mock_tool_modules["projects"],
+                advanced_search=mock_tool_modules["advanced_search"],
+                query_processing=mock_tool_modules["query_processing"],
+                filtering_tools=mock_tool_modules["filtering_tools"],
+                query_processing_tools=mock_tool_modules["query_processing_tools"],
+                payload_indexing=mock_tool_modules["payload_indexing"],
+                deployment=mock_tool_modules["deployment"],
+                analytics=mock_tool_modules["analytics"],
+                cache=mock_tool_modules["cache"],
+                utilities=mock_tool_modules["utilities"],
+                content_intelligence=mock_tool_modules["content_intelligence"],
             ),
             caplog.at_level(logging.INFO),
         ):
@@ -585,5 +693,5 @@ class TestLoggingBehavior:
             if "Successfully registered" in record.message
         ]
 
-        # Should report 14 modules (since register_all_tools always tries to register all modules)
-        assert "Successfully registered 14 tool modules" in summary_logs[0]
+        # Should report 16 modules (since register_all_tools always tries to register all modules)
+        assert "Successfully registered 16 tool modules" in summary_logs[0]

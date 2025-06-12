@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from ..config.enums import ABTestVariant
 from ..config.enums import FusionAlgorithm
@@ -547,6 +548,318 @@ class QueryFeatures(BaseModel):
     )
 
 
+# Advanced filtering integration models
+class TemporalSearchCriteria(BaseModel):
+    """Temporal search criteria for date-based filtering."""
+
+    start_date: str | None = Field(None, description="Start date (ISO format)")
+    end_date: str | None = Field(None, description="End date (ISO format)")
+    time_window: str | None = Field(
+        None, description="Relative time window (e.g., '7d', '1M')"
+    )
+    freshness_weight: float = Field(
+        0.1, ge=0.0, le=1.0, description="Weight for content freshness"
+    )
+    enable_decay: bool = Field(True, description="Enable time decay scoring")
+
+    @model_validator(mode="after")
+    def validate_temporal_criteria(self) -> "TemporalSearchCriteria":
+        """Validate temporal criteria consistency."""
+        if self.time_window and (self.start_date or self.end_date):
+            raise ValueError("Cannot specify both time_window and explicit dates")
+        return self
+
+
+class ContentTypeSearchCriteria(BaseModel):
+    """Content type criteria for filtering by document type."""
+
+    allowed_types: list[str] = Field(
+        default_factory=list, description="Allowed content types"
+    )
+    excluded_types: list[str] = Field(
+        default_factory=list, description="Excluded content types"
+    )
+    type_weights: dict[str, float] = Field(
+        default_factory=dict, description="Weights for different content types"
+    )
+    semantic_classification: bool = Field(
+        False, description="Enable semantic content classification"
+    )
+    confidence_threshold: float = Field(
+        0.8, ge=0.0, le=1.0, description="Confidence threshold for classification"
+    )
+
+
+class MetadataSearchCriteria(BaseModel):
+    """Metadata search criteria with boolean logic support."""
+
+    filters: dict[str, Any] = Field(
+        default_factory=dict, description="Key-value filters"
+    )
+    boolean_operator: str = Field("AND", description="Boolean operator (AND, OR)")
+    nested_conditions: list[dict[str, Any]] = Field(
+        default_factory=list, description="Nested filter conditions"
+    )
+    field_boost: dict[str, float] = Field(
+        default_factory=dict, description="Field-specific boost values"
+    )
+    enable_fuzzy_match: bool = Field(False, description="Enable fuzzy matching")
+    fuzzy_threshold: float = Field(
+        0.8, ge=0.0, le=1.0, description="Fuzzy match threshold"
+    )
+
+
+class SimilarityThresholdCriteria(BaseModel):
+    """Adaptive similarity threshold criteria."""
+
+    base_threshold: float = Field(
+        0.6, ge=0.0, le=1.0, description="Base similarity threshold"
+    )
+    adaptive_mode: str = Field(
+        "dynamic", description="Adaptive mode (static, dynamic, auto)"
+    )
+    quality_target: float = Field(
+        0.8, ge=0.0, le=1.0, description="Target quality score"
+    )
+    min_results: int = Field(5, ge=1, description="Minimum results to return")
+    max_threshold_reduction: float = Field(
+        0.3, ge=0.0, le=0.5, description="Maximum threshold reduction"
+    )
+    enable_feedback_learning: bool = Field(
+        True, description="Enable feedback-based learning"
+    )
+
+
+class EnhancedFilteredSearchRequest(BaseModel):
+    """Enhanced filtered search request with advanced filtering capabilities."""
+
+    collection_name: str = Field(..., description="Target collection")
+    query_vector: list[float] = Field(..., description="Query vector")
+    limit: int = Field(10, ge=1, le=1000, description="Number of results to return")
+
+    # Advanced filtering criteria
+    temporal_criteria: TemporalSearchCriteria | None = Field(
+        None, description="Temporal filtering criteria"
+    )
+    content_type_criteria: ContentTypeSearchCriteria | None = Field(
+        None, description="Content type filtering criteria"
+    )
+    metadata_criteria: MetadataSearchCriteria | None = Field(
+        None, description="Metadata filtering criteria"
+    )
+    similarity_threshold_criteria: SimilarityThresholdCriteria | None = Field(
+        None, description="Similarity threshold criteria"
+    )
+
+    # Filter composition
+    filter_composition_logic: dict[str, Any] | None = Field(
+        None, description="Advanced filter composition logic"
+    )
+
+    # Search parameters
+    search_params: SearchParams = Field(
+        default_factory=SearchParams, description="Search parameters"
+    )
+    enable_query_expansion: bool = Field(False, description="Enable query expansion")
+    enable_result_clustering: bool = Field(
+        False, description="Enable result clustering"
+    )
+    enable_personalized_ranking: bool = Field(
+        False, description="Enable personalized ranking"
+    )
+
+    # User context
+    user_id: str | None = Field(None, description="User ID for personalization")
+    session_id: str | None = Field(None, description="Session ID for context")
+    context: dict[str, Any] = Field(
+        default_factory=dict, description="Additional context"
+    )
+
+
+class EnhancedSearchResult(BaseModel):
+    """Enhanced search result with filtering and processing metadata."""
+
+    id: str = Field(..., description="Document ID")
+    score: float = Field(..., description="Relevance score")
+    payload: dict[str, Any] = Field(
+        default_factory=dict, description="Document metadata"
+    )
+
+    # Enhanced metadata
+    filter_scores: dict[str, float] = Field(
+        default_factory=dict, description="Individual filter scores"
+    )
+    cluster_id: str | None = Field(None, description="Cluster assignment if clustered")
+    cluster_label: str | None = Field(None, description="Cluster label if available")
+    personalization_boost: float = Field(0.0, description="Personalization score boost")
+    temporal_relevance: float = Field(
+        1.0, ge=0.0, le=1.0, description="Temporal relevance score"
+    )
+    content_type_match: float = Field(
+        1.0, ge=0.0, le=1.0, description="Content type match score"
+    )
+
+    # Processing metadata
+    processing_pipeline: list[str] = Field(
+        default_factory=list, description="Processing stages applied"
+    )
+    expansion_terms: list[str] = Field(
+        default_factory=list, description="Query expansion terms used"
+    )
+    ranking_factors: dict[str, float] = Field(
+        default_factory=dict, description="Ranking factors applied"
+    )
+
+
+class EnhancedSearchResponse(BaseModel):
+    """Enhanced search response with comprehensive metadata."""
+
+    results: list[EnhancedSearchResult] = Field(
+        default_factory=list, description="Enhanced search results"
+    )
+    total_count: int = Field(0, description="Total matching documents")
+
+    # Query processing metadata
+    query_processed: str = Field(..., description="Processed query")
+    query_expansion_applied: bool = Field(
+        False, description="Whether query expansion was applied"
+    )
+    expanded_terms: list[str] = Field(
+        default_factory=list, description="Expanded query terms"
+    )
+
+    # Filtering metadata
+    filters_applied: list[str] = Field(
+        default_factory=list, description="Filters applied"
+    )
+    filter_composition: dict[str, Any] | None = Field(
+        None, description="Filter composition used"
+    )
+    filtered_count: int = Field(0, description="Count after filtering")
+
+    # Clustering metadata
+    clustering_applied: bool = Field(
+        False, description="Whether clustering was applied"
+    )
+    clusters_found: int = Field(0, description="Number of clusters found")
+    cluster_distribution: dict[str, int] = Field(
+        default_factory=dict, description="Result distribution across clusters"
+    )
+
+    # Ranking metadata
+    personalized_ranking_applied: bool = Field(
+        False, description="Whether personalized ranking was applied"
+    )
+    ranking_strategy: str | None = Field(None, description="Ranking strategy used")
+
+    # Performance metadata
+    retrieval_metrics: RetrievalMetrics = Field(
+        default_factory=RetrievalMetrics, description="Performance metrics"
+    )
+    quality_metrics: dict[str, float] = Field(
+        default_factory=dict, description="Quality metrics"
+    )
+
+    # Optimization metadata
+    optimization_applied: bool = Field(
+        False, description="Whether optimization was applied"
+    )
+    adaptive_adjustments: dict[str, Any] = Field(
+        default_factory=dict, description="Adaptive adjustments made"
+    )
+
+
+class VectorSearchIntegrationConfig(BaseModel):
+    """Configuration for integrating vector search with advanced features."""
+
+    # Feature enablement
+    enable_advanced_filtering: bool = Field(
+        True, description="Enable advanced filtering"
+    )
+    enable_query_processing: bool = Field(
+        True, description="Enable query processing pipeline"
+    )
+    enable_adaptive_optimization: bool = Field(
+        True, description="Enable adaptive optimization"
+    )
+    enable_federated_search: bool = Field(False, description="Enable federated search")
+
+    # Integration settings
+    default_pipeline: str = Field("balanced", description="Default processing pipeline")
+    max_processing_time_ms: float = Field(5000.0, description="Maximum processing time")
+    cache_integration_results: bool = Field(
+        True, description="Cache integrated results"
+    )
+
+    # Quality thresholds
+    min_quality_score: float = Field(
+        0.6, ge=0.0, le=1.0, description="Minimum quality threshold"
+    )
+    diversity_factor: float = Field(
+        0.1, ge=0.0, le=1.0, description="Result diversity factor"
+    )
+
+    # Performance optimization
+    parallel_processing: bool = Field(True, description="Enable parallel processing")
+    max_concurrent_operations: int = Field(
+        5, ge=1, description="Max concurrent operations"
+    )
+    adaptive_timeout: bool = Field(
+        True, description="Enable adaptive timeout adjustment"
+    )
+
+    @model_validator(mode="after")
+    def validate_config(self) -> "VectorSearchIntegrationConfig":
+        """Validate integration configuration."""
+        if self.enable_federated_search and not self.enable_query_processing:
+            raise ValueError("Federated search requires query processing to be enabled")
+        return self
+
+
+class IntegratedSearchRequest(BaseModel):
+    """Unified search request integrating all advanced capabilities."""
+
+    # Core search parameters
+    query: str = Field(..., description="Search query")
+    collection_name: str | None = Field(None, description="Target collection")
+    limit: int = Field(10, ge=1, le=1000, description="Maximum results")
+    offset: int = Field(0, ge=0, description="Result offset")
+
+    # Vector search configuration
+    vector_search_config: VectorSearchConfig = Field(
+        default_factory=VectorSearchConfig, description="Vector search configuration"
+    )
+
+    # Advanced filtering
+    temporal_criteria: TemporalSearchCriteria | None = Field(None)
+    content_type_criteria: ContentTypeSearchCriteria | None = Field(None)
+    metadata_criteria: MetadataSearchCriteria | None = Field(None)
+    similarity_threshold_criteria: SimilarityThresholdCriteria | None = Field(None)
+
+    # Query processing options
+    enable_query_expansion: bool = Field(True)
+    enable_result_clustering: bool = Field(False)
+    enable_personalized_ranking: bool = Field(False)
+    enable_federated_search: bool = Field(False)
+
+    # Integration configuration
+    integration_config: VectorSearchIntegrationConfig = Field(
+        default_factory=VectorSearchIntegrationConfig,
+        description="Integration configuration",
+    )
+
+    # User context
+    user_id: str | None = Field(None)
+    session_id: str | None = Field(None)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+    # Performance controls
+    time_budget_ms: float | None = Field(None, description="Time budget override")
+    quality_threshold: float | None = Field(
+        None, description="Quality threshold override"
+    )
+
+
 # Export commonly used types
 __all__ = [
     "ABTestConfig",
@@ -555,12 +868,18 @@ __all__ = [
     "AdvancedHybridSearchRequest",
     "AdvancedSearchResponse",
     "CollectionStats",
+    "ContentTypeSearchCriteria",
     "EffectivenessScore",
+    "EnhancedFilteredSearchRequest",
+    "EnhancedSearchResponse",
+    "EnhancedSearchResult",
     "FilteredSearchRequest",
     "FusionConfig",
     "HyDESearchRequest",
     "HybridSearchRequest",
     "IndexingRequest",
+    "IntegratedSearchRequest",
+    "MetadataSearchCriteria",
     "ModelSelectionStrategy",
     "MultiStageSearchRequest",
     "OptimizationRequest",
@@ -573,5 +892,8 @@ __all__ = [
     "SearchResponse",
     "SearchResult",
     "SearchStage",
+    "SimilarityThresholdCriteria",
+    "TemporalSearchCriteria",
     "VectorSearchConfig",
+    "VectorSearchIntegrationConfig",
 ]

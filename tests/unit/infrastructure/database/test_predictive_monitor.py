@@ -76,14 +76,18 @@ class TestPredictiveLoadMonitor:
         assert prediction.trend_direction == "unknown"
 
     @pytest.mark.asyncio
-    async def test_record_load_metrics(self, predictive_monitor, sample_load_metrics):
+    async def test_record_load_metrics(
+        self, predictive_monitor, sample_metrics_sequence
+    ):
         """Test recording load metrics and pattern history management."""
-        for metrics in sample_load_metrics:
+        for metrics in sample_metrics_sequence:
             await predictive_monitor.record_load_metrics(metrics)
 
-        assert len(predictive_monitor.pattern_history) == len(sample_load_metrics)
+        assert len(predictive_monitor.pattern_history) == len(sample_metrics_sequence)
         # Features should be extracted after 10 metrics
-        assert len(predictive_monitor.feature_history) >= len(sample_load_metrics) - 9
+        assert (
+            len(predictive_monitor.feature_history) >= len(sample_metrics_sequence) - 9
+        )
 
     @pytest.mark.asyncio
     async def test_pattern_history_size_management(self, predictive_monitor):
@@ -510,7 +514,21 @@ class TestPredictiveLoadMonitor:
         """Test error handling during prediction generation."""
         # Force model to be considered trained but cause prediction to fail
         predictive_monitor.is_model_trained = True
-        predictive_monitor.pattern_history = [Mock()] * 20
+
+        # Create proper mock LoadMetrics objects with all required attributes
+        mock_metrics = []
+        base_time = time.time()
+        for i in range(20):
+            mock_metric = Mock()
+            mock_metric.concurrent_requests = 5
+            mock_metric.memory_usage_percent = 50.0
+            mock_metric.cpu_usage_percent = 40.0
+            mock_metric.avg_response_time_ms = 100.0
+            mock_metric.connection_errors = 0
+            mock_metric.timestamp = base_time + i
+            mock_metrics.append(mock_metric)
+
+        predictive_monitor.pattern_history = mock_metrics
 
         # Mock model prediction to raise exception
         with patch.object(

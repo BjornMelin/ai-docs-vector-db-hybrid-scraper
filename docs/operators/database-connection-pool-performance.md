@@ -724,9 +724,9 @@ capacity_targets = {
 
 ### Documentation Links
 
-- [Database Configuration Guide](configuration.md)
-- [Monitoring Setup Guide](monitoring.md)
-- [Troubleshooting Guide](troubleshooting.md)
+- [Database Configuration Guide](../operators/configuration.md)
+- [Monitoring Setup Guide](../operators/monitoring.md)
+- [Troubleshooting Guide](../users/troubleshooting.md)
 - [API Reference](../developers/api-reference.md)
 
 ### External Resources
@@ -743,4 +743,4 @@ capacity_targets = {
 
 ---
 
-> **Next Steps**: Review the [monitoring setup guide](monitoring.md) to implement comprehensive observability for your database connection pool performance.
+> **Next Steps**: Review the [monitoring setup guide](../operators/monitoring.md) to implement comprehensive observability for your database connection pool performance.

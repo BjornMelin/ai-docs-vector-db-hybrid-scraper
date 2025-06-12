@@ -5,7 +5,6 @@ performance metrics, and operational patterns.
 """
 
 import asyncio
-import contextlib
 import logging
 import time
 from dataclasses import dataclass
@@ -156,35 +155,55 @@ class AdaptiveConfigManager:
     async def stop_monitoring(self) -> None:
         """Stop adaptive configuration monitoring."""
         self.is_monitoring = False
-        if self._monitoring_task:
+        if self._monitoring_task and not self._monitoring_task.done():
             self._monitoring_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._monitoring_task
+            try:
+                await asyncio.wait_for(self._monitoring_task, timeout=2.0)
+            except (TimeoutError, asyncio.CancelledError):
+                logger.debug("Adaptive monitoring task cancelled")
+            except Exception as e:
+                logger.debug(f"Expected cancellation during stop: {e}")
+            finally:
+                self._monitoring_task = None
         logger.info("Stopped adaptive configuration monitoring")
 
     async def _monitoring_loop(self) -> None:
         """Main monitoring loop for adaptive configuration."""
-        while self.is_monitoring:
-            try:
-                # Collect system metrics
-                system_metrics = await self._collect_system_metrics()
-                self.recent_system_metrics.append(system_metrics)
+        try:
+            while self.is_monitoring:
+                try:
+                    # Collect system metrics
+                    system_metrics = await self._collect_system_metrics()
+                    self.recent_system_metrics.append(system_metrics)
 
-                # Maintain metrics window
-                if len(self.recent_system_metrics) > self.metrics_window_size:
-                    self.recent_system_metrics.pop(0)
+                    # Maintain metrics window
+                    if len(self.recent_system_metrics) > self.metrics_window_size:
+                        self.recent_system_metrics.pop(0)
 
-                # Analyze and adapt if needed
-                await self._analyze_and_adapt()
+                    # Analyze and adapt if needed
+                    await self._analyze_and_adapt()
 
-                # Wait for next monitoring cycle
-                await asyncio.sleep(self.current_monitoring_interval)
+                    # Wait for next monitoring cycle with cancellable sleep
+                    sleep_time = int(self.current_monitoring_interval)
+                    for _ in range(max(1, sleep_time)):
+                        if not self.is_monitoring:
+                            return
+                        await asyncio.sleep(1.0)
 
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in adaptive monitoring loop: {e}")
-                await asyncio.sleep(self.settings.base_monitoring_interval)
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.error(f"Error in adaptive monitoring loop: {e}")
+                    # Use cancellable sleep for error recovery
+                    sleep_time = int(self.settings.base_monitoring_interval)
+                    for _ in range(max(1, sleep_time)):
+                        if not self.is_monitoring:
+                            return
+                        await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.debug("Adaptive monitoring loop terminated")
 
     async def _collect_system_metrics(self) -> SystemMetrics:
         """Collect current system resource metrics."""

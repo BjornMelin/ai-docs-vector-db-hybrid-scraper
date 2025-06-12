@@ -1,8 +1,22 @@
-# Advanced Query Processing Guide
+# Advanced Query Processing & Filtering Guide
 
 ## Overview
 
-The Advanced Query Processing system provides intelligent query understanding, preprocessing, and routing capabilities that dramatically improve search accuracy and relevance. This system represents a complete implementation of sophisticated query analysis with 14 intent categories, Matryoshka embeddings, and centralized orchestration.
+The Advanced Query Processing system provides intelligent query understanding, preprocessing, routing, and **advanced filtering capabilities** that dramatically improve search accuracy and relevance. This system represents a complete implementation of sophisticated query analysis with 14 intent categories, Matryoshka embeddings, centralized orchestration, and a comprehensive filtering architecture for precise content retrieval.
+
+## New in This Version: Advanced Filtering Architecture
+
+The system now includes a powerful filtering architecture that provides:
+
+- **Temporal Filtering**: Date-based filtering and content freshness evaluation
+- **Content Type Filtering**: Document type and semantic classification filtering  
+- **Metadata Filtering**: Boolean logic operations (AND, OR, NOT) on document metadata
+- **Similarity Threshold Management**: Adaptive threshold controls for vector similarity
+- **Filter Composition**: Complex filter combinations with boolean logic
+- **Personalized Ranking**: User-based ranking and preference learning
+- **Result Clustering**: HDBSCAN and other clustering algorithms for result organization
+- **Query Expansion**: Synonym and related term expansion for broader coverage
+- **Federated Search**: Cross-collection search capabilities
 
 ## Architecture
 
@@ -23,6 +37,44 @@ graph TD
     
     F --> I[Fallback Strategies]
     I --> G
+```
+
+### Advanced Filtering Architecture
+
+```mermaid
+graph TD
+    A[Query + Filters] --> B[Filter Composer]
+    B --> C[Temporal Filter]
+    B --> D[Content Type Filter]
+    B --> E[Metadata Filter]
+    B --> F[Similarity Filter]
+    
+    C --> G[Date Range Validation]
+    C --> H[Content Freshness Scoring]
+    
+    D --> I[Document Type Classification]
+    D --> J[Semantic Content Analysis]
+    
+    E --> K[Boolean Logic Engine]
+    K --> L[AND Operations]
+    K --> M[OR Operations] 
+    K --> N[NOT Operations]
+    
+    F --> O[Adaptive Threshold Manager]
+    O --> P[Dynamic Threshold Adjustment]
+    O --> Q[Confidence Score Analysis]
+    
+    G --> R[Combined Filter Results]
+    H --> R
+    I --> R
+    J --> R
+    L --> R
+    M --> R
+    N --> R
+    P --> R
+    Q --> R
+    
+    R --> S[Enhanced Search Results]
 ```
 
 ## Core Components
@@ -135,6 +187,249 @@ Intelligent query enhancement pipeline:
 - Synonym expansion: "API" → "REST API", "js" → "javascript"
 - Context extraction: Programming languages, frameworks, urgency levels
 - Version detection: "Python 3.9", "React v18"
+```
+
+## Advanced Filtering Components
+
+### 6. Temporal Filtering
+
+Date-based filtering and content freshness evaluation for time-sensitive searches.
+
+```python
+from src.services.vector_db.filters.temporal import TemporalFilter
+from datetime import datetime, timedelta
+
+# Create temporal filter
+temporal_filter = TemporalFilter()
+
+# Filter by date range
+await temporal_filter.apply_date_range_filter(
+    start_date=datetime.now() - timedelta(days=30),
+    end_date=datetime.now(),
+    collection_name="documents"
+)
+
+# Filter by content freshness
+fresh_results = await temporal_filter.apply_freshness_filter(
+    freshness_threshold=0.8,  # 80% freshness score
+    decay_factor=0.1,
+    collection_name="documentation"
+)
+```
+
+### 7. Content Type Filtering
+
+Document type and semantic classification filtering for precise content targeting.
+
+```python
+from src.services.vector_db.filters.content_type import ContentTypeFilter
+
+# Initialize content type filter
+content_filter = ContentTypeFilter()
+
+# Filter by document type
+api_docs = await content_filter.apply_type_filter(
+    document_types=["api_reference", "tutorial"],
+    collection_name="documentation"
+)
+
+# Filter by semantic classification
+code_examples = await content_filter.apply_semantic_filter(
+    semantic_categories=["code_example", "implementation"],
+    confidence_threshold=0.7,
+    collection_name="examples"
+)
+```
+
+### 8. Metadata Filtering with Boolean Logic
+
+Complex metadata filtering with AND, OR, NOT operations.
+
+```python
+from src.services.vector_db.filters.metadata import MetadataFilter
+from src.services.vector_db.filters.base import BooleanOperation
+
+# Create metadata filter
+metadata_filter = MetadataFilter()
+
+# Complex boolean filter
+advanced_filter = await metadata_filter.create_boolean_filter([
+    ("language", "python", BooleanOperation.AND),
+    ("framework", ["django", "fastapi"], BooleanOperation.OR),
+    ("deprecated", True, BooleanOperation.NOT)
+])
+
+results = await metadata_filter.apply_filter(
+    filter_conditions=advanced_filter,
+    collection_name="projects"
+)
+```
+
+### 9. Similarity Threshold Management
+
+Adaptive threshold controls for vector similarity optimization.
+
+```python
+from src.services.vector_db.filters.similarity import SimilarityThresholdManager
+
+# Initialize threshold manager
+threshold_manager = SimilarityThresholdManager()
+
+# Apply adaptive threshold
+optimized_results = await threshold_manager.apply_adaptive_threshold(
+    query_vector=query_embedding,
+    base_threshold=0.7,
+    collection_name="documents",
+    adjustment_factor=0.1
+)
+
+# Dynamic threshold based on query complexity
+dynamic_threshold = await threshold_manager.calculate_dynamic_threshold(
+    query_complexity="high",
+    result_count_target=10,
+    collection_stats=collection_metadata
+)
+```
+
+### 10. Filter Composition
+
+Combine multiple filters with complex boolean logic.
+
+```python
+from src.services.vector_db.filters.composer import FilterComposer
+
+# Initialize filter composer
+composer = FilterComposer()
+
+# Compose complex filter combinations
+composite_filter = await composer.compose_filters([
+    temporal_filter,
+    content_filter,
+    metadata_filter
+], boolean_operation=BooleanOperation.AND)
+
+# Apply composed filters
+filtered_results = await composer.apply_composed_filters(
+    filters=composite_filter,
+    query_vector=embedding,
+    collection_name="comprehensive_docs",
+    limit=20
+)
+```
+
+### 11. Personalized Ranking
+
+User-based ranking and preference learning for customized result ordering.
+
+```python
+from src.services.query_processing.ranking import PersonalizedRankingService
+
+# Initialize ranking service
+ranking_service = PersonalizedRankingService()
+
+# Apply personalized ranking
+personalized_results = await ranking_service.rank_results(
+    results=search_results,
+    user_profile={
+        "programming_languages": ["python", "javascript"],
+        "experience_level": "intermediate",
+        "preferred_content_types": ["tutorial", "example"]
+    },
+    ranking_strategy="hybrid"
+)
+
+# Learn from user interactions
+await ranking_service.update_user_preferences(
+    user_id="user123",
+    interaction_data={
+        "clicked_results": [1, 3, 5],
+        "time_spent": [45, 120, 78],
+        "feedback_scores": [4, 5, 4]
+    }
+)
+```
+
+### 12. Result Clustering
+
+HDBSCAN and other clustering algorithms for result organization.
+
+```python
+from src.services.query_processing.clustering import ResultClusteringService
+
+# Initialize clustering service
+clustering_service = ResultClusteringService()
+
+# Apply HDBSCAN clustering
+clustered_results = await clustering_service.cluster_results(
+    results=search_results,
+    algorithm="hdbscan",
+    min_cluster_size=3,
+    min_samples=2
+)
+
+# Get cluster summaries
+cluster_summaries = await clustering_service.generate_cluster_summaries(
+    clustered_results=clustered_results,
+    summary_method="representative_docs"
+)
+```
+
+### 13. Query Expansion
+
+Synonym and related term expansion for broader coverage.
+
+```python
+from src.services.query_processing.expansion import QueryExpansionService
+
+# Initialize expansion service
+expansion_service = QueryExpansionService()
+
+# Expand query with synonyms
+expanded_query = await expansion_service.expand_query(
+    original_query="database optimization",
+    expansion_strategy="hybrid",
+    max_expanded_terms=5,
+    min_confidence=0.6
+)
+
+# Context-aware expansion
+contextual_expansion = await expansion_service.expand_query_contextual(
+    query="API authentication",
+    context={
+        "domain": ["web_development"],
+        "programming_language": ["python"],
+        "framework": ["fastapi"]
+    }
+)
+```
+
+### 14. Federated Search
+
+Cross-collection search capabilities for comprehensive coverage.
+
+```python
+from src.services.query_processing.federated import FederatedSearchService
+
+# Initialize federated search
+federated_service = FederatedSearchService()
+
+# Search across multiple collections
+federated_results = await federated_service.search_across_collections(
+    query="microservices architecture",
+    collections=["documentation", "examples", "tutorials"],
+    search_strategy="adaptive",
+    result_fusion="weighted_rrf"
+)
+
+# Collection-specific weighting
+weighted_search = await federated_service.weighted_search(
+    query="performance optimization",
+    collection_weights={
+        "documentation": 0.4,
+        "benchmarks": 0.6,
+        "examples": 0.3
+    }
+)
 ```
 
 ## Integration Examples

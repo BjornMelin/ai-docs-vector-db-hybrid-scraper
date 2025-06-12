@@ -39,6 +39,11 @@ This system implements a sophisticated vector-based Retrieval-Augmented Generati
 
 - **Multi-Tier Browser Automation**: Five-tier routing system (httpx → Crawl4AI → Enhanced → browser-use → Playwright)
 - **Enhanced Database Connection Pool**: ML-based predictive scaling with 50.9% latency reduction and 887.9% throughput increase
+- **Advanced Filtering Architecture**: Temporal, content type, metadata, and similarity filtering with boolean logic
+- **Federated Search**: Cross-collection search with intelligent ranking and result fusion
+- **Personalized Ranking**: User-based ranking with preference learning and collaborative filtering
+- **Query Processing Pipeline**: 14-category intent classification with Matryoshka embeddings
+- **Result Clustering**: HDBSCAN-based organization with cluster summaries
 - **Hybrid Vector Search**: Dense + sparse embeddings with reciprocal rank fusion
 - **Query Enhancement**: HyDE (Hypothetical Document Embeddings) implementation
 - **Advanced Reranking**: Cross-encoder reranking with BGE-reranker-v2-m3

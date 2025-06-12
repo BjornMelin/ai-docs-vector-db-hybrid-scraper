@@ -642,10 +642,7 @@ class ConnectionAffinityManager:
 
         # Check if connection is responsive (last used within reasonable time)
         time_since_last_use = time.time() - stats.last_used
-        if time_since_last_use > 1800:  # 30 minutes
-            return False
-
-        return True
+        return time_since_last_use <= 1800  # 30 minutes
 
     async def _track_connection_selection(
         self, connection_id: str, pattern_id: str, selection_method: str
