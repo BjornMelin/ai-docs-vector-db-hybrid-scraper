@@ -5,6 +5,7 @@ settings across the application into a single, well-structured configuration mod
 """
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 from pydantic import BaseModel
@@ -34,6 +35,10 @@ from .validators import validate_model_benchmark_consistency
 from .validators import validate_rate_limit_config
 from .validators import validate_scoring_weights
 from .validators import validate_url_format
+
+# Import enhanced validation components for forward reference
+if TYPE_CHECKING:
+    from .enhanced_validators import ValidationReport
 
 
 class ModelBenchmark(BaseModel):
@@ -1398,12 +1403,24 @@ class UnifiedConfig(BaseSettings):
 
     # Advanced configuration management metadata (optional fields)
     config_version: str = Field(default="1.0.0", description="Configuration version")
-    config_hash: str | None = Field(default=None, description="Configuration hash for change tracking")
-    template_source: str | None = Field(default=None, description="Source template used to generate this config")
-    migration_version: str = Field(default="1.0.0", description="Schema migration version")
-    last_migrated: str | None = Field(default=None, description="Last migration timestamp")
-    created_at: str | None = Field(default=None, description="Configuration creation timestamp")
-    schema_version: str = Field(default="2025.1.0", description="Schema version for compatibility")
+    config_hash: str | None = Field(
+        default=None, description="Configuration hash for change tracking"
+    )
+    template_source: str | None = Field(
+        default=None, description="Source template used to generate this config"
+    )
+    migration_version: str = Field(
+        default="1.0.0", description="Schema migration version"
+    )
+    last_migrated: str | None = Field(
+        default=None, description="Last migration timestamp"
+    )
+    created_at: str | None = Field(
+        default=None, description="Configuration creation timestamp"
+    )
+    schema_version: str = Field(
+        default="2025.1.0", description="Schema version for compatibility"
+    )
 
     # Application settings
     app_name: str = Field(
@@ -1630,13 +1647,15 @@ class UnifiedConfig(BaseSettings):
 
         return issues
 
-    def apply_template(self, template_data: dict[str, Any], template_name: str) -> "UnifiedConfig":
+    def apply_template(
+        self, template_data: dict[str, Any], template_name: str
+    ) -> "UnifiedConfig":
         """Apply a configuration template to create a new configuration.
-        
+
         Args:
             template_data: Template configuration data
             template_name: Name of the template being applied
-            
+
         Returns:
             New configuration instance with template applied
         """
@@ -1645,26 +1664,32 @@ class UnifiedConfig(BaseSettings):
         from .utils import generate_timestamp
 
         # Merge template with current config
-        current_data = self.model_dump(exclude={"config_hash", "created_at", "template_source"})
+        current_data = self.model_dump(
+            exclude={"config_hash", "created_at", "template_source"}
+        )
         merged_data = ConfigMerger.deep_merge(current_data, template_data)
 
         # Add metadata
         config_hash = ConfigVersioning.generate_config_hash(merged_data)
-        merged_data.update({
-            "config_hash": config_hash,
-            "template_source": template_name,
-            "created_at": generate_timestamp(),
-            "config_version": "1.0.0"
-        })
+        merged_data.update(
+            {
+                "config_hash": config_hash,
+                "template_source": template_name,
+                "created_at": generate_timestamp(),
+                "config_version": "1.0.0",
+            }
+        )
 
         return self.__class__(**merged_data)
 
-    def validate_with_suggestions(self, environment: str | None = None) -> "ValidationReport":
+    def validate_with_suggestions(
+        self, environment: str | None = None
+    ) -> "ValidationReport":
         """Perform enhanced validation with suggestions.
-        
+
         Args:
             environment: Target environment for validation
-            
+
         Returns:
             Detailed validation report with suggestions
         """
@@ -1675,7 +1700,7 @@ class UnifiedConfig(BaseSettings):
 
     def get_metadata_summary(self) -> dict[str, Any]:
         """Get configuration metadata summary.
-        
+
         Returns:
             Dictionary containing configuration metadata
         """
@@ -1687,7 +1712,7 @@ class UnifiedConfig(BaseSettings):
             "last_migrated": self.last_migrated,
             "created_at": self.created_at,
             "schema_version": self.schema_version,
-            "environment": str(self.environment)
+            "environment": str(self.environment),
         }
 
 

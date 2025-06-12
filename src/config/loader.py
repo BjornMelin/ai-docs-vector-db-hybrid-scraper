@@ -144,12 +144,14 @@ AI_DOCS__EMBEDDING_PROVIDER=fastembed
 AI_DOCS__CRAWL_PROVIDER=crawl4ai
 
 # OpenAI Configuration
-AI_DOCS__OPENAI__API_KEY=sk-your-openai-api-key
+# WARNING: Replace with your actual API key - never commit real keys!
+AI_DOCS__OPENAI__API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AI_DOCS__OPENAI__MODEL=text-embedding-3-small
 AI_DOCS__OPENAI__DIMENSIONS=1536
 
 # Firecrawl Configuration
-AI_DOCS__FIRECRAWL__API_KEY=your-firecrawl-api-key
+# WARNING: Replace with your actual API key - never commit real keys!
+AI_DOCS__FIRECRAWL__API_KEY=fc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Qdrant Configuration
 AI_DOCS__QDRANT__URL=http://localhost:6333
@@ -195,10 +197,18 @@ AI_DOCS__SECURITY__RATE_LIMIT_REQUESTS=100
                 issues.append("API keys should be required in production")
 
         # Check for test/example values
-        if config.openai.api_key and "your-" in config.openai.api_key:
-            issues.append("OpenAI API key appears to be a placeholder")
-        if config.firecrawl.api_key and "your-" in config.firecrawl.api_key:
-            issues.append("Firecrawl API key appears to be a placeholder")
+        if config.openai.api_key and (
+            "your-" in config.openai.api_key or "xxxxxxx" in config.openai.api_key
+        ):
+            issues.append(
+                "OpenAI API key appears to be a placeholder - replace with real key"
+            )
+        if config.firecrawl.api_key and (
+            "your-" in config.firecrawl.api_key or "xxxxxxx" in config.firecrawl.api_key
+        ):
+            issues.append(
+                "Firecrawl API key appears to be a placeholder - replace with real key"
+            )
 
         return len(issues) == 0, issues
 
