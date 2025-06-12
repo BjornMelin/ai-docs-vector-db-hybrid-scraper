@@ -9,7 +9,6 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from contextlib import suppress
 from typing import Any
 
 from sqlalchemy import text
@@ -246,7 +245,7 @@ class AsyncConnectionManager:
             response_time_ms = (time.time() - start_time) * 1000
             await self.load_monitor.record_request_end(response_time_ms)
 
-    async def execute_query(
+    async def execute_query(  # noqa: PLR0915
         self,
         query: str,
         parameters: dict[str, Any] | None = None,
@@ -271,15 +270,21 @@ class AsyncConnectionManager:
             # Get optimal connection using affinity manager if available
             optimal_connection_id = None
             if self.connection_affinity:
-                optimal_connection_id = (
-                    await self.connection_affinity.get_optimal_connection(
-                        query, query_type
+                try:
+                    optimal_connection_id = (
+                        await self.connection_affinity.get_optimal_connection(
+                            query, query_type
+                        )
                     )
-                )
-                if optimal_connection_id:
+                    if optimal_connection_id:
+                        logger.debug(
+                            f"Using affinity-optimized connection {optimal_connection_id}"
+                        )
+                except Exception as e:
                     logger.debug(
-                        f"Using affinity-optimized connection {optimal_connection_id}"
+                        f"Connection affinity failed, using default routing: {e}"
                     )
+                    optimal_connection_id = None
 
             # Determine appropriate failure type for circuit breaker
             failure_type = self._map_query_type_to_failure_type(query_type)
@@ -287,10 +292,16 @@ class AsyncConnectionManager:
             # Get timeout from adaptive config if available
             execution_timeout = timeout
             if not execution_timeout and self.adaptive_config:
-                config_state = await self.adaptive_config.get_current_configuration()
-                execution_timeout = (
-                    config_state["current_settings"]["timeout_ms"] / 1000.0
-                )
+                try:
+                    config_state = (
+                        await self.adaptive_config.get_current_configuration()
+                    )
+                    execution_timeout = (
+                        config_state["current_settings"]["timeout_ms"] / 1000.0
+                    )
+                except Exception as e:
+                    logger.debug(f"Adaptive config failed, using default timeout: {e}")
+                    execution_timeout = None
 
             # Execute query with circuit breaker protection
             async def _execute_query():
@@ -326,13 +337,16 @@ class AsyncConnectionManager:
 
             # Track performance in connection affinity manager
             if self.connection_affinity and optimal_connection_id:
-                await self.connection_affinity.track_query_performance(
-                    optimal_connection_id,
-                    query,
-                    execution_time_ms,
-                    query_type,
-                    success=True,
-                )
+                try:
+                    await self.connection_affinity.track_query_performance(
+                        optimal_connection_id,
+                        query,
+                        execution_time_ms,
+                        query_type,
+                        success=True,
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to track query performance: {e}")
 
             logger.debug(f"Query executed in {execution_time:.2f}ms: {query[:100]}...")
 
@@ -345,13 +359,16 @@ class AsyncConnectionManager:
 
             # Track failure in connection affinity manager
             if self.connection_affinity and optimal_connection_id:
-                await self.connection_affinity.track_query_performance(
-                    optimal_connection_id,
-                    query,
-                    execution_time_ms,
-                    query_type,
-                    success=False,
-                )
+                try:
+                    await self.connection_affinity.track_query_performance(
+                        optimal_connection_id,
+                        query,
+                        execution_time_ms,
+                        query_type,
+                        success=False,
+                    )
+                except Exception as track_error:
+                    logger.debug(f"Failed to track query failure: {track_error}")
 
             logger.error(f"Query execution failed: {e}")
             raise
@@ -579,43 +596,69 @@ class AsyncConnectionManager:
 
     async def _health_check_loop(self) -> None:
         """Periodic health checks for the database connection."""
-        while self._is_initialized:
-            try:
-                if self._engine:
-                    # Test connection health using circuit breaker
-                    async def health_check():
-                        async with self._engine.begin() as conn:
-                            await conn.execute(text("SELECT 1"))
+        try:
+            while self._is_initialized:
+                try:
+                    if self._engine:
+                        # Test connection health using circuit breaker
+                        async def health_check():
+                            async with self._engine.begin() as conn:
+                                await conn.execute(text("SELECT 1"))
 
-                    await self.circuit_breaker.call(health_check)
+                        await self.circuit_breaker.call(health_check)
 
-                await asyncio.sleep(30.0)  # Health check every 30 seconds
+                    # Use a cancellable sleep that checks the flag
+                    for _ in range(30):  # 30 seconds in 1-second chunks
+                        if not self._is_initialized:
+                            return
+                        await asyncio.sleep(1.0)
 
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.warning(f"Health check failed: {e}")
-                await self.load_monitor.record_connection_error()
-                await asyncio.sleep(10.0)  # Shorter retry interval on failure
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.warning(f"Health check failed: {e}")
+                    await self.load_monitor.record_connection_error()
+                    # Use a cancellable sleep that checks the flag
+                    for _ in range(10):  # 10 seconds in 1-second chunks
+                        if not self._is_initialized:
+                            return
+                        await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.debug("Health check loop terminated")
 
     async def _metrics_loop(self) -> None:
         """Periodic metrics collection and pool optimization."""
-        while self._is_initialized:
-            try:
-                # Check if we need to adjust pool size
-                if self.config.adaptive_pool_sizing:
-                    await self._maybe_adjust_pool_size()
+        try:
+            while self._is_initialized:
+                try:
+                    # Check if we need to adjust pool size
+                    if self.config.adaptive_pool_sizing:
+                        await self._maybe_adjust_pool_size()
 
-                # Clean up old query stats
-                await self.query_monitor.cleanup_old_stats()
+                    # Clean up old query stats
+                    await self.query_monitor.cleanup_old_stats()
 
-                await asyncio.sleep(60.0)  # Check every minute
+                    # Use a cancellable sleep that checks the flag
+                    for _ in range(60):  # 60 seconds in 1-second chunks
+                        if not self._is_initialized:
+                            return
+                        await asyncio.sleep(1.0)
 
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in metrics loop: {e}")
-                await asyncio.sleep(30.0)
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.error(f"Error in metrics loop: {e}")
+                    # Use a cancellable sleep that checks the flag
+                    for _ in range(30):  # 30 seconds in 1-second chunks
+                        if not self._is_initialized:
+                            return
+                        await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.debug("Metrics loop terminated")
 
     async def _maybe_adjust_pool_size(self) -> None:
         """Adjust pool size if needed based on current load."""
@@ -650,16 +693,35 @@ class AsyncConnectionManager:
     async def _cleanup(self) -> None:
         """Clean up resources."""
         try:
-            # Cancel monitoring tasks
-            if self._health_check_task:
-                self._health_check_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await self._health_check_task
+            # Set flag to stop monitoring loops
+            self._is_initialized = False
 
-            if self._metrics_task:
+            # Cancel monitoring tasks with proper timeout handling
+            tasks_to_cancel = []
+
+            if self._health_check_task and not self._health_check_task.done():
+                self._health_check_task.cancel()
+                tasks_to_cancel.append(self._health_check_task)
+
+            if self._metrics_task and not self._metrics_task.done():
                 self._metrics_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await self._metrics_task
+                tasks_to_cancel.append(self._metrics_task)
+
+            # Wait for tasks to complete with timeout
+            if tasks_to_cancel:
+                try:
+                    # Give tasks a chance to complete gracefully
+                    await asyncio.wait_for(
+                        asyncio.gather(*tasks_to_cancel, return_exceptions=True),
+                        timeout=2.0,
+                    )
+                except TimeoutError:
+                    logger.debug("Tasks cancelled during cleanup")
+                except Exception as e:
+                    logger.debug(f"Expected cancellation during cleanup: {e}")
+                finally:
+                    self._health_check_task = None
+                    self._metrics_task = None
 
             # Stop load monitor
             await self.load_monitor.stop()

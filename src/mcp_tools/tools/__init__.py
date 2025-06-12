@@ -18,6 +18,7 @@ from . import lightweight_scrape
 from . import payload_indexing
 from . import projects
 from . import query_processing
+from . import query_processing_tools
 from . import search
 from . import utilities
 
@@ -35,6 +36,7 @@ __all__ = [
     "payload_indexing",
     "projects",
     "query_processing",
+    "query_processing_tools",
     "search",
     "utilities",
 ]
