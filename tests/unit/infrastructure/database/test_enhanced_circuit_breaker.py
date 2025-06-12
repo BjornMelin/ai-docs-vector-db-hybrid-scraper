@@ -533,7 +533,8 @@ class TestMultiLevelCircuitBreaker:
 
         # Execute multiple concurrent requests
         tasks = [
-            circuit_breaker.execute(lambda: test_func(0.01 * i)) for i in range(10)
+            circuit_breaker.execute(lambda delay=0.01 * i: test_func(delay))
+            for i in range(10)
         ]
 
         results = await asyncio.gather(*tasks)

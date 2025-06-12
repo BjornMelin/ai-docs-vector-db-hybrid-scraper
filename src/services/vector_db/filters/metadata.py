@@ -82,11 +82,10 @@ class FieldConditionModel(BaseModel):
     @classmethod
     def validate_values_for_operator(cls, v, info):
         """Validate values list is provided for appropriate operators."""
-        if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN]:
-            if not v:
-                raise ValueError(
-                    f"values list required for {info.data['operator']} operator"
-                )
+        if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN] and not v:
+            raise ValueError(
+                f"values list required for {info.data['operator']} operator"
+            )
         return v
 
     @model_validator(mode="after")
@@ -95,9 +94,11 @@ class FieldConditionModel(BaseModel):
         if self.operator in [FieldOperator.IN, FieldOperator.NIN]:
             if not self.values:
                 raise ValueError(f"values list required for {self.operator} operator")
-        elif self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS]:
-            if self.value is None:
-                raise ValueError(f"value required for {self.operator} operator")
+        elif (
+            self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS]
+            and self.value is None
+        ):
+            raise ValueError(f"value required for {self.operator} operator")
 
         return self
 
@@ -119,11 +120,8 @@ class BooleanExpressionModel(BaseModel):
         if operator == BooleanOperator.NOT:
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one condition")
-        elif operator in [BooleanOperator.AND, BooleanOperator.OR]:
-            if len(v) < 2:
-                raise ValueError(
-                    f"{operator} operator requires at least two conditions"
-                )
+        elif operator in [BooleanOperator.AND, BooleanOperator.OR] and len(v) < 2:
+            raise ValueError(f"{operator} operator requires at least two conditions")
 
         return v
 
@@ -335,9 +333,11 @@ class MetadataFilter(BaseFilter):
                 if isinstance(value, list):
                     # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                     exclude_values = [
-                        str(v)
-                        if isinstance(v, bool) or not isinstance(v, (str, int))
-                        else v
+                        (
+                            str(v)
+                            if isinstance(v, bool) or not isinstance(v, str | int)
+                            else v
+                        )
                         for v in value
                     ]
                     conditions.append(
@@ -350,7 +350,7 @@ class MetadataFilter(BaseFilter):
                     # Convert value to string if it's not string/int (but exclude bool even though it's int)
                     exclude_value = (
                         str(value)
-                        if isinstance(value, bool) or not isinstance(value, (str, int))
+                        if isinstance(value, bool) or not isinstance(value, str | int)
                         else value
                     )
                     conditions.append(
@@ -400,8 +400,8 @@ class MetadataFilter(BaseFilter):
         value = condition.value
         values = condition.values
 
-        # Apply global case sensitivity setting
-        case_sensitive = condition.case_sensitive and not criteria.ignore_case
+        # Apply global case sensitivity setting (unused for now)
+        # case_sensitive = condition.case_sensitive and not criteria.ignore_case
 
         try:
             # Existence operators
@@ -424,7 +424,7 @@ class MetadataFilter(BaseFilter):
                 # Convert value to string if it's not string/int (but exclude bool even though it's int)
                 exclude_value = (
                     str(value)
-                    if isinstance(value, bool) or not isinstance(value, (str, int))
+                    if isinstance(value, bool) or not isinstance(value, str | int)
                     else value
                 )
                 return models.FieldCondition(
@@ -449,9 +449,7 @@ class MetadataFilter(BaseFilter):
             elif operator == FieldOperator.NIN:
                 # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                 exclude_values = [
-                    str(v)
-                    if isinstance(v, bool) or not isinstance(v, (str, int))
-                    else v
+                    str(v) if isinstance(v, bool) or not isinstance(v, str | int) else v
                     for v in values
                 ]
                 return models.FieldCondition(
@@ -608,7 +606,7 @@ class MetadataFilter(BaseFilter):
         try:
             operator = BooleanOperator(operator_key)
         except ValueError:
-            raise ValueError(f"Invalid boolean operator: {operator_key}")
+            raise ValueError(f"Invalid boolean operator: {operator_key}") from None
 
         # Parse conditions
         parsed_conditions = []

@@ -93,7 +93,7 @@ services:
   task-worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: docker/Dockerfile.worker
     container_name: task-worker-personal
     restart: unless-stopped
     environment:

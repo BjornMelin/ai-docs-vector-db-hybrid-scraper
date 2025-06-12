@@ -350,11 +350,11 @@ class TestDatabaseConnectionPoolOptimizationIntegration:
                 raise Exception(f"Simulated circuit breaker failure {failure_count}")
 
             # Trigger failures through the circuit breaker directly (3 failures to reach threshold)
+            import contextlib
+
             for _i in range(3):
-                try:
+                with contextlib.suppress(Exception):
                     await manager.circuit_breaker.call(failing_function)
-                except Exception:
-                    pass  # Expected failures
 
             # Circuit should be open now
             stats = await manager.get_connection_stats()

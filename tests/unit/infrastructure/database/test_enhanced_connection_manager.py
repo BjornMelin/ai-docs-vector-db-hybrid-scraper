@@ -109,181 +109,191 @@ class TestEnhancedAsyncConnectionManager:
         assert hasattr(enhanced_manager.circuit_breaker, "execute")
 
         # Test initialization process
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                assert enhanced_manager._is_initialized
-                enhanced_manager.load_monitor.start.assert_called_once()
-                enhanced_manager.adaptive_config.start_monitoring.assert_called_once()
+            assert enhanced_manager._is_initialized
+            enhanced_manager.load_monitor.start.assert_called_once()
+            enhanced_manager.adaptive_config.start_monitoring.assert_called_once()
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_predictive_load_monitoring_integration(
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test integration with predictive load monitoring."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Test that prediction is used for pool sizing
-                prediction = LoadPrediction(
-                    predicted_load=0.8,
-                    confidence_score=0.9,
-                    recommendation="Scale up immediately",
-                    time_horizon_minutes=15,
-                    feature_importance={"avg_requests": 0.5},
-                    trend_direction="increasing",
-                )
-                enhanced_manager.load_monitor.predict_future_load.return_value = (
-                    prediction
-                )
+            # Test that prediction is used for pool sizing
+            prediction = LoadPrediction(
+                predicted_load=0.8,
+                confidence_score=0.9,
+                recommendation="Scale up immediately",
+                time_horizon_minutes=15,
+                feature_importance={"avg_requests": 0.5},
+                trend_direction="increasing",
+            )
+            enhanced_manager.load_monitor.predict_future_load.return_value = prediction
 
-                # Simulate prediction request
-                result = await enhanced_manager.load_monitor.predict_future_load(
-                    horizon_minutes=15
-                )
+            # Simulate prediction request
+            result = await enhanced_manager.load_monitor.predict_future_load(
+                horizon_minutes=15
+            )
 
-                assert result.predicted_load == 0.8
-                assert result.confidence_score == 0.9
-                assert "Scale up" in result.recommendation
+            assert result.predicted_load == 0.8
+            assert result.confidence_score == 0.9
+            assert "Scale up" in result.recommendation
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_multi_level_circuit_breaker_integration(
         self, enhanced_manager, mock_engine, mock_session_factory, mock_session
     ):
         """Test integration with multi-level circuit breaker."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Mock circuit breaker to return the result
-                mock_result = Mock()
-                mock_result.scalar.return_value = 1
-                enhanced_manager.circuit_breaker.execute.return_value = mock_result
+            # Mock circuit breaker to return the result
+            mock_result = Mock()
+            mock_result.scalar.return_value = 1
+            enhanced_manager.circuit_breaker.execute.return_value = mock_result
 
-                # Test query execution with enhanced circuit breaker
-                query = "SELECT * FROM users"
-                await enhanced_manager.execute_query(query, query_type=QueryType.READ)
+            # Test query execution with enhanced circuit breaker
+            query = "SELECT * FROM users"
+            await enhanced_manager.execute_query(query, query_type=QueryType.READ)
 
-                # Verify circuit breaker was called with correct failure type
-                enhanced_manager.circuit_breaker.execute.assert_called_once()
-                call_args = enhanced_manager.circuit_breaker.execute.call_args
-                assert call_args.kwargs["failure_type"] == FailureType.QUERY
+            # Verify circuit breaker was called with correct failure type
+            enhanced_manager.circuit_breaker.execute.assert_called_once()
+            call_args = enhanced_manager.circuit_breaker.execute.call_args
+            assert call_args.kwargs["failure_type"] == FailureType.QUERY
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_connection_affinity_integration(
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test integration with connection affinity manager."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Mock optimal connection selection
-                enhanced_manager.connection_affinity.get_optimal_connection.return_value = "conn_optimal"
+            # Mock optimal connection selection
+            enhanced_manager.connection_affinity.get_optimal_connection.return_value = (
+                "conn_optimal"
+            )
 
-                # Mock circuit breaker and session
-                mock_result = Mock()
-                mock_result.scalar.return_value = 1
-                enhanced_manager.circuit_breaker.execute.return_value = mock_result
+            # Mock circuit breaker and session
+            mock_result = Mock()
+            mock_result.scalar.return_value = 1
+            enhanced_manager.circuit_breaker.execute.return_value = mock_result
 
-                # Test query execution with connection affinity
-                query = "SELECT * FROM analytics_data"
-                await enhanced_manager.execute_query(
-                    query, query_type=QueryType.ANALYTICS
-                )
+            # Test query execution with connection affinity
+            query = "SELECT * FROM analytics_data"
+            await enhanced_manager.execute_query(query, query_type=QueryType.ANALYTICS)
 
-                # Verify connection affinity was consulted
-                enhanced_manager.connection_affinity.get_optimal_connection.assert_called_with(
-                    query, QueryType.ANALYTICS
-                )
+            # Verify connection affinity was consulted
+            enhanced_manager.connection_affinity.get_optimal_connection.assert_called_with(
+                query, QueryType.ANALYTICS
+            )
 
-                # Verify performance tracking
-                enhanced_manager.connection_affinity.track_query_performance.assert_called()
+            # Verify performance tracking
+            enhanced_manager.connection_affinity.track_query_performance.assert_called()
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_adaptive_configuration_integration(
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test integration with adaptive configuration manager."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Mock adaptive configuration response
-                config_state = {
-                    "current_settings": {
-                        "timeout_ms": 45000.0,
-                        "pool_size": 8,
-                        "failure_threshold": 7,
-                    }
+            # Mock adaptive configuration response
+            config_state = {
+                "current_settings": {
+                    "timeout_ms": 45000.0,
+                    "pool_size": 8,
+                    "failure_threshold": 7,
                 }
-                enhanced_manager.adaptive_config.get_current_configuration.return_value = config_state
+            }
+            enhanced_manager.adaptive_config.get_current_configuration.return_value = (
+                config_state
+            )
 
-                # Mock circuit breaker and session
-                mock_result = Mock()
-                mock_result.scalar.return_value = 1
-                enhanced_manager.circuit_breaker.execute.return_value = mock_result
+            # Mock circuit breaker and session
+            mock_result = Mock()
+            mock_result.scalar.return_value = 1
+            enhanced_manager.circuit_breaker.execute.return_value = mock_result
 
-                # Test query execution with adaptive timeout
-                query = "SELECT * FROM large_table"
-                await enhanced_manager.execute_query(
-                    query, timeout=None
-                )  # Use adaptive timeout
+            # Test query execution with adaptive timeout
+            query = "SELECT * FROM large_table"
+            await enhanced_manager.execute_query(
+                query, timeout=None
+            )  # Use adaptive timeout
 
-                # Verify adaptive configuration was consulted
-                enhanced_manager.adaptive_config.get_current_configuration.assert_called()
+            # Verify adaptive configuration was consulted
+            enhanced_manager.adaptive_config.get_current_configuration.assert_called()
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_connection_registration_and_management(self, enhanced_manager):
@@ -306,36 +316,38 @@ class TestEnhancedAsyncConnectionManager:
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test comprehensive statistics collection from all components."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Mock the missing _failure_count attribute
-                enhanced_manager.circuit_breaker._failure_count = 0
+            # Mock the missing _failure_count attribute
+            enhanced_manager.circuit_breaker._failure_count = 0
 
-                stats = await enhanced_manager.get_connection_stats()
+            stats = await enhanced_manager.get_connection_stats()
 
-                # Verify all enhanced components provide stats
-                assert "enhanced_circuit_breaker" in stats
-                assert "connection_affinity" in stats
-                assert "adaptive_config" in stats
-                assert "predictive_monitoring" in stats
+            # Verify all enhanced components provide stats
+            assert "enhanced_circuit_breaker" in stats
+            assert "connection_affinity" in stats
+            assert "adaptive_config" in stats
+            assert "predictive_monitoring" in stats
 
-                # Verify component-specific methods were called
-                enhanced_manager.circuit_breaker.get_health_status.assert_called()
-                enhanced_manager.connection_affinity.get_performance_report.assert_called()
-                enhanced_manager.adaptive_config.get_current_configuration.assert_called()
-                enhanced_manager.load_monitor.get_prediction_metrics.assert_called()
+            # Verify component-specific methods were called
+            enhanced_manager.circuit_breaker.get_health_status.assert_called()
+            enhanced_manager.connection_affinity.get_performance_report.assert_called()
+            enhanced_manager.adaptive_config.get_current_configuration.assert_called()
+            enhanced_manager.load_monitor.get_prediction_metrics.assert_called()
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_failure_type_mapping(self, enhanced_manager):
@@ -358,57 +370,65 @@ class TestEnhancedAsyncConnectionManager:
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test shutdown process with all enhanced components."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
-                await enhanced_manager.shutdown()
+            await enhanced_manager.initialize()
+            await enhanced_manager.shutdown()
 
-                # Verify all components are properly stopped
-                enhanced_manager.load_monitor.stop.assert_called_once()
-                enhanced_manager.adaptive_config.stop_monitoring.assert_called_once()
-                assert not enhanced_manager._is_initialized
+            # Verify all components are properly stopped
+            enhanced_manager.load_monitor.stop.assert_called_once()
+            enhanced_manager.adaptive_config.stop_monitoring.assert_called_once()
+            assert not enhanced_manager._is_initialized
 
     @pytest.mark.asyncio
     async def test_error_handling_with_enhanced_features(
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
         """Test error handling across all enhanced features."""
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = mock_session_factory
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = mock_session_factory
 
-                await enhanced_manager.initialize()
+            await enhanced_manager.initialize()
 
-                # Mock a database error
-                enhanced_manager.circuit_breaker.execute.side_effect = Exception(
-                    "Database error"
-                )
+            # Mock a database error
+            enhanced_manager.circuit_breaker.execute.side_effect = Exception(
+                "Database error"
+            )
 
-                # Mock connection affinity to return a connection
-                enhanced_manager.connection_affinity.get_optimal_connection.return_value = "conn_error"
+            # Mock connection affinity to return a connection
+            enhanced_manager.connection_affinity.get_optimal_connection.return_value = (
+                "conn_error"
+            )
 
-                with pytest.raises(Exception, match="Database error"):
-                    await enhanced_manager.execute_query("SELECT * FROM test")
+            with pytest.raises(Exception, match="Database error"):
+                await enhanced_manager.execute_query("SELECT * FROM test")
 
-                # Verify error was tracked in connection affinity
-                enhanced_manager.connection_affinity.track_query_performance.assert_called()
-                call_args = enhanced_manager.connection_affinity.track_query_performance.call_args
-                assert call_args.kwargs["success"] is False
+            # Verify error was tracked in connection affinity
+            enhanced_manager.connection_affinity.track_query_performance.assert_called()
+            call_args = (
+                enhanced_manager.connection_affinity.track_query_performance.call_args
+            )
+            assert call_args.kwargs["success"] is False
 
-                # Clean up
-                await enhanced_manager.shutdown()
+            # Clean up
+            await enhanced_manager.shutdown()
 
     def test_enhanced_initialization_flags(self, enhanced_db_config):
         """Test initialization with different feature flags."""
@@ -483,28 +503,30 @@ class TestEnhancedConnectionManagerEdgeCases:
         )
         manager.connection_affinity = failing_affinity_manager
 
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = Mock()
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = Mock()
 
-                await manager.initialize()
+            await manager.initialize()
 
-                # Mock circuit breaker to succeed
-                mock_result = Mock()
-                mock_result.scalar.return_value = 1
-                manager.circuit_breaker.execute = AsyncMock(return_value=mock_result)
+            # Mock circuit breaker to succeed
+            mock_result = Mock()
+            mock_result.scalar.return_value = 1
+            manager.circuit_breaker.execute = AsyncMock(return_value=mock_result)
 
-                # Query should still succeed despite affinity manager failure
-                result = await manager.execute_query("SELECT 1")
-                assert result == mock_result
+            # Query should still succeed despite affinity manager failure
+            result = await manager.execute_query("SELECT 1")
+            assert result == mock_result
 
-                # Clean up
-                await manager.shutdown()
+            # Clean up
+            await manager.shutdown()
 
     @pytest.mark.asyncio
     async def test_stats_collection_with_component_errors(
@@ -531,30 +553,32 @@ class TestEnhancedConnectionManagerEdgeCases:
             side_effect=Exception("Config stats error")
         )
 
-        with patch(
-            "src.infrastructure.database.connection_manager.create_async_engine"
-        ) as mock_create_engine:
-            with patch(
+        with (
+            patch(
+                "src.infrastructure.database.connection_manager.create_async_engine"
+            ) as mock_create_engine,
+            patch(
                 "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker:
-                mock_create_engine.return_value = mock_engine
-                mock_sessionmaker.return_value = Mock()
+            ) as mock_sessionmaker,
+        ):
+            mock_create_engine.return_value = mock_engine
+            mock_sessionmaker.return_value = Mock()
 
-                await manager.initialize()
+            await manager.initialize()
 
-                # Mock the missing _failure_count attribute
-                manager.circuit_breaker._failure_count = 0
+            # Mock the missing _failure_count attribute
+            manager.circuit_breaker._failure_count = 0
 
-                stats = await manager.get_connection_stats()
+            stats = await manager.get_connection_stats()
 
-                # Should still return stats with error information
-                assert "connection_affinity" in stats
-                assert "adaptive_config" in stats
-                assert "error" in str(stats["connection_affinity"])
-                assert "error" in str(stats["adaptive_config"])
+            # Should still return stats with error information
+            assert "connection_affinity" in stats
+            assert "adaptive_config" in stats
+            assert "error" in str(stats["connection_affinity"])
+            assert "error" in str(stats["adaptive_config"])
 
-                # Clean up
-                await manager.shutdown()
+            # Clean up
+            await manager.shutdown()
 
 
 class TestEnhancedConnectionManagerIntegration:
@@ -694,42 +718,44 @@ class TestEnhancedConnectionManagerIntegration:
         manager.adaptive_config = mock_real_components["adaptive_config"]
 
         try:
-            with patch(
-                "src.infrastructure.database.connection_manager.create_async_engine"
-            ) as mock_create_engine:
-                with patch(
+            with (
+                patch(
+                    "src.infrastructure.database.connection_manager.create_async_engine"
+                ) as mock_create_engine,
+                patch(
                     "src.infrastructure.database.connection_manager.async_sessionmaker"
-                ) as mock_sessionmaker:
-                    mock_create_engine.return_value = mock_engine
-                    mock_sessionmaker.return_value = mock_session_factory
+                ) as mock_sessionmaker,
+            ):
+                mock_create_engine.return_value = mock_engine
+                mock_sessionmaker.return_value = mock_session_factory
 
-                    # Initialize and test basic functionality
-                    await manager.initialize()
-                    assert manager._is_initialized
+                # Initialize and test basic functionality
+                await manager.initialize()
+                assert manager._is_initialized
 
-                    # Test query execution
-                    # The circuit breaker will call the function, which returns the mock_result from the session
-                    result = await manager.execute_query(
-                        "SELECT 1", query_type=QueryType.READ
-                    )
-                    # The result should be the mock_result from the session
-                    assert result == mock_result
-                    assert result.scalar() == 1
+                # Test query execution
+                # The circuit breaker will call the function, which returns the mock_result from the session
+                result = await manager.execute_query(
+                    "SELECT 1", query_type=QueryType.READ
+                )
+                # The result should be the mock_result from the session
+                assert result == mock_result
+                assert result.scalar() == 1
 
-                    # Test connection registration
-                    await manager.register_connection("test_conn", "read")
+                # Test connection registration
+                await manager.register_connection("test_conn", "read")
 
-                    # Test adaptive configuration
-                    config_state = await mock_real_components[
-                        "adaptive_config"
-                    ].get_current_configuration()
-                    assert "strategy" in config_state
-                    assert "current_settings" in config_state
+                # Test adaptive configuration
+                config_state = await mock_real_components[
+                    "adaptive_config"
+                ].get_current_configuration()
+                assert "strategy" in config_state
+                assert "current_settings" in config_state
 
-                    # Test comprehensive stats
-                    stats = await manager.get_connection_stats()
-                    assert "pool_size" in stats
-                    assert "enhanced_circuit_breaker" in stats
+                # Test comprehensive stats
+                stats = await manager.get_connection_stats()
+                assert "pool_size" in stats
+                assert "enhanced_circuit_breaker" in stats
 
         finally:
             await manager.shutdown()
@@ -805,47 +831,49 @@ class TestEnhancedConnectionManagerIntegration:
         mock_engine.begin = mock_begin
 
         try:
-            with patch(
-                "src.infrastructure.database.connection_manager.create_async_engine"
-            ) as mock_create_engine:
-                with patch(
+            with (
+                patch(
+                    "src.infrastructure.database.connection_manager.create_async_engine"
+                ) as mock_create_engine,
+                patch(
                     "src.infrastructure.database.connection_manager.async_sessionmaker"
-                ) as mock_sessionmaker:
-                    mock_create_engine.return_value = mock_engine
-                    mock_sessionmaker.return_value = mock_session_factory
+                ) as mock_sessionmaker,
+            ):
+                mock_create_engine.return_value = mock_engine
+                mock_sessionmaker.return_value = mock_session_factory
 
-                    await manager.initialize()
+                await manager.initialize()
 
-                    # Mock circuit breaker to return results
-                    circuit_breaker.execute.return_value = mock_result
+                # Mock circuit breaker to return results
+                circuit_breaker.execute.return_value = mock_result
 
-                    # Simulate concurrent load
-                    async def execute_queries():
-                        tasks = []
-                        for i in range(20):
-                            query_type = [
-                                QueryType.READ,
-                                QueryType.WRITE,
-                                QueryType.ANALYTICS,
-                            ][i % 3]
-                            task = manager.execute_query(
-                                f"SELECT {i}", query_type=query_type
-                            )
-                            tasks.append(task)
+                # Simulate concurrent load
+                async def execute_queries():
+                    tasks = []
+                    for i in range(20):
+                        query_type = [
+                            QueryType.READ,
+                            QueryType.WRITE,
+                            QueryType.ANALYTICS,
+                        ][i % 3]
+                        task = manager.execute_query(
+                            f"SELECT {i}", query_type=query_type
+                        )
+                        tasks.append(task)
 
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        return results
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    return results
 
-                    start_time = time.time()
-                    results = await execute_queries()
-                    execution_time = time.time() - start_time
+                start_time = time.time()
+                results = await execute_queries()
+                execution_time = time.time() - start_time
 
-                    # Should complete within reasonable time
-                    assert execution_time < 5.0  # 5 seconds max
+                # Should complete within reasonable time
+                assert execution_time < 5.0  # 5 seconds max
 
-                    # All queries should succeed (no exceptions)
-                    exceptions = [r for r in results if isinstance(r, Exception)]
-                    assert len(exceptions) == 0
+                # All queries should succeed (no exceptions)
+                exceptions = [r for r in results if isinstance(r, Exception)]
+                assert len(exceptions) == 0
 
         finally:
             await manager.shutdown()
