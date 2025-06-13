@@ -224,6 +224,7 @@ jobs:
           fi
 
       - name: Run comprehensive test suite
+        shell: bash
         run: |
           # Set test markers based on platform and test type
           if [ "${{ runner.os }}" == "Windows" ] || [ "${{ runner.os }}" == "macOS" ]; then
