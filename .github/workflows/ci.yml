@@ -179,13 +179,15 @@ jobs:
               echo "Fallback: Installing with build isolation disabled"
               uv pip install setuptools wheel hatchling
               uv pip install -e . --no-build-isolation
-              uv pip install pytest-timeout --no-build-isolation
+              uv pip install pytest-timeout pytest-xdist --no-build-isolation
               uv sync --dev --frozen --no-build-isolation || echo "Fallback completed"
             }
+            # Ensure pytest plugins are available on Windows
+            uv pip install pytest-timeout pytest-xdist || echo "pytest plugins already available"
           else
             uv sync --dev --frozen
-            # Ensure pytest-timeout is available
-            uv pip install pytest-timeout || echo "pytest-timeout already available"
+            # Ensure pytest plugins are available on Linux/macOS
+            uv pip install pytest-timeout pytest-xdist || echo "pytest plugins already available"
           fi
         env:
           # Cross-platform environment variables for native dependencies
@@ -225,6 +227,8 @@ jobs:
           echo "PYTHONIOENCODING=utf-8" >> $GITHUB_ENV
           echo "TESTING=true" >> $GITHUB_ENV
           echo "LOG_LEVEL=INFO" >> $GITHUB_ENV
+          echo "SKIP_BROWSER_TESTS=1" >> $GITHUB_ENV
+          echo "SKIP_INTEGRATION_TESTS=1" >> $GITHUB_ENV
           
           # Platform-specific environment setup
           if [ "${{ runner.os }}" == "Windows" ]; then

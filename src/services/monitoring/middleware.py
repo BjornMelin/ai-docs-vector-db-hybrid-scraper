@@ -4,6 +4,7 @@ This module provides middleware components for automatic HTTP request monitoring
 health check endpoints, and Prometheus metrics exposure.
 """
 
+import logging
 import time
 from collections.abc import Callable
 
@@ -21,6 +22,8 @@ from .health import HealthCheckManager
 from .health import HealthStatus
 from .metrics import MetricsRegistry
 from .metrics import get_metrics_registry
+
+logger = logging.getLogger(__name__)
 
 
 class PrometheusMiddleware:
@@ -64,14 +67,35 @@ class PrometheusMiddleware:
                 inprogress_labels=True,
             )
 
-            # Add default metrics
-            self.instrumentator.add(
-                metrics.request_size_and_response_size(
-                    should_include_handler=True,
-                    should_include_method=True,
-                    should_include_status=True,
-                )
-            )
+            # Add default metrics (using available metrics)
+            try:
+                # Try the new API first
+                if hasattr(metrics, "request_size_and_response_size"):
+                    self.instrumentator.add(
+                        metrics.request_size_and_response_size(
+                            should_include_handler=True,
+                            should_include_method=True,
+                            should_include_status=True,
+                        )
+                    )
+                else:
+                    # Fall back to individual metrics if available
+                    if hasattr(metrics, "request_size"):
+                        self.instrumentator.add(metrics.request_size())
+                    if hasattr(metrics, "response_size"):
+                        self.instrumentator.add(metrics.response_size())
+                    if hasattr(metrics, "requests"):
+                        self.instrumentator.add(metrics.requests())
+            except AttributeError as e:
+                logger.warning(f"Could not add request/response size metrics: {e}")
+                # Add basic request count metric as fallback
+                try:
+                    if hasattr(metrics, "requests"):
+                        self.instrumentator.add(metrics.requests())
+                except AttributeError:
+                    logger.warning(
+                        "No compatible metrics found, continuing with basic instrumentator"
+                    )
             self.instrumentator.add(
                 metrics.latency(
                     should_include_handler=True,
