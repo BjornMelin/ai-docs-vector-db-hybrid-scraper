@@ -368,7 +368,9 @@ class TestFastAPIProductionConfig:
         assert config.workers == cpu_count * 2
 
         # Worker count exceeding limit (use a larger number to ensure it fails)
-        excessive_workers = max(cpu_count * 3, 16)  # Ensure we exceed any reasonable limit
+        excessive_workers = max(
+            cpu_count * 3, 16
+        )  # Ensure we exceed any reasonable limit
         with pytest.raises(ValueError, match="Worker count"):
             FastAPIProductionConfig(workers=excessive_workers)
 
