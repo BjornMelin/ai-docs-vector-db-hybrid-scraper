@@ -7,7 +7,10 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
+# Import the actual enums before any mocking happens
 from src.config.enums import QualityTier
+from src.config.enums import SearchStrategy
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -427,7 +430,6 @@ async def test_list_projects_all(mock_client_manager, mock_context):
     assert result[2].id == "proj_3"
 
 
-@pytest.mark.skip(reason="get_project_details function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_get_project_details_success(mock_client_manager, mock_context):
     """Test getting project details."""
@@ -443,13 +445,13 @@ async def test_get_project_details_success(mock_client_manager, mock_context):
     mock_mcp.tool.return_value = capture_tool
 
     # Setup mocks
-    project_storage = mock_client_manager.get_project_storage()
+    project_storage = await mock_client_manager.get_project_storage()
     project_storage.get_project.return_value = {
         "id": "proj_123",
         "name": "Test Project",
         "description": "A test project",
         "quality_tier": "balanced",
-        "collection_name": "project_proj_123",
+        "collection": "project_proj_123",
         "created_at": "2024-01-01T00:00:00Z",
         "urls": ["https://example.com"],
     }
@@ -467,7 +469,6 @@ async def test_get_project_details_success(mock_client_manager, mock_context):
     assert len(result["project"]["urls"]) == 1
 
 
-@pytest.mark.skip(reason="get_project_details function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_get_project_details_not_found(mock_client_manager, mock_context):
     """Test getting details of non-existent project."""
@@ -483,7 +484,7 @@ async def test_get_project_details_not_found(mock_client_manager, mock_context):
     mock_mcp.tool.return_value = capture_tool
 
     # Setup mocks
-    project_storage = mock_client_manager.get_project_storage()
+    project_storage = await mock_client_manager.get_project_storage()
     project_storage.get_project.return_value = None
 
     register_tools(mock_mcp, mock_client_manager)
@@ -496,7 +497,6 @@ async def test_get_project_details_not_found(mock_client_manager, mock_context):
         )
 
 
-@pytest.mark.skip(reason="add_project_urls function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_add_project_urls_success(mock_client_manager, mock_context):
     """Test adding URLs to project."""
@@ -516,7 +516,7 @@ async def test_add_project_urls_success(mock_client_manager, mock_context):
     project_storage.get_project.return_value = {
         "id": "proj_123",
         "name": "Test Project",
-        "collection_name": "project_proj_123",
+        "collection": "project_proj_123",
         "urls": ["https://example.com/existing"],
     }
 
@@ -559,7 +559,6 @@ async def test_add_project_urls_success(mock_client_manager, mock_context):
     assert document_service.add_document.call_count == len(new_urls)
 
 
-@pytest.mark.skip(reason="add_project_urls function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_context):
     """Test adding duplicate URLs to project."""
@@ -579,9 +578,21 @@ async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_con
     project_storage.get_project.return_value = {
         "id": "proj_123",
         "name": "Test Project",
-        "collection_name": "project_proj_123",
+        "collection": "project_proj_123",
         "urls": ["https://example.com/existing"],
     }
+    project_storage.update_project = AsyncMock()
+
+    # Setup crawling and document services (even though only new URL will be processed)
+    crawling = mock_client_manager.get_crawling_service()
+    crawling.crawl_url = AsyncMock(return_value={
+        "url": "https://example.com/new",
+        "content": "New content",
+        "title": "New Title",
+    })
+    
+    document_service = mock_client_manager.get_document_service()
+    document_service.add_document = AsyncMock()
 
     register_tools(mock_mcp, mock_client_manager)
 
@@ -597,7 +608,6 @@ async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_con
     assert result["total_urls"] == 2
 
 
-@pytest.mark.skip(reason="export_project function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_export_project_success(mock_client_manager, mock_context):
     """Test successful project export."""
@@ -619,7 +629,7 @@ async def test_export_project_success(mock_client_manager, mock_context):
         "name": "Test Project",
         "description": "A test project",
         "quality_tier": "balanced",
-        "collection_name": "project_proj_123",
+        "collection": "project_proj_123",
         "created_at": "2024-01-01T00:00:00Z",
         "urls": ["https://example.com"],
     }
@@ -644,7 +654,6 @@ async def test_export_project_success(mock_client_manager, mock_context):
         mock_json_dumps.assert_called_once()
 
 
-@pytest.mark.skip(reason="export_project function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_export_project_yaml_format(mock_client_manager, mock_context):
     """Test project export in YAML format."""
@@ -683,7 +692,6 @@ async def test_export_project_yaml_format(mock_client_manager, mock_context):
         mock_yaml.dump.assert_called_once()
 
 
-@pytest.mark.skip(reason="export_project function doesn't exist in implementation")
 @pytest.mark.asyncio
 async def test_export_project_invalid_format(mock_client_manager, mock_context):
     """Test project export with invalid format."""

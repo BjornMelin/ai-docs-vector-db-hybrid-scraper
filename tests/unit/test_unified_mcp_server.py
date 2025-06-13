@@ -13,7 +13,12 @@ sys.modules["fastmcp"] = MagicMock()
 sys.modules["src.infrastructure.client_manager"] = MagicMock()
 sys.modules["src.mcp_tools.tool_registry"] = MagicMock()
 sys.modules["src.services.logging_config"] = MagicMock()
+sys.modules["src.services.monitoring.initialization"] = MagicMock()
 sys.modules["src.config"] = MagicMock()
+sys.modules["src.config.enums"] = MagicMock()
+sys.modules["src.services"] = MagicMock()
+sys.modules["src.services.vector_db"] = MagicMock()
+sys.modules["src.services.vector_db.search"] = MagicMock()
 
 # This is intentionally after mocks due to import dependencies
 from src import unified_mcp_server  # noqa: E402
@@ -282,8 +287,18 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
     @patch("src.config.get_config")
+    @patch("src.unified_mcp_server.initialize_monitoring_system")
+    @patch("src.unified_mcp_server.setup_fastmcp_monitoring")
+    @patch("src.unified_mcp_server.run_periodic_health_checks")
+    @patch("src.unified_mcp_server.update_system_metrics_periodically")
+    @patch("src.unified_mcp_server.update_cache_metrics_periodically")
     async def test_lifespan_successful_initialization(
         self,
+        mock_update_cache_metrics,
+        mock_update_system_metrics,
+        mock_health_checks,
+        mock_setup_monitoring,
+        mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
@@ -292,6 +307,7 @@ class TestLifespanContextManager:
         """Test successful lifespan initialization and cleanup."""
         # Mock config
         mock_config = MagicMock()
+        mock_config.cache.enable_dragonfly_cache = False
         mock_get_config.return_value = mock_config
 
         # Mock client manager
@@ -299,6 +315,23 @@ class TestLifespanContextManager:
         mock_client_manager.initialize = AsyncMock()
         mock_client_manager.cleanup = AsyncMock()
         mock_client_manager_class.return_value = mock_client_manager
+
+        # Mock monitoring system initialization
+        mock_metrics_registry = MagicMock()
+        mock_health_manager = MagicMock()
+        mock_init_monitoring.return_value = (mock_metrics_registry, mock_health_manager)
+
+        # Mock async monitoring tasks to return coroutines
+        async def mock_health_task(*args, **kwargs):
+            pass
+        async def mock_system_metrics(*args, **kwargs):
+            pass
+        async def mock_cache_metrics(*args, **kwargs):
+            pass
+        
+        mock_health_checks.return_value = mock_health_task()
+        mock_update_system_metrics.return_value = mock_system_metrics()
+        mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
         async def mock_register(*args, **kwargs):
@@ -364,8 +397,18 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
     @patch("src.config.get_config")
+    @patch("src.unified_mcp_server.initialize_monitoring_system")
+    @patch("src.unified_mcp_server.setup_fastmcp_monitoring")
+    @patch("src.unified_mcp_server.run_periodic_health_checks")
+    @patch("src.unified_mcp_server.update_system_metrics_periodically")
+    @patch("src.unified_mcp_server.update_cache_metrics_periodically")
     async def test_lifespan_cleanup_on_exception(
         self,
+        mock_update_cache_metrics,
+        mock_update_system_metrics,
+        mock_health_checks,
+        mock_setup_monitoring,
+        mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
@@ -374,12 +417,30 @@ class TestLifespanContextManager:
         """Test that cleanup is called even when exception occurs during operation."""
         # Mock config
         mock_config = MagicMock()
+        mock_config.cache.enable_dragonfly_cache = False
         mock_get_config.return_value = mock_config
 
         mock_client_manager = AsyncMock()
         mock_client_manager.initialize = AsyncMock()
         mock_client_manager.cleanup = AsyncMock()
         mock_client_manager_class.return_value = mock_client_manager
+
+        # Mock monitoring system initialization
+        mock_metrics_registry = MagicMock()
+        mock_health_manager = MagicMock()
+        mock_init_monitoring.return_value = (mock_metrics_registry, mock_health_manager)
+
+        # Mock async monitoring tasks to return coroutines
+        async def mock_health_task(*args, **kwargs):
+            pass
+        async def mock_system_metrics(*args, **kwargs):
+            pass
+        async def mock_cache_metrics(*args, **kwargs):
+            pass
+        
+        mock_health_checks.return_value = mock_health_task()
+        mock_update_system_metrics.return_value = mock_system_metrics()
+        mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
         async def mock_register(*args, **kwargs):
