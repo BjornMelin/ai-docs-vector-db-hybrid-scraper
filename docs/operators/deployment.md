@@ -12,7 +12,7 @@ and scale the AI Documentation Vector DB system in production environments.
 
 ### Supported Platforms
 - **Linux**: Full feature support (recommended for production)
-- **macOS**: Core functionality supported 
+- **macOS**: Core functionality supported
 - **Windows**: Core functionality supported
 
 ### Python Version Compatibility
