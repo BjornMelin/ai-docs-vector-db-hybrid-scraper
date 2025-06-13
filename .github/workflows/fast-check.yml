@@ -116,8 +116,8 @@ jobs:
 
       - name: Run fastest unit tests only
         run: |
-          # Install pytest-xdist for parallel testing
-          uv add --dev pytest-xdist
+          # Install pytest-xdist for parallel testing and pytest-timeout for timeouts
+          uv add --dev pytest-xdist pytest-timeout
           
           # Run only fast unit tests (no browser, no integration)
           uv run pytest tests/unit \
