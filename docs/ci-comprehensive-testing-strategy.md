@@ -1,8 +1,8 @@
-# Comprehensive CI Testing Strategy
+# CI Testing Strategy
 
 ## Overview
 
-This document outlines our comprehensive CI testing strategy that ensures the entire AI Docs Vector DB Hybrid Scraper application is thoroughly tested, not just browser capabilities.
+Our CI strategy tests the entire application comprehensively, with browser testing as an appropriate subset.
 
 ## Testing Layers
 
@@ -197,46 +197,14 @@ This document outlines our comprehensive CI testing strategy that ensures the en
 - Coverage reports
 - Security vulnerability alerts
 
-## Tools & Technologies
-
-### **Testing Frameworks**
-- **pytest**: Primary test runner
-- **pytest-asyncio**: Async test support
-- **pytest-cov**: Coverage measurement
-- **pytest-xdist**: Parallel test execution
-
-### **Mocking & Fixtures**
-- **unittest.mock**: Python mocking
-- **pytest fixtures**: Test data management
-- **factory_boy**: Test data generation
-- **responses**: HTTP request mocking
-
-### **Performance Testing**
-- **locust**: Load testing
-- **memory_profiler**: Memory usage analysis
-- **py-spy**: Performance profiling
-- **pytest-benchmark**: Microbenchmarks
-
 ## Browser Testing (Subset)
 
-Browser testing is now properly positioned as a **subset** of our comprehensive testing strategy:
+Browser testing is positioned as a **subset** of our comprehensive testing strategy:
 
-### **When Browser Tests Run**
-- Only when browser-specific functionality is modified
-- As part of web scraping feature validation
-- During integration testing of scraping workflows
-- Optional on Windows/macOS for faster CI
-
-### **Browser Test Scope**
-- Web scraping capabilities
-- JavaScript rendering
-- Dynamic content extraction
-- Browser automation reliability
-
-### **Fallback Strategy**
-- Browser setup failures don't fail entire CI
-- Tests gracefully skip when browsers unavailable
-- Core functionality tests continue regardless
+- **When**: Only for browser-specific functionality
+- **Scope**: Web scraping, JS rendering, content extraction  
+- **Fallback**: Graceful skipping when browsers unavailable
+- **Priority**: Core functionality tests continue regardless
 
 ## Summary
 
