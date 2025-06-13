@@ -1265,6 +1265,20 @@ class SecurityConfig(BaseModel):
     rate_limit_requests: int = Field(
         default=100, gt=0, description="Requests per minute"
     )
+    
+    # ML Security (minimal essential features)
+    enable_ml_input_validation: bool = Field(
+        default=True, description="Enable ML input validation"
+    )
+    max_ml_input_size: int = Field(
+        default=1_000_000, description="Maximum ML input size in bytes"
+    )
+    enable_dependency_scanning: bool = Field(
+        default=True, description="Enable dependency vulnerability scanning"
+    )
+    dependency_scan_on_startup: bool = Field(
+        default=True, description="Run dependency scan on startup"
+    )
 
     model_config = ConfigDict(extra="forbid")
 

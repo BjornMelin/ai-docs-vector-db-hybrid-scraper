@@ -48,6 +48,7 @@ strategies to achieve superior performance compared to existing solutions.
 - **Federated Search**: Cross-collection search with intelligent ranking and result fusion
 - **Personalized Ranking**: User-based ranking with preference learning and collaborative filtering
 - **Query Processing Pipeline**: 14-category intent classification with Matryoshka embeddings
+- **ML Security**: Minimalistic security implementation with input validation, dependency scanning, and monitoring
 - **Result Clustering**: HDBSCAN-based organization with cluster summaries
 - **Hybrid Vector Search**: Dense + sparse embeddings with reciprocal rank fusion
 - **Query Enhancement**: HyDE (Hypothetical Document Embeddings) implementation

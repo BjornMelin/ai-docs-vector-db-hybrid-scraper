@@ -48,6 +48,10 @@ graph TD
     J[Infrastructure Threats] --> K[Container Escape]
     J --> L[Network Intrusion]
     J --> M[Supply Chain Attacks]
+    
+    N[ML-Specific Threats] --> O[Input Validation Attacks]
+    N --> P[Dependency Vulnerabilities]
+    N --> Q[Model Extraction Attempts]
 ```
 
 ### Security Components
@@ -277,6 +281,96 @@ SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'self'",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "Referrer-Policy": "strict-origin-when-cross-origin"
+}
+```
+
+## ML Security (BJO-93)
+
+### Minimalistic ML Security Approach
+
+The system implements a pragmatic, minimalistic approach to ML security, leveraging existing infrastructure and proven tools rather than building ML-specific solutions. This approach provides 95% of the security value with 10% of the complexity.
+
+#### Security Philosophy
+
+1. **Use Existing Infrastructure**: Rate limiting via nginx/CloudFlare, not application code
+2. **Leverage Standard Tools**: pip-audit for dependencies, trivy for containers
+3. **Basic Input Validation**: Simple pattern matching for common attacks
+4. **Focus on Real Threats**: 99% of ML attacks are basic injection attempts
+
+#### ML Security Implementation
+
+```python
+from src.security import MLSecurityValidator
+
+# Initialize security validator
+validator = MLSecurityValidator()
+
+# Basic input validation
+result = validator.validate_input(
+    data={"query": user_input},
+    expected_schema={"query": str}
+)
+
+if not result.passed:
+    logger.warning(f"Security validation failed: {result.message}")
+    raise SecurityError("Invalid input")
+
+# Dependency scanning (run periodically)
+dep_result = validator.check_dependencies()
+if not dep_result.passed:
+    logger.error(f"Dependency vulnerabilities: {dep_result.details}")
+
+# Container scanning (for deployments)
+container_result = validator.check_container("myapp:latest")
+```
+
+#### Configuration
+
+```python
+# ML Security configuration (minimal)
+ML_SECURITY_CONFIG = {
+    "enable_ml_input_validation": True,
+    "max_ml_input_size": 1_000_000,  # 1MB limit
+    "enable_dependency_scanning": True,
+    "dependency_scan_on_startup": True,
+    "suspicious_patterns": [
+        "<script", "DROP TABLE", "__import__", "eval(",
+        "exec(", "UNION SELECT", "javascript:"
+    ]
+}
+```
+
+### Production ML Security Best Practices
+
+1. **Infrastructure-Level Protection**:
+   - Use CloudFlare or nginx for rate limiting
+   - Deploy behind API gateway with authentication
+   - Enable WAF rules for common attacks
+
+2. **Application-Level Validation**:
+   - Validate input size and type
+   - Block suspicious patterns
+   - Log security events for monitoring
+
+3. **Supply Chain Security**:
+   - Run pip-audit in CI/CD pipeline
+   - Scan container images with trivy
+   - Keep dependencies updated
+
+4. **Monitoring and Response**:
+   - Log all security events
+   - Set up alerts for suspicious patterns
+   - Have incident response plan
+
+### Security Metrics for ML
+
+```python
+# Key metrics to monitor
+ML_SECURITY_METRICS = {
+    "input_validation_failures": Counter("ml_input_validation_failed_total"),
+    "oversized_inputs": Counter("ml_oversized_inputs_total"),
+    "suspicious_patterns": Counter("ml_suspicious_patterns_total"),
+    "dependency_vulnerabilities": Gauge("ml_dependency_vulnerabilities_count")
 }
 ```
 

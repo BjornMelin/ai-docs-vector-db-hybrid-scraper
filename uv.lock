@@ -146,7 +146,7 @@ requires-dist = [
     { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "browser", "llm", "parsing", "docs"], marker = "extra == 'all'" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.4,<4.0.0" },
-    { name = "arq", specifier = ">=0.25.0,<0.26.0" },
+    { name = "arq", specifier = ">=0.25.0,<0.27.0" },
     { name = "asyncio-throttle", specifier = ">=1.0.2,<2.0.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0,<26.0.0" },
     { name = "browser-use", marker = "extra == 'browser'", specifier = ">=0.2.6,<0.3.0" },
