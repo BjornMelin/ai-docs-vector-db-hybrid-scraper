@@ -218,9 +218,10 @@ class FastAPIProductionConfig(BaseModel):
 
         cpu_count = os.cpu_count() or 1
 
-        if v > cpu_count * 2:
+        max_workers = cpu_count * 2
+        if v > max_workers:
             raise ValueError(
-                f"Worker count ({v}) should not exceed 2x CPU count ({cpu_count * 2})"
+                f"Worker count ({v}) should not exceed 2x CPU count ({max_workers})"
             )
 
         return v
