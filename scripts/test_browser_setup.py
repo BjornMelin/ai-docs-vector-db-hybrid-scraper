@@ -20,6 +20,16 @@ project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 sys.path.insert(0, str(src_path))
 
+# Import cross-platform utilities
+from utils.cross_platform import (
+    is_windows,
+    is_macos,
+    is_linux,
+    is_ci_environment,
+    get_playwright_browser_path,
+    set_platform_environment_defaults,
+)
+
 
 def print_status(message: str, status: str = "INFO") -> None:
     """Print status message with formatting."""
@@ -34,9 +44,12 @@ def check_environment() -> dict:
     env_info = {
         "python_version": sys.version,
         "platform": sys.platform,
-        "ci_environment": bool(os.getenv("CI") or os.getenv("GITHUB_ACTIONS")),
+        "is_windows": is_windows(),
+        "is_macos": is_macos(),
+        "is_linux": is_linux(),
+        "ci_environment": is_ci_environment(),
         "crawl4ai_headless": os.getenv("CRAWL4AI_HEADLESS", "false"),
-        "playwright_path": os.getenv("PLAYWRIGHT_BROWSERS_PATH", "default"),
+        "playwright_path": get_playwright_browser_path(),
     }
 
     for key, value in env_info.items():
@@ -118,9 +131,15 @@ async def test_basic_crawling() -> bool:
             browser_type="chromium",
         )
 
-        # Add CI-specific args if in CI environment
-        if os.getenv("CI"):
-            browser_config.extra_args = ["--no-sandbox", "--disable-dev-shm-usage"]
+        # Add platform and CI-specific args
+        extra_args = []
+        if is_ci_environment():
+            extra_args.extend(["--no-sandbox", "--disable-dev-shm-usage"])
+        if is_windows():
+            extra_args.extend(["--disable-gpu", "--disable-dev-shm-usage"])
+        
+        if extra_args:
+            browser_config.extra_args = extra_args
 
         run_config = CrawlerRunConfig(
             word_count_threshold=10,
@@ -170,24 +189,37 @@ def install_browsers_if_needed() -> bool:
         except:
             pass
 
-        # Determine installation strategy based on environment
-        if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
-            # CI environment: Try with system deps, fall back to browser-only
+        # Determine installation strategy based on platform and environment
+        if is_ci_environment():
+            # CI environment: Platform-specific installation
             print_status("CI environment detected, attempting browser install...")
-            cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-            if result.returncode != 0:
-                print_status("System deps install failed, trying browser only...", "WARNING")
+            if is_linux():
+                cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                if result.returncode != 0:
+                    print_status("System deps install failed, trying browser only...", "WARNING")
+                    cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            else:
+                # Windows/macOS: Browser-only installation in CI
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         else:
-            # Local environment: Try browser-only first (avoid sudo issues)
-            print_status("Local environment detected, installing browsers without system deps...")
-            cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
+            # Local environment: Platform-specific strategy
+            if is_windows():
+                print_status("Windows detected, installing browsers only...")
+                cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
+            elif is_macos():
+                print_status("macOS detected, installing browsers only...")
+                cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
+            else:
+                print_status("Linux detected, trying browser-only first...")
+                cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
+            
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
-            if result.returncode != 0:
+            # For Linux local dev, try with system deps if browser-only fails
+            if result.returncode != 0 and is_linux():
                 print_status("Browser-only install failed, trying with system deps...", "WARNING")
                 cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -212,6 +244,13 @@ async def main():
     """Main test function."""
     print_status("Starting browser automation setup test...")
     print()
+
+    # Set platform-specific environment defaults
+    env_defaults = set_platform_environment_defaults()
+    for key, value in env_defaults.items():
+        if key not in os.environ:
+            os.environ[key] = value
+            print_status(f"Set environment variable: {key}={value}")
 
     # Check environment
     env_info = check_environment()

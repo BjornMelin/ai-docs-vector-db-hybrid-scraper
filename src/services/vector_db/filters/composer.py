@@ -491,15 +491,21 @@ class FilterComposer(BaseFilter):
         self, operator: CompositionOperator, conditions: list[models.Filter]
     ) -> models.Filter | None:
         """Apply boolean operator to conditions."""
-        if len(conditions) == 1:
+        if not conditions:
+            return None
+
+        if operator == CompositionOperator.NOT:
+            # For NOT composition, we need to negate all conditions
+            # Create a filter with must_not containing all the original conditions
+            return models.Filter(must_not=conditions)
+
+        if len(conditions) == 1 and operator != CompositionOperator.NOT:
             return conditions[0]
 
         if operator == CompositionOperator.AND:
             return self._create_and_filter(conditions)
         elif operator == CompositionOperator.OR:
             return models.Filter(should=conditions)
-        elif operator == CompositionOperator.NOT and conditions:
-            return models.Filter(must_not=[conditions[0]])
 
         return None
 

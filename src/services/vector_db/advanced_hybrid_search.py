@@ -133,19 +133,22 @@ class AdvancedHybridSearchService:
                     {"user_id": request.user_id, "session_id": request.session_id},
                 )
                 if query_classification:
-                    # Store classification for later use
-                    advanced_request.query_classification = query_classification
+                    # Store classification in context for later use
+                    advanced_request.context["query_classification"] = (
+                        query_classification
+                    )
 
             # Handle model selection if enabled
-            if request.enable_model_selection and hasattr(
-                advanced_request, "query_classification"
+            if (
+                request.enable_model_selection
+                and "query_classification" in advanced_request.context
             ):
                 model_selection = await self._select_model_with_timeout(
-                    advanced_request.query_classification, request
+                    advanced_request.context["query_classification"], request
                 )
                 if model_selection:
                     # Pass model selection to orchestrator via context
-                    advanced_request.model_selection = model_selection
+                    advanced_request.context["model_selection"] = model_selection
 
             # Handle SPLADE if enabled
             if request.enable_splade:
@@ -153,8 +156,8 @@ class AdvancedHybridSearchService:
                     request.query, request.splade_config
                 )
                 if sparse_vector:
-                    # Pass sparse vector configuration
-                    advanced_request.splade_config = {
+                    # Pass sparse vector configuration via context
+                    advanced_request.context["splade_config"] = {
                         "enabled": True,
                         "vector": sparse_vector,
                         "config": request.splade_config,
@@ -179,10 +182,10 @@ class AdvancedHybridSearchService:
                     ),
                     hnsw_ef_used=request.search_params.hnsw_ef,
                 ),
-                query_classification=getattr(
-                    advanced_request, "query_classification", None
+                query_classification=advanced_request.context.get(
+                    "query_classification", None
                 ),
-                model_selection=getattr(advanced_request, "model_selection", None),
+                model_selection=advanced_request.context.get("model_selection", None),
                 optimization_applied=orchestrator_result.optimizations_applied != [],
                 # A/B test handling
                 ab_test_variant=self._assign_ab_test_variant(request)
@@ -191,8 +194,9 @@ class AdvancedHybridSearchService:
             )
 
             # Handle adaptive fusion if enabled
-            if request.enable_adaptive_fusion and hasattr(
-                advanced_request, "query_classification"
+            if (
+                request.enable_adaptive_fusion
+                and "query_classification" in advanced_request.context
             ):
                 # Get fusion weights from orchestrator metadata
                 fusion_metadata = orchestrator_result.search_metadata.get(

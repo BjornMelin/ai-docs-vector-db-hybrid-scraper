@@ -44,6 +44,35 @@ if _test_env_path.exists():
     load_dotenv(_test_env_path, override=True)
 
 
+# Import cross-platform utilities
+try:
+    from src.utils.cross_platform import get_playwright_browser_path
+    from src.utils.cross_platform import is_ci_environment
+    from src.utils.cross_platform import is_linux
+    from src.utils.cross_platform import is_macos
+    from src.utils.cross_platform import is_windows
+    from src.utils.cross_platform import set_platform_environment_defaults
+except ImportError:
+    # Fallback implementations for when utils aren't available
+    def is_windows():
+        return sys.platform.startswith("win")
+
+    def is_macos():
+        return sys.platform == "darwin"
+
+    def is_linux():
+        return sys.platform.startswith("linux")
+
+    def is_ci_environment():
+        return bool(os.getenv("CI") or os.getenv("GITHUB_ACTIONS"))
+
+    def set_platform_environment_defaults():
+        return {}
+
+    def get_playwright_browser_path():
+        return None
+
+
 # Configure browser automation for CI environments
 @pytest.fixture(scope="session", autouse=True)
 def setup_browser_environment():
@@ -58,13 +87,34 @@ def setup_browser_environment():
     original_env = os.environ.copy()
 
     try:
-        # Configure for headless testing in CI
-        if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
+        # Set platform-specific environment defaults
+        env_defaults = set_platform_environment_defaults()
+        for key, value in env_defaults.items():
+            if key not in os.environ:
+                os.environ[key] = value
+
+        # Configure for headless testing in CI and platform-specific settings
+        if is_ci_environment():
             os.environ["CRAWL4AI_HEADLESS"] = "true"
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
             os.environ["CRAWL4AI_SKIP_BROWSER_DOWNLOAD"] = "false"
             # Disable browser sandbox for CI environments
             os.environ["PLAYWRIGHT_CHROMIUM_SANDBOX"] = "false"
+
+            # Platform-specific CI settings
+            if is_linux():
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+            else:
+                # Windows/macOS: Use platform-specific browser paths
+                browser_path = get_playwright_browser_path()
+                if browser_path:
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browser_path
+
+        # Platform-specific browser configurations
+        if is_windows():
+            os.environ["PYTHONUTF8"] = "1"
+            os.environ["PLAYWRIGHT_SKIP_BROWSER_GC"] = "1"  # Reduce memory issues
+        elif is_macos():
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = get_playwright_browser_path() or ""
 
         # Ensure test directories exist
         project_root = Path(__file__).parent.parent
@@ -88,21 +138,82 @@ def setup_browser_environment():
         os.environ.update(original_env)
 
 
+# Platform-specific fixtures
+@pytest.fixture(scope="session")
+def platform_info():
+    """Provide platform information for tests."""
+    return {
+        "is_windows": is_windows(),
+        "is_macos": is_macos(),
+        "is_linux": is_linux(),
+        "is_ci": is_ci_environment(),
+        "platform": sys.platform,
+    }
+
+
+@pytest.fixture(scope="session")
+def skip_if_windows():
+    """Skip test if running on Windows."""
+    if is_windows():
+        pytest.skip("Test not supported on Windows")
+
+
+@pytest.fixture(scope="session")
+def skip_if_macos():
+    """Skip test if running on macOS."""
+    if is_macos():
+        pytest.skip("Test not supported on macOS")
+
+
+@pytest.fixture(scope="session")
+def skip_if_linux():
+    """Skip test if running on Linux."""
+    if is_linux():
+        pytest.skip("Test not supported on Linux")
+
+
+@pytest.fixture(scope="session")
+def skip_if_ci():
+    """Skip test if running in CI environment."""
+    if is_ci_environment():
+        pytest.skip("Test not supported in CI environment")
+
+
+@pytest.fixture(scope="session")
+def require_ci():
+    """Require test to run in CI environment."""
+    if not is_ci_environment():
+        pytest.skip("Test requires CI environment")
+
+
 @pytest.fixture
 def mock_browser_config():
-    """Provide a mock browser configuration for testing.
+    """Provide a platform-aware mock browser configuration for testing.
 
     Returns:
-        dict: Browser configuration suitable for testing
+        dict: Browser configuration suitable for testing on current platform
     """
-    return {
+    # Base configuration
+    config = {
         "headless": True,
         "browser_type": "chromium",
         "timeout": 30000,
         "viewport": {"width": 1280, "height": 720},
         "user_agent": "pytest-browser-automation",
-        "args": ["--no-sandbox", "--disable-dev-shm-usage"] if os.getenv("CI") else [],
+        "args": [],
     }
+
+    # Platform-specific arguments
+    if is_ci_environment():
+        config["args"].extend(["--no-sandbox", "--disable-dev-shm-usage"])
+
+    if is_windows():
+        config["args"].extend(["--disable-gpu", "--disable-dev-shm-usage"])
+        config["timeout"] = 60000  # Longer timeout for Windows
+    elif is_macos():
+        config["timeout"] = 45000  # Medium timeout for macOS
+
+    return config
 
 
 @pytest.fixture

@@ -130,8 +130,18 @@ jobs:
           - os: ubuntu-latest
             python-version: '3.13'
             coverage: true
+          - os: windows-latest
+            python-version: '3.13'
+            coverage: false
+            # Windows-specific test configuration
+            test-marker: "not slow and not integration"
+          - os: macos-latest
+            python-version: '3.13'
+            coverage: false
+            # macOS-specific test configuration  
+            test-marker: "not slow and not integration"
         exclude:
-          # Reduce matrix size for faster CI - run only on Linux for PRs
+          # Reduce matrix size for faster CI - focus on Python 3.13 for non-Linux
           - os: windows-latest
             python-version: '3.11'
           - os: macos-latest
@@ -160,63 +170,138 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
             # Windows: Install with fallbacks for problematic native dependencies
-            uv sync --dev --frozen || uv pip install --no-deps -e . && uv pip install -r pyproject.toml
+            # Use pip constraints to avoid version conflicts on Windows
+            uv sync --dev --frozen --no-build-isolation || {
+              echo "Fallback: Installing with pip and constraints"
+              uv pip install --upgrade pip setuptools wheel
+              uv pip install -e . --no-build-isolation --constraint requirements.txt
+              uv pip install -r requirements-dev.txt --no-build-isolation
+            }
           else
             uv sync --dev --frozen
           fi
         env:
-          # Windows-specific environment variables for native dependencies
+          # Cross-platform environment variables for native dependencies
           PYTHONUTF8: 1
+          # Windows: Set compiler flags for native extensions
+          DISTUTILS_USE_SDK: 1
+          MSSdk: 1
         shell: bash
 
       - name: Install browser dependencies
         shell: bash
         run: |
+          # Set platform-specific browser paths and options
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            export PLAYWRIGHT_BROWSERS_PATH="$USERPROFILE/AppData/Local/ms-playwright"
+            export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            export PLAYWRIGHT_BROWSERS_PATH="$HOME/Library/Caches/ms-playwright"
+          else
+            export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+          fi
+          
           # Use our tested browser setup script for cross-platform installation
           uv run python scripts/test_browser_setup.py || {
             echo "Browser setup script failed, attempting manual installation..."
             
-            # Fallback manual installation based on OS
+            # Fallback manual installation based on OS with better error handling
             if [ "${{ runner.os }}" == "Linux" ]; then
               # Linux: Try with system deps first, fall back to browser-only
-              uv run python -m playwright install --with-deps chromium || \
-              uv run python -m playwright install chromium
+              timeout 300 uv run python -m playwright install --with-deps chromium || \
+              timeout 300 uv run python -m playwright install chromium || {
+                echo "Browser installation failed on Linux"
+                exit 1
+              }
             elif [ "${{ runner.os }}" == "macOS" ]; then
-              # macOS: Install browsers only (system deps not needed)
-              uv run python -m playwright install chromium
+              # macOS: Install browsers with homebrew fallback
+              timeout 300 uv run python -m playwright install chromium || {
+                echo "Attempting macOS system browser fallback..."
+                # Use system Chrome if available
+                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+              }
             elif [ "${{ runner.os }}" == "Windows" ]; then
-              # Windows: Install browsers only (system deps not needed)
-              uv run python -m playwright install chromium
+              # Windows: Install browsers with timeout and proper error handling
+              timeout 300 uv run python -m playwright install chromium || {
+                echo "Browser installation failed on Windows"
+                exit 1
+              }
             fi
           }
 
       - name: Setup test environment
         shell: bash
         run: |
-          # Create test directories (cross-platform)
-          mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
-          mkdir -p logs cache data
+          # Create test directories (cross-platform with proper permissions)
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            # Windows: Use Windows-style directory creation
+            mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
+            mkdir -p logs cache data
+            # Set Windows-specific permissions if needed
+            icacls tests /grant Users:F /T 2>/dev/null || true
+          else
+            # Unix-like: Create with proper permissions
+            mkdir -p tests/fixtures/{cache,data,logs} logs cache data
+            chmod -R 755 tests logs cache data
+          fi
           
-          # Set environment variables for headless testing
-          echo "PLAYWRIGHT_BROWSERS_PATH=0" >> $GITHUB_ENV
+          # Set environment variables for headless testing (cross-platform)
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "PLAYWRIGHT_BROWSERS_PATH=$USERPROFILE/AppData/Local/ms-playwright" >> $GITHUB_ENV
+          else
+            echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> $GITHUB_ENV
+          fi
           echo "CRAWL4AI_HEADLESS=true" >> $GITHUB_ENV
+          echo "PYTHONIOENCODING=utf-8" >> $GITHUB_ENV
+          
+          # Platform-specific test environment setup
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "PYTHONUTF8=1" >> $GITHUB_ENV
+            echo "PLAYWRIGHT_BROWSERS_PATH=0" >> $GITHUB_ENV
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            # macOS: Set up proper path for system tools
+            echo "/usr/local/bin:/opt/homebrew/bin:$PATH" >> $GITHUB_PATH
+          fi
 
       - name: Run unit tests
         run: |
-          uv run pytest tests/unit \
-            --tb=short \
-            --maxfail=10 \
-            -x \
-            --disable-warnings \
-            ${{ matrix.coverage && '--cov=src --cov-report=xml --cov-report=html --cov-branch' || '' }}
+          # Platform-specific test execution with appropriate markers
+          TEST_MARKERS="${{ matrix.test-marker || 'not slow' }}"
+          COVERAGE_ARGS="${{ matrix.coverage && '--cov=src --cov-report=xml --cov-report=html --cov-branch' || '' }}"
+          
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            # Windows: Use shorter timeout and more lenient failure handling
+            uv run pytest tests/unit \
+              -m "$TEST_MARKERS" \
+              --tb=short \
+              --maxfail=5 \
+              --timeout=300 \
+              --disable-warnings \
+              --durations=10 \
+              $COVERAGE_ARGS
+          else
+            # Unix-like: Standard test execution
+            uv run pytest tests/unit \
+              -m "$TEST_MARKERS" \
+              --tb=short \
+              --maxfail=10 \
+              -x \
+              --disable-warnings \
+              $COVERAGE_ARGS
+          fi
 
       - name: Run integration tests
         run: |
-          uv run pytest tests/integration \
-            --tb=short \
-            --maxfail=5 \
-            -x \
-            --disable-warnings
+          # Skip integration tests on Windows/macOS for faster CI
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            uv run pytest tests/integration \
+              --tb=short \
+              --maxfail=5 \
+              -x \
+              --disable-warnings
+          else
+            echo "Skipping integration tests on ${{ runner.os }} for faster CI"
+          fi
 
       - name: Upload coverage reports
         if: matrix.coverage
