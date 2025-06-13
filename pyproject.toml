@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "🚀 Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.13"
+requires-python = ">=3.11,<3.13"
 authors = [{ name = "BjornMelin", email = "your-email@example.com" }]
 keywords = [
     "ai",
@@ -23,7 +23,8 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Documentation",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
@@ -53,7 +54,7 @@ dependencies = [
     
     # Data processing & ML (Python 3.13 compatible)
     "pandas>=2.2.3,<3.0.0",
-    "numpy>=2.2.6,<3.0.0", # Python 3.13 support from 2.1.0+
+    "numpy>=1.24.0,<2.0.0", # Compatible with browser-use and Python 3.12
     "scipy>=1.15.3,<2.0.0", # Python 3.13 support from 1.13+
     "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
     
@@ -152,7 +153,11 @@ mcp-server = "src.unified_mcp_server:main"
 task-worker = "src.cli_worker:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling>=1.18.0",
+    "setuptools>=68.0.0",
+    "wheel>=0.40.0"
+]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -160,12 +165,12 @@ packages = ["src"]
 
 [tool.uv]
 managed = true
-package = false
+package = true
 
 # ===== Simplified Ruff Configuration =====
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py312"
 src = ["src", "tests", "examples"]
 exclude = ["scripts"]
 

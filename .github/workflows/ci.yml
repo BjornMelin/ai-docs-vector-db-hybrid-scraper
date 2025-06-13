@@ -74,7 +74,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -125,31 +125,27 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12']
         include:
           - os: ubuntu-latest
-            python-version: '3.13'
+            python-version: '3.12'
             coverage: true
           - os: windows-latest
-            python-version: '3.13'
+            python-version: '3.12'
             coverage: false
             # Windows-specific test configuration
             test-marker: "not slow and not integration"
           - os: macos-latest
-            python-version: '3.13'
+            python-version: '3.12'
             coverage: false
             # macOS-specific test configuration  
             test-marker: "not slow and not integration"
         exclude:
-          # Reduce matrix size for faster CI - focus on Python 3.13 for non-Linux
+          # Reduce matrix size for faster CI - focus on Python 3.12 for non-Linux
           - os: windows-latest
             python-version: '3.11'
           - os: macos-latest
             python-version: '3.11'
-          - os: windows-latest
-            python-version: '3.12'
-          - os: macos-latest
-            python-version: '3.12'
 
     steps:
       - name: Checkout repository
@@ -169,12 +165,15 @@ jobs:
       - name: Install dependencies
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            # Windows: Install with fallbacks for problematic native dependencies
-            # Use pip constraints to avoid version conflicts on Windows
-            uv sync --dev --frozen --no-build-isolation || {
-              echo "Fallback: Installing with pip and constraints"
-              uv pip install --upgrade pip setuptools wheel
-              uv pip install -e . --no-build-isolation --constraint requirements.txt
+            # Windows: Install build tools first, then dependencies
+            echo "Installing build dependencies for Windows..."
+            uv pip install --upgrade pip setuptools wheel hatchling
+            
+            # Install core dependencies first
+            uv sync --dev --frozen || {
+              echo "Fallback: Installing with build isolation disabled"
+              uv pip install setuptools wheel hatchling
+              uv pip install -e . --no-build-isolation
               uv pip install -r requirements-dev.txt --no-build-isolation
             }
           else
@@ -348,7 +347,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -382,7 +381,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -424,7 +423,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -485,7 +484,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
