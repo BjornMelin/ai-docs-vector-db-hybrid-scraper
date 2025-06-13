@@ -585,12 +585,14 @@ async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_con
 
     # Setup crawling and document services (even though only new URL will be processed)
     crawling = mock_client_manager.get_crawling_service()
-    crawling.crawl_url = AsyncMock(return_value={
-        "url": "https://example.com/new",
-        "content": "New content",
-        "title": "New Title",
-    })
-    
+    crawling.crawl_url = AsyncMock(
+        return_value={
+            "url": "https://example.com/new",
+            "content": "New content",
+            "title": "New Title",
+        }
+    )
+
     document_service = mock_client_manager.get_document_service()
     document_service.add_document = AsyncMock()
 
@@ -981,7 +983,6 @@ async def test_search_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_project_success(mock_client_manager, mock_context):
     """Test successful project search."""
-    from src.config.enums import SearchStrategy
     from src.mcp_tools.tools.projects import register_tools
 
     mock_mcp = MagicMock()

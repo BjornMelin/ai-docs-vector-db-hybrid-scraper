@@ -324,11 +324,13 @@ class TestLifespanContextManager:
         # Mock async monitoring tasks to return coroutines
         async def mock_health_task(*args, **kwargs):
             pass
+
         async def mock_system_metrics(*args, **kwargs):
             pass
+
         async def mock_cache_metrics(*args, **kwargs):
             pass
-        
+
         mock_health_checks.return_value = mock_health_task()
         mock_update_system_metrics.return_value = mock_system_metrics()
         mock_update_cache_metrics.return_value = mock_cache_metrics()
@@ -433,11 +435,13 @@ class TestLifespanContextManager:
         # Mock async monitoring tasks to return coroutines
         async def mock_health_task(*args, **kwargs):
             pass
+
         async def mock_system_metrics(*args, **kwargs):
             pass
+
         async def mock_cache_metrics(*args, **kwargs):
             pass
-        
+
         mock_health_checks.return_value = mock_health_task()
         mock_update_system_metrics.return_value = mock_system_metrics()
         mock_update_cache_metrics.return_value = mock_cache_metrics()
