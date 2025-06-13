@@ -6,9 +6,9 @@ Last updated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
 
 | Pipeline | Status | Last Run |
 |----------|--------|----------|
-| Continuous Integration | [![CI](https://img.shields.io/badge/CI-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:20:53.164Z |
-| Security Pipeline | [![Security](https://img.shields.io/badge/Security-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:20:53.223Z |
-| Documentation Pipeline | [![Docs](https://img.shields.io/badge/Docs-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:20:53.284Z |
+| Continuous Integration | [![CI](https://img.shields.io/badge/CI-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:25:57.187Z |
+| Security Pipeline | [![Security](https://img.shields.io/badge/Security-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:25:57.262Z |
+| Documentation Pipeline | [![Docs](https://img.shields.io/badge/Docs-error-$(case "error" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](#) | 2025-06-13T01:25:57.324Z |
 
 ## Quick Links
 
