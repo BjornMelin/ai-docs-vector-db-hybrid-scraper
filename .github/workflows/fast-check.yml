@@ -125,7 +125,12 @@ jobs:
       - name: Run fastest unit tests only
         run: |
           # Install pytest-xdist and pytest-timeout in the existing environment
-          uv pip install pytest-xdist pytest-timeout
+          echo "Installing pytest plugins for fast tests..."
+          uv pip install pytest-timeout>=2.3.1 pytest-xdist>=3.0.0
+          
+          # Verify pytest-timeout is available
+          echo "Verifying pytest-timeout installation..."
+          uv run python -c "import pytest_timeout; print('✅ pytest-timeout available')" || echo "❌ pytest-timeout not available"
           
           # Run only fast unit tests (no browser, no integration)
           uv run pytest tests/unit \

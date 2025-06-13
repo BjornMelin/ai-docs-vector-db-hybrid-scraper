@@ -186,9 +186,14 @@ jobs:
             uv pip install pytest-timeout pytest-xdist || echo "pytest plugins already available"
           else
             uv sync --dev --frozen
-            # Ensure pytest plugins are available on Linux/macOS
-            uv pip install pytest-timeout pytest-xdist || echo "pytest plugins already available"
+            # Force install pytest plugins to ensure they are available
+            echo "Installing pytest plugins..."
+            uv pip install pytest-timeout>=2.3.1 pytest-xdist>=3.0.0
           fi
+          
+          # Verify pytest-timeout is installed and working
+          echo "Verifying pytest-timeout installation..."
+          uv run python -c "import pytest_timeout; print('✅ pytest-timeout available')" || echo "❌ pytest-timeout not available"
         env:
           # Cross-platform environment variables for native dependencies
           PYTHONUTF8: 1
