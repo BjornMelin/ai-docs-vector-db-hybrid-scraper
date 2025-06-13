@@ -8,6 +8,23 @@
 This comprehensive guide provides everything operators need to deploy, maintain,
 and scale the AI Documentation Vector DB system in production environments.
 
+## Platform Requirements
+
+### Supported Platforms
+- **Linux**: Full feature support (recommended for production)
+- **macOS**: Core functionality supported 
+- **Windows**: Core functionality supported
+
+### Python Version Compatibility
+- **Required**: Python 3.11 or 3.12
+- **Recommended**: Python 3.12 for optimal compatibility
+- **Not supported**: Python 3.13 (browser-use library limitation)
+
+### Browser Dependencies
+- Browser automation features require Linux for production deployments
+- Windows/macOS deployments support core API and database functionality
+- Web scraping capabilities optimized for Linux environments
+
 ## Quick Navigation
 
 - [Configuration Migration](#configuration-migration)

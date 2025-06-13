@@ -246,6 +246,29 @@ uv run pytest --cov=src/models --cov-report=term-missing
 # Coverage must not decrease with new changes
 ```
 
+### CI Testing Strategy
+
+Our CI pipeline tests the entire application comprehensively across multiple platforms:
+
+#### Platform Coverage
+- **Linux (Ubuntu)**: Full test suite including unit, integration, and browser tests
+- **Windows**: Core functionality tests (unit and integration)
+- **macOS**: Core functionality tests (unit and integration)
+- **Python versions**: 3.11-3.12 (3.13 not yet supported due to browser-use compatibility)
+
+#### Test Categories
+- **Unit tests**: Fast isolated component tests
+- **Integration tests**: Service-to-service communication
+- **Performance tests**: Load testing and benchmarks
+- **Security tests**: Validation and vulnerability scanning
+- **Browser tests**: Web scraping functionality (Linux only for CI efficiency)
+
+#### Coverage Requirements
+- **Overall**: 60% minimum (relaxed for ML model variability)
+- **Core services**: 80% required
+- **API endpoints**: 90% required
+- **Critical paths**: 95-100% required
+
 ### Testing Best Practices
 
 #### Test Organization
