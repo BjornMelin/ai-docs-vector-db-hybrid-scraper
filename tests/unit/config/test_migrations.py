@@ -728,7 +728,10 @@ class TestConfigMigrationManager:
         assert isinstance(manager._migrations, dict)
         assert len(manager._migrations) == 0  # Should start empty due to corruption
 
-    @patch("src.config.utils.ConfigPathManager.ensure_directories", side_effect=PermissionError("Access denied"))
+    @patch(
+        "src.config.utils.ConfigPathManager.ensure_directories",
+        side_effect=PermissionError("Access denied"),
+    )
     def test_error_handling_permission_denied(self, mock_ensure_dirs):
         """Test error handling when directory creation is denied."""
         # This test checks that permission errors are properly propagated
