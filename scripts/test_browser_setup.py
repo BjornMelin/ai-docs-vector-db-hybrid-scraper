@@ -82,7 +82,6 @@ def test_crawl4ai_browser_config() -> bool:
         config = BrowserConfig(
             headless=True,
             browser_type="chromium",
-            timeout=30000,
         )
 
         print_status("Crawl4AI BrowserConfig created successfully", "SUCCESS")
@@ -92,7 +91,6 @@ def test_crawl4ai_browser_config() -> bool:
             ci_config = BrowserConfig(
                 headless=True,
                 browser_type="chromium",
-                timeout=30000,
                 extra_args=["--no-sandbox", "--disable-dev-shm-usage"],
             )
             print_status("CI-specific BrowserConfig created successfully", "SUCCESS")
@@ -118,7 +116,6 @@ async def test_basic_crawling() -> bool:
         browser_config = BrowserConfig(
             headless=True,
             browser_type="chromium",
-            timeout=30000,
         )
 
         # Add CI-specific args if in CI environment
@@ -127,7 +124,7 @@ async def test_basic_crawling() -> bool:
 
         run_config = CrawlerRunConfig(
             word_count_threshold=10,
-            timeout=30000,
+            page_timeout=30000,
         )
 
         async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -153,29 +150,54 @@ def install_browsers_if_needed() -> bool:
     print_status("Checking browser installation...")
 
     try:
-        # Try to install browsers
-        cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
-        if os.getenv("CI"):
-            # In CI, fallback to just browser install if system deps fail
+        # Check if browsers are already installed by trying to find browser binary
+        try:
+            check_cmd = [sys.executable, "-c", 
+                "from playwright.async_api import async_playwright; import asyncio; "
+                "async def check(): "
+                "  p = await async_playwright().start(); "
+                "  b = await p.chromium.launch(); "
+                "  await b.close(); "
+                "  await p.stop(); "
+                "asyncio.run(check())"]
+            
+            result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print_status("Browsers already installed and working", "SUCCESS")
+                return True
+            else:
+                print_status("Browsers need to be installed...", "INFO")
+        except:
+            pass
+
+        # Determine installation strategy based on environment
+        if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
+            # CI environment: Try with system deps, fall back to browser-only
             print_status("CI environment detected, attempting browser install...")
+            cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
             if result.returncode != 0:
-                print_status(
-                    "System deps install failed, trying browser only...", "WARNING"
-                )
+                print_status("System deps install failed, trying browser only...", "WARNING")
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=300
-                )
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         else:
+            # Local environment: Try browser-only first (avoid sudo issues)
+            print_status("Local environment detected, installing browsers without system deps...")
+            cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode != 0:
+                print_status("Browser-only install failed, trying with system deps...", "WARNING")
+                cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         if result.returncode == 0:
             print_status("Browser installation completed", "SUCCESS")
             return True
         else:
-            print_status(f"Browser installation failed: {result.stderr}", "ERROR")
+            error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+            print_status(f"Browser installation failed: {error_msg}", "ERROR")
             return False
 
     except subprocess.TimeoutExpired:
