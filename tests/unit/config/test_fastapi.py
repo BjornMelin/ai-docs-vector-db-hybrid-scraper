@@ -285,11 +285,11 @@ class TestFastAPIProductionConfig:
     def test_fastapi_config_custom_values(self):
         """Test FastAPIProductionConfig with custom values."""
         import os
-        
+
         # Use a safe worker count that works on all platforms
         cpu_count = os.cpu_count() or 1
         safe_worker_count = min(4, cpu_count)  # Use 4 or less based on CPU count
-        
+
         config = FastAPIProductionConfig(
             environment=Environment.PRODUCTION,
             debug=True,
