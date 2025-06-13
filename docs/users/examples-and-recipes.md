@@ -5,7 +5,8 @@
 > **Purpose**: Real-world use cases and practical examples  
 > **Audience**: Users looking for specific implementation patterns
 
-Learn through practical examples! This guide provides ready-to-use recipes for common scenarios, showing you exactly how to accomplish real-world tasks with our system.
+Learn through practical examples! This guide provides ready-to-use recipes for common scenarios,
+showing you exactly how to accomplish real-world tasks with our system.
 
 ## 🚀 Quick Recipes
 
@@ -48,7 +49,7 @@ mcp scrape --url "https://docs.example.com/changelog" --compare-with "changelog"
 # Scrape documentation sites
 mcp scrape --url "https://docs.framework.com" --auto-index
 
-# Add local documents  
+# Add local documents
 mcp add-documents --path "./company-docs" --collection "internal-knowledge"
 
 # Search across everything with federated search
@@ -69,7 +70,7 @@ mcp search --query "production deployment" --federated \
 ```bash
 # Set up specialized collections
 mcp scrape --url "https://api-docs.com" --collection "api-reference"
-mcp scrape --url "https://tutorials.com" --collection "tutorials"  
+mcp scrape --url "https://tutorials.com" --collection "tutorials"
 mcp scrape --url "https://examples.com" --collection "code-examples"
 
 # Federated search with smart collection selection
@@ -290,7 +291,7 @@ mcp search --query "security updates" --temporal-filter \
   --date-range "2024-01-01:now" --group-by-month
 ```
 
-### Content Type and Semantic Filtering  
+### Content Type and Semantic Filtering
 
 **Scenario**: Finding specific types of content with precision
 
@@ -492,7 +493,7 @@ mcp scrape --url "https://target-site.com" --show-tier
 **New in this version**: The system includes intelligent database connection pooling that automatically optimizes performance:
 
 - **50.9% faster search response times** across all query types
-- **887.9% higher throughput** during peak usage periods  
+- **887.9% higher throughput** during peak usage periods
 - **Automatic scaling** that adjusts to your usage patterns
 - **Smart resource management** with no configuration required
 
@@ -587,4 +588,4 @@ mcp scrape --url-list "sites.txt" --delay 2s --respectful
 
 ---
 
-*📚 These recipes provide proven patterns for real-world success. Adapt them to your specific needs and build your own variations!*
+_📚 These recipes provide proven patterns for real-world success. Adapt them to your specific needs and build your own variations!_

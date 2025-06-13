@@ -7,6 +7,9 @@ repo_name: BjornMelin/ai-docs-vector-db-hybrid-scraper
 repo_url: https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
 edit_uri: blob/main/docs/
 
+docs_dir: ../
+site_dir: ../../site
+
 copyright: Copyright &copy; 2025 BjornMelin
 
 theme:
@@ -56,6 +59,7 @@ nav:
     - Monitoring: operators/monitoring.md
     - Security: operators/security.md
     - Operations: operators/operations.md
+    - Windows Compatibility: operators/windows-compatibility.md
 
 markdown_extensions:
   - toc:

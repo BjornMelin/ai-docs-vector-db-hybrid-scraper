@@ -5,7 +5,25 @@
 > **Purpose**: Comprehensive deployment guide for production operators  
 > **Audience**: System operators, DevOps engineers, and production teams
 
-This comprehensive guide provides everything operators need to deploy, maintain, and scale the AI Documentation Vector DB system in production environments.
+This comprehensive guide provides everything operators need to deploy, maintain,
+and scale the AI Documentation Vector DB system in production environments.
+
+## Platform Requirements
+
+### Supported Platforms
+- **Linux**: Full feature support (recommended for production)
+- **macOS**: Core functionality supported
+- **Windows**: Core functionality supported
+
+### Python Version Compatibility
+- **Required**: Python 3.11 or 3.12
+- **Recommended**: Python 3.12 for optimal compatibility
+- **Not supported**: Python 3.13 (browser-use library limitation)
+
+### Browser Dependencies
+- Browser automation features require Linux for production deployments
+- Windows/macOS deployments support core API and database functionality
+- Web scraping capabilities optimized for Linux environments
 
 ## Quick Navigation
 
@@ -809,93 +827,93 @@ from src.infrastructure.database.adaptive_config import AdaptiveConfigManager
 
 class EnhancedDatabaseDeployment:
     """Deployment manager for enhanced database features."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.deployment_id = f"deploy_{int(time.time())}"
-        
+
     async def deploy_enhanced_features(self):
         """Deploy enhanced database connection pool features."""
-        
+
         # Step 1: Initialize predictive monitoring
         await self._deploy_predictive_monitoring()
-        
+
         # Step 2: Configure multi-level circuit breaker
         await self._deploy_circuit_breaker()
-        
+
         # Step 3: Setup connection affinity
         await self._deploy_connection_affinity()
-        
+
         # Step 4: Enable adaptive configuration
         await self._deploy_adaptive_config()
-        
+
         # Step 5: Validate deployment
         await self._validate_deployment()
-        
+
     async def _deploy_predictive_monitoring(self):
         """Deploy ML-based predictive load monitoring."""
         logging.info("Deploying predictive load monitoring...")
-        
+
         # Initialize ML model
         monitor = PredictiveLoadMonitor(self.config['load_monitor'])
         await monitor.start()
-        
+
         # Validate model performance
         metrics = await monitor.get_prediction_metrics()
         if metrics.get('model_accuracy', 0) < 0.7:
             raise RuntimeError("ML model accuracy below deployment threshold")
-            
+
         # Train on recent data if needed
         if metrics.get('training_samples', 0) < 1000:
             await monitor.retrain_model()
-            
+
         logging.info("✓ Predictive monitoring deployed successfully")
-        
+
     async def _deploy_circuit_breaker(self):
         """Deploy multi-level circuit breaker."""
         logging.info("Deploying multi-level circuit breaker...")
-        
+
         circuit_breaker = MultiLevelCircuitBreaker(self.config['circuit_breaker'])
-        
+
         # Test circuit breaker functionality
         test_results = await self._test_circuit_breaker(circuit_breaker)
         if not test_results['all_passed']:
             raise RuntimeError("Circuit breaker tests failed")
-            
+
         logging.info("✓ Circuit breaker deployed successfully")
-        
+
     async def _deploy_connection_affinity(self):
         """Deploy connection affinity management."""
         logging.info("Deploying connection affinity management...")
-        
+
         affinity_manager = ConnectionAffinityManager(
             max_patterns=self.config['affinity']['max_patterns'],
             max_connections=self.config['affinity']['max_connections']
         )
-        
+
         # Pre-load common query patterns
         patterns_file = self.config.get('affinity_patterns_file')
         if patterns_file:
             await self._load_query_patterns(affinity_manager, patterns_file)
-            
+
         logging.info("✓ Connection affinity deployed successfully")
-        
+
     async def _validate_deployment(self):
         """Validate complete enhanced deployment."""
         logging.info("Validating enhanced database deployment...")
-        
+
         # Performance validation
         perf_results = await self._run_performance_tests()
-        
+
         required_improvements = {
             'query_latency_improvement': 0.40,  # 40% improvement
             'throughput_improvement': 2.0,      # 2x improvement
         }
-        
+
         for metric, threshold in required_improvements.items():
             if perf_results.get(metric, 0) < threshold:
                 raise RuntimeError(f"Performance requirement not met: {metric}")
-                
+
         logging.info("✓ Enhanced database deployment validated")
 ```
 
@@ -962,15 +980,15 @@ echo "=== Enhanced Database Deployment Validation Complete ==="
 ```python
 class EnhancedDatabaseRollback:
     """Rollback procedures for enhanced database features."""
-    
+
     async def rollback_to_basic_pool(self):
         """Rollback to basic connection pool if issues occur."""
-        
+
         # Disable enhanced features
         await self._disable_predictive_monitoring()
         await self._disable_circuit_breaker()
         await self._disable_connection_affinity()
-        
+
         # Revert to basic connection manager
         basic_manager = AsyncConnectionManager(
             config=self.config,
@@ -978,9 +996,9 @@ class EnhancedDatabaseRollback:
             enable_connection_affinity=False,
             enable_adaptive_config=False
         )
-        
+
         return basic_manager
-        
+
     async def _disable_predictive_monitoring(self):
         """Disable ML-based monitoring and revert to basic."""
         # Stop ML model training
@@ -1073,7 +1091,7 @@ watch -n 5 'curl -s localhost:8000/metrics | grep "db_connection_pool\|circuit_b
 # Validate 50.9% latency improvement
 curl -s "localhost:9090/api/v1/query?query=histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))"
 
-# Validate 887.9% throughput improvement  
+# Validate 887.9% throughput improvement
 curl -s "localhost:9090/api/v1/query?query=rate(db_query_total[5m])"
 
 # Monitor ML model accuracy
@@ -1612,7 +1630,9 @@ class ProductionProfiler:
 
 ## Conclusion
 
-This comprehensive deployment guide provides everything needed to successfully deploy and maintain the AI Documentation Vector DB system in production. The V1 enhancements deliver significant performance improvements while maintaining operational simplicity.
+This comprehensive deployment guide provides everything needed to successfully deploy
+and maintain the AI Documentation Vector DB system in production. The V1 enhancements
+deliver significant performance improvements while maintaining operational simplicity.
 
 Key success factors:
 

@@ -64,8 +64,10 @@ class CompositionRule(BaseModel):
         if operator == CompositionOperator.NOT:
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one filter")
-        elif operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2:
-                raise ValueError(f"{operator} operator requires at least two filters")
+        elif (
+            operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2
+        ):
+            raise ValueError(f"{operator} operator requires at least two filters")
 
         return v
 
@@ -319,9 +321,11 @@ class FilterComposer(BaseFilter):
             done, pending = await asyncio.wait(
                 [task for _, task in tasks],
                 timeout=timeout,
-                return_when=asyncio.ALL_COMPLETED
-                if not criteria.fail_fast
-                else asyncio.FIRST_EXCEPTION,
+                return_when=(
+                    asyncio.ALL_COMPLETED
+                    if not criteria.fail_fast
+                    else asyncio.FIRST_EXCEPTION
+                ),
             )
 
             # Cancel pending tasks
@@ -362,10 +366,14 @@ class FilterComposer(BaseFilter):
                 results[filter_ref.filter_instance.name] = result
 
                 # Check if this is a required filter that failed
-                if filter_ref.required and not result.filter_conditions and criteria.fail_fast:
-                        raise FilterError(
-                            f"Required filter {filter_ref.filter_instance.name} failed"
-                        )
+                if (
+                    filter_ref.required
+                    and not result.filter_conditions
+                    and criteria.fail_fast
+                ):
+                    raise FilterError(
+                        f"Required filter {filter_ref.filter_instance.name} failed"
+                    )
 
             except Exception as e:
                 self._logger.error(
@@ -449,6 +457,17 @@ class FilterComposer(BaseFilter):
         self, rule: CompositionRule, filter_results: dict[str, FilterResult]
     ) -> models.Filter | None:
         """Compose individual filter results into final filter."""
+        conditions = self._collect_filter_conditions(rule, filter_results)
+
+        if not conditions:
+            return None
+
+        return self._apply_composition_operator(rule.operator, conditions)
+
+    def _collect_filter_conditions(
+        self, rule: CompositionRule, filter_results: dict[str, FilterResult]
+    ) -> list[models.Filter]:
+        """Collect valid filter conditions from rule and nested rules."""
         conditions = []
 
         # Collect valid filter conditions
@@ -466,39 +485,42 @@ class FilterComposer(BaseFilter):
                 if nested_filter:
                     conditions.append(nested_filter)
 
+        return conditions
+
+    def _apply_composition_operator(
+        self, operator: CompositionOperator, conditions: list[models.Filter]
+    ) -> models.Filter | None:
+        """Apply boolean operator to conditions."""
         if not conditions:
             return None
 
-        # Apply boolean operator
-        if rule.operator == CompositionOperator.AND:
-            if len(conditions) == 1:
-                return conditions[0]
-            # Combine all conditions with AND logic
-            all_must_conditions = []
-            for condition in conditions:
-                if isinstance(condition, models.Filter):
-                    if condition.must:
-                        all_must_conditions.extend(condition.must)
-                    elif condition.should:
-                        # Convert OR to AND by wrapping in a filter
-                        all_must_conditions.append(condition)
-                    else:
-                        all_must_conditions.append(condition)
-                else:
-                    all_must_conditions.append(condition)
-            return models.Filter(must=all_must_conditions)
+        if operator == CompositionOperator.NOT:
+            # For NOT composition, we need to negate all conditions
+            # Create a filter with must_not containing all the original conditions
+            return models.Filter(must_not=conditions)
 
-        elif rule.operator == CompositionOperator.OR:
-            if len(conditions) == 1:
-                return conditions[0]
-            # Combine all conditions with OR logic
+        if len(conditions) == 1 and operator != CompositionOperator.NOT:
+            return conditions[0]
+
+        if operator == CompositionOperator.AND:
+            return self._create_and_filter(conditions)
+        elif operator == CompositionOperator.OR:
             return models.Filter(should=conditions)
 
-        elif rule.operator == CompositionOperator.NOT:
-            if conditions:
-                return models.Filter(must_not=[conditions[0]])
-
         return None
+
+    def _create_and_filter(self, conditions: list[models.Filter]) -> models.Filter:
+        """Create AND filter from conditions."""
+        all_must_conditions = []
+        for condition in conditions:
+            if isinstance(condition, models.Filter):
+                if condition.must:
+                    all_must_conditions.extend(condition.must)
+                else:
+                    all_must_conditions.append(condition)
+            else:
+                all_must_conditions.append(condition)
+        return models.Filter(must=all_must_conditions)
 
     def _optimize_composition_order(self, rule: CompositionRule) -> CompositionRule:
         """Optimize filter execution order for better performance."""
@@ -648,7 +670,6 @@ class FilterComposer(BaseFilter):
 
         def explain_rule(rule: CompositionRule, indent: int = 0) -> str:
             prefix = "  " * indent
-            [f.filter_instance.name for f in rule.filters]
 
             explanation = f"{prefix}{rule.operator.value.upper()}:\n"
             for filter_ref in rule.filters:

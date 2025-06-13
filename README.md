@@ -11,7 +11,9 @@
 [![Tests](https://img.shields.io/badge/tests-500%2B-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](tests/)
 
-A production-grade vector RAG system implementing research-backed best practices for intelligent document processing, multi-tier web crawling, and hybrid search with reranking. Built with modern Python architecture and comprehensive testing.
+A production-grade vector RAG system implementing research-backed best practices for intelligent
+document processing, multi-tier web crawling, and hybrid search with reranking. Built with modern
+Python architecture and comprehensive testing.
 
 ## Table of Contents
 
@@ -33,7 +35,9 @@ A production-grade vector RAG system implementing research-backed best practices
 
 ## System Overview
 
-This system implements a sophisticated vector-based Retrieval-Augmented Generation (RAG) pipeline with intelligent web crawling capabilities. The architecture combines multiple crawling tiers, advanced embedding techniques, and hybrid search strategies to achieve superior performance compared to existing solutions.
+This system implements a sophisticated vector-based Retrieval-Augmented Generation (RAG) pipeline with intelligent web
+crawling capabilities. The architecture combines multiple crawling tiers, advanced embedding techniques, and hybrid search
+strategies to achieve superior performance compared to existing solutions.
 
 ### Core Features
 
@@ -82,27 +86,27 @@ flowchart TB
     subgraph "Tier 1: Lightweight HTTP"
         A1[httpx] --> A2[Basic HTML parsing]
     end
-    
+
     subgraph "Tier 2: Enhanced Crawling"
         B1[Crawl4AI] --> B2[JavaScript execution]
         B1 --> B3[Memory-adaptive concurrency]
     end
-    
+
     subgraph "Tier 3: Advanced Routing"
         C1[Enhanced Router] --> C2[Dynamic tier selection]
         C1 --> C3[Failure recovery]
     end
-    
+
     subgraph "Tier 4: AI Browser Control"
         D1[browser-use] --> D2[LLM-guided interaction]
         D1 --> D3[Multi-model support]
     end
-    
+
     subgraph "Tier 5: Full Browser"
         E1[Playwright] --> E2[Complete JS rendering]
         E1 --> E3[Complex interactions]
     end
-    
+
     A1 --> B1
     B1 --> C1
     C1 --> D1
@@ -117,26 +121,26 @@ flowchart LR
         A[Raw Documents] --> B[AST-Aware Chunking]
         B --> C[Metadata Extraction]
     end
-    
+
     subgraph "Embedding Generation"
         C --> D[Dense Embeddings<br/>text-embedding-3-small]
         C --> E[Sparse Embeddings<br/>SPLADE++]
     end
-    
+
     subgraph "Storage & Indexing"
         D --> F[Qdrant Vector DB]
         E --> F
         F --> G[Payload Indexing]
         F --> H[Vector Quantization]
     end
-    
+
     subgraph "Search & Retrieval"
         I[Query] --> J[HyDE Enhancement]
         J --> K[Hybrid Search]
         K --> L[BGE Reranking]
         L --> M[Results]
     end
-    
+
     F --> K
 ```
 
@@ -148,13 +152,13 @@ flowchart TB
         A1[System Metrics<br/>CPU, Memory, Connections] --> A2[ML Model<br/>RandomForestRegressor]
         A2 --> A3[Load Prediction<br/>High/Medium/Low]
     end
-    
+
     subgraph "Adaptive Configuration"
         A3 --> B1[Dynamic Scaling<br/>Pool Size: 5-50]
         B1 --> B2[Timeout Adjustment<br/>30s-300s]
         B2 --> B3[Monitoring Interval<br/>10s-60s]
     end
-    
+
     subgraph "Multi-Level Circuit Breaker"
         C1[CONNECTION Failures] --> C2[Circuit Breaker<br/>Per Failure Type]
         C3[TIMEOUT Failures] --> C2
@@ -162,13 +166,13 @@ flowchart TB
         C5[TRANSACTION Failures] --> C2
         C6[RESOURCE Failures] --> C2
     end
-    
+
     subgraph "Connection Affinity Manager"
         D1[Query Pattern Analysis] --> D2[Connection Optimization<br/>READ/WRITE/TRANSACTION]
         D2 --> D3[Performance Tracking<br/>Per Connection]
         D3 --> D4[Optimal Routing]
     end
-    
+
     B3 --> C2
     C2 --> D4
     D4 --> E1[Enhanced AsyncConnectionManager<br/>50.9% Latency ↓ | 887.9% Throughput ↑]
@@ -189,7 +193,7 @@ flowchart TB
 ### Embedding Model Performance Comparison
 
 | Model | MTEB Score | Cost (per 1M tokens) | Dimensions | Use Case |
-|-------|------------|---------------------|------------|----------|
+|-------|------------|----------------------|------------|----------|
 | **text-embedding-3-small** | 62.3 | $0.02 | 1536 | **Recommended** |
 | text-embedding-3-large | 64.6 | $0.13 | 3072 | High accuracy |
 | text-embedding-ada-002 | 61.0 | $0.10 | 1536 | Legacy compatibility |
@@ -206,7 +210,7 @@ flowchart TB
 ### Enhanced Database Connection Pool Performance
 
 | Metric | Baseline System | Enhanced System | Improvement |
-|--------|----------------|-----------------|-------------|
+|--------|-----------------|-----------------|-------------|
 | **P95 Latency** | 820ms | 402ms | **50.9% reduction** |
 | **P50 Latency** | 450ms | 198ms | **56.0% reduction** |
 | **P99 Latency** | 1200ms | 612ms | **49.0% reduction** |
@@ -216,6 +220,7 @@ flowchart TB
 | **Memory Usage** | 180MB | 165MB | **8.3% reduction** |
 
 #### Key Features Delivered
+
 - **🤖 ML-Based Predictive Scaling**: RandomForestRegressor model for load prediction
 - **🔧 Multi-Level Circuit Breaker**: Failure categorization with intelligent recovery
 - **🎯 Connection Affinity**: Query pattern optimization for optimal routing
@@ -405,14 +410,14 @@ async def process_documents():
                 vector_size=1536,
                 sparse_vector_name="sparse"
             )
-            
+
             # Process documents with chunking
             texts = ["Document content...", "More content..."]
             dense_vectors, sparse_vectors = await embeddings.generate_embeddings(
-                texts, 
+                texts,
                 generate_sparse=True
             )
-            
+
             # Store with metadata
             await qdrant.upsert_documents(
                 collection_name="knowledge_base",
@@ -438,7 +443,7 @@ async def hybrid_search_with_reranking():
             sparse_weight=0.3,
             limit=20
         )
-        
+
         # Rerank results for improved relevance
         reranker = BGEReranker()
         reranked_results = await reranker.rerank(
@@ -446,7 +451,7 @@ async def hybrid_search_with_reranking():
             results=results,
             top_k=5
         )
-        
+
         return reranked_results
 ```
 
@@ -464,7 +469,7 @@ async def crawl_with_intelligent_routing():
             enable_javascript=True,
             wait_for_content=True
         )
-        
+
         # Process with enhanced chunking
         from src.chunking import enhanced_chunk_text
         chunks = enhanced_chunk_text(
@@ -473,7 +478,7 @@ async def crawl_with_intelligent_routing():
             preserve_code_blocks=True,
             enable_ast_chunking=True
         )
-        
+
         return chunks
 ```
 
@@ -494,15 +499,15 @@ async def use_enhanced_database():
             max_pool_size=50,
             min_pool_size=5
         )
-        
+
         # Connection affinity optimizes query routing
         affinity_mgr = ConnectionAffinityManager()
-        
+
         # Execute optimized query
         async with conn_mgr.get_connection() as conn:
             # System automatically routes to optimal connection
             result = await conn.execute("SELECT * FROM documents WHERE id = ?", [doc_id])
-            
+
             # Performance metrics tracked automatically
             stats = await adaptive_config.get_performance_metrics()
             print(f"P95 Latency: {stats['p95_latency_ms']}ms")
@@ -542,15 +547,15 @@ db_config = DatabaseConfig(
 ```python
 class EmbeddingManager:
     """Manages embedding generation with multiple providers."""
-    
+
     async def generate_embeddings(
-        self, 
-        texts: List[str], 
+        self,
+        texts: List[str],
         generate_sparse: bool = False,
         quality_tier: str = "BALANCED"
     ) -> Tuple[List[List[float]], Optional[List[SparseVector]]]:
         """Generate dense and optionally sparse embeddings."""
-        
+
     async def get_provider_stats(self) -> Dict[str, Any]:
         """Get embedding provider statistics and costs."""
 ```
@@ -560,7 +565,7 @@ class EmbeddingManager:
 ```python
 class QdrantService:
     """Qdrant vector database operations with hybrid search."""
-    
+
     async def hybrid_search(
         self,
         collection_name: str,
@@ -571,7 +576,7 @@ class QdrantService:
         filter_conditions: Optional[Dict] = None
     ) -> List[SearchResult]:
         """Perform hybrid search with RRF fusion."""
-        
+
     async def create_collection_with_quantization(
         self,
         name: str,
@@ -690,18 +695,18 @@ services:
       resources:
         limits:
           memory: 8G
-          cpus: '4'
+          cpus: "4"
     environment:
       - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true
       - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8
-      
+
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.23.0
     deploy:
       resources:
         limits:
           memory: 4G
-          cpus: '2'
+          cpus: "2"
     command: >
       --logtostderr
       --cache_mode
@@ -727,6 +732,7 @@ curl -s http://localhost:8000/health | jq
 ### Common Issues
 
 #### High Memory Usage
+
 ```bash
 # Enable quantization to reduce memory by 83%
 export ENABLE_QUANTIZATION=true
@@ -736,6 +742,7 @@ export EMBEDDING_BATCH_SIZE=16
 ```
 
 #### Slow Search Performance
+
 ```bash
 # Enable payload indexing for filtered queries
 export ENABLE_PAYLOAD_INDEXING=true
@@ -745,6 +752,7 @@ export CACHE_PROVIDER=dragonfly
 ```
 
 #### Connection Issues
+
 ```bash
 # Verify service health
 docker-compose ps
@@ -758,6 +766,7 @@ docker-compose restart
 ### Performance Optimization
 
 For detailed optimization guidelines, see our consolidated documentation:
+
 - [Performance & Optimization](docs/operators/deployment.md#performance-optimization)
 - [Monitoring & Observability](docs/operators/monitoring.md)
 - [Troubleshooting Procedures](docs/operators/operations.md#troubleshooting)
@@ -767,13 +776,15 @@ For detailed optimization guidelines, see our consolidated documentation:
 Our documentation is organized by user role for efficient navigation and focused guidance:
 
 ### 📚 For End Users
+
 - **[Quick Start Guide](docs/users/quick-start.md)** - Get up and running in minutes
 - **[Search & Retrieval](docs/users/search-and-retrieval.md)** - Complete search functionality guide
 - **[Web Scraping](docs/users/web-scraping.md)** - Multi-tier browser automation guide
 - **[Examples & Recipes](docs/users/examples-and-recipes.md)** - Practical usage examples
 - **[Troubleshooting](docs/users/troubleshooting.md)** - Common questions and solutions
 
-### 👩‍💻 For Developers  
+### 👩‍💻 For Developers
+
 - **[API Reference](docs/developers/api-reference.md)** - Complete API documentation (REST, Browser, MCP)
 - **[Integration Guide](docs/developers/integration-guide.md)** - SDK, Docker, and framework integration
 - **[Architecture Guide](docs/developers/architecture.md)** - System design and component details
@@ -782,6 +793,7 @@ Our documentation is organized by user role for efficient navigation and focused
 - **[Contributing Guide](docs/developers/contributing.md)** - Contribution guidelines and standards
 
 ### 🚀 For Operators
+
 - **[Deployment Guide](docs/operators/deployment.md)** - Production deployment and optimization
 - **[Monitoring & Observability](docs/operators/monitoring.md)** - Comprehensive monitoring setup
 - **[Operations Manual](docs/operators/operations.md)** - Day-to-day operational procedures
@@ -789,6 +801,7 @@ Our documentation is organized by user role for efficient navigation and focused
 - **[Security Guide](docs/operators/security.md)** - Security implementation and best practices
 
 ### 📋 Additional Resources
+
 - **[Backup Documentation](docs-backup-20250609-115943/)** - Previous documentation structure (archived)
 - **[Project Analysis](FEATURES_DOCUMENTATION_ANALYSIS_REPORT.md)** - Comprehensive feature analysis report
 
@@ -807,10 +820,11 @@ Our documentation is organized by user role for efficient navigation and focused
 
 ## Contributing
 
-We welcome contributions to improve the system's capabilities and performance. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
+We welcome contributions to improve the system's capabilities and performance. Please see
+[CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
 
 - Development setup and workflow
-- Code style and testing requirements  
+- Code style and testing requirements
 - Performance benchmarking procedures
 - Documentation standards
 
@@ -833,11 +847,14 @@ If you use this system in your research or production environment, please cite:
 
 This implementation builds upon established research in:
 
-- **Hybrid Search**: Dense-sparse vector fusion with reciprocal rank fusion [[Chen et al., 2024]](https://arxiv.org/abs/2401.15884)
-- **Vector Quantization**: Binary and scalar quantization techniques [[Malkov & Yashunin, 2018]](https://arxiv.org/abs/1603.09320)
+- **Hybrid Search**: Dense-sparse vector fusion with reciprocal rank fusion
+  [[Chen et al., 2024]](https://arxiv.org/abs/2401.15884)
+- **Vector Quantization**: Binary and scalar quantization techniques
+  [[Malkov & Yashunin, 2018]](https://arxiv.org/abs/1603.09320)
 - **Cross-Encoder Reranking**: BGE reranker architecture [[Xiao et al., 2023]](https://arxiv.org/abs/2309.07597)
 - **Memory-Adaptive Processing**: Dynamic concurrency control for optimal resource utilization
-- **HyDE Query Enhancement**: Hypothetical document embedding generation [[Gao et al., 2022]](https://arxiv.org/abs/2212.10496)
+- **HyDE Query Enhancement**: Hypothetical document embedding generation
+  [[Gao et al., 2022]](https://arxiv.org/abs/2212.10496)
 
 ## License
 

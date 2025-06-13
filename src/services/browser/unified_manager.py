@@ -216,7 +216,7 @@ class UnifiedBrowserManager(BaseService):
         self._initialized = False
         logger.info("UnifiedBrowserManager cleaned up")
 
-    async def scrape(  # noqa: PLR0912, PLR0915
+    async def scrape(
         self,
         request: UnifiedScrapingRequest | None = None,
         url: str | None = None,

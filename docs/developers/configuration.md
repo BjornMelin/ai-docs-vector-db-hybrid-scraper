@@ -5,7 +5,8 @@
 > **Purpose**: Complete configuration system documentation  
 > **Audience**: Developers configuring and deploying the system
 
-This comprehensive guide covers the unified configuration system, environment setup, provider configuration, and deployment patterns for the AI Documentation Vector DB system.
+This comprehensive guide covers the unified configuration system, environment setup,
+provider configuration, and deployment patterns for the AI Documentation Vector DB system.
 
 ## 🚀 Quick Configuration Start
 
@@ -46,7 +47,9 @@ export AI_DOCS__DEBUG="true"
 
 ### Architecture Overview
 
-The system uses a comprehensive unified configuration model built with Pydantic v2 that consolidates all application settings into a single, well-structured configuration with complete validation and type safety.
+The system uses a comprehensive unified configuration model built with Pydantic v2 that
+consolidates all application settings into a single, well-structured configuration with
+complete validation and type safety.
 
 ```mermaid
 classDiagram
@@ -61,28 +64,28 @@ classDiagram
         +get_active_providers() Dict
         +validate_completeness() List
     }
-    
+
     class CacheConfig {
         +enable_caching: bool
         +redis_url: str
         +ttl: int
         +max_memory_mb: int
     }
-    
+
     class QdrantConfig {
         +url: str
         +api_key: Optional[str]
         +collection_name: str
         +timeout: float
     }
-    
+
     class SecurityConfig {
         +enable_url_validation: bool
         +allowed_domains: List[str]
         +blocked_domains: List[str]
         +max_request_size: int
     }
-    
+
     UnifiedConfig --> CacheConfig
     UnifiedConfig --> QdrantConfig
     UnifiedConfig --> SecurityConfig
@@ -98,15 +101,15 @@ class UnifiedConfig(BaseSettings):
     environment: Environment  # development, testing, production
     debug: bool = False
     log_level: LogLevel = LogLevel.INFO
-    
+
     # Application metadata
     app_name: str = "AI Documentation Vector DB"
     version: str = "1.0.0"
-    
+
     # Provider selection
     embedding_provider: EmbeddingProvider  # openai, fastembed
     crawl_provider: CrawlProvider = CrawlProvider.CRAWL4AI
-    
+
     # Component configurations
     cache: CacheConfig = Field(default_factory=CacheConfig)
     qdrant: QdrantConfig = Field(default_factory=QdrantConfig)
@@ -114,7 +117,7 @@ class UnifiedConfig(BaseSettings):
     crawl4ai: Crawl4AIConfig = Field(default_factory=Crawl4AIConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
-    
+
     # File paths
     data_dir: Path = Path("./data")
     cache_dir: Path = Path("./cache")
@@ -651,7 +654,7 @@ The enhanced database connection pool includes machine learning-based load predi
 class DatabaseConfig(BaseModel):
     # Core connection pool settings
     connection_pool: ConnectionPoolConfig = Field(default_factory=ConnectionPoolConfig)
-    
+
     # Enhanced features
     enable_predictive_monitoring: bool = True
     enable_connection_affinity: bool = True
@@ -662,17 +665,17 @@ class ConnectionPoolConfig(BaseModel):
     # Dynamic pool sizing (5-50 connections)
     min_size: int = 5
     max_size: int = 50
-    
+
     # Connection management
     max_overflow: int = 10
     pool_pre_ping: bool = True
     pool_recycle: int = 3600  # 1 hour
-    
+
     # Performance optimization
     enable_ml_scaling: bool = True
     prediction_window_minutes: int = 15
     scaling_factor: float = 1.2
-    
+
     # Circuit breaker thresholds
     connection_failure_threshold: int = 3
     timeout_failure_threshold: int = 5
@@ -690,19 +693,19 @@ production_db_config = DatabaseConfig(
         max_size=50,
         max_overflow=20,
         pool_recycle=1800,  # 30 minutes for production
-        
+
         # Enhanced features enabled
         enable_ml_scaling=True,
         prediction_window_minutes=10,  # More responsive
         scaling_factor=1.5,  # Aggressive scaling
-        
+
         # Production circuit breaker settings
         connection_failure_threshold=5,
         timeout_failure_threshold=8,
         query_failure_threshold=15,
         recovery_timeout_seconds=30
     ),
-    
+
     # Enable all enhanced features
     enable_predictive_monitoring=True,
     enable_connection_affinity=True,
@@ -721,19 +724,19 @@ development_db_config = DatabaseConfig(
         max_size=20,
         max_overflow=5,
         pool_recycle=7200,  # 2 hours for development
-        
+
         # ML features for testing
         enable_ml_scaling=True,
         prediction_window_minutes=5,
         scaling_factor=1.1,  # Conservative scaling
-        
+
         # Relaxed circuit breaker settings
         connection_failure_threshold=2,
         timeout_failure_threshold=3,
         query_failure_threshold=5,
         recovery_timeout_seconds=120
     ),
-    
+
     # Selective feature enablement
     enable_predictive_monitoring=True,
     enable_connection_affinity=False,  # Disabled for simplicity
@@ -752,19 +755,19 @@ load_test_db_config = DatabaseConfig(
         max_size=100,  # Higher for load testing
         max_overflow=50,
         pool_recycle=600,  # 10 minutes - faster cycling
-        
+
         # Aggressive ML scaling
         enable_ml_scaling=True,
         prediction_window_minutes=3,  # Very responsive
         scaling_factor=2.0,  # Maximum scaling
-        
+
         # Strict circuit breaker for reliability
         connection_failure_threshold=8,
         timeout_failure_threshold=12,
         query_failure_threshold=25,
         recovery_timeout_seconds=15
     ),
-    
+
     # All features enabled
     enable_predictive_monitoring=True,
     enable_connection_affinity=True,
@@ -780,21 +783,21 @@ class MLModelConfig(BaseModel):
     # Model selection
     primary_model: str = "random_forest"
     fallback_model: str = "linear_regression"
-    
+
     # Training parameters
     max_training_samples: int = 10000
     training_interval_hours: int = 6
     min_accuracy_threshold: float = 0.7
-    
+
     # Feature engineering
     feature_window_minutes: int = 60
     lag_features: List[int] = [1, 5, 10, 30]  # Minutes
     seasonal_features: bool = True
-    
+
     # Prediction parameters
     prediction_confidence_threshold: float = 0.8
     prediction_update_interval_seconds: int = 30
-    
+
     # Model performance
     retrain_accuracy_threshold: float = 0.65
     max_prediction_error_rate: float = 0.3
@@ -812,17 +815,17 @@ class CircuitBreakerConfig(BaseModel):
         "TRANSACTION": 7,
         "RESOURCE": 4
     }
-    
+
     # Recovery settings
     half_open_max_calls: int = 5
     half_open_timeout_seconds: int = 60
     recovery_timeout_seconds: int = 120
-    
+
     # Monitoring
     failure_rate_threshold: float = 0.5
     slow_call_duration_threshold_ms: int = 5000
     slow_call_rate_threshold: float = 0.8
-    
+
     # State transition delays
     open_to_half_open_delay_seconds: int = 60
     half_open_to_closed_success_threshold: int = 3
@@ -836,22 +839,22 @@ class ConnectionAffinityConfig(BaseModel):
     max_patterns: int = 1000
     pattern_expiry_minutes: int = 60
     min_pattern_frequency: int = 5
-    
+
     # Connection specialization
     max_connections_per_type: int = 20
     affinity_score_threshold: float = 0.7
-    
+
     # Query type classification
     query_type_mapping: Dict[str, str] = {
         "SELECT": "READ",
-        "INSERT": "WRITE", 
+        "INSERT": "WRITE",
         "UPDATE": "WRITE",
         "DELETE": "WRITE",
         "CREATE": "MAINTENANCE",
         "ALTER": "MAINTENANCE",
         "EXPLAIN": "ANALYTICS"
     }
-    
+
     # Performance tracking
     performance_window_minutes: int = 30
     min_performance_improvement: float = 0.1
@@ -863,7 +866,7 @@ class ConnectionAffinityConfig(BaseModel):
 class AdaptiveConfigConfig(BaseModel):
     # Adaptation strategies
     adaptation_strategy: str = "moderate"  # conservative, moderate, aggressive
-    
+
     # Strategy definitions
     strategies: Dict[str, Dict[str, float]] = {
         "conservative": {
@@ -882,12 +885,12 @@ class AdaptiveConfigConfig(BaseModel):
             "threshold_sensitivity": 0.8
         }
     }
-    
+
     # Adaptation limits
     max_pool_size_change_per_cycle: int = 5
     min_adaptation_interval_seconds: int = 30
     max_adaptations_per_hour: int = 10
-    
+
     # Monitoring integration
     enable_prometheus_metrics: bool = True
     enable_grafana_alerts: bool = True
@@ -912,7 +915,7 @@ class AdaptiveConfigConfig(BaseModel):
       "query_failure_threshold": 15,
       "recovery_timeout_seconds": 30
     },
-    
+
     "ml_model": {
       "primary_model": "random_forest",
       "fallback_model": "linear_regression",
@@ -924,7 +927,7 @@ class AdaptiveConfigConfig(BaseModel):
       "prediction_confidence_threshold": 0.8,
       "prediction_update_interval_seconds": 30
     },
-    
+
     "circuit_breaker": {
       "failure_thresholds": {
         "CONNECTION": 5,
@@ -938,7 +941,7 @@ class AdaptiveConfigConfig(BaseModel):
       "failure_rate_threshold": 0.5,
       "slow_call_duration_threshold_ms": 5000
     },
-    
+
     "connection_affinity": {
       "max_patterns": 1000,
       "pattern_expiry_minutes": 60,
@@ -946,7 +949,7 @@ class AdaptiveConfigConfig(BaseModel):
       "affinity_score_threshold": 0.7,
       "performance_window_minutes": 30
     },
-    
+
     "adaptive_config": {
       "adaptation_strategy": "moderate",
       "max_pool_size_change_per_cycle": 5,
@@ -954,7 +957,7 @@ class AdaptiveConfigConfig(BaseModel):
       "enable_prometheus_metrics": true,
       "enable_grafana_alerts": true
     },
-    
+
     "enable_predictive_monitoring": true,
     "enable_connection_affinity": true,
     "enable_adaptive_configuration": true,
@@ -1012,7 +1015,7 @@ await connection_manager.start()
 # Use the connection manager
 async with connection_manager.get_connection() as conn:
     result = await conn.execute("SELECT * FROM documents LIMIT 10")
-    
+
 # Monitor performance
 metrics = await connection_manager.get_performance_metrics()
 print(f"Current pool size: {metrics['current_pool_size']}")
@@ -1049,10 +1052,10 @@ async with connection_manager.get_connection(
 class EnhancedDatabaseMonitor:
     def __init__(self, connection_manager):
         self.connection_manager = connection_manager
-        
+
     async def get_performance_report(self):
         metrics = await self.connection_manager.get_performance_metrics()
-        
+
         return {
             "pool_utilization": {
                 "current_size": metrics["current_pool_size"],
@@ -1092,12 +1095,12 @@ class CacheConfig(BaseModel):
     redis_url: str = "redis://localhost:6379"
     redis_db: int = 0
     redis_max_connections: int = 20
-    
+
     # TTL settings
     default_ttl: int = 3600  # 1 hour
     search_cache_ttl: int = 1800  # 30 minutes
     embedding_cache_ttl: int = 86400  # 24 hours
-    
+
     # Memory limits
     max_memory_mb: int = 1024
     max_cache_size: int = 10000  # Max cached items
@@ -1131,15 +1134,15 @@ class QdrantConfig(BaseModel):
     collection_name: str = "documents"
     timeout: float = 30.0
     max_retries: int = 3
-    
+
     # Vector settings
     vector_size: int = 1536  # OpenAI ada-002 dimensions
     distance_metric: str = "Cosine"
-    
+
     # Performance optimization
     enable_quantization: bool = True
     hnsw_config: HNSWConfig = Field(default_factory=HNSWConfig)
-    
+
     # Collection aliases for zero-downtime updates
     enable_aliases: bool = True
     alias_prefix: str = "current"
@@ -1165,14 +1168,14 @@ production_qdrant_config = QdrantConfig(
     collection_name="prod_documents",
     timeout=60.0,
     max_retries=5,
-    
+
     # High-performance HNSW
     hnsw_config=HNSWConfig(
         m=32,  # Higher connectivity for better recall
         ef_construct=400,  # More thorough indexing
         ef=200,  # Higher search quality
     ),
-    
+
     # Enable quantization for memory efficiency
     enable_quantization=True,
     enable_aliases=True
@@ -1190,11 +1193,11 @@ class OpenAIConfig(BaseModel):
     batch_size: int = 100
     timeout: float = 30.0
     max_retries: int = 3
-    
+
     # Cost optimization
     enable_batch_processing: bool = True
     max_tokens_per_minute: int = 1000000
-    
+
     # Quality settings
     dimensions: Optional[int] = None  # Use model default
     encoding_format: str = "float"
@@ -1208,7 +1211,7 @@ class FastEmbedConfig(BaseModel):
     cache_dir: Path = Path("./models")
     max_length: int = 512
     batch_size: int = 32
-    
+
     # Performance settings
     device: str = "cpu"  # or "cuda" for GPU
     threads: int = 4
@@ -1221,13 +1224,13 @@ class FastEmbedConfig(BaseModel):
 # Automatic provider configuration
 config = UnifiedConfig(
     embedding_provider="openai",  # Primary provider
-    
+
     # Provider-specific configurations
     openai=OpenAIConfig(
         api_key="${OPENAI_API_KEY}",
         model="text-embedding-3-small"
     ),
-    
+
     fastembed=FastEmbedConfig(
         model_name="BAAI/bge-small-en-v1.5",
         device="cpu"
@@ -1250,17 +1253,17 @@ class Crawl4AIConfig(BaseModel):
     memory_threshold_percent: float = 70.0
     max_session_permit: int = 15
     dispatcher_check_interval: float = 1.0
-    
+
     # Browser settings
     browser_type: str = "chromium"
     headless: bool = True
     viewport: dict = {"width": 1920, "height": 1080}
     page_timeout: float = 30.0
-    
+
     # Performance settings
     max_concurrent_crawls: int = 10  # Fallback if dispatcher disabled
     enable_streaming: bool = True
-    
+
     # Rate limiting with exponential backoff
     rate_limit_base_delay_min: float = 1.0
     rate_limit_base_delay_max: float = 2.0
@@ -1279,7 +1282,7 @@ high_memory_config = Crawl4AIConfig(
     max_session_permit=50,              # More concurrent sessions
     dispatcher_check_interval=0.5,      # Faster checks
     enable_streaming=True,
-    
+
     # Aggressive rate limiting for high throughput
     rate_limit_base_delay_min=0.1,
     rate_limit_base_delay_max=0.5,
@@ -1297,7 +1300,7 @@ low_memory_config = Crawl4AIConfig(
     max_session_permit=5,               # Limited sessions
     dispatcher_check_interval=2.0,      # Less frequent checks
     enable_streaming=False,             # Save memory
-    
+
     # Conservative rate limiting
     rate_limit_base_delay_min=2.0,
     rate_limit_base_delay_max=5.0,
@@ -1315,7 +1318,7 @@ streaming_config = Crawl4AIConfig(
     memory_threshold_percent=75.0,
     max_session_permit=20,
     dispatcher_check_interval=0.5,
-    
+
     # Optimized for streaming
     page_timeout=15.0,                  # Faster timeouts
     viewport={"width": 1280, "height": 720}  # Smaller viewport
@@ -1378,19 +1381,19 @@ class SecurityConfig(BaseModel):
     enable_url_validation: bool = True
     enable_content_filtering: bool = True
     enable_rate_limiting: bool = True
-    
+
     # URL validation
     allowed_domains: List[str] = []  # Empty = allow all
     blocked_domains: List[str] = [
         "localhost", "127.0.0.1", "0.0.0.0",
         "169.254.169.254"  # AWS metadata
     ]
-    
+
     # Content limits
     max_request_size: int = 10 * 1024 * 1024  # 10MB
     max_query_length: int = 1000
     max_results_per_request: int = 100
-    
+
     # Rate limiting
     requests_per_minute: int = 60
     burst_limit: int = 10
@@ -1420,21 +1423,21 @@ class PerformanceConfig(BaseModel):
     max_connections: int = 100
     max_connections_per_host: int = 30
     connection_timeout: float = 10.0
-    
+
     # Batch processing
     enable_batch_processing: bool = True
     batch_size: int = 32
     max_concurrent_batches: int = 5
-    
+
     # Memory management
     max_memory_mb: int = 2048
     gc_threshold: int = 1000  # Objects before garbage collection
-    
+
     # Timeouts
     request_timeout: float = 30.0
     embedding_timeout: float = 60.0
     search_timeout: float = 10.0
-    
+
     # Monitoring
     enable_monitoring: bool = True
     enable_rate_limiting: bool = True
@@ -1585,14 +1588,14 @@ Pre-configured templates are available in `config/templates/`:
   "debug": false,
   "log_level": "INFO",
   "embedding_provider": "openai",
-  
+
   "openai": {
     "api_key": "${OPENAI_API_KEY}",
     "model": "text-embedding-3-small",
     "batch_size": 100,
     "timeout": 60.0
   },
-  
+
   "qdrant": {
     "url": "${QDRANT_URL}",
     "timeout": 60.0,
@@ -1604,27 +1607,27 @@ Pre-configured templates are available in `config/templates/`:
       "ef": 200
     }
   },
-  
+
   "cache": {
     "enable_caching": true,
     "redis_url": "${REDIS_URL}",
     "default_ttl": 3600,
     "max_memory_mb": 2048
   },
-  
+
   "crawl4ai": {
     "enable_memory_adaptive_dispatcher": true,
     "memory_threshold_percent": 75.0,
     "max_session_permit": 30,
     "enable_streaming": true
   },
-  
+
   "security": {
     "enable_url_validation": true,
     "enable_rate_limiting": true,
     "requests_per_minute": 100
   },
-  
+
   "performance": {
     "max_connections": 200,
     "enable_batch_processing": true,
@@ -1641,36 +1644,36 @@ Pre-configured templates are available in `config/templates/`:
   "debug": true,
   "log_level": "DEBUG",
   "embedding_provider": "openai",
-  
+
   "openai": {
     "api_key": "${OPENAI_API_KEY}",
     "model": "text-embedding-3-small",
     "batch_size": 10
   },
-  
+
   "qdrant": {
     "url": "http://localhost:6333",
     "timeout": 30.0
   },
-  
+
   "cache": {
     "enable_caching": true,
     "redis_url": "redis://localhost:6379",
     "default_ttl": 300
   },
-  
+
   "crawl4ai": {
     "enable_memory_adaptive_dispatcher": true,
     "memory_threshold_percent": 60.0,
     "max_session_permit": 5,
     "headless": false
   },
-  
+
   "security": {
     "enable_url_validation": false,
     "enable_rate_limiting": false
   },
-  
+
   "performance": {
     "max_connections": 50,
     "enable_monitoring": true
@@ -1686,29 +1689,29 @@ Pre-configured templates are available in `config/templates/`:
   "debug": false,
   "log_level": "WARNING",
   "embedding_provider": "fastembed",
-  
+
   "fastembed": {
     "model_name": "BAAI/bge-small-en-v1.5",
     "device": "cpu",
     "batch_size": 16
   },
-  
+
   "qdrant": {
     "url": "http://localhost:6333",
     "collection_name": "test_documents",
     "timeout": 10.0
   },
-  
+
   "cache": {
     "enable_caching": false
   },
-  
+
   "crawl4ai": {
     "enable_memory_adaptive_dispatcher": false,
     "max_concurrent_crawls": 2,
     "page_timeout": 5.0
   },
-  
+
   "security": {
     "enable_url_validation": false,
     "enable_rate_limiting": false
@@ -1813,7 +1816,7 @@ Checking Service Connections...
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   ai-docs-vector-db:
@@ -1968,19 +1971,19 @@ from src.config.watcher import ConfigWatcher
 async def monitor_config_changes():
     """Monitor configuration file changes and reload automatically."""
     watcher = ConfigWatcher("config.json")
-    
+
     async def on_config_change(new_config):
         logger.info("Configuration changed, reloading...")
         # Validate new configuration
         is_valid, issues = ConfigValidator.validate_config(new_config)
-        
+
         if is_valid:
             # Apply new configuration
             set_config(new_config)
             logger.info("Configuration reloaded successfully")
         else:
             logger.error(f"Invalid configuration: {issues}")
-    
+
     watcher.add_change_handler(on_config_change)
     await watcher.start_monitoring()
 
@@ -1996,9 +1999,9 @@ from src.config.health import ConfigHealthChecker
 async def periodic_health_check():
     """Perform periodic configuration health checks."""
     checker = ConfigHealthChecker(config)
-    
+
     health_report = await checker.check_all()
-    
+
     if health_report["overall_status"] == "healthy":
         logger.info("All configuration services healthy")
     else:
@@ -2046,16 +2049,16 @@ export AI_DOCS__ANTHROPIC__API_KEY=${ANTHROPIC_API_KEY}
 # Always validate configuration at startup
 def startup_validation():
     config = get_config()
-    
+
     # Check required API keys
     if config.embedding_provider == "openai" and not config.openai.api_key:
         raise ConfigurationError("OpenAI API key required")
-    
+
     # Validate service connections
     issues = asyncio.run(validate_service_connections(config))
     if issues:
         raise ConfigurationError(f"Service connection issues: {issues}")
-    
+
     logger.info("Configuration validation successful")
 
 startup_validation()
@@ -2069,10 +2072,10 @@ import psutil
 
 def optimize_config_for_system():
     config = get_config()
-    
+
     # Adjust based on available memory
     available_memory_gb = psutil.virtual_memory().total / (1024**3)
-    
+
     if available_memory_gb >= 16:
         # High-memory system
         config.crawl4ai.memory_threshold_percent = 80.0
@@ -2088,7 +2091,7 @@ def optimize_config_for_system():
         config.crawl4ai.memory_threshold_percent = 60.0
         config.crawl4ai.max_session_permit = 5
         config.cache.max_memory_mb = 1024
-    
+
     return config
 ```
 
@@ -2099,21 +2102,21 @@ def optimize_config_for_system():
 def create_deployment_config():
     """Create configuration for deployment."""
     base_config = UnifiedConfig.from_template("production")
-    
+
     # Environment-specific overrides
     deployment_overrides = {
         "qdrant.url": os.getenv("QDRANT_URL"),
         "cache.redis_url": os.getenv("REDIS_URL"),
         "performance.max_connections": int(os.getenv("MAX_CONNECTIONS", "200"))
     }
-    
+
     # Apply overrides
     for key, value in deployment_overrides.items():
         set_nested_value(base_config, key, value)
-    
+
     # Validate final configuration
     base_config.validate()
-    
+
     return base_config
 ```
 
@@ -2127,17 +2130,17 @@ def create_deployment_config():
 def test_template_configuration(config_name):
     """Test that all template configurations are valid."""
     config = UnifiedConfig.from_template(config_name)
-    
+
     # Basic validation
     assert config.environment is not None
     assert config.embedding_provider is not None
-    
+
     # Provider-specific validation
     if config.embedding_provider == "openai":
         assert hasattr(config, "openai")
     elif config.embedding_provider == "fastembed":
         assert hasattr(config, "fastembed")
-    
+
     # Service availability validation
     if config.cache.enable_caching:
         assert config.cache.redis_url is not None
@@ -2212,8 +2215,10 @@ Recommendations:
 - Enable quantization for Qdrant to save memory
 ```
 
-This comprehensive configuration guide provides everything needed to properly configure, deploy, and monitor the AI Documentation Vector DB system across different environments and use cases.
+This comprehensive configuration guide provides everything needed to properly configure,
+deploy, and monitor the AI Documentation Vector DB system across different environments and use cases.
 
 ---
 
-*⚙️ Proper configuration is crucial for optimal performance and reliability. Follow the patterns and best practices outlined in this guide for successful deployments.*
+_⚙️ Proper configuration is crucial for optimal performance and reliability. Follow the patterns and
+best practices outlined in this guide for successful deployments._

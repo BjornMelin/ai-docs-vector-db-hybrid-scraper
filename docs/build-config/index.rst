@@ -8,10 +8,10 @@ with Qdrant vector database for Claude Desktop/Code integration.
    :maxdepth: 2
    :caption: Contents:
 
-   users/README
-   developers/README
-   operators/README
-   api/modules
+   ../users/README
+   ../developers/README
+   ../operators/README
+   ../api/modules
 
 Features
 --------
@@ -39,7 +39,7 @@ API Reference
    :maxdepth: 4
    :caption: API Documentation:
 
-   api/modules
+   ../api/modules
 
 Indices and tables
 ==================

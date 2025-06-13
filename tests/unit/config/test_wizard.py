@@ -436,27 +436,25 @@ class TestConfigurationWizard:
                     "src.config.wizard.ConfigurationValidator"
                 ) as mock_validator_class,
             ):
-                    mock_validator = MagicMock()
-                    mock_validator_class.return_value = mock_validator
-                    mock_validator.validate_configuration.return_value = (
-                        ValidationReport(
-                            issues=[], is_valid=True, config_hash="test_hash"
-                        )
-                    )
+                mock_validator = MagicMock()
+                mock_validator_class.return_value = mock_validator
+                mock_validator.validate_configuration.return_value = ValidationReport(
+                    issues=[], is_valid=True, config_hash="test_hash"
+                )
 
-                    result = self.wizard._attempt_fixes(sample_config_file, report)
+                result = self.wizard._attempt_fixes(sample_config_file, report)
 
-                    assert result is True
-                    mock_backup.assert_called_once()
-                    mock_json_dump.assert_called_once()
+                assert result is True
+                mock_backup.assert_called_once()
+                mock_json_dump.assert_called_once()
 
-                    # Check that fixes were applied
-                    saved_config = mock_json_dump.call_args[0][0]
-                    assert saved_config["debug"] is False
-                    assert (
-                        saved_config["openai"]["api_key"]
-                        == "sk-test123456789012345678901234567890123456789012"
-                    )
+                # Check that fixes were applied
+                saved_config = mock_json_dump.call_args[0][0]
+                assert saved_config["debug"] is False
+                assert (
+                    saved_config["openai"]["api_key"]
+                    == "sk-test123456789012345678901234567890123456789012"
+                )
 
     @patch("src.config.wizard.questionary.text")
     @patch("src.config.wizard.questionary.confirm")
@@ -650,12 +648,12 @@ class TestConfigurationWizard:
                 patch("src.config.wizard.questionary.text") as mock_text,
                 patch("src.config.wizard.questionary.confirm") as mock_confirm,
             ):
-                    mock_text.return_value.ask.return_value = ""
-                    mock_confirm.return_value.ask.return_value = False
+                mock_text.return_value.ask.return_value = ""
+                mock_confirm.return_value.ask.return_value = False
 
-                    result = self.wizard.run_backup_wizard(sample_config_file)
+                result = self.wizard.run_backup_wizard(sample_config_file)
 
-                    assert result is None
+                assert result is None
 
     def test_run_restore_wizard_no_backups(self):
         """Test restore wizard when no backups exist."""
@@ -681,22 +679,22 @@ class TestConfigurationWizard:
             patch("src.config.wizard.questionary.path") as mock_path,
             patch("src.config.wizard.questionary.text") as mock_text,
         ):
-                mock_path.return_value.ask.return_value = str(sample_config_file)
-                mock_text.return_value.ask.return_value = "3.0.0"  # No path to 3.0.0
+            mock_path.return_value.ask.return_value = str(sample_config_file)
+            mock_text.return_value.ask.return_value = "3.0.0"  # No path to 3.0.0
+
+            with patch.object(
+                self.wizard.migration_manager, "get_current_version"
+            ) as mock_get_version:
+                mock_get_version.return_value = "1.0.0"
 
                 with patch.object(
-                    self.wizard.migration_manager, "get_current_version"
-                ) as mock_get_version:
-                    mock_get_version.return_value = "1.0.0"
+                    self.wizard.migration_manager, "create_migration_plan"
+                ) as mock_create_plan:
+                    mock_create_plan.return_value = None  # No migration path
 
-                    with patch.object(
-                        self.wizard.migration_manager, "create_migration_plan"
-                    ) as mock_create_plan:
-                        mock_create_plan.return_value = None  # No migration path
+                    result = self.wizard._migration_setup(sample_config_file)
 
-                        result = self.wizard._migration_setup(sample_config_file)
-
-                        assert result == sample_config_file  # Returns original path
+                    assert result == sample_config_file  # Returns original path
 
     def test_import_setup_validation_failure(self, sample_config_file):
         """Test import setup when validation fails and user cancels."""
@@ -706,43 +704,41 @@ class TestConfigurationWizard:
             patch("src.config.wizard.questionary.path") as mock_path,
             patch("src.config.wizard.questionary.confirm") as mock_confirm,
         ):
-                mock_path.return_value.ask.side_effect = [
-                    str(sample_config_file),
-                    str(target_path),
-                ]
-                mock_confirm.return_value.ask.return_value = False  # Don't proceed
+            mock_path.return_value.ask.side_effect = [
+                str(sample_config_file),
+                str(target_path),
+            ]
+            mock_confirm.return_value.ask.return_value = False  # Don't proceed
 
-                with patch(
-                    "src.config.wizard.ConfigurationValidator"
-                ) as mock_validator_class:
-                    mock_validator = MagicMock()
-                    mock_validator_class.return_value = mock_validator
+            with patch(
+                "src.config.wizard.ConfigurationValidator"
+            ) as mock_validator_class:
+                mock_validator = MagicMock()
+                mock_validator_class.return_value = mock_validator
 
-                    # Validation fails
-                    error_report = ValidationReport(
-                        issues=[
-                            ValidationIssue(
-                                field_path="test",
-                                message="Test error",
-                                severity=ValidationSeverity.ERROR,
-                                category="validation",
-                            )
-                        ],
-                        is_valid=False,
-                        config_hash="test_hash_123",
-                    )
-                    mock_validator.validate_configuration.return_value = error_report
-
-                    with patch.object(UnifiedConfig, "load_from_file") as mock_load:
-                        mock_load.return_value = UnifiedConfig(
-                            environment="development", debug=True, log_level="DEBUG"
+                # Validation fails
+                error_report = ValidationReport(
+                    issues=[
+                        ValidationIssue(
+                            field_path="test",
+                            message="Test error",
+                            severity=ValidationSeverity.ERROR,
+                            category="validation",
                         )
+                    ],
+                    is_valid=False,
+                    config_hash="test_hash_123",
+                )
+                mock_validator.validate_configuration.return_value = error_report
 
-                        result = self.wizard._import_setup(None)
+                with patch.object(UnifiedConfig, "load_from_file") as mock_load:
+                    mock_load.return_value = UnifiedConfig(
+                        environment="development", debug=True, log_level="DEBUG"
+                    )
 
-                        assert (
-                            result == target_path
-                        )  # Returns target path even on cancel
+                    result = self.wizard._import_setup(None)
+
+                    assert result == target_path  # Returns target path even on cancel
 
     def test_attempt_fixes_no_fixes_available(self, sample_config_file):
         """Test attempt fixes when no automatic fixes are available."""
@@ -766,11 +762,11 @@ class TestConfigurationWizard:
                 patch("builtins.open", mock_open(read_data='{"test": "config"}')),
                 patch("src.config.wizard.json.load") as mock_json_load,
             ):
-                    mock_json_load.return_value = {"test": "config"}
+                mock_json_load.return_value = {"test": "config"}
 
-                    result = self.wizard._attempt_fixes(sample_config_file, report)
+                result = self.wizard._attempt_fixes(sample_config_file, report)
 
-                    assert result is False
+                assert result is False
 
     def test_error_handling_template_application_failure(self):
         """Test error handling when template application fails."""
@@ -783,13 +779,13 @@ class TestConfigurationWizard:
                 patch("src.config.wizard.questionary.select") as mock_select,
                 patch("src.config.wizard.questionary.confirm") as mock_confirm,
             ):
-                    mock_select.return_value.ask.return_value = (
-                        "🛠️  Development - Debug logging, local database, fast iteration"
-                    )
-                    mock_confirm.return_value.ask.return_value = False
+                mock_select.return_value.ask.return_value = (
+                    "🛠️  Development - Debug logging, local database, fast iteration"
+                )
+                mock_confirm.return_value.ask.return_value = False
 
-                    with pytest.raises(ValueError, match="Failed to load template"):
-                        self.wizard._template_based_setup(None)
+                with pytest.raises(ValueError, match="Failed to load template"):
+                    self.wizard._template_based_setup(None)
 
     @patch("src.config.wizard.questionary.select")
     def test_template_based_setup_no_template_selected(self, mock_select):

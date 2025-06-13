@@ -28,14 +28,14 @@ from ..models.responses import SearchResult
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
+def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
     from ..models.responses import OperationStatus
     from ..models.responses import ProjectInfo
 
     @mcp.tool()
-    async def create_project(  # noqa: PLR0912
+    async def create_project(
         request: ProjectRequest, ctx: Context = None
     ) -> ProjectInfo:
         """

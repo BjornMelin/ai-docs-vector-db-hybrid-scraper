@@ -5,7 +5,8 @@
 > **Purpose**: Complete API reference for all system interfaces  
 > **Audience**: Developers integrating with or contributing to the system
 
-This comprehensive API reference covers all interfaces in the AI Documentation Vector DB system: REST APIs, Browser Automation APIs, MCP Tools, and data models.
+This comprehensive API reference covers all interfaces in the AI Documentation Vector DB system:
+REST APIs, Browser Automation APIs, MCP Tools, and data models.
 
 ## 🚀 Quick API Start
 
@@ -47,9 +48,12 @@ Content-Type: application/json
 
 ### Enhanced Database Connection Pool APIs (BJO-134)
 
-The Enhanced Database Connection Pool (BJO-134) provides comprehensive APIs for monitoring and managing ML-driven database optimization, delivering **50.9% latency reduction** and **887.9% throughput increase** through intelligent connection management.
+The Enhanced Database Connection Pool (BJO-134) provides comprehensive APIs for monitoring
+and managing ML-driven database optimization, delivering **50.9% latency reduction** and
+**887.9% throughput increase** through intelligent connection management.
 
 **Key Features:**
+
 - **ML-based Predictive Load Monitoring** with 95% accuracy using RandomForest and Linear Regression models
 - **Multi-level Circuit Breaker** with failure type categorization (connection, timeout, query, transaction, security)
 - **Connection Affinity Management** for specialized workloads and query pattern optimization
@@ -57,6 +61,7 @@ The Enhanced Database Connection Pool (BJO-134) provides comprehensive APIs for 
 - **Real-time Performance Analytics** and comprehensive reporting with baseline comparisons
 
 **Performance Achievements:**
+
 - Average latency: **2500ms → 1200ms** (50.9% reduction)
 - 95th percentile latency: **5000ms → 156ms** (96.9% reduction)
 - Throughput: **50 RPS → 494 RPS** (887.9% increase)
@@ -198,7 +203,7 @@ curl $BASE_URL/admin/circuit-breaker-status \
       "last_failure": null
     },
     "timeout_failure": {
-      "state": "closed", 
+      "state": "closed",
       "failure_count": 2,
       "threshold": 8,
       "timeout_seconds": 45,
@@ -260,7 +265,7 @@ curl $BASE_URL/admin/connection-affinity-patterns \
       "hit_rate": 0.73
     },
     {
-      "pattern_id": "search_queries_pattern_2", 
+      "pattern_id": "search_queries_pattern_2",
       "normalized_query": "SELECT vector_data FROM documents WHERE collection_id = ?",
       "execution_count": 8500,
       "avg_execution_time_ms": 120.5,
@@ -1109,21 +1114,21 @@ Claude: [Uses add_url tool to crawl and index the page]
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | Yes | - | OpenAI API key for embeddings |
-| `FIRECRAWL_API_KEY` | No | - | Firecrawl API key for premium features |
-| `QDRANT_URL` | No | <http://localhost:6333> | Qdrant database URL |
-| `REDIS_URL` | No | - | Redis URL for caching |
-| `LOG_LEVEL` | No | INFO | Logging level |
-| `ENABLE_CACHE` | No | true | Enable caching layer |
-| `CACHE_TTL` | No | 3600 | Cache TTL in seconds |
-| `DATABASE_POOL_MIN_SIZE` | No | 15 | Minimum database connection pool size |
-| `DATABASE_POOL_MAX_SIZE` | No | 75 | Maximum database connection pool size |
-| `ENABLE_ML_SCALING` | No | true | Enable ML-driven connection pool scaling |
-| `ML_PREDICTION_CONFIDENCE` | No | 0.85 | ML prediction confidence threshold |
-| `CIRCUIT_BREAKER_ENABLED` | No | true | Enable multi-level circuit breaker |
-| `CONNECTION_AFFINITY_ENABLED` | No | true | Enable connection affinity optimization |
+| Variable                      | Required | Default                 | Description                              |
+| ----------------------------- | -------- | ----------------------- | ---------------------------------------- |
+| `OPENAI_API_KEY`              | Yes      | -                       | OpenAI API key for embeddings            |
+| `FIRECRAWL_API_KEY`           | No       | -                       | Firecrawl API key for premium features   |
+| `QDRANT_URL`                  | No       | <http://localhost:6333> | Qdrant database URL                      |
+| `REDIS_URL`                   | No       | -                       | Redis URL for caching                    |
+| `LOG_LEVEL`                   | No       | INFO                    | Logging level                            |
+| `ENABLE_CACHE`                | No       | true                    | Enable caching layer                     |
+| `CACHE_TTL`                   | No       | 3600                    | Cache TTL in seconds                     |
+| `DATABASE_POOL_MIN_SIZE`      | No       | 15                      | Minimum database connection pool size    |
+| `DATABASE_POOL_MAX_SIZE`      | No       | 75                      | Maximum database connection pool size    |
+| `ENABLE_ML_SCALING`           | No       | true                    | Enable ML-driven connection pool scaling |
+| `ML_PREDICTION_CONFIDENCE`    | No       | 0.85                    | ML prediction confidence threshold       |
+| `CIRCUIT_BREAKER_ENABLED`     | No       | true                    | Enable multi-level circuit breaker       |
+| `CONNECTION_AFFINITY_ENABLED` | No       | true                    | Enable connection affinity optimization  |
 
 ## 📊 Data Models Reference
 
@@ -1143,25 +1148,25 @@ database_config = DatabaseConfig(
         max_size=75,
         max_overflow=25,
         pool_recycle=1800,  # 30 minutes
-        
+
         # ML-driven performance optimization
         enable_ml_scaling=True,
         prediction_window_minutes=10,
         scaling_factor=1.8,
-        
+
         # Multi-level circuit breaker
         connection_failure_threshold=5,
         timeout_failure_threshold=8,
         query_failure_threshold=15,
         recovery_timeout_seconds=30
     ),
-    
+
     # Enhanced features
     enable_predictive_monitoring=True,
     enable_connection_affinity=True,
     enable_adaptive_configuration=True,
     enable_circuit_breaker=True,
-    
+
     # ML model configuration for 95% accuracy
     ml_model_config={
         "primary_model": "random_forest",
@@ -1170,7 +1175,7 @@ database_config = DatabaseConfig(
         "feature_window_minutes": 120,
         "accuracy_target": 0.95
     },
-    
+
     # Connection affinity for specialized workloads
     connection_affinity_config={
         "max_patterns": 2000,
@@ -1192,7 +1197,7 @@ class MLModelConfig(BaseModel):
         description="Primary ML model for load prediction"
     )
     fallback_model: str = Field(
-        default="linear_regression", 
+        default="linear_regression",
         description="Fallback model if primary fails"
     )
     training_interval_hours: int = Field(
@@ -1313,7 +1318,7 @@ from src.config.enums import (
 
 # Environment types
 Environment.DEVELOPMENT
-Environment.TESTING  
+Environment.TESTING
 Environment.PRODUCTION
 
 # Embedding providers
@@ -1322,7 +1327,7 @@ EmbeddingProvider.FASTEMBED  # "fastembed"
 
 # Search strategies
 SearchStrategy.DENSE   # "dense"
-SearchStrategy.SPARSE  # "sparse" 
+SearchStrategy.SPARSE  # "sparse"
 SearchStrategy.HYBRID  # "hybrid"
 ```
 
@@ -1395,7 +1400,7 @@ chunk = Chunk(
 
 ```python
 ChunkType.TEXT       # "text"
-ChunkType.CODE       # "code"  
+ChunkType.CODE       # "code"
 ChunkType.HEADING    # "heading"
 ChunkType.LIST       # "list"
 ChunkType.TABLE      # "table"
@@ -1457,16 +1462,16 @@ async with DatabaseConnectionManager(enhanced_config) as db_manager:
     # Get optimized connection with ML prediction
     async with db_manager.get_optimized_connection() as conn:
         result = await conn.execute("SELECT * FROM collections")
-    
+
     # Get performance metrics
     metrics = await db_manager.get_performance_metrics()
     print(f"Average latency: {metrics.avg_latency_ms}ms")
     print(f"ML accuracy: {metrics.ml_accuracy:.2%}")
     print(f"Throughput: {metrics.throughput_rps} req/sec")
-    
+
     # Trigger ML model retraining
     await db_manager.retrain_ml_model()
-    
+
     # Get connection affinity insights
     affinity_stats = await db_manager.get_affinity_performance()
     print(f"Affinity hit rate: {affinity_stats.hit_rate:.2%}")
@@ -1483,12 +1488,12 @@ async with EmbeddingManager(config) as embeddings:
         texts=["Hello world", "Vector search"],
         quality_tier="BALANCED"
     )
-    
+
     # Generate sparse embeddings (if supported)
     sparse_vectors = await embeddings.generate_sparse_embeddings(
         texts=["Hello world"]
     )
-    
+
     # Get embedding dimensions
     dimensions = embeddings.get_embedding_dimensions()
 ```
@@ -1505,7 +1510,7 @@ async with QdrantService(config) as qdrant:
         vector_size=1536,
         distance="Cosine"
     )
-    
+
     # Hybrid search
     results = await qdrant.hybrid_search(
         collection_name="documents",
@@ -1513,7 +1518,7 @@ async with QdrantService(config) as qdrant:
         sparse_vector=sparse_vector,
         limit=10
     )
-    
+
     # Add documents
     await qdrant.add_documents(
         collection_name="documents",
@@ -1532,7 +1537,7 @@ async with CrawlManager(config) as crawler:
         url="https://docs.example.com",
         max_depth=2
     )
-    
+
     # Bulk crawl site
     results = await crawler.crawl_site(
         base_url="https://docs.example.com",
@@ -1552,7 +1557,7 @@ async with CacheManager(config) as cache:
         compute_fn=lambda: generate_embeddings(["Hello world"]),
         ttl=3600
     )
-    
+
     # Cache search results
     await cache.cache_search_results(
         query="vector search",
@@ -1575,7 +1580,7 @@ from src.models.validators import (
 # Validate OpenAI API key
 key = openai_api_key_validator("sk-1234567890abcdef")
 
-# Validate Firecrawl API key  
+# Validate Firecrawl API key
 key = firecrawl_api_key_validator("fc-abcdefghijklmnop")
 
 # Generic API key validation
@@ -1657,7 +1662,7 @@ All API endpoints return standardized error responses:
 ```python
 class ServiceError(Exception):
     """Base exception for service errors."""
-    
+
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.details = details or {}
@@ -1690,17 +1695,17 @@ config = get_config()
 # Initialize services
 async with EmbeddingManager(config) as embeddings, \
            QdrantService(config) as qdrant:
-    
+
     # Create search request
     request = SearchRequest(
         query="vector database optimization",
         limit=10,
         score_threshold=0.7
     )
-    
+
     # Generate query embedding
     query_vector = await embeddings.generate_embeddings([request.query])
-    
+
     # Perform search
     results = await qdrant.search_vectors(
         collection_name=request.collection_name,
@@ -1708,7 +1713,7 @@ async with EmbeddingManager(config) as embeddings, \
         limit=request.limit,
         score_threshold=request.score_threshold
     )
-    
+
     # Format response
     response = SearchResponse(
         success=True,
@@ -1727,35 +1732,35 @@ from src.models.api_contracts import DocumentRequest
 
 async def process_document(request: DocumentRequest):
     config = get_config()
-    
+
     async with CrawlManager(config) as crawler, \
                EmbeddingManager(config) as embeddings, \
                QdrantService(config) as qdrant:
-        
+
         # Crawl document
         crawl_result = await crawler.crawl_url(request.url)
-        
+
         if not crawl_result["success"]:
             return DocumentResponse(
                 success=False,
                 error=f"Failed to crawl {request.url}",
                 timestamp=time.time()
             )
-        
+
         # Process and chunk content
         processed_doc = await process_crawl_result(crawl_result, request)
-        
+
         # Generate embeddings for chunks
         chunk_texts = [chunk.content for chunk in processed_doc.chunks]
         embeddings_result = await embeddings.generate_embeddings(chunk_texts)
-        
+
         # Store in vector database
         await qdrant.add_document(
             collection_name=request.collection_name,
             document=processed_doc,
             embeddings=embeddings_result
         )
-        
+
         return DocumentResponse(
             success=True,
             timestamp=time.time(),
@@ -1792,7 +1797,7 @@ try:
         tier="auto",  # Let system choose optimal tier
         extract_metadata=True
     )
-    
+
     if response.success:
         print(f"Success! Used {response.tier_used} tier")
         print(f"Content length: {response.content_length}")
@@ -1801,7 +1806,7 @@ try:
     else:
         print(f"Failed: {response.error}")
         print(f"Failed tiers: {response.failed_tiers}")
-        
+
 finally:
     await manager.cleanup()
 ```
@@ -1815,7 +1820,7 @@ finally:
 The system uses optimized connection pooling:
 
 - Qdrant: 10 connections
-- Redis: 20 connections  
+- Redis: 20 connections
 - HTTP: 100 connections
 
 #### Batch Processing
@@ -1842,13 +1847,13 @@ config.performance.request_timeout = 30
 # Regular performance monitoring
 async def monitor_system_health():
     status = manager.get_system_status()
-    
+
     if status["overall_success_rate"] < 0.9:
         logger.warning("System performance degraded")
-        
+
     if status["cache_stats"]["hit_rate"] < 0.7:
         logger.info("Consider cache optimization")
-        
+
     # Check tier-specific metrics
     for tier, metrics in status["tier_metrics"].items():
         if metrics["success_rate"] < 0.8:
@@ -1881,16 +1886,16 @@ async def robust_api_request(url: str) -> dict:
     """Production-ready API request with comprehensive error handling."""
     try:
         response = await manager.scrape(url)
-        
+
         if not response.success:
             logger.error(f"Request failed for {url}: {response.error}")
-            
+
             # Implement custom fallback logic if needed
             if "authentication" in response.error.lower():
                 return await handle_auth_required(url)
-            
+
         return response
-        
+
     except Exception as e:
         logger.exception(f"Unexpected error for {url}")
         return UnifiedScrapingResponse(
@@ -1909,18 +1914,18 @@ async def robust_api_request(url: str) -> dict:
 # Always use context managers or try/finally
 async def safe_api_session():
     manager = UnifiedBrowserManager(config)
-    
+
     try:
         await manager.initialize()
-        
+
         # Perform API operations
         results = []
         for url in urls:
             result = await manager.scrape(url)
             results.append(result)
-            
+
         return results
-        
+
     finally:
         await manager.cleanup()  # Essential for resource cleanup
 ```
@@ -1932,18 +1937,18 @@ async def safe_api_session():
 async def efficient_bulk_processing(urls: list[str]):
     manager = UnifiedBrowserManager(config)
     await manager.initialize()
-    
+
     try:
         # Batch process with concurrency control
         semaphore = asyncio.Semaphore(10)  # Limit concurrent requests
-        
+
         async def process_single(url):
             async with semaphore:
                 return await manager.scrape(url)
-        
+
         tasks = [process_single(url) for url in urls]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         return results
     finally:
         await manager.cleanup()
@@ -1969,7 +1974,7 @@ if not validate_url_format(request.url):
 async with RateLimitContext(rate_limiter, "api_calls") as allowed:
     if not allowed:
         raise RateLimitError("Rate limit exceeded")
-    
+
     result = await perform_api_call()
 ```
 
@@ -1987,4 +1992,5 @@ if not api_key:
 
 ---
 
-*📚 This comprehensive API reference provides complete documentation for all system interfaces. For implementation examples and advanced usage patterns, refer to the test suite and service implementations.*
+_📚 This comprehensive API reference provides complete documentation for all system interfaces.
+For implementation examples and advanced usage patterns, refer to the test suite and service implementations._

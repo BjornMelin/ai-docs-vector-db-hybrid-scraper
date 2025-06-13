@@ -14,33 +14,36 @@ sys.path.insert(0, str(project_root))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'AI Docs Vector DB Hybrid Scraper'
-copyright = '2025, BjornMelin'
-author = 'BjornMelin'
-version = '0.1.0'
-release = '0.1.0'
+project = "AI Docs Vector DB Hybrid Scraper"
+copyright = "2025, BjornMelin"
+author = "BjornMelin"
+version = "0.1.0"
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.coverage',
-    'sphinx.ext.todo',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.coverage",
+    "sphinx.ext.todo",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# The master toctree document
+root_doc = "build-config/index"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
 
 # -- Extension configuration -------------------------------------------------
 
@@ -59,11 +62,11 @@ napoleon_use_rtype = True
 
 # Autodoc settings
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # Autosummary settings
@@ -71,10 +74,10 @@ autosummary_generate = True
 
 # Intersphinx configuration
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'pydantic': ('https://docs.pydantic.dev/', None),
-    'fastapi': ('https://fastapi.tiangolo.com/', None),
-    'qdrant': ('https://qdrant.tech/', None),
+    "python": ("https://docs.python.org/3", None),
+    "pydantic": ("https://docs.pydantic.dev/", None),
+    "fastapi": ("https://fastapi.tiangolo.com/", None),
+    "qdrant": ("https://qdrant.tech/", None),
 }
 
 # Todo extension
@@ -82,25 +85,25 @@ todo_include_todos = True
 
 # Mock imports for problematic dependencies
 autodoc_mock_imports = [
-    'qdrant_client',
-    'crawl4ai',
-    'firecrawl',
-    'openai',
-    'anthropic',
-    'browser_use',
-    'playwright',
-    'redis',
-    'fastembed',
-    'flagembedding',
-    'tree_sitter',
-    'tree_sitter_python',
-    'tree_sitter_javascript',
-    'tree_sitter_typescript',
-    'arq',
-    'uvicorn',
-    'prometheus_client',
-    'prometheus_fastapi_instrumentator',
+    "qdrant_client",
+    "crawl4ai",
+    "firecrawl",
+    "openai",
+    "anthropic",
+    "browser_use",
+    "playwright",
+    "redis",
+    "fastembed",
+    "flagembedding",
+    "tree_sitter",
+    "tree_sitter_python",
+    "tree_sitter_javascript",
+    "tree_sitter_typescript",
+    "arq",
+    "uvicorn",
+    "prometheus_client",
+    "prometheus_fastapi_instrumentator",
 ]
 
 # Allow duplicate toctree entries
-suppress_warnings = ['toc.duplicate_label']
+suppress_warnings = ["toc.duplicate_label"]

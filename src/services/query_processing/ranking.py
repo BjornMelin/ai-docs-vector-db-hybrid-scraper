@@ -571,11 +571,11 @@ class PersonalizedRankingService:
                 ranking_factors=ranking_factors,
                 personalization_boost=personalization_boost,
                 metadata=result,
-                ranking_explanation=self._generate_content_explanation(
-                    content_boost, user_profile
-                )
-                if request.enable_explanations
-                else None,
+                ranking_explanation=(
+                    self._generate_content_explanation(content_boost, user_profile)
+                    if request.enable_explanations
+                    else None
+                ),
             )
 
             ranked_results.append(ranked_result)
@@ -833,9 +833,11 @@ class PersonalizedRankingService:
                 ranking_factors=ranking_factors,
                 personalization_boost=personalization_boost,
                 metadata=result,
-                ranking_explanation=self._generate_hybrid_explanation(ranking_factors)
-                if request.enable_explanations
-                else None,
+                ranking_explanation=(
+                    self._generate_hybrid_explanation(ranking_factors)
+                    if request.enable_explanations
+                    else None
+                ),
             )
 
             ranked_results.append(ranked_result)

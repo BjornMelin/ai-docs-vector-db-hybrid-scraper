@@ -29,14 +29,15 @@ from .temporal import TemporalFilter
 __all__ = [
     # Base classes and infrastructure
     "BaseFilter",
+    # Enums and types
     "BooleanOperator",
     # Composition framework
     "CompositionOperator",
     "CompositionRule",
     "ContentCategory",
     "ContentIntent",
+    # Core filter implementations
     "ContentTypeFilter",
-    # Enums and types
     "DocumentType",
     "FieldOperator",
     "FilterComposer",
@@ -47,7 +48,6 @@ __all__ = [
     "MetadataFilter",
     "QueryContext",
     "SimilarityThresholdManager",
-    # Core filter implementations
     "TemporalFilter",
     "ThresholdStrategy",
     "filter_registry",

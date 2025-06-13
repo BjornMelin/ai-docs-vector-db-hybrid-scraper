@@ -27,7 +27,7 @@ from ..models.responses import GenericDictResponse
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
+def register_tools(mcp, client_manager: ClientManager):
     """Register payload indexing tools with the MCP server."""
 
     @mcp.tool()

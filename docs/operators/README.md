@@ -5,7 +5,8 @@
 > **Purpose**: Operations and deployment guides for the AI Documentation Vector DB system  
 > **Audience**: System operators, DevOps engineers, and deployment teams
 
-Welcome to the operations hub! This section provides everything you need to deploy, configure, and maintain the AI Documentation Vector DB system in production environments.
+Welcome to the operations hub! This section provides everything you need to deploy,
+configure, and maintain the AI Documentation Vector DB system in production environments.
 
 ## 🚀 Quick Navigation
 

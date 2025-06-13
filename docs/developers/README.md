@@ -5,7 +5,8 @@
 > **Purpose**: Complete development resources for the AI Documentation Vector DB system  
 > **Audience**: Software developers integrating with or contributing to the system
 
-Welcome to the developer hub! This section provides everything you need to build with, integrate, and contribute to the AI Documentation Vector DB system.
+Welcome to the developer hub! This section provides everything you need to build with,
+integrate, and contribute to the AI Documentation Vector DB system.
 
 ## 🚀 Quick Navigation
 
@@ -25,9 +26,10 @@ Welcome to the developer hub! This section provides everything you need to build
 
 ### Development Environment
 
-- Prerequisites and installation steps
+- Prerequisites and installation steps (Python 3.11-3.12)
 - Local development setup with Docker
 - Testing framework and quality standards
+- Cross-platform CI pipeline (Linux, Windows, macOS)
 - Development workflow and best practices
 
 ### API Integration
@@ -196,4 +198,6 @@ Building platforms or tools that incorporate our vector search capabilities.
 
 ---
 
-*🛠️ This developer hub consolidates all technical resources you need to build with and contribute to the AI Documentation Vector DB system. Choose your path above and start building!*
+_🛠️ This developer hub consolidates all technical resources you need to build with and
+contribute to the AI Documentation Vector DB system. Choose your path above and start
+building!_

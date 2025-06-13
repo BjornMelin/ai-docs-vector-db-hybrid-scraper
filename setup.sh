@@ -66,8 +66,7 @@ fi
 
 # Install project dependencies with UV
 echo -e "${BLUE}📦 Installing project dependencies with UV...${NC}"
-uv add crawl4ai[all] qdrant-client openai pandas numpy python-dotenv colorlog tqdm playwright httpx pydantic click rich
-uv add --dev pytest pytest-asyncio black ruff
+uv sync
 
 # Setup Crawl4AI
 echo -e "${BLUE}🕷️ Setting up Crawl4AI...${NC}"

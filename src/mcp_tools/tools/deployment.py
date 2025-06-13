@@ -24,7 +24,7 @@ from ..models.responses import SearchResult
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
+def register_tools(mcp, client_manager: ClientManager):
     """Register deployment and alias management tools with the MCP server."""
 
     # Import search utility

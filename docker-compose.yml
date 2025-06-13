@@ -95,7 +95,7 @@ services:
   task-worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: docker/Dockerfile.worker
     container_name: task-worker
     restart: unless-stopped
     environment:

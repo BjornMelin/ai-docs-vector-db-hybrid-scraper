@@ -44,6 +44,194 @@ if _test_env_path.exists():
     load_dotenv(_test_env_path, override=True)
 
 
+# Import cross-platform utilities
+try:
+    from src.utils.cross_platform import get_playwright_browser_path
+    from src.utils.cross_platform import is_ci_environment
+    from src.utils.cross_platform import is_linux
+    from src.utils.cross_platform import is_macos
+    from src.utils.cross_platform import is_windows
+    from src.utils.cross_platform import set_platform_environment_defaults
+except ImportError:
+    # Fallback implementations for when utils aren't available
+    def is_windows():
+        return sys.platform.startswith("win")
+
+    def is_macos():
+        return sys.platform == "darwin"
+
+    def is_linux():
+        return sys.platform.startswith("linux")
+
+    def is_ci_environment():
+        return bool(os.getenv("CI") or os.getenv("GITHUB_ACTIONS"))
+
+    def set_platform_environment_defaults():
+        return {}
+
+    def get_playwright_browser_path():
+        return None
+
+
+# Configure browser automation for CI environments
+@pytest.fixture(scope="session", autouse=True)
+def setup_browser_environment():
+    """Set up browser automation environment for CI and local testing.
+
+    This fixture runs once per test session and configures:
+    - Environment variables for headless testing
+    - Browser paths and settings for CI
+    - Test isolation settings
+    """
+    # Store original environment
+    original_env = os.environ.copy()
+
+    try:
+        # Set platform-specific environment defaults
+        env_defaults = set_platform_environment_defaults()
+        for key, value in env_defaults.items():
+            if key not in os.environ:
+                os.environ[key] = value
+
+        # Configure for headless testing in CI and platform-specific settings
+        if is_ci_environment():
+            os.environ["CRAWL4AI_HEADLESS"] = "true"
+            os.environ["CRAWL4AI_SKIP_BROWSER_DOWNLOAD"] = "false"
+            # Disable browser sandbox for CI environments
+            os.environ["PLAYWRIGHT_CHROMIUM_SANDBOX"] = "false"
+
+            # Platform-specific CI settings
+            if is_linux():
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+            else:
+                # Windows/macOS: Use platform-specific browser paths
+                browser_path = get_playwright_browser_path()
+                if browser_path:
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browser_path
+
+        # Platform-specific browser configurations
+        if is_windows():
+            os.environ["PYTHONUTF8"] = "1"
+            os.environ["PLAYWRIGHT_SKIP_BROWSER_GC"] = "1"  # Reduce memory issues
+        elif is_macos():
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = get_playwright_browser_path() or ""
+
+        # Ensure test directories exist
+        project_root = Path(__file__).parent.parent
+        test_dirs = [
+            project_root / "tests" / "fixtures" / "cache",
+            project_root / "tests" / "fixtures" / "data",
+            project_root / "tests" / "fixtures" / "logs",
+            project_root / "logs",
+            project_root / "cache",
+            project_root / "data",
+        ]
+
+        for test_dir in test_dirs:
+            test_dir.mkdir(parents=True, exist_ok=True)
+
+        yield
+
+    finally:
+        # Restore original environment
+        os.environ.clear()
+        os.environ.update(original_env)
+
+
+# Platform-specific fixtures
+@pytest.fixture(scope="session")
+def platform_info():
+    """Provide platform information for tests."""
+    return {
+        "is_windows": is_windows(),
+        "is_macos": is_macos(),
+        "is_linux": is_linux(),
+        "is_ci": is_ci_environment(),
+        "platform": sys.platform,
+    }
+
+
+@pytest.fixture(scope="session")
+def skip_if_windows():
+    """Skip test if running on Windows."""
+    if is_windows():
+        pytest.skip("Test not supported on Windows")
+
+
+@pytest.fixture(scope="session")
+def skip_if_macos():
+    """Skip test if running on macOS."""
+    if is_macos():
+        pytest.skip("Test not supported on macOS")
+
+
+@pytest.fixture(scope="session")
+def skip_if_linux():
+    """Skip test if running on Linux."""
+    if is_linux():
+        pytest.skip("Test not supported on Linux")
+
+
+@pytest.fixture(scope="session")
+def skip_if_ci():
+    """Skip test if running in CI environment."""
+    if is_ci_environment():
+        pytest.skip("Test not supported in CI environment")
+
+
+@pytest.fixture(scope="session")
+def require_ci():
+    """Require test to run in CI environment."""
+    if not is_ci_environment():
+        pytest.skip("Test requires CI environment")
+
+
+@pytest.fixture
+def mock_browser_config():
+    """Provide a platform-aware mock browser configuration for testing.
+
+    Returns:
+        dict: Browser configuration suitable for testing on current platform
+    """
+    # Base configuration
+    config = {
+        "headless": True,
+        "browser_type": "chromium",
+        "timeout": 30000,
+        "viewport": {"width": 1280, "height": 720},
+        "user_agent": "pytest-browser-automation",
+        "args": [],
+    }
+
+    # Platform-specific arguments
+    if is_ci_environment():
+        config["args"].extend(["--no-sandbox", "--disable-dev-shm-usage"])
+
+    if is_windows():
+        config["args"].extend(["--disable-gpu", "--disable-dev-shm-usage"])
+        config["timeout"] = 60000  # Longer timeout for Windows
+    elif is_macos():
+        config["timeout"] = 45000  # Medium timeout for macOS
+
+    return config
+
+
+@pytest.fixture
+def test_urls():
+    """Provide test URLs for browser automation testing.
+
+    Returns:
+        dict: Collection of test URLs for different scenarios
+    """
+    return {
+        "simple": "https://httpbin.org/html",
+        "json": "https://httpbin.org/json",
+        "delayed": "https://httpbin.org/delay/1",
+        "status_200": "https://httpbin.org/status/200",
+        "status_404": "https://httpbin.org/status/404",
+    }
+
+
 # Remove the custom event_loop fixture to use pytest-asyncio's default
 # The event loop scope is now configured in pyproject.toml
 
@@ -177,6 +365,61 @@ def sample_vector_points() -> list[PointStruct]:
             },
         ),
     ]
+
+
+# Configure pytest markers for better test organization
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line(
+        "markers", "browser: mark test as requiring browser automation"
+    )
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line("markers", "unit: mark test as unit test")
+    config.addinivalue_line("markers", "performance: mark test as performance test")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection to handle CI environment constraints."""
+    # Skip browser tests if browsers are not properly installed in CI
+    if os.getenv("CI") and not _check_browser_availability():
+        skip_browser = pytest.mark.skip(reason="Browser automation not available in CI")
+        for item in items:
+            if "browser" in item.keywords:
+                item.add_marker(skip_browser)
+
+
+def _check_browser_availability() -> bool:
+    """Check if browser automation is available for testing.
+
+    Returns:
+        bool: True if browsers are available, False otherwise
+    """
+    try:
+        import subprocess
+        import sys
+
+        # Try to check if Playwright browsers are installed
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from playwright.sync_api import sync_playwright; "
+                "p = sync_playwright().start(); "
+                "browser = p.chromium.launch(headless=True); "
+                "browser.close(); p.stop(); "
+                "print('available')",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        return result.returncode == 0 and "available" in result.stdout
+
+    except Exception:
+        return False
 
 
 # Enhanced Database Testing Fixtures

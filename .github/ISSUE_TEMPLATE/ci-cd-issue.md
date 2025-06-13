@@ -12,8 +12,8 @@ A clear and concise description of the CI/CD issue.
 ## Workflow Information
 - **Workflow Name**: (e.g., Continuous Integration, Security Pipeline)
 - **Run ID**: (GitHub Actions run ID if available)
-- **Branch**: 
-- **Commit SHA**: 
+- **Branch**:
+- **Commit SHA**:
 - **Trigger Event**: (push, pull_request, schedule, etc.)
 
 ## Error Details
@@ -22,9 +22,9 @@ Paste error logs or failure messages here
 ```
 
 ## Steps to Reproduce
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected Behavior
 A clear description of what should happen.

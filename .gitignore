@@ -104,3 +104,78 @@ claude_task.pid
 CLAUDE.md.bak
 repomix-output.*
 .crawl4ai_state.json
+
+# Runtime directories and files
+logs/
+cache/
+data/
+worktrees/
+coverage.json
+
+# AI/ML specific
+models/
+checkpoints/
+experiments/
+artifacts/
+wandb/
+.wandb/
+mlruns/
+.mlflow/
+runs/
+tensorboard/
+.tensorboard/
+
+# Model files
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.pb
+*.tflite
+*.joblib
+
+# Vector database data
+qdrant_storage/
+vector_data/
+embeddings_cache/
+index_data/
+
+# Hugging Face cache
+.cache/huggingface/
+.cache/torch/
+transformers_cache/
+
+# GPU profiling
+*.nvprof
+*.nsys-rep
+*.qdrep
+*.sqlite
+
+# Additional Python patterns
+.pdm.toml
+.pdm-python
+.pdm-build/
+__pypackages__/
+.pypirc
+.ruff_cache/
+.cursorignore
+.cursorindexingignore
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.tmp
+
+# System files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini

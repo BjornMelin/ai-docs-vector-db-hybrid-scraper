@@ -231,7 +231,7 @@ class LightweightScraper(BaseService):
 
         return 0.3  # Default low confidence
 
-    async def _analyze_head_request(self, url: str) -> dict[str, Any] | None:  # noqa: PLR0912
+    async def _analyze_head_request(self, url: str) -> dict[str, Any] | None:
         """Perform HEAD request analysis for content assessment.
 
         Args:

@@ -1,10 +1,13 @@
 # 🌟 Community Guidelines
 
-Welcome to the AI Documentation Scraper community! We're building the most advanced, research-backed documentation processing system through open collaboration, sharing knowledge, and pushing the boundaries of performance optimization.
+Welcome to the AI Documentation Scraper community! We're building the most advanced, research-backed
+documentation processing system through open collaboration, sharing knowledge, and pushing the
+boundaries of performance optimization.
 
 ## 🎯 Our Mission
 
-Building a thriving, inclusive community of researchers, developers, and practitioners advancing AI-powered documentation processing through:
+Building a thriving, inclusive community of researchers, developers, and practitioners
+advancing AI-powered documentation processing through:
 
 - **Open Research**: Collaborative performance optimization achieving 50.9% latency reduction and 887.9% throughput increases
 - **Knowledge Sharing**: Benchmarks, techniques, and findings that benefit everyone
@@ -16,6 +19,7 @@ Building a thriving, inclusive community of researchers, developers, and practit
 ## 🤝 Community Values
 
 ### 1. Research Excellence & Collaboration
+
 **Scientific Rigor**: We value evidence-based improvements, reproducible research, and peer-reviewed contributions.
 
 **Open Science**: Research findings, benchmarks, and methodologies are shared openly for community benefit.
@@ -23,6 +27,7 @@ Building a thriving, inclusive community of researchers, developers, and practit
 **Constructive Peer Review**: We provide thoughtful, actionable feedback that helps improve research quality and impact.
 
 ### 2. Performance & Innovation Focus
+
 **Measurable Impact**: Contributions should demonstrate clear performance improvements with quantitative evidence.
 
 **Breakthrough Thinking**: We encourage bold approaches and novel solutions to complex optimization challenges.
@@ -30,6 +35,7 @@ Building a thriving, inclusive community of researchers, developers, and practit
 **Real-World Validation**: Research and optimizations are tested in production-like environments with real workloads.
 
 ### 3. Inclusive & Supportive Environment
+
 **Welcoming to All**: We welcome contributors from all backgrounds, experience levels, and institutions.
 
 **Growth Mindset**: We support learning, experimentation, and growth through mentorship and collaboration.
@@ -37,6 +43,7 @@ Building a thriving, inclusive community of researchers, developers, and practit
 **Respectful Communication**: All interactions are professional, constructive, and focused on advancing our shared goals.
 
 ### 4. Quality & Reliability
+
 **High Standards**: Code contributions meet our quality standards with comprehensive testing and documentation.
 
 **Production Ready**: Features and optimizations are built for real-world deployment and long-term maintenance.
@@ -50,19 +57,23 @@ Building a thriving, inclusive community of researchers, developers, and practit
 ### Discussion Guidelines
 
 #### Performance Optimization Discussions
-**Share Complete Context**
+
+##### Share Complete Context
+
 - Include benchmark data, system configurations, and testing methodology
 - Provide reproducible test cases and environment details
 - Document baseline performance for comparison
 - Share both positive and negative results
 
-**Evidence-Based Claims**
+##### Evidence-Based Claims
+
 - Support performance claims with rigorous benchmarking
 - Include statistical significance testing where appropriate
 - Provide confidence intervals and uncertainty quantification
 - Document testing limitations and potential biases
 
-**Example of Good Performance Discussion**:
+##### Example of Good Performance Discussion
+
 ```markdown
 ## Database Connection Pool Optimization Results
 
@@ -89,26 +100,32 @@ All tests reproducible with: `uv run python scripts/benchmark_optimization.py --
 ```
 
 #### ML Model Enhancement Discussions
-**Model Performance Reporting**
+
+##### Model Performance Reporting
+
 - Include accuracy metrics with appropriate baselines
 - Report training and inference performance characteristics
 - Document model interpretability and explainability analysis
 - Share hyperparameter optimization process and results
 
-**Research Context**
+##### Research Context
+
 - Reference relevant academic literature and industry benchmarks
 - Explain theoretical foundations and algorithmic choices
 - Discuss limitations and potential failure modes
 - Propose future research directions and improvements
 
 #### Technical Implementation Discussions
-**Code Quality Focus**
+
+##### Code Quality Focus
+
 - Follow established coding standards and best practices
 - Include comprehensive test coverage and documentation
 - Consider performance implications and resource usage
 - Plan for maintainability and future extensibility
 
-**Architecture Decisions**
+##### Architecture Decisions
+
 - Explain technical trade-offs and decision rationale
 - Consider scalability and production deployment requirements
 - Document integration points and dependency management
@@ -117,26 +134,32 @@ All tests reproducible with: `uv run python scripts/benchmark_optimization.py --
 ### Collaboration Etiquette
 
 #### Research Collaboration
-**Attribution and Credit**
+
+##### Attribution and Credit
+
 - Properly credit all contributors and collaborators
 - Acknowledge prior work and building upon existing research
 - Follow academic standards for citation and references
 - Share authorship appropriately on publications
 
-**Data and Resource Sharing**
+##### Data and Resource Sharing
+
 - Share benchmark data and testing methodologies
 - Provide access to reproducible research environments
 - Respect privacy and confidentiality requirements
 - Follow open science principles while protecting sensitive information
 
 #### Code Collaboration
-**Pull Request Best Practices**
+
+##### Pull Request Best Practices
+
 - Provide clear, detailed descriptions of changes
 - Include test results and performance impact analysis
 - Respond promptly to review feedback and suggestions
 - Maintain focus on specific, well-scoped improvements
 
-**Issue Reporting and Discussion**
+##### Issue Reporting and Discussion
+
 - Use appropriate issue templates and labels
 - Provide complete reproduction steps and environment details
 - Search existing issues before creating duplicates
@@ -145,7 +168,9 @@ All tests reproducible with: `uv run python scripts/benchmark_optimization.py --
 ### Knowledge Sharing Guidelines
 
 #### Benchmark Results and Analysis
-**Standardized Reporting**
+
+##### Standardized Reporting
+
 ```python
 # Example benchmark result format
 benchmark_result = {
@@ -180,20 +205,24 @@ benchmark_result = {
 }
 ```
 
-**Community Leaderboards**
+##### Community Leaderboards
+
 - Submit results to community performance leaderboards
 - Include complete methodology and reproducibility information
 - Participate in community benchmark validation and peer review
 - Share insights and lessons learned from optimization attempts
 
 #### Technical Documentation
-**Comprehensive Documentation Standards**
+
+##### Comprehensive Documentation Standards
+
 - Include both conceptual explanations and practical examples
 - Provide step-by-step tutorials for complex procedures
 - Document common issues, troubleshooting, and debugging approaches
 - Keep documentation current with code changes and improvements
 
-**Research Publication Standards**
+##### Research Publication Standards
+
 - Follow academic standards for research documentation
 - Include abstract, methodology, results, and discussion sections
 - Provide complete experimental setup and reproducibility information
@@ -206,6 +235,7 @@ benchmark_result = {
 ### Getting Started with Research Contributions
 
 #### Research Onboarding Path
+
 1. **Join Research Community**
    - Subscribe to research mailing list
    - Join monthly research seminars
@@ -219,6 +249,7 @@ benchmark_result = {
    - Novel optimization algorithms and techniques
 
 3. **Set Up Research Environment**
+
    ```bash
    # Research environment setup
    git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
@@ -242,19 +273,22 @@ benchmark_result = {
 
 #### Research Quality Standards
 
-**Experimental Rigor**
+##### Experimental Rigor
+
 - Use control groups and statistical significance testing
 - Document all experimental parameters and conditions
 - Include multiple runs and confidence intervals
 - Address potential confounding variables and biases
 
-**Reproducibility Requirements**
+##### Reproducibility Requirements
+
 - Share complete code, configuration, and data
 - Provide detailed environment setup instructions
 - Use version control and dependency management
 - Test reproducibility on different systems and configurations
 
-**Peer Review Process**
+##### Peer Review Process
+
 - All research contributions undergo community peer review
 - Feedback focuses on methodology, validity, and impact
 - Iterative improvement based on reviewer suggestions
@@ -263,7 +297,9 @@ benchmark_result = {
 ### Performance Optimization Contributions
 
 #### Benchmark Development
-**Creating Standard Benchmarks**
+
+##### Creating Standard Benchmarks
+
 ```python
 # Example benchmark contribution
 from ai_docs_scraper.benchmarks import BaseBenchmark
@@ -303,20 +339,24 @@ class ConnectionPoolOptimizationBenchmark(BaseBenchmark):
         )
 ```
 
-**Benchmark Validation Process**
+##### Benchmark Validation Process
+
 - Community review of benchmark methodology and implementation
 - Validation on multiple systems and configurations
 - Statistical analysis of result reliability and significance
 - Documentation of limitations and appropriate use cases
 
 #### Algorithm Implementation
-**Optimization Algorithm Contributions**
+
+##### Optimization Algorithm Contributions
+
 - Implement new ML models for load prediction and resource optimization
 - Develop adaptive scaling algorithms for dynamic workloads
 - Create novel caching strategies and memory management techniques
 - Build distributed optimization algorithms for multi-node deployments
 
-**Code Quality Requirements**
+##### Code Quality Requirements
+
 - Comprehensive test coverage (≥90%)
 - Performance benchmarking and regression testing
 - Complete documentation and usage examples
@@ -325,20 +365,25 @@ class ConnectionPoolOptimizationBenchmark(BaseBenchmark):
 ### ML Model Enhancement Contributions
 
 #### Model Development Guidelines
-**Research-Backed Model Development**
+
+##### Research-Backed Model Development
+
 - Base new models on published research and established techniques
 - Include theoretical justification for architectural choices
 - Provide comprehensive evaluation against existing baselines
 - Document model interpretability and explainability characteristics
 
-**Production-Ready Implementation**
+##### Production-Ready Implementation
+
 - Optimize for inference speed and memory efficiency
 - Include model versioning and A/B testing support
 - Implement proper error handling and fallback mechanisms
 - Provide monitoring and performance tracking capabilities
 
 #### Model Evaluation Standards
-**Comprehensive Evaluation Framework**
+
+##### Comprehensive Evaluation Framework
+
 ```python
 # Example model evaluation contribution
 from ai_docs_scraper.evaluation import ModelEvaluator
@@ -385,26 +430,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Contributor Recognition Programs
 
 #### Performance Achievement Recognition
-**Optimization Breakthrough Awards**
+
+##### Optimization Breakthrough Awards
+
 - **Bronze Level**: 10%+ performance improvement with rigorous benchmarking
 - **Silver Level**: 25%+ performance improvement with community validation
 - **Gold Level**: 50%+ performance improvement with production validation
 - **Platinum Level**: Breakthrough research with industry-wide impact
 
-**Recognition Benefits**
+##### Recognition Benefits
+
 - Featured contributor spotlight in monthly newsletter
 - Conference speaking opportunities and travel support
 - Research collaboration opportunities with academic institutions
 - Career advancement support and professional networking
 
 #### Research Excellence Awards
-**Academic Research Recognition**
+
+##### Academic Research Recognition
+
 - Best Paper Awards for breakthrough research contributions
 - Research Grant Support for promising projects
 - Conference Presentation Opportunities at top-tier venues
 - Co-authorship on high-impact publications
 
-**Industry Impact Recognition**
+##### Industry Impact Recognition
+
 - Technology Transfer Awards for practical applications
 - Industry Partnership Opportunities with major companies
 - Consulting and Advisory Role Opportunities
@@ -413,26 +464,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Community Leadership Opportunities
 
 #### Special Interest Groups (SIGs)
-**Research SIG Leadership**
+
+##### Research SIG Leadership
+
 - Lead specialized research areas (ML, databases, systems)
 - Organize monthly research seminars and workshops
 - Mentor new researchers and guide project direction
 - Coordinate with academic institutions and industry partners
 
-**Community Management Roles**
+##### Community Management Roles
+
 - Community Moderators for discussions and events
 - Documentation Leaders for maintaining guides and tutorials
 - Event Organizers for conferences, workshops, and meetups
 - Mentorship Program Coordinators
 
 #### Advisory Board Participation
-**Technical Advisory Board**
+
+##### Technical Advisory Board
+
 - Provide strategic direction for technical roadmap
 - Review and approve major architecture decisions
 - Guide research priorities and funding allocation
 - Represent community interests in external partnerships
 
-**Research Advisory Board**
+##### Research Advisory Board
+
 - Set research priorities and evaluation criteria
 - Review research proposals and grant applications
 - Coordinate with academic institutions and funding agencies
@@ -445,26 +502,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Professional Behavior Standards
 
 #### Respectful Communication
-**In All Interactions**
+
+##### In All Interactions
+
 - Use professional, respectful language in all communications
 - Focus on technical content and constructive feedback
 - Avoid personal attacks, harassment, or discriminatory language
 - Respect diverse perspectives and backgrounds
 
-**Constructive Feedback**
+##### Constructive Feedback
+
 - Provide specific, actionable suggestions for improvement
 - Focus on technical merits and objective evaluation criteria
 - Acknowledge good work and positive contributions
 - Offer help and support for addressing identified issues
 
 #### Inclusive Environment
-**Welcoming All Contributors**
+
+##### Welcoming All Contributors
+
 - Support contributors regardless of experience level, background, or affiliation
 - Provide mentorship and guidance for new community members
 - Create accessible documentation and onboarding materials
 - Address barriers to participation and contribution
 
-**Diversity and Inclusion**
+##### Diversity and Inclusion
+
 - Actively promote diverse perspectives and approaches
 - Support underrepresented groups in research and development
 - Create opportunities for skill development and career advancement
@@ -473,26 +536,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Research Ethics and Integrity
 
 #### Ethical Research Practices
-**Data Privacy and Security**
+
+##### Data Privacy and Security
+
 - Respect user privacy and data protection requirements
 - Follow institutional and regulatory guidelines for data use
 - Implement appropriate security measures for sensitive information
 - Obtain proper approvals for research involving user data
 
-**Research Integrity**
+##### Research Integrity
+
 - Conduct honest, transparent research with accurate reporting
 - Avoid plagiarism and properly attribute all sources and collaborators
 - Share negative results and limitations alongside positive findings
 - Follow established standards for reproducibility and transparency
 
 #### Intellectual Property Respect
-**Open Source Principles**
+
+##### Open Source Principles
+
 - Respect open source licenses and contribution agreements
 - Properly attribute code, ideas, and research contributions
 - Follow community guidelines for patent and IP considerations
 - Support open science and knowledge sharing principles
 
-**Collaboration Agreements**
+##### Collaboration Agreements
+
 - Honor collaboration agreements and partnership terms
 - Respect confidentiality requirements and non-disclosure agreements
 - Follow institutional policies for external collaboration and publication
@@ -501,20 +570,25 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Enforcement and Resolution
 
 #### Issue Resolution Process
-**Informal Resolution**
+
+##### Informal Resolution
+
 - Address minor issues through direct, respectful communication
 - Seek mediation from community moderators when needed
 - Focus on finding constructive solutions and preventing future issues
 - Document resolutions and lessons learned for community benefit
 
-**Formal Resolution**
+##### Formal Resolution
+
 - Serious violations are reviewed by community leadership team
 - Investigation follows fair, transparent process with due process rights
 - Appropriate consequences based on severity and impact of violations
 - Appeals process available for disputed decisions
 
 #### Consequences for Violations
-**Progressive Response System**
+
+##### Progressive Response System
+
 - **Warning**: First-time minor violations receive educational response
 - **Temporary Suspension**: Repeated or moderate violations result in temporary community access restrictions
 - **Permanent Ban**: Serious violations or repeated offenses may result in permanent exclusion from community
@@ -527,26 +601,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Getting Help and Support
 
 #### Technical Support Channels
-**Community Support**
+
+##### Community Support
+
 - GitHub Discussions for technical questions and feature requests
 - Research Slack channels for real-time collaboration and discussion
 - Monthly community calls for updates and Q&A sessions
 - Documentation and tutorials for self-service support
 
-**Expert Support**
+##### Expert Support
+
 - Office hours with maintainers and domain experts
 - Research mentorship for academic and industry collaborators
 - Code review and feedback for significant contributions
 - Debugging and troubleshooting assistance for complex issues
 
 #### Community Resources
-**Learning and Development**
+
+##### Learning and Development
+
 - Comprehensive documentation and tutorials
 - Research methodologies and best practices guides
 - Performance optimization techniques and case studies
 - ML model development and evaluation frameworks
 
-**Collaboration Tools**
+##### Collaboration Tools
+
 - Shared research environments and computing resources
 - Standardized benchmarking frameworks and datasets
 - Version control and project management tools
@@ -555,32 +635,39 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Community Events and Engagement
 
 #### Regular Community Events
-**Monthly Research Seminars**
+
+##### Monthly Research Seminars
+
 - Guest speakers from academia and industry
 - Community member presentations and research updates
 - Q&A sessions and collaborative discussions
 - Networking and partnership opportunities
 
-**Quarterly Research Sprints**
+##### Quarterly Research Sprints
+
 - Intensive collaborative research sessions
 - Focus on specific optimization challenges and breakthrough opportunities
 - Mix of remote and in-person participation options
 - Sponsored travel and accommodation support for key contributors
 
-**Annual Community Conference**
+##### Annual Community Conference
+
 - Multi-day event with research presentations and workshops
 - Industry keynotes and academic paper sessions
 - Networking events and career development opportunities
 - Community awards and recognition ceremonies
 
 #### Special Events and Initiatives
-**Optimization Challenges**
+
+##### Optimization Challenges
+
 - Quarterly performance optimization competitions
 - Industry-sponsored research problems and prizes
 - Community collaboration on breakthrough challenges
 - Recognition and career advancement opportunities for winners
 
-**Research Collaborations**
+##### Research Collaborations
+
 - Joint projects with academic institutions and industry partners
 - Funded research grants and fellowship opportunities
 - Publication and conference presentation support
@@ -589,31 +676,38 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Contact Information and Resources
 
 #### Primary Contact Points
-**Community Management**
-- community@ai-docs-scraper.org
+
+##### Community Management
+
+- <community@ai-docs-scraper.org>
 - GitHub: @community-team
 - Slack: #community-general
 
-**Research Coordination**
-- research@ai-docs-scraper.org
+##### Research Coordination
+
+- <research@ai-docs-scraper.org>
 - Research Slack: #research-coordination
 - Monthly research seminars: First Friday, 2 PM UTC
 
-**Technical Support**
-- support@ai-docs-scraper.org
+##### Technical Support
+
+- <support@ai-docs-scraper.org>
 - GitHub Issues: Technical problems and bug reports
-- Documentation: https://docs.ai-docs-scraper.org
+- Documentation: <https://docs.ai-docs-scraper.org>
 
 #### Emergency and Urgent Issues
-**Code of Conduct Violations**
-- conduct@ai-docs-scraper.org
-- Anonymous reporting: https://ai-docs-scraper.org/report
+
+##### Code of Conduct Violations
+
+- <conduct@ai-docs-scraper.org>
+- Anonymous reporting: <https://ai-docs-scraper.org/report>
 - Urgent issues: Contact community leadership directly
 
-**Security Issues**
-- security@ai-docs-scraper.org
+##### Security Issues
+
+- <security@ai-docs-scraper.org>
 - GPG key: [Key ID and fingerprint]
-- Responsible disclosure process: https://ai-docs-scraper.org/security
+- Responsible disclosure process: <https://ai-docs-scraper.org/security>
 
 ---
 
@@ -622,26 +716,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Community Feedback and Evolution
 
 #### Regular Community Surveys
-**Quarterly Satisfaction Surveys**
+
+##### Quarterly Satisfaction Surveys
+
 - Community satisfaction and engagement metrics
 - Feedback on processes, tools, and resources
 - Suggestions for improvement and new initiatives
 - Anonymous feedback options for sensitive topics
 
-**Annual Community Review**
+##### Annual Community Review
+
 - Comprehensive review of community guidelines and policies
 - Evaluation of recognition programs and incentives
 - Assessment of research priorities and strategic direction
 - Planning for upcoming year and long-term vision
 
 #### Guideline Updates and Revisions
-**Community Input Process**
+
+##### Community Input Process
+
 - Open discussion periods for proposed changes
 - Community voting on significant policy modifications
 - Implementation of approved changes with clear communication
 - Regular review and update cycles to stay current
 
-**Adaptation to Growth**
+##### Adaptation to Growth
+
 - Scaling processes and resources as community grows
 - Maintaining quality and standards with increased participation
 - Balancing inclusivity with technical excellence requirements
@@ -650,26 +750,32 @@ class LoadPredictionEvaluator(ModelEvaluator):
 ### Metrics and Success Measurement
 
 #### Community Health Metrics
-**Participation and Engagement**
+
+##### Participation and Engagement
+
 - Active contributor growth and retention rates
 - Diversity and inclusion metrics across all community activities
 - Quality and impact of research contributions and optimizations
 - Community satisfaction and Net Promoter Score tracking
 
-**Technical Achievement Metrics**
+##### Technical Achievement Metrics
+
 - Performance improvement contributions and their impact
 - Research publication quality and citation metrics
 - Code quality and maintainability improvements
 - Production deployment success and reliability metrics
 
 #### Success Stories and Impact
-**Research Impact**
+
+##### Research Impact
+
 - Academic publications and citations from community research
 - Industry adoption of optimization techniques and algorithms
 - Technology transfer and commercialization success stories
 - Conference presentations and recognition from external organizations
 
-**Community Growth**
+##### Community Growth
+
 - Geographic and institutional diversity of contributors
 - Career advancement and professional development of community members
 - Successful mentorship relationships and knowledge transfer
@@ -677,8 +783,9 @@ class LoadPredictionEvaluator(ModelEvaluator):
 
 ---
 
-*These guidelines are a living document that evolves with our community. We welcome feedback, suggestions, and contributions to make our community even more effective, inclusive, and impactful.*
+*These guidelines are a living document that evolves with our community. We welcome feedback,
+suggestions, and contributions to make our community even more effective, inclusive, and impactful.*
 
-**Last Updated**: January 2025  
-**Next Review**: April 2025  
+**Last Updated**: June 2025  
+**Next Review**: July 2025  
 **Community Input**: [GitHub Discussions](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/discussions/categories/community)

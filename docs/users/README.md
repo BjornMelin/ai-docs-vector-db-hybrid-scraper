@@ -4,7 +4,8 @@
 > **Last Updated**: 2025-01-09  
 > **Purpose**: Complete guide for end users of the AI Documentation Vector DB system
 
-Welcome to the user documentation! This section is designed for anyone who wants to **use** the system to search documents, scrape web content, or retrieve information.
+Welcome to the user documentation! This section is designed for anyone who wants to **use**
+the system to search documents, scrape web content, or retrieve information.
 
 ## 🚀 Quick Navigation
 
@@ -22,7 +23,7 @@ Welcome to the user documentation! This section is designed for anyone who wants
 - **Set up configurations easily** with interactive wizard and templates
 - **Search intelligently** across documents with advanced retrieval
 - **Scrape web content** using 5-tier browser automation
-- **Extract information** from multiple sources simultaneously  
+- **Extract information** from multiple sources simultaneously
 - **Use AI-enhanced search** with hypothetical document embeddings
 - **Get ranked results** with semantic reranking
 - **Manage configurations safely** with backup, restore, and migration tools
@@ -44,4 +45,4 @@ Welcome to the user documentation! This section is designed for anyone who wants
 
 ---
 
-*All user guides are written to be accessible to both technical and non-technical users. No programming knowledge required.*
+_All user guides are written to be accessible to both technical and non-technical users. No programming knowledge required._

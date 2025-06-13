@@ -7,7 +7,9 @@
 
 ## 🎯 Overview
 
-This guide provides complete monitoring and observability setup for the AI documentation vector database system. It covers V1 enhanced monitoring with real-time performance tracking, comprehensive metrics collection, and production-ready alerting strategies.
+This guide provides complete monitoring and observability setup for the AI documentation vector database system.
+It covers V1 enhanced monitoring with real-time performance tracking, comprehensive metrics collection,
+and production-ready alerting strategies.
 
 ## 📋 Quick Start Checklist
 
@@ -29,6 +31,14 @@ This guide provides complete monitoring and observability setup for the AI docum
 - [ ] Collection alias operation tracking
 - [ ] Payload indexing performance monitoring
 
+## 🌐 Dashboard Access
+
+### Access URLs
+
+- **Grafana**: <http://localhost:3000> (admin/admin123)
+- **Prometheus**: <http://localhost:9090>
+- **Alertmanager**: <http://localhost:9093>
+
 ## 🏗️ Monitoring Architecture
 
 ```mermaid
@@ -37,22 +47,22 @@ graph TD
     B --> C[Prometheus]
     C --> D[Grafana Dashboards]
     C --> E[AlertManager]
-    
+
     F[Logs] --> G[Log Aggregation]
     G --> H[Centralized Logging]
-    
+
     I[Health Checks] --> J[Uptime Monitoring]
-    
+
     K[Custom Metrics] --> L[Business Logic Monitoring]
     L --> C
-    
+
     subgraph "V1 Enhanced Monitoring"
         M[Query API Metrics]
         N[HyDE Performance]
         O[Cache Analytics]
         P[Index Performance]
     end
-    
+
     M --> C
     N --> C
     O --> C
@@ -78,40 +88,40 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+            - alertmanager:9093
 
 scrape_configs:
   # System metrics
-  - job_name: 'node-exporter'
+  - job_name: "node-exporter"
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ["node-exporter:9100"]
     scrape_interval: 5s
 
   # Application metrics
-  - job_name: 'app-metrics'
+  - job_name: "app-metrics"
     static_configs:
-      - targets: ['app:8000']
-    metrics_path: '/metrics'
+      - targets: ["app:8000"]
+    metrics_path: "/metrics"
     scrape_interval: 5s
 
   # Qdrant metrics
-  - job_name: 'qdrant'
+  - job_name: "qdrant"
     static_configs:
-      - targets: ['qdrant:6333']
-    metrics_path: '/metrics'
+      - targets: ["qdrant:6333"]
+    metrics_path: "/metrics"
     scrape_interval: 10s
 
   # DragonflyDB metrics (V1)
-  - job_name: 'dragonfly'
+  - job_name: "dragonfly"
     static_configs:
-      - targets: ['dragonfly:6379']
+      - targets: ["dragonfly:6379"]
     scrape_interval: 10s
 
   # Custom application metrics
-  - job_name: 'mcp-server'
+  - job_name: "mcp-server"
     static_configs:
-      - targets: ['mcp-server:8080']
-    metrics_path: '/health/metrics'
+      - targets: ["mcp-server:8080"]
+    metrics_path: "/health/metrics"
     scrape_interval: 15s
 ```
 
@@ -131,7 +141,7 @@ Create comprehensive monitoring dashboard at `monitoring/dashboards/main-dashboa
       {
         "title": "System Overview",
         "type": "stat",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
         "targets": [
           {
             "expr": "up",
@@ -142,7 +152,7 @@ Create comprehensive monitoring dashboard at `monitoring/dashboards/main-dashboa
       {
         "title": "Query Performance (V1 Enhanced)",
         "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
         "targets": [
           {
             "expr": "histogram_quantile(0.95, rate(query_api_duration_seconds_bucket[5m]))",
@@ -157,7 +167,7 @@ Create comprehensive monitoring dashboard at `monitoring/dashboards/main-dashboa
       {
         "title": "HyDE Performance Tracking",
         "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
         "targets": [
           {
             "expr": "rate(hyde_cache_hits_total[5m])",
@@ -175,8 +185,8 @@ Create comprehensive monitoring dashboard at `monitoring/dashboards/main-dashboa
       },
       {
         "title": "DragonflyDB Cache Metrics",
-        "type": "graph", 
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
         "targets": [
           {
             "expr": "dragonfly_cache_hit_rate",
@@ -282,7 +292,7 @@ groups:
           description: "HyDE cache miss rate is above 50%"
 
       - alert: DragonflyMemoryHigh
-        expr: dragonfly_memory_usage_bytes > 4294967296  # 4GB
+        expr: dragonfly_memory_usage_bytes > 4294967296 # 4GB
         for: 5m
         labels:
           severity: warning
@@ -375,7 +385,7 @@ groups:
           description: "Vector search queries are taking longer than 2 seconds"
 
       - alert: HighVectorDBMemory
-        expr: qdrant_memory_usage_bytes > 8589934592  # 8GB
+        expr: qdrant_memory_usage_bytes > 8589934592 # 8GB
         for: 5m
         labels:
           severity: warning
@@ -462,23 +472,23 @@ active_connections = Gauge(
 
 class MetricsMiddleware:
     """Middleware to collect HTTP metrics."""
-    
+
     def __init__(self, app):
         self.app = app
-    
+
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        
+
         method = scope["method"]
         path = scope["path"]
-        
+
         start_time = time.time()
-        
+
         # Increment active connections
         active_connections.inc()
-        
+
         try:
             # Process request
             await self.app(scope, receive, send)
@@ -493,18 +503,64 @@ class MetricsMiddleware:
                 method=method,
                 endpoint=path
             ).observe(duration)
-            
+
             http_requests_total.labels(
                 method=method,
                 endpoint=path,
                 status=status
             ).inc()
-            
+
             # Decrement active connections
             active_connections.dec()
 ```
 
 ### 3. V1 Enhanced Metrics
+
+**ML Application Specific Metrics**:
+
+The following metrics are collected specifically for ML application monitoring:
+
+**Vector Search**:
+
+- `ml_app_vector_search_requests_total`: Total search requests
+- `ml_app_vector_search_duration_seconds`: Search latency histogram
+- `ml_app_vector_search_quality_score`: Search quality metrics
+- `ml_app_vector_search_concurrent_requests`: Active requests
+
+**Embeddings**:
+
+- `ml_app_embedding_requests_total`: Embedding generation requests  
+- `ml_app_embedding_generation_duration_seconds`: Generation latency
+- `ml_app_embedding_cost_total`: Cumulative costs (USD)
+- `ml_app_embedding_batch_size`: Batch size distribution
+- `ml_app_embedding_queue_depth`: Queue depth gauge
+
+**Cache Performance**:
+
+- `ml_app_cache_hits_total`/`ml_app_cache_misses_total`: Hit/miss counts
+- `ml_app_cache_operation_duration_seconds`: Cache operation latency
+- `ml_app_cache_memory_usage_bytes`: Memory usage per cache
+- `ml_app_cache_evictions_total`: Eviction counts
+
+**Database Connection Pool (Enhanced)**:
+
+- `ml_app_db_pool_connections_active`: Active database connections
+- `ml_app_db_pool_connections_idle`: Idle connections in pool
+- `ml_app_db_pool_size_current`: Current pool size
+- `ml_app_db_pool_overflow_connections`: Overflow connections count
+- `ml_app_db_pool_connection_errors_total`: Connection creation errors
+- `ml_app_db_circuit_breaker_state`: Circuit breaker state (0=closed, 1=open, 2=half-open)
+- `ml_app_db_circuit_breaker_failures_total`: Circuit breaker failure count by type
+- `ml_app_db_predictive_load_factor`: ML-predicted load factor (0.0-1.0)
+- `ml_app_db_connection_affinity_hit_rate`: Connection affinity cache hit rate
+- `ml_app_db_adaptive_config_adjustment_count`: Adaptive configuration changes
+
+**System Health**:
+
+- `ml_app_service_health_status`: Service health (1=healthy, 0=unhealthy)
+- `ml_app_dependency_health_status`: Dependency health
+- `ml_app_system_cpu_usage_percent`: CPU utilization
+- `ml_app_system_memory_usage_bytes`: Memory usage
 
 **Query API Performance**:
 
@@ -595,7 +651,7 @@ db_connection_pool_checked_out = Gauge(
 )
 
 db_connection_pool_checked_in = Gauge(
-    'db_connection_pool_checked_in', 
+    'db_connection_pool_checked_in',
     'Number of checked in connections'
 )
 
@@ -689,17 +745,17 @@ db_connection_affinity_performance_gain = Gauge(
 
 class V1MetricsCollector:
     """Collect V1-specific metrics."""
-    
+
     def __init__(self):
         self.start_times = {}
-    
+
     def start_query_api_timer(self, operation: str, collection: str) -> str:
         """Start timing a Query API operation."""
         timer_id = f"{operation}_{collection}_{time.time()}"
         self.start_times[timer_id] = time.time()
         return timer_id
-    
-    def end_query_api_timer(self, timer_id: str, operation: str, 
+
+    def end_query_api_timer(self, timer_id: str, operation: str,
                            collection: str, status: str):
         """End timing a Query API operation."""
         if timer_id in self.start_times:
@@ -708,45 +764,45 @@ class V1MetricsCollector:
                 operation=operation,
                 collection=collection
             ).observe(duration)
-            
+
             query_api_requests.labels(
                 operation=operation,
                 collection=collection,
                 status=status
             ).inc()
-            
+
             del self.start_times[timer_id]
-    
+
     def record_hyde_cache_hit(self):
         """Record HyDE cache hit."""
         hyde_cache_hits.inc()
-    
+
     def record_hyde_cache_miss(self, generation_time: float):
         """Record HyDE cache miss and generation time."""
         hyde_cache_misses.inc()
         hyde_generation_duration.observe(generation_time)
-    
+
     def update_dragonfly_metrics(self, hit_rate: float, memory_bytes: int, evicted: int):
         """Update DragonflyDB metrics."""
         dragonfly_cache_hit_rate.set(hit_rate)
         dragonfly_memory_usage.set(memory_bytes)
         dragonfly_evicted_keys._value._value = evicted
-    
-    def record_payload_indexing(self, operation: str, field_type: str, 
+
+    def record_payload_indexing(self, operation: str, field_type: str,
                                duration: float, success: bool, error_type: str = None):
         """Record payload indexing metrics."""
         payload_indexing_duration.labels(
             operation=operation,
             field_type=field_type
         ).observe(duration)
-        
+
         if not success and error_type:
             payload_indexing_errors.labels(
                 operation=operation,
                 error_type=error_type
             ).inc()
-    
-    def record_collection_alias_operation(self, operation: str, 
+
+    def record_collection_alias_operation(self, operation: str,
                                         success: bool, error_type: str = None):
         """Record collection alias operation."""
         status = "success" if success else "error"
@@ -754,7 +810,7 @@ class V1MetricsCollector:
             operation=operation,
             status=status
         ).inc()
-        
+
         if not success and error_type:
             collection_alias_errors.labels(
                 operation=operation,
@@ -811,48 +867,48 @@ qdrant_memory_usage = Gauge(
 
 class QdrantMetricsCollector:
     """Collect Qdrant-specific metrics."""
-    
+
     def __init__(self, qdrant_client):
         self.client = qdrant_client
-    
+
     async def collect_collection_metrics(self):
         """Collect metrics for all collections."""
         try:
             collections = await self.client.get_collections()
-            
+
             for collection in collections.collections:
                 collection_name = collection.name
-                
+
                 # Get collection info
                 info = await self.client.get_collection(collection_name)
-                
+
                 # Update metrics
                 qdrant_collection_points.labels(
                     collection=collection_name
                 ).set(info.points_count)
-                
+
                 qdrant_collection_segments.labels(
                     collection=collection_name
                 ).set(info.segments_count)
-                
+
         except Exception as e:
             logger.error(f"Failed to collect Qdrant metrics: {e}")
-    
-    def record_search_operation(self, collection: str, search_type: str, 
+
+    def record_search_operation(self, collection: str, search_type: str,
                                duration: float, success: bool):
         """Record search operation metrics."""
         qdrant_search_duration.labels(
             collection=collection,
             search_type=search_type
         ).observe(duration)
-        
+
         status = "success" if success else "error"
         qdrant_search_requests.labels(
             collection=collection,
             search_type=search_type,
             status=status
         ).inc()
-    
+
     def record_index_operation(self, operation: str, collection: str, success: bool):
         """Record index operation."""
         status = "success" if success else "error"
@@ -869,23 +925,23 @@ class QdrantMetricsCollector:
 
 **V1 Enhanced Performance Targets**:
 
-| Metric | Target | Alert Threshold |
-|--------|--------|----------------|
-| Query API Latency (95th) | < 100ms | > 500ms |
-| HyDE Cache Hit Rate | > 70% | < 50% |
-| DragonflyDB Hit Rate | > 80% | < 60% |
-| Vector Search (95th) | < 50ms | > 200ms |
-| Payload Index Query | < 10ms | > 100ms |
-| Collection Alias Ops | < 5s | > 30s |
+| Metric                   | Target  | Alert Threshold |
+| ------------------------ | ------- | --------------- |
+| Query API Latency (95th) | < 100ms | > 500ms         |
+| HyDE Cache Hit Rate      | > 70%   | < 50%           |
+| DragonflyDB Hit Rate     | > 80%   | < 60%           |
+| Vector Search (95th)     | < 50ms  | > 200ms         |
+| Payload Index Query      | < 10ms  | > 100ms         |
+| Collection Alias Ops     | < 5s    | > 30s           |
 
 **System Performance Targets**:
 
-| Resource | Target | Alert Threshold |
-|----------|--------|----------------|
-| CPU Usage | < 70% | > 80% |
-| Memory Usage | < 80% | > 90% |
-| Disk Usage | < 80% | > 90% |
-| Network Latency | < 10ms | > 50ms |
+| Resource        | Target | Alert Threshold |
+| --------------- | ------ | --------------- |
+| CPU Usage       | < 70%  | > 80%           |
+| Memory Usage    | < 80%  | > 90%           |
+| Disk Usage      | < 80%  | > 90%           |
+| Network Latency | < 10ms | > 50ms          |
 
 ### 2. Performance Analysis Queries
 
@@ -893,11 +949,11 @@ class QdrantMetricsCollector:
 
 ```promql
 # Average Query API latency by operation
-avg(rate(query_api_duration_seconds_sum[5m])) by (operation) / 
+avg(rate(query_api_duration_seconds_sum[5m])) by (operation) /
 avg(rate(query_api_duration_seconds_count[5m])) by (operation)
 
 # Query API error rate
-rate(query_api_requests_total{status!="success"}[5m]) / 
+rate(query_api_requests_total{status!="success"}[5m]) /
 rate(query_api_requests_total[5m])
 
 # Query API throughput
@@ -908,14 +964,14 @@ rate(query_api_requests_total[5m])
 
 ```promql
 # HyDE cache hit rate
-rate(hyde_cache_hits_total[5m]) / 
+rate(hyde_cache_hits_total[5m]) /
 (rate(hyde_cache_hits_total[5m]) + rate(hyde_cache_misses_total[5m]))
 
 # Average HyDE generation time
 avg(hyde_generation_duration_seconds)
 
 # HyDE cache efficiency trend
-increase(hyde_cache_hits_total[1h]) / 
+increase(hyde_cache_hits_total[1h]) /
 increase(hyde_cache_requests_total[1h])
 ```
 
@@ -947,7 +1003,7 @@ rate(node_memory_usage_bytes[1h])
 rate(node_filesystem_used_bytes[1h])
 
 # Network bandwidth utilization
-rate(node_network_transmit_bytes_total[5m]) + 
+rate(node_network_transmit_bytes_total[5m]) +
 rate(node_network_receive_bytes_total[5m])
 ```
 
@@ -972,26 +1028,26 @@ Create `monitoring/alertmanager.yml`:
 
 ```yaml
 global:
-  smtp_smarthost: 'localhost:587'
-  smtp_from: 'alerts@yourcompany.com'
+  smtp_smarthost: "localhost:587"
+  smtp_from: "alerts@yourcompany.com"
 
 route:
-  group_by: ['alertname']
+  group_by: ["alertname"]
   group_wait: 10s
   group_interval: 10s
   repeat_interval: 1h
-  receiver: 'web.hook'
+  receiver: "web.hook"
 
 receivers:
-  - name: 'web.hook'
+  - name: "web.hook"
     webhook_configs:
-      - url: 'http://webhook-service:5000/alerts'
+      - url: "http://webhook-service:5000/alerts"
         send_resolved: true
 
-  - name: 'email-alerts'
+  - name: "email-alerts"
     email_configs:
-      - to: 'ops-team@yourcompany.com'
-        subject: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+      - to: "ops-team@yourcompany.com"
+        subject: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
         body: |
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
@@ -1000,34 +1056,34 @@ receivers:
           Severity: {{ .Labels.severity }}
           {{ end }}
 
-  - name: 'slack-alerts'
+  - name: "slack-alerts"
     slack_configs:
-      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
-        channel: '#ops-alerts'
-        title: 'AI Vector DB Alert'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+      - api_url: "YOUR_SLACK_WEBHOOK_URL"
+        channel: "#ops-alerts"
+        title: "AI Vector DB Alert"
+        text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
 
 inhibit_rules:
   - source_match:
-      severity: 'critical'
+      severity: "critical"
     target_match:
-      severity: 'warning'
-    equal: ['alertname', 'instance']
+      severity: "warning"
+    equal: ["alertname", "instance"]
 ```
 
 ### 2. PagerDuty Integration
 
 ```yaml
 # Add to alertmanager.yml receivers
-- name: 'pagerduty'
+- name: "pagerduty"
   pagerduty_configs:
-    - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
-      description: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    - service_key: "YOUR_PAGERDUTY_SERVICE_KEY"
+      description: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
       details:
-        firing: '{{ .Alerts.Firing | len }}'
-        resolved: '{{ .Alerts.Resolved | len }}'
-        num_firing: '{{ .Alerts.Firing | len }}'
-        num_resolved: '{{ .Alerts.Resolved | len }}'
+        firing: "{{ .Alerts.Firing | len }}"
+        resolved: "{{ .Alerts.Resolved | len }}"
+        num_firing: "{{ .Alerts.Firing | len }}"
+        num_resolved: "{{ .Alerts.Resolved | len }}"
 ```
 
 ### 3. Custom Webhook Alerts
@@ -1044,21 +1100,21 @@ app = Flask(__name__)
 def handle_alert():
     """Handle incoming Prometheus alerts."""
     data = request.get_json()
-    
+
     for alert in data.get('alerts', []):
         alert_name = alert.get('labels', {}).get('alertname')
         severity = alert.get('labels', {}).get('severity')
         status = alert.get('status')
-        
+
         # Custom alert processing
         if severity == 'critical':
             send_urgent_notification(alert)
         elif alert_name.startswith('V1'):
             process_v1_alert(alert)
-        
+
         # Log all alerts
         log_alert(alert)
-    
+
     return jsonify({'status': 'received'})
 
 def send_urgent_notification(alert):
@@ -1070,7 +1126,7 @@ def send_urgent_notification(alert):
 def process_v1_alert(alert):
     """Process V1-specific alerts."""
     alert_name = alert.get('labels', {}).get('alertname')
-    
+
     if alert_name == 'QueryAPISlowdown':
         # Trigger automatic optimization
         trigger_query_optimization()
@@ -1114,9 +1170,9 @@ NC='\033[0m' # No Color
 check_service() {
     local service_name=$1
     local check_command=$2
-    
+
     echo -n "Checking $service_name... "
-    
+
     if eval "$check_command" >/dev/null 2>&1; then
         echo -e "${GREEN}✓ Healthy${NC}"
         return 0
@@ -1131,17 +1187,17 @@ check_metric() {
     local query=$2
     local threshold=$3
     local operator=$4
-    
+
     echo -n "Checking $metric_name... "
-    
+
     result=$(curl -s "http://localhost:9090/api/v1/query?query=$query" | \
              jq -r '.data.result[0].value[1]' 2>/dev/null || echo "error")
-    
+
     if [ "$result" = "error" ] || [ "$result" = "null" ]; then
         echo -e "${RED}✗ No data${NC}"
         return 1
     fi
-    
+
     case $operator in
         "lt")
             if (( $(echo "$result < $threshold" | bc -l) )); then
@@ -1239,12 +1295,12 @@ router = APIRouter()
 
 class HealthChecker:
     """Comprehensive health checking for all components."""
-    
+
     def __init__(self, qdrant_client, dragonfly_client, hyde_service):
         self.qdrant = qdrant_client
         self.dragonfly = dragonfly_client
         self.hyde = hyde_service
-    
+
     async def check_all(self) -> dict:
         """Run all health checks."""
         results = {
@@ -1252,7 +1308,7 @@ class HealthChecker:
             "timestamp": datetime.utcnow().isoformat(),
             "checks": {}
         }
-        
+
         # Run checks in parallel
         checks = [
             ("database", self.check_database()),
@@ -1261,16 +1317,16 @@ class HealthChecker:
             ("indexes", self.check_indexes()),
             ("aliases", self.check_aliases())
         ]
-        
+
         check_results = await asyncio.gather(
             *[check[1] for check in checks],
             return_exceptions=True
         )
-        
+
         # Process results
         for i, (name, _) in enumerate(checks):
             result = check_results[i]
-            
+
             if isinstance(result, Exception):
                 results["checks"][name] = {
                     "status": "error",
@@ -1281,15 +1337,15 @@ class HealthChecker:
                 results["checks"][name] = result
                 if result["status"] != "healthy":
                     results["status"] = "degraded"
-        
+
         return results
-    
+
     async def check_database(self) -> dict:
         """Check Qdrant database health."""
         try:
             # Check connection
             collections = await self.qdrant.get_collections()
-            
+
             # Check collection health
             collection_health = {}
             for collection in collections.collections:
@@ -1299,19 +1355,19 @@ class HealthChecker:
                     "segments": info.segments_count,
                     "status": "healthy" if info.status == "green" else "degraded"
                 }
-            
+
             return {
                 "status": "healthy",
                 "collections": collection_health,
                 "total_collections": len(collections.collections)
             }
-            
+
         except Exception as e:
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def check_cache(self) -> dict:
         """Check DragonflyDB cache health."""
         try:
@@ -1320,94 +1376,94 @@ class HealthChecker:
             await self.dragonfly.set(test_key, "test_value", ex=10)
             value = await self.dragonfly.get(test_key)
             await self.dragonfly.delete(test_key)
-            
+
             # Get cache stats
             info = await self.dragonfly.info()
-            
+
             return {
                 "status": "healthy",
                 "memory_usage": info.get("used_memory_human"),
-                "hit_rate": info.get("keyspace_hits", 0) / 
+                "hit_rate": info.get("keyspace_hits", 0) /
                           (info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0) + 1),
                 "connected_clients": info.get("connected_clients", 0)
             }
-            
+
         except Exception as e:
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def check_hyde(self) -> dict:
         """Check HyDE service health."""
         try:
             # Test HyDE generation
             test_query = "test health check query"
             result = await self.hyde.enhance(test_query)
-            
+
             # Get cache stats
             cache_stats = await self.hyde.get_cache_stats()
-            
+
             return {
                 "status": "healthy",
                 "cache_hit_rate": cache_stats.get("hit_rate", 0),
                 "avg_generation_time": cache_stats.get("avg_generation_time", 0),
                 "cache_size": cache_stats.get("cache_size", 0)
             }
-            
-        except Exception as e:
-            return {
-                "status": "error", 
-                "error": str(e)
-            }
-    
-    async def check_indexes(self) -> dict:
-        """Check payload indexes health."""
-        try:
-            index_health = {}
-            
-            collections = await self.qdrant.get_collections()
-            for collection in collections.collections:
-                info = await self.qdrant.get_collection(collection.name)
-                
-                # Check payload schema
-                payload_schema = info.payload_schema or {}
-                
-                index_health[collection.name] = {
-                    "indexed_fields": list(payload_schema.keys()),
-                    "index_count": len(payload_schema),
-                    "status": "healthy"
-                }
-            
-            return {
-                "status": "healthy",
-                "indexes": index_health
-            }
-            
+
         except Exception as e:
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
+    async def check_indexes(self) -> dict:
+        """Check payload indexes health."""
+        try:
+            index_health = {}
+
+            collections = await self.qdrant.get_collections()
+            for collection in collections.collections:
+                info = await self.qdrant.get_collection(collection.name)
+
+                # Check payload schema
+                payload_schema = info.payload_schema or {}
+
+                index_health[collection.name] = {
+                    "indexed_fields": list(payload_schema.keys()),
+                    "index_count": len(payload_schema),
+                    "status": "healthy"
+                }
+
+            return {
+                "status": "healthy",
+                "indexes": index_health
+            }
+
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+
     async def check_aliases(self) -> dict:
         """Check collection aliases health."""
         try:
             aliases = await self.qdrant.get_collection_aliases()
-            
+
             alias_health = {}
             for alias in aliases.aliases:
                 alias_health[alias.alias_name] = {
                     "collection": alias.collection_name,
                     "status": "healthy"
                 }
-            
+
             return {
                 "status": "healthy",
                 "aliases": alias_health,
                 "total_aliases": len(aliases.aliases)
             }
-            
+
         except Exception as e:
             return {
                 "status": "error",
@@ -1429,12 +1485,12 @@ async def health_check(health_checker: HealthChecker):
 async def detailed_health_check(health_checker: HealthChecker):
     """Comprehensive health check."""
     result = await health_checker.check_all()
-    
+
     if result["status"] == "error":
         raise HTTPException(status_code=503, detail=result)
     elif result["status"] == "degraded":
         raise HTTPException(status_code=200, detail=result)  # 200 but degraded
-    
+
     return result
 
 @router.get("/health/{component}")
@@ -1447,18 +1503,18 @@ async def component_health_check(component: str, health_checker: HealthChecker):
         "indexes": health_checker.check_indexes,
         "aliases": health_checker.check_aliases
     }
-    
+
     if component not in check_methods:
         raise HTTPException(status_code=404, detail=f"Component '{component}' not found")
-    
+
     try:
         result = await check_methods[component]()
-        
+
         if result["status"] == "error":
             raise HTTPException(status_code=503, detail=result)
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Health check failed: {str(e)}")
 ```
@@ -1476,10 +1532,10 @@ from typing import Any, Dict
 
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for logs."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as structured JSON."""
-        
+
         # Base log structure
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -1490,42 +1546,42 @@ class StructuredFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno
         }
-        
+
         # Add extra fields if present
         if hasattr(record, 'extra'):
             log_entry.update(record.extra)
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry["exception"] = self.formatException(record.exc_info)
-        
+
         # Add trace ID if present (for distributed tracing)
         if hasattr(record, 'trace_id'):
             log_entry["trace_id"] = record.trace_id
-        
+
         # Add user ID if present
         if hasattr(record, 'user_id'):
             log_entry["user_id"] = record.user_id
-        
+
         # Add request ID if present
         if hasattr(record, 'request_id'):
             log_entry["request_id"] = record.request_id
-        
+
         return json.dumps(log_entry)
 
-def setup_logging(level: str = "INFO", 
+def setup_logging(level: str = "INFO",
                  log_file: str = None,
                  structured: bool = True) -> None:
     """Setup application logging."""
-    
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, level.upper()))
-    
+
     # Remove existing handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Choose formatter
     if structured:
         formatter = StructuredFormatter()
@@ -1533,55 +1589,55 @@ def setup_logging(level: str = "INFO",
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-    
+
     # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
-    
+
     # File handler (if specified)
     if log_file:
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
-    
+
     # Configure specific loggers
     configure_specific_loggers()
 
 def configure_specific_loggers():
     """Configure logging for specific modules."""
-    
+
     # Qdrant client (reduce verbosity)
     logging.getLogger("qdrant_client").setLevel(logging.WARNING)
-    
+
     # HTTP clients (reduce verbosity)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
-    
+
     # FastAPI (info level)
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("fastapi").setLevel(logging.INFO)
-    
+
     # Application loggers (debug in development)
     logging.getLogger("app").setLevel(logging.DEBUG)
     logging.getLogger("monitoring").setLevel(logging.DEBUG)
 
 class RequestLoggingMiddleware:
     """Middleware to log HTTP requests with structured data."""
-    
+
     def __init__(self, app):
         self.app = app
         self.logger = logging.getLogger("app.requests")
-    
+
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        
+
         # Generate request ID
         import uuid
         request_id = str(uuid.uuid4())
-        
+
         # Log request start
         self.logger.info(
             "Request started",
@@ -1593,12 +1649,12 @@ class RequestLoggingMiddleware:
                 "user_agent": dict(scope.get("headers", {})).get(b"user-agent", b"").decode()
             }
         )
-        
+
         start_time = time.time()
-        
+
         try:
             await self.app(scope, receive, send)
-            
+
             # Log successful completion
             duration = time.time() - start_time
             self.logger.info(
@@ -1609,7 +1665,7 @@ class RequestLoggingMiddleware:
                     "status": "success"
                 }
             )
-            
+
         except Exception as e:
             # Log error
             duration = time.time() - start_time
@@ -1627,15 +1683,15 @@ class RequestLoggingMiddleware:
 
 class V1OperationLogger:
     """Logger for V1-specific operations."""
-    
+
     def __init__(self):
         self.logger = logging.getLogger("app.v1_operations")
-    
-    def log_query_api_operation(self, operation: str, collection: str, 
-                               duration: float, success: bool, 
+
+    def log_query_api_operation(self, operation: str, collection: str,
+                               duration: float, success: bool,
                                result_count: int = None, error: str = None):
         """Log Query API operation."""
-        
+
         extra = {
             "operation_type": "query_api",
             "operation": operation,
@@ -1643,58 +1699,58 @@ class V1OperationLogger:
             "duration_ms": round(duration * 1000, 2),
             "success": success
         }
-        
+
         if result_count is not None:
             extra["result_count"] = result_count
-        
+
         if error:
             extra["error"] = error
-        
+
         if success:
             self.logger.info(f"Query API {operation} completed", extra=extra)
         else:
             self.logger.error(f"Query API {operation} failed", extra=extra)
-    
-    def log_hyde_operation(self, query: str, cache_hit: bool, 
+
+    def log_hyde_operation(self, query: str, cache_hit: bool,
                           generation_time: float = None):
         """Log HyDE operation."""
-        
+
         extra = {
             "operation_type": "hyde",
             "query_length": len(query),
             "cache_hit": cache_hit
         }
-        
+
         if generation_time is not None:
             extra["generation_time_ms"] = round(generation_time * 1000, 2)
-        
+
         if cache_hit:
             self.logger.debug("HyDE cache hit", extra=extra)
         else:
             self.logger.info("HyDE document generated", extra=extra)
-    
-    def log_cache_operation(self, operation: str, key: str, 
+
+    def log_cache_operation(self, operation: str, key: str,
                            hit: bool = None, size: int = None):
         """Log cache operation."""
-        
+
         extra = {
             "operation_type": "cache",
             "operation": operation,
             "key_hash": hash(key) % 10000  # Anonymized key
         }
-        
+
         if hit is not None:
             extra["hit"] = hit
-        
+
         if size is not None:
             extra["size_bytes"] = size
-        
+
         self.logger.debug(f"Cache {operation}", extra=extra)
-    
-    def log_indexing_operation(self, collection: str, field: str, 
+
+    def log_indexing_operation(self, collection: str, field: str,
                               operation: str, duration: float, success: bool):
         """Log payload indexing operation."""
-        
+
         extra = {
             "operation_type": "indexing",
             "collection": collection,
@@ -1703,7 +1759,7 @@ class V1OperationLogger:
             "duration_ms": round(duration * 1000, 2),
             "success": success
         }
-        
+
         if success:
             self.logger.info(f"Index {operation} completed", extra=extra)
         else:
@@ -1715,7 +1771,7 @@ class V1OperationLogger:
 **ELK Stack Configuration** (`monitoring/docker-compose.logging.yml`):
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   elasticsearch:
@@ -1791,7 +1847,7 @@ input {
   beats {
     port => 5044
   }
-  
+
   http {
     port => 8080
     codec => json
@@ -1803,19 +1859,19 @@ filter {
     json {
       source => "message"
     }
-    
+
     # Parse timestamp
     date {
       match => [ "timestamp", "ISO8601" ]
     }
-    
+
     # Add tags based on log level
     if [level] == "ERROR" {
       mutate {
         add_tag => [ "error" ]
       }
     }
-    
+
     # Add tags for V1 operations
     if [operation_type] {
       mutate {
@@ -1823,7 +1879,7 @@ filter {
       }
     }
   }
-  
+
   # Docker logs
   if [container][name] {
     mutate {
@@ -1837,7 +1893,7 @@ output {
     hosts => ["elasticsearch:9200"]
     index => "logs-%{+YYYY.MM.dd}"
   }
-  
+
   # Debug output (remove in production)
   stdout {
     codec => rubydebug
@@ -1947,7 +2003,7 @@ docker logs alertmanager
 ```yaml
 # Implement alert grouping
 route:
-  group_by: ['alertname', 'severity']
+  group_by: ["alertname", "severity"]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 12h
@@ -1955,10 +2011,10 @@ route:
 # Use inhibition rules
 inhibit_rules:
   - source_match:
-      severity: 'critical'
+      severity: "critical"
     target_match:
-      severity: 'warning'
-    equal: ['service']
+      severity: "warning"
+    equal: ["service"]
 ```
 
 ## 📚 Production Best Practices
@@ -1980,11 +2036,11 @@ slis:
   availability:
     query: "up == 1"
     target: 99.9%
-  
+
   latency:
     query: "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))"
     target: "< 500ms"
-  
+
   error_rate:
     query: "rate(http_requests_total{status=~'5..'}[5m]) / rate(http_requests_total[5m])"
     target: "< 1%"
@@ -1995,7 +2051,7 @@ slos:
     sli: latency
     target: 95%
     window: 30d
-  
+
   system_availability:
     sli: availability
     target: 99.5%
@@ -2010,7 +2066,7 @@ slos:
 # monitoring/terraform/main.tf
 resource "aws_cloudwatch_dashboard" "vector_db_dashboard" {
   dashboard_name = "vector-db-monitoring"
-  
+
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -2040,11 +2096,11 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   statistic           = "Average"
   threshold           = "80"
   alarm_description   = "This metric monitors ec2 cpu utilization"
-  
+
   dimensions = {
     InstanceId = var.instance_id
   }
-  
+
   alarm_actions = [aws_sns_topic.alerts.arn]
 }
 ```
@@ -2077,11 +2133,11 @@ user_activity.labels(
 grafana:
   rbac:
     check_access: true
-  
+
   auth:
     oauth_auto_login: true
     oauth_allow_insecure_email_lookup: false
-  
+
   security:
     admin_password: ${GRAFANA_ADMIN_PASSWORD}
     secret_key: ${GRAFANA_SECRET_KEY}
@@ -2094,9 +2150,9 @@ grafana:
 ```yaml
 # Prometheus retention configuration
 prometheus:
-  retention: 30d  # Reduce for cost savings
+  retention: 30d # Reduce for cost savings
   retention_size: 100GB
-  
+
   # Use recording rules for long-term storage
   recording_rules:
     - name: aggregated_metrics
@@ -2134,45 +2190,45 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 def setup_tracing():
     """Setup distributed tracing with Jaeger."""
-    
+
     # Configure tracer
     trace.set_tracer_provider(TracerProvider())
     tracer = trace.get_tracer(__name__)
-    
+
     # Configure Jaeger exporter
     jaeger_exporter = JaegerExporter(
         agent_host_name="jaeger",
         agent_port=6831,
     )
-    
+
     # Add span processor
     span_processor = BatchSpanProcessor(jaeger_exporter)
     trace.get_tracer_provider().add_span_processor(span_processor)
-    
+
     return tracer
 
 class TracedVectorSearch:
     """Vector search with distributed tracing."""
-    
+
     def __init__(self, qdrant_client):
         self.client = qdrant_client
         self.tracer = trace.get_tracer(__name__)
-    
+
     async def search_with_tracing(self, collection: str, query_vector: list,
                                  limit: int = 10, trace_context: dict = None):
         """Perform vector search with distributed tracing."""
-        
+
         with self.tracer.start_as_current_span("vector_search") as span:
             # Add span attributes
             span.set_attribute("collection", collection)
             span.set_attribute("vector_dimension", len(query_vector))
             span.set_attribute("limit", limit)
-            
+
             # Add trace context if provided
             if trace_context:
                 span.set_attribute("trace_id", trace_context.get("trace_id"))
                 span.set_attribute("user_id", trace_context.get("user_id"))
-            
+
             try:
                 # Perform search
                 with self.tracer.start_as_current_span("qdrant_search"):
@@ -2181,14 +2237,14 @@ class TracedVectorSearch:
                         query_vector=query_vector,
                         limit=limit
                     )
-                
+
                 # Add result metrics to span
                 span.set_attribute("result_count", len(results))
                 span.set_attribute("min_score", min(r.score for r in results) if results else 0)
                 span.set_attribute("max_score", max(r.score for r in results) if results else 0)
-                
+
                 return results
-                
+
             except Exception as e:
                 span.record_exception(e)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
@@ -2201,8 +2257,16 @@ class TracedVectorSearch:
 
 ```tsx
 // monitoring/dashboard/src/components/V1Dashboard.tsx
-import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import React, { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 interface MetricData {
   timestamp: string;
@@ -2223,42 +2287,53 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
       try {
         // Fetch Query API latency
         const latencyResponse = await fetch(
-          `${prometheusUrl}/api/v1/query_range?query=histogram_quantile(0.95, rate(query_api_duration_seconds_bucket[5m]))&start=${Date.now() - 3600000}&end=${Date.now()}&step=60`
+          `${prometheusUrl}/api/v1/query_range?query=histogram_quantile(0.95, rate(query_api_duration_seconds_bucket[5m]))&start=${
+            Date.now() - 3600000
+          }&end=${Date.now()}&step=60`
         );
         const latencyData = await latencyResponse.json();
         setQueryApiLatency(
-          latencyData.data.result[0]?.values.map(([timestamp, value]: [number, string]) => ({
-            timestamp: new Date(timestamp * 1000).toISOString(),
-            value: parseFloat(value)
-          })) || []
+          latencyData.data.result[0]?.values.map(
+            ([timestamp, value]: [number, string]) => ({
+              timestamp: new Date(timestamp * 1000).toISOString(),
+              value: parseFloat(value),
+            })
+          ) || []
         );
 
         // Fetch HyDE hit rate
         const hydeResponse = await fetch(
-          `${prometheusUrl}/api/v1/query_range?query=rate(hyde_cache_hits_total[5m]) / (rate(hyde_cache_hits_total[5m]) + rate(hyde_cache_misses_total[5m]))&start=${Date.now() - 3600000}&end=${Date.now()}&step=60`
+          `${prometheusUrl}/api/v1/query_range?query=rate(hyde_cache_hits_total[5m]) / (rate(hyde_cache_hits_total[5m]) + rate(hyde_cache_misses_total[5m]))&start=${
+            Date.now() - 3600000
+          }&end=${Date.now()}&step=60`
         );
         const hydeData = await hydeResponse.json();
         setHydeHitRate(
-          hydeData.data.result[0]?.values.map(([timestamp, value]: [number, string]) => ({
-            timestamp: new Date(timestamp * 1000).toISOString(),
-            value: parseFloat(value) * 100 // Convert to percentage
-          })) || []
+          hydeData.data.result[0]?.values.map(
+            ([timestamp, value]: [number, string]) => ({
+              timestamp: new Date(timestamp * 1000).toISOString(),
+              value: parseFloat(value) * 100, // Convert to percentage
+            })
+          ) || []
         );
 
         // Fetch DragonflyDB memory
         const memoryResponse = await fetch(
-          `${prometheusUrl}/api/v1/query_range?query=dragonfly_memory_usage_bytes&start=${Date.now() - 3600000}&end=${Date.now()}&step=60`
+          `${prometheusUrl}/api/v1/query_range?query=dragonfly_memory_usage_bytes&start=${
+            Date.now() - 3600000
+          }&end=${Date.now()}&step=60`
         );
         const memoryData = await memoryResponse.json();
         setDragonflyMemory(
-          memoryData.data.result[0]?.values.map(([timestamp, value]: [number, string]) => ({
-            timestamp: new Date(timestamp * 1000).toISOString(),
-            value: parseFloat(value) / (1024 * 1024 * 1024) // Convert to GB
-          })) || []
+          memoryData.data.result[0]?.values.map(
+            ([timestamp, value]: [number, string]) => ({
+              timestamp: new Date(timestamp * 1000).toISOString(),
+              value: parseFloat(value) / (1024 * 1024 * 1024), // Convert to GB
+            })
+          ) || []
         );
-
       } catch (error) {
-        console.error('Failed to fetch metrics:', error);
+        console.error("Failed to fetch metrics:", error);
       }
     };
 
@@ -2271,7 +2346,7 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
   return (
     <div className="dashboard">
       <h1>V1 Enhanced Monitoring Dashboard</h1>
-      
+
       <div className="metrics-grid">
         <div className="metric-panel">
           <h3>Query API Latency (95th percentile)</h3>
@@ -2281,7 +2356,12 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="value" stroke="#8884d8" name="Latency (s)" />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#8884d8"
+              name="Latency (s)"
+            />
           </LineChart>
         </div>
 
@@ -2293,7 +2373,12 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="value" stroke="#82ca9d" name="Hit Rate (%)" />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#82ca9d"
+              name="Hit Rate (%)"
+            />
           </LineChart>
         </div>
 
@@ -2305,7 +2390,12 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="value" stroke="#ffc658" name="Memory (GB)" />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#ffc658"
+              name="Memory (GB)"
+            />
           </LineChart>
         </div>
       </div>
@@ -2354,7 +2444,32 @@ export const V1Dashboard: React.FC<DashboardProps> = ({ prometheusUrl }) => {
 
 ## 📊 Enhanced Database Connection Pool Dashboards (BJO-134)
 
-### 1. Database Connection Pool Dashboard
+The database connection pool monitoring includes several advanced features:
+
+### 1. ML-Based Predictive Load Monitoring
+
+- **Purpose**: Anticipates database load patterns using machine learning
+- **Model**: Random Forest Regressor with feature extraction from historical patterns
+- **Features Tracked**: Request rates, memory trends, response time variance, cyclical patterns
+- **Prediction Horizon**: 15-minute forecasting with confidence scoring
+- **Benefits**: Proactive scaling recommendations, 50.9% average latency reduction
+
+### 2. Multi-Level Circuit Breaker Patterns
+
+- **Failure Categorization**: Connection, timeout, query, transaction, and resource failures
+- **State Management**: Closed → Open → Half-Open state transitions
+- **Partial Recovery**: Handles different failure types independently
+- **Fallback Mechanisms**: Configurable fallback handlers per failure type
+- **Benefits**: 887.9% throughput increase through intelligent failure handling
+
+### 3. Connection Affinity Management
+
+- **Query Pattern Recognition**: Analyzes query types and routes to optimal connections
+- **Specialization**: Supports read-optimized, write-optimized, analytics, and transaction connections
+- **Performance Tracking**: Monitors connection performance per query type
+- **Cache Hit Rates**: Tracks effectiveness of connection reuse
+
+### 4. Database Connection Pool Dashboard
 
 Create `config/grafana/dashboards/database-connection-pool.json`:
 
@@ -2376,9 +2491,9 @@ Create `config/grafana/dashboards/database-connection-pool.json`:
             "unit": "percent",
             "thresholds": {
               "steps": [
-                {"color": "green", "value": 0},
-                {"color": "yellow", "value": 70},
-                {"color": "red", "value": 90}
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 70 },
+                { "color": "red", "value": 90 }
               ]
             }
           }
@@ -2409,9 +2524,9 @@ Create `config/grafana/dashboards/database-connection-pool.json`:
         "fieldConfig": {
           "defaults": {
             "mappings": [
-              {"options": {"0": {"text": "Closed", "color": "green"}}},
-              {"options": {"1": {"text": "Open", "color": "red"}}},
-              {"options": {"2": {"text": "Half-Open", "color": "yellow"}}}
+              { "options": { "0": { "text": "Closed", "color": "green" } } },
+              { "options": { "1": { "text": "Open", "color": "red" } } },
+              { "options": { "2": { "text": "Half-Open", "color": "yellow" } } }
             ]
           }
         }
@@ -2517,9 +2632,9 @@ Create `config/grafana/dashboards/database-connection-pool.json`:
             "unit": "percent",
             "thresholds": {
               "steps": [
-                {"color": "red", "value": 0},
-                {"color": "yellow", "value": 70},
-                {"color": "green", "value": 85}
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 70 },
+                { "color": "green", "value": 85 }
               ]
             }
           }
@@ -2566,7 +2681,7 @@ docker restart grafana
 ```promql
 # Detect 50.9% performance improvement regression
 (
-  histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) - 
+  histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) -
   histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m] offset 1w))
 ) / histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m] offset 1w)) * 100 > 25
 ```
@@ -2583,7 +2698,7 @@ rate(db_query_total[5m]) / rate(db_query_total[5m] offset 1w) > 8
 ```promql
 # Connection pool efficiency score
 (
-  db_connection_pool_successful_queries_total / 
+  db_connection_pool_successful_queries_total /
   db_connection_pool_total_queries_total
 ) * 100
 ```
@@ -2601,6 +2716,9 @@ This comprehensive monitoring and observability guide provides operators with:
 - **Best practices** for scalable, secure monitoring
 - **Advanced features** like distributed tracing and custom dashboards
 
-The monitoring system is designed to provide real-time visibility into system performance, enabling proactive issue detection and resolution while supporting the V1 performance improvements of 50-70% through comprehensive tracking and optimization capabilities.
+The monitoring system is designed to provide real-time visibility into system performance,
+enabling proactive issue detection and resolution while supporting the V1 performance
+improvements of 50-70% through comprehensive tracking and optimization capabilities.
 
-For questions or additional monitoring requirements, refer to the troubleshooting section or contact the development team through the established support channels.
+For questions or additional monitoring requirements, refer to the troubleshooting section
+or contact the development team through the established support channels.

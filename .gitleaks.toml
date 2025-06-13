@@ -4,7 +4,9 @@
 # Use the default gitleaks configuration as base
 useDefault = true
 
-[allowlist]
+# Global allowlists (modern format as of v8.25.0)
+[[allowlists]]
+description = "Ignore test files and common false positives"
 # Files to ignore completely
 paths = [
     ".*test.*\\.py$",
@@ -15,13 +17,16 @@ paths = [
     ".*\\.log$",
     "htmlcov/.*",
     "cache/.*",
-    "logs/.*"
+    "logs/.*",
+    "tests/.*",
+    ".*test.*",
+    ".*mock.*"
 ]
 
 # Commit SHAs to ignore
 commits = []
 
-# Regular expressions to ignore
+# Regular expressions to ignore (targets the secret, not the full match)
 regexes = [
     # Test/example API keys and tokens
     "test_api_key",
@@ -40,50 +45,43 @@ regexes = [
     "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 ]
 
-# Entropy threshold for generic secrets
-[rules.generic-api-key]
+# Generic API key rule (modern format)
+[[rules]]
 id = "generic-api-key"
 description = "Generic API Key"
 regex = '''(?i)(api[_-]?key|apikey)['":\s]*[=:]\s*['"][a-zA-Z0-9]{20,}['"]'''
 entropy = 3.5
 secretGroup = 2
+keywords = ["api", "key", "apikey"]
 
 # Custom rules for this project
 [[rules]]
 id = "openai-api-key"
 description = "OpenAI API Key"
 regex = '''sk-[a-zA-Z0-9]{48}'''
-keywords = ["sk-"]
+keywords = ["sk-", "openai", "api"]
 
 [[rules]]
 id = "anthropic-api-key"
 description = "Anthropic API Key"
 regex = '''sk-ant-[a-zA-Z0-9\-]{95}'''
-keywords = ["sk-ant-"]
+keywords = ["sk-ant-", "anthropic", "claude"]
 
 [[rules]]
 id = "github-token"
 description = "GitHub Personal Access Token"
 regex = '''gh[pousr]_[A-Za-z0-9_]{36}'''
-keywords = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
+keywords = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github", "token"]
 
 [[rules]]
 id = "docker-config"
 description = "Docker configuration credentials"
 regex = '''(?i)(docker[_-]?config|dockercfg)['":\s]*[=:]\s*['"][^'"]+['"]'''
-keywords = ["docker"]
+keywords = ["docker", "config", "dockercfg"]
 
-# Ignore certain file patterns for specific rules
+# JWT Token detection (modern pattern)
 [[rules]]
-id = "ignore-test-files"
-description = "Ignore secrets in test files"
-regex = '''.*'''
-paths = [
-    "tests/.*",
-    ".*test.*",
-    ".*mock.*"
-]
-allowlist = {
-    description = "Test files",
-    regexTarget = "match"
-}
+id = "jwt-token"
+description = "JSON Web Token"
+regex = '''eyJ[A-Za-z0-9+/=]+\.eyJ[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]*'''
+keywords = ["eyJ", "jwt", "token", "bearer"]

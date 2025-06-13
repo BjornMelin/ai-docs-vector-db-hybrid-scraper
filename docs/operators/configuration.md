@@ -5,7 +5,8 @@
 > **Purpose**: Comprehensive configuration guide for operators  
 > **Audience**: DevOps engineers, system administrators, and operators
 
-This guide provides comprehensive configuration management for operators deploying and maintaining the AI Documentation Vector DB system across different environments.
+This guide provides comprehensive configuration management for operators deploying and
+maintaining the AI Documentation Vector DB system across different environments.
 
 ## Table of Contents
 
@@ -46,26 +47,26 @@ The AI Documentation Vector DB uses a unified configuration system built with Py
 ```mermaid
 graph TB
     A[Configuration Sources] --> B[UnifiedConfig]
-    
+
     A1[Environment Variables] --> A
     A2[Configuration Files] --> A
     A3[.env Files] --> A
     A4[Default Values] --> A
-    
+
     B --> C[Component Configurations]
-    
+
     C --> C1[Cache Config]
     C --> C2[Qdrant Config]
     C --> C3[Provider Configs]
     C --> C4[Performance Config]
     C --> C5[Security Config]
-    
+
     B --> D[Configuration Management]
     D --> D1[Validation]
     D --> D2[Migration]
     D --> D3[Templates]
     D --> D4[CLI Tools]
-    
+
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#fff3e0
@@ -85,13 +86,13 @@ graph TB
 
 The system provides pre-configured templates for different environments:
 
-| Template | Use Case | Key Features |
-|----------|----------|--------------|
-| `production.json` | Production deployment | High performance, security, monitoring |
-| `development.json` | Local development | Debug features, local services |
-| `local-only.json` | Privacy-focused | No cloud services, local-only |
-| `testing.json` | Test execution | Optimized for test speed |
-| `minimal.json` | Basic deployment | Minimal configuration with defaults |
+| Template           | Use Case              | Key Features                           |
+| ------------------ | --------------------- | -------------------------------------- |
+| `production.json`  | Production deployment | High performance, security, monitoring |
+| `development.json` | Local development     | Debug features, local services         |
+| `local-only.json`  | Privacy-focused       | No cloud services, local-only          |
+| `testing.json`     | Test execution        | Optimized for test speed               |
+| `minimal.json`     | Basic deployment      | Minimal configuration with defaults    |
 
 ### Environment-Specific Configuration
 
@@ -147,7 +148,7 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
   "log_level": "INFO",
   "embedding_provider": "openai",
   "crawl_provider": "crawl4ai",
-  
+
   "cache": {
     "enable_caching": true,
     "enable_local_cache": true,
@@ -160,7 +161,7 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "local_max_memory_mb": 100.0,
     "redis_pool_size": 20
   },
-  
+
   "qdrant": {
     "url": "http://qdrant:6333",
     "collection_name": "documents",
@@ -170,7 +171,7 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "hnsw_m": 16,
     "quantization_enabled": true
   },
-  
+
   "openai": {
     "model": "text-embedding-3-small",
     "dimensions": 1536,
@@ -179,7 +180,7 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "cost_per_million_tokens": 0.02,
     "budget_limit": 100.0
   },
-  
+
   "crawl4ai": {
     "enable_memory_adaptive_dispatcher": true,
     "memory_threshold_percent": 75.0,
@@ -188,7 +189,7 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "headless": true,
     "max_concurrent_crawls": 10,
     "page_timeout": 30.0,
-    "viewport": {"width": 1920, "height": 1080},
+    "viewport": { "width": 1920, "height": 1080 },
     "remove_scripts": true,
     "remove_styles": true,
     "enable_streaming": true,
@@ -197,14 +198,14 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "rate_limit_max_delay": 30.0,
     "rate_limit_max_retries": 2
   },
-  
+
   "chunking": {
     "strategy": "enhanced",
     "chunk_size": 1600,
     "chunk_overlap": 200,
     "preserve_function_boundaries": true
   },
-  
+
   "performance": {
     "max_concurrent_requests": 20,
     "request_timeout": 30.0,
@@ -214,13 +215,13 @@ export AI_DOCS__CACHE__ENABLE_DRAGONFLY_CACHE=false
     "max_memory_usage_mb": 2000.0,
     "gc_threshold": 0.8,
     "default_rate_limits": {
-      "openai": {"max_calls": 500, "time_window": 60},
-      "firecrawl": {"max_calls": 100, "time_window": 60},
-      "crawl4ai": {"max_calls": 50, "time_window": 1},
-      "qdrant": {"max_calls": 100, "time_window": 1}
+      "openai": { "max_calls": 500, "time_window": 60 },
+      "firecrawl": { "max_calls": 100, "time_window": 60 },
+      "crawl4ai": { "max_calls": 50, "time_window": 1 },
+      "qdrant": { "max_calls": 100, "time_window": 1 }
     }
   },
-  
+
   "security": {
     "require_api_keys": true,
     "enable_rate_limiting": true,
@@ -248,16 +249,16 @@ For systems with 16GB+ RAM and high throughput requirements:
     "rate_limit_max_delay": 10.0,
     "rate_limit_max_retries": 3
   },
-  
+
   "performance": {
     "max_concurrent_requests": 50,
     "max_memory_usage_mb": 4000.0,
     "default_rate_limits": {
-      "openai": {"max_calls": 1000, "time_window": 60},
-      "crawl4ai": {"max_calls": 100, "time_window": 1}
+      "openai": { "max_calls": 1000, "time_window": 60 },
+      "crawl4ai": { "max_calls": 100, "time_window": 1 }
     }
   },
-  
+
   "cache": {
     "redis_pool_size": 50,
     "local_max_size": 2000,
@@ -279,15 +280,15 @@ For systems with 8GB or less RAM:
     "dispatcher_check_interval": 2.0,
     "enable_streaming": false
   },
-  
+
   "performance": {
     "max_concurrent_requests": 5,
     "max_memory_usage_mb": 1000.0,
     "default_rate_limits": {
-      "crawl4ai": {"max_calls": 10, "time_window": 1}
+      "crawl4ai": { "max_calls": 10, "time_window": 1 }
     }
   },
-  
+
   "cache": {
     "local_max_size": 100,
     "local_max_memory_mb": 25.0,
@@ -307,7 +308,7 @@ For systems with 8GB or less RAM:
   "log_level": "DEBUG",
   "embedding_provider": "fastembed",
   "crawl_provider": "crawl4ai",
-  
+
   "cache": {
     "enable_caching": true,
     "enable_local_cache": true,
@@ -315,18 +316,18 @@ For systems with 8GB or less RAM:
     "local_max_size": 500,
     "local_max_memory_mb": 50.0
   },
-  
+
   "qdrant": {
     "url": "http://localhost:6333",
     "collection_name": "dev_documents",
     "batch_size": 50
   },
-  
+
   "fastembed": {
     "model": "BAAI/bge-small-en-v1.5",
     "batch_size": 16
   },
-  
+
   "crawl4ai": {
     "headless": false,
     "max_concurrent_crawls": 5,
@@ -335,13 +336,13 @@ For systems with 8GB or less RAM:
     "memory_threshold_percent": 70.0,
     "max_session_permit": 10
   },
-  
+
   "performance": {
     "max_concurrent_requests": 5,
     "request_timeout": 60.0,
     "max_memory_usage_mb": 500.0
   },
-  
+
   "security": {
     "require_api_keys": false,
     "enable_rate_limiting": false
@@ -377,10 +378,7 @@ export AI_DOCS__FIRECRAWL__API_KEY="${FIRECRAWL_API_KEY_PROD}"
       "fastapi.tiangolo.com",
       "docs.pydantic.dev"
     ],
-    "blocked_domains": [
-      "malicious.com",
-      "spam.example.org"
-    ],
+    "blocked_domains": ["malicious.com", "spam.example.org"],
     "max_content_length": 10485760,
     "enable_cors": true,
     "cors_origins": ["https://yourdomain.com"],
@@ -472,9 +470,9 @@ export AI_DOCS__FIRECRAWL__API_KEY="${FIRECRAWL_API_KEY_PROD}"
       "recovery_timeout_seconds": 60,
       "half_open_max_calls": 3,
       "failure_types": {
-        "connection": {"threshold": 3, "timeout": 30},
-        "query": {"threshold": 5, "timeout": 60},
-        "transaction": {"threshold": 2, "timeout": 120}
+        "connection": { "threshold": 3, "timeout": 30 },
+        "query": { "threshold": 5, "timeout": 60 },
+        "transaction": { "threshold": 2, "timeout": 120 }
       }
     },
     "connection_affinity": {
@@ -668,29 +666,29 @@ from src.infrastructure.database.connection_manager import AsyncConnectionManage
 
 class DatabaseConfigTester:
     """Test database configuration performance."""
-    
+
     def __init__(self, config_file: str):
         self.config = UnifiedConfig.load_from_file(config_file)
-        
+
     async def test_performance_targets(self) -> Dict[str, Any]:
         """Test that configuration meets performance targets."""
         manager = AsyncConnectionManager(self.config.database)
-        
+
         try:
             await manager.initialize()
-            
+
             # Test connection pool performance
             start_time = time.time()
             tasks = []
             for _ in range(20):
                 task = manager.execute_query("SELECT 1")
                 tasks.append(task)
-            
+
             results = await asyncio.gather(*tasks)
             end_time = time.time()
-            
+
             avg_latency = (end_time - start_time) / len(tasks)
-            
+
             # Performance targets
             targets = {
                 'avg_latency_ms': avg_latency * 1000,
@@ -699,12 +697,12 @@ class DatabaseConfigTester:
                 'pool_utilization': await self._get_pool_utilization(manager),
                 'enhanced_features_active': self._check_enhanced_features()
             }
-            
+
             return targets
-            
+
         finally:
             await manager.shutdown()
-    
+
     def _check_enhanced_features(self) -> Dict[str, bool]:
         """Check which enhanced features are enabled."""
         features = self.config.database.enhanced_features
@@ -717,16 +715,16 @@ class DatabaseConfigTester:
 
 if __name__ == "__main__":
     import sys
-    
+
     tester = DatabaseConfigTester(sys.argv[1] if len(sys.argv) > 1 else "config.json")
     results = asyncio.run(tester.test_performance_targets())
-    
+
     print("Performance Test Results:")
     print(f"  Average Latency: {results['avg_latency_ms']:.2f}ms")
     print(f"  Target Latency: {results['target_latency_ms']}ms")
     print(f"  Meets Target: {'✓' if results['meets_target'] else '✗'}")
     print(f"  Enhanced Features: {results['enhanced_features_active']}")
-    
+
     if not results['meets_target']:
         sys.exit(1)
 ```
@@ -831,10 +829,10 @@ from src.infrastructure.database.connection_manager import AsyncConnectionManage
 
 class ConfigHealthMonitor:
     """Monitor configuration health and performance."""
-    
+
     def __init__(self, config: UnifiedConfig):
         self.config = config
-        
+
     async def check_configuration_health(self) -> Dict[str, Any]:
         """Comprehensive configuration health check."""
         health_report = {
@@ -842,29 +840,29 @@ class ConfigHealthMonitor:
             'checks': {},
             'recommendations': []
         }
-        
+
         # 1. Database connection health
         health_report['checks']['database_connection'] = await self._check_database_connection()
-        
+
         # 2. Enhanced features health
         health_report['checks']['enhanced_features'] = await self._check_enhanced_features()
-        
+
         # 3. Performance metrics validation
         health_report['checks']['performance_metrics'] = await self._check_performance_metrics()
-        
+
         # 4. Configuration consistency
         health_report['checks']['config_consistency'] = self._check_config_consistency()
-        
+
         # Generate recommendations
         health_report['recommendations'] = self._generate_recommendations(health_report['checks'])
-        
+
         # Determine overall status
-        failed_checks = [name for name, result in health_report['checks'].items() 
+        failed_checks = [name for name, result in health_report['checks'].items()
                         if not result.get('healthy', False)]
         if failed_checks:
             health_report['overall_status'] = 'unhealthy'
             health_report['failed_checks'] = failed_checks
-            
+
         return health_report
 ```
 
@@ -882,11 +880,11 @@ class ConfigHealthMonitor:
     "retry_max_delay": 30.0,
     "gc_threshold": 0.9,
     "default_rate_limits": {
-      "openai": {"max_calls": 1000, "time_window": 60},
-      "crawl4ai": {"max_calls": 100, "time_window": 1}
+      "openai": { "max_calls": 1000, "time_window": 60 },
+      "crawl4ai": { "max_calls": 100, "time_window": 1 }
     }
   },
-  
+
   "crawl4ai": {
     "max_concurrent_crawls": 20,
     "page_timeout": 15.0,
@@ -908,13 +906,13 @@ class ConfigHealthMonitor:
     "enable_memory_monitoring": true,
     "memory_check_interval": 30.0
   },
-  
+
   "cache": {
     "local_max_size": 100,
     "local_max_memory_mb": 50.0,
     "enable_memory_pressure_eviction": true
   },
-  
+
   "crawl4ai": {
     "enable_memory_adaptive_dispatcher": true,
     "memory_threshold_percent": 60.0,
@@ -935,7 +933,7 @@ class ConfigHealthMonitor:
     "connection_pool_size": 100,
     "keep_alive_timeout": 30.0
   },
-  
+
   "cache": {
     "enable_caching": true,
     "ttl_embeddings": 86400,
@@ -2229,10 +2227,10 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'ai-docs-vector-db'
+  - job_name: "ai-docs-vector-db"
     static_configs:
-      - targets: ['localhost:9090']
-    metrics_path: '/metrics'
+      - targets: ["localhost:9090"]
+    metrics_path: "/metrics"
     scrape_interval: 30s
 ```
 
@@ -2337,4 +2335,7 @@ groups:
 }
 ```
 
-This comprehensive configuration guide provides operators with all the tools and knowledge needed to successfully deploy, manage, and maintain the AI Documentation Vector DB system across different environments. The guide emphasizes security, performance, and operational excellence while providing practical examples and troubleshooting guidance.
+This comprehensive configuration guide provides operators with all the tools and knowledge
+needed to successfully deploy, manage, and maintain the AI Documentation Vector DB system
+across different environments. The guide emphasizes security, performance, and operational
+excellence while providing practical examples and troubleshooting guidance.

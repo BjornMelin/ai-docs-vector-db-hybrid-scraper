@@ -15,6 +15,7 @@ This document outlines known Windows compatibility issues and their solutions fo
 **Issue**: `tree-sitter` packages may fail to build on Windows due to missing C compiler or build tools.
 
 **Solution**:
+
 - Ensure Microsoft C++ Build Tools are installed
 - Use pre-built wheels when available
 - Fall back to pure Python alternatives if needed
@@ -26,10 +27,12 @@ This document outlines known Windows compatibility issues and their solutions fo
 **Issue**: `redis[hiredis]` may fail to compile on Windows.
 
 **Solution**:
+
 - Use `redis` without hiredis extension as fallback
 - Performance impact is minimal for most use cases
 
-**Configuration**: 
+**Configuration**:
+
 ```python
 # In src/config/redis_config.py
 REDIS_CONNECTION_CLASS = "redis.Connection"  # instead of hiredis.Connection
@@ -40,6 +43,7 @@ REDIS_CONNECTION_CLASS = "redis.Connection"  # instead of hiredis.Connection
 **Issue**: Unix-style directory creation commands may fail on Windows.
 
 **Solution**: Use cross-platform commands in CI workflows:
+
 ```bash
 # Instead of: mkdir -p tests/fixtures/{cache,data,logs}
 mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
@@ -50,6 +54,7 @@ mkdir -p tests/fixtures/cache tests/fixtures/data tests/fixtures/logs
 **Issue**: Hard-coded forward slashes in file paths.
 
 **Solution**: Use `pathlib.Path` or `os.path.join()` for cross-platform compatibility:
+
 ```python
 from pathlib import Path
 
@@ -65,6 +70,7 @@ config_path = "config/settings.yml"
 ### Local Development
 
 1. **Install Prerequisites**:
+
    ```cmd
    # Install uv
    pip install uv
@@ -74,11 +80,13 @@ config_path = "config/settings.yml"
    ```
 
 2. **Install Dependencies**:
+
    ```cmd
    uv sync --dev
    ```
 
 3. **Run Tests**:
+
    ```cmd
    uv run pytest tests/unit
    ```
@@ -86,6 +94,7 @@ config_path = "config/settings.yml"
 ### CI Pipeline
 
 The GitHub Actions CI pipeline includes Windows testing with:
+
 - Multiple Python versions (3.12, 3.13)
 - Fallback installation methods for problematic dependencies
 - Cross-platform shell commands

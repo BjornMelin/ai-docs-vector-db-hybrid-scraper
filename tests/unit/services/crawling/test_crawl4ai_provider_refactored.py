@@ -53,6 +53,7 @@ class TestCrawl4AIProvider:
     async def test_initialize_success(self, mock_crawler_class, provider):
         """Test successful initialization."""
         mock_crawler = AsyncMock()
+        mock_crawler.start = AsyncMock()  # Mock the start method
         mock_crawler_class.return_value = mock_crawler
 
         await provider.initialize()
@@ -60,11 +61,13 @@ class TestCrawl4AIProvider:
         assert provider._initialized
         assert provider._crawler is not None
         mock_crawler_class.assert_called_once_with(config=provider.browser_config)
+        mock_crawler.start.assert_called_once()
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
     async def test_cleanup(self, mock_crawler_class, provider):
         """Test cleanup after initialization."""
         mock_crawler = AsyncMock()
+        mock_crawler.start = AsyncMock()
         mock_crawler.close = AsyncMock()
         mock_crawler_class.return_value = mock_crawler
 
@@ -81,6 +84,7 @@ class TestCrawl4AIProvider:
     ):
         """Test successful URL scraping."""
         mock_crawler = AsyncMock()
+        mock_crawler.start = AsyncMock()
         mock_crawler.arun.return_value = mock_crawler_result
         mock_crawler_class.return_value = mock_crawler
 

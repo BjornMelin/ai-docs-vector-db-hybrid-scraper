@@ -3,16 +3,19 @@
 ## Issues Identified and Fixed
 
 ### 1. Original PATH Issue
+
 - **Problem**: `uv` package manager was installed but not available in PATH
 - **Root Cause**: PATH environment variable wasn't updated after uv installation
 - **Solution**: Switched from uv to pip for better compatibility and reliability
 
 ### 2. Python Version Compatibility
+
 - **Problem**: Python 3.13 had package compatibility issues with many dependencies
 - **Root Cause**: Many packages haven't been updated for Python 3.13 yet
 - **Solution**: Updated Dockerfiles to use Python 3.12 for better package compatibility
 
 ### 3. Missing Build Dependencies
+
 - **Problem**: Python packages requiring compilation failed to build
 - **Root Cause**: Missing system libraries and build tools
 - **Solution**: Added comprehensive build dependencies including:
@@ -21,6 +24,7 @@
   - Image processing libraries (JPEG, PNG, WebP, etc.)
 
 ### 4. Dependency Conflicts
+
 - **Problem**: Complex dependency conflicts between packages
 - **Root Cause**: Incompatible version requirements between FastAPI, MCP, and other packages
 - **Solution**: Created a minimal requirements file for testing and development
@@ -28,6 +32,7 @@
 ## Final Solutions
 
 ### 1. Fixed Production Dockerfile (`Dockerfile.worker`)
+
 ```dockerfile
 # Multi-stage build using Python 3.12
 FROM python:3.12 AS builder
@@ -48,12 +53,14 @@ RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
 ```
 
 ### 2. Minimal Development Dockerfile (`Dockerfile.worker.minimal`)
+
 - Successfully builds with core dependencies only
 - Suitable for development and testing
 - Faster build times (~4 minutes vs 20+ minutes)
 - Proven to work with container startup and basic functionality
 
 ### 3. Optimized .dockerignore
+
 - Reduces build context size
 - Excludes unnecessary development files, caches, and documentation
 - Improves build performance
@@ -61,12 +68,14 @@ RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
 ## Build Status
 
 ### ✅ Minimal Build - WORKING
+
 - **File**: `Dockerfile.worker.minimal`
 - **Status**: ✅ Successfully builds and runs
 - **Time**: ~4 minutes
 - **Use case**: Development, testing, CI/CD validation
 
 ### 🔄 Full Build - IN PROGRESS
+
 - **File**: `Dockerfile.worker`
 - **Status**: 🔄 Building successfully (downloads in progress)
 - **Expected time**: 15-25 minutes (due to CUDA packages)

@@ -94,8 +94,11 @@ class FieldConditionModel(BaseModel):
         if self.operator in [FieldOperator.IN, FieldOperator.NIN]:
             if not self.values:
                 raise ValueError(f"values list required for {self.operator} operator")
-        elif self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS] and self.value is None:
-                raise ValueError(f"value required for {self.operator} operator")
+        elif (
+            self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS]
+            and self.value is None
+        ):
+            raise ValueError(f"value required for {self.operator} operator")
 
         return self
 
@@ -118,9 +121,7 @@ class BooleanExpressionModel(BaseModel):
             if len(v) != 1:
                 raise ValueError("NOT operator requires exactly one condition")
         elif operator in [BooleanOperator.AND, BooleanOperator.OR] and len(v) < 2:
-                raise ValueError(
-                    f"{operator} operator requires at least two conditions"
-                )
+            raise ValueError(f"{operator} operator requires at least two conditions")
 
         return v
 
@@ -332,9 +333,11 @@ class MetadataFilter(BaseFilter):
                 if isinstance(value, list):
                     # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                     exclude_values = [
-                        str(v)
-                        if isinstance(v, bool) or not isinstance(v, str | int)
-                        else v
+                        (
+                            str(v)
+                            if isinstance(v, bool) or not isinstance(v, str | int)
+                            else v
+                        )
                         for v in value
                     ]
                     conditions.append(
@@ -397,7 +400,8 @@ class MetadataFilter(BaseFilter):
         value = condition.value
         values = condition.values
 
-        # Apply global case sensitivity setting
+        # Apply global case sensitivity setting (unused for now)
+        # case_sensitive = condition.case_sensitive and not criteria.ignore_case
 
         try:
             # Existence operators
@@ -601,8 +605,8 @@ class MetadataFilter(BaseFilter):
 
         try:
             operator = BooleanOperator(operator_key)
-        except ValueError as e:
-            raise ValueError(f"Invalid boolean operator: {operator_key}") from e
+        except ValueError:
+            raise ValueError(f"Invalid boolean operator: {operator_key}") from None
 
         # Parse conditions
         parsed_conditions = []

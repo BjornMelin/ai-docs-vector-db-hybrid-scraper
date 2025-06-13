@@ -104,7 +104,7 @@ async def _perform_ab_test_search(
     return search_results, ab_test_results
 
 
-def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
+def register_tools(mcp, client_manager: ClientManager):
     """Register advanced search tools with the MCP server."""
 
     async def _search_documents_direct(
@@ -346,7 +346,7 @@ def register_tools(mcp, client_manager: ClientManager):  # noqa: PLR0915
                 raise e from fallback_error
 
     @mcp.tool()
-    async def hyde_search_advanced(  # noqa: PLR0912, PLR0915
+    async def hyde_search_advanced(
         query: str,
         collection: str = "documentation",
         domain: "str | None" = None,
