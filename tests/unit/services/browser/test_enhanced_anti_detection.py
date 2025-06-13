@@ -226,6 +226,7 @@ class TestSuccessRateMonitor:
         assert monitor.needs_strategy_adjustment()
 
 
+@pytest.mark.browser
 class TestEnhancedAntiDetection:
     """Test EnhancedAntiDetection main class functionality."""
 
@@ -451,6 +452,7 @@ class TestEnhancedAntiDetection:
         ]  # More aggressive strategies
 
 
+@pytest.mark.browser
 class TestPlaywrightAdapterIntegration:
     """Test integration with Playwright adapter."""
 

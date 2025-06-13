@@ -6,6 +6,11 @@ on:
   push:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 env:
   PYTHONUNBUFFERED: 1
   PYTHONDONTWRITEBYTECODE: 1
@@ -31,7 +36,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -86,7 +91,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -116,8 +121,8 @@ jobs:
 
       - name: Run fastest unit tests only
         run: |
-          # Install pytest-xdist for parallel testing and pytest-timeout for timeouts
-          uv add --dev pytest-xdist pytest-timeout
+          # Install pytest-xdist and pytest-timeout in the existing environment
+          uv pip install pytest-xdist pytest-timeout
           
           # Run only fast unit tests (no browser, no integration)
           uv run pytest tests/unit \
@@ -143,7 +148,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Check Python syntax
         run: |
@@ -167,7 +172,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
