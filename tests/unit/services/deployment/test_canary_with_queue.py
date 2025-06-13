@@ -50,6 +50,8 @@ class TestCanaryDeploymentWithTaskQueue:
         # Mock save/load methods
         canary._save_deployments = AsyncMock()
         canary._load_deployments = AsyncMock()
+        # Mock collection readiness check
+        canary._check_collection_ready = AsyncMock()
         return canary
 
     @pytest.mark.asyncio
@@ -131,6 +133,8 @@ class TestCanaryDeploymentWithTaskQueue:
         )
         canary._save_deployments = AsyncMock()
         canary._load_deployments = AsyncMock()
+        # Mock collection readiness check
+        canary._check_collection_ready = AsyncMock()
 
         alias_manager.get_collection_for_alias = AsyncMock(
             return_value="old_collection"

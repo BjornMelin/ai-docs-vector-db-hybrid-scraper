@@ -1,11 +1,14 @@
 """Project management tools for MCP server."""
 
 import contextlib
+import json
 import logging
 from datetime import UTC
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
+
+import yaml
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -400,4 +403,219 @@ def register_tools(mcp, client_manager: ClientManager):
             if ctx:
                 await ctx.error(f"Failed to delete project {project_id}: {e}")
             logger.error(f"Failed to delete project: {e}")
+            raise
+
+    @mcp.tool()
+    async def export_project(
+        project_id: str, format: str = "json", ctx: Context = None
+    ) -> dict:
+        """
+        Export project data in the specified format.
+
+        Args:
+            project_id: Project ID to export
+            format: Export format ('json' or 'yaml')
+
+        Returns:
+            Dictionary containing status, format, and exported data
+        """
+        if ctx:
+            await ctx.info(f"Exporting project {project_id} in {format} format")
+
+        try:
+            # Validate format
+            if format not in ["json", "yaml"]:
+                if ctx:
+                    await ctx.error(f"Unsupported format: {format}")
+                raise ValueError(f"Unsupported format: {format}. Use 'json' or 'yaml'")
+
+            # Get project data
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
+            if not project:
+                if ctx:
+                    await ctx.error(f"Project {project_id} not found")
+                raise ValueError(f"Project {project_id} not found")
+
+            # Prepare project data for export
+            export_data = {
+                "id": project.get("id"),
+                "name": project.get("name"),
+                "description": project.get("description"),
+                "quality_tier": project.get("quality_tier"),
+                "collection_name": project.get("collection"),
+                "created_at": project.get("created_at"),
+                "urls": project.get("urls", []),
+                "document_count": project.get("document_count", 0),
+            }
+
+            # Format the data
+            if format == "json":
+                formatted_data = json.dumps(export_data, indent=2)
+                if ctx:
+                    await ctx.debug("Exported project data as JSON")
+            else:  # yaml
+                formatted_data = yaml.dump(export_data, default_flow_style=False)
+                if ctx:
+                    await ctx.debug("Exported project data as YAML")
+
+            if ctx:
+                await ctx.info(f"Project {project_id} exported successfully")
+
+            return {
+                "status": "exported",
+                "format": format,
+                "data": formatted_data,
+            }
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to export project {project_id}: {e}")
+            logger.error(f"Failed to export project: {e}")
+            raise
+
+    @mcp.tool()
+    async def add_project_urls(
+        project_id: str, urls: list[str], ctx: Context = None
+    ) -> dict:
+        """
+        Add new URLs to an existing project.
+
+        Args:
+            project_id: Project ID to add URLs to
+            urls: List of URLs to add
+            ctx: MCP context for logging
+
+        Returns:
+            Status dict with urls_added and total_urls
+        """
+        if ctx:
+            await ctx.info(f"Adding {len(urls)} URLs to project {project_id}")
+
+        try:
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
+            if not project:
+                if ctx:
+                    await ctx.error(f"Project {project_id} not found")
+                raise ValueError(f"Project {project_id} not found")
+
+            # Get existing URLs to avoid duplicates
+            existing_urls = set(project.get("urls", []))
+            new_urls = [url for url in urls if url not in existing_urls]
+
+            if ctx:
+                await ctx.debug(
+                    f"Found {len(new_urls)} new URLs out of {len(urls)} provided"
+                )
+
+            # Process new URLs
+            urls_added = 0
+            crawling_service = client_manager.get_crawling_service()
+            document_service = client_manager.get_document_service()
+
+            for url in new_urls:
+                try:
+                    # Crawl the URL
+                    crawl_result = await crawling_service.crawl_url(url)
+                    if crawl_result and crawl_result.get("content"):
+                        # Add document to collection
+                        await document_service.add_document(
+                            collection_name=project["collection"],
+                            content=crawl_result["content"],
+                            metadata={
+                                "url": url,
+                                "title": crawl_result.get("title", ""),
+                                "project_id": project_id,
+                            },
+                        )
+                        urls_added += 1
+                        if ctx:
+                            await ctx.debug(f"Successfully added URL: {url}")
+                except Exception as e:
+                    if ctx:
+                        await ctx.warning(f"Failed to process URL {url}: {e}")
+                    logger.warning(f"Failed to process URL {url}: {e}")
+
+            # Update project URLs
+            updated_urls = list(existing_urls) + new_urls
+            await project_storage.update_project(project_id, {"urls": updated_urls})
+
+            if ctx:
+                await ctx.info(
+                    f"Added {urls_added} URLs to project {project_id}. Total URLs: {len(updated_urls)}"
+                )
+
+            return {
+                "status": "urls_added",
+                "urls_added": urls_added,
+                "total_urls": len(updated_urls),
+            }
+
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to add URLs to project {project_id}: {e}")
+            logger.error(f"Failed to add URLs to project: {e}")
+            raise
+
+    @mcp.tool()
+    async def get_project_details(project_id: str, ctx: Context = None) -> dict:
+        """
+        Get detailed information about a specific project.
+
+        Args:
+            project_id: The ID of the project to retrieve
+            ctx: Optional context for logging
+
+        Returns:
+            Dictionary containing project details
+
+        Raises:
+            ValueError: If project not found
+        """
+        if ctx:
+            await ctx.info(f"Getting details for project {project_id}")
+
+        try:
+            project_storage = await client_manager.get_project_storage()
+            project = await project_storage.get_project(project_id)
+
+            if not project:
+                if ctx:
+                    await ctx.error(f"Project {project_id} not found")
+                raise ValueError(f"Project not found: {project_id}")
+
+            # Get collection stats if available
+            try:
+                info = await client_manager.qdrant_service.get_collection_info(
+                    project.get("collection", f"project_{project_id}")
+                )
+                project["vector_count"] = info.vectors_count
+                project["indexed_count"] = info.indexed_vectors_count
+                if ctx:
+                    await ctx.debug(
+                        f"Project {project.get('name', project_id)}: {info.vectors_count} vectors"
+                    )
+            except Exception as e:
+                project["vector_count"] = 0
+                project["indexed_count"] = 0
+                if ctx:
+                    await ctx.warning(
+                        f"Failed to get collection stats for project {project_id}: {e}"
+                    )
+
+            if ctx:
+                await ctx.info(
+                    f"Successfully retrieved details for project {project_id}"
+                )
+
+            return {"project": project}
+
+        except ValueError:
+            # Re-raise ValueError as is
+            raise
+        except Exception as e:
+            if ctx:
+                await ctx.error(f"Failed to get project details for {project_id}: {e}")
+            logger.error(f"Failed to get project details: {e}")
             raise

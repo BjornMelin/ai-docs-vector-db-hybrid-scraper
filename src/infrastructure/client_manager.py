@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import logging
+import threading
 import time
 from contextlib import asynccontextmanager
 
@@ -35,11 +36,15 @@ class ClientManager:
 
     _instance: Optional["ClientManager"] = None
     _lock = asyncio.Lock()
+    _init_lock = threading.Lock()  # Thread-safe lock for singleton creation
 
     def __new__(cls, config: UnifiedConfig | None = None):
-        """Ensure singleton instance."""
+        """Ensure singleton instance with thread safety."""
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with cls._init_lock:
+                # Double-check pattern for thread safety
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     @classmethod
@@ -54,6 +59,22 @@ class ClientManager:
         # Load the unified configuration
         unified_config = ConfigLoader.load_config()
         return cls(unified_config)
+
+    @classmethod
+    def reset_singleton(cls) -> None:
+        """Reset singleton instance for testing purposes.
+
+        This method is thread-safe and should only be used in tests.
+        """
+        with cls._init_lock:
+            if (
+                cls._instance is not None
+                and hasattr(cls._instance, "_health_check_task")
+                and cls._instance._health_check_task
+                and not cls._instance._health_check_task.done()
+            ):
+                cls._instance._health_check_task.cancel()
+            cls._instance = None
 
     def __init__(self, config: UnifiedConfig | None = None):
         """Initialize client manager.
