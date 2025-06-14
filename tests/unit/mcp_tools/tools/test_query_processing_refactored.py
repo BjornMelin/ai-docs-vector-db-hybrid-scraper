@@ -230,7 +230,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -303,7 +303,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -340,7 +340,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -375,7 +375,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks to raise an exception
@@ -472,7 +472,7 @@ class TestQueryAnalysisTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks

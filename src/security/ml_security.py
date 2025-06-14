@@ -61,6 +61,11 @@ class MLSecurityValidator:
         self.base_validator = BaseSecurityValidator.from_unified_config()
         self.checks_performed = []
 
+    @classmethod
+    def from_unified_config(cls) -> "MLSecurityValidator":
+        """Create MLSecurityValidator from unified config."""
+        return cls()
+
     def validate_input(
         self, data: dict[str, Any], expected_schema: dict[str, type] | None = None
     ) -> SecurityCheckResult:
@@ -301,6 +306,28 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
+
+    def validate_collection_name(self, name: str) -> str:
+        """Validate collection name using base validator.
+
+        Args:
+            name: Collection name to validate
+
+        Returns:
+            Validated collection name
+        """
+        return self.base_validator.validate_collection_name(name)
+
+    def validate_query_string(self, query: str) -> str:
+        """Validate query string using base validator.
+
+        Args:
+            query: Query string to validate
+
+        Returns:
+            Validated query string
+        """
+        return self.base_validator.validate_query_string(query)
 
     def log_security_event(
         self, event_type: str, details: dict[str, Any], severity: str = "info"
