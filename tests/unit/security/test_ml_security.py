@@ -69,10 +69,16 @@ class TestMLSecurityValidator:
         mock_config.security.max_ml_input_size = 1_000_000
         mock_config.security.enable_dependency_scanning = True
         mock_config.security.dependency_scan_on_startup = True
-        mock_config.security.suspicious_patterns = ["<script", "DROP TABLE", "__import__", "eval("]
-        
-        with patch("src.security.ml_security.get_config", return_value=mock_config), patch(
-            "src.security.ml_security.BaseSecurityValidator.from_unified_config"
+        mock_config.security.suspicious_patterns = [
+            "<script",
+            "DROP TABLE",
+            "__import__",
+            "eval(",
+        ]
+
+        with (
+            patch("src.security.ml_security.get_config", return_value=mock_config),
+            patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
         ):
             return MLSecurityValidator()
 
@@ -194,15 +200,16 @@ class TestMLSecurityValidator:
 
     def test_check_dependencies_exception(self, validator):
         """Test dependency check exception handling."""
-        with patch("subprocess.run", side_effect=Exception("Test error")), patch(
-            "src.security.ml_security.logger"
-        ) as mock_logger:
-                result = validator.check_dependencies()
+        with (
+            patch("subprocess.run", side_effect=Exception("Test error")),
+            patch("src.security.ml_security.logger") as mock_logger,
+        ):
+            result = validator.check_dependencies()
 
-                assert result.passed is True
-                assert "scan failed" in result.message
-                assert result.severity == "info"
-                mock_logger.error.assert_called_once()
+            assert result.passed is True
+            assert "scan failed" in result.message
+            assert result.severity == "info"
+            mock_logger.error.assert_called_once()
 
     def test_check_container_success(self, validator):
         """Test successful container scan."""
@@ -251,15 +258,16 @@ class TestMLSecurityValidator:
 
     def test_check_container_exception(self, validator):
         """Test container scan exception handling."""
-        with patch("subprocess.run", side_effect=Exception("Test error")), patch(
-            "src.security.ml_security.logger"
-        ) as mock_logger:
-                result = validator.check_container("myapp:latest")
+        with (
+            patch("subprocess.run", side_effect=Exception("Test error")),
+            patch("src.security.ml_security.logger") as mock_logger,
+        ):
+            result = validator.check_container("myapp:latest")
 
-                assert result.passed is True
-                assert "not performed" in result.message
-                assert result.severity == "info"
-                mock_logger.info.assert_called_once()
+            assert result.passed is True
+            assert "not performed" in result.message
+            assert result.severity == "info"
+            mock_logger.info.assert_called_once()
 
     @pytest.mark.parametrize(
         "severity,log_method",
@@ -391,10 +399,16 @@ class TestIntegration:
         mock_config.security.max_ml_input_size = 1_000_000
         mock_config.security.enable_dependency_scanning = True
         mock_config.security.dependency_scan_on_startup = True
-        mock_config.security.suspicious_patterns = ["<script", "DROP TABLE", "__import__", "eval("]
-        
-        with patch("src.security.ml_security.get_config", return_value=mock_config), patch(
-            "src.security.ml_security.BaseSecurityValidator.from_unified_config"
+        mock_config.security.suspicious_patterns = [
+            "<script",
+            "DROP TABLE",
+            "__import__",
+            "eval(",
+        ]
+
+        with (
+            patch("src.security.ml_security.get_config", return_value=mock_config),
+            patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
         ):
             return MLSecurityValidator()
 

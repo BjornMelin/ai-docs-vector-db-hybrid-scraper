@@ -110,7 +110,11 @@ class MLSecurityValidator:
                         return result
 
             # Check for suspicious patterns from config
-            suspicious_patterns = self.config.security.suspicious_patterns if hasattr(self.config.security, 'suspicious_patterns') else ["<script", "DROP TABLE", "__import__", "eval("]
+            suspicious_patterns = (
+                self.config.security.suspicious_patterns
+                if hasattr(self.config.security, "suspicious_patterns")
+                else ["<script", "DROP TABLE", "__import__", "eval("]
+            )
             for pattern in suspicious_patterns:
                 if pattern in data_str:
                     result = SecurityCheckResult(

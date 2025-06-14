@@ -1279,6 +1279,18 @@ class SecurityConfig(BaseModel):
     dependency_scan_on_startup: bool = Field(
         default=True, description="Run dependency scan on startup"
     )
+    suspicious_patterns: list[str] = Field(
+        default_factory=lambda: [
+            "<script",
+            "DROP TABLE",
+            "__import__",
+            "eval(",
+            "exec(",
+            "UNION SELECT",
+            "javascript:",
+        ],
+        description="Patterns to block in ML inputs",
+    )
 
     model_config = ConfigDict(extra="forbid")
 
