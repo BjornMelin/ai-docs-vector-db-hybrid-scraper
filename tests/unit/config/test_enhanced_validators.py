@@ -7,13 +7,13 @@ detailed error reporting and automatic suggestions for configuration issues.
 from unittest.mock import patch
 
 import pytest
-
-# Import enums and models before any mocking happens
-from src.config.enums import Environment
 from src.config.enhanced_validators import ConfigurationValidator
 from src.config.enhanced_validators import ValidationIssue
 from src.config.enhanced_validators import ValidationReport
 from src.config.enhanced_validators import ValidationSeverity
+
+# Import enums and models before any mocking happens
+from src.config.enums import Environment
 from src.config.models import UnifiedConfig
 
 

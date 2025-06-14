@@ -21,7 +21,7 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ...security import SecurityValidator
+from ...security import MLSecurityValidator as SecurityValidator
 from ..models.responses import GenericDictResponse
 
 logger = logging.getLogger(__name__)

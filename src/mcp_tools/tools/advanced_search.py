@@ -19,7 +19,7 @@ else:
 
 from ...config.enums import SearchStrategy
 from ...infrastructure.client_manager import ClientManager
-from ...security import SecurityValidator
+from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import FilteredSearchRequest
 from ..models.requests import HyDESearchRequest
 from ..models.requests import MultiStageSearchRequest
