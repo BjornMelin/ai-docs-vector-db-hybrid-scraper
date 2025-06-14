@@ -73,7 +73,7 @@ After comprehensive research and analysis, **we recommend abandoning the current
 
 ### Code Comparison
 
-#### Current (Over-engineered):
+#### Current (Over-engineered)
 ```python
 # ~400 lines of complex detection
 class DataPoisoningDetector:
@@ -84,7 +84,7 @@ class DataPoisoningDetector:
         # ... 50+ more lines
 ```
 
-#### Recommended (Simple):
+#### Recommended (Simple)
 ```python
 # ~20 lines of practical validation
 def validate_ml_input(data: dict) -> bool:
@@ -135,13 +135,13 @@ def validate_ml_input(data: dict) -> bool:
 
 ## Real-World Evidence
 
-### What Major Companies Actually Do:
+### What Major Companies Actually Do
 - **Google**: Basic input validation + existing infrastructure
 - **Microsoft**: Standard security practices, not ML-specific
 - **OpenAI**: Rate limiting + API keys (publicly visible)
 - **Anthropic**: Standard web security + monitoring
 
-### Security Incident Analysis:
+### Security Incident Analysis
 - **99% of ML attacks**: Prevented by basic rate limiting
 - **Actual data poisoning**: Rare in production, caught by monitoring
 - **Model theft**: Prevented by API limits, not complex detection
