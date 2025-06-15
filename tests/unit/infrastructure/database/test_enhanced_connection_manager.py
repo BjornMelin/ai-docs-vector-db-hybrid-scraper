@@ -18,8 +18,8 @@ import pytest
 from src.infrastructure.database.adaptive_config import AdaptationStrategy
 from src.infrastructure.database.connection_affinity import QueryType
 from src.infrastructure.database.connection_manager import AsyncConnectionManager
-# Simple circuit breaker doesn't have failure types
 
+# Simple circuit breaker doesn't have failure types
 # Simple load monitoring imports
 from src.infrastructure.database.simple_monitor import SimpleLoadDecision
 
@@ -154,7 +154,7 @@ class TestEnhancedAsyncConnectionManager:
                 should_scale_down=False,
                 current_load=0.8,
                 reason="Load 80% > 80% threshold",
-                recommendation="Scale up database connections"
+                recommendation="Scale up database connections",
             )
             enhanced_manager.load_monitor.get_load_decision.return_value = load_decision
 
@@ -460,7 +460,7 @@ class TestEnhancedConnectionManagerEdgeCases:
             ) as mock_sessionmaker,
         ):
             mock_create_engine.return_value = mock_engine
-            
+
             # Create a proper async session mock
             mock_session = AsyncMock()
             mock_result = Mock()
@@ -468,7 +468,7 @@ class TestEnhancedConnectionManagerEdgeCases:
             mock_session.execute = AsyncMock(return_value=mock_result)
             mock_session.commit = AsyncMock()
             mock_session.close = AsyncMock()
-            
+
             mock_sessionmaker.return_value = Mock(return_value=mock_session)
 
             await manager.initialize()
@@ -560,7 +560,7 @@ class TestEnhancedConnectionManagerIntegration:
 
         # Create a simple circuit breaker mock
         from src.infrastructure.shared import CircuitBreaker
-        
+
         circuit_breaker = Mock(spec=CircuitBreaker)
         circuit_breaker.state = Mock()
         circuit_breaker.state.value = "closed"

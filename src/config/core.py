@@ -5,28 +5,27 @@ All configuration models in one place for V1 release.
 """
 
 from pathlib import Path
-from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import HttpUrl
+from pydantic import field_validator
+from pydantic import model_validator
+from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict
 
-from .enums import (
-    CacheType,
-    ChunkingStrategy,
-    CrawlProvider,
-    EmbeddingModel,
-    EmbeddingProvider,
-    Environment,
-    LogLevel,
-    SearchAccuracy,
-    SearchStrategy,
-    VectorType,
-)
+from .enums import ChunkingStrategy
+from .enums import CrawlProvider
+from .enums import EmbeddingModel
+from .enums import EmbeddingProvider
+from .enums import Environment
+from .enums import LogLevel
+from .enums import SearchStrategy
 
 
 class CacheConfig(BaseModel):
     """Simple cache configuration."""
-    
+
     enable_caching: bool = Field(default=True)
     dragonfly_url: str = Field(default="redis://localhost:6379")
     local_max_size: int = Field(default=1000, gt=0)
@@ -35,7 +34,7 @@ class CacheConfig(BaseModel):
 
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
-    
+
     url: str = Field(default="http://localhost:6333")
     api_key: str | None = Field(default=None)
     timeout: float = Field(default=30.0, gt=0)
@@ -45,7 +44,7 @@ class QdrantConfig(BaseModel):
 
 class OpenAIConfig(BaseModel):
     """OpenAI API configuration."""
-    
+
     api_key: str | None = Field(default=None)
     model: str = Field(default="text-embedding-3-small")
     dimensions: int = Field(default=1536, gt=0, le=3072)
@@ -63,7 +62,7 @@ class OpenAIConfig(BaseModel):
 
 class FastEmbedConfig(BaseModel):
     """FastEmbed local embeddings configuration."""
-    
+
     model: str = Field(default="BAAI/bge-small-en-v1.5")
     cache_dir: str | None = Field(default=None)
     max_length: int = Field(default=512, gt=0)
@@ -72,7 +71,7 @@ class FastEmbedConfig(BaseModel):
 
 class FirecrawlConfig(BaseModel):
     """Firecrawl API configuration."""
-    
+
     api_key: str | None = Field(default=None)
     api_url: str = Field(default="https://api.firecrawl.dev")
     timeout: float = Field(default=30.0, gt=0)
@@ -87,7 +86,7 @@ class FirecrawlConfig(BaseModel):
 
 class Crawl4AIConfig(BaseModel):
     """Crawl4AI configuration."""
-    
+
     browser_type: str = Field(default="chromium")
     headless: bool = Field(default=True)
     max_concurrent_crawls: int = Field(default=10, gt=0, le=50)
@@ -98,7 +97,7 @@ class Crawl4AIConfig(BaseModel):
 
 class ChunkingConfig(BaseModel):
     """Document chunking configuration."""
-    
+
     chunk_size: int = Field(default=1600, gt=0)
     chunk_overlap: int = Field(default=320, ge=0)
     strategy: ChunkingStrategy = Field(default=ChunkingStrategy.ENHANCED)
@@ -118,7 +117,7 @@ class ChunkingConfig(BaseModel):
 
 class EmbeddingConfig(BaseModel):
     """Embedding model configuration."""
-    
+
     provider: EmbeddingProvider = Field(default=EmbeddingProvider.FASTEMBED)
     dense_model: EmbeddingModel = Field(default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL)
     search_strategy: SearchStrategy = Field(default=SearchStrategy.DENSE)
@@ -127,7 +126,7 @@ class EmbeddingConfig(BaseModel):
 
 class SecurityConfig(BaseModel):
     """Basic security settings."""
-    
+
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)
     require_api_keys: bool = Field(default=True)
@@ -138,7 +137,7 @@ class SecurityConfig(BaseModel):
 
 class SQLAlchemyConfig(BaseModel):
     """Database configuration."""
-    
+
     database_url: str = Field(default="sqlite+aiosqlite:///data/app.db")
     echo_queries: bool = Field(default=False)
     pool_size: int = Field(default=20, gt=0, le=100)
@@ -148,15 +147,15 @@ class SQLAlchemyConfig(BaseModel):
 
 class PlaywrightConfig(BaseModel):
     """Playwright browser configuration."""
-    
+
     browser: str = Field(default="chromium")
     headless: bool = Field(default=True)
     timeout: int = Field(default=30000, gt=0)
-    
-    
+
+
 class BrowserUseConfig(BaseModel):
     """BrowserUse automation configuration."""
-    
+
     llm_provider: str = Field(default="openai")
     model: str = Field(default="gpt-4o-mini")
     headless: bool = Field(default=True)
@@ -165,7 +164,7 @@ class BrowserUseConfig(BaseModel):
 
 class HyDEConfig(BaseModel):
     """HyDE configuration."""
-    
+
     enable_hyde: bool = Field(default=True)
     num_generations: int = Field(default=5, ge=1, le=10)
     generation_temperature: float = Field(default=0.7, ge=0.0, le=1.0)
@@ -173,7 +172,7 @@ class HyDEConfig(BaseModel):
 
 class PerformanceConfig(BaseModel):
     """Performance settings."""
-    
+
     max_concurrent_requests: int = Field(default=10, gt=0, le=100)
     request_timeout: float = Field(default=30.0, gt=0)
     max_retries: int = Field(default=3, ge=0, le=10)
@@ -183,7 +182,7 @@ class PerformanceConfig(BaseModel):
 
 class DocumentationSite(BaseModel):
     """Documentation site to crawl."""
-    
+
     name: str = Field(...)
     url: HttpUrl = Field(...)
     max_pages: int = Field(default=50, gt=0)
@@ -191,26 +190,34 @@ class DocumentationSite(BaseModel):
     priority: str = Field(default="medium")
 
 
+class MonitoringConfig(BaseModel):
+    """Basic monitoring configuration."""
+
+    enable_metrics: bool = Field(default=False)
+    enable_health_checks: bool = Field(default=True)
+    metrics_port: int = Field(default=8001, gt=0, le=65535)
+
+
 class Config(BaseSettings):
     """Main application configuration.
-    
+
     Consolidated configuration using Pydantic Settings best practices.
     Follows KISS principles with only essential settings for V1.
     """
-    
+
     # Environment
     environment: Environment = Field(default=Environment.DEVELOPMENT)
     debug: bool = Field(default=False)
     log_level: LogLevel = Field(default=LogLevel.INFO)
-    
+
     # App info
     app_name: str = Field(default="AI Documentation Vector DB")
     version: str = Field(default="0.1.0")
-    
+
     # Provider preferences
     embedding_provider: EmbeddingProvider = Field(default=EmbeddingProvider.FASTEMBED)
     crawl_provider: CrawlProvider = Field(default=CrawlProvider.CRAWL4AI)
-    
+
     # Component configs
     cache: CacheConfig = Field(default_factory=CacheConfig)
     database: SQLAlchemyConfig = Field(default_factory=SQLAlchemyConfig)
@@ -226,15 +233,16 @@ class Config(BaseSettings):
     hyde: HyDEConfig = Field(default_factory=HyDEConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
-    
+    monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(default_factory=list)
-    
+
     # File paths
     data_dir: Path = Field(default=Path("data"))
     cache_dir: Path = Field(default=Path("cache"))
     logs_dir: Path = Field(default=Path("logs"))
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -243,22 +251,55 @@ class Config(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-    
+
     @model_validator(mode="after")
     def validate_provider_keys(self) -> "Config":
         """Validate required API keys for selected providers."""
-        if self.embedding_provider == EmbeddingProvider.OPENAI and not self.openai.api_key:
-            raise ValueError("OpenAI API key required when using OpenAI embedding provider")
-        if self.crawl_provider == CrawlProvider.FIRECRAWL and not self.firecrawl.api_key:
+        if (
+            self.embedding_provider == EmbeddingProvider.OPENAI
+            and not self.openai.api_key
+        ):
+            raise ValueError(
+                "OpenAI API key required when using OpenAI embedding provider"
+            )
+        if (
+            self.crawl_provider == CrawlProvider.FIRECRAWL
+            and not self.firecrawl.api_key
+        ):
             raise ValueError("Firecrawl API key required when using Firecrawl provider")
         return self
-    
+
     @model_validator(mode="after")
     def create_directories(self) -> "Config":
         """Create required directories."""
         for dir_path in [self.data_dir, self.cache_dir, self.logs_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
         return self
+
+    @classmethod
+    def load_from_file(cls, config_path: Path | str) -> "Config":
+        """Load configuration from a specific file."""
+        config_path = Path(config_path)
+        if config_path.suffix == ".json":
+            import json
+
+            with open(config_path) as f:
+                data = json.load(f)
+            return cls(**data)
+        elif config_path.suffix in [".yaml", ".yml"]:
+            import yaml
+
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls(**data)
+        elif config_path.suffix == ".toml":
+            import tomllib
+
+            with open(config_path, "rb") as f:
+                data = tomllib.load(f)
+            return cls(**data)
+        else:
+            raise ValueError(f"Unsupported config file format: {config_path.suffix}")
 
 
 # Singleton pattern

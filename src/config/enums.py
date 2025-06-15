@@ -8,13 +8,15 @@ from enum import Enum
 
 class Environment(str, Enum):
     """Application environment."""
+
     DEVELOPMENT = "development"
-    STAGING = "staging" 
+    STAGING = "staging"
     PRODUCTION = "production"
 
 
 class LogLevel(str, Enum):
     """Logging levels."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -24,12 +26,14 @@ class LogLevel(str, Enum):
 
 class EmbeddingProvider(str, Enum):
     """Embedding providers."""
+
     OPENAI = "openai"
     FASTEMBED = "fastembed"
 
 
 class EmbeddingModel(str, Enum):
     """Embedding models."""
+
     TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"
     TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"
     TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
@@ -39,12 +43,14 @@ class EmbeddingModel(str, Enum):
 
 class CrawlProvider(str, Enum):
     """Crawling providers."""
+
     FIRECRAWL = "firecrawl"
     CRAWL4AI = "crawl4ai"
 
 
 class ChunkingStrategy(str, Enum):
     """Document chunking strategies."""
+
     BASIC = "basic"
     ENHANCED = "enhanced"
     AST_AWARE = "ast_aware"
@@ -52,6 +58,7 @@ class ChunkingStrategy(str, Enum):
 
 class SearchStrategy(str, Enum):
     """Vector search strategies."""
+
     DENSE = "dense"
     SPARSE = "sparse"
     HYBRID = "hybrid"
@@ -59,6 +66,7 @@ class SearchStrategy(str, Enum):
 
 class SearchAccuracy(str, Enum):
     """Search accuracy levels."""
+
     FAST = "fast"
     BALANCED = "balanced"
     ACCURATE = "accurate"
@@ -67,6 +75,7 @@ class SearchAccuracy(str, Enum):
 
 class VectorType(str, Enum):
     """Vector types for search optimization."""
+
     DENSE = "dense"
     SPARSE = "sparse"
     HYDE = "hyde"
@@ -74,7 +83,65 @@ class VectorType(str, Enum):
 
 class CacheType(str, Enum):
     """Cache data types."""
+
     EMBEDDINGS = "embeddings"
     CRAWL = "crawl"
     SEARCH = "search"
     HYDE = "hyde"
+
+
+# Additional enums needed by the codebase
+class DocumentStatus(str, Enum):
+    """Document processing status."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class QueryType(str, Enum):
+    """Query types."""
+
+    SIMPLE = "simple"
+    COMPLEX = "complex"
+    SEMANTIC = "semantic"
+
+
+class QueryComplexity(str, Enum):
+    """Query complexity levels."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class ModelType(str, Enum):
+    """Model types."""
+
+    EMBEDDING = "embedding"
+    RERANKING = "reranking"
+
+
+class OptimizationStrategy(str, Enum):
+    """Optimization strategies."""
+
+    SPEED = "speed"
+    ACCURACY = "accuracy"
+    BALANCED = "balanced"
+
+
+class FusionAlgorithm(str, Enum):
+    """Fusion algorithms for hybrid search."""
+
+    RRF = "rrf"  # Reciprocal Rank Fusion
+    LINEAR = "linear"
+    WEIGHTED = "weighted"
+
+
+class ABTestVariant(str, Enum):
+    """A/B test variants."""
+
+    CONTROL = "control"
+    VARIANT_A = "variant_a"
+    VARIANT_B = "variant_b"

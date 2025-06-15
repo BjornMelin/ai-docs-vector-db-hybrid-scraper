@@ -19,8 +19,8 @@ else:
 
 
 from ...chunking import EnhancedChunker
-from ...config.enums import ChunkingStrategy
 from ...config import ChunkingConfig
+from ...config.enums import ChunkingStrategy
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import BatchRequest

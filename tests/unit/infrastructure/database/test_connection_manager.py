@@ -17,6 +17,7 @@ from unittest.mock import patch
 import pytest
 from src.config import SQLAlchemyConfig
 from src.infrastructure.database.connection_manager import AsyncConnectionManager
+
 # Using simple circuit breaker instead of enhanced
 from src.infrastructure.database.load_monitor import LoadMetrics
 from src.infrastructure.database.load_monitor import LoadMonitor

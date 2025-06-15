@@ -39,8 +39,8 @@ from .orchestrator import AdvancedSearchRequest
 from .orchestrator import AdvancedSearchResult
 from .orchestrator import ProcessingStage
 from .orchestrator import SearchMode
-from .orchestrator import SearchPipeline
 from .orchestrator import SearchOrchestrator
+from .orchestrator import SearchPipeline
 from .orchestrator import SearchRequest
 from .orchestrator import SearchResult as OrchestratorSearchResult
 from .pipeline import QueryProcessingPipeline

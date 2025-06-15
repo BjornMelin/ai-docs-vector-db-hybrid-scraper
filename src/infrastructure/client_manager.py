@@ -54,10 +54,9 @@ class ClientManager:
         This factory method loads configuration from environment variables
         and creates a properly configured ClientManager instance.
         """
-        from src.config.loader import ConfigLoader
 
         # Load the unified configuration
-        unified_config = ConfigLoader.load_config()
+        unified_config = get_config()
         return cls(unified_config)
 
     @classmethod

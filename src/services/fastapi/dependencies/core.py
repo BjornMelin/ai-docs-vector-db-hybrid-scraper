@@ -11,13 +11,11 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi import Request
-from src.config.fastapi import FastAPIProductionConfig
-from src.config.fastapi import get_fastapi_config
-from src.config import UnifiedConfig
+from src.config import get_config, Config
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.fastapi.middleware.tracing import get_correlation_id
+# Removed tracing middleware import (over-engineered)
 from src.services.vector_db.service import QdrantService
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
@@ -29,14 +27,13 @@ class DependencyContainer:
 
     def __init__(self):
         """Initialize dependency container."""
-        self._config: UnifiedConfig | None = None
-        self._fastapi_config: FastAPIProductionConfig | None = None
+        self._config: Config | None = None
         self._vector_service: QdrantService | None = None
         self._embedding_manager: EmbeddingManager | None = None
         self._cache_manager: CacheManager | None = None
         self._initialized = False
 
-    async def initialize(self, config: UnifiedConfig | None = None) -> None:
+    async def initialize(self, config: Config | None = None) -> None:
         """Initialize all dependencies.
 
         Args:
@@ -48,12 +45,9 @@ class DependencyContainer:
         try:
             # Load configurations
             if config is None:
-                from src.config.loader import load_config
-
-                config = load_config()
+                config = get_config()
 
             self._config = config
-            self._fastapi_config = get_fastapi_config()
 
             # Initialize core services
             client_manager = ClientManager(config)

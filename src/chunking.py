@@ -9,9 +9,10 @@ import re
 from typing import Any
 from typing import ClassVar
 
-# Handle both module and script imports
-from src.config.enums import ChunkingStrategy
 from src.config import ChunkingConfig
+
+# Handle both module and script imports
+from src.config import ChunkingStrategy
 from src.models.document_processing import Chunk
 from src.models.document_processing import CodeBlock
 from src.models.document_processing import CodeLanguage

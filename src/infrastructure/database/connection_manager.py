@@ -23,6 +23,7 @@ from .adaptive_config import AdaptationStrategy
 from .adaptive_config import AdaptiveConfigManager
 from .connection_affinity import ConnectionAffinityManager
 from .connection_affinity import QueryType
+
 # Simple circuit breaker is used instead of enhanced multi-level version
 from .load_monitor import LoadMonitor
 from .load_monitor import LoadMonitorConfig
@@ -92,9 +93,7 @@ class AsyncConnectionManager:
         else:
             # Create default simple circuit breaker
             self.circuit_breaker = CircuitBreaker(
-                failure_threshold=5,
-                recovery_timeout=60.0,
-                half_open_requests=2
+                failure_threshold=5, recovery_timeout=60.0, half_open_requests=2
             )
 
         # Connection affinity manager for query optimization
@@ -357,7 +356,6 @@ class AsyncConnectionManager:
 
             logger.error(f"Query execution failed: {e}")
             raise
-
 
     async def register_connection(
         self, connection_id: str, specialization: str | None = None

@@ -24,11 +24,11 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import SearchOrchestrator
-from ...services.query_processing import SearchRequest
 from ...services.query_processing import ProcessingStage
 from ...services.query_processing import SearchMode
+from ...services.query_processing import SearchOrchestrator
 from ...services.query_processing import SearchPipeline
+from ...services.query_processing import SearchRequest
 from ..models.responses import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -114,9 +114,7 @@ class OrchestrationRequest(BaseModel):
 # Helper function to create the orchestrator
 def create_orchestrator() -> SearchOrchestrator:
     """Create and configure the search orchestrator."""
-    return SearchOrchestrator(
-        enable_performance_optimization=True
-    )
+    return SearchOrchestrator(enable_performance_optimization=True)
 
 
 # Individual tool implementations
@@ -160,7 +158,9 @@ async def query_expansion_tool(
                 metadata=r.get("metadata", {}),
                 score=r.get("score", 0.0),
                 source=r.get("metadata", {}).get("source", "unknown"),
-                relevance_explanation=f"Query expanded: {result.expanded_query}" if result.expanded_query else "Query processed",
+                relevance_explanation=f"Query expanded: {result.expanded_query}"
+                if result.expanded_query
+                else "Query processed",
             )
             converted_results.append(search_result)
 

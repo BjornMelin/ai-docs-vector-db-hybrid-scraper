@@ -4,26 +4,29 @@ This module provides a streamlined search orchestrator that maintains core funct
 and valuable V2 features. Includes query expansion, clustering, personalization, and federation.
 """
 
-import asyncio
 import logging
 import time
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 from ..base import BaseService
-from .clustering import ResultClusteringRequest, ResultClusteringService
-from .expansion import QueryExpansionRequest, QueryExpansionService
-from .federated import FederatedSearchRequest, FederatedSearchService
-from .ranking import PersonalizedRankingRequest, PersonalizedRankingService
+from .clustering import ResultClusteringRequest
+from .clustering import ResultClusteringService
+from .expansion import QueryExpansionRequest
+from .expansion import QueryExpansionService
+from .federated import FederatedSearchService
+from .ranking import PersonalizedRankingRequest
+from .ranking import PersonalizedRankingService
 
 logger = logging.getLogger(__name__)
 
 
 class SearchMode(str, Enum):
     """Search execution modes."""
-    
+
     BASIC = "basic"  # Basic search without advanced features
     ENHANCED = "enhanced"  # Search with expansion and filtering
     FULL = "full"  # All features enabled
@@ -31,7 +34,7 @@ class SearchMode(str, Enum):
 
 class SearchPipeline(str, Enum):
     """Pipeline configurations."""
-    
+
     FAST = "fast"  # Optimized for speed
     BALANCED = "balanced"  # Balance between speed and quality
     COMPREHENSIVE = "comprehensive"  # Maximum quality and features
@@ -39,27 +42,31 @@ class SearchPipeline(str, Enum):
 
 class SearchRequest(BaseModel):
     """Search request parameters."""
-    
+
     # Core parameters
     query: str = Field(..., description="Search query")
     collection_name: str | None = Field(None, description="Target collection")
     limit: int = Field(10, ge=1, le=1000, description="Maximum results")
     offset: int = Field(0, ge=0, description="Result offset")
-    
+
     # Feature flags
     mode: SearchMode = Field(SearchMode.ENHANCED, description="Search mode")
-    pipeline: SearchPipeline = Field(SearchPipeline.BALANCED, description="Pipeline config")
-    
+    pipeline: SearchPipeline = Field(
+        SearchPipeline.BALANCED, description="Pipeline config"
+    )
+
     # Optional features
     enable_expansion: bool = Field(True, description="Enable query expansion")
     enable_clustering: bool = Field(False, description="Enable result clustering")
-    enable_personalization: bool = Field(False, description="Enable personalized ranking")
+    enable_personalization: bool = Field(
+        False, description="Enable personalized ranking"
+    )
     enable_federation: bool = Field(False, description="Enable federated search")
-    
+
     # User context
     user_id: str | None = Field(None, description="User ID for personalization")
     session_id: str | None = Field(None, description="Session ID")
-    
+
     # Performance
     enable_caching: bool = Field(True, description="Enable result caching")
     max_processing_time_ms: float = Field(5000.0, description="Max processing time")
@@ -67,31 +74,33 @@ class SearchRequest(BaseModel):
 
 class SearchResult(BaseModel):
     """Search result with metadata."""
-    
+
     results: list[dict[str, Any]] = Field(..., description="Search results")
     total_results: int = Field(..., ge=0, description="Total results found")
     query_processed: str = Field(..., description="Final processed query")
     processing_time_ms: float = Field(..., ge=0.0, description="Processing time")
-    
+
     # Feature metadata
     expanded_query: str | None = Field(None, description="Expanded query if applicable")
     clusters: list[dict[str, Any]] | None = Field(None, description="Result clusters")
-    features_used: list[str] = Field(default_factory=list, description="Features applied")
-    
+    features_used: list[str] = Field(
+        default_factory=list, description="Features applied"
+    )
+
     # Caching
     cache_hit: bool = Field(False, description="Whether result was cached")
 
 
 class SearchOrchestrator(BaseService):
     """Search orchestrator with essential features."""
-    
+
     def __init__(
         self,
         cache_size: int = 1000,
         enable_performance_optimization: bool = True,
     ):
         """Initialize search orchestrator.
-        
+
         Args:
             cache_size: Size of result cache
             enable_performance_optimization: Enable performance optimizations
@@ -100,16 +109,16 @@ class SearchOrchestrator(BaseService):
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
         )
-        
+
         # Configuration
         self.enable_performance_optimization = enable_performance_optimization
-        
+
         # Initialize services (lazy loading)
-        self._query_expansion_service: Optional[QueryExpansionService] = None
-        self._clustering_service: Optional[ResultClusteringService] = None
-        self._ranking_service: Optional[PersonalizedRankingService] = None
-        self._federated_service: Optional[FederatedSearchService] = None
-        
+        self._query_expansion_service: QueryExpansionService | None = None
+        self._clustering_service: ResultClusteringService | None = None
+        self._ranking_service: PersonalizedRankingService | None = None
+        self._federated_service: FederatedSearchService | None = None
+
         # Pipeline configurations
         self.pipeline_configs = {
             SearchPipeline.FAST: {
@@ -131,11 +140,11 @@ class SearchOrchestrator(BaseService):
                 "max_processing_time_ms": 10000.0,
             },
         }
-        
+
         # Simple caching
         self.cache = {}
         self.cache_size = cache_size
-        
+
         # Performance tracking
         self.stats = {
             "total_searches": 0,
@@ -143,47 +152,47 @@ class SearchOrchestrator(BaseService):
             "cache_hits": 0,
             "cache_misses": 0,
         }
-    
+
     @property
     def query_expansion_service(self) -> QueryExpansionService:
         """Lazy load query expansion service."""
         if self._query_expansion_service is None:
             self._query_expansion_service = QueryExpansionService()
         return self._query_expansion_service
-    
+
     @property
     def clustering_service(self) -> ResultClusteringService:
         """Lazy load clustering service."""
         if self._clustering_service is None:
             self._clustering_service = ResultClusteringService()
         return self._clustering_service
-    
+
     @property
     def ranking_service(self) -> PersonalizedRankingService:
         """Lazy load ranking service."""
         if self._ranking_service is None:
             self._ranking_service = PersonalizedRankingService()
         return self._ranking_service
-    
+
     @property
     def federated_service(self) -> FederatedSearchService:
         """Lazy load federated search service."""
         if self._federated_service is None:
             self._federated_service = FederatedSearchService()
         return self._federated_service
-    
+
     async def search(self, request: SearchRequest) -> SearchResult:
         """Execute search with optimized pipeline.
-        
+
         Args:
             request: Search request
-            
+
         Returns:
             SearchResult with processed results
         """
         start_time = time.time()
         features_used = []
-        
+
         try:
             # Check cache first
             if request.enable_caching:
@@ -195,16 +204,19 @@ class SearchOrchestrator(BaseService):
                     return cached_result
                 else:
                     self.stats["cache_misses"] += 1
-            
+
             # Apply pipeline configuration
             config = self._apply_pipeline_config(request)
-            
+
             # Process query
             processed_query = request.query
             expanded_query = None
-            
+
             # Step 1: Query expansion (if enabled)
-            if config.get("enable_expansion", False) and request.mode != SearchMode.BASIC:
+            if (
+                config.get("enable_expansion", False)
+                and request.mode != SearchMode.BASIC
+            ):
                 try:
                     expansion_request = QueryExpansionRequest(
                         original_query=request.query,
@@ -220,12 +232,12 @@ class SearchOrchestrator(BaseService):
                         features_used.append("query_expansion")
                 except Exception as e:
                     self._logger.warning(f"Query expansion failed: {e}")
-            
+
             # Step 2: Execute search (would call actual search service)
             search_results = await self._execute_search(
                 processed_query, request, config
             )
-            
+
             # Step 3: Post-processing (clustering, ranking, etc.)
             if search_results:
                 # Clustering (if enabled)
@@ -235,8 +247,10 @@ class SearchOrchestrator(BaseService):
                             results=search_results,
                             num_clusters=min(5, len(search_results) // 3),
                         )
-                        clustering_result = await self.clustering_service.cluster_results(
-                            clustering_request
+                        clustering_result = (
+                            await self.clustering_service.cluster_results(
+                                clustering_request
+                            )
                         )
                         # Add cluster info to results
                         for cluster in clustering_result.clusters:
@@ -248,7 +262,7 @@ class SearchOrchestrator(BaseService):
                         features_used.append("result_clustering")
                     except Exception as e:
                         self._logger.warning(f"Clustering failed: {e}")
-                
+
                 # Personalized ranking (if enabled)
                 if config.get("enable_personalization", False) and request.user_id:
                     try:
@@ -267,13 +281,13 @@ class SearchOrchestrator(BaseService):
                         features_used.append("personalized_ranking")
                     except Exception as e:
                         self._logger.warning(f"Personalized ranking failed: {e}")
-            
+
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000
-            
+
             # Build result
             result = SearchResult(
-                results=search_results[:request.limit],
+                results=search_results[: request.limit],
                 total_results=len(search_results),
                 query_processed=processed_query,
                 processing_time_ms=processing_time,
@@ -281,21 +295,21 @@ class SearchOrchestrator(BaseService):
                 features_used=features_used,
                 cache_hit=False,
             )
-            
+
             # Cache result
             if request.enable_caching and len(self.cache) < self.cache_size:
                 cache_key = self._get_cache_key(request)
                 self.cache[cache_key] = result
-            
+
             # Update stats
             self.stats["total_searches"] += 1
             self.stats["avg_processing_time"] = (
-                (self.stats["avg_processing_time"] * (self.stats["total_searches"] - 1) + processing_time)
-                / self.stats["total_searches"]
-            )
-            
+                self.stats["avg_processing_time"] * (self.stats["total_searches"] - 1)
+                + processing_time
+            ) / self.stats["total_searches"]
+
             return result
-            
+
         except Exception as e:
             self._logger.error(f"Search failed: {e}")
             # Return minimal result on error
@@ -306,12 +320,12 @@ class SearchOrchestrator(BaseService):
                 processing_time_ms=(time.time() - start_time) * 1000,
                 features_used=features_used,
             )
-    
+
     def _apply_pipeline_config(self, request: SearchRequest) -> dict[str, Any]:
         """Apply pipeline configuration to request."""
         # Start with pipeline defaults
         config = self.pipeline_configs.get(request.pipeline.value, {}).copy()
-        
+
         # Override with explicit request settings
         if hasattr(request, "enable_expansion"):
             config["enable_expansion"] = request.enable_expansion
@@ -321,9 +335,9 @@ class SearchOrchestrator(BaseService):
             config["enable_personalization"] = request.enable_personalization
         if hasattr(request, "max_processing_time_ms"):
             config["max_processing_time_ms"] = request.max_processing_time_ms
-            
+
         return config
-    
+
     async def _execute_search(
         self, query: str, request: SearchRequest, config: dict[str, Any]
     ) -> list[dict[str, Any]]:
@@ -332,21 +346,23 @@ class SearchOrchestrator(BaseService):
         # For now, return mock results
         results = []
         for i in range(20):  # Mock 20 results
-            results.append({
-                "id": f"doc_{i}",
-                "content": f"Result {i} for query: {query}",
-                "score": 0.9 - (i * 0.04),
-                "metadata": {"source": f"collection_{i % 3}"},
-            })
+            results.append(
+                {
+                    "id": f"doc_{i}",
+                    "content": f"Result {i} for query: {query}",
+                    "score": 0.9 - (i * 0.04),
+                    "metadata": {"source": f"collection_{i % 3}"},
+                }
+            )
         return results
-    
+
     def _apply_ranking(
         self, results: list[dict[str, Any]], ranking_result: Any
     ) -> list[dict[str, Any]]:
         """Apply personalized ranking to results."""
         # Create a mapping of result IDs to results
         result_map = {r["id"]: r for r in results}
-        
+
         # Re-order based on ranking
         ranked_results = []
         for ranked in ranking_result.ranked_results:
@@ -354,14 +370,14 @@ class SearchOrchestrator(BaseService):
                 result = result_map[ranked.result_id]
                 result["personalized_score"] = ranked.final_score
                 ranked_results.append(result)
-        
+
         # Add any results not in ranking (shouldn't happen, but be safe)
         for result in results:
             if result["id"] not in [r["id"] for r in ranked_results]:
                 ranked_results.append(result)
-                
+
         return ranked_results
-    
+
     def _get_cache_key(self, request: SearchRequest) -> str:
         """Generate cache key for request."""
         # Simple cache key based on essential parameters
@@ -374,20 +390,20 @@ class SearchOrchestrator(BaseService):
             request.user_id or "anonymous",
         ]
         return "|".join(key_parts)
-    
+
     def get_stats(self) -> dict[str, Any]:
         """Get orchestrator statistics."""
         return self.stats.copy()
-    
+
     def clear_cache(self) -> None:
         """Clear the result cache."""
         self.cache.clear()
         self._logger.info("Cache cleared")
-    
+
     async def initialize(self) -> None:
         """Initialize the orchestrator."""
         self._logger.info("SearchOrchestrator initialized")
-    
+
     async def cleanup(self) -> None:
         """Cleanup orchestrator resources."""
         self.clear_cache()
@@ -403,10 +419,11 @@ AdvancedSearchResult = SearchResult
 # Also export with simplified name for transition
 SimplifiedOrchestrator = SearchOrchestrator
 
+
 # Legacy enums that may be imported elsewhere
 class ProcessingStage(str, Enum):
     """Processing stages for backward compatibility."""
-    
+
     PREPROCESSING = "preprocessing"
     EXPANSION = "expansion"
     FILTERING = "filtering"

@@ -15,9 +15,9 @@ from typing import Any
 
 import psutil
 
+from .load_monitor import LoadMetrics
 from .load_monitor import LoadMonitor
 from .load_monitor import LoadMonitorConfig
-from .load_monitor import LoadMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ class SimpleLoadMonitor(LoadMonitor):
                 cpu_usage_percent=cpu_percent,
                 avg_response_time_ms=self._avg_response_time,
                 connection_errors=self._connection_errors,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
 
         except Exception as e:
@@ -104,12 +104,12 @@ class SimpleLoadMonitor(LoadMonitor):
                 cpu_usage_percent=50.0,
                 avg_response_time_ms=0.0,
                 connection_errors=0,
-                timestamp=time.time()
+                timestamp=time.time(),
             )
-    
+
     def _get_simple_load(self) -> float:
         """Get simple load value as a float 0-1.
-        
+
         Returns:
             Load factor between 0.0 and 1.0
         """

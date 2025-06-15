@@ -7,32 +7,27 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-
-from src.config import (
-    CacheConfig,
-    ChunkingConfig,
-    Config,
-    Crawl4AIConfig,
-    DocumentationSite,
-    EmbeddingConfig,
-    FastEmbedConfig,
-    FirecrawlConfig,
-    OpenAIConfig,
-    PerformanceConfig,
-    QdrantConfig,
-    SecurityConfig,
-    UnifiedConfig,
-    get_config,
-    reset_config,
-    set_config,
-)
-from src.config.enums import (
-    ChunkingStrategy,
-    CrawlProvider,
-    EmbeddingProvider,
-    Environment,
-    LogLevel,
-)
+from src.config import CacheConfig
+from src.config import ChunkingConfig
+from src.config import Config
+from src.config import Crawl4AIConfig
+from src.config import DocumentationSite
+from src.config import EmbeddingConfig
+from src.config import FastEmbedConfig
+from src.config import FirecrawlConfig
+from src.config import OpenAIConfig
+from src.config import PerformanceConfig
+from src.config import QdrantConfig
+from src.config import SecurityConfig
+from src.config import UnifiedConfig
+from src.config import get_config
+from src.config import reset_config
+from src.config import set_config
+from src.config.enums import ChunkingStrategy
+from src.config.enums import CrawlProvider
+from src.config.enums import EmbeddingProvider
+from src.config.enums import Environment
+from src.config.enums import LogLevel
 
 
 class TestCacheConfig:
@@ -116,7 +111,9 @@ class TestOpenAIConfig:
         assert config.api_key == "sk-1234567890abcdef"
 
         # Invalid API key (no sk- prefix)
-        with pytest.raises(ValidationError, match="OpenAI API key must start with 'sk-'"):
+        with pytest.raises(
+            ValidationError, match="OpenAI API key must start with 'sk-'"
+        ):
             OpenAIConfig(api_key="invalid-key")
 
     def test_custom_values(self):
@@ -159,7 +156,9 @@ class TestFirecrawlConfig:
         assert config.api_key == "fc-1234567890abcdef"
 
         # Invalid API key (no fc- prefix)
-        with pytest.raises(ValidationError, match="Firecrawl API key must start with 'fc-'"):
+        with pytest.raises(
+            ValidationError, match="Firecrawl API key must start with 'fc-'"
+        ):
             FirecrawlConfig(api_key="invalid-key")
 
 
@@ -185,15 +184,21 @@ class TestChunkingConfig:
         assert config.chunk_size == 1000
 
         # Invalid: overlap >= chunk_size
-        with pytest.raises(ValidationError, match="chunk_overlap must be less than chunk_size"):
+        with pytest.raises(
+            ValidationError, match="chunk_overlap must be less than chunk_size"
+        ):
             ChunkingConfig(chunk_size=1000, chunk_overlap=1000)
 
         # Invalid: min_chunk_size > chunk_size
-        with pytest.raises(ValidationError, match="min_chunk_size must be <= chunk_size"):
+        with pytest.raises(
+            ValidationError, match="min_chunk_size must be <= chunk_size"
+        ):
             ChunkingConfig(chunk_size=1000, min_chunk_size=1500)
 
         # Invalid: max_chunk_size < chunk_size
-        with pytest.raises(ValidationError, match="max_chunk_size must be >= chunk_size"):
+        with pytest.raises(
+            ValidationError, match="max_chunk_size must be >= chunk_size"
+        ):
             ChunkingConfig(chunk_size=2000, max_chunk_size=1500)
 
 
@@ -272,12 +277,15 @@ class TestConfig:
 
     def test_environment_variables(self):
         # Test environment variable loading
-        with patch.dict(os.environ, {
-            "AI_DOCS_DEBUG": "true",
-            "AI_DOCS_LOG_LEVEL": "DEBUG",
-            "AI_DOCS_EMBEDDING_PROVIDER": "openai",
-            "AI_DOCS_OPENAI__API_KEY": "sk-test-env",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "AI_DOCS_DEBUG": "true",
+                "AI_DOCS_LOG_LEVEL": "DEBUG",
+                "AI_DOCS_EMBEDDING_PROVIDER": "openai",
+                "AI_DOCS_OPENAI__API_KEY": "sk-test-env",
+            },
+        ):
             config = Config()
             assert config.debug is True
             assert config.log_level == LogLevel.DEBUG
@@ -287,7 +295,9 @@ class TestConfig:
     def test_documentation_sites(self):
         sites = [
             DocumentationSite(name="Test Docs", url="https://example.com"),
-            DocumentationSite(name="API Docs", url="https://api.example.com", max_pages=100),
+            DocumentationSite(
+                name="API Docs", url="https://api.example.com", max_pages=100
+            ),
         ]
         config = Config(documentation_sites=sites)
         assert len(config.documentation_sites) == 2
@@ -315,7 +325,7 @@ class TestConfigSingleton:
     def test_set_config(self):
         custom_config = Config(app_name="Custom App")
         set_config(custom_config)
-        
+
         retrieved_config = get_config()
         assert retrieved_config is custom_config
         assert retrieved_config.app_name == "Custom App"
@@ -399,7 +409,9 @@ class TestConfigIntegration:
             chunking=ChunkingConfig(chunk_size=2000, chunk_overlap=400),
             documentation_sites=[
                 DocumentationSite(name="Main Docs", url="https://docs.example.com"),
-                DocumentationSite(name="API Docs", url="https://api.example.com", max_pages=200),
+                DocumentationSite(
+                    name="API Docs", url="https://api.example.com", max_pages=200
+                ),
             ],
         )
 
@@ -414,9 +426,9 @@ class TestConfigIntegration:
 
     def test_config_with_env_file(self):
         """Test configuration loading with environment file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("AI_DOCS_DEBUG=true\n")
-            f.write("AI_DOCS_LOG_LEVEL=DEBUG\n") 
+            f.write("AI_DOCS_LOG_LEVEL=DEBUG\n")
             f.write("AI_DOCS_OPENAI__API_KEY=sk-env-test\n")
             env_file = f.name
 

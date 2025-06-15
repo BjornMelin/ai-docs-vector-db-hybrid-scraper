@@ -537,7 +537,7 @@ def mock_multi_level_circuit_breaker():
 
     # Simple circuit breaker only has call method, not execute
     breaker.call = AsyncMock(side_effect=mock_call)
-    
+
     # For compatibility with tests expecting execute
     breaker.execute = breaker.call
 
@@ -550,7 +550,7 @@ def mock_multi_level_circuit_breaker():
     )
 
     # Simple circuit breaker doesn't have force_close or get_failure_analysis methods
-    
+
     return breaker
 
 

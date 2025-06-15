@@ -13,9 +13,8 @@ try:
 except ImportError:
     FlagReranker = None
 
-from src.config import UnifiedConfig
-from src.config.loader import ConfigLoader
 from src.config import ModelBenchmark
+from src.config import UnifiedConfig
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider

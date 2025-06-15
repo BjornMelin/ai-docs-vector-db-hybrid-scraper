@@ -1,25 +1,19 @@
 """Tests for search orchestrator."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-from src.services.query_processing.orchestrator import (
-    SearchOrchestrator,
-    SearchRequest,
-    SearchResult,
-    SearchMode,
-    SearchPipeline,
-)
-from src.services.query_processing.expansion import QueryExpansionResult, ExpandedTerm
-from src.services.query_processing.clustering import (
-    ResultClusteringResult,
-    ClusterGroup,
-    SearchResult as ClusterSearchResult,
-)
-from src.services.query_processing.ranking import (
-    PersonalizedRankingResult,
-    RankedResult,
-)
+from src.services.query_processing.clustering import ClusterGroup
+from src.services.query_processing.clustering import ResultClusteringResult
+from src.services.query_processing.clustering import SearchResult as ClusterSearchResult
+from src.services.query_processing.expansion import QueryExpansionResult
+from src.services.query_processing.orchestrator import SearchMode
+from src.services.query_processing.orchestrator import SearchOrchestrator
+from src.services.query_processing.orchestrator import SearchPipeline
+from src.services.query_processing.orchestrator import SearchRequest
+from src.services.query_processing.orchestrator import SearchResult
+from src.services.query_processing.ranking import PersonalizedRankingResult
+from src.services.query_processing.ranking import RankedResult
 
 
 @pytest.fixture
@@ -51,7 +45,7 @@ def mock_expansion_service():
 def mock_clustering_service():
     """Mock clustering service."""
     service = AsyncMock()
-    
+
     # Create mock search results for clustering
     mock_results = [
         ClusterSearchResult(
@@ -63,7 +57,7 @@ def mock_clustering_service():
         )
         for i in range(3)
     ]
-    
+
     service.cluster_results = AsyncMock(
         return_value=ResultClusteringResult(
             clusters=[
@@ -126,9 +120,9 @@ async def test_basic_search(orchestrator):
         enable_clustering=False,
         enable_personalization=False,
     )
-    
+
     result = await orchestrator.search(request)
-    
+
     assert isinstance(result, SearchResult)
     assert result.query_processed == "test query"
     assert len(result.results) <= 10
@@ -138,21 +132,19 @@ async def test_basic_search(orchestrator):
 
 
 @pytest.mark.asyncio
-async def test_search_with_query_expansion(
-    orchestrator, mock_expansion_service
-):
+async def test_search_with_query_expansion(orchestrator, mock_expansion_service):
     """Test search with query expansion enabled."""
     orchestrator._query_expansion_service = mock_expansion_service
-    
+
     request = SearchRequest(
         query="test",
         limit=10,
         mode=SearchMode.ENHANCED,
         enable_expansion=True,
     )
-    
+
     result = await orchestrator.search(request)
-    
+
     assert result.query_processed == "test OR testing OR tests"
     assert result.expanded_query == "test OR testing OR tests"
     assert "query_expansion" in result.features_used
@@ -163,25 +155,25 @@ async def test_search_with_query_expansion(
 async def test_search_with_clustering(orchestrator, mock_clustering_service):
     """Test search with result clustering enabled."""
     orchestrator._clustering_service = mock_clustering_service
-    
+
     request = SearchRequest(
         query="test",
         limit=10,
         mode=SearchMode.ENHANCED,
         enable_clustering=True,
     )
-    
+
     # Override _execute_search to return enough results for clustering
     async def mock_execute_search(query, request, config):
         return [
             {"id": f"doc_{i}", "content": f"Result {i}", "score": 0.9 - (i * 0.1)}
             for i in range(10)
         ]
-    
+
     orchestrator._execute_search = mock_execute_search
-    
+
     result = await orchestrator.search(request)
-    
+
     assert "result_clustering" in result.features_used
     mock_clustering_service.cluster_results.assert_called_once()
 
@@ -190,7 +182,7 @@ async def test_search_with_clustering(orchestrator, mock_clustering_service):
 async def test_search_with_personalization(orchestrator, mock_ranking_service):
     """Test search with personalized ranking enabled."""
     orchestrator._ranking_service = mock_ranking_service
-    
+
     request = SearchRequest(
         query="test",
         limit=10,
@@ -198,9 +190,9 @@ async def test_search_with_personalization(orchestrator, mock_ranking_service):
         mode=SearchMode.ENHANCED,
         enable_personalization=True,
     )
-    
+
     result = await orchestrator.search(request)
-    
+
     assert "personalized_ranking" in result.features_used
     mock_ranking_service.rank_results.assert_called_once()
 
@@ -215,7 +207,7 @@ async def test_pipeline_configurations(orchestrator):
     )
     result = await orchestrator.search(request)
     assert result.processing_time_ms < 5000  # Should be fast
-    
+
     # Test BALANCED pipeline
     request = SearchRequest(
         query="test",
@@ -223,7 +215,7 @@ async def test_pipeline_configurations(orchestrator):
     )
     result = await orchestrator.search(request)
     assert "query_expansion" in result.features_used or len(result.features_used) >= 0
-    
+
     # Test COMPREHENSIVE pipeline
     request = SearchRequest(
         query="test",
@@ -242,11 +234,11 @@ async def test_caching(orchestrator):
         limit=10,
         enable_caching=True,
     )
-    
+
     # First call - should not be cached
     result1 = await orchestrator.search(request)
     assert not result1.cache_hit
-    
+
     # Second call - should be cached
     result2 = await orchestrator.search(request)
     assert result2.cache_hit
@@ -256,19 +248,20 @@ async def test_caching(orchestrator):
 @pytest.mark.asyncio
 async def test_error_handling(orchestrator):
     """Test error handling in search."""
+
     # Mock _execute_search to raise an error
     async def mock_failing_search(query, request, config):
         raise Exception("Search failed")
-    
+
     orchestrator._execute_search = mock_failing_search
-    
+
     request = SearchRequest(
         query="test",
         limit=10,
     )
-    
+
     result = await orchestrator.search(request)
-    
+
     # Should return empty results on error
     assert result.results == []
     assert result.total_results == 0
@@ -280,10 +273,10 @@ async def test_stats_tracking(orchestrator):
     """Test statistics tracking."""
     initial_stats = orchestrator.get_stats()
     assert initial_stats["total_searches"] == 0
-    
+
     request = SearchRequest(query="test", limit=10)
     await orchestrator.search(request)
-    
+
     stats = orchestrator.get_stats()
     assert stats["total_searches"] == 1
     assert stats["avg_processing_time"] > 0
@@ -293,11 +286,11 @@ async def test_stats_tracking(orchestrator):
 async def test_cache_clearing(orchestrator):
     """Test cache clearing functionality."""
     request = SearchRequest(query="test", limit=10, enable_caching=True)
-    
+
     # Populate cache
     await orchestrator.search(request)
     assert len(orchestrator.cache) > 0
-    
+
     # Clear cache
     orchestrator.clear_cache()
     assert len(orchestrator.cache) == 0
@@ -306,12 +299,10 @@ async def test_cache_clearing(orchestrator):
 @pytest.mark.asyncio
 async def test_backward_compatibility():
     """Test backward compatibility aliases."""
-    from src.services.query_processing.orchestrator import (
-        AdvancedSearchOrchestrator,
-        AdvancedSearchRequest,
-        AdvancedSearchResult,
-    )
-    
+    from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
+    from src.services.query_processing.orchestrator import AdvancedSearchRequest
+    from src.services.query_processing.orchestrator import AdvancedSearchResult
+
     # Check aliases work
     assert AdvancedSearchOrchestrator == SearchOrchestrator
     assert AdvancedSearchRequest == SearchRequest
@@ -326,11 +317,11 @@ async def test_features_with_failures(
     # Make expansion fail
     mock_expansion_service.expand_query.side_effect = Exception("Expansion failed")
     orchestrator._query_expansion_service = mock_expansion_service
-    
+
     # Make clustering fail
     mock_clustering_service.cluster_results.side_effect = Exception("Clustering failed")
     orchestrator._clustering_service = mock_clustering_service
-    
+
     request = SearchRequest(
         query="test",
         limit=10,
@@ -338,18 +329,18 @@ async def test_features_with_failures(
         enable_expansion=True,
         enable_clustering=True,
     )
-    
+
     # Override _execute_search to return results
     async def mock_execute_search(query, request, config):
         return [
             {"id": f"doc_{i}", "content": f"Result {i}", "score": 0.9 - (i * 0.1)}
             for i in range(10)
         ]
-    
+
     orchestrator._execute_search = mock_execute_search
-    
+
     result = await orchestrator.search(request)
-    
+
     # Should still return results despite feature failures
     assert len(result.results) > 0
     assert result.query_processed == "test"  # Original query since expansion failed

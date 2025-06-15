@@ -7,9 +7,9 @@ class and all its health check methods.
 from unittest.mock import Mock
 from unittest.mock import patch
 
+from src.config import UnifiedConfig
 from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
-from src.config import UnifiedConfig
 from src.utils.health_checks import ServiceHealthChecker
 
 
