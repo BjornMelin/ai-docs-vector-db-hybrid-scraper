@@ -5,7 +5,7 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.errors import APIError
 from src.services.utilities.rate_limiter import AdaptiveRateLimiter
 from src.services.utilities.rate_limiter import RateLimiter

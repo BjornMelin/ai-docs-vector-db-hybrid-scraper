@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.utils.health_checks import ServiceHealthChecker
 
 

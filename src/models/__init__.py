@@ -11,26 +11,39 @@ Usage:
 
 # Configuration models
 # API contract models
-from ..config.models import CacheConfig
-from ..config.models import ChunkingConfig
-from ..config.models import CollectionHNSWConfigs
-from ..config.models import Crawl4AIConfig
-from ..config.models import DocumentationSite
-from ..config.models import EmbeddingConfig
-from ..config.models import FastEmbedConfig
-from ..config.models import FirecrawlConfig
-from ..config.models import HNSWConfig
-from ..config.models import HyDEConfig
-from ..config.models import ModelBenchmark
-from ..config.models import OpenAIConfig
-from ..config.models import PerformanceConfig
-from ..config.models import QdrantConfig
-from ..config.models import SecurityConfig
-from ..config.models import SmartSelectionConfig
-from ..config.models import UnifiedConfig
-from ..config.models import get_config
-from ..config.models import reset_config
-from ..config.models import set_config
+from ..config import CacheConfig
+from ..config import ChunkingConfig
+from ..config import Crawl4AIConfig
+from ..config import DocumentationSite
+from ..config import EmbeddingConfig
+from ..config import FastEmbedConfig
+from ..config import FirecrawlConfig
+from ..config import HyDEConfig
+from ..config import OpenAIConfig
+from ..config import PerformanceConfig
+from ..config import QdrantConfig
+from ..config import SecurityConfig
+from ..config import UnifiedConfig
+from ..config import get_config
+from ..config import reset_config
+from ..config import set_config
+
+# Legacy compatibility - these were removed in consolidation
+class CollectionHNSWConfigs:
+    """Legacy compatibility - removed during config simplification."""
+    pass
+
+class HNSWConfig:
+    """Legacy compatibility - removed during config simplification."""
+    pass
+
+class ModelBenchmark:
+    """Legacy compatibility - removed during config simplification."""
+    pass
+
+class SmartSelectionConfig:
+    """Legacy compatibility - removed during config simplification."""
+    pass
 from .api_contracts import AdvancedSearchRequest
 from .api_contracts import AnalyticsRequest
 from .api_contracts import AnalyticsResponse

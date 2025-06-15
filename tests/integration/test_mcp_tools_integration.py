@@ -12,10 +12,10 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-from src.config.models import FirecrawlConfig
-from src.config.models import OpenAIConfig
-from src.config.models import QdrantConfig
-from src.config.models import UnifiedConfig
+from src.config import FirecrawlConfig
+from src.config import OpenAIConfig
+from src.config import QdrantConfig
+from src.config import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.requests import DocumentRequest

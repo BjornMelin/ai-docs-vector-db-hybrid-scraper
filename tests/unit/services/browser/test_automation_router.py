@@ -7,10 +7,10 @@ from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
-from src.config.models import BrowserUseConfig
-from src.config.models import Crawl4AIConfig
-from src.config.models import PlaywrightConfig
-from src.config.models import UnifiedConfig
+from src.config import BrowserUseConfig
+from src.config import Crawl4AIConfig
+from src.config import PlaywrightConfig
+from src.config import UnifiedConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 

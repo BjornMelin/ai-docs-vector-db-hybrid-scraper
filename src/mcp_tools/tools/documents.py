@@ -19,10 +19,10 @@ else:
 
 
 from ...chunking import EnhancedChunker
+from ...config import ChunkingConfig
 from ...config.enums import ChunkingStrategy
-from ...config.models import ChunkingConfig
 from ...infrastructure.client_manager import ClientManager
-from ...security import SecurityValidator
+from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import BatchRequest
 from ..models.requests import DocumentRequest
 

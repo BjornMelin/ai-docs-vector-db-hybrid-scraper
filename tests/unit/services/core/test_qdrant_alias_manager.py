@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from qdrant_client.models import CreateAliasOperation
 from qdrant_client.models import DeleteAliasOperation
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.base import BaseService
 from src.services.core.qdrant_alias_manager import MAX_NAME_LENGTH
 from src.services.core.qdrant_alias_manager import VALID_NAME_PATTERN

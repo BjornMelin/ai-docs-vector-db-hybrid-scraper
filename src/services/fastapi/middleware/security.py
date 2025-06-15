@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 
-from src.config.fastapi import SecurityConfig
+from src.config import SecurityConfig
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse

@@ -11,13 +11,12 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi import Request
-from src.config.fastapi import FastAPIProductionConfig
-from src.config.fastapi import get_fastapi_config
-from src.config.models import UnifiedConfig
+from src.config import Config
+from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.fastapi.middleware.tracing import get_correlation_id
+from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
@@ -29,14 +28,13 @@ class DependencyContainer:
 
     def __init__(self):
         """Initialize dependency container."""
-        self._config: UnifiedConfig | None = None
-        self._fastapi_config: FastAPIProductionConfig | None = None
+        self._config: Config | None = None
         self._vector_service: QdrantService | None = None
         self._embedding_manager: EmbeddingManager | None = None
         self._cache_manager: CacheManager | None = None
         self._initialized = False
 
-    async def initialize(self, config: UnifiedConfig | None = None) -> None:
+    async def initialize(self, config: Config | None = None) -> None:
         """Initialize all dependencies.
 
         Args:
@@ -48,12 +46,9 @@ class DependencyContainer:
         try:
             # Load configurations
             if config is None:
-                from src.config.loader import load_config
-
-                config = load_config()
+                config = get_config()
 
             self._config = config
-            self._fastapi_config = get_fastapi_config()
 
             # Initialize core services
             client_manager = ClientManager(config)
@@ -97,18 +92,11 @@ class DependencyContainer:
         return self._initialized
 
     @property
-    def config(self) -> UnifiedConfig:
-        """Get unified configuration."""
+    def config(self) -> Config:
+        """Get configuration."""
         if not self._config:
             raise RuntimeError("Dependency container not initialized")
         return self._config
-
-    @property
-    def fastapi_config(self) -> FastAPIProductionConfig:
-        """Get FastAPI configuration."""
-        if not self._fastapi_config:
-            raise RuntimeError("Dependency container not initialized")
-        return self._fastapi_config
 
     @property
     def vector_service(self) -> QdrantService:
@@ -152,7 +140,7 @@ def get_container() -> DependencyContainer:
     return _container
 
 
-async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
+async def initialize_dependencies(config: Config | None = None) -> None:
     """Initialize the global dependency container.
 
     Args:
@@ -175,11 +163,11 @@ async def cleanup_dependencies() -> None:
 # FastAPI dependency functions
 
 
-def get_config() -> UnifiedConfig:
-    """FastAPI dependency for unified configuration.
+def get_config_dependency() -> Config:
+    """FastAPI dependency for configuration.
 
     Returns:
-        Unified configuration instance
+        Configuration instance
     """
     return get_container().config
 
@@ -336,7 +324,7 @@ class ServiceHealthChecker:
         # Check vector service
         try:
             # Attempt a simple health check operation
-            await self.container.vector_service.health_check()
+            await self.container.vector_service.list_collections()
             health["services"]["vector_db"] = {"status": "healthy"}
         except Exception as e:
             health["status"] = "degraded"
@@ -377,11 +365,10 @@ __all__ = [
     "cleanup_dependencies",
     "database_session",
     "get_cache_manager",
-    "get_config",
+    "get_config_dependency",
     "get_container",
     "get_correlation_id_dependency",
     "get_embedding_manager",
-    "get_fastapi_config",
     "get_health_checker",
     "get_request_context",
     "get_vector_service",

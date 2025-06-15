@@ -14,7 +14,8 @@ from .collections import QdrantCollections
 from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
-from .search_interceptor import SearchInterceptor
+
+# Removed search interceptor (over-engineered deployment infrastructure)
 
 if TYPE_CHECKING:
     from ...infrastructure.client_manager import ClientManager
@@ -41,8 +42,7 @@ class QdrantService(BaseService):
         self._search: QdrantSearch | None = None
         self._indexing: QdrantIndexing | None = None
         self._documents: QdrantDocuments | None = None
-        self._search_interceptor: SearchInterceptor | None = None
-        self._canary_router = None
+        # Removed deployment infrastructure components
 
     async def initialize(self) -> None:
         """Initialize all Qdrant modules with connection validation.
@@ -66,45 +66,7 @@ class QdrantService(BaseService):
             # Initialize each module
             await self._collections.initialize()
 
-            # Initialize search interceptor with canary routing if available
-            try:
-                cache_manager = await self._client_manager.get_cache_manager()
-                redis_client = None
-
-                # Try to get Redis client for event publishing
-                try:
-                    redis_client = await self._client_manager.get_redis_client()
-                except Exception:
-                    logger.debug("Redis client not available for search interceptor")
-
-                if cache_manager and cache_manager.distributed_cache:
-                    from ..deployment.canary_router import CanaryRouter
-
-                    self._canary_router = CanaryRouter(
-                        cache=cache_manager.distributed_cache,
-                        config=self.config,
-                    )
-
-                    self._search_interceptor = SearchInterceptor(
-                        search_service=self._search,
-                        router=self._canary_router,
-                        config=self.config,
-                        redis_client=redis_client,
-                    )
-                    logger.info("Search interceptor initialized with canary routing")
-                else:
-                    # No canary routing, use direct search
-                    self._search_interceptor = SearchInterceptor(
-                        search_service=self._search,
-                        router=None,
-                        config=self.config,
-                        redis_client=redis_client,
-                    )
-                    logger.info("Search interceptor initialized without canary routing")
-            except Exception as e:
-                logger.warning(f"Failed to initialize search interceptor: {e}")
-                # Fallback to direct search without interceptor
-                self._search_interceptor = None
+            # Simple initialization without deployment infrastructure
 
             self._initialized = True
             logger.info("QdrantService initialized with modular architecture")
@@ -293,30 +255,16 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.hybrid_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                sparse_vector=sparse_vector,
-                limit=limit,
-                score_threshold=score_threshold,
-                fusion_type=fusion_type,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
-                request_id=request_id,
-            )
-        else:
-            # Fallback to direct search
-            return await self._search.hybrid_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                sparse_vector=sparse_vector,
-                limit=limit,
-                score_threshold=score_threshold,
-                fusion_type=fusion_type,
-                search_accuracy=search_accuracy,
-            )
+        # Direct search (deployment infrastructure removed)
+        return await self._search.hybrid_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            sparse_vector=sparse_vector,
+            limit=limit,
+            score_threshold=score_threshold,
+            fusion_type=fusion_type,
+            search_accuracy=search_accuracy,
+        )
 
     async def multi_stage_search(
         self,
@@ -350,26 +298,14 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.multi_stage_search(
-                collection_name=collection_name,
-                stages=stages,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
-                request_id=request_id,
-            )
-        else:
-            # Fallback to direct search
-            return await self._search.multi_stage_search(
-                collection_name=collection_name,
-                stages=stages,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-            )
+        # Direct search (deployment infrastructure removed)
+        return await self._search.multi_stage_search(
+            collection_name=collection_name,
+            stages=stages,
+            limit=limit,
+            fusion_algorithm=fusion_algorithm,
+            search_accuracy=search_accuracy,
+        )
 
     async def hyde_search(
         self,
@@ -404,30 +340,16 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.hyde_search(
-                collection_name=collection_name,
-                query=query,
-                query_embedding=query_embedding,
-                hypothetical_embeddings=hypothetical_embeddings,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
-                request_id=request_id,
-            )
-        else:
-            # Fallback to direct search
-            return await self._search.hyde_search(
-                collection_name=collection_name,
-                query=query,
-                query_embedding=query_embedding,
-                hypothetical_embeddings=hypothetical_embeddings,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-            )
+        # Direct search (deployment infrastructure removed)
+        return await self._search.hyde_search(
+            collection_name=collection_name,
+            query=query,
+            query_embedding=query_embedding,
+            hypothetical_embeddings=hypothetical_embeddings,
+            limit=limit,
+            fusion_algorithm=fusion_algorithm,
+            search_accuracy=search_accuracy,
+        )
 
     async def filtered_search(
         self,
@@ -458,26 +380,14 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                filters=filters,
-                limit=limit,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
-                request_id=request_id,
-            )
-        else:
-            # Fallback to direct search
-            return await self._search.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                filters=filters,
-                limit=limit,
-                search_accuracy=search_accuracy,
-            )
+        # Direct search (deployment infrastructure removed)
+        return await self._search.filtered_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            filters=filters,
+            limit=limit,
+            search_accuracy=search_accuracy,
+        )
 
     # Indexing API (delegates to QdrantIndexing)
 

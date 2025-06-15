@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from prometheus_client.registry import CollectorRegistry
-from src.config.models import MonitoringConfig
+from src.config import MonitoringConfig
 from src.services.monitoring.initialization import cleanup_monitoring
 from src.services.monitoring.initialization import initialize_monitoring_system
 from src.services.monitoring.initialization import run_periodic_health_checks

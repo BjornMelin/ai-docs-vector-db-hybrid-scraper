@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from dataclasses import field
 
 import psutil
-from src.config.fastapi import PerformanceConfig
+from src.config import PerformanceConfig
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response

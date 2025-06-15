@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-from src.config.models import PlaywrightConfig
+from src.config import PlaywrightConfig
 from src.services.browser.playwright_adapter import PlaywrightAdapter
 from src.services.errors import CrawlServiceError
 

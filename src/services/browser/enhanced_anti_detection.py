@@ -14,7 +14,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from ...config.models import PlaywrightConfig
+from ...config import PlaywrightConfig
 
 
 class UserAgentPool(BaseModel):

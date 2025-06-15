@@ -39,8 +39,10 @@ from .orchestrator import AdvancedSearchRequest
 from .orchestrator import AdvancedSearchResult
 from .orchestrator import ProcessingStage
 from .orchestrator import SearchMode
+from .orchestrator import SearchOrchestrator
 from .orchestrator import SearchPipeline
-from .orchestrator import StageResult
+from .orchestrator import SearchRequest
+from .orchestrator import SearchResult as OrchestratorSearchResult
 from .pipeline import QueryProcessingPipeline
 from .preprocessor import QueryPreprocessor
 from .ranking import InteractionEvent
@@ -80,6 +82,7 @@ __all__ = [
     # Interaction handling
     "InteractionEvent",
     "InteractionType",
+    "OrchestratorSearchResult",
     # Outlier detection
     "OutlierResult",
     # Personalized ranking
@@ -108,12 +111,14 @@ __all__ = [
     "ResultMergingStrategy",
     # Search configuration
     "SearchMode",
+    # Search orchestrator
+    "SearchOrchestrator",
     "SearchPipeline",
+    "SearchRequest",
     "SearchResult",
     "SearchStrategySelector",
     # Similarity metrics
     "SimilarityMetric",
-    "StageResult",
     # Term relationships
     "TermRelationType",
     # User profile
