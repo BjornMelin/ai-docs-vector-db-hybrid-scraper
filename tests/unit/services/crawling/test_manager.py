@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.crawling.base import CrawlProvider
 from src.services.crawling.manager import CrawlManager
 from src.services.errors import CrawlServiceError

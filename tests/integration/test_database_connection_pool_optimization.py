@@ -14,7 +14,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import SQLAlchemyConfig
+from src.config import SQLAlchemyConfig
 from src.infrastructure.database.connection_manager import AsyncConnectionManager
 from src.infrastructure.database.load_monitor import LoadMonitor
 from src.infrastructure.database.load_monitor import LoadMonitorConfig

@@ -7,7 +7,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 from bs4 import BeautifulSoup
-from src.config.models import LightweightScraperConfig
+from src.config import LightweightScraperConfig
 from src.services.crawling.lightweight_scraper import LightweightScraper
 from src.services.crawling.lightweight_scraper import TierRecommendation
 from src.services.errors import CrawlServiceError

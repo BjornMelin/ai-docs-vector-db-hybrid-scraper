@@ -13,7 +13,7 @@ from fastapi import HTTPException
 from fastapi import Request
 from src.config.fastapi import FastAPIProductionConfig
 from src.config.fastapi import get_fastapi_config
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
 from src.services.embeddings.manager import EmbeddingManager

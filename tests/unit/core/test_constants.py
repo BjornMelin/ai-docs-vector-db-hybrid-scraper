@@ -12,12 +12,12 @@ from src.config.enums import HttpStatus
 from src.config.enums import LogLevel
 from src.config.enums import SearchAccuracy
 from src.config.enums import VectorType
-from src.config.models import CacheConfig
-from src.config.models import ChunkingConfig
-from src.config.models import CollectionHNSWConfigs
-from src.config.models import HNSWConfig
-from src.config.models import PerformanceConfig
-from src.config.models import VectorSearchConfig
+from src.config import CacheConfig
+from src.config import ChunkingConfig
+from src.config import CollectionHNSWConfigs
+from src.config import HNSWConfig
+from src.config import PerformanceConfig
+from src.config import VectorSearchConfig
 from src.core import constants
 
 

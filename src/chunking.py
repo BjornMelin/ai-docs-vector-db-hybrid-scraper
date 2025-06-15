@@ -11,7 +11,7 @@ from typing import ClassVar
 
 # Handle both module and script imports
 from src.config.enums import ChunkingStrategy
-from src.config.models import ChunkingConfig
+from src.config import ChunkingConfig
 from src.models.document_processing import Chunk
 from src.models.document_processing import CodeBlock
 from src.models.document_processing import CodeLanguage

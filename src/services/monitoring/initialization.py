@@ -7,8 +7,8 @@ for FastMCP-based applications.
 import asyncio
 import logging
 
-from src.config.models import MonitoringConfig
-from src.config.models import UnifiedConfig
+from src.config import MonitoringConfig
+from src.config import UnifiedConfig
 
 from .health import HealthCheckManager
 from .metrics import MetricsConfig

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.deployment.blue_green import BlueGreenDeployment
 from src.services.errors import ServiceError
 

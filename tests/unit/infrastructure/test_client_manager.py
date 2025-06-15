@@ -626,7 +626,7 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_get_database_manager_creation(self):
         """Test creation of database manager."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
         config = UnifiedConfig()
         config.database = SQLAlchemyConfig(
@@ -674,7 +674,7 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_in_managed_client(self):
         """Test database manager through managed_client interface."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
         config = UnifiedConfig()
         config.database = SQLAlchemyConfig(
@@ -697,7 +697,7 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_cleanup(self):
         """Test database manager is included in cleanup."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
         config = UnifiedConfig()
         config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
@@ -720,7 +720,7 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_circuit_breaker_configuration(self):
         """Test database manager uses circuit breaker from performance config."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
         config = UnifiedConfig()
         config.database = SQLAlchemyConfig(

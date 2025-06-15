@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ...config.models import SQLAlchemyConfig
+from ...config import SQLAlchemyConfig
 from ...infrastructure.shared import CircuitBreaker
 from .adaptive_config import AdaptationStrategy
 from .adaptive_config import AdaptiveConfigManager

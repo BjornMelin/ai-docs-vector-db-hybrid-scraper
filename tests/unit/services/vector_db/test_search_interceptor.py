@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.deployment.canary_router import CanaryRouter
 from src.services.deployment.canary_router import RouteDecision
 from src.services.errors import QdrantServiceError

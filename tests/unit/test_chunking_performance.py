@@ -10,7 +10,7 @@ import time
 import pytest
 from src.chunking import EnhancedChunker
 from src.config.enums import ChunkingStrategy
-from src.config.models import ChunkingConfig
+from src.config import ChunkingConfig
 
 
 class TestChunkingPerformance:

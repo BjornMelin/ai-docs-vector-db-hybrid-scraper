@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from pydantic import Field
 
-from ...config.models import UnifiedConfig
+from ...config import UnifiedConfig
 from ..base import BaseService
 
 logger = logging.getLogger(__name__)

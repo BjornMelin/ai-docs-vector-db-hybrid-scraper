@@ -426,7 +426,7 @@ def _check_browser_availability() -> bool:
 @pytest.fixture()
 def enhanced_db_config():
     """Enhanced SQLAlchemy configuration for testing."""
-    from src.config.models import SQLAlchemyConfig
+    from src.config import SQLAlchemyConfig
 
     return SQLAlchemyConfig(
         database_url="sqlite+aiosqlite:///:memory:",

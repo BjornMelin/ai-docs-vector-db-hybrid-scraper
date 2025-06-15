@@ -19,7 +19,7 @@ from rich.text import Text
 from src.config.backup_restore import ConfigBackupManager
 from src.config.loader import ConfigLoader
 from src.config.migrations import ConfigMigrationManager
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.config.templates import ConfigurationTemplates
 from src.config.wizard import ConfigurationWizard
 from src.utils.health_checks import ServiceHealthChecker

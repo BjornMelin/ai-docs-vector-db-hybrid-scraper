@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.deployment.canary_router import CanaryRoute
 from src.services.deployment.canary_router import CanaryRouter
 from src.services.deployment.canary_router import RouteDecision

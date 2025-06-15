@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.services.deployment.ab_testing import ABTestingManager
 from src.services.deployment.ab_testing import ExperimentResults
 from src.services.errors import ServiceError

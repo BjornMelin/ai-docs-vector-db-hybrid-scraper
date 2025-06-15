@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import PlaywrightConfig
+from src.config import PlaywrightConfig
 from src.services.browser.enhanced_anti_detection import BrowserStealthConfig
 from src.services.browser.enhanced_anti_detection import EnhancedAntiDetection
 from src.services.browser.enhanced_anti_detection import SiteProfile

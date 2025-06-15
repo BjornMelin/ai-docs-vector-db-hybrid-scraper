@@ -15,7 +15,7 @@ except ImportError:
 
 from src.config import UnifiedConfig
 from src.config.loader import ConfigLoader
-from src.config.models import ModelBenchmark
+from src.config import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider

@@ -22,7 +22,7 @@ try:
 except ImportError:
     MEMORY_ADAPTIVE_AVAILABLE = False
 
-from ...config.models import Crawl4AIConfig
+from ...config import Crawl4AIConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.utils.health_checks import ServiceHealthChecker
 
 

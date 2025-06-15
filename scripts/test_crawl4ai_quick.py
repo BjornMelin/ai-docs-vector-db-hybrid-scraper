@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 async def test_crawl4ai():
     """Quick test of Crawl4AI functionality."""
-    from src.config.models import Crawl4AIConfig
+    from src.config import Crawl4AIConfig
 
     config = Crawl4AIConfig(
         max_concurrent_crawls=1,

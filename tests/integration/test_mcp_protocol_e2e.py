@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
 
 from tests.mocks.mock_tools import MockMCPServer

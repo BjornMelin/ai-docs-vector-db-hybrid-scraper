@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import FirecrawlConfig
+from src.config import FirecrawlConfig
 from src.services.base import BaseService
 from src.services.crawling.base import CrawlProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider

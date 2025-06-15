@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from ...config.models import LightweightScraperConfig
+from ...config import LightweightScraperConfig
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 
