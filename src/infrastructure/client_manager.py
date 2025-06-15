@@ -110,9 +110,7 @@ class ClientManager:
         self._crawl_manager: Any = None
         self._hyde_engine: Any = None
         self._project_storage: Any = None
-        self._blue_green_deployment: Any = None
-        self._ab_testing_manager: Any = None
-        self._canary_deployment: Any = None
+        # Removed deployment infrastructure components
         self._browser_automation_router: Any = None
         self._task_queue_manager: Any = None
         self._content_intelligence_service: Any = None
@@ -148,7 +146,7 @@ class ClientManager:
             "_project_storage",
             "_alias_manager",
             "_blue_green",
-            "_ab_testing",
+            # Removed deployment service health checks
             "_canary",
             "_content_intelligence_service",
             "_database_manager",
@@ -185,9 +183,7 @@ class ClientManager:
         self._cache_manager = None
         self._crawl_manager = None
         self._hyde_engine = None
-        self._blue_green_deployment = None
-        self._ab_testing_manager = None
-        self._canary_deployment = None
+        # Removed deployment infrastructure cleanup
         self._browser_automation_router = None
         self._content_intelligence_service = None
         self._database_manager = None
@@ -402,81 +398,11 @@ class ClientManager:
 
         return self._project_storage
 
-    async def get_blue_green_deployment(self):
-        """Get or create BlueGreenDeployment instance."""
-        if self._blue_green_deployment is None:
-            if "blue_green_deployment" not in self._service_locks:
-                self._service_locks["blue_green_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["blue_green_deployment"]:
-                if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import BlueGreenDeployment
-
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-
-                    self._blue_green_deployment = BlueGreenDeployment(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                    )
-                    logger.info("Initialized BlueGreenDeployment")
-
-        return self._blue_green_deployment
-
-    async def get_ab_testing_manager(self):
-        """Get or create ABTestingManager instance."""
-        if self._ab_testing_manager is None:
-            if "ab_testing_manager" not in self._service_locks:
-                self._service_locks["ab_testing_manager"] = asyncio.Lock()
-
-            async with self._service_locks["ab_testing_manager"]:
-                if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import ABTestingManager
-
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-
-                    self._ab_testing_manager = ABTestingManager(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                    )
-                    logger.info("Initialized ABTestingManager")
-
-        return self._ab_testing_manager
-
-    async def get_canary_deployment(self):
-        """Get or create CanaryDeployment instance."""
-        if self._canary_deployment is None:
-            if "canary_deployment" not in self._service_locks:
-                self._service_locks["canary_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["canary_deployment"]:
-                if self._canary_deployment is None:
-                    from src.services.core.qdrant_alias_manager import (
-                        QdrantAliasManager,
-                    )
-                    from src.services.deployment.canary import CanaryDeployment
-
-                    qdrant_service = await self.get_qdrant_service()
-
-                    # Initialize alias manager
-                    alias_manager = QdrantAliasManager(self.config, qdrant_service)
-                    await alias_manager.initialize()
-
-                    # Get task queue manager (required for canary deployments)
-                    task_queue_manager = await self.get_task_queue_manager()
-
-                    self._canary_deployment = CanaryDeployment(
-                        config=self.config,
-                        alias_manager=alias_manager,
-                        task_queue_manager=task_queue_manager,
-                        qdrant_service=qdrant_service,
-                        client_manager=self,
-                    )
-                    await self._canary_deployment.initialize()
-                    logger.info("Initialized CanaryDeployment")
-
-        return self._canary_deployment
+    # Removed enterprise deployment infrastructure methods:
+    # - get_blue_green_deployment()
+    # - get_ab_testing_manager()
+    # - get_canary_deployment()
+    # These were over-engineered for V1 with 0 users
 
     async def get_browser_automation_router(self):
         """Get or create BrowserAutomationRouter instance."""

@@ -68,21 +68,21 @@ class ProductionMCPServer:
         """Initialize server components."""
         # Configure logging
         configure_logging(self.config.log_level.value, self.config.debug)
-        
+
         # Initialize middleware manager
         self.middleware_manager = get_middleware_manager(self.config)
-        
+
         logger.info("Production MCP server startup complete")
 
     async def shutdown(self) -> None:
         """Cleanup server components."""
         try:
             self._shutdown_event.set()
-            
+
             if self._mcp_server:
                 # FastMCP cleanup would go here if it had cleanup methods
                 logger.info("FastMCP server cleanup complete")
-                
+
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
 
@@ -90,11 +90,13 @@ class ProductionMCPServer:
 
     async def health_check(self, request) -> JSONResponse:
         """Health check endpoint."""
-        return JSONResponse({
-            "status": "healthy",
-            "version": self.config.version,
-            "environment": self.config.environment.value
-        })
+        return JSONResponse(
+            {
+                "status": "healthy",
+                "version": self.config.version,
+                "environment": self.config.environment.value,
+            }
+        )
 
     def create_app(self) -> Starlette:
         """Create Starlette application with middleware."""
@@ -124,10 +126,10 @@ class ProductionMCPServer:
         """Run the production server asynchronously."""
         try:
             import uvicorn
-            
+
             # Create app
             app = self.create_app()
-            
+
             # Run with uvicorn
             config = uvicorn.Config(
                 app,
@@ -136,10 +138,10 @@ class ProductionMCPServer:
                 log_level=self.config.log_level.value.lower(),
                 access_log=self.config.debug,
             )
-            
+
             server = uvicorn.Server(config)
             await server.serve()
-            
+
         except Exception as e:
             logger.error(f"Server error: {e}")
             raise

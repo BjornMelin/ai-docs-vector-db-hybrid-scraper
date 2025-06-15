@@ -56,7 +56,7 @@ class AsyncConnectionManager:
         adaptive_config: AdaptiveConfigManager | None = None,
         enable_connection_affinity: bool = True,
         enable_adaptive_config: bool = True,
-        adaptation_strategy: AdaptationStrategy = AdaptationStrategy.MODERATE,
+        adaptation_strategy: AdaptationStrategy = AdaptationStrategy.BALANCED,
     ):
         """Initialize the simplified connection manager.
 

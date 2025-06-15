@@ -126,7 +126,7 @@ def config():
     config = UnifiedConfig()
     config.openai.api_key = "test-openai-key"
     config.firecrawl.api_key = "test-firecrawl-key"
-    config.cache.enable_dragonfly_cache = False
+    config.cache.enable_caching = False
     return config
 
 

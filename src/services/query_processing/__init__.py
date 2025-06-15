@@ -82,6 +82,7 @@ __all__ = [
     # Interaction handling
     "InteractionEvent",
     "InteractionType",
+    "OrchestratorSearchResult",
     # Outlier detection
     "OutlierResult",
     # Personalized ranking
@@ -110,15 +111,14 @@ __all__ = [
     "ResultMergingStrategy",
     # Search configuration
     "SearchMode",
+    # Search orchestrator
+    "SearchOrchestrator",
     "SearchPipeline",
+    "SearchRequest",
     "SearchResult",
     "SearchStrategySelector",
     # Similarity metrics
     "SimilarityMetric",
-    # Search orchestrator
-    "SearchOrchestrator",
-    "SearchRequest",
-    "OrchestratorSearchResult",
     # Term relationships
     "TermRelationType",
     # User profile

@@ -19,7 +19,6 @@ from urllib.parse import urlparse
 from ...config import UnifiedConfig
 from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
-from .tier_config import EnhancedRoutingConfig
 from .tier_config import PerformanceHistoryEntry
 from .tier_config import TierConfiguration
 from .tier_config import TierPerformanceAnalysis
@@ -29,7 +28,7 @@ from .tier_rate_limiter import TierRateLimiter
 logger = logging.getLogger(__name__)
 
 
-class CircuitBreakerState:
+class TierCircuitBreaker:
     """Circuit breaker state for a tier."""
 
     def __init__(self, tier: str, config: TierConfiguration):
@@ -50,7 +49,7 @@ class CircuitBreakerState:
         self.consecutive_failures += 1
         self.last_failure_time = time.time()
 
-        threshold = self.config.performance_thresholds.max_consecutive_failures
+        threshold = self.config.circuit_breaker_threshold
         if self.consecutive_failures >= threshold:
             self.is_open = True
             logger.warning(
@@ -66,7 +65,7 @@ class CircuitBreakerState:
         # Check if circuit should be reset
         if self.last_failure_time:
             elapsed = time.time() - self.last_failure_time
-            duration = self.config.performance_thresholds.circuit_break_duration_seconds
+            duration = self.config.circuit_breaker_timeout_seconds
             if elapsed > duration:
                 logger.info(
                     f"Circuit breaker reset for {self.tier} after {elapsed:.1f}s"
@@ -86,16 +85,18 @@ class EnhancedAutomationRouter(AutomationRouter):
         super().__init__(config)
 
         # Load enhanced configuration
-        self.routing_config = EnhancedRoutingConfig.get_default_config()
+        from .tier_config import create_default_routing_config
+
+        self.routing_config = create_default_routing_config()
 
         # Performance history tracking
         self.performance_history: deque[PerformanceHistoryEntry] = deque(maxlen=10000)
         self.performance_lock = asyncio.Lock()
 
         # Circuit breakers for each tier
-        self.circuit_breakers: dict[str, CircuitBreakerState] = {}
-        for tier_name, tier_config in self.routing_config.tier_configs.items():
-            self.circuit_breakers[tier_name] = CircuitBreakerState(
+        self.circuit_breakers: dict[str, TierCircuitBreaker] = {}
+        for tier_name, tier_config in self.routing_config.tiers.items():
+            self.circuit_breakers[tier_name] = TierCircuitBreaker(
                 tier_name, tier_config
             )
 
@@ -105,7 +106,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         )
 
         # Rate limiter for tier requests
-        self.rate_limiter = TierRateLimiter(self.routing_config.tier_configs)
+        self.rate_limiter = TierRateLimiter(self.routing_config.tiers)
 
     async def scrape(
         self,
