@@ -17,15 +17,13 @@ from unittest.mock import patch
 import pytest
 from src.config.models import SQLAlchemyConfig
 from src.infrastructure.database.connection_manager import AsyncConnectionManager
-from src.infrastructure.database.enhanced_circuit_breaker import (
-    MultiLevelCircuitBreaker,
-)
+# Using simple circuit breaker instead of enhanced
 from src.infrastructure.database.load_monitor import LoadMetrics
 from src.infrastructure.database.load_monitor import LoadMonitor
 from src.infrastructure.database.load_monitor import LoadMonitorConfig
-from src.infrastructure.database.predictive_monitor import PredictiveLoadMonitor
 from src.infrastructure.database.query_monitor import QueryMonitor
 from src.infrastructure.database.query_monitor import QueryMonitorConfig
+from src.infrastructure.database.simple_monitor import SimpleLoadMonitor
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientState
 
@@ -130,9 +128,9 @@ class TestAsyncConnectionManager:
         manager = AsyncConnectionManager(config)
 
         assert manager.config == config
-        assert isinstance(manager.load_monitor, PredictiveLoadMonitor)
+        assert isinstance(manager.load_monitor, SimpleLoadMonitor)
         assert isinstance(manager.query_monitor, QueryMonitor)
-        assert isinstance(manager.circuit_breaker, MultiLevelCircuitBreaker)
+        assert isinstance(manager.circuit_breaker, CircuitBreaker)
 
     @pytest.mark.asyncio
     @patch("src.infrastructure.database.connection_manager.create_async_engine")

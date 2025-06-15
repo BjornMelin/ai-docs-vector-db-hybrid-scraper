@@ -18,8 +18,10 @@ import pytest
 from src.infrastructure.database.adaptive_config import AdaptationStrategy
 from src.infrastructure.database.connection_affinity import QueryType
 from src.infrastructure.database.connection_manager import AsyncConnectionManager
-from src.infrastructure.database.enhanced_circuit_breaker import FailureType
-from src.infrastructure.database.predictive_monitor import LoadPrediction
+# Simple circuit breaker doesn't have failure types
+
+# Simple load monitoring imports
+from src.infrastructure.database.simple_monitor import SimpleLoadDecision
 
 
 class TestEnhancedAsyncConnectionManager:
@@ -76,7 +78,7 @@ class TestEnhancedAsyncConnectionManager:
     def enhanced_manager(
         self,
         enhanced_db_config,
-        mock_predictive_load_monitor,
+        mock_simple_load_monitor,
         mock_multi_level_circuit_breaker,
         mock_connection_affinity_manager,
         mock_adaptive_config_manager,
@@ -84,10 +86,9 @@ class TestEnhancedAsyncConnectionManager:
         """Create enhanced AsyncConnectionManager with all features enabled."""
         manager = AsyncConnectionManager(
             config=enhanced_db_config,
-            load_monitor=mock_predictive_load_monitor,
+            load_monitor=mock_simple_load_monitor,
             circuit_breaker=mock_multi_level_circuit_breaker,
             adaptive_config=mock_adaptive_config_manager,
-            enable_predictive_monitoring=True,
             enable_connection_affinity=True,
             enable_adaptive_config=True,
             adaptation_strategy=AdaptationStrategy.MODERATE,
@@ -130,10 +131,10 @@ class TestEnhancedAsyncConnectionManager:
             await enhanced_manager.shutdown()
 
     @pytest.mark.asyncio
-    async def test_predictive_load_monitoring_integration(
+    async def test_simple_load_monitoring_integration(
         self, enhanced_manager, mock_engine, mock_session_factory
     ):
-        """Test integration with predictive load monitoring."""
+        """Test integration with simple load monitoring."""
         with (
             patch(
                 "src.infrastructure.database.connection_manager.create_async_engine"
@@ -147,63 +148,27 @@ class TestEnhancedAsyncConnectionManager:
 
             await enhanced_manager.initialize()
 
-            # Test that prediction is used for pool sizing
-            prediction = LoadPrediction(
-                predicted_load=0.8,
-                confidence_score=0.9,
-                recommendation="Scale up immediately",
-                time_horizon_minutes=15,
-                feature_importance={"avg_requests": 0.5},
-                trend_direction="increasing",
+            # Test that simple load decision is used for pool sizing
+            load_decision = SimpleLoadDecision(
+                should_scale_up=True,
+                should_scale_down=False,
+                current_load=0.8,
+                reason="Load 80% > 80% threshold",
+                recommendation="Scale up database connections"
             )
-            enhanced_manager.load_monitor.predict_future_load.return_value = prediction
+            enhanced_manager.load_monitor.get_load_decision.return_value = load_decision
 
-            # Simulate prediction request
-            result = await enhanced_manager.load_monitor.predict_future_load(
-                horizon_minutes=15
-            )
+            # Simulate load decision request
+            result = enhanced_manager.load_monitor.get_load_decision()
 
-            assert result.predicted_load == 0.8
-            assert result.confidence_score == 0.9
+            assert result.current_load == 0.8
+            assert result.should_scale_up is True
             assert "Scale up" in result.recommendation
 
             # Clean up
             await enhanced_manager.shutdown()
 
-    @pytest.mark.asyncio
-    async def test_multi_level_circuit_breaker_integration(
-        self, enhanced_manager, mock_engine, mock_session_factory, mock_session
-    ):
-        """Test integration with multi-level circuit breaker."""
-        with (
-            patch(
-                "src.infrastructure.database.connection_manager.create_async_engine"
-            ) as mock_create_engine,
-            patch(
-                "src.infrastructure.database.connection_manager.async_sessionmaker"
-            ) as mock_sessionmaker,
-        ):
-            mock_create_engine.return_value = mock_engine
-            mock_sessionmaker.return_value = mock_session_factory
-
-            await enhanced_manager.initialize()
-
-            # Mock circuit breaker to return the result
-            mock_result = Mock()
-            mock_result.scalar.return_value = 1
-            enhanced_manager.circuit_breaker.execute.return_value = mock_result
-
-            # Test query execution with enhanced circuit breaker
-            query = "SELECT * FROM users"
-            await enhanced_manager.execute_query(query, query_type=QueryType.READ)
-
-            # Verify circuit breaker was called with correct failure type
-            enhanced_manager.circuit_breaker.execute.assert_called_once()
-            call_args = enhanced_manager.circuit_breaker.execute.call_args
-            assert call_args.kwargs["failure_type"] == FailureType.QUERY
-
-            # Clean up
-            await enhanced_manager.shutdown()
+    # Multi-level circuit breaker test removed - using simple circuit breaker
 
     @pytest.mark.asyncio
     async def test_connection_affinity_integration(
@@ -335,35 +300,20 @@ class TestEnhancedAsyncConnectionManager:
             stats = await enhanced_manager.get_connection_stats()
 
             # Verify all enhanced components provide stats
-            assert "enhanced_circuit_breaker" in stats
+            # Simple monitoring doesn't have enhanced_circuit_breaker or predictive_monitoring stats
             assert "connection_affinity" in stats
             assert "adaptive_config" in stats
-            assert "predictive_monitoring" in stats
 
             # Verify component-specific methods were called
-            enhanced_manager.circuit_breaker.get_health_status.assert_called()
+            # Simple circuit breaker doesn't have get_health_status method
             enhanced_manager.connection_affinity.get_performance_report.assert_called()
             enhanced_manager.adaptive_config.get_current_configuration.assert_called()
-            enhanced_manager.load_monitor.get_prediction_metrics.assert_called()
+            # Simple load monitor doesn't have get_prediction_metrics
 
             # Clean up
             await enhanced_manager.shutdown()
 
-    @pytest.mark.asyncio
-    async def test_failure_type_mapping(self, enhanced_manager):
-        """Test query type to failure type mapping."""
-        # Test mapping function
-        mapping_tests = [
-            (QueryType.READ, FailureType.QUERY),
-            (QueryType.WRITE, FailureType.QUERY),
-            (QueryType.ANALYTICS, FailureType.QUERY),
-            (QueryType.TRANSACTION, FailureType.TRANSACTION),
-            (QueryType.MAINTENANCE, FailureType.QUERY),
-        ]
-
-        for query_type, expected_failure_type in mapping_tests:
-            result = enhanced_manager._map_query_type_to_failure_type(query_type)
-            assert result == expected_failure_type
+    # test_failure_type_mapping removed - not applicable to simple circuit breaker
 
     @pytest.mark.asyncio
     async def test_shutdown_with_all_components(
@@ -435,15 +385,14 @@ class TestEnhancedAsyncConnectionManager:
         # Test with all features disabled
         manager = AsyncConnectionManager(
             config=enhanced_db_config,
-            enable_predictive_monitoring=False,
             enable_connection_affinity=False,
             enable_adaptive_config=False,
         )
 
         assert manager.connection_affinity is None
         assert manager.adaptive_config is None
-        # Load monitor should be basic LoadMonitor, not PredictiveLoadMonitor
-        assert type(manager.load_monitor).__name__ == "LoadMonitor"
+        # Load monitor should be SimpleLoadMonitor
+        assert type(manager.load_monitor).__name__ == "SimpleLoadMonitor"
 
     def test_adaptation_strategy_configuration(self, enhanced_db_config):
         """Test different adaptation strategies."""
@@ -497,7 +446,6 @@ class TestEnhancedConnectionManagerEdgeCases:
 
         manager = AsyncConnectionManager(
             config=enhanced_db_config,
-            enable_predictive_monitoring=True,
             enable_connection_affinity=True,
             enable_adaptive_config=True,
         )
@@ -512,14 +460,18 @@ class TestEnhancedConnectionManagerEdgeCases:
             ) as mock_sessionmaker,
         ):
             mock_create_engine.return_value = mock_engine
-            mock_sessionmaker.return_value = Mock()
-
-            await manager.initialize()
-
-            # Mock circuit breaker to succeed
+            
+            # Create a proper async session mock
+            mock_session = AsyncMock()
             mock_result = Mock()
             mock_result.scalar.return_value = 1
-            manager.circuit_breaker.execute = AsyncMock(return_value=mock_result)
+            mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session.commit = AsyncMock()
+            mock_session.close = AsyncMock()
+            
+            mock_sessionmaker.return_value = Mock(return_value=mock_session)
+
+            await manager.initialize()
 
             # Query should still succeed despite affinity manager failure
             result = await manager.execute_query("SELECT 1")
@@ -535,7 +487,6 @@ class TestEnhancedConnectionManagerEdgeCases:
         """Test stats collection when some components error."""
         manager = AsyncConnectionManager(
             config=enhanced_db_config,
-            enable_predictive_monitoring=True,
             enable_connection_affinity=True,
             enable_adaptive_config=True,
         )
@@ -607,17 +558,10 @@ class TestEnhancedConnectionManagerIntegration:
             }
         )
 
-        # Create a circuit breaker that passes isinstance check
-        from src.infrastructure.database.enhanced_circuit_breaker import (
-            MultiLevelCircuitBreaker,
-        )
-
-        class MockMultiLevelCircuitBreaker(MultiLevelCircuitBreaker):
-            def __init__(self):
-                # Don't call super().__init__ to avoid real initialization
-                pass
-
-        circuit_breaker = MockMultiLevelCircuitBreaker()
+        # Create a simple circuit breaker mock
+        from src.infrastructure.shared import CircuitBreaker
+        
+        circuit_breaker = Mock(spec=CircuitBreaker)
         circuit_breaker.state = Mock()
         circuit_breaker.state.value = "closed"
         circuit_breaker._failure_count = 0
@@ -755,7 +699,7 @@ class TestEnhancedConnectionManagerIntegration:
                 # Test comprehensive stats
                 stats = await manager.get_connection_stats()
                 assert "pool_size" in stats
-                assert "enhanced_circuit_breaker" in stats
+                # Simple circuit breaker doesn't add enhanced_circuit_breaker stats
 
         finally:
             await manager.shutdown()
@@ -799,7 +743,6 @@ class TestEnhancedConnectionManagerIntegration:
             config=enhanced_db_config,
             load_monitor=load_monitor,
             circuit_breaker=circuit_breaker,
-            enable_predictive_monitoring=True,
             enable_connection_affinity=True,
             enable_adaptive_config=False,  # Disable for performance test
         )
