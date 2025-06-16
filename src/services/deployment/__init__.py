@@ -26,10 +26,10 @@ from .models import DeploymentMetrics
 from .models import DeploymentStatus
 
 __all__ = [
-    # A/B Testing
-    "ABTestingManager",
     "ABTestResult",
     "ABTestStatus",
+    # A/B Testing
+    "ABTestingManager",
     # Blue-Green Deployment
     "BlueGreenDeployment",
     "BlueGreenStatus",
@@ -37,12 +37,12 @@ __all__ = [
     "CanaryDeployment",
     "CanaryMetrics",
     "CanaryStatus",
-    # Feature Flags
-    "DeploymentTier",
-    "FeatureFlagManager",
     # Models
     "DeploymentEnvironment",
     "DeploymentHealth",
     "DeploymentMetrics",
     "DeploymentStatus",
+    # Feature Flags
+    "DeploymentTier",
+    "FeatureFlagManager",
 ]

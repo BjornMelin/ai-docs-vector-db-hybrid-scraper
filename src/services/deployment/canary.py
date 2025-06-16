@@ -8,6 +8,7 @@ This module provides enterprise-grade canary deployment capabilities including:
 """
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -725,12 +726,10 @@ class CanaryDeployment:
 
         # Wait for tasks to complete
         if self._monitoring_tasks:
-            try:
+            with contextlib.suppress(Exception):
                 await asyncio.gather(
                     *self._monitoring_tasks.values(), return_exceptions=True
                 )
-            except Exception:
-                pass
 
         self._active_deployments.clear()
         self._deployment_metrics.clear()

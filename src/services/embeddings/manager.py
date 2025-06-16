@@ -14,7 +14,7 @@ except ImportError:
     FlagReranker = None
 
 from src.config import Config
-from src.config import ModelBenchmark
+from src.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider

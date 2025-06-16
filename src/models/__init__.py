@@ -23,7 +23,7 @@ from ..config import OpenAIConfig
 from ..config import PerformanceConfig
 from ..config import QdrantConfig
 from ..config import SecurityConfig
-from ..config import UnifiedConfig
+from ..config import Config
 from ..config import get_config
 from ..config import reset_config
 from ..config import set_config
@@ -208,7 +208,7 @@ __all__ = [
     "SimilarityThresholdCriteria",
     "SmartSelectionConfig",
     "TemporalSearchCriteria",
-    "UnifiedConfig",
+    "Config",
     "ValidationRequest",
     "ValidationResponse",
     "VectorMetrics",

@@ -283,11 +283,6 @@ async def personalized_search_tool(
 
     try:
         # Build personalization configuration
-        personalization_config = {
-            "strength": request.personalization_strength,
-            "use_history": request.use_history,
-            "use_preferences": request.use_preferences,
-        }
 
         # Create search request
         search_request = SearchRequest(
@@ -342,16 +337,11 @@ async def orchestrated_search_tool(
 
     try:
         # Build orchestration configuration
-        orchestration_config = {
-            "time_budget_ms": request.time_budget_ms,
-            "quality_threshold": request.quality_threshold,
-        }
 
         # Determine stages to skip
-        skip_stages = []
         if request.stages:
             all_stages = [s.value for s in ProcessingStage]
-            skip_stages = [s for s in all_stages if s not in request.stages]
+            [s for s in all_stages if s not in request.stages]
 
         # Create search request
         search_request = SearchRequest(

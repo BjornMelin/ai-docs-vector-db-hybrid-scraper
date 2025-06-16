@@ -8,6 +8,7 @@ This module provides enterprise-grade blue-green deployment capabilities includi
 """
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -517,17 +518,13 @@ class BlueGreenDeployment:
         """Cleanup blue-green deployment manager resources."""
         if self._deployment_task:
             self._deployment_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._deployment_task
-            except asyncio.CancelledError:
-                pass
 
         if self._health_check_task:
             self._health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
-            except asyncio.CancelledError:
-                pass
 
         self._deployment_status = BlueGreenStatus.IDLE
         self._current_deployment = None

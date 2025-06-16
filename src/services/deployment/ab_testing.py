@@ -8,6 +8,7 @@ This module provides comprehensive A/B testing capabilities including:
 """
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 from dataclasses import dataclass
@@ -531,10 +532,8 @@ class ABTestingManager:
         """Cleanup A/B testing manager resources."""
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         self._active_tests.clear()
         self._test_metrics.clear()

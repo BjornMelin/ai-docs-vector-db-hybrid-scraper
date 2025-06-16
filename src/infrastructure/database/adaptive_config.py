@@ -159,12 +159,11 @@ class AdaptiveConfigManager:
         if (
             latest_metrics.avg_checkout_time_ms
             > self.config.target_checkout_time_ms * 2
-        ):
-            if "pool_timeout" not in changes:
-                new_timeout = min(self.config.pool_timeout + 10, 60)
-                changes["pool_timeout"] = new_timeout
-                self.config.pool_timeout = new_timeout
-                logger.info(f"Increased pool timeout to {new_timeout}s")
+        ) and "pool_timeout" not in changes:
+            new_timeout = min(self.config.pool_timeout + 10, 60)
+            changes["pool_timeout"] = new_timeout
+            self.config.pool_timeout = new_timeout
+            logger.info(f"Increased pool timeout to {new_timeout}s")
 
         if changes:
             self.last_adaptation_time = time.time()

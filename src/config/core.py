@@ -359,7 +359,7 @@ _config: Config | None = None
 
 def get_config() -> Config:
     """Get the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     if _config is None:
         _config = Config()
     return _config
@@ -367,11 +367,11 @@ def get_config() -> Config:
 
 def set_config(config: Config) -> None:
     """Set the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     _config = config
 
 
 def reset_config() -> None:
     """Reset the global configuration instance."""
-    global _config
+    global _config  # noqa: PLW0603
     _config = None

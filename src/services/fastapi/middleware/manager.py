@@ -81,3 +81,8 @@ class MiddlewareManager:
 def get_middleware_manager(config=None) -> MiddlewareManager:
     """Get configured middleware manager instance."""
     return MiddlewareManager(config or get_config())
+
+
+def create_middleware_manager(config=None) -> MiddlewareManager:
+    """Alias for get_middleware_manager for backward compatibility."""
+    return get_middleware_manager(config)

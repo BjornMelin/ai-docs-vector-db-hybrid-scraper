@@ -172,6 +172,15 @@ def get_config_dependency() -> Config:
     return get_container().config
 
 
+def get_fastapi_config() -> Config:
+    """Alias for get_config_dependency for backward compatibility.
+
+    Returns:
+        Configuration instance
+    """
+    return get_config_dependency()
+
+
 async def get_vector_service() -> QdrantService:
     """FastAPI dependency for vector database service.
 
@@ -369,6 +378,7 @@ __all__ = [
     "get_container",
     "get_correlation_id_dependency",
     "get_embedding_manager",
+    "get_fastapi_config",
     "get_health_checker",
     "get_request_context",
     "get_vector_service",
