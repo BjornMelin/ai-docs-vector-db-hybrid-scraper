@@ -164,14 +164,12 @@ delete_collection_task = func(
     delete_collection,
     name="delete_collection",
     max_tries=2,
-    retry_delay=300,  # 5 minutes
 )
 
 persist_cache_task = func(
     persist_cache,
     name="persist_cache",
     max_tries=3,
-    retry_delay=60,  # 1 minute
 )
 
 # Task registry for ARQ worker
