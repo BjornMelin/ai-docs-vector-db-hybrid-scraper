@@ -9,7 +9,7 @@ import time
 from statistics import mean
 from statistics import stdev
 
-from src.config import UnifiedConfig
+from ..config import Config
 from src.services.crawling.manager import CrawlManager
 from src.utils.imports import log_import_issues
 
@@ -46,7 +46,7 @@ class TierBenchmark:
 
     async def setup(self):
         """Set up crawl manager with all tiers enabled."""
-        self.config = UnifiedConfig()
+        self.config = Config()
         self.manager = CrawlManager(self.config)
         await self.manager.initialize()
         logger.info(

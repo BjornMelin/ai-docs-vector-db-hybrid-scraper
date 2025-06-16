@@ -4,7 +4,7 @@ This module provides a unified import location for all Pydantic models used thro
 the application, organized by domain and purpose.
 
 Usage:
-    from models import UnifiedConfig, SearchRequest, VectorSearchConfig
+    from models import Config, SearchRequest, VectorSearchConfig
     from models.configuration import QdrantConfig, CacheConfig
     from models.vector_search import SearchParams, PrefetchConfig
 """

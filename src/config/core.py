@@ -198,6 +198,56 @@ class MonitoringConfig(BaseModel):
     metrics_port: int = Field(default=8001, gt=0, le=65535)
 
 
+class DeploymentConfig(BaseModel):
+    """Deployment tier and feature flag configuration."""
+
+    # Tier settings
+    tier: str = Field(
+        default="personal",
+        description="Deployment tier: personal, professional, enterprise",
+    )
+
+    # Feature flag integration
+    enable_feature_flags: bool = Field(
+        default=False, description="Enable feature flag management"
+    )
+    flagsmith_api_key: str | None = Field(default=None, description="Flagsmith API key")
+    flagsmith_environment_key: str | None = Field(
+        default=None, description="Flagsmith environment key"
+    )
+    flagsmith_api_url: str = Field(
+        default="https://edge.api.flagsmith.com/api/v1/",
+        description="Flagsmith API URL",
+    )
+
+    # Deployment services
+    enable_deployment_services: bool = Field(
+        default=False, description="Enable enterprise deployment services"
+    )
+    enable_ab_testing: bool = Field(
+        default=False, description="Enable A/B testing capabilities"
+    )
+    enable_blue_green: bool = Field(
+        default=False, description="Enable blue-green deployments"
+    )
+    enable_canary: bool = Field(default=False, description="Enable canary deployments")
+
+    @field_validator("tier")
+    @classmethod
+    def validate_tier(cls, v: str) -> str:
+        valid_tiers = {"personal", "professional", "enterprise"}
+        if v.lower() not in valid_tiers:
+            raise ValueError(f"Tier must be one of {valid_tiers}")
+        return v.lower()
+
+    @field_validator("flagsmith_api_key")
+    @classmethod
+    def validate_flagsmith_key(cls, v: str | None) -> str | None:
+        if v and not (v.startswith("fs_") or v.startswith("env_")):
+            raise ValueError("Flagsmith API key must start with 'fs_' or 'env_'")
+        return v
+
+
 class Config(BaseSettings):
     """Main application configuration.
 
@@ -234,6 +284,7 @@ class Config(BaseSettings):
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(default_factory=list)

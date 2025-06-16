@@ -46,10 +46,7 @@ def export(ctx: click.Context, output: str, format: str):
     """Export configuration to file."""
     config_obj = ctx.obj["config"]
 
-    if output:
-        output_path = Path(output)
-    else:
-        output_path = Path(f"config.{format}")
+    output_path = Path(output) if output else Path(f"config.{format}")
 
     try:
         if format == "json":

@@ -145,3 +145,11 @@ class ABTestVariant(str, Enum):
     CONTROL = "control"
     VARIANT_A = "variant_a"
     VARIANT_B = "variant_b"
+
+
+class DeploymentTier(str, Enum):
+    """Deployment configuration tiers with progressive feature access."""
+
+    PERSONAL = "personal"  # Simple FastAPI + basic features
+    PROFESSIONAL = "professional"  # + Flagsmith + monitoring
+    ENTERPRISE = "enterprise"  # + Full deployment services + advanced monitoring

@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..errors import CrawlServiceError
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class CrawlManager:
     and provides consistent response formatting across all tiers.
     """
 
-    def __init__(self, config: UnifiedConfig, rate_limiter: object = None):
+    def __init__(self, config: Config, rate_limiter: object = None):
         """Initialize crawl manager.
 
         Args:

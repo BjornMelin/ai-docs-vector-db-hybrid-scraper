@@ -15,7 +15,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from ..config import UnifiedConfig
+from ..config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class MetricSummary(BaseModel):
 class MetricsCollector:
     """Advanced metrics collection and aggregation system."""
 
-    def __init__(self, config: UnifiedConfig, max_points: int = 10000):
+    def __init__(self, config: Config, max_points: int = 10000):
         """Initialize metrics collector.
 
         Args:

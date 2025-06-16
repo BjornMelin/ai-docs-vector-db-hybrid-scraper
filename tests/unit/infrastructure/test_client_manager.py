@@ -19,12 +19,13 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientHealth
 from src.infrastructure.shared import ClientState
 from src.services.errors import APIError
+
+from ..config import Config
 
 
 # Abstract interfaces for better testability
@@ -32,22 +33,22 @@ class ClientFactoryInterface(ABC):
     """Abstract interface for creating API clients."""
 
     @abstractmethod
-    async def create_qdrant_client(self, config: UnifiedConfig) -> Any:
+    async def create_qdrant_client(self, config: Config) -> Any:
         """Create Qdrant client instance."""
         pass
 
     @abstractmethod
-    async def create_openai_client(self, config: UnifiedConfig) -> Any:
+    async def create_openai_client(self, config: Config) -> Any:
         """Create OpenAI client instance."""
         pass
 
     @abstractmethod
-    async def create_redis_client(self, config: UnifiedConfig) -> Any:
+    async def create_redis_client(self, config: Config) -> Any:
         """Create Redis client instance."""
         pass
 
     @abstractmethod
-    async def create_firecrawl_client(self, config: UnifiedConfig) -> Any:
+    async def create_firecrawl_client(self, config: Config) -> Any:
         """Create Firecrawl client instance."""
         pass
 
@@ -86,7 +87,7 @@ class StubClientFactory(ClientFactoryInterface):
         self.redis_client = None
         self.firecrawl_client = None
 
-    async def create_qdrant_client(self, config: UnifiedConfig) -> Any:
+    async def create_qdrant_client(self, config: Config) -> Any:
         if self.qdrant_client is None:
             self.qdrant_client = FakeQdrantClient(
                 url=config.qdrant.url,
@@ -95,17 +96,17 @@ class StubClientFactory(ClientFactoryInterface):
             )
         return self.qdrant_client
 
-    async def create_openai_client(self, config: UnifiedConfig) -> Any:
+    async def create_openai_client(self, config: Config) -> Any:
         if self.openai_client is None:
             self.openai_client = MagicMock()
         return self.openai_client
 
-    async def create_redis_client(self, config: UnifiedConfig) -> Any:
+    async def create_redis_client(self, config: Config) -> Any:
         if self.redis_client is None:
             self.redis_client = AsyncMock()
         return self.redis_client
 
-    async def create_firecrawl_client(self, config: UnifiedConfig) -> Any:
+    async def create_firecrawl_client(self, config: Config) -> Any:
         if self.firecrawl_client is None:
             self.firecrawl_client = AsyncMock()
         return self.firecrawl_client
@@ -123,7 +124,7 @@ async def ensure_clean_singleton():
 @pytest.fixture
 def config():
     """Create test configuration."""
-    config = UnifiedConfig()
+    config = Config()
     config.openai.api_key = "test-openai-key"
     config.firecrawl.api_key = "test-firecrawl-key"
     config.cache.enable_caching = False
@@ -628,7 +629,7 @@ class TestClientManagerDatabaseIntegration:
         """Test creation of database manager."""
         from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             enable_query_monitoring=True,
@@ -676,7 +677,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager through managed_client interface."""
         from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             enable_query_monitoring=True,
@@ -699,7 +700,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager is included in cleanup."""
         from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
 
         client_manager = ClientManager(config)
@@ -722,7 +723,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager uses circuit breaker from performance config."""
         from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             enable_query_monitoring=True,
@@ -770,7 +771,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_ab_testing_manager_creation(self):
         """Test creation of AB testing manager."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         # Mock the ABTestingManager and its dependencies
@@ -810,7 +811,7 @@ class TestClientManagerAdvancedCoverage:
         # Clear singleton to ensure clean state
         ClientManager.reset_singleton()
 
-        config = UnifiedConfig()
+        config = Config()
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = "test-key"
         config.qdrant.timeout = 30.0
@@ -844,7 +845,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_qdrant_service_lazy_initialization(self):
         """Test lazy initialization of QdrantService."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch(
@@ -866,7 +867,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_hyde_engine_with_dependencies(self):
         """Test HyDEEngine initialization with all dependencies."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         mock_hyde_engine = AsyncMock()
@@ -910,7 +911,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_cache_manager_initialization(self):
         """Test CacheManager initialization with config parameters."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch("src.services.cache.manager.CacheManager") as mock_manager_class:
@@ -938,7 +939,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_project_storage_initialization(self):
         """Test ProjectStorage initialization."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch(

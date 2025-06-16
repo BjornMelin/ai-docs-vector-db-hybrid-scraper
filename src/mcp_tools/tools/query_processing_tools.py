@@ -128,13 +128,6 @@ async def query_expansion_tool(
     await ctx.info(f"Starting query expansion search {request_id}")
 
     try:
-        # Build expansion configuration
-        expansion_config = {
-            "methods": request.expansion_methods,
-            "depth": request.expansion_depth,
-            "context_window": request.context_window,
-        }
-
         # Create search request
         search_request = SearchRequest(
             query=request.query,
@@ -187,13 +180,6 @@ async def clustered_search_tool(
     await ctx.info(f"Starting clustered search {request_id}")
 
     try:
-        # Build clustering configuration
-        clustering_config = {
-            "num_clusters": request.num_clusters,
-            "algorithm": request.clustering_algorithm,
-            "min_cluster_size": request.min_cluster_size,
-        }
-
         # Create search request
         search_request = SearchRequest(
             query=request.query,
@@ -245,14 +231,6 @@ async def federated_search_tool(
     await ctx.info(f"Starting federated search {request_id}")
 
     try:
-        # Build federation configuration
-        federation_config = {
-            "collections": request.collections,
-            "strategy": request.federation_strategy,
-            "merging": request.result_merging,
-            "per_collection_limit": request.per_collection_limit,
-        }
-
         # Create search request
         search_request = SearchRequest(
             query=request.query,

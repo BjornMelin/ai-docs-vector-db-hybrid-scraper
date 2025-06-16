@@ -28,6 +28,18 @@ class CircuitState(Enum):
 
 
 @dataclass
+class TimeoutConfig:
+    """Timeout middleware configuration."""
+
+    enabled: bool = True
+    request_timeout: float = 30.0
+    enable_circuit_breaker: bool = True
+    failure_threshold: int = 5
+    recovery_timeout: float = 60.0
+    half_open_max_calls: int = 3
+
+
+@dataclass
 class CircuitBreakerStats:
     """Circuit breaker statistics."""
 

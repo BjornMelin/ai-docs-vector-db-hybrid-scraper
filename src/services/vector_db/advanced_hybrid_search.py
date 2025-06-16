@@ -12,7 +12,7 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ...config.enums import ABTestVariant
 from ...config.enums import OptimizationStrategy
 from ...models.vector_search import AdvancedHybridSearchRequest
@@ -43,7 +43,7 @@ class AdvancedHybridSearchService:
     def __init__(
         self,
         client: AsyncQdrantClient,
-        config: UnifiedConfig,
+        config: Config,
         qdrant_search: QdrantSearch,
     ):
         """Initialize advanced hybrid search service.

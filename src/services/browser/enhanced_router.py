@@ -16,7 +16,7 @@ from collections import deque
 from typing import Any
 from urllib.parse import urlparse
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
 from .tier_config import PerformanceHistoryEntry
@@ -80,7 +80,7 @@ class TierCircuitBreaker:
 class EnhancedAutomationRouter(AutomationRouter):
     """Enhanced automation router with advanced routing capabilities."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize enhanced router with configuration."""
         super().__init__(config)
 

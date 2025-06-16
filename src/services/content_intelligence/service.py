@@ -10,7 +10,7 @@ import logging
 import time
 from typing import Any
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 from ..errors import APIError
 from .classifiers import ContentClassifier
@@ -38,7 +38,7 @@ class ContentIntelligenceService(BaseService):
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         embedding_manager: Any = None,
         cache_manager: Any = None,
     ):

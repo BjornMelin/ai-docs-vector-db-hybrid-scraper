@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ...models.vector_search import SPLADEConfig
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 class SPLADEProvider:
     """SPLADE provider for generating sparse vectors with semantic expansion."""
 
-    def __init__(
-        self, config: UnifiedConfig, splade_config: SPLADEConfig | None = None
-    ):
+    def __init__(self, config: Config, splade_config: SPLADEConfig | None = None):
         """Initialize SPLADE provider.
 
         Args:

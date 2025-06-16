@@ -10,6 +10,7 @@ from .core import CacheConfig
 from .core import ChunkingConfig
 from .core import Config
 from .core import Crawl4AIConfig
+from .core import DeploymentConfig
 from .core import DocumentationSite
 from .core import EmbeddingConfig
 from .core import FastEmbedConfig
@@ -26,8 +27,14 @@ from .core import get_config
 from .core import reset_config
 from .core import set_config
 
-# Legacy aliases for backward compatibility
-UnifiedConfig = Config
+# Deployment tier configuration
+from .deployment_tiers import DeploymentTier
+from .deployment_tiers import TierCapability
+from .deployment_tiers import TierConfiguration
+from .deployment_tiers import TierManager
+from .deployment_tiers import default_tier_manager
+from .deployment_tiers import get_current_tier_config
+from .deployment_tiers import is_feature_enabled
 
 # Enums
 from .enums import ABTestVariant
@@ -48,46 +55,54 @@ from .enums import SearchAccuracy
 from .enums import SearchStrategy
 from .enums import VectorType
 
+# Legacy aliases for backward compatibility
+UnifiedConfig = Config
+
 __all__ = [
-    # Main config
-    "Config",
-    "UnifiedConfig",  # Legacy alias
-    "get_config",
-    "set_config",
-    "reset_config",
-    # Config components
+    "ABTestVariant",
     "BrowserUseConfig",
     "CacheConfig",
+    "CacheType",
     "ChunkingConfig",
+    "ChunkingStrategy",
+    "Config",
     "Crawl4AIConfig",
+    "CrawlProvider",
+    "DeploymentConfig",
+    "DeploymentTier",
+    "DocumentStatus",
     "DocumentationSite",
     "EmbeddingConfig",
-    "FastEmbedConfig",
-    "FirecrawlConfig",
-    "HyDEConfig",
-    "MonitoringConfig",
-    "OpenAIConfig",
-    "PerformanceConfig",
-    "PlaywrightConfig",
-    "QdrantConfig",
-    "SecurityConfig",
-    "SQLAlchemyConfig",
-    # Enums
-    "ABTestVariant",
-    "CacheType",
-    "ChunkingStrategy",
-    "CrawlProvider",
-    "DocumentStatus",
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
+    "FastEmbedConfig",
+    "FirecrawlConfig",
     "FusionAlgorithm",
+    "HyDEConfig",
     "LogLevel",
     "ModelType",
+    "MonitoringConfig",
+    "OpenAIConfig",
     "OptimizationStrategy",
+    "PerformanceConfig",
+    "PlaywrightConfig",
+    "QdrantConfig",
     "QueryComplexity",
     "QueryType",
+    "SQLAlchemyConfig",
     "SearchAccuracy",
     "SearchStrategy",
+    "SecurityConfig",
+    "TierCapability",
+    "TierConfiguration",
+    "TierManager",
+    "UnifiedConfig",
     "VectorType",
+    "default_tier_manager",
+    "get_config",
+    "get_current_tier_config",
+    "is_feature_enabled",
+    "reset_config",
+    "set_config",
 ]

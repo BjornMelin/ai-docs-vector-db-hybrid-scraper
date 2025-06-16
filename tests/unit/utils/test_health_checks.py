@@ -4,15 +4,16 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
 from src.utils.health_checks import ServiceHealthChecker
+
+from ..config import Config
 
 
 @pytest.fixture
 def sample_config():
     """Create a sample configuration for testing."""
     # Create a default config first
-    config = UnifiedConfig()
+    config = Config()
 
     # Set providers and API keys
     config.embedding_provider = "openai"

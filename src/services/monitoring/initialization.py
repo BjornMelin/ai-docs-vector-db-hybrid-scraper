@@ -7,8 +7,8 @@ for FastMCP-based applications.
 import asyncio
 import logging
 
+from src.config import Config
 from src.config import MonitoringConfig
-from src.config import UnifiedConfig
 
 from .health import HealthCheckManager
 from .metrics import MetricsConfig
@@ -141,7 +141,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
 
 def initialize_monitoring_system(
-    config: UnifiedConfig, qdrant_client=None, redis_url: str | None = None
+    config: Config, qdrant_client=None, redis_url: str | None = None
 ) -> tuple[MetricsRegistry, HealthCheckManager]:
     """Initialize the complete monitoring system.
 
@@ -228,7 +228,7 @@ def initialize_monitoring_system(
 
 def setup_fastmcp_monitoring(
     mcp_app,
-    config: UnifiedConfig,
+    config: Config,
     metrics_registry: MetricsRegistry,
     health_manager: HealthCheckManager,
 ) -> None:

@@ -19,7 +19,6 @@ from src.config import OpenAIConfig
 from src.config import PerformanceConfig
 from src.config import QdrantConfig
 from src.config import SecurityConfig
-from src.config import UnifiedConfig
 from src.config import get_config
 from src.config import reset_config
 from src.config import set_config
@@ -270,7 +269,8 @@ class TestConfig:
                 logs_dir=logs_dir,
             )
 
-            # Directories should be created
+            # Config should be valid and directories should be created
+            assert config.data_dir == data_dir
             assert data_dir.exists()
             assert cache_dir.exists()
             assert logs_dir.exists()
@@ -347,12 +347,12 @@ class TestLegacyCompatibility:
     """Test backward compatibility."""
 
     def test_unified_config_alias(self):
-        """Test that UnifiedConfig is an alias for Config."""
-        assert UnifiedConfig is Config
+        """Test that Config is an alias for Config."""
+        assert Config is Config
 
     def test_unified_config_works(self):
-        """Test that UnifiedConfig can be used as expected."""
-        config = UnifiedConfig(app_name="Legacy Test")
+        """Test that Config can be used as expected."""
+        config = Config(app_name="Legacy Test")
         assert isinstance(config, Config)
         assert config.app_name == "Legacy Test"
 

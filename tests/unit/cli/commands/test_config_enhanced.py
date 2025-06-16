@@ -430,7 +430,7 @@ class TestTemplateCommands:
             patch(
                 "src.cli.commands.config.ConfigurationTemplates"
             ) as mock_templates_class,
-            patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
+            patch("src.cli.commands.config.Config") as mock_config_class,
         ):
             mock_templates = MagicMock()
             mock_templates.apply_template_to_config.return_value = {
@@ -479,7 +479,7 @@ class TestTemplateCommands:
             patch(
                 "src.cli.commands.config.ConfigurationTemplates"
             ) as mock_templates_class,
-            patch("src.cli.commands.config.UnifiedConfig") as mock_config_class,
+            patch("src.cli.commands.config.Config") as mock_config_class,
         ):
             mock_templates = MagicMock()
             mock_templates.apply_template_to_config.return_value = {"test": "config"}

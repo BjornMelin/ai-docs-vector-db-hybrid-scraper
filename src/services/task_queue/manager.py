@@ -7,7 +7,7 @@ from arq import ArqRedis
 from arq import create_pool
 from arq.connections import RedisSettings
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ except ImportError:
 class TaskQueueManager(BaseService):
     """Manages task queue operations using ARQ."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize task queue manager.
 
         Args:

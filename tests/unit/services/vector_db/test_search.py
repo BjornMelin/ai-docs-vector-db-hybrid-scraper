@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
-from src.config import UnifiedConfig
+from src.config import Config
 from src.config.enums import SearchAccuracy
 from src.config.enums import VectorType
 from src.models.vector_search import PrefetchConfig
@@ -20,7 +20,7 @@ class TestQdrantSearch:
     @pytest.fixture
     def mock_config(self):
         """Create mock configuration."""
-        return MagicMock(spec=UnifiedConfig)
+        return MagicMock(spec=Config)
 
     @pytest.fixture
     def mock_client(self):

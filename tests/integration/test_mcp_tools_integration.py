@@ -12,10 +12,10 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+from src.config import Config
 from src.config import FirecrawlConfig
 from src.config import OpenAIConfig
 from src.config import QdrantConfig
-from src.config import UnifiedConfig
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.requests import DocumentRequest
@@ -37,7 +37,7 @@ class TestMCPToolsIntegration:
     @pytest.fixture
     async def mock_config(self):
         """Create a mock configuration for testing."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         # Mock nested config objects
         config.qdrant = MagicMock(spec=QdrantConfig)

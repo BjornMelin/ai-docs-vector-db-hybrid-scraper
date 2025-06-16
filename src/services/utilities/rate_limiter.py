@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TypeVar
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..errors import APIError
 
 logger = logging.getLogger(__name__)
@@ -98,11 +98,11 @@ class RateLimitManager:
     with configurable limits per provider and endpoint.
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize rate limit manager.
 
         Args:
-            config: UnifiedConfig instance with rate limiting configuration.
+            config: Config instance with rate limiting configuration.
         """
         self.limiters: dict[str, RateLimiter] = {}
         self.default_limits = config.performance.default_rate_limits.copy()
