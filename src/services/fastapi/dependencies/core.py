@@ -29,6 +29,7 @@ class DependencyContainer:
     def __init__(self):
         """Initialize dependency container."""
         self._config: Config | None = None
+        self._client_manager: ClientManager | None = None
         self._vector_service: QdrantService | None = None
         self._embedding_manager: EmbeddingManager | None = None
         self._cache_manager: CacheManager | None = None
@@ -51,8 +52,8 @@ class DependencyContainer:
             self._config = config
 
             # Initialize core services
-            client_manager = ClientManager(config)
-            self._vector_service = QdrantService(config, client_manager)
+            self._client_manager = ClientManager(config)
+            self._vector_service = QdrantService(config, self._client_manager)
             await self._vector_service.initialize()
 
             self._embedding_manager = EmbeddingManager(config.embeddings)
@@ -79,6 +80,9 @@ class DependencyContainer:
 
             if self._vector_service:
                 await self._vector_service.cleanup()
+
+            if self._client_manager:
+                await self._client_manager.cleanup()
 
             self._initialized = False
             logger.info("Dependency container cleaned up")
@@ -118,6 +122,13 @@ class DependencyContainer:
         if not self._cache_manager:
             raise RuntimeError("Cache manager not initialized")
         return self._cache_manager
+
+    @property
+    def client_manager(self) -> ClientManager:
+        """Get client manager."""
+        if not self._client_manager:
+            raise RuntimeError("Client manager not initialized")
+        return self._client_manager
 
 
 # Global dependency container instance
@@ -256,6 +267,31 @@ async def get_cache_manager() -> CacheManager:
         ) from e
 
 
+def get_client_manager() -> ClientManager:
+    """FastAPI dependency for client manager.
+
+    Returns:
+        Client manager instance
+
+    Raises:
+        HTTPException: If service is not available
+    """
+    try:
+        container = get_container()
+        if not container.is_initialized:
+            raise HTTPException(
+                status_code=HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Client manager not available",
+            )
+        return container.client_manager
+    except Exception as e:
+        logger.error(f"Failed to get client manager: {e}")
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Client manager not available",
+        ) from e
+
+
 def get_correlation_id_dependency(request: Request) -> str:
     """FastAPI dependency for correlation ID from request.
 
@@ -272,15 +308,16 @@ def get_correlation_id_dependency(request: Request) -> str:
 async def database_session() -> AsyncGenerator[Any]:
     """Async context manager for database sessions.
 
-    This is a placeholder for when database sessions are needed.
-    Currently returns None as we're using Qdrant which doesn't
-    require traditional database sessions.
+    Provides SQLAlchemy async sessions through the DatabaseManager.
 
     Yields:
-        Database session (currently None)
+        AsyncSession: SQLAlchemy async database session
     """
-    # Placeholder for future database session implementation
-    yield None
+    client_manager = get_client_manager()
+    db_manager = await client_manager.get_database_manager()
+
+    async with db_manager.session() as session:
+        yield session
 
 
 def get_request_context(request: Request) -> dict[str, Any]:
@@ -374,6 +411,7 @@ __all__ = [
     "cleanup_dependencies",
     "database_session",
     "get_cache_manager",
+    "get_client_manager",
     "get_config_dependency",
     "get_container",
     "get_correlation_id_dependency",

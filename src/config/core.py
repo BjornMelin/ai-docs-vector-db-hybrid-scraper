@@ -198,6 +198,50 @@ class MonitoringConfig(BaseModel):
     metrics_port: int = Field(default=8001, gt=0, le=65535)
 
 
+class RAGConfig(BaseModel):
+    """RAG (Retrieval-Augmented Generation) configuration."""
+
+    # Core settings
+    enable_rag: bool = Field(default=False, description="Enable RAG answer generation")
+    model: str = Field(
+        default="gpt-3.5-turbo", description="LLM model for answer generation"
+    )
+    temperature: float = Field(
+        default=0.1, ge=0.0, le=2.0, description="Generation temperature"
+    )
+    max_tokens: int = Field(
+        default=1000, gt=0, le=4000, description="Maximum response tokens"
+    )
+    timeout_seconds: float = Field(default=30.0, gt=0, description="Generation timeout")
+
+    # Context configuration
+    max_context_length: int = Field(
+        default=4000, gt=0, description="Max context length in tokens"
+    )
+    max_results_for_context: int = Field(
+        default=5, gt=0, le=20, description="Max search results for context"
+    )
+    min_confidence_threshold: float = Field(
+        default=0.6, ge=0.0, le=1.0, description="Min confidence for answers"
+    )
+
+    # Features
+    include_sources: bool = Field(default=True, description="Include source citations")
+    include_confidence_score: bool = Field(
+        default=True, description="Include confidence scoring"
+    )
+    enable_answer_metrics: bool = Field(
+        default=True, description="Track answer quality metrics"
+    )
+    enable_caching: bool = Field(default=True, description="Enable answer caching")
+
+    # Performance
+    cache_ttl_seconds: int = Field(default=3600, gt=0, description="Cache TTL")
+    parallel_processing: bool = Field(
+        default=True, description="Enable parallel processing"
+    )
+
+
 class DeploymentConfig(BaseModel):
     """Deployment tier and feature flag configuration."""
 
@@ -281,6 +325,7 @@ class Config(BaseSettings):
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     hyde: HyDEConfig = Field(default_factory=HyDEConfig)
+    rag: RAGConfig = Field(default_factory=RAGConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)

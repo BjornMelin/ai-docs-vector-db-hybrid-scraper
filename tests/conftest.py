@@ -446,66 +446,6 @@ def enhanced_db_config():
 
 
 @pytest.fixture()
-def mock_simple_load_monitor():
-    """Mock SimpleLoadMonitor for testing."""
-    import time
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
-
-    from src.infrastructure.database.load_monitor import LoadMetrics
-    from src.infrastructure.database.simple_monitor import SimpleLoadMonitor
-
-    # Create a mock that inherits from SimpleLoadMonitor to pass isinstance checks
-    class MockSimpleLoadMonitor(SimpleLoadMonitor):
-        def __init__(self):
-            # Don't call super().__init__ to avoid real initialization
-            pass
-
-    monitor = MockSimpleLoadMonitor()
-
-    # Configure standard LoadMonitor behavior
-    monitor.start = AsyncMock()
-    monitor.stop = AsyncMock()
-    monitor.record_request_start = AsyncMock()
-    monitor.record_request_end = AsyncMock()
-    monitor.record_connection_error = AsyncMock()
-
-    # Create realistic load metrics
-    mock_load_metrics = LoadMetrics(
-        concurrent_requests=3,
-        memory_usage_percent=45.0,
-        cpu_usage_percent=30.0,
-        avg_response_time_ms=100.0,
-        connection_errors=0,
-        timestamp=time.time(),
-    )
-    monitor.get_current_load = AsyncMock(return_value=mock_load_metrics)
-    monitor.calculate_load_factor = Mock(return_value=0.5)
-
-    # Configure simple monitoring behavior
-    monitor.should_scale_up = Mock(return_value=False)
-    monitor.should_scale_down = Mock(return_value=False)
-    monitor.get_load_decision = Mock()
-    monitor.get_system_stats = Mock(
-        return_value={
-            "cpu_percent": 45.0,
-            "memory_percent": 60.0,
-            "memory_available_gb": 8.5,
-            "current_load": 0.5,
-        }
-    )
-    monitor.get_summary_stats = AsyncMock(
-        return_value={
-            "total_queries": 100,
-            "avg_execution_time_ms": 150.0,
-            "slow_queries": 5,
-        }
-    )
-
-    return monitor
-
-
-@pytest.fixture()
 def mock_multi_level_circuit_breaker():
     """Mock simple CircuitBreaker for testing (renamed for compatibility)."""
     import asyncio

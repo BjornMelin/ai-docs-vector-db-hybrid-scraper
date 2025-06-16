@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     pass
 
 # Import for actual usage
-from src.infrastructure.database.connection_manager import AsyncConnectionManager
+from .database import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class ClientManager:
         self._browser_automation_router: Any = None
         self._task_queue_manager: Any = None
         self._content_intelligence_service: Any = None
-        self._database_manager: AsyncConnectionManager | None = None
+        self._database_manager: DatabaseManager | None = None
         self._advanced_search_orchestrator: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
@@ -477,59 +477,38 @@ class ClientManager:
 
         return self._content_intelligence_service
 
-    async def get_database_manager(self) -> "AsyncConnectionManager":
-        """Get or create AsyncConnectionManager instance."""
+    async def get_database_manager(self) -> DatabaseManager:
+        """Get or create enterprise DatabaseManager instance."""
         if self._database_manager is None:
             if "database_manager" not in self._service_locks:
                 self._service_locks["database_manager"] = asyncio.Lock()
 
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
-                    from src.infrastructure.database.load_monitor import LoadMonitor
-                    from src.infrastructure.database.load_monitor import (
-                        LoadMonitorConfig,
-                    )
-                    from src.infrastructure.database.query_monitor import QueryMonitor
-                    from src.infrastructure.database.query_monitor import (
-                        QueryMonitorConfig,
-                    )
+                    # Create enterprise monitoring components
+                    from .database.monitoring import LoadMonitor
+                    from .database.monitoring import QueryMonitor
 
-                    # Create monitoring components
-                    load_monitor = LoadMonitor(LoadMonitorConfig())
-                    query_monitor = QueryMonitor(
-                        QueryMonitorConfig(
-                            enabled=self.config.database.enable_query_monitoring,
-                            slow_query_threshold_ms=self.config.database.slow_query_threshold_ms,
-                        )
-                    )
+                    load_monitor = LoadMonitor()
+                    query_monitor = QueryMonitor()
 
-                    # Create circuit breaker for database
+                    # Create circuit breaker for enterprise resilience
                     circuit_breaker = CircuitBreaker(
-                        failure_threshold=getattr(
-                            self.config.performance,
-                            "circuit_breaker_failure_threshold",
-                            5,
-                        ),
-                        recovery_timeout=getattr(
-                            self.config.performance,
-                            "circuit_breaker_recovery_timeout",
-                            60.0,
-                        ),
-                        half_open_requests=getattr(
-                            self.config.performance,
-                            "circuit_breaker_half_open_requests",
-                            1,
-                        ),
+                        failure_threshold=5,
+                        recovery_timeout=60.0,
+                        half_open_requests=1,
                     )
 
-                    self._database_manager = AsyncConnectionManager(
-                        config=self.config.database,
+                    self._database_manager = DatabaseManager(
+                        config=self.config,
                         load_monitor=load_monitor,
                         query_monitor=query_monitor,
                         circuit_breaker=circuit_breaker,
                     )
                     await self._database_manager.initialize()
-                    logger.info("Initialized AsyncConnectionManager")
+                    logger.info(
+                        "Initialized enterprise DatabaseManager with ML monitoring"
+                    )
 
         return self._database_manager
 

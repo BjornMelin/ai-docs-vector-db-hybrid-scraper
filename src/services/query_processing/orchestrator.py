@@ -13,6 +13,8 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from ..base import BaseService
+from ..rag import RAGGenerator
+from ..rag.models import RAGRequest
 from .clustering import ResultClusteringRequest
 from .clustering import ResultClusteringService
 from .expansion import QueryExpansionRequest
@@ -63,6 +65,18 @@ class SearchRequest(BaseModel):
     )
     enable_federation: bool = Field(False, description="Enable federated search")
 
+    # RAG features (NEW V1 PORTFOLIO FEATURE)
+    enable_rag: bool = Field(False, description="Enable RAG answer generation")
+    rag_max_tokens: int | None = Field(
+        None, gt=0, le=4000, description="Override RAG max tokens"
+    )
+    rag_temperature: float | None = Field(
+        None, ge=0.0, le=2.0, description="Override RAG temperature"
+    )
+    require_high_confidence: bool = Field(
+        False, description="Require high confidence RAG answers"
+    )
+
     # User context
     user_id: str | None = Field(None, description="User ID for personalization")
     session_id: str | None = Field(None, description="Session ID")
@@ -85,6 +99,20 @@ class SearchResult(BaseModel):
     clusters: list[dict[str, Any]] | None = Field(None, description="Result clusters")
     features_used: list[str] = Field(
         default_factory=list, description="Features applied"
+    )
+
+    # RAG-generated answer (NEW V1 PORTFOLIO FEATURE)
+    generated_answer: str | None = Field(
+        None, description="RAG-generated contextual answer"
+    )
+    answer_confidence: float | None = Field(
+        None, ge=0.0, le=1.0, description="Answer confidence score"
+    )
+    answer_sources: list[dict[str, Any]] | None = Field(
+        None, description="Sources used for answer"
+    )
+    answer_metrics: dict[str, Any] | None = Field(
+        None, description="Answer generation metrics"
     )
 
     # Caching
@@ -118,6 +146,7 @@ class SearchOrchestrator(BaseService):
         self._clustering_service: ResultClusteringService | None = None
         self._ranking_service: PersonalizedRankingService | None = None
         self._federated_service: FederatedSearchService | None = None
+        self._rag_generator: RAGGenerator | None = None
 
         # Pipeline configurations
         self.pipeline_configs = {
@@ -180,6 +209,16 @@ class SearchOrchestrator(BaseService):
         if self._federated_service is None:
             self._federated_service = FederatedSearchService()
         return self._federated_service
+
+    @property
+    def rag_generator(self) -> RAGGenerator:
+        """Lazy load RAG generator service."""
+        if self._rag_generator is None:
+            from ...config import get_config
+
+            config = get_config()
+            self._rag_generator = RAGGenerator(config.rag)
+        return self._rag_generator
 
     async def search(self, request: SearchRequest) -> SearchResult:
         """Execute search with optimized pipeline.
@@ -282,6 +321,64 @@ class SearchOrchestrator(BaseService):
                     except Exception as e:
                         self._logger.warning(f"Personalized ranking failed: {e}")
 
+            # Step 4: RAG answer generation (if enabled)
+            rag_answer = None
+            rag_confidence = None
+            rag_sources = None
+            rag_metrics = None
+
+            if request.enable_rag and search_results:
+                try:
+                    from ...config import get_config
+
+                    config = get_config()
+
+                    # Only generate RAG answer if globally enabled or explicitly requested
+                    if config.rag.enable_rag or request.enable_rag:
+                        rag_request = RAGRequest(
+                            query=request.query,
+                            search_results=search_results[
+                                : config.rag.max_results_for_context
+                            ],
+                            max_tokens=request.rag_max_tokens,
+                            temperature=request.rag_temperature,
+                            require_high_confidence=request.require_high_confidence,
+                        )
+
+                        # Initialize RAG generator if needed
+                        if not self._rag_generator._initialized:
+                            await self.rag_generator.initialize()
+
+                        rag_result = await self.rag_generator.generate_answer(
+                            rag_request
+                        )
+
+                        # Only include answer if confidence meets threshold
+                        min_confidence = config.rag.min_confidence_threshold
+                        if rag_result.confidence_score >= min_confidence:
+                            rag_answer = rag_result.answer
+                            rag_confidence = rag_result.confidence_score
+                            rag_sources = [
+                                {
+                                    "source_id": source.source_id,
+                                    "title": source.title,
+                                    "url": source.url,
+                                    "relevance_score": source.relevance_score,
+                                    "excerpt": source.excerpt,
+                                }
+                                for source in rag_result.sources
+                            ]
+                            rag_metrics = (
+                                rag_result.metrics.model_dump()
+                                if rag_result.metrics
+                                else None
+                            )
+                            features_used.append("rag_answer_generation")
+
+                except Exception as e:
+                    self._logger.warning(f"RAG answer generation failed: {e}")
+                    # Continue without RAG - don't fail the entire search
+
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000
 
@@ -293,6 +390,10 @@ class SearchOrchestrator(BaseService):
                 processing_time_ms=processing_time,
                 expanded_query=expanded_query,
                 features_used=features_used,
+                generated_answer=rag_answer,
+                answer_confidence=rag_confidence,
+                answer_sources=rag_sources,
+                answer_metrics=rag_metrics,
                 cache_hit=False,
             )
 
@@ -407,28 +508,9 @@ class SearchOrchestrator(BaseService):
     async def cleanup(self) -> None:
         """Cleanup orchestrator resources."""
         self.clear_cache()
+
+        # Cleanup RAG generator if initialized
+        if self._rag_generator and self._rag_generator._initialized:
+            await self._rag_generator.cleanup()
+
         self._logger.info("SearchOrchestrator cleaned up")
-
-
-# For backward compatibility with existing imports that expect these classes
-# Re-export with legacy names
-AdvancedSearchOrchestrator = SearchOrchestrator
-AdvancedSearchRequest = SearchRequest
-AdvancedSearchResult = SearchResult
-
-# Also export with simplified name for transition
-SimplifiedOrchestrator = SearchOrchestrator
-
-
-# Legacy enums that may be imported elsewhere
-class ProcessingStage(str, Enum):
-    """Processing stages for backward compatibility."""
-
-    PREPROCESSING = "preprocessing"
-    EXPANSION = "expansion"
-    FILTERING = "filtering"
-    EXECUTION = "execution"
-    CLUSTERING = "clustering"
-    RANKING = "ranking"
-    FEDERATION = "federation"
-    POSTPROCESSING = "postprocessing"

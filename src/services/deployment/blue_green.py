@@ -228,13 +228,14 @@ class BlueGreenDeployment:
             source_env = self._green_env
 
         # Health check target environment (unless forced)
-        if not force:
-            if not target_env.health or target_env.health.status != "healthy":
-                logger.warning(
-                    "Target environment %s is not healthy, aborting switch",
-                    target_env.name,
-                )
-                return False
+        if not force and (
+            not target_env.health or target_env.health.status != "healthy"
+        ):
+            logger.warning(
+                "Target environment %s is not healthy, aborting switch",
+                target_env.name,
+            )
+            return False
 
         # Perform switch
         try:

@@ -18,6 +18,7 @@ from . import payload_indexing
 from . import projects
 from . import query_processing
 from . import query_processing_tools
+from . import rag
 from . import search
 from . import utilities
 
@@ -35,6 +36,7 @@ __all__ = [
     "projects",
     "query_processing",
     "query_processing_tools",
+    "rag",
     "search",
     "utilities",
 ]

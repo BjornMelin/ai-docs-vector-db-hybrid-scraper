@@ -580,11 +580,7 @@ class CanaryDeployment:
                     return False
 
             # Check minimum monitoring duration
-            if metrics.stage_duration_minutes < config.monitoring_window_minutes:
-                return False
-
-            # All criteria met
-            return True
+            return metrics.stage_duration_minutes >= config.monitoring_window_minutes
 
         except Exception as e:
             logger.error(
@@ -686,7 +682,7 @@ class CanaryDeployment:
             await self._persist_deployment_state(deployment_id)
 
             # Clean up after delay (keep for analysis)
-            asyncio.create_task(
+            self._monitoring_tasks[f"{deployment_id}_cleanup"] = asyncio.create_task(
                 self._cleanup_deployment(deployment_id, delay_seconds=3600)
             )  # 1 hour
 

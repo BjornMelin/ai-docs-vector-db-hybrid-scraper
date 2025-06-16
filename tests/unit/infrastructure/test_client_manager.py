@@ -637,39 +637,25 @@ class TestClientManagerDatabaseIntegration:
 
         client_manager = ClientManager(config)
 
-        with (
-            patch(
-                "src.infrastructure.database.load_monitor.LoadMonitor"
-            ) as mock_load_monitor_class,
-            patch(
-                "src.infrastructure.database.query_monitor.QueryMonitor"
-            ) as mock_query_monitor_class,
-            patch(
-                "src.infrastructure.client_manager.AsyncConnectionManager"
-            ) as mock_connection_manager_class,
-        ):
-            mock_load_monitor = Mock()
-            mock_load_monitor.start = AsyncMock()  # Fix: Make start method async
-            mock_query_monitor = Mock()
-            mock_connection_manager = AsyncMock()
-
-            mock_load_monitor_class.return_value = mock_load_monitor
-            mock_query_monitor_class.return_value = mock_query_monitor
-            mock_connection_manager_class.return_value = mock_connection_manager
+        with patch(
+            "src.infrastructure.client_manager.DatabaseManager"
+        ) as mock_database_manager_class:
+            mock_database_manager = AsyncMock()
+            mock_database_manager_class.return_value = mock_database_manager
 
             # First call should create the manager
             db_manager = await client_manager.get_database_manager()
 
-            assert db_manager is mock_connection_manager
-            mock_connection_manager_class.assert_called_once()
-            mock_connection_manager.initialize.assert_called_once()
+            assert db_manager is mock_database_manager
+            mock_database_manager_class.assert_called_once()
+            mock_database_manager.initialize.assert_called_once()
 
             # Second call should return the same instance (cached)
             db_manager2 = await client_manager.get_database_manager()
-            assert db_manager2 is mock_connection_manager
+            assert db_manager2 is mock_database_manager
 
             # Should not create a new instance
-            mock_connection_manager_class.assert_called_once()
+            mock_database_manager_class.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_database_manager_in_managed_client(self):
@@ -714,54 +700,34 @@ class TestClientManagerDatabaseIntegration:
         # Should call cleanup on database manager
         mock_db_manager.cleanup.assert_called_once()
 
-    @pytest.mark.skip(
-        reason="Test infrastructure mocking complexity - client manager import caching issue"
-    )
     @pytest.mark.asyncio
-    async def test_database_circuit_breaker_configuration(self):
-        """Test database manager uses circuit breaker from performance config."""
+    async def test_database_manager_enterprise_creation(self):
+        """Test database manager uses enterprise DatabaseManager with monitoring."""
         from src.config import SQLAlchemyConfig
 
         config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
         )
-
-        # Set custom circuit breaker parameters
-        config.performance.circuit_breaker_failure_threshold = 3
-        config.performance.circuit_breaker_recovery_timeout = 30.0
-        config.performance.circuit_breaker_half_open_requests = 2
 
         client_manager = ClientManager(config)
 
-        with (
-            patch("src.infrastructure.database.load_monitor.LoadMonitor"),
-            patch("src.infrastructure.database.query_monitor.QueryMonitor"),
-            patch(
-                "src.infrastructure.client_manager.AsyncConnectionManager"
-            ) as mock_connection_manager_class,
-            patch(
-                "src.infrastructure.client_manager.CircuitBreaker"
-            ) as mock_circuit_breaker_class,
-        ):
-            mock_connection_manager = AsyncMock()
-            mock_circuit_breaker = Mock()
-
-            mock_connection_manager_class.return_value = mock_connection_manager
-            mock_circuit_breaker_class.return_value = mock_circuit_breaker
+        with patch(
+            "src.infrastructure.client_manager.DatabaseManager"
+        ) as mock_database_manager_class:
+            mock_database_manager = AsyncMock()
+            mock_database_manager_class.return_value = mock_database_manager
 
             await client_manager.get_database_manager()
 
-            # Verify circuit breaker was created with correct parameters
-            mock_circuit_breaker_class.assert_called_once_with(
-                failure_threshold=3, recovery_timeout=30.0, half_open_requests=2
-            )
-
-            # Verify connection manager was created with circuit breaker
-            call_args = mock_connection_manager_class.call_args
-            assert call_args.kwargs["circuit_breaker"] is mock_circuit_breaker
+            # Verify database manager was created with enterprise components
+            mock_database_manager_class.assert_called_once()
+            call_kwargs = mock_database_manager_class.call_args.kwargs
+            assert "config" in call_kwargs
+            assert "load_monitor" in call_kwargs
+            assert "query_monitor" in call_kwargs
+            assert "circuit_breaker" in call_kwargs
+            mock_database_manager.initialize.assert_called_once()
 
 
 class TestClientManagerAdvancedCoverage:
