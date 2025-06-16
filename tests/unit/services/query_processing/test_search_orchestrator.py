@@ -9,15 +9,16 @@ This test suite provides extensive coverage for the SearchOrchestrator including
 - Error handling and edge cases
 """
 
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from src.services.query_processing.orchestrator import (
-    SearchMode,
-    SearchPipeline,
-    SearchRequest,
-    SearchResult,
-    SearchOrchestrator,
-)
+from src.services.query_processing.orchestrator import SearchMode
+from src.services.query_processing.orchestrator import SearchOrchestrator
+from src.services.query_processing.orchestrator import SearchPipeline
+from src.services.query_processing.orchestrator import SearchRequest
+from src.services.query_processing.orchestrator import SearchResult
 
 
 @pytest.fixture
@@ -124,7 +125,7 @@ class TestModels:
         # Test limit boundaries
         with pytest.raises(ValueError):
             SearchRequest(query="test", limit=0)  # Below minimum
-        
+
         with pytest.raises(ValueError):
             SearchRequest(query="test", limit=1001)  # Above maximum
 
@@ -194,7 +195,7 @@ class TestSearchOrchestrator:
         assert orchestrator.cache_size == 100
         assert isinstance(orchestrator.cache, dict)
         assert len(orchestrator.cache) == 0
-        
+
         # Check stats initialization
         expected_stats = {
             "total_searches": 0,
@@ -223,7 +224,9 @@ class TestSearchOrchestrator:
         assert balanced_config["enable_personalization"] is False
         assert balanced_config["max_processing_time_ms"] == 3000.0
 
-        comprehensive_config = orchestrator.pipeline_configs[SearchPipeline.COMPREHENSIVE]
+        comprehensive_config = orchestrator.pipeline_configs[
+            SearchPipeline.COMPREHENSIVE
+        ]
         assert comprehensive_config["enable_expansion"] is True
         assert comprehensive_config["enable_clustering"] is True
         assert comprehensive_config["enable_personalization"] is True
@@ -280,7 +283,7 @@ class TestSearchOrchestrator:
 
         # Cache should be cleared
         assert len(orchestrator.cache) == 0
-        
+
         # RAG generator cleanup should be called
         orchestrator._rag_generator.cleanup.assert_called_once()
 
@@ -294,7 +297,10 @@ class TestCoreSearchFunctionality:
 
         assert isinstance(result, SearchResult)
         # Allow for query processing differences (case, punctuation)
-        assert result.query_processed.replace("?", "").replace(".", "").strip().lower() == basic_request.query.replace("?", "").replace(".", "").strip().lower()
+        assert (
+            result.query_processed.replace("?", "").replace(".", "").strip().lower()
+            == basic_request.query.replace("?", "").replace(".", "").strip().lower()
+        )
         assert result.processing_time_ms > 0
         assert len(result.results) <= basic_request.limit
         assert result.total_results >= 0
@@ -336,7 +342,7 @@ class TestCoreSearchFunctionality:
             return_value=Mock(expanded_query="expanded test")
         )
         orchestrator._query_expansion_service = mock_service
-        
+
         result = await orchestrator.search(enhanced_request)
         assert result.expanded_query == "expanded test"
         assert "query_expansion" in result.features_used
@@ -352,7 +358,9 @@ class TestCoreSearchFunctionality:
     async def test_search_error_handling(self, orchestrator, basic_request):
         """Test search error handling."""
         # Mock _execute_search to raise an exception
-        with patch.object(orchestrator, "_execute_search", side_effect=Exception("Search failed")):
+        with patch.object(
+            orchestrator, "_execute_search", side_effect=Exception("Search failed")
+        ):
             result = await orchestrator.search(basic_request)
 
             # Should return minimal result on error
@@ -369,9 +377,7 @@ class TestFeatureIntegration:
     async def test_query_expansion_feature(self, orchestrator):
         """Test query expansion feature."""
         request = SearchRequest(
-            query="ML algorithms",
-            mode=SearchMode.ENHANCED,
-            enable_expansion=True
+            query="ML algorithms", mode=SearchMode.ENHANCED, enable_expansion=True
         )
 
         # Mock the expansion service
@@ -390,9 +396,7 @@ class TestFeatureIntegration:
     async def test_query_expansion_failure(self, orchestrator):
         """Test query expansion failure handling."""
         request = SearchRequest(
-            query="test",
-            mode=SearchMode.ENHANCED,
-            enable_expansion=True
+            query="test", mode=SearchMode.ENHANCED, enable_expansion=True
         )
 
         # Mock expansion service to raise exception
@@ -412,18 +416,48 @@ class TestFeatureIntegration:
         request = SearchRequest(
             query="test",
             enable_clustering=True,
-            enable_expansion=False  # Disable expansion to focus on clustering
+            enable_expansion=False,  # Disable expansion to focus on clustering
         )
 
         # Mock _execute_search to return results with required fields for clustering
         with patch.object(orchestrator, "_execute_search") as mock_search:
             mock_search.return_value = [
-                {"id": "doc_0", "title": "Test Document 0", "content": "content 0", "score": 0.9},
-                {"id": "doc_1", "title": "Test Document 1", "content": "content 1", "score": 0.8},
-                {"id": "doc_2", "title": "Test Document 2", "content": "content 2", "score": 0.7},
-                {"id": "doc_3", "title": "Test Document 3", "content": "content 3", "score": 0.6},
-                {"id": "doc_4", "title": "Test Document 4", "content": "content 4", "score": 0.5},
-                {"id": "doc_5", "title": "Test Document 5", "content": "content 5", "score": 0.4},
+                {
+                    "id": "doc_0",
+                    "title": "Test Document 0",
+                    "content": "content 0",
+                    "score": 0.9,
+                },
+                {
+                    "id": "doc_1",
+                    "title": "Test Document 1",
+                    "content": "content 1",
+                    "score": 0.8,
+                },
+                {
+                    "id": "doc_2",
+                    "title": "Test Document 2",
+                    "content": "content 2",
+                    "score": 0.7,
+                },
+                {
+                    "id": "doc_3",
+                    "title": "Test Document 3",
+                    "content": "content 3",
+                    "score": 0.6,
+                },
+                {
+                    "id": "doc_4",
+                    "title": "Test Document 4",
+                    "content": "content 4",
+                    "score": 0.5,
+                },
+                {
+                    "id": "doc_5",
+                    "title": "Test Document 5",
+                    "content": "content 5",
+                    "score": 0.4,
+                },
             ]
 
             # Mock clustering service
@@ -432,10 +466,12 @@ class TestFeatureIntegration:
             mock_cluster.cluster_id = "cluster_1"
             mock_cluster.label = "Technical Documentation"
             mock_cluster.results = [Mock(id="doc_0"), Mock(id="doc_1")]
-            
+
             mock_clustering_result = Mock()
             mock_clustering_result.clusters = [mock_cluster]
-            mock_service.cluster_results = AsyncMock(return_value=mock_clustering_result)
+            mock_service.cluster_results = AsyncMock(
+                return_value=mock_clustering_result
+            )
             orchestrator._clustering_service = mock_service
 
             result = await orchestrator.search(request)
@@ -450,7 +486,7 @@ class TestFeatureIntegration:
         request = SearchRequest(
             query="test",
             limit=3,  # Less than 5 results
-            enable_clustering=True
+            enable_clustering=True,
         )
 
         # Mock to return only 3 results
@@ -472,14 +508,24 @@ class TestFeatureIntegration:
             query="test",
             enable_personalization=True,
             enable_expansion=False,  # Disable expansion to focus on ranking
-            user_id="test_user"
+            user_id="test_user",
         )
-        
+
         # Mock _execute_search to return results with required fields for ranking
         with patch.object(orchestrator, "_execute_search") as mock_search:
             mock_search.return_value = [
-                {"id": "doc_0", "title": "Test Document 0", "content": "content 0", "score": 0.9},
-                {"id": "doc_1", "title": "Test Document 1", "content": "content 1", "score": 0.8},
+                {
+                    "id": "doc_0",
+                    "title": "Test Document 0",
+                    "content": "content 0",
+                    "score": 0.9,
+                },
+                {
+                    "id": "doc_1",
+                    "title": "Test Document 1",
+                    "content": "content 1",
+                    "score": 0.8,
+                },
             ]
 
             # Mock ranking service
@@ -487,7 +533,7 @@ class TestFeatureIntegration:
             mock_ranked = Mock()
             mock_ranked.result_id = "doc_0"
             mock_ranked.final_score = 0.95
-            
+
             mock_ranking_result = Mock()
             mock_ranking_result.ranked_results = [mock_ranked]
             mock_service.rank_results = AsyncMock(return_value=mock_ranking_result)
@@ -504,7 +550,7 @@ class TestFeatureIntegration:
         request = SearchRequest(
             query="test",
             enable_personalization=True,
-            user_id=None  # No user ID
+            user_id=None,  # No user ID
         )
 
         result = await orchestrator.search(request)
@@ -522,30 +568,27 @@ class TestFeatureIntegration:
         mock_config.rag.min_confidence_threshold = 0.7
         mock_get_config.return_value = mock_config
 
-        request = SearchRequest(
-            query="What is Python?",
-            enable_rag=True
-        )
+        request = SearchRequest(query="What is Python?", enable_rag=True)
 
         # Mock RAG generator
         mock_rag = Mock()
         mock_rag._initialized = True
         mock_rag.initialize = AsyncMock()
-        
+
         mock_source = Mock()
         mock_source.source_id = "doc_0"
         mock_source.title = "Python Documentation"
         mock_source.url = "https://docs.python.org"
         mock_source.relevance_score = 0.9
         mock_source.excerpt = "Python is a programming language"
-        
+
         mock_rag_result = Mock()
         mock_rag_result.answer = "Python is a high-level programming language."
         mock_rag_result.confidence_score = 0.85
         mock_rag_result.sources = [mock_source]
         mock_rag_result.metrics = Mock()
         mock_rag_result.metrics.model_dump.return_value = {"tokens": 100}
-        
+
         mock_rag.generate_answer = AsyncMock(return_value=mock_rag_result)
         orchestrator._rag_generator = mock_rag
 
@@ -568,22 +611,19 @@ class TestFeatureIntegration:
         mock_config.rag.min_confidence_threshold = 0.8  # High threshold
         mock_get_config.return_value = mock_config
 
-        request = SearchRequest(
-            query="What is Python?",
-            enable_rag=True
-        )
+        request = SearchRequest(query="What is Python?", enable_rag=True)
 
         # Mock RAG generator with low confidence
         mock_rag = Mock()
         mock_rag._initialized = True
         mock_rag.initialize = AsyncMock()
-        
+
         mock_rag_result = Mock()
         mock_rag_result.answer = "Low confidence answer"
         mock_rag_result.confidence_score = 0.6  # Below threshold
         mock_rag_result.sources = []
         mock_rag_result.metrics = None
-        
+
         mock_rag.generate_answer = AsyncMock(return_value=mock_rag_result)
         orchestrator._rag_generator = mock_rag
 
@@ -596,10 +636,7 @@ class TestFeatureIntegration:
 
     async def test_rag_failure_handling(self, orchestrator):
         """Test RAG failure doesn't break search."""
-        request = SearchRequest(
-            query="test",
-            enable_rag=True
-        )
+        request = SearchRequest(query="test", enable_rag=True)
 
         # Mock RAG generator to raise exception
         mock_rag = Mock()
@@ -623,20 +660,20 @@ class TestFeatureIntegration:
         mock_fed_result.results = [
             {
                 "id": "fed_doc_1",
-                "title": "Federated Document 1", 
+                "title": "Federated Document 1",
                 "content": "Content from collection A",
                 "score": 0.95,
                 "metadata": {"source": "collection_a"},
-                "collection": "collection_a"
+                "collection": "collection_a",
             },
             {
                 "id": "fed_doc_2",
                 "title": "Federated Document 2",
-                "content": "Content from collection B", 
+                "content": "Content from collection B",
                 "score": 0.88,
                 "metadata": {"source": "collection_b"},
-                "collection": "collection_b"
-            }
+                "collection": "collection_b",
+            },
         ]
         mock_federated_service.search = AsyncMock(return_value=mock_fed_result)
         orchestrator._federated_service = mock_federated_service
@@ -644,18 +681,18 @@ class TestFeatureIntegration:
         request = SearchRequest(
             query="federated search test",
             enable_federation=True,
-            collection_name="target_collection"
+            collection_name="target_collection",
         )
 
         result = await orchestrator.search(request)
-        
+
         # Should use federated results
         assert len(result.results) == 2
         assert result.results[0]["id"] == "fed_doc_1"
         assert result.results[0]["title"] == "Federated Document 1"
         assert result.results[0]["collection"] == "collection_a"
         assert result.results[1]["collection"] == "collection_b"
-        
+
         # Verify federated service was called
         mock_federated_service.search.assert_called_once()
         fed_request = mock_federated_service.search.call_args[0][0]
@@ -666,16 +703,15 @@ class TestFeatureIntegration:
         """Test federated search failure falls back to regular search."""
         # Mock federated service to fail
         mock_federated_service = Mock()
-        mock_federated_service.search = AsyncMock(side_effect=Exception("Federation failed"))
+        mock_federated_service.search = AsyncMock(
+            side_effect=Exception("Federation failed")
+        )
         orchestrator._federated_service = mock_federated_service
 
-        request = SearchRequest(
-            query="test federation failure",
-            enable_federation=True
-        )
+        request = SearchRequest(query="test federation failure", enable_federation=True)
 
         result = await orchestrator.search(request)
-        
+
         # Should fall back to mock results
         assert len(result.results) > 0
         assert result.results[0]["id"].startswith("doc_")  # Mock result format
@@ -704,10 +740,7 @@ class TestPipelineConfiguration:
 
     def test_apply_pipeline_config_balanced(self, orchestrator):
         """Test applying balanced pipeline configuration."""
-        request = SearchRequest(
-            query="test",
-            pipeline=SearchPipeline.BALANCED
-        )
+        request = SearchRequest(query="test", pipeline=SearchPipeline.BALANCED)
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -718,10 +751,7 @@ class TestPipelineConfiguration:
 
     def test_apply_pipeline_config_comprehensive(self, orchestrator):
         """Test applying comprehensive pipeline configuration."""
-        request = SearchRequest(
-            query="test",
-            pipeline=SearchPipeline.COMPREHENSIVE
-        )
+        request = SearchRequest(query="test", pipeline=SearchPipeline.COMPREHENSIVE)
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -772,10 +802,7 @@ class TestCachingFunctionality:
 
     async def test_cache_disabled(self, orchestrator):
         """Test search with caching disabled."""
-        request = SearchRequest(
-            query="test",
-            enable_caching=False
-        )
+        request = SearchRequest(query="test", enable_caching=False)
 
         result1 = await orchestrator.search(request)
         result2 = await orchestrator.search(request)
@@ -788,8 +815,12 @@ class TestCachingFunctionality:
     async def test_cache_key_generation(self, orchestrator):
         """Test cache key generation."""
         request1 = SearchRequest(query="test", limit=10, user_id="user1")
-        request2 = SearchRequest(query="test", limit=20, user_id="user1")  # Different limit
-        request3 = SearchRequest(query="test", limit=10, user_id="user2")  # Different user
+        request2 = SearchRequest(
+            query="test", limit=20, user_id="user1"
+        )  # Different limit
+        request3 = SearchRequest(
+            query="test", limit=10, user_id="user2"
+        )  # Different user
 
         key1 = orchestrator._get_cache_key(request1)
         key2 = orchestrator._get_cache_key(request2)
@@ -846,7 +877,9 @@ class TestStatisticsAndPerformance:
         """Test average processing time calculation."""
         # Perform multiple searches
         for i in range(3):
-            request = SearchRequest(query=f"test {i}")  # Different queries to avoid cache
+            request = SearchRequest(
+                query=f"test {i}"
+            )  # Different queries to avoid cache
             await orchestrator.search(request)
 
         stats = orchestrator.get_stats()
@@ -889,7 +922,11 @@ class TestUtilityMethods:
         mock_ranked_3.result_id = "doc_3"
         mock_ranked_3.final_score = 0.75
 
-        mock_ranking_result.ranked_results = [mock_ranked_1, mock_ranked_2, mock_ranked_3]
+        mock_ranking_result.ranked_results = [
+            mock_ranked_1,
+            mock_ranked_2,
+            mock_ranked_3,
+        ]
 
         ranked_results = orchestrator._apply_ranking(results, mock_ranking_result)
 
@@ -955,22 +992,26 @@ class TestEdgeCasesAndErrorHandling:
             enable_clustering=True,
             enable_personalization=True,
             enable_rag=True,
-            user_id="test_user"
+            user_id="test_user",
         )
 
         # Mock all services to fail
         mock_expansion = Mock()
-        mock_expansion.expand_query = AsyncMock(side_effect=Exception("Expansion failed"))
+        mock_expansion.expand_query = AsyncMock(
+            side_effect=Exception("Expansion failed")
+        )
         orchestrator._query_expansion_service = mock_expansion
-        
+
         mock_clustering = Mock()
-        mock_clustering.cluster_results = AsyncMock(side_effect=Exception("Clustering failed"))
+        mock_clustering.cluster_results = AsyncMock(
+            side_effect=Exception("Clustering failed")
+        )
         orchestrator._clustering_service = mock_clustering
-        
+
         mock_ranking = Mock()
         mock_ranking.rank_results = AsyncMock(side_effect=Exception("Ranking failed"))
         orchestrator._ranking_service = mock_ranking
-        
+
         mock_rag = Mock()
         mock_rag._initialized = True
         mock_rag.initialize = AsyncMock()
@@ -988,7 +1029,7 @@ class TestEdgeCasesAndErrorHandling:
         """Test search behavior under timeout conditions."""
         request = SearchRequest(
             query="test",
-            max_processing_time_ms=1.0  # Very short timeout
+            max_processing_time_ms=1.0,  # Very short timeout
         )
 
         # The current implementation doesn't enforce timeouts,
@@ -996,7 +1037,9 @@ class TestEdgeCasesAndErrorHandling:
         result = await orchestrator.search(request)
         assert isinstance(result, SearchResult)
 
-    async def test_comprehensive_feature_integration(self, orchestrator, comprehensive_request):
+    async def test_comprehensive_feature_integration(
+        self, orchestrator, comprehensive_request
+    ):
         """Test all features working together successfully."""
         # Mock all services to succeed
         with patch("src.config.get_config") as mock_get_config:
@@ -1010,7 +1053,7 @@ class TestEdgeCasesAndErrorHandling:
                     "title": f"Comprehensive Test Document {i}",
                     "content": f"Test content for comprehensive integration {i}",
                     "score": 0.9 - (i * 0.1),
-                    "metadata": {"source": "test_collection"}
+                    "metadata": {"source": "test_collection"},
                 }
                 for i in range(8)  # 8 results to trigger clustering (> 5)
             ]
@@ -1031,7 +1074,9 @@ class TestEdgeCasesAndErrorHandling:
             mock_cluster.results = [Mock(id="doc_0")]
             mock_clustering_result = Mock()
             mock_clustering_result.clusters = [mock_cluster]
-            mock_clustering.cluster_results = AsyncMock(return_value=mock_clustering_result)
+            mock_clustering.cluster_results = AsyncMock(
+                return_value=mock_clustering_result
+            )
             orchestrator._clustering_service = mock_clustering
 
             # Mock ranking
@@ -1067,9 +1112,9 @@ class TestEdgeCasesAndErrorHandling:
             # All features should be used
             expected_features = {
                 "query_expansion",
-                "result_clustering", 
+                "result_clustering",
                 "personalized_ranking",
-                "rag_answer_generation"
+                "rag_answer_generation",
             }
             assert set(result.features_used) == expected_features
 
