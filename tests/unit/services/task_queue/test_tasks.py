@@ -1,6 +1,7 @@
 """Tests for task queue task functions."""
 
 from unittest.mock import AsyncMock
+from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
@@ -24,35 +25,39 @@ class TestTaskFunctions:
         collection_name = "test_collection"
         grace_period_minutes = 60
 
-        # Mock the client manager and its dependencies
-        mock_qdrant_service = AsyncMock()
-        mock_qdrant_service.delete_collection.return_value = True
-
-        mock_client_manager = AsyncMock()
-        mock_client_manager.get_qdrant_service.return_value = mock_qdrant_service
-
-        # Mock the QdrantAliasManager
-        mock_alias_manager = AsyncMock()
-        mock_alias_manager.check_collection_deletion_safety.return_value = (True, [])
-        mock_alias_manager.cleanup_after_collection_deletion.return_value = None
-
+        # Mock the async sleep to avoid waiting
         with (
+            patch("src.services.task_queue.tasks.asyncio.sleep"),
+            patch("src.services.task_queue.tasks.get_config") as mock_get_config,
             patch(
-                "src.services.task_queue.tasks.ClientManager.from_unified_config",
-                return_value=mock_client_manager,
-            ),
+                "src.services.task_queue.tasks.ClientManager"
+            ) as mock_client_manager_class,
             patch(
-                "src.services.task_queue.tasks.QdrantAliasManager",
-                return_value=mock_alias_manager,
-            ),
+                "src.services.task_queue.tasks.QdrantAliasManager"
+            ) as mock_alias_manager_class,
             patch("src.services.task_queue.tasks.logger") as mock_logger,
         ):
+            # Mock config
+            mock_config = Mock()
+            mock_get_config.return_value = mock_config
+
+            # Mock client manager
+            mock_client_manager = AsyncMock()
+            mock_qdrant_client = AsyncMock()
+            mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
+            mock_client_manager_class.return_value = mock_client_manager
+
+            # Mock alias manager
+            mock_alias_manager = AsyncMock()
+            mock_alias_manager.list_aliases.return_value = {}  # No aliases
+            mock_alias_manager_class.return_value = mock_alias_manager
+
             # Execute the task
             result = await delete_collection(ctx, collection_name, grace_period_minutes)
 
             # Verify the result
             assert result["status"] == "success"
-            assert result["collection_name"] == collection_name
+            assert result["collection"] == collection_name
             mock_logger.info.assert_called()
 
     @pytest.mark.asyncio
@@ -62,15 +67,18 @@ class TestTaskFunctions:
         collection_name = "test_collection"
         grace_period_minutes = 60
 
-        # Mock client manager to raise an exception
-        with patch(
-            "src.services.task_queue.tasks.ClientManager.from_unified_config",
-            side_effect=Exception("Database error"),
+        # Mock to raise an exception
+        with (
+            patch("src.services.task_queue.tasks.asyncio.sleep"),
+            patch(
+                "src.services.task_queue.tasks.get_config",
+                side_effect=Exception("Database error"),
+            ),
         ):
             result = await delete_collection(ctx, collection_name, grace_period_minutes)
 
             # Should return error result
-            assert result["status"] == "error"
+            assert result["status"] == "failed"
             assert "Database error" in result["error"]
 
     @pytest.mark.asyncio
@@ -79,28 +87,36 @@ class TestTaskFunctions:
         ctx = {"redis": AsyncMock()}
         cache_key = "test_cache_key"
         cache_data = {"data": "test_data"}
+        persist_func_module = "src.services.cache.patterns"
+        persist_func_name = "persist_to_storage"
 
-        # Mock the client manager and cache manager
-        mock_cache_manager = AsyncMock()
-        mock_cache_manager.persist_to_distributed.return_value = True
-
-        mock_client_manager = AsyncMock()
-        mock_client_manager.get_cache_manager.return_value = mock_cache_manager
+        # Mock the persist function module and function
+        mock_persist_func = AsyncMock()
 
         with (
-            patch(
-                "src.services.task_queue.tasks.ClientManager.from_unified_config",
-                return_value=mock_client_manager,
-            ),
-            patch("src.services.task_queue.tasks.logger") as mock_logger,
+            patch("src.services.task_queue.tasks.asyncio.sleep"),  # Mock the delay
+            patch("importlib.import_module") as mock_import,
         ):
-            # Execute the task
-            result = await persist_cache(ctx, cache_key, cache_data)
+            # Mock the module and function
+            mock_module = Mock()
+            mock_module.persist_to_storage = mock_persist_func
+            mock_import.return_value = mock_module
+
+            # Execute the task - need to pass delay parameter too
+            result = await persist_cache(
+                ctx,
+                cache_key,
+                cache_data,
+                persist_func_module,
+                persist_func_name,
+                delay=0.1,
+            )
 
             # Verify the result
             assert result["status"] == "success"
-            assert result["cache_key"] == cache_key
-            mock_logger.info.assert_called()
+            assert result["key"] == cache_key
+            assert "duration" in result
+            mock_persist_func.assert_called_once_with(cache_key, cache_data)
 
     @pytest.mark.asyncio
     async def test_persist_cache_error(self):
@@ -108,16 +124,20 @@ class TestTaskFunctions:
         ctx = {"redis": AsyncMock()}
         cache_key = "test_cache_key"
         cache_data = {"data": "test_data"}
+        persist_func_module = "src.services.cache.patterns"
+        persist_func_name = "persist_to_storage"
 
-        # Mock client manager to raise an exception
+        # Mock import to raise an exception
         with patch(
-            "src.services.task_queue.tasks.ClientManager.from_unified_config",
+            "importlib.import_module",
             side_effect=Exception("Cache error"),
         ):
-            result = await persist_cache(ctx, cache_key, cache_data)
+            result = await persist_cache(
+                ctx, cache_key, cache_data, persist_func_module, persist_func_name
+            )
 
             # Should return error result
-            assert result["status"] == "error"
+            assert result["status"] == "failed"
             assert "Cache error" in result["error"]
 
 

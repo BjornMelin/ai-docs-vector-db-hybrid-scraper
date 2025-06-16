@@ -631,8 +631,8 @@ class TestClientManagerDatabaseIntegration:
         config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
+            echo_queries=True,
+            pool_size=20,
         )
 
         client_manager = ClientManager(config)
@@ -665,8 +665,8 @@ class TestClientManagerDatabaseIntegration:
         config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
+            echo_queries=True,
+            pool_size=20,
         )
 
         client_manager = ClientManager(config)
