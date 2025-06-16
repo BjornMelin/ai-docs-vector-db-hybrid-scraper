@@ -31,6 +31,16 @@ class EmbeddingProvider(str, Enum):
     FASTEMBED = "fastembed"
 
 
+class QualityTier(str, Enum):
+    """Embedding quality tiers."""
+
+    FAST = "fast"  # Local models, fastest
+    BALANCED = "balanced"  # Balance of speed and quality
+    BEST = "best"  # Highest quality, may be slower/costlier
+    PREMIUM = "premium"  # Premium tier with advanced features
+    FASTEMBED = "fastembed"
+
+
 class EmbeddingModel(str, Enum):
     """Embedding models."""
 

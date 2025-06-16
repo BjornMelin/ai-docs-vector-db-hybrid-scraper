@@ -24,7 +24,8 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import ProcessingStage
+
+# ProcessingStage removed from simplified orchestrator
 from ...services.query_processing import SearchMode
 from ...services.query_processing import SearchOrchestrator
 from ...services.query_processing import SearchPipeline
@@ -338,10 +339,8 @@ async def orchestrated_search_tool(
     try:
         # Build orchestration configuration
 
-        # Determine stages to skip
-        if request.stages:
-            all_stages = [s.value for s in ProcessingStage]
-            [s for s in all_stages if s not in request.stages]
+        # Note: ProcessingStage removed in simplified orchestrator
+        # Stages are now handled implicitly by SearchMode and SearchPipeline
 
         # Create search request
         search_request = SearchRequest(

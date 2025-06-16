@@ -16,13 +16,13 @@ from src.services.query_processing.expansion import ExpansionStrategy
 from src.services.query_processing.expansion import QueryExpansionResult
 from src.services.query_processing.federated import FederatedSearchResult
 from src.services.query_processing.federated import SearchMode as FederatedSearchMode
-from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
-from src.services.query_processing.orchestrator import AdvancedSearchRequest
-from src.services.query_processing.orchestrator import AdvancedSearchResult
-from src.services.query_processing.orchestrator import ProcessingStage
+from src.services.query_processing.orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
+from src.services.query_processing.orchestrator import SearchRequest as AdvancedSearchRequest
+from src.services.query_processing.orchestrator import SearchResult as AdvancedSearchResult
+# ProcessingStage removed from simplified orchestrator
 from src.services.query_processing.orchestrator import SearchMode
 from src.services.query_processing.orchestrator import SearchPipeline
-from src.services.query_processing.orchestrator import StageResult
+# StageResult removed from simplified orchestrator
 from src.services.query_processing.ranking import PersonalizedRankingResult
 from src.services.query_processing.ranking import RankingStrategy
 

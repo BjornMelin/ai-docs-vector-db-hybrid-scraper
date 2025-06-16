@@ -8,9 +8,9 @@ from src.services.query_processing.models import QueryIntent
 from src.services.query_processing.models import QueryProcessingRequest
 from src.services.query_processing.models import QueryProcessingResponse
 from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
-from src.services.query_processing.orchestrator import AdvancedSearchRequest
-from src.services.query_processing.orchestrator import AdvancedSearchResult
+from src.services.query_processing.orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
+from src.services.query_processing.orchestrator import SearchRequest as AdvancedSearchRequest
+from src.services.query_processing.orchestrator import SearchResult as AdvancedSearchResult
 from src.services.query_processing.orchestrator import SearchMode
 from src.services.query_processing.orchestrator import SearchPipeline
 
