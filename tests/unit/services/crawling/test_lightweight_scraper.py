@@ -7,6 +7,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 from bs4 import BeautifulSoup
+
 # LightweightScraperConfig not in simplified config, use Config instead
 from src.config import Config
 from src.services.crawling.lightweight_scraper import LightweightScraper

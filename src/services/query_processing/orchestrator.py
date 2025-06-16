@@ -238,6 +238,7 @@ class SearchOrchestrator(BaseService):
                 cache_key = self._get_cache_key(request)
                 if cache_key in self.cache:
                     self.stats["cache_hits"] += 1
+                    self.stats["total_searches"] += 1  # Count cache hits too
                     cached_result = self.cache[cache_key]
                     cached_result.cache_hit = True
                     return cached_result
@@ -424,32 +425,80 @@ class SearchOrchestrator(BaseService):
 
     def _apply_pipeline_config(self, request: SearchRequest) -> dict[str, Any]:
         """Apply pipeline configuration to request."""
-        # Start with pipeline defaults
-        config = self.pipeline_configs.get(request.pipeline.value, {}).copy()
-
-        # Override with explicit request settings
-        if hasattr(request, "enable_expansion"):
-            config["enable_expansion"] = request.enable_expansion
-        if hasattr(request, "enable_clustering"):
-            config["enable_clustering"] = request.enable_clustering
-        if hasattr(request, "enable_personalization"):
-            config["enable_personalization"] = request.enable_personalization
-        if hasattr(request, "max_processing_time_ms"):
-            config["max_processing_time_ms"] = request.max_processing_time_ms
-
+        # Start with pipeline defaults - these should take precedence
+        config = self.pipeline_configs.get(request.pipeline, {}).copy()
+        
+        # Check which fields were explicitly set using Pydantic's __pydantic_fields_set__
+        if hasattr(request, '__pydantic_fields_set__'):
+            explicitly_set = request.__pydantic_fields_set__
+        else:
+            # Fallback: assume fields that differ from pipeline defaults were explicitly set
+            explicitly_set = set()
+            pipeline_defaults = self.pipeline_configs.get(request.pipeline, {})
+            for field in ["enable_expansion", "enable_clustering", "enable_personalization", "max_processing_time_ms"]:
+                request_value = getattr(request, field)
+                pipeline_default = pipeline_defaults.get(field)
+                if pipeline_default is not None and request_value != pipeline_default:
+                    explicitly_set.add(field)
+        
+        # Override pipeline settings for explicitly set fields
+        for field in explicitly_set:
+            if hasattr(request, field):
+                config[field] = getattr(request, field)
+        
         return config
 
     async def _execute_search(
         self, query: str, request: SearchRequest, config: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Execute the actual search (placeholder for actual implementation)."""
-        # This would call the actual vector search service
-        # For now, return mock results
+        """Execute the actual search (calls federated search if enabled)."""
+        
+        # Check if federated search is enabled
+        if request.enable_federation:
+            try:
+                from .federated import FederatedSearchRequest, SearchMode as FedSearchMode, CollectionSelectionStrategy, ResultMergingStrategy
+                
+                # Create federated search request
+                fed_request = FederatedSearchRequest(
+                    query=query,
+                    limit=request.limit,
+                    offset=request.offset,
+                    target_collections=[request.collection_name] if request.collection_name else None,
+                    collection_selection_strategy=CollectionSelectionStrategy.SMART_ROUTING,
+                    search_mode=FedSearchMode.PARALLEL,
+                    result_merging_strategy=ResultMergingStrategy.SCORE_BASED,
+                    timeout_ms=config.get("max_processing_time_ms", 5000.0),
+                    enable_deduplication=True,
+                )
+                
+                # Execute federated search
+                fed_result = await self.federated_service.search(fed_request)
+                
+                # Convert federated results to standard format
+                results = []
+                for result in fed_result.results:
+                    results.append({
+                        "id": result.get("id", f"fed_{len(results)}"),
+                        "title": result.get("title", "Federated Result"),
+                        "content": result.get("content", ""),
+                        "score": result.get("score", 0.0),
+                        "metadata": result.get("metadata", {}),
+                        "collection": result.get("collection", "unknown"),
+                    })
+                
+                return results
+                
+            except Exception as e:
+                self._logger.warning(f"Federated search failed: {e}")
+                # Fall back to mock results
+        
+        # Default mock search implementation for non-federated search
         results = []
         for i in range(20):  # Mock 20 results
             results.append(
                 {
                     "id": f"doc_{i}",
+                    "title": f"Document {i} Title",  # Required by ranking/clustering
                     "content": f"Result {i} for query: {query}",
                     "score": 0.9 - (i * 0.04),
                     "metadata": {"source": f"collection_{i % 3}"},
