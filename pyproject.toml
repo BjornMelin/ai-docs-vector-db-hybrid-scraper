@@ -33,6 +33,7 @@ classifiers = [
 dependencies = [
     # Core web framework & API
     "fastapi>=0.115.12,<0.116.0",
+    "starlette>=0.41.0,<0.42.0", # Explicit dependency for middleware
     "uvicorn[standard]>=0.34.2,<0.35.0",
     "python-multipart>=0.0.12,<0.1.0", # For FastAPI file uploads
     
@@ -117,6 +118,14 @@ llm = [
     "langchain-google-genai>=2.0.0,<3.0.0", # Updated to 2.x series
 ]
 
+# Observability and tracing (optional monitoring features)
+observability = [
+    "opentelemetry-api>=1.29.0,<2.0.0",
+    "opentelemetry-sdk>=1.29.0,<2.0.0", 
+    "opentelemetry-instrumentation-fastapi>=0.54.0,<1.0.0",
+    "opentelemetry-exporter-prometheus>=0.54.0,<1.0.0",
+]
+
 # Code parsing tools (optional development features)
 parsing = [
     "tree-sitter>=0.24.0,<0.25.0",
@@ -139,7 +148,7 @@ docs = [
 
 # All optional dependencies combined
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,parsing,docs]",
+    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,observability,parsing,docs]",
 ]
 
 [project.urls]
