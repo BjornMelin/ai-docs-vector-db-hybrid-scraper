@@ -19,13 +19,12 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientHealth
 from src.infrastructure.shared import ClientState
 from src.services.errors import APIError
-
-from ..config import Config
 
 
 # Abstract interfaces for better testability
