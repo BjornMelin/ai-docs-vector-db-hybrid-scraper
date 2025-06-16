@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from src.config import Config
-from src.services.browser.enhanced_router import EnhancedAutomationRouter
+from src.services.browser.browser_router import EnhancedAutomationRouter
 from src.services.browser.tier_config import EnhancedRoutingConfig
 from src.services.browser.tier_rate_limiter import TierRateLimiter
 from src.services.errors import CrawlServiceError

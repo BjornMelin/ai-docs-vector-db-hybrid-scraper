@@ -746,21 +746,28 @@ class TestClientManagerAdvancedCoverage:
             ) as mock_ab_class,
             patch.object(client_manager, "get_qdrant_service") as mock_get_qdrant,
             patch.object(client_manager, "get_cache_manager") as mock_get_cache,
+            patch.object(
+                client_manager, "get_feature_flag_manager"
+            ) as mock_get_feature_flag,
         ):
-            mock_ab_instance = Mock()
+            mock_ab_instance = AsyncMock()
             mock_ab_class.return_value = mock_ab_instance
 
             mock_qdrant_service = Mock()
             mock_cache_manager = Mock()
+            mock_feature_flag_manager = Mock()
             mock_get_qdrant.return_value = mock_qdrant_service
             mock_get_cache.return_value = mock_cache_manager
+            mock_get_feature_flag.return_value = mock_feature_flag_manager
 
             # First call should create the manager
             ab_manager = await client_manager.get_ab_testing_manager()
 
             assert ab_manager is mock_ab_instance
             mock_ab_class.assert_called_once_with(
-                qdrant_service=mock_qdrant_service, cache_manager=mock_cache_manager
+                qdrant_service=mock_qdrant_service,
+                cache_manager=mock_cache_manager,
+                feature_flag_manager=mock_feature_flag_manager,
             )
 
             # Second call should return the same instance (cached)

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from src.config import Config
-from src.services.browser.enhanced_router import EnhancedAutomationRouter
+from src.services.browser.browser_router import EnhancedAutomationRouter
 from src.services.browser.tier_config import CircuitBreakerState
 from src.services.browser.tier_config import DomainPreference
 from src.services.browser.tier_config import TierConfiguration

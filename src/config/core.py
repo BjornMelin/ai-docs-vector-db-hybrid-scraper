@@ -24,12 +24,22 @@ from .enums import SearchStrategy
 
 
 class CacheConfig(BaseModel):
-    """Simple cache configuration."""
+    """Cache configuration with local and distributed options."""
 
     enable_caching: bool = Field(default=True)
+    enable_local_cache: bool = Field(default=True)
+    enable_dragonfly_cache: bool = Field(default=False)
     dragonfly_url: str = Field(default="redis://localhost:6379")
     local_max_size: int = Field(default=1000, gt=0)
+    local_max_memory_mb: int = Field(default=100, gt=0)
     ttl_seconds: int = Field(default=3600, gt=0)
+    cache_ttl_seconds: dict[str, int] = Field(
+        default_factory=lambda: {
+            "search_results": 3600,
+            "embeddings": 86400,
+            "collections": 7200,
+        }
+    )
 
 
 class QdrantConfig(BaseModel):
@@ -40,6 +50,8 @@ class QdrantConfig(BaseModel):
     timeout: float = Field(default=30.0, gt=0)
     collection_name: str = Field(default="documents")
     batch_size: int = Field(default=100, gt=0, le=1000)
+    prefer_grpc: bool = Field(default=False)
+    grpc_port: int = Field(default=6334, gt=0)
 
 
 class OpenAIConfig(BaseModel):
@@ -247,13 +259,13 @@ class DeploymentConfig(BaseModel):
 
     # Tier settings
     tier: str = Field(
-        default="personal",
+        default="enterprise",
         description="Deployment tier: personal, professional, enterprise",
     )
 
     # Feature flag integration
     enable_feature_flags: bool = Field(
-        default=False, description="Enable feature flag management"
+        default=True, description="Enable feature flag management"
     )
     flagsmith_api_key: str | None = Field(default=None, description="Flagsmith API key")
     flagsmith_environment_key: str | None = Field(
@@ -266,15 +278,19 @@ class DeploymentConfig(BaseModel):
 
     # Deployment services
     enable_deployment_services: bool = Field(
-        default=False, description="Enable enterprise deployment services"
+        default=True, description="Enable enterprise deployment services"
     )
     enable_ab_testing: bool = Field(
-        default=False, description="Enable A/B testing capabilities"
+        default=True, description="Enable A/B testing capabilities"
     )
     enable_blue_green: bool = Field(
-        default=False, description="Enable blue-green deployments"
+        default=True, description="Enable blue-green deployments"
     )
-    enable_canary: bool = Field(default=False, description="Enable canary deployments")
+    enable_canary: bool = Field(default=True, description="Enable canary deployments")
+    enable_monitoring: bool = Field(default=True, description="Enable monitoring")
+    deployment_tier: str = Field(
+        default="enterprise", description="Legacy deployment tier field"
+    )
 
     @field_validator("tier")
     @classmethod

@@ -318,10 +318,7 @@ class ClientManager:
                         enable_distributed_cache=self.config.cache.enable_dragonfly_cache,
                         local_max_size=self.config.cache.local_max_size,
                         local_max_memory_mb=self.config.cache.local_max_memory_mb,
-                        distributed_ttl_seconds={
-                            cache_type.value: ttl
-                            for cache_type, ttl in self.config.cache.cache_ttl_seconds.items()
-                        },
+                        distributed_ttl_seconds=self.config.cache.cache_ttl_seconds,
                     )
                     await self._cache_manager.initialize()
                     logger.info("Initialized CacheManager")
@@ -419,7 +416,7 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.enhanced_router import (
+                    from src.services.browser.browser_router import (
                         EnhancedAutomationRouter,
                     )
 

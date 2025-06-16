@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 import pytest
 from src.config import PlaywrightConfig
-from src.services.browser.enhanced_anti_detection import BrowserStealthConfig
-from src.services.browser.enhanced_anti_detection import EnhancedAntiDetection
-from src.services.browser.enhanced_anti_detection import SiteProfile
-from src.services.browser.enhanced_anti_detection import SuccessRateMonitor
-from src.services.browser.enhanced_anti_detection import TimingPattern
-from src.services.browser.enhanced_anti_detection import UserAgentPool
-from src.services.browser.enhanced_anti_detection import ViewportProfile
+from src.services.browser.anti_detection import BrowserStealthConfig
+from src.services.browser.anti_detection import EnhancedAntiDetection
+from src.services.browser.anti_detection import SiteProfile
+from src.services.browser.anti_detection import SuccessRateMonitor
+from src.services.browser.anti_detection import TimingPattern
+from src.services.browser.anti_detection import UserAgentPool
+from src.services.browser.anti_detection import ViewportProfile
 
 
 class TestUserAgentPool:
