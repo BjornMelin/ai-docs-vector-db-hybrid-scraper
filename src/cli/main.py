@@ -12,7 +12,8 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from src.config.loader import ConfigLoader
+from src.config import Config
+from src.config import get_config
 
 from .commands import batch as batch_commands
 
@@ -97,9 +98,10 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
     # Load configuration
     try:
         if config:
-            ctx.obj["config"] = ConfigLoader.from_file(config)
+            # Load from specific file - with new config this would be:
+            ctx.obj["config"] = Config.load_from_file(config)
         else:
-            ctx.obj["config"] = ConfigLoader.load_config()
+            ctx.obj["config"] = get_config()
     except Exception as e:
         rich_cli.show_error("Failed to load configuration", details=str(e))
         sys.exit(1)

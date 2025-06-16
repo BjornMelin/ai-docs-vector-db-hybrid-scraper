@@ -15,9 +15,11 @@ from src.mcp_tools.tools.filtering_tools import create_orchestrator
 from src.mcp_tools.tools.filtering_tools import metadata_filter_tool
 from src.mcp_tools.tools.filtering_tools import similarity_filter_tool
 from src.mcp_tools.tools.filtering_tools import temporal_filter_tool
-from src.services.query_processing.orchestrator import AdvancedSearchResult
 from src.services.query_processing.orchestrator import SearchMode
 from src.services.query_processing.orchestrator import SearchPipeline
+from src.services.query_processing.orchestrator import (
+    SearchResult as AdvancedSearchResult,
+)
 
 
 class MockContext:

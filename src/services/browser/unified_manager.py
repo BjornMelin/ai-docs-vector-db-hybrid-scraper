@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 from pydantic import Field
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
@@ -107,7 +107,7 @@ class UnifiedBrowserManager(BaseService):
     - Tier 4: Playwright + Firecrawl - Maximum control + API fallback
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize unified browser manager.
 
         Args:

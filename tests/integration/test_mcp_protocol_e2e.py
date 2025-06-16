@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import UnifiedConfig
+from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 
 from tests.mocks.mock_tools import MockMCPServer
@@ -25,7 +25,7 @@ class TestMCPProtocolE2E:
     @pytest.fixture
     async def mock_config(self):
         """Mock configuration for E2E testing."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         # Mock nested config objects
         config.qdrant = MagicMock()

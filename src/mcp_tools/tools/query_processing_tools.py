@@ -24,11 +24,12 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import AdvancedSearchOrchestrator
-from ...services.query_processing import AdvancedSearchRequest
-from ...services.query_processing import ProcessingStage
+
+# ProcessingStage removed from simplified orchestrator
 from ...services.query_processing import SearchMode
+from ...services.query_processing import SearchOrchestrator
 from ...services.query_processing import SearchPipeline
+from ...services.query_processing import SearchRequest
 from ..models.responses import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -112,42 +113,31 @@ class OrchestrationRequest(BaseModel):
 
 
 # Helper function to create the orchestrator
-def create_orchestrator() -> AdvancedSearchOrchestrator:
+def create_orchestrator() -> SearchOrchestrator:
     """Create and configure the search orchestrator."""
-    return AdvancedSearchOrchestrator(
-        enable_all_features=True, enable_performance_optimization=True
-    )
+    return SearchOrchestrator(enable_performance_optimization=True)
 
 
 # Individual tool implementations
 async def query_expansion_tool(
     request: QueryExpansionRequest,
     ctx: Context,
-    orchestrator: AdvancedSearchOrchestrator,
+    orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
     """Implementation for query expansion."""
     request_id = str(uuid4())
     await ctx.info(f"Starting query expansion search {request_id}")
 
     try:
-        # Build expansion configuration
-        expansion_config = {
-            "methods": request.expansion_methods,
-            "depth": request.expansion_depth,
-            "context_window": request.context_window,
-        }
-
-        # Create advanced search request
-        search_request = AdvancedSearchRequest(
+        # Create search request
+        search_request = SearchRequest(
             query=request.query,
-            collection=request.collection_name,
+            collection_name=request.collection_name,
             limit=request.limit,
-            search_mode=SearchMode.ENHANCED,
+            mode=SearchMode.ENHANCED,
             pipeline=SearchPipeline.BALANCED,
             enable_expansion=True,
-            expansion_config=expansion_config,
             enable_caching=True,
-            enable_performance_optimization=True,
         )
 
         # Execute search
@@ -157,14 +147,14 @@ async def query_expansion_tool(
         converted_results = []
         for r in result.results:
             search_result = SearchResult(
-                id=r.id,
-                content=r.content,
-                metadata=r.metadata,
-                score=r.score,
-                source=r.metadata.get("source", "unknown"),
-                relevance_explanation=r.metadata.get(
-                    "expansion_terms", "Query expanded"
-                ),
+                id=r.get("id", ""),
+                content=r.get("content", ""),
+                metadata=r.get("metadata", {}),
+                score=r.get("score", 0.0),
+                source=r.get("metadata", {}).get("source", "unknown"),
+                relevance_explanation=f"Query expanded: {result.expanded_query}"
+                if result.expanded_query
+                else "Query processed",
             )
             converted_results.append(search_result)
 
@@ -184,31 +174,22 @@ async def query_expansion_tool(
 async def clustered_search_tool(
     request: ClusteredSearchRequest,
     ctx: Context,
-    orchestrator: AdvancedSearchOrchestrator,
+    orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
     """Implementation for clustered search."""
     request_id = str(uuid4())
     await ctx.info(f"Starting clustered search {request_id}")
 
     try:
-        # Build clustering configuration
-        clustering_config = {
-            "num_clusters": request.num_clusters,
-            "algorithm": request.clustering_algorithm,
-            "min_cluster_size": request.min_cluster_size,
-        }
-
-        # Create advanced search request
-        search_request = AdvancedSearchRequest(
+        # Create search request
+        search_request = SearchRequest(
             query=request.query,
-            collection=request.collection_name,
+            collection_name=request.collection_name,
             limit=request.limit * 2,  # Get more results for clustering
-            search_mode=SearchMode.ENHANCED,
+            mode=SearchMode.ENHANCED,
             pipeline=SearchPipeline.BALANCED,
             enable_clustering=True,
-            clustering_config=clustering_config,
             enable_caching=True,
-            enable_performance_optimization=True,
         )
 
         # Execute search
@@ -217,13 +198,13 @@ async def clustered_search_tool(
         # Convert results
         converted_results = []
         for r in result.results[: request.limit]:
-            cluster_info = r.metadata.get("cluster_id", "unclustered")
+            cluster_info = r.get("cluster_id", "unclustered")
             search_result = SearchResult(
-                id=r.id,
-                content=r.content,
-                metadata=r.metadata,
-                score=r.score,
-                source=r.metadata.get("source", "unknown"),
+                id=r.get("id", ""),
+                content=r.get("content", ""),
+                metadata=r.get("metadata", {}),
+                score=r.get("score", 0.0),
+                source=r.get("metadata", {}).get("source", "unknown"),
                 relevance_explanation=f"Cluster: {cluster_info}",
             )
             converted_results.append(search_result)
@@ -244,32 +225,22 @@ async def clustered_search_tool(
 async def federated_search_tool(
     request: FederatedSearchRequest,
     ctx: Context,
-    orchestrator: AdvancedSearchOrchestrator,
+    orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
     """Implementation for federated search."""
     request_id = str(uuid4())
     await ctx.info(f"Starting federated search {request_id}")
 
     try:
-        # Build federation configuration
-        federation_config = {
-            "collections": request.collections,
-            "strategy": request.federation_strategy,
-            "merging": request.result_merging,
-            "per_collection_limit": request.per_collection_limit,
-        }
-
-        # Create advanced search request
-        search_request = AdvancedSearchRequest(
+        # Create search request
+        search_request = SearchRequest(
             query=request.query,
-            collection=request.collections[0],  # Primary collection
+            collection_name=request.collections[0],  # Primary collection
             limit=request.total_limit,
-            search_mode=SearchMode.ENHANCED,
+            mode=SearchMode.ENHANCED,
             pipeline=SearchPipeline.BALANCED,
             enable_federation=True,
-            federation_config=federation_config,
             enable_caching=True,
-            enable_performance_optimization=True,
         )
 
         # Execute search
@@ -278,13 +249,13 @@ async def federated_search_tool(
         # Convert results
         converted_results = []
         for r in result.results:
-            collection = r.metadata.get("collection", "unknown")
+            collection = r.get("metadata", {}).get("collection", "unknown")
             search_result = SearchResult(
-                id=r.id,
-                content=r.content,
-                metadata=r.metadata,
-                score=r.score,
-                source=r.metadata.get("source", "unknown"),
+                id=r.get("id", ""),
+                content=r.get("content", ""),
+                metadata=r.get("metadata", {}),
+                score=r.get("score", 0.0),
+                source=r.get("metadata", {}).get("source", "unknown"),
                 relevance_explanation=f"From: {collection}",
             )
             converted_results.append(search_result)
@@ -305,7 +276,7 @@ async def federated_search_tool(
 async def personalized_search_tool(
     request: PersonalizedSearchRequest,
     ctx: Context,
-    orchestrator: AdvancedSearchOrchestrator,
+    orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
     """Implementation for personalized search."""
     request_id = str(uuid4())
@@ -313,24 +284,17 @@ async def personalized_search_tool(
 
     try:
         # Build personalization configuration
-        personalization_config = {
-            "strength": request.personalization_strength,
-            "use_history": request.use_history,
-            "use_preferences": request.use_preferences,
-        }
 
-        # Create advanced search request
-        search_request = AdvancedSearchRequest(
+        # Create search request
+        search_request = SearchRequest(
             query=request.query,
-            collection=request.collection_name,
+            collection_name=request.collection_name,
             limit=request.limit,
-            search_mode=SearchMode.ENHANCED,
+            mode=SearchMode.ENHANCED,
             pipeline=SearchPipeline.BALANCED,
             user_id=request.user_id,
             enable_personalization=True,
-            personalization_config=personalization_config,
             enable_caching=True,
-            enable_performance_optimization=True,
         )
 
         # Execute search
@@ -339,13 +303,13 @@ async def personalized_search_tool(
         # Convert results
         converted_results = []
         for r in result.results:
-            personalization_score = r.metadata.get("personalization_score", 0.0)
+            personalization_score = r.get("personalized_score", 0.0)
             search_result = SearchResult(
-                id=r.id,
-                content=r.content,
-                metadata=r.metadata,
-                score=r.score,
-                source=r.metadata.get("source", "unknown"),
+                id=r.get("id", ""),
+                content=r.get("content", ""),
+                metadata=r.get("metadata", {}),
+                score=r.get("score", 0.0),
+                source=r.get("metadata", {}).get("source", "unknown"),
                 relevance_explanation=f"Personalized (score: {personalization_score:.2f})",
             )
             converted_results.append(search_result)
@@ -366,7 +330,7 @@ async def personalized_search_tool(
 async def orchestrated_search_tool(
     request: OrchestrationRequest,
     ctx: Context,
-    orchestrator: AdvancedSearchOrchestrator,
+    orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
     """Implementation for orchestrated search."""
     request_id = str(uuid4())
@@ -374,29 +338,19 @@ async def orchestrated_search_tool(
 
     try:
         # Build orchestration configuration
-        orchestration_config = {
-            "time_budget_ms": request.time_budget_ms,
-            "quality_threshold": request.quality_threshold,
-        }
 
-        # Determine stages to skip
-        skip_stages = []
-        if request.stages:
-            all_stages = [s.value for s in ProcessingStage]
-            skip_stages = [s for s in all_stages if s not in request.stages]
+        # Note: ProcessingStage removed in simplified orchestrator
+        # Stages are now handled implicitly by SearchMode and SearchPipeline
 
-        # Create advanced search request
-        search_request = AdvancedSearchRequest(
+        # Create search request
+        search_request = SearchRequest(
             query=request.query,
-            collection=request.collection_name,
+            collection_name=request.collection_name,
             limit=request.limit,
-            search_mode=SearchMode.ENHANCED,
+            mode=SearchMode.ENHANCED,
             pipeline=SearchPipeline.BALANCED,
-            skip_stages=skip_stages,
-            orchestration_config=orchestration_config,
-            enable_all_features=True,
             enable_caching=True,
-            enable_performance_optimization=True,
+            max_processing_time_ms=request.time_budget_ms,
         )
 
         # Execute search
@@ -405,29 +359,20 @@ async def orchestrated_search_tool(
         # Convert results
         converted_results = []
         for r in result.results:
-            pipeline_info = f"Pipeline: {result.pipeline.value}"
+            pipeline_info = f"Features: {', '.join(result.features_used) if result.features_used else 'basic'}"
             search_result = SearchResult(
-                id=r.id,
-                content=r.content,
-                metadata=r.metadata,
-                score=r.score,
-                source=r.metadata.get("source", "unknown"),
+                id=r.get("id", ""),
+                content=r.get("content", ""),
+                metadata=r.get("metadata", {}),
+                score=r.get("score", 0.0),
+                source=r.get("metadata", {}).get("source", "unknown"),
                 relevance_explanation=pipeline_info,
             )
             converted_results.append(search_result)
 
-        # Log stage results
-        stages_info = []
-        for stage_result in result.stage_results:
-            status = "✓" if stage_result.success else "✗"
-            stages_info.append(
-                f"{stage_result.stage}: {status} ({stage_result.processing_time_ms:.1f}ms)"
-            )
-
         await ctx.info(
             f"Orchestrated search completed: {len(converted_results)} results\n"
-            f"Stages: {', '.join(stages_info)}\n"
-            f"Quality: {result.quality_score:.2f}"
+            f"Processing time: {result.processing_time_ms:.1f}ms"
         )
 
         return converted_results

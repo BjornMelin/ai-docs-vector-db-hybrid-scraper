@@ -7,7 +7,7 @@ including sparse vector generation, tokenization, and caching.
 from unittest.mock import MagicMock
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.models.vector_search import SPLADEConfig
 from src.services.vector_db.splade_provider import SPLADEProvider
 
@@ -18,7 +18,7 @@ class TestSPLADEProvider:
     @pytest.fixture
     def mock_config(self):
         """Mock unified configuration."""
-        return MagicMock(spec=UnifiedConfig)
+        return MagicMock(spec=Config)
 
     @pytest.fixture
     def splade_config(self):

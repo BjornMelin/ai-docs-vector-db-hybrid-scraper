@@ -32,12 +32,13 @@ classifiers = [
 
 dependencies = [
     # Core web framework & API
-    "fastapi>=0.115.12,<0.116.0",
-    "uvicorn[standard]>=0.34.2,<0.35.0",
+    "fastapi>=0.115.12,<0.116.0", # Latest stable release 2025
+    "starlette>=0.41.0,<0.42.0", # Compatible with FastAPI 0.115.12
+    "uvicorn[standard]>=0.34.2,<0.35.0",  # Latest available stable release 2025
     "python-multipart>=0.0.12,<0.1.0", # For FastAPI file uploads
     
     # Data validation & configuration
-    "pydantic>=2.11.5,<3.0.0", # Updated for browser-use 0.2.6 compatibility
+    "pydantic>=2.11.5,<3.0.0", # Latest stable release 2025, browser-use 0.2.6 compatibility
     "pydantic-settings>=2.8.0,<3.0.0",
     "python-dotenv>=1.1.0,<2.0.0",
     "pyyaml>=6.0.2,<7.0.0",
@@ -117,6 +118,15 @@ llm = [
     "langchain-google-genai>=2.0.0,<3.0.0", # Updated to 2.x series
 ]
 
+# Observability and tracing (optional monitoring features)
+observability = [
+    "opentelemetry-api>=1.34.1,<2.0.0", # Latest stable release June 2025
+    "opentelemetry-sdk>=1.34.1,<2.0.0", # Latest stable release June 2025
+    "opentelemetry-instrumentation-fastapi>=0.54b0,<1.0.0", # Latest beta
+    "opentelemetry-exporter-prometheus>=0.54b1,<1.0.0", # Latest beta
+    "opentelemetry-instrumentation-starlette>=0.54b0,<1.0.0", # For Starlette instrumentation
+]
+
 # Code parsing tools (optional development features)
 parsing = [
     "tree-sitter>=0.24.0,<0.25.0",
@@ -139,7 +149,7 @@ docs = [
 
 # All optional dependencies combined
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,parsing,docs]",
+    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,observability,parsing,docs]",
 ]
 
 [project.urls]
@@ -298,4 +308,5 @@ dev = [
     "pytest-mock>=3.14.1",
     "coverage>=7.6.0",
     "ruff>=0.11.13",
+    "pytest-benchmark>=5.1.0",
 ]

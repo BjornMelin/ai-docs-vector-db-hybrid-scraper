@@ -34,13 +34,16 @@ from .intent_classifier import QueryIntentClassifier
 from .models import QueryIntent
 from .models import QueryProcessingRequest
 from .models import QueryProcessingResponse
-from .orchestrator import AdvancedSearchOrchestrator
-from .orchestrator import AdvancedSearchRequest
-from .orchestrator import AdvancedSearchResult
-from .orchestrator import ProcessingStage
+
+# ProcessingStage removed as it's not implemented in simplified orchestrator
 from .orchestrator import SearchMode
+from .orchestrator import SearchOrchestrator
+from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
 from .orchestrator import SearchPipeline
-from .orchestrator import StageResult
+from .orchestrator import SearchRequest
+from .orchestrator import SearchRequest as AdvancedSearchRequest
+from .orchestrator import SearchResult as AdvancedSearchResult
+from .orchestrator import SearchResult as OrchestratorSearchResult
 from .pipeline import QueryProcessingPipeline
 from .preprocessor import QueryPreprocessor
 from .ranking import InteractionEvent
@@ -80,6 +83,7 @@ __all__ = [
     # Interaction handling
     "InteractionEvent",
     "InteractionType",
+    "OrchestratorSearchResult",
     # Outlier detection
     "OutlierResult",
     # Personalized ranking
@@ -87,7 +91,7 @@ __all__ = [
     "PersonalizedRankingResult",
     "PersonalizedRankingService",
     # Pipeline stages
-    "ProcessingStage",
+    # "ProcessingStage",  # Removed from simplified orchestrator
     # Core query processing
     "QueryExpansionRequest",
     "QueryExpansionResult",
@@ -108,12 +112,14 @@ __all__ = [
     "ResultMergingStrategy",
     # Search configuration
     "SearchMode",
+    # Search orchestrator
+    "SearchOrchestrator",
     "SearchPipeline",
+    "SearchRequest",
     "SearchResult",
     "SearchStrategySelector",
     # Similarity metrics
     "SimilarityMetric",
-    "StageResult",
     # Term relationships
     "TermRelationType",
     # User profile

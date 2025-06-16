@@ -7,7 +7,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 from ..errors import QdrantServiceError
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class QdrantCollections(BaseService):
     """Focused service for Qdrant collection management operations."""
 
-    def __init__(self, config: UnifiedConfig, qdrant_client: AsyncQdrantClient):
+    def __init__(self, config: Config, qdrant_client: AsyncQdrantClient):
         """Initialize collections service.
 
         Args:
@@ -25,7 +25,7 @@ class QdrantCollections(BaseService):
             qdrant_client: Initialized Qdrant client
         """
         super().__init__(config)
-        self.config: UnifiedConfig = config
+        self.config: Config = config
         self._client = qdrant_client
         self._initialized = True  # Client is already initialized
 

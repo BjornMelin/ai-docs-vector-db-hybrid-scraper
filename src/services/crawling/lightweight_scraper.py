@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from ...config.models import LightweightScraperConfig
+from ...config import Config  # LightweightScraperConfig not in simplified config
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 
@@ -28,7 +28,7 @@ class LightweightScraper(CrawlProvider):
 
     def __init__(
         self,
-        config: LightweightScraperConfig,
+        config: Config,
         rate_limiter: object | None = None,
     ):
         """Initialize lightweight scraper.

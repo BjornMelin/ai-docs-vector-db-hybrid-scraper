@@ -5,6 +5,7 @@ components for the FastMCP server environment.
 """
 
 from .compression import CompressionMiddleware
+from .correlation import get_correlation_id
 from .performance import EndpointStats
 from .performance import PerformanceMiddleware
 from .performance import RequestMetrics
@@ -14,7 +15,6 @@ from .timeout import BulkheadMiddleware
 from .timeout import CircuitState
 from .timeout import TimeoutMiddleware
 from .tracing import TracingMiddleware
-from .tracing import get_correlation_id
 
 __all__ = [
     "BulkheadMiddleware",

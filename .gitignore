@@ -165,6 +165,14 @@ __pypackages__/
 .cursorignore
 .cursorindexingignore
 
+# Benchmark artifacts
+.benchmarks/
+benchmark_results/
+*_benchmark*.log
+*_benchmark*.json
+.benchmark/
+benchmarks/results/
+
 # Backup files
 *.bak
 *.backup

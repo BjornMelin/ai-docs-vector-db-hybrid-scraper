@@ -12,7 +12,7 @@ from .background import initialize_task_manager
 from .background import submit_managed_task
 from .dependencies import cleanup_dependencies
 from .dependencies import get_cache_manager
-from .dependencies import get_config
+from .dependencies import get_config_dependency as get_config
 from .dependencies import get_embedding_manager
 from .dependencies import get_fastapi_config
 from .dependencies import get_health_checker

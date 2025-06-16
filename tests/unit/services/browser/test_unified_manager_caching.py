@@ -6,7 +6,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.browser.unified_manager import UnifiedScrapingRequest
 from src.services.cache.browser_cache import BrowserCache
@@ -17,7 +17,7 @@ from src.services.errors import CrawlServiceError
 @pytest.fixture
 def mock_config():
     """Create mock configuration with caching enabled."""
-    config = Mock(spec=UnifiedConfig)
+    config = Mock(spec=Config)
     config.performance = Mock()
     config.cache = Mock()
     config.cache.enable_browser_cache = True

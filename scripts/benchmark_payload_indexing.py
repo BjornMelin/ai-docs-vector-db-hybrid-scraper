@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from src.config import UnifiedConfig
+from ..config import Config
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import QdrantService
 
@@ -29,7 +29,7 @@ class PayloadIndexingBenchmark:
 
     def __init__(self):
         """Initialize benchmark with service dependencies."""
-        self.config = UnifiedConfig()
+        self.config = Config()
         self.qdrant_service = QdrantService(self.config)
         self.embedding_manager = EmbeddingManager(self.config)
 

@@ -21,8 +21,8 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 from src.chunking import EnhancedChunker
+from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
-from src.config.models import ChunkingConfig
 from src.models.document_processing import Chunk
 
 

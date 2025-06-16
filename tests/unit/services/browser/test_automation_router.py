@@ -7,10 +7,10 @@ from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
-from src.config.models import BrowserUseConfig
-from src.config.models import Crawl4AIConfig
-from src.config.models import PlaywrightConfig
-from src.config.models import UnifiedConfig
+from src.config import BrowserUseConfig
+from src.config import Config
+from src.config import Crawl4AIConfig
+from src.config import PlaywrightConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 
@@ -18,7 +18,7 @@ from src.services.errors import CrawlServiceError
 @pytest.fixture
 def mock_unified_config():
     """Create mock unified configuration with all browser configs."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
 
     # Mock browser configurations
     config.crawl4ai = MagicMock(spec=Crawl4AIConfig)

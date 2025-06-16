@@ -7,7 +7,9 @@ from unittest.mock import patch
 import httpx
 import pytest
 from bs4 import BeautifulSoup
-from src.config.models import LightweightScraperConfig
+
+# LightweightScraperConfig not in simplified config, use Config instead
+from src.config import Config
 from src.services.crawling.lightweight_scraper import LightweightScraper
 from src.services.crawling.lightweight_scraper import TierRecommendation
 from src.services.errors import CrawlServiceError
@@ -16,7 +18,7 @@ from src.services.errors import CrawlServiceError
 @pytest.fixture
 def config():
     """Create test configuration."""
-    return LightweightScraperConfig(
+    return Config(
         enable_lightweight_tier=True,
         use_head_analysis=True,
         content_threshold=100,
