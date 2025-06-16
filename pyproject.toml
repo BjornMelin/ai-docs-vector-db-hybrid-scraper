@@ -55,7 +55,7 @@ dependencies = [
     
     # Data processing & ML (Python 3.13 compatible)
     "pandas>=2.2.3,<3.0.0",
-    "numpy>=1.24.0,<2.0.0", # Compatible with browser-use and Python 3.12
+    "numpy>=1.24.0,<3.0.0", # Compatible with browser-use and Python 3.12
     "scipy>=1.15.3,<2.0.0", # Python 3.13 support from 1.13+
     "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
     
