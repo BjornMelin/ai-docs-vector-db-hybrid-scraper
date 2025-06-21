@@ -187,3 +187,25 @@ benchmarks/results/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Task Master AI - API Keys and Sensitive Config
+.cursor/mcp.json*
+.codeium/windsurf/mcp_config.json*
+
+# Task Master AI - Debug and Temporary Files
+*.debug
+init-debug.log
+dev-debug.log
+.taskmaster/temp/
+.taskmaster/.cache/
+
+# Task Master AI - Legacy Structure (pre-v0.16.0)
+.taskmasterconfig
+/scripts/prd.txt
+/scripts/task-complexity-report.json
+
+# Cursor/AI Tools (may contain sensitive data)
+.cursor/
+.roo/
+.roomodes
+.windsurfrules
