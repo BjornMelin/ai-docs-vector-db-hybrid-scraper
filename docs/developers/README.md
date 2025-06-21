@@ -21,6 +21,7 @@ integrate, and contribute to the AI Documentation Vector DB system.
 - **[API Reference](./api-reference.md)** - Complete API documentation (REST, Browser, MCP)
 - **[Architecture](./architecture.md)** - System design and technical architecture
 - **[Configuration](./configuration.md)** - All configuration options and environment setup
+- **[Deployment Strategies](./deployment-strategies.md)** - Enterprise deployment patterns (A/B, Blue-Green, Canary)
 
 ## 🎯 What You'll Find Here
 
@@ -110,6 +111,7 @@ results = client.search("your query")
 - **Performance Optimization**: Scaling, caching, monitoring
 - **Security**: Authentication, authorization, data protection
 - **Extensibility**: Plugin architecture, custom components
+- **Enterprise Deployment**: A/B testing, canary releases, feature flags
 
 ## 🎯 Developer Personas
 

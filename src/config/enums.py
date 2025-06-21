@@ -1,22 +1,21 @@
-"""Consolidated enums for the AI Documentation Vector DB system.
+"""Configuration enums consolidated from original enums.py.
 
-This module contains all enums used across the application to ensure
-consistency and avoid duplication.
+All enumeration types used in configuration in one place.
 """
 
 from enum import Enum
 
 
 class Environment(str, Enum):
-    """Application environment types."""
+    """Application environment."""
 
     DEVELOPMENT = "development"
-    TESTING = "testing"
+    STAGING = "staging"
     PRODUCTION = "production"
 
 
 class LogLevel(str, Enum):
-    """Logging level options."""
+    """Logging levels."""
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -26,59 +25,82 @@ class LogLevel(str, Enum):
 
 
 class EmbeddingProvider(str, Enum):
-    """Available embedding providers."""
+    """Embedding providers."""
 
     OPENAI = "openai"
     FASTEMBED = "fastembed"
 
 
-class CrawlProvider(str, Enum):
-    """Available crawling providers."""
+class QualityTier(str, Enum):
+    """Embedding quality tiers."""
 
-    CRAWL4AI = "crawl4ai"
+    FAST = "fast"  # Local models, fastest
+    BALANCED = "balanced"  # Balance of speed and quality
+    BEST = "best"  # Highest quality, may be slower/costlier
+    PREMIUM = "premium"  # Premium tier with advanced features
+    FASTEMBED = "fastembed"
+
+
+class EmbeddingModel(str, Enum):
+    """Embedding models."""
+
+    TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"
+    TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"
+    TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
+    BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"
+    BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"
+
+
+class CrawlProvider(str, Enum):
+    """Crawling providers."""
+
     FIRECRAWL = "firecrawl"
+    CRAWL4AI = "crawl4ai"
 
 
 class ChunkingStrategy(str, Enum):
-    """Available chunking strategies."""
+    """Document chunking strategies."""
 
     BASIC = "basic"
     ENHANCED = "enhanced"
-    AST = "ast"
+    AST_AWARE = "ast_aware"
 
 
 class SearchStrategy(str, Enum):
-    """Search strategy options."""
+    """Vector search strategies."""
 
     DENSE = "dense"
     SPARSE = "sparse"
     HYBRID = "hybrid"
 
 
-class EmbeddingModel(str, Enum):
-    """Advanced embedding models based on research findings."""
+class SearchAccuracy(str, Enum):
+    """Search accuracy levels."""
 
-    # OpenAI Models (API-based)
-    TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"  # Best cost-performance
-    TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"  # Best OpenAI performance
-
-    # FastEmbed Models (Local inference, research-backed)
-    NV_EMBED_V2 = "nvidia/NV-Embed-v2"  # #1 on MTEB leaderboard
-    BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"  # Cost-effective open source
-    BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"  # Higher accuracy
-
-    # Sparse Models for Hybrid Search
-    SPLADE_PP_EN_V1 = "prithvida/Splade_PP_en_v1"  # SPLADE++ for keyword matching
-
-
-class QualityTier(str, Enum):
-    """Quality tiers for project configuration."""
-
-    ECONOMY = "economy"
+    FAST = "fast"
     BALANCED = "balanced"
-    PREMIUM = "premium"
+    ACCURATE = "accurate"
+    EXACT = "exact"
 
 
+class VectorType(str, Enum):
+    """Vector types for search optimization."""
+
+    DENSE = "dense"
+    SPARSE = "sparse"
+    HYDE = "hyde"
+
+
+class CacheType(str, Enum):
+    """Cache data types."""
+
+    EMBEDDINGS = "embeddings"
+    CRAWL = "crawl"
+    SEARCH = "search"
+    HYDE = "hyde"
+
+
+# Additional enums needed by the codebase
 class DocumentStatus(str, Enum):
     """Document processing status."""
 
@@ -88,129 +110,56 @@ class DocumentStatus(str, Enum):
     FAILED = "failed"
 
 
-class CollectionStatus(str, Enum):
-    """Vector collection status."""
-
-    GREEN = "green"
-    YELLOW = "yellow"
-    RED = "red"
-
-
-class FusionAlgorithm(str, Enum):
-    """Fusion algorithms for combining multiple search results."""
-
-    RRF = "rrf"  # Reciprocal Rank Fusion - best for hybrid search
-    DBSF = "dbsf"  # Distribution-Based Score Fusion - best for similar vectors
-
-
-class SearchAccuracy(str, Enum):
-    """Search accuracy levels for HNSW parameter optimization."""
-
-    FAST = "fast"  # HNSW EF=50, prioritize speed
-    BALANCED = "balanced"  # HNSW EF=100, balance speed/accuracy
-    ACCURATE = "accurate"  # HNSW EF=200, prioritize accuracy
-    EXACT = "exact"  # Exact search, disable HNSW
-
-
-class VectorType(str, Enum):
-    """Vector types for multi-stage retrieval."""
-
-    DENSE = "dense"  # Dense embedding vectors
-    SPARSE = "sparse"  # Sparse keyword vectors (SPLADE)
-    HYDE = "hyde"  # Hypothetical document embeddings
-
-
 class QueryType(str, Enum):
-    """Query types for adaptive search optimization."""
+    """Query types."""
 
-    CODE = "code"  # Code search queries
-    DOCUMENTATION = "documentation"  # Documentation queries
-    CONCEPTUAL = "conceptual"  # Conceptual/tutorial queries
-    API_REFERENCE = "api_reference"  # API reference queries
-    TROUBLESHOOTING = "troubleshooting"  # Problem-solving queries
-    MULTIMODAL = "multimodal"  # Multi-modal queries
+    SIMPLE = "simple"
+    COMPLEX = "complex"
+    SEMANTIC = "semantic"
 
 
 class QueryComplexity(str, Enum):
-    """Query complexity levels for adaptive optimization."""
+    """Query complexity levels."""
 
-    SIMPLE = "simple"  # Single-hop, direct queries
-    MODERATE = "moderate"  # Multi-step queries
-    COMPLEX = "complex"  # Multi-hop, reasoning-intensive queries
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class ModelType(str, Enum):
-    """Embedding model types for dynamic selection."""
+    """Model types."""
 
-    GENERAL_PURPOSE = "general_purpose"  # General semantic embeddings
-    CODE_SPECIALIZED = "code_specialized"  # Code-specific embeddings
-    DOMAIN_SPECIFIC = "domain_specific"  # Domain-specific embeddings
-    MULTIMODAL = "multimodal"  # Multi-modal embeddings
-    SPARSE = "sparse"  # Sparse vector models (SPLADE)
+    EMBEDDING = "embedding"
+    RERANKING = "reranking"
 
 
 class OptimizationStrategy(str, Enum):
-    """Optimization strategies for adaptive search."""
+    """Optimization strategies."""
 
-    SPEED_OPTIMIZED = "speed_optimized"  # Prioritize response time
-    QUALITY_OPTIMIZED = "quality_optimized"  # Prioritize result quality
-    BALANCED = "balanced"  # Balance speed and quality
-    COST_OPTIMIZED = "cost_optimized"  # Prioritize cost efficiency
+    SPEED = "speed"
+    ACCURACY = "accuracy"
+    BALANCED = "balanced"
+
+
+class FusionAlgorithm(str, Enum):
+    """Fusion algorithms for hybrid search."""
+
+    RRF = "rrf"  # Reciprocal Rank Fusion
+    LINEAR = "linear"
+    WEIGHTED = "weighted"
 
 
 class ABTestVariant(str, Enum):
-    """A/B test variants for fusion strategies."""
+    """A/B test variants."""
 
-    CONTROL = "control"  # Current baseline implementation
-    RRF_OPTIMIZED = "rrf_optimized"  # Optimized RRF fusion
-    DBSF_OPTIMIZED = "dbsf_optimized"  # Optimized DBSF fusion
-    ADAPTIVE_FUSION = "adaptive_fusion"  # Adaptive weight tuning
-    MULTI_MODEL = "multi_model"  # Multi-model ensemble
+    CONTROL = "control"
+    VARIANT_A = "variant_a"
+    VARIANT_B = "variant_b"
 
 
-class HttpStatus(int, Enum):
-    """HTTP status codes for API responses."""
+class DeploymentTier(str, Enum):
+    """Deployment configuration tiers with progressive feature access."""
 
-    OK = 200
-    CREATED = 201
-    BAD_REQUEST = 400
-    UNAUTHORIZED = 401
-    FORBIDDEN = 403
-    NOT_FOUND = 404
-    TOO_MANY_REQUESTS = 429
-    INTERNAL_SERVER_ERROR = 500
-    SERVICE_UNAVAILABLE = 503
-
-
-class CacheType(str, Enum):
-    """Cache types for different data patterns."""
-
-    EMBEDDINGS = "embeddings"
-    CRAWL = "crawl"
-    SEARCH = "search"
-    HYDE = "hyde"
-
-
-# Re-export commonly used enums for backward compatibility
-__all__ = [
-    "ABTestVariant",
-    "CacheType",
-    "ChunkingStrategy",
-    "CollectionStatus",
-    "CrawlProvider",
-    "DocumentStatus",
-    "EmbeddingModel",
-    "EmbeddingProvider",
-    "Environment",
-    "FusionAlgorithm",
-    "HttpStatus",
-    "LogLevel",
-    "ModelType",
-    "OptimizationStrategy",
-    "QualityTier",
-    "QueryComplexity",
-    "QueryType",
-    "SearchAccuracy",
-    "SearchStrategy",
-    "VectorType",
-]
+    PERSONAL = "personal"  # Simple FastAPI + basic features
+    PROFESSIONAL = "professional"  # + Flagsmith + monitoring
+    ENTERPRISE = "enterprise"  # + Full deployment services + advanced monitoring

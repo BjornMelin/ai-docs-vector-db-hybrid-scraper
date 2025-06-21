@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
@@ -14,7 +14,7 @@ class TestQdrantAliasManagerWithTaskQueue:
     @pytest.fixture
     def config(self):
         """Create test configuration."""
-        return Mock(spec=UnifiedConfig)
+        return Mock(spec=Config)
 
     @pytest.fixture
     def client(self):

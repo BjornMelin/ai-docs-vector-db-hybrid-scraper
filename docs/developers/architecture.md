@@ -1740,3 +1740,39 @@ hybrid vector search, and zero-downtime deployments.
 
 _🏗️ This architecture supports high-performance document processing, intelligent search capabilities,
 and robust operational patterns. All components are designed with scalability, reliability, and maintainability in mind._
+
+
+## 🚀 Enterprise Deployment Features
+
+### Overview
+
+The system includes advanced deployment capabilities for enterprise environments:
+
+- **A/B Testing**: Compare deployment variants with statistical analysis
+- **Blue-Green Deployments**: Zero-downtime deployments with instant rollback
+- **Canary Releases**: Progressive traffic routing with health monitoring
+- **Feature Flags**: Tier-based feature control and rollout management
+
+For detailed deployment strategies, see [Deployment Strategies Guide](./deployment-strategies.md).
+
+### Architecture Integration
+
+Deployment features integrate with the core architecture:
+
+```mermaid
+flowchart TD
+    A[Client Request] --> B[Feature Flag Check]
+    B --> C{Deployment Strategy}
+    
+    C -->|A/B Test| D[Variant Router]
+    C -->|Blue-Green| E[Environment Selector]
+    C -->|Canary| F[Traffic Splitter]
+    
+    D --> G[Service Layer]
+    E --> G
+    F --> G
+    
+    G --> H[Monitoring & Metrics]
+    H --> I[Deployment Controller]
+    I --> J[Rollback Decision]
+```

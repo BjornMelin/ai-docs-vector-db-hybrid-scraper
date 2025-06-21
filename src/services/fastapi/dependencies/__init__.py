@@ -5,7 +5,8 @@ from .core import ServiceHealthChecker
 from .core import cleanup_dependencies
 from .core import database_session
 from .core import get_cache_manager
-from .core import get_config
+from .core import get_config_dependency
+from .core import get_config_dependency as get_config
 from .core import get_container
 from .core import get_correlation_id_dependency
 from .core import get_embedding_manager
@@ -22,6 +23,7 @@ __all__ = [
     "database_session",
     "get_cache_manager",
     "get_config",
+    "get_config_dependency",
     "get_container",
     "get_correlation_id_dependency",
     "get_embedding_manager",

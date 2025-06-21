@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.crawl4ai_bulk_embedder import BulkEmbedder
 from src.crawl4ai_bulk_embedder import ProcessingState
 from src.crawl4ai_bulk_embedder import main
@@ -16,7 +16,7 @@ from src.infrastructure.client_manager import ClientManager
 @pytest.fixture
 def mock_config():
     """Create mock configuration."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
 
     # Mock nested attributes
     config.openai = MagicMock()

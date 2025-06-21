@@ -14,7 +14,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from ..config import UnifiedConfig
+from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
 from ..services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
 
@@ -229,7 +229,7 @@ class LoadTestUser:
 class LoadTestRunner:
     """Main load testing orchestrator."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize load test runner.
 
         Args:

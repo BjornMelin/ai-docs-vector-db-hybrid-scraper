@@ -5,14 +5,14 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.services.task_queue.manager import TaskQueueManager
 
 
 @pytest.fixture
 def config():
     """Create test configuration."""
-    config = Mock(spec=UnifiedConfig)
+    config = Mock(spec=Config)
     config.task_queue = Mock()
     config.task_queue.redis_url = "redis://localhost:6379"
     config.task_queue.redis_password = None

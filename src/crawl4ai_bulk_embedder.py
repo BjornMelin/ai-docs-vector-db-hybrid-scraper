@@ -29,7 +29,7 @@ from rich.progress import TimeElapsedColumn
 from rich.table import Table
 
 from .chunking import EnhancedChunker
-from .config import UnifiedConfig
+from .config import Config
 from .config.loader import ConfigLoader
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
@@ -57,7 +57,7 @@ class BulkEmbedder:
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         client_manager: ClientManager,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
@@ -545,7 +545,7 @@ async def _async_main(
     sitemap: str | None,
     collection: str,
     concurrent: int,
-    config: UnifiedConfig,
+    config: Config,
     state_file: Path,
     resume: bool,
 ) -> None:

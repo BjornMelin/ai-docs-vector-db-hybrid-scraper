@@ -10,7 +10,6 @@ from . import analytics
 from . import cache
 from . import collections
 from . import content_intelligence
-from . import deployment
 from . import documents
 from . import embeddings
 from . import filtering_tools
@@ -19,6 +18,7 @@ from . import payload_indexing
 from . import projects
 from . import query_processing
 from . import query_processing_tools
+from . import rag
 from . import search
 from . import utilities
 
@@ -28,7 +28,6 @@ __all__ = [
     "cache",
     "collections",
     "content_intelligence",
-    "deployment",
     "documents",
     "embeddings",
     "filtering_tools",
@@ -37,6 +36,7 @@ __all__ = [
     "projects",
     "query_processing",
     "query_processing_tools",
+    "rag",
     "search",
     "utilities",
 ]

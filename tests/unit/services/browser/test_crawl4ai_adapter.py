@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.models import Crawl4AIConfig
+from src.config import Crawl4AIConfig
 from src.services.browser.crawl4ai_adapter import Crawl4AIAdapter
 from src.services.errors import CrawlServiceError
 

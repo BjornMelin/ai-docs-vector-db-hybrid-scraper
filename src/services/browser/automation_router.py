@@ -8,7 +8,7 @@ from typing import Any
 from typing import Literal
 from urllib.parse import urlparse
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 from ..errors import CrawlServiceError
 
@@ -26,7 +26,7 @@ class AutomationRouter(BaseService):
     4. Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize automation router with configuration.
 
         Args:

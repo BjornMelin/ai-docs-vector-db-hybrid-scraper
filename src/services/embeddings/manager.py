@@ -13,9 +13,8 @@ try:
 except ImportError:
     FlagReranker = None
 
-from src.config import UnifiedConfig
-from src.config.loader import ConfigLoader
-from src.config.models import ModelBenchmark
+from src.config import Config
+from src.models import ModelBenchmark
 
 from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
@@ -72,7 +71,7 @@ class EmbeddingManager:
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         client_manager: "ClientManager",
         budget_limit: float | None = None,
         rate_limiter: object = None,
@@ -600,17 +599,24 @@ class EmbeddingManager:
             json.JSONDecodeError: If file contains invalid JSON
             pydantic.ValidationError: If data doesn't match expected schema
         """
+        import json
         from pathlib import Path
 
+        from src.config import Config
+
         # Load and validate benchmark configuration
-        benchmark_config = ConfigLoader.load_benchmark_config(benchmark_file)
+        benchmark_path = Path(benchmark_file)
+        with benchmark_path.open() as f:
+            benchmark_data = json.load(f)
+
+        benchmark_config = Config(**benchmark_data)
 
         # Update manager's benchmarks and smart selection config
         self._benchmarks = benchmark_config.embedding.model_benchmarks
         self._smart_config = benchmark_config.embedding.smart_selection
 
         logger.info(
-            f"Loaded custom benchmarks from {Path(benchmark_file).name} "
+            f"Loaded custom benchmarks from {benchmark_path.name} "
             f"with {len(self._benchmarks)} models"
         )
 

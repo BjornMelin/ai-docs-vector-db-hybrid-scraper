@@ -8,7 +8,7 @@ import asyncio
 from unittest.mock import Mock
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.services.base import BaseService
 from src.services.errors import APIError
 
@@ -16,7 +16,7 @@ from src.services.errors import APIError
 class ConcreteService(BaseService):
     """Concrete implementation of BaseService for testing."""
 
-    def __init__(self, config: UnifiedConfig | None = None):
+    def __init__(self, config: Config | None = None):
         super().__init__(config)
         self.init_called = False
         self.cleanup_called = False
@@ -43,7 +43,7 @@ class TestBaseService:
 
     def test_base_service_init_with_config(self):
         """Test BaseService initialization with config."""
-        config = Mock(spec=UnifiedConfig)
+        config = Mock(spec=Config)
         service = ConcreteService(config)
 
         assert service.config is config
@@ -277,7 +277,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_with_configuration(self):
         """Test service with actual configuration object."""
-        config = Mock(spec=UnifiedConfig)
+        config = Mock(spec=Config)
         config.some_setting = "test_value"
 
         service = ConcreteService(config)

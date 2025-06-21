@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from benchmarks import AdvancedHybridSearchBenchmark
 from benchmarks import BenchmarkConfig
 from benchmarks import BenchmarkResults
-from config import UnifiedConfig
+from ..config import Config
 from services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
 
 

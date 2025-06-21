@@ -17,6 +17,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 **Note:** Prefix all Python and test commands with `uv` since we're in a uv-managed environment.
 
 - Test: `uv run pytest --cov=src`
+- Benchmark: `uv run pytest tests/benchmarks/ --benchmark-only`
 - Lint: `ruff check . --fix && ruff format .`  
 - Services: `./scripts/start-services.sh`
 - Health: `curl localhost:6333/health`

@@ -10,7 +10,7 @@ from qdrant_client.models import CreateAliasOperation
 from qdrant_client.models import DeleteAlias
 from qdrant_client.models import DeleteAliasOperation
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..base import BaseService
 from ..errors import QdrantServiceError
 
@@ -26,7 +26,7 @@ class QdrantAliasManager(BaseService):
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         client: AsyncQdrantClient,
         task_queue_manager,
     ):

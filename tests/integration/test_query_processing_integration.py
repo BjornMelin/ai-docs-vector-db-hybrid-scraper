@@ -8,7 +8,9 @@ from src.services.query_processing.models import QueryComplexity
 from src.services.query_processing.models import QueryIntent
 from src.services.query_processing.models import QueryProcessingRequest
 from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
+from src.services.query_processing.orchestrator import (
+    SearchOrchestrator as AdvancedSearchOrchestrator,
+)
 from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 

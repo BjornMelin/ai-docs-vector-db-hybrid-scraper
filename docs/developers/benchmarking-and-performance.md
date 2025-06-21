@@ -99,8 +99,40 @@ The benchmarking suite provides:
 
 #### Database Performance Benchmarks
 
+**New pytest-benchmark Integration (BJO-171)** - Clean, industry-standard benchmarking:
+
 ```bash
-# Comprehensive database connection pool benchmarking with BJO-134 features
+# Run comprehensive database performance benchmarks with pytest-benchmark
+uv run pytest tests/benchmarks/test_database_performance.py \
+  --benchmark-only \
+  --benchmark-sort=mean \
+  --benchmark-columns=min,max,mean,stddev,rounds,iterations \
+  --benchmark-save=database_baseline
+
+# Compare performance against saved baseline
+uv run pytest tests/benchmarks/test_database_performance.py \
+  --benchmark-only \
+  --benchmark-compare=database_baseline \
+  --benchmark-compare-fail=min:5% \
+  --benchmark-compare-fail=mean:10%
+
+# Quick benchmark validation (faster execution)
+uv run python scripts/run_benchmarks.py --quick
+
+# Comprehensive benchmark with result saving
+uv run python scripts/run_benchmarks.py --save-results --verbose
+
+# Performance regression testing with statistical analysis
+uv run pytest tests/benchmarks/test_database_performance.py \
+  --benchmark-only \
+  --benchmark-histogram=performance_histogram \
+  --benchmark-json=benchmarks/latest_results.json
+```
+
+**Legacy Database Pool Benchmarks (deprecated - use pytest-benchmark above):**
+
+```bash
+# Legacy comprehensive database connection pool benchmarking with BJO-134 features
 uv run python scripts/benchmark_database_connection_pool.py \
   --test-suite comprehensive \
   --concurrent-connections "10,25,50,100,200,500" \
@@ -108,32 +140,6 @@ uv run python scripts/benchmark_database_connection_pool.py \
   --duration 300 \
   --validate-performance-targets \
   --output benchmarks/database-pool-results.json
-
-# ML model performance testing with 95% accuracy validation
-uv run python scripts/benchmark_database_connection_pool.py \
-  --ml-model-testing \
-  --prediction-horizons "5,15,30,60" \
-  --feature-windows "30,60,120" \
-  --accuracy-targets "0.8,0.9,0.95" \
-  --model-types "random_forest,linear_regression,gradient_boosting" \
-  --validate-prediction-latency \
-  --target-accuracy 0.95
-
-# Circuit breaker and connection affinity testing
-uv run python scripts/benchmark_database_connection_pool.py \
-  --circuit-breaker-testing \
-  --failure-scenarios "connection,timeout,query,transaction,security" \
-  --affinity-patterns "read,write,mixed,analytics,api_queries" \
-  --recovery-validation \
-  --affinity-performance-tracking \
-  --validate-887-percent-improvement
-
-# Performance regression testing
-uv run python scripts/benchmark_database_connection_pool.py \
-  --regression-testing \
-  --baseline-metrics "latency_ms:2500,throughput_rps:50" \
-  --target-metrics "latency_ms:1200,throughput_rps:494" \
-  --validate-50-percent-latency-reduction
 ```
 
 #### Load Testing and Scaling Benchmarks

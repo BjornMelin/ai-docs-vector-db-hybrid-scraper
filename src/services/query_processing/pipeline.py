@@ -10,7 +10,7 @@ from typing import Any
 from ..base import BaseService
 from .models import QueryProcessingRequest
 from .models import QueryProcessingResponse
-from .orchestrator import AdvancedSearchOrchestrator
+from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
 
 logger = logging.getLogger(__name__)
 

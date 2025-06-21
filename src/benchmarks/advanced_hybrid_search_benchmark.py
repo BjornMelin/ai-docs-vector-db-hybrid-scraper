@@ -14,7 +14,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from ..config import UnifiedConfig
+from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
 from ..models.vector_search import FusionConfig
 from ..models.vector_search import SearchParams
@@ -120,7 +120,7 @@ class AdvancedHybridSearchBenchmark:
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         search_service: AdvancedHybridSearchService,
         benchmark_config: BenchmarkConfig,
     ):

@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Any
 
-from ...config.models import Crawl4AIConfig
+from ...config import Crawl4AIConfig
 from ..base import BaseService
 from ..crawling.crawl4ai_provider import Crawl4AIProvider
 from ..errors import CrawlServiceError

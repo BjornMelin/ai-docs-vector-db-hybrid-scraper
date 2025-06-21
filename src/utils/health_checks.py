@@ -4,14 +4,14 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
-from ..config.models import UnifiedConfig
+from src.config import Config
 
 
 class ServiceHealthChecker:
     """Centralized service health checking utility."""
 
     @staticmethod
-    def check_qdrant_connection(config: UnifiedConfig) -> dict[str, object]:
+    def check_qdrant_connection(config: Config) -> dict[str, object]:
         """Check Qdrant connection status.
 
         Args:
@@ -49,7 +49,7 @@ class ServiceHealthChecker:
         return result
 
     @staticmethod
-    def check_dragonfly_connection(config: UnifiedConfig) -> dict[str, object]:
+    def check_dragonfly_connection(config: Config) -> dict[str, object]:
         """Check DragonflyDB connection status.
 
         Args:
@@ -86,7 +86,7 @@ class ServiceHealthChecker:
 
     @staticmethod
     def check_openai_connection(
-        config: UnifiedConfig, client_manager=None
+        config: Config, client_manager=None
     ) -> dict[str, object]:
         """Check OpenAI API connection status.
 
@@ -146,7 +146,7 @@ class ServiceHealthChecker:
         return result
 
     @staticmethod
-    def check_firecrawl_connection(config: UnifiedConfig) -> dict[str, object]:
+    def check_firecrawl_connection(config: Config) -> dict[str, object]:
         """Check Firecrawl API connection status.
 
         Args:
@@ -194,7 +194,7 @@ class ServiceHealthChecker:
 
     @classmethod
     def perform_all_health_checks(
-        cls, config: UnifiedConfig, client_manager=None
+        cls, config: Config, client_manager=None
     ) -> dict[str, dict[str, object]]:
         """Perform health checks for all configured services.
 
@@ -227,7 +227,7 @@ class ServiceHealthChecker:
 
     @classmethod
     def get_connection_summary(
-        cls, config: UnifiedConfig, client_manager=None
+        cls, config: Config, client_manager=None
     ) -> dict[str, object]:
         """Get a summary of all service connection statuses.
 

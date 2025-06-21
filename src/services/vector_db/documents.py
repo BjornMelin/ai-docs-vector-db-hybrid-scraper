@@ -10,7 +10,7 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
 
-from ...config import UnifiedConfig
+from ...config import Config
 from ..errors import QdrantServiceError
 from .utils import build_filter
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class QdrantDocuments:
     """Focused document/point operations for Qdrant with batching optimization."""
 
-    def __init__(self, client: AsyncQdrantClient, config: UnifiedConfig):
+    def __init__(self, client: AsyncQdrantClient, config: Config):
         """Initialize documents service.
 
         Args:

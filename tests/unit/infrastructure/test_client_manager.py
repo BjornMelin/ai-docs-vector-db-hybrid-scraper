@@ -19,7 +19,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.config import UnifiedConfig
+from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientHealth
@@ -32,22 +32,22 @@ class ClientFactoryInterface(ABC):
     """Abstract interface for creating API clients."""
 
     @abstractmethod
-    async def create_qdrant_client(self, config: UnifiedConfig) -> Any:
+    async def create_qdrant_client(self, config: Config) -> Any:
         """Create Qdrant client instance."""
         pass
 
     @abstractmethod
-    async def create_openai_client(self, config: UnifiedConfig) -> Any:
+    async def create_openai_client(self, config: Config) -> Any:
         """Create OpenAI client instance."""
         pass
 
     @abstractmethod
-    async def create_redis_client(self, config: UnifiedConfig) -> Any:
+    async def create_redis_client(self, config: Config) -> Any:
         """Create Redis client instance."""
         pass
 
     @abstractmethod
-    async def create_firecrawl_client(self, config: UnifiedConfig) -> Any:
+    async def create_firecrawl_client(self, config: Config) -> Any:
         """Create Firecrawl client instance."""
         pass
 
@@ -86,7 +86,7 @@ class StubClientFactory(ClientFactoryInterface):
         self.redis_client = None
         self.firecrawl_client = None
 
-    async def create_qdrant_client(self, config: UnifiedConfig) -> Any:
+    async def create_qdrant_client(self, config: Config) -> Any:
         if self.qdrant_client is None:
             self.qdrant_client = FakeQdrantClient(
                 url=config.qdrant.url,
@@ -95,17 +95,17 @@ class StubClientFactory(ClientFactoryInterface):
             )
         return self.qdrant_client
 
-    async def create_openai_client(self, config: UnifiedConfig) -> Any:
+    async def create_openai_client(self, config: Config) -> Any:
         if self.openai_client is None:
             self.openai_client = MagicMock()
         return self.openai_client
 
-    async def create_redis_client(self, config: UnifiedConfig) -> Any:
+    async def create_redis_client(self, config: Config) -> Any:
         if self.redis_client is None:
             self.redis_client = AsyncMock()
         return self.redis_client
 
-    async def create_firecrawl_client(self, config: UnifiedConfig) -> Any:
+    async def create_firecrawl_client(self, config: Config) -> Any:
         if self.firecrawl_client is None:
             self.firecrawl_client = AsyncMock()
         return self.firecrawl_client
@@ -123,10 +123,10 @@ async def ensure_clean_singleton():
 @pytest.fixture
 def config():
     """Create test configuration."""
-    config = UnifiedConfig()
+    config = Config()
     config.openai.api_key = "test-openai-key"
     config.firecrawl.api_key = "test-firecrawl-key"
-    config.cache.enable_dragonfly_cache = False
+    config.cache.enable_caching = False
     return config
 
 
@@ -626,61 +626,47 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_get_database_manager_creation(self):
         """Test creation of database manager."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
+            echo_queries=True,
+            pool_size=20,
         )
 
         client_manager = ClientManager(config)
 
-        with (
-            patch(
-                "src.infrastructure.database.load_monitor.LoadMonitor"
-            ) as mock_load_monitor_class,
-            patch(
-                "src.infrastructure.database.query_monitor.QueryMonitor"
-            ) as mock_query_monitor_class,
-            patch(
-                "src.infrastructure.client_manager.AsyncConnectionManager"
-            ) as mock_connection_manager_class,
-        ):
-            mock_load_monitor = Mock()
-            mock_load_monitor.start = AsyncMock()  # Fix: Make start method async
-            mock_query_monitor = Mock()
-            mock_connection_manager = AsyncMock()
-
-            mock_load_monitor_class.return_value = mock_load_monitor
-            mock_query_monitor_class.return_value = mock_query_monitor
-            mock_connection_manager_class.return_value = mock_connection_manager
+        with patch(
+            "src.infrastructure.client_manager.DatabaseManager"
+        ) as mock_database_manager_class:
+            mock_database_manager = AsyncMock()
+            mock_database_manager_class.return_value = mock_database_manager
 
             # First call should create the manager
             db_manager = await client_manager.get_database_manager()
 
-            assert db_manager is mock_connection_manager
-            mock_connection_manager_class.assert_called_once()
-            mock_connection_manager.initialize.assert_called_once()
+            assert db_manager is mock_database_manager
+            mock_database_manager_class.assert_called_once()
+            mock_database_manager.initialize.assert_called_once()
 
             # Second call should return the same instance (cached)
             db_manager2 = await client_manager.get_database_manager()
-            assert db_manager2 is mock_connection_manager
+            assert db_manager2 is mock_database_manager
 
             # Should not create a new instance
-            mock_connection_manager_class.assert_called_once()
+            mock_database_manager_class.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_database_manager_in_managed_client(self):
         """Test database manager through managed_client interface."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
+            echo_queries=True,
+            pool_size=20,
         )
 
         client_manager = ClientManager(config)
@@ -697,9 +683,9 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_cleanup(self):
         """Test database manager is included in cleanup."""
-        from src.config.models import SQLAlchemyConfig
+        from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
 
         client_manager = ClientManager(config)
@@ -714,54 +700,34 @@ class TestClientManagerDatabaseIntegration:
         # Should call cleanup on database manager
         mock_db_manager.cleanup.assert_called_once()
 
-    @pytest.mark.skip(
-        reason="Test infrastructure mocking complexity - client manager import caching issue"
-    )
     @pytest.mark.asyncio
-    async def test_database_circuit_breaker_configuration(self):
-        """Test database manager uses circuit breaker from performance config."""
-        from src.config.models import SQLAlchemyConfig
+    async def test_database_manager_enterprise_creation(self):
+        """Test database manager uses enterprise DatabaseManager with monitoring."""
+        from src.config import SQLAlchemyConfig
 
-        config = UnifiedConfig()
+        config = Config()
         config.database = SQLAlchemyConfig(
             database_url="sqlite+aiosqlite:///:memory:",
-            enable_query_monitoring=True,
-            slow_query_threshold_ms=100.0,
         )
-
-        # Set custom circuit breaker parameters
-        config.performance.circuit_breaker_failure_threshold = 3
-        config.performance.circuit_breaker_recovery_timeout = 30.0
-        config.performance.circuit_breaker_half_open_requests = 2
 
         client_manager = ClientManager(config)
 
-        with (
-            patch("src.infrastructure.database.load_monitor.LoadMonitor"),
-            patch("src.infrastructure.database.query_monitor.QueryMonitor"),
-            patch(
-                "src.infrastructure.client_manager.AsyncConnectionManager"
-            ) as mock_connection_manager_class,
-            patch(
-                "src.infrastructure.client_manager.CircuitBreaker"
-            ) as mock_circuit_breaker_class,
-        ):
-            mock_connection_manager = AsyncMock()
-            mock_circuit_breaker = Mock()
-
-            mock_connection_manager_class.return_value = mock_connection_manager
-            mock_circuit_breaker_class.return_value = mock_circuit_breaker
+        with patch(
+            "src.infrastructure.client_manager.DatabaseManager"
+        ) as mock_database_manager_class:
+            mock_database_manager = AsyncMock()
+            mock_database_manager_class.return_value = mock_database_manager
 
             await client_manager.get_database_manager()
 
-            # Verify circuit breaker was created with correct parameters
-            mock_circuit_breaker_class.assert_called_once_with(
-                failure_threshold=3, recovery_timeout=30.0, half_open_requests=2
-            )
-
-            # Verify connection manager was created with circuit breaker
-            call_args = mock_connection_manager_class.call_args
-            assert call_args.kwargs["circuit_breaker"] is mock_circuit_breaker
+            # Verify database manager was created with enterprise components
+            mock_database_manager_class.assert_called_once()
+            call_kwargs = mock_database_manager_class.call_args.kwargs
+            assert "config" in call_kwargs
+            assert "load_monitor" in call_kwargs
+            assert "query_monitor" in call_kwargs
+            assert "circuit_breaker" in call_kwargs
+            mock_database_manager.initialize.assert_called_once()
 
 
 class TestClientManagerAdvancedCoverage:
@@ -770,7 +736,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_ab_testing_manager_creation(self):
         """Test creation of AB testing manager."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         # Mock the ABTestingManager and its dependencies
@@ -780,21 +746,28 @@ class TestClientManagerAdvancedCoverage:
             ) as mock_ab_class,
             patch.object(client_manager, "get_qdrant_service") as mock_get_qdrant,
             patch.object(client_manager, "get_cache_manager") as mock_get_cache,
+            patch.object(
+                client_manager, "get_feature_flag_manager"
+            ) as mock_get_feature_flag,
         ):
-            mock_ab_instance = Mock()
+            mock_ab_instance = AsyncMock()
             mock_ab_class.return_value = mock_ab_instance
 
             mock_qdrant_service = Mock()
             mock_cache_manager = Mock()
+            mock_feature_flag_manager = Mock()
             mock_get_qdrant.return_value = mock_qdrant_service
             mock_get_cache.return_value = mock_cache_manager
+            mock_get_feature_flag.return_value = mock_feature_flag_manager
 
             # First call should create the manager
             ab_manager = await client_manager.get_ab_testing_manager()
 
             assert ab_manager is mock_ab_instance
             mock_ab_class.assert_called_once_with(
-                qdrant_service=mock_qdrant_service, cache_manager=mock_cache_manager
+                qdrant_service=mock_qdrant_service,
+                cache_manager=mock_cache_manager,
+                feature_flag_manager=mock_feature_flag_manager,
             )
 
             # Second call should return the same instance (cached)
@@ -810,7 +783,7 @@ class TestClientManagerAdvancedCoverage:
         # Clear singleton to ensure clean state
         ClientManager.reset_singleton()
 
-        config = UnifiedConfig()
+        config = Config()
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = "test-key"
         config.qdrant.timeout = 30.0
@@ -844,7 +817,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_qdrant_service_lazy_initialization(self):
         """Test lazy initialization of QdrantService."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch(
@@ -866,7 +839,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_hyde_engine_with_dependencies(self):
         """Test HyDEEngine initialization with all dependencies."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         mock_hyde_engine = AsyncMock()
@@ -910,7 +883,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_cache_manager_initialization(self):
         """Test CacheManager initialization with config parameters."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch("src.services.cache.manager.CacheManager") as mock_manager_class:
@@ -938,7 +911,7 @@ class TestClientManagerAdvancedCoverage:
     @pytest.mark.asyncio
     async def test_get_project_storage_initialization(self):
         """Test ProjectStorage initialization."""
-        config = UnifiedConfig()
+        config = Config()
         client_manager = ClientManager(config)
 
         with patch(

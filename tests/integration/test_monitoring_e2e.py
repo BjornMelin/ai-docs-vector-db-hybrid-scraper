@@ -1,7 +1,7 @@
 """Simple monitoring integration tests."""
 
 import pytest
-from src.config.models import MonitoringConfig
+from src.config import MonitoringConfig
 
 
 class TestMonitoringE2E:

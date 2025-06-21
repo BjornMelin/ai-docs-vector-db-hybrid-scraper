@@ -8,11 +8,11 @@ from urllib.parse import urlparse
 
 from pydantic import ValidationError
 
-from ...config.models import PlaywrightConfig
+from ...config import PlaywrightConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
-from .enhanced_anti_detection import EnhancedAntiDetection
+from .anti_detection import EnhancedAntiDetection
 
 logger = logging.getLogger(__name__)
 
