@@ -247,6 +247,56 @@ class MonitoringConfig(BaseModel):
     metrics_port: int = Field(default=8001, gt=0, le=65535)
 
 
+class ObservabilityConfig(BaseModel):
+    """OpenTelemetry observability configuration."""
+
+    # Core observability toggle
+    enabled: bool = Field(default=False, description="Enable OpenTelemetry observability")
+    
+    # Service identification
+    service_name: str = Field(default="ai-docs-vector-db", description="Service name for traces")
+    service_version: str = Field(default="1.0.0", description="Service version")
+    service_namespace: str = Field(default="ai-docs", description="Service namespace")
+    
+    # OTLP Exporter configuration
+    otlp_endpoint: str = Field(
+        default="http://localhost:4317", 
+        description="OTLP gRPC endpoint for trace export"
+    )
+    otlp_headers: dict[str, str] = Field(
+        default_factory=dict, 
+        description="Headers for OTLP export"
+    )
+    otlp_insecure: bool = Field(default=True, description="Use insecure OTLP connection")
+    
+    # Sampling configuration
+    trace_sample_rate: float = Field(
+        default=1.0, 
+        ge=0.0, 
+        le=1.0, 
+        description="Trace sampling rate (0.0-1.0)"
+    )
+    
+    # AI/ML specific configuration
+    track_ai_operations: bool = Field(
+        default=True, 
+        description="Track AI operations (embeddings, LLM calls)"
+    )
+    track_costs: bool = Field(default=True, description="Track AI service costs")
+    
+    # Instrumentation configuration
+    instrument_fastapi: bool = Field(default=True, description="Auto-instrument FastAPI")
+    instrument_httpx: bool = Field(default=True, description="Auto-instrument HTTP clients")
+    instrument_redis: bool = Field(default=True, description="Auto-instrument Redis")
+    instrument_sqlalchemy: bool = Field(default=True, description="Auto-instrument SQLAlchemy")
+    
+    # Console debugging (development)
+    console_exporter: bool = Field(
+        default=False, 
+        description="Export traces to console (development)"
+    )
+
+
 class RAGConfig(BaseModel):
     """RAG (Retrieval-Augmented Generation) configuration."""
 
@@ -383,6 +433,7 @@ class Config(BaseSettings):
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
     circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
 
     # Documentation sites

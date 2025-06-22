@@ -81,7 +81,7 @@
    - Verify alerting effectiveness with on-call team
 
 # Subtasks:
-## 20.1. Design OpenTelemetry architecture and integration strategy [pending]
+## 1. Design OpenTelemetry architecture and integration strategy [in-progress]
 ### Dependencies: None
 ### Description: Create comprehensive architecture and implementation plan for OpenTelemetry across all services
 ### Details:
@@ -106,8 +106,8 @@ Architecture specifications:
 - Observability as code patterns with version control
 - Cross-service correlation using W3C trace context standards
 
-## 20.2. Implement distributed tracing across all services [pending]
-### Dependencies: None
+## 2. Implement distributed tracing across all services [pending]
+### Dependencies: 20.1
 ### Description: Configure end-to-end tracing with context propagation, custom span attributes for AI operations, and sampling strategies
 ### Details:
 1. Evaluate and enhance existing tracing infrastructure in fastapi/middleware/tracing.py
@@ -132,8 +132,8 @@ Advanced tracing features:
 - Integration with chaos engineering for resilience testing
 - Distributed debugging capabilities for complex failure scenarios
 
-## 20.3. Create custom AI/ML metrics and cost tracking [pending]
-### Dependencies: None
+## 3. Create custom AI/ML metrics and cost tracking [pending]
+### Dependencies: 20.1
 ### Description: Implement AI-specific metrics (embedding quality, search relevance, LLM performance) and cost tracking for external AI services
 ### Details:
 1. Extend existing metrics collection in monitoring/metrics.py for AI-specific use cases
@@ -158,8 +158,8 @@ Advanced AI metrics:
 - Bias detection and fairness metrics for AI outputs
 - Energy consumption tracking for carbon footprint analysis
 
-## 20.4. Implement predictive alerting and anomaly detection [pending]
-### Dependencies: None
+## 4. Implement predictive alerting and anomaly detection [pending]
+### Dependencies: 20.2, 20.3
 ### Description: Develop ML-powered anomaly detection with baseline models, real-time detection, and predictive alerting based on trend analysis
 ### Details:
 1. Baseline model training for normal system behavior using historical metrics
@@ -182,8 +182,8 @@ ML-powered features:
 - Explainable AI for alert reasoning and troubleshooting guidance
 - Cross-service anomaly correlation and propagation analysis
 
-## 20.5. Develop observability dashboards and monitoring [pending]
-### Dependencies: None
+## 5. Develop observability dashboards and monitoring [pending]
+### Dependencies: 20.2, 20.3
 ### Description: Create comprehensive dashboards for system monitoring, trace analysis, cost visualization, and performance tracking
 ### Details:
 1. Comprehensive Grafana dashboards for system health and performance monitoring
@@ -206,8 +206,8 @@ Advanced dashboard features:
 - AI-powered insights and recommendations within dashboards
 - Integration with external tools (Slack, Jira, PagerDuty)
 
-## 20.6. Integrate security monitoring and compliance logging [pending]
-### Dependencies: None
+## 6. Integrate security monitoring and compliance logging [pending]
+### Dependencies: 20.1, 20.2
 ### Description: Implement security event logging, compliance metrics, audit trails, and security dashboards
 ### Details:
 1. Security event logging for authentication, authorization, and data access
