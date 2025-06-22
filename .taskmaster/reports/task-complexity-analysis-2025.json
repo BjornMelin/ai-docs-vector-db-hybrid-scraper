@@ -1,0 +1,157 @@
+{
+	"meta": {
+		"generatedAt": "2025-06-21T22:16:00.932Z",
+		"tasksAnalyzed": 18,
+		"totalTasks": 18,
+		"analysisCount": 18,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Fix Test Infrastructure",
+			"complexityScore": 10,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Break down the modernization and stabilization of test infrastructure into granular subtasks: address import/registry errors, implement async and property-based testing, integrate advanced tooling (mutation, benchmarking, parallelization), enforce code coverage targets, add observability/logging, and ensure all tests pass with robust CI/CD integration.",
+			"reasoning": "This task involves a broad overhaul of the test infrastructure, including fixing deep technical debt, integrating multiple advanced testing tools, enforcing strict coverage targets, and demonstrating modern Python testing expertise. The scope spans code refactoring, tooling, CI/CD, and observability, making it highly complex and requiring many coordinated subtasks."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Consolidate Configuration Files",
+			"complexityScore": 9,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand the consolidation process into subtasks: schema design, automation/migration scripts, service auto-detection, profile management, CLI wizard development, backward compatibility, observability/security integration, and developer experience optimization.",
+			"reasoning": "This task requires consolidating a large number of legacy files, automating migration, supporting multiple environments, and integrating advanced features like auto-detection and interactive CLI. The need for backward compatibility, robust validation, and developer-centric patterns adds to the complexity."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Modernize Error Handling",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Decompose error handling modernization into subtasks: refactor exceptions, implement global handlers, add structured logging, integrate observability, set up monitoring/alerting, optimize for performance, and validate production readiness.",
+			"reasoning": "The task involves refactoring legacy error handling to modern FastAPI patterns, integrating observability, and ensuring resilience and user-friendliness. It spans code, monitoring, and operational best practices, requiring careful coordination."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Flatten Service Layer Architecture",
+			"complexityScore": 10,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Break down the refactor into subtasks: class-to-function conversion, domain modularization, 3-tier architecture setup, dependency injection, async resource management, connection pooling, circuit breaker integration, interface compatibility, performance benchmarking, and production readiness validation.",
+			"reasoning": "This is a major architectural refactor involving 50+ classes, async patterns, DDD, dependency injection, and resilience features. The scope is broad and impacts the entire codebase, requiring extensive planning and validation."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Implement Circuit Breaker Pattern",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand circuit breaker implementation into subtasks: dependency mapping, library integration, async/fallback logic, threshold configuration, health checks, observability/monitoring, and resilience validation via chaos engineering.",
+			"reasoning": "Implementing robust, async circuit breakers across all external dependencies with observability, fallback, and chaos testing is technically challenging and critical for reliability."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Update Documentation and Prepare for Release",
+			"complexityScore": 7,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Divide documentation update into subtasks: audit/fix inconsistencies, deployment guides, setup scripts, configuration updates, API docs, security/compliance, production readiness, and user testing/QA.",
+			"reasoning": "Comprehensive documentation and release prep involves technical writing, automation, cross-platform support, and quality assurance, but is less technically complex than deep architectural or infrastructure changes."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Implement RAG (Retrieval-Augmented Generation) Integration",
+			"complexityScore": 9,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand RAG integration into subtasks: system architecture, data ingestion, LLM integration, prompt engineering, streaming/caching, source attribution, evaluation/metrics, and production deployment.",
+			"reasoning": "Integrating a production-grade RAG system with multi-provider LLMs, advanced retrieval, safety, and observability is highly complex and requires expertise in AI, backend, and system design."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Develop Search Analytics Dashboard",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down dashboard development into subtasks: backend instrumentation, analytics aggregation, privacy-compliant user analytics, backend APIs, frontend dashboard, A/B testing integration, and performance optimization.",
+			"reasoning": "Building a real-time, full-stack analytics dashboard with advanced visualization, privacy, and business intelligence features is complex, requiring coordination across backend, frontend, and data engineering."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Create Vector Embeddings Visualization",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand visualization into subtasks: API for embedding reduction, 3D frontend component, clustering integration, observability/security, QA/benchmarking, and documentation.",
+			"reasoning": "Developing an interactive 3D visualization with clustering and performance optimization is moderately complex, involving both backend and frontend engineering."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement Natural Language Query Interface",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Decompose the query interface into subtasks: intent recognition/classification, conversation state machine, RAG integration, WebSocket API, context management, deployment/observability, and QA automation.",
+			"reasoning": "Building a conversational, intent-aware query system with multi-turn support and RAG integration is technically challenging and requires expertise in NLP, backend, and real-time systems."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Implement Service Auto-Detection",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand service auto-detection into subtasks: architecture design, Docker discovery, local/cloud scanning, config generation/fallbacks, observability/security, and production deployment.",
+			"reasoning": "Implementing robust, async service discovery across diverse environments with observability and security is moderately complex and critical for automation."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Develop Configuration Profiles System",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down profile system into subtasks: model design, async profile selection, CLI tool, validation/observability, production deployment, and documentation.",
+			"reasoning": "Creating a flexible, validated configuration profile system with CLI and automation is moderately complex, involving backend, CLI, and DevOps skills."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Create Interactive Setup Wizard",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand setup wizard into subtasks: CLI architecture, auto-detection/validation, interactive flow, observability/security, automated testing/deployment, and documentation.",
+			"reasoning": "Developing an interactive, robust CLI wizard with real-time validation and auto-detection is moderately complex, requiring UX, backend, and automation expertise."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Implement Multi-Collection Architecture",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Decompose multi-collection architecture into subtasks: schema design, cross-collection search, management API, observability/analytics, deployment/optimization, and QA.",
+			"reasoning": "Supporting multi-collection search and management in a vector database is moderately complex, involving backend, API, and data engineering."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Develop Advanced Analytics and ML Insights",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand analytics/ML into subtasks: API design, ML model integration, observability/security, CI/CD automation, A/B testing framework, dashboard visualization, and QA.",
+			"reasoning": "Implementing ML-driven analytics, recommendations, anomaly detection, and A/B testing with production readiness is complex, requiring ML, backend, and DevOps expertise."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Implement Data Export/Import Tools",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down data tools into subtasks: export/import APIs, backup/restore/versioning, observability/security, CLI/automation, production deployment, and documentation.",
+			"reasoning": "Developing robust, scalable data migration and backup tools with validation, security, and automation is moderately complex and essential for maintainability."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Extend Language Support",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand language support into subtasks: parser integration, tokenization/chunking, embedding/indexing, content extraction/language detection, production deployment, and monitoring/security.",
+			"reasoning": "Integrating new language parsers and extending multi-language support across the pipeline is moderately complex, involving backend, ML, and DevOps."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Implement Enterprise SSO Integration",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Decompose SSO integration into subtasks: architecture/strategy, OAuth2/OIDC flows, RBAC, user provisioning, observability/security, audit logging, and production validation.",
+			"reasoning": "Enterprise SSO integration with robust security, RBAC, audit logging, and compliance is complex, requiring security, backend, and DevOps expertise."
+		}
+	]
+}

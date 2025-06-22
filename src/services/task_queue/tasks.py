@@ -177,3 +177,6 @@ TASK_MAP = {
     "delete_collection": delete_collection_task,
     "persist_cache": persist_cache_task,
 }
+
+# Legacy alias for backward compatibility
+TASK_REGISTRY = TASK_MAP

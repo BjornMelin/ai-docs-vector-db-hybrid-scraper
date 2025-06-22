@@ -1,0 +1,66 @@
+# Task ID: 2
+# Title: Consolidate Configuration Files
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Modernize and consolidate 21 legacy config files into 3 core Python modules using automation, smart defaults, and developer-centric patterns. Leverage Pydantic V2 BaseSettings for robust schema validation, multi-alias environment variable support, and declarative GitOps-ready configuration. Integrate auto-detection for Docker, local, and cloud services, and provide interactive setup via a Rich-powered CLI wizard. Support environment-based feature flags, audit trails, and zero-downtime updates to optimize developer experience and enterprise automation.
+# Details:
+1. Consolidate all configuration into core.py, profiles.py, and auto_detect.py, reducing total config model size to under 200 lines with smart defaults.
+2. Implement SmartConfig class using Pydantic v2 BaseSettings, supporting multi-alias environment variables (e.g., OPENAI_API_KEY, AI_DOCS__OPENAI__API_KEY).
+3. Add service auto-detection for Redis 8, Qdrant with connection pooling, Supabase/Neon databases, and modern container orchestration (StatefulSets, edge deployment).
+4. Create configuration profiles for local-dev, cloud-prod, and enterprise, supporting environment-based feature flags and declarative GitOps patterns.
+5. Ensure backward compatibility with existing config files and provide zero-downtime configuration updates with validation and audit trail for all changes.
+6. Implement an interactive setup wizard using the Rich CLI library with real-time validation, enabling one-command setup (./setup.sh --profile local-dev) and reducing setup complexity by 95%.
+7. Demonstrate DevOps automation, enterprise configuration management, security-first practices with secrets management, and developer experience optimization throughout the implementation.
+
+# Test Strategy:
+1. Unit test SmartConfig class, multi-alias env var logic, and enhanced service auto-detection (Redis 8, Qdrant with connection pooling, Supabase/Neon databases).
+2. Integration test with local-dev, Docker, and cloud-prod profiles, verifying environment-based feature flags and declarative config updates.
+3. Verify backward compatibility and zero-downtime updates with legacy config files.
+4. Test audit trail logging for all configuration changes and secrets management security practices.
+5. Measure and verify setup time reduction to under 5 minutes using the interactive Rich CLI wizard with real-time validation.
+6. Test integration with modern container orchestration (StatefulSets, edge deployment).
+
+# Subtasks:
+## 1. Design Unified Configuration Schema and Smart Defaults [pending]
+### Dependencies: None
+### Description: Define a robust, developer-centric configuration schema using Pydantic v2 BaseSettings. Establish smart defaults, multi-alias environment variable support, and clear separation of core, profile, and auto-detection modules. Ensure schema is concise (under 200 lines) and supports layered configuration for local, cloud, and enterprise environments.
+### Details:
+Leverage Pydantic's advanced validation and type enforcement to prevent runtime errors. Use descriptive key names and logical sections for maintainability. Document all configuration options and defaults for developer onboarding.
+
+## 2. Implement Automated Configuration Consolidation and Migration [pending]
+### Dependencies: 2.1
+### Description: Develop automation scripts to migrate and consolidate 21 legacy config files into the new core.py, profiles.py, and auto_detect.py modules. Ensure backward compatibility, audit trails, and zero-downtime updates during migration.
+### Details:
+Use Python automation (e.g., scripts or Ansible) to parse, validate, and transform legacy configs. Integrate audit logging for all changes. Provide rollback and validation mechanisms to ensure safe migration.
+
+## 3. Develop Service Auto-Detection and Environment Profiling [pending]
+### Dependencies: 2.2
+### Description: Implement auto-detection logic for Docker, local, and cloud environments. Automatically discover and configure services such as Redis 8, Qdrant with connection pooling, and Supabase/Neon databases. Support environment-based feature flags and declarative GitOps patterns.
+### Details:
+Use async patterns and dependency injection for efficient service discovery. Integrate with environment metadata and service APIs for robust detection. Ensure configuration profiles adapt dynamically to detected environments. Implement connection pooling for Qdrant and optimize for Redis 8 features.
+
+## 4. Build Interactive Rich CLI Setup Wizard [pending]
+### Dependencies: 2.3
+### Description: Create an interactive CLI wizard using the Rich library to guide developers through configuration setup with real-time validation. Support one-command setup (e.g., ./setup.sh --profile local-dev), environment selection, and automated migration from legacy configurations.
+### Details:
+Design CLI flows for all supported profiles and environments. Provide contextual help, real-time validation feedback, and audit logging. Minimize setup complexity and optimize for developer experience. Include automated migration paths from legacy configurations.
+
+## 5. Integrate Observability, Testing, and Production Automation [pending]
+### Dependencies: 2.4
+### Description: Embed OpenTelemetry-based observability, property-based and mutation testing, and CI/CD automation for configuration deployment. Ensure secure, monitored, and production-ready configuration management with zero-downtime updates.
+### Details:
+Instrument configuration modules with OpenTelemetry for traceability. Automate deployment and validation via CI/CD pipelines. Enforce security-first practices (e.g., encryption, secrets management, access controls) and monitor for configuration drift.
+
+## 6. Implement Container Orchestration Integration [pending]
+### Dependencies: 2.3
+### Description: Integrate configuration management with modern container orchestration, supporting StatefulSets and edge deployment scenarios. Ensure configuration is GitOps-ready and compatible with 2025 deployment patterns.
+### Details:
+Design configuration structures that work seamlessly with Kubernetes StatefulSets, edge computing deployments, and GitOps workflows. Implement configuration discovery and adaptation for containerized environments. Support dynamic reconfiguration without container restarts.
+
+## 7. Enhance Security with Secrets Management [pending]
+### Dependencies: 2.1
+### Description: Implement security-first practices with comprehensive secrets management integration. Support secure storage, rotation, and access control for sensitive configuration values.
+### Details:
+Integrate with secrets management solutions (HashiCorp Vault, AWS Secrets Manager, etc.). Implement secure defaults, automatic rotation, and least-privilege access patterns. Provide audit trails for all secrets access and changes.
+

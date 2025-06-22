@@ -1,0 +1,90 @@
+# Task ID: 1
+# Title: Fix Test Infrastructure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Modernize and stabilize the test infrastructure to resolve import errors, implement async and property-based testing, and achieve robust code coverage. Integrate advanced testing tools and patterns to demonstrate modern Python testing expertise, comprehensive quality assurance, and production-readiness. Target a minimum of 38% coverage overall, with a 90% target for V1-critical areas.
+# Details:
+1. Fix missing TASK_REGISTRY in src/services/task_queue/tasks.py
+2. Create adaptive_fusion_tuner module for vector search optimization
+3. Fix QueryType.CODE enum references in search processing
+4. Resolve import errors in test_crawl4ai_bulk_embedder.py
+5. Implement async test patterns for all async code using pytest-asyncio with pytest 8.x+ patterns and proper fixture scoping
+6. Use pytest for unit testing, pytest-asyncio for async code, and Hypothesis for property-based testing
+7. Add mutation testing with mutmut to validate test quality
+8. Set up pytest-benchmark for performance regression detection
+9. Configure parallel test execution with pytest-xdist
+10. Use pytest-cov and coverage.py to measure and report coverage, targeting 38% minimum overall and 90% for V1 areas
+11. Integrate TypeAdapter caching for Pydantic V2 performance optimization
+12. Implement structured logging with correlation IDs
+13. Add comprehensive error handling using FastAPI patterns
+14. Set up continuous performance monitoring with OpenTelemetry test observability
+15. Ensure all 172 tests execute successfully and critical integration points are covered
+16. Implement contract testing with Pact for API reliability
+17. Add visual regression testing with Playwright
+18. Explore AI-powered test generation for enhanced coverage
+19. Apply hexagonal architecture patterns for improved test isolation
+20. Integrate security scanning (SAST/DAST) into the CI/CD pipeline
+21. Implement intelligent test selection and fail-fast quality gates
+
+# Test Strategy:
+1. Run pytest with pytest-cov to verify all tests pass and measure coverage
+2. Use coverage.py to ensure at least 38% overall and 90% for V1 areas
+3. Implement property-based tests with Hypothesis for edge case discovery
+4. Add mutation testing with mutmut to assess test robustness
+5. Use pytest-benchmark to detect performance regressions
+6. Configure pytest-xdist for parallel test execution
+7. Regularly review coverage and mutation reports to identify gaps
+8. Implement integration tests for critical components and error handling
+9. Monitor structured logs and performance metrics for continuous assurance
+10. Utilize contract testing with Pact to ensure API reliability
+11. Perform visual regression testing with Playwright for UI components
+12. Leverage AI-powered test generation to identify coverage gaps
+13. Instrument tests with OpenTelemetry for enhanced observability
+14. Apply hexagonal architecture patterns to improve test isolation
+15. Integrate security scanning into the test pipeline
+16. Implement intelligent test selection for faster feedback cycles
+17. Configure fail-fast quality gates to prevent regressions
+
+# Subtasks:
+## 1. Resolve Import and Registry Errors in Test and Source Modules [pending]
+### Dependencies: None
+### Description: Fix all import errors and missing registry issues in both source and test files, including TASK_REGISTRY in src/services/task_queue/tasks.py and references in test_crawl4ai_bulk_embedder.py and QueryType.CODE enum.
+### Details:
+Audit all failing imports and registry lookups, refactor module paths for compatibility with modern Python packaging, and ensure all enums and registries are correctly referenced. Validate fixes by running all affected tests and confirming successful imports.
+
+## 2. Implement Modern Async and Property-Based Testing Patterns [pending]
+### Dependencies: 1.1
+### Description: Refactor all async code tests to use pytest-asyncio with pytest 8.x+ patterns and introduce property-based testing with Hypothesis for critical logic, ensuring robust coverage of asynchronous and edge-case behaviors.
+### Details:
+Apply @pytest.mark.asyncio to async test functions, use async fixtures with proper scoping, and leverage event_loop management for concurrency. Integrate Hypothesis to generate diverse input scenarios for property-based validation of core algorithms. Ensure compatibility with latest pytest 8.x+ async patterns.
+
+## 3. Integrate Advanced Test Quality and Performance Tooling [pending]
+### Dependencies: 1.2
+### Description: Set up mutation testing with mutmut, performance regression detection with pytest-benchmark, and parallel execution with pytest-xdist to ensure test suite quality and efficiency.
+### Details:
+Configure mutmut for mutation testing to validate test effectiveness, integrate pytest-benchmark for key performance metrics, and enable pytest-xdist for parallel test runs to reduce CI latency.
+
+## 4. Achieve and Report Targeted Code Coverage [pending]
+### Dependencies: 1.3
+### Description: Configure pytest-cov and coverage.py to measure and enforce a minimum of 38% overall coverage and 90% for V1-critical areas, reporting results in CI and blocking merges on coverage regressions.
+### Details:
+Instrument all test runs with coverage tools, annotate V1-critical code, and set up CI rules to enforce thresholds. Generate detailed coverage reports for team review. Implement intelligent test selection to prioritize tests with highest impact on coverage.
+
+## 5. Demonstrate Production-Readiness and Observability in Test Infrastructure [pending]
+### Dependencies: 1.4
+### Description: Integrate OpenTelemetry for test observability, structured logging with correlation IDs, and continuous performance monitoring. Ensure all 172 tests execute successfully and critical integration points are covered.
+### Details:
+Instrument test runs with OpenTelemetry traces, implement structured logs for test events, and set up dashboards for continuous monitoring. Validate that all integration and system tests pass and observability data is actionable.
+
+## 6. Implement 2025 Testing Best Practices [pending]
+### Dependencies: 1.5
+### Description: Enhance the test infrastructure with 2025 testing best practices including contract testing, visual regression testing, AI-powered test generation, and hexagonal architecture patterns.
+### Details:
+1. Set up contract testing with Pact for API reliability verification
+2. Implement visual regression testing with Playwright for UI components
+3. Explore and integrate AI-powered test generation tools to identify coverage gaps
+4. Apply hexagonal architecture patterns for improved test isolation
+5. Integrate security scanning (SAST/DAST) into the CI/CD pipeline
+6. Configure fail-fast quality gates to prevent regressions
+
