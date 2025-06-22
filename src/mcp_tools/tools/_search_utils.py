@@ -3,7 +3,8 @@
 import logging
 from uuid import uuid4
 
-from ...config.enums import SearchStrategy
+from src.config import SearchStrategy
+
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult

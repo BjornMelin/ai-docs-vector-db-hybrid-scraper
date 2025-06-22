@@ -9,8 +9,8 @@ import re
 from typing import Any
 
 import numpy as np
+from src.config import Config
 
-from ...config import Config
 from ...models.vector_search import SPLADEConfig
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from ...config import HyDEConfig as UnifiedHyDEConfig
+    from src.config import HyDEConfig as UnifiedHyDEConfig
 
 
 class HyDEConfig(BaseModel):

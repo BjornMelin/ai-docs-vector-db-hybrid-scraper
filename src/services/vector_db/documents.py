@@ -9,8 +9,8 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
+from src.config import Config
 
-from ...config import Config
 from ..errors import QdrantServiceError
 from .utils import build_filter
 

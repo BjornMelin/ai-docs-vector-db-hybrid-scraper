@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from src.config import Config  # LightweightScraperConfig not in simplified config
 
-from ...config import Config  # LightweightScraperConfig not in simplified config
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 

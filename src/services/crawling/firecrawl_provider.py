@@ -4,8 +4,8 @@ import logging
 from typing import Any
 
 from firecrawl import FirecrawlApp
+from src.config import FirecrawlConfig
 
-from ...config import FirecrawlConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimitManager

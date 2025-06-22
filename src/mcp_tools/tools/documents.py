@@ -18,9 +18,10 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
+from src.config import ChunkingConfig
+from src.config import ChunkingStrategy
+
 from ...chunking import EnhancedChunker
-from ...config import ChunkingConfig
-from ...config.enums import ChunkingStrategy
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import BatchRequest

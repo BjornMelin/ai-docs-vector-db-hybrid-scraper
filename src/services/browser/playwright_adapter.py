@@ -7,8 +7,8 @@ from typing import Any
 from urllib.parse import urlparse
 
 from pydantic import ValidationError
+from src.config import PlaywrightConfig
 
-from ...config import PlaywrightConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .action_schemas import validate_actions

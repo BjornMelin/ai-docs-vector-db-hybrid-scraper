@@ -16,8 +16,8 @@ import httpx
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from pydantic import Field
+from src.config import Config
 
-from ...config import Config
 from ..base import BaseService
 
 logger = logging.getLogger(__name__)

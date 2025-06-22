@@ -9,8 +9,8 @@ from qdrant_client.models import CreateAlias
 from qdrant_client.models import CreateAliasOperation
 from qdrant_client.models import DeleteAlias
 from qdrant_client.models import DeleteAliasOperation
+from src.config import Config
 
-from ...config import Config
 from ..base import BaseService
 from ..errors import QdrantServiceError
 

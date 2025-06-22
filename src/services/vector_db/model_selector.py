@@ -7,12 +7,13 @@ characteristics, performance history, and cost optimization.
 import logging
 from typing import Any
 
-from ...config import Config
-from ...config.enums import EmbeddingModel
-from ...config.enums import ModelType
-from ...config.enums import OptimizationStrategy
-from ...config.enums import QueryComplexity
-from ...config.enums import QueryType
+from src.config import Config
+from src.config import EmbeddingModel
+from src.config import ModelType
+from src.config import OptimizationStrategy
+from src.config import QueryComplexity
+from src.config import QueryType
+
 from ...models.vector_search import ModelSelectionStrategy
 from ...models.vector_search import QueryClassification
 

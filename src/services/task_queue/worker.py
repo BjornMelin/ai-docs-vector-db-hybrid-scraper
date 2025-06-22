@@ -5,8 +5,8 @@ from typing import Any
 from typing import ClassVar
 
 from arq.connections import RedisSettings
+from src.config import get_config
 
-from ...config import get_config
 from .tasks import TASK_REGISTRY
 
 logger = logging.getLogger(__name__)

@@ -8,9 +8,10 @@ import logging
 import re
 from typing import Any
 
-from ...config import Config
-from ...config.enums import QueryComplexity
-from ...config.enums import QueryType
+from src.config import Config
+from src.config import QueryComplexity
+from src.config import QueryType
+
 from ...models.vector_search import QueryClassification
 from ...models.vector_search import QueryFeatures
 

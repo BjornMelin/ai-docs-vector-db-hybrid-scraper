@@ -1,7 +1,8 @@
 """Utility services and helpers."""
 
-from ...config.enums import SearchAccuracy
-from ...config.enums import VectorType
+from src.config import SearchAccuracy
+from src.config import VectorType
+
 from ...models.vector_search import PrefetchConfig
 from ...models.vector_search import SearchStage
 from .hnsw_optimizer import HNSWOptimizer

@@ -4,7 +4,8 @@ import logging
 import time
 from typing import Any
 
-from ...config import Config
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import QdrantServiceError
 

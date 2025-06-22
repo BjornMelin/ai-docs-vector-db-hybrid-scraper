@@ -8,7 +8,8 @@ from typing import Any
 from typing import Literal
 from urllib.parse import urlparse
 
-from ...config import Config
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 

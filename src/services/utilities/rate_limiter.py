@@ -5,7 +5,8 @@ import logging
 import time
 from typing import TypeVar
 
-from ...config import Config
+from src.config import Config
+
 from ..errors import APIError
 
 logger = logging.getLogger(__name__)

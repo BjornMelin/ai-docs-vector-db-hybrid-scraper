@@ -6,8 +6,8 @@ from typing import Any
 from arq import ArqRedis
 from arq import create_pool
 from arq.connections import RedisSettings
+from src.config import Config
 
-from ...config import Config
 from ..base import BaseService
 
 logger = logging.getLogger(__name__)

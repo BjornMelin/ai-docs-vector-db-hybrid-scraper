@@ -13,8 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
-
-from ...config import PlaywrightConfig
+from src.config import PlaywrightConfig
 
 
 class UserAgentPool(BaseModel):

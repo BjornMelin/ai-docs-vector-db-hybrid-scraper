@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
+from src.config import Config
 
-from ...config.core import Config
 from ..shared import CircuitBreaker
 from ..shared import ClientState
 from .monitoring import LoadMonitor

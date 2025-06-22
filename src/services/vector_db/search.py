@@ -10,10 +10,10 @@ from typing import Any
 import numpy as np
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
+from src.config import Config
+from src.config import SearchAccuracy
+from src.config import VectorType
 
-from ...config import Config
-from ...config.enums import SearchAccuracy
-from ...config.enums import VectorType
 from ...models.vector_search import PrefetchConfig
 from ..errors import QdrantServiceError
 from ..monitoring.metrics import get_metrics_registry

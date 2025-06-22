@@ -3,7 +3,8 @@
 import logging
 from typing import Any
 
-from ...config import Config
+from src.config import Config
+
 from ..errors import CrawlServiceError
 
 logger = logging.getLogger(__name__)

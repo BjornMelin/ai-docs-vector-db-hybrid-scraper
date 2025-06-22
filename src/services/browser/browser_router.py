@@ -16,7 +16,8 @@ from collections import deque
 from typing import Any
 from urllib.parse import urlparse
 
-from ...config import Config
+from src.config import Config
+
 from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
 from .tier_config import PerformanceHistoryEntry

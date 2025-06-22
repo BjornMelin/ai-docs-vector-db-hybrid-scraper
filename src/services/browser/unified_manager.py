@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 from pydantic import Field
+from src.config import Config
 
-from ...config import Config
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor

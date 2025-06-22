@@ -7,7 +7,8 @@ using the centralized ClientManager for all client operations.
 import logging
 from typing import TYPE_CHECKING
 
-from ...config import Config
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import QdrantServiceError
 from .collections import QdrantCollections

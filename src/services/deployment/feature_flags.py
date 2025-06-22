@@ -10,8 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
-
-from ...config.enums import DeploymentTier
+from src.config import DeploymentTier
 
 logger = logging.getLogger(__name__)
 

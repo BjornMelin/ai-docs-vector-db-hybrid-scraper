@@ -6,7 +6,8 @@ import os
 import time
 from typing import Any
 
-from ...config import BrowserUseConfig
+from src.config import BrowserUseConfig
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 

@@ -214,7 +214,7 @@ class SearchOrchestrator(BaseService):
     def rag_generator(self) -> RAGGenerator:
         """Lazy load RAG generator service."""
         if self._rag_generator is None:
-            from ...config import get_config
+            from src.config import get_config
 
             config = get_config()
             self._rag_generator = RAGGenerator(config.rag)
@@ -330,7 +330,7 @@ class SearchOrchestrator(BaseService):
 
             if request.enable_rag and search_results:
                 try:
-                    from ...config import get_config
+                    from src.config import get_config
 
                     config = get_config()
 

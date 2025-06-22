@@ -6,8 +6,8 @@ import time
 from typing import Any
 
 from arq import func
+from src.config import get_config
 
-from ...config import get_config
 from ...infrastructure.client_manager import ClientManager
 from ..core.qdrant_alias_manager import QdrantAliasManager
 
