@@ -198,6 +198,7 @@ init-debug.log
 dev-debug.log
 .taskmaster/temp/
 .taskmaster/.cache/
+.taskmaster/reports/
 
 # Task Master AI - Legacy Structure (pre-v0.16.0)
 .taskmasterconfig
