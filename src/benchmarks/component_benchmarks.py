@@ -14,7 +14,7 @@ from pydantic import Field
 
 from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 logger = logging.getLogger(__name__)
 

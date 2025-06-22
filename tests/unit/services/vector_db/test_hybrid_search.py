@@ -24,7 +24,7 @@ from src.models.vector_search import QueryClassification
 from src.models.vector_search import SearchAccuracy
 from src.models.vector_search import SearchParams
 from src.services.errors import QdrantServiceError
-from src.services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 class TestAdvancedHybridSearchService:

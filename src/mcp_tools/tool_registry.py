@@ -53,8 +53,8 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
 
     # Advanced features
     logger.info("Registering advanced tools...")
-    tools.advanced_search.register_tools(mcp, client_manager)
-    registered_tools.append("advanced_search")
+    tools.search_tools.register_tools(mcp, client_manager)
+    registered_tools.append("search_tools")
 
     tools.query_processing.register_tools(mcp, client_manager)
     registered_tools.append("query_processing")
@@ -68,9 +68,6 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
 
     tools.payload_indexing.register_tools(mcp, client_manager)
     registered_tools.append("payload_indexing")
-
-    tools.deployment.register_tools(mcp, client_manager)
-    registered_tools.append("deployment")
 
     # Utilities and monitoring
     logger.info("Registering utility tools...")

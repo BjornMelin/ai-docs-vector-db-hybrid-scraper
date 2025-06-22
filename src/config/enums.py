@@ -42,13 +42,14 @@ class QualityTier(str, Enum):
 
 
 class EmbeddingModel(str, Enum):
-    """Embedding models."""
+    """Embedding models from various providers."""
 
     TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"
     TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"
     TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
     BGE_SMALL_EN_V15 = "BAAI/bge-small-en-v1.5"
     BGE_LARGE_EN_V15 = "BAAI/bge-large-en-v1.5"
+    NV_EMBED_V2 = "nvidia/NV-Embed-v2"
 
 
 class CrawlProvider(str, Enum):
@@ -111,11 +112,17 @@ class DocumentStatus(str, Enum):
 
 
 class QueryType(str, Enum):
-    """Query types."""
+    """Query types for different search scenarios."""
 
     SIMPLE = "simple"
     COMPLEX = "complex"
     SEMANTIC = "semantic"
+    CODE = "code"
+    API_REFERENCE = "api_reference"
+    DOCUMENTATION = "documentation"
+    TROUBLESHOOTING = "troubleshooting"
+    MULTIMODAL = "multimodal"
+    CONCEPTUAL = "conceptual"
 
 
 class QueryComplexity(str, Enum):
@@ -124,21 +131,30 @@ class QueryComplexity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    SIMPLE = "simple"
+    MODERATE = "moderate"
+    COMPLEX = "complex"
 
 
 class ModelType(str, Enum):
-    """Model types."""
+    """Model types for different AI capabilities."""
 
     EMBEDDING = "embedding"
     RERANKING = "reranking"
+    GENERAL_PURPOSE = "general_purpose"
+    CODE_SPECIALIZED = "code_specialized"
+    MULTIMODAL = "multimodal"
 
 
 class OptimizationStrategy(str, Enum):
-    """Optimization strategies."""
+    """Optimization strategies for model selection."""
 
     SPEED = "speed"
     ACCURACY = "accuracy"
     BALANCED = "balanced"
+    SPEED_OPTIMIZED = "speed_optimized"
+    QUALITY_OPTIMIZED = "quality_optimized"
+    COST_OPTIMIZED = "cost_optimized"
 
 
 class FusionAlgorithm(str, Enum):

@@ -18,7 +18,7 @@ from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
 from ..models.vector_search import FusionConfig
 from ..models.vector_search import SearchParams
-from ..services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
 from .load_test_runner import LoadTestConfig

@@ -11,10 +11,10 @@ import uuid
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
+from src.config import ABTestVariant
+from src.config import Config
+from src.config import OptimizationStrategy
 
-from ...config import Config
-from ...config.enums import ABTestVariant
-from ...config.enums import OptimizationStrategy
 from ...models.vector_search import AdvancedHybridSearchRequest
 from ...models.vector_search import AdvancedSearchResponse
 from ...models.vector_search import RetrievalMetrics
@@ -59,7 +59,7 @@ class AdvancedHybridSearchService:
 
         # Initialize the new orchestrator
         self.orchestrator = AdvancedSearchOrchestrator(
-            enable_all_features=True, enable_performance_optimization=True
+            cache_size=1000, enable_performance_optimization=True
         )
 
         # Initialize ML components for backward compatibility

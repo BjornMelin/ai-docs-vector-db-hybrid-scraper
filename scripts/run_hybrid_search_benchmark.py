@@ -18,7 +18,7 @@ from benchmarks import AdvancedHybridSearchBenchmark
 from benchmarks import BenchmarkConfig
 from benchmarks import BenchmarkResults
 from ..config import Config
-from services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 def setup_logging(log_level: str = "INFO") -> None:

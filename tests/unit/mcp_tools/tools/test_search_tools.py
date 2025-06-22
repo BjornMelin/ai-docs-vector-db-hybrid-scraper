@@ -57,9 +57,7 @@ def mock_client_manager():
 @pytest.fixture
 def mock_security_validator():
     """Create a mock security validator."""
-    with patch(
-        "src.mcp_tools.tools.advanced_search.SecurityValidator"
-    ) as mock_security:
+    with patch("src.mcp_tools.tools.search_tools.SecurityValidator") as mock_security:
         mock_validator = Mock()
         mock_validator.validate_collection_name.side_effect = lambda x: x
         mock_validator.validate_query_string.side_effect = lambda x: x
@@ -70,7 +68,7 @@ def mock_security_validator():
 @pytest.mark.asyncio
 async def test_advanced_search_tools_registration(mock_client_manager, mock_context):
     """Test that advanced search tools are properly registered."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -99,7 +97,7 @@ async def test_multi_stage_search_success(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test successful multi-stage search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -201,7 +199,7 @@ async def test_multi_stage_search_error_handling(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test error handling in multi-stage search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -247,7 +245,7 @@ async def test_hyde_search_success(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test successful HyDE search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -343,7 +341,7 @@ async def test_hyde_search_fallback(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test HyDE search fallback to regular search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -407,7 +405,7 @@ async def test_hyde_search_qdrant_point_format(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test HyDE search with Qdrant point object format."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -458,7 +456,7 @@ async def test_hyde_search_advanced_success(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test successful advanced HyDE search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -544,7 +542,7 @@ async def test_hyde_search_advanced_with_ab_testing(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test advanced HyDE search with A/B testing."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -557,7 +555,7 @@ async def test_hyde_search_advanced_with_ab_testing(
 
     # Mock A/B test function
     with patch(
-        "src.mcp_tools.tools.advanced_search._perform_ab_test_search",
+        "src.mcp_tools.tools.search_tools._perform_ab_test_search",
         new_callable=AsyncMock,
     ) as mock_ab_test:
         mock_search_results = [
@@ -598,7 +596,7 @@ async def test_hyde_search_advanced_engine_unavailable(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test advanced HyDE search when engine is unavailable."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -628,7 +626,7 @@ async def test_filtered_search_success(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test successful filtered search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -718,7 +716,7 @@ async def test_filtered_search_without_metadata(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test filtered search without including metadata."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -775,7 +773,7 @@ async def test_filtered_search_error_handling(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test error handling in filtered search."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -812,7 +810,7 @@ async def test_filtered_search_error_handling(
 @pytest.mark.asyncio
 async def test_perform_ab_test_search_success(mock_client_manager, mock_context):
     """Test _perform_ab_test_search function."""
-    from src.mcp_tools.tools.advanced_search import _perform_ab_test_search
+    from src.mcp_tools.tools.search_tools import _perform_ab_test_search
 
     # Setup HyDE engine mock
     hyde_engine = await mock_client_manager.get_hyde_engine()
@@ -851,7 +849,7 @@ async def test_perform_ab_test_search_with_exceptions(
     mock_client_manager, mock_context
 ):
     """Test _perform_ab_test_search with service exceptions."""
-    from src.mcp_tools.tools.advanced_search import _perform_ab_test_search
+    from src.mcp_tools.tools.search_tools import _perform_ab_test_search
 
     # Make HyDE engine fail
     hyde_engine = await mock_client_manager.get_hyde_engine()
@@ -892,7 +890,7 @@ async def test_hyde_search_advanced_without_context(
     mock_client_manager, mock_security_validator
 ):
     """Test advanced HyDE search without context parameter."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -930,7 +928,7 @@ async def test_hyde_search_with_search_accuracy_enum(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test HyDE search with SearchAccuracy enum value."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}
@@ -974,7 +972,7 @@ async def test_hyde_search_error_with_failed_fallback(
     mock_client_manager, mock_context, mock_security_validator
 ):
     """Test HyDE search error handling when both main and fallback fail."""
-    from src.mcp_tools.tools.advanced_search import register_tools
+    from src.mcp_tools.tools.search_tools import register_tools
 
     mock_mcp = MagicMock()
     registered_tools = {}

@@ -30,7 +30,7 @@ from rich.table import Table
 
 from .chunking import EnhancedChunker
 from .config import Config
-from .config.loader import ConfigLoader
+from .config import get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
@@ -514,10 +514,7 @@ def main(
     )
 
     # Load configuration
-    if config_path:
-        config = ConfigLoader.load_config(config_path)
-    else:
-        config = ConfigLoader.load_config()
+    config = get_config()
 
     # Validate inputs
     if not any([urls, file, sitemap]):

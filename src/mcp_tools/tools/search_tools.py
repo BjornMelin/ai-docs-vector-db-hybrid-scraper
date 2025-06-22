@@ -17,7 +17,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...config.enums import SearchStrategy
+from src.config import SearchStrategy
+
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import FilteredSearchRequest
