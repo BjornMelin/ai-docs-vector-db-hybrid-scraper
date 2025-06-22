@@ -122,6 +122,7 @@ class ClientManager:
         self._content_intelligence_service: Any = None
         self._database_manager: DatabaseManager | None = None
         self._advanced_search_orchestrator: Any = None
+        self._rag_generator: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -150,6 +151,7 @@ class ClientManager:
             "_crawl_manager",
             "_hyde_engine",
             "_project_storage",
+            "_rag_generator",
             "_feature_flag_manager",
             "_ab_testing_manager",
             "_blue_green_deployment",
@@ -473,6 +475,25 @@ class ClientManager:
                     logger.info("Initialized ContentIntelligenceService")
 
         return self._content_intelligence_service
+
+    async def get_rag_generator(self):
+        """Get or create RAGGenerator instance."""
+        if self._rag_generator is None:
+            if "rag_generator" not in self._service_locks:
+                self._service_locks["rag_generator"] = asyncio.Lock()
+
+            async with self._service_locks["rag_generator"]:
+                if self._rag_generator is None:
+                    from src.services.rag import RAGGenerator
+
+                    self._rag_generator = RAGGenerator(
+                        config=self.config.rag,
+                        client_manager=self,
+                    )
+                    await self._rag_generator.initialize()
+                    logger.info("Initialized RAGGenerator")
+
+        return self._rag_generator
 
     async def get_database_manager(self) -> DatabaseManager:
         """Get or create enterprise DatabaseManager instance."""
@@ -983,7 +1004,7 @@ class ClientManager:
         """Context manager for automatic client lifecycle management.
 
         Args:
-            client_type: Type of client ("qdrant", "openai", "firecrawl", "redis", "database", "feature_flags", "ab_testing", "blue_green", "canary")
+            client_type: Type of client ("qdrant", "openai", "firecrawl", "redis", "database", "rag", "feature_flags", "ab_testing", "blue_green", "canary")
 
         Yields:
             Client instance
@@ -1002,6 +1023,7 @@ class ClientManager:
             "firecrawl": self.get_firecrawl_client,
             "redis": self.get_redis_client,
             "database": self.get_database_manager,
+            "rag": self.get_rag_generator,
             # Deployment services
             "feature_flags": self.get_feature_flag_manager,
             "ab_testing": self.get_ab_testing_manager,

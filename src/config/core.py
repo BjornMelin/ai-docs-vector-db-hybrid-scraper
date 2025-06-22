@@ -5,6 +5,7 @@ All configuration models in one place for V1 release.
 """
 
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -182,6 +183,42 @@ class HyDEConfig(BaseModel):
     generation_temperature: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
+class CircuitBreakerConfig(BaseModel):
+    """Circuit breaker configuration for external services."""
+
+    # Core circuit breaker settings
+    failure_threshold: int = Field(
+        default=5, gt=0, le=20, description="Failures before opening circuit"
+    )
+    recovery_timeout: float = Field(
+        default=60.0, gt=0, description="Seconds before attempting recovery"
+    )
+    half_open_max_calls: int = Field(
+        default=3, gt=0, le=10, description="Max calls in half-open state"
+    )
+
+    # Advanced features
+    enable_adaptive_timeout: bool = Field(
+        default=True, description="Enable adaptive timeout adjustment"
+    )
+    enable_bulkhead_isolation: bool = Field(
+        default=True, description="Enable bulkhead pattern isolation"
+    )
+    enable_metrics_collection: bool = Field(
+        default=True, description="Enable circuit breaker metrics"
+    )
+
+    # Service-specific overrides
+    service_overrides: dict[str, dict[str, Any]] = Field(
+        default_factory=lambda: {
+            "openai": {"failure_threshold": 3, "recovery_timeout": 30.0},
+            "firecrawl": {"failure_threshold": 5, "recovery_timeout": 60.0},
+            "qdrant": {"failure_threshold": 3, "recovery_timeout": 15.0},
+            "redis": {"failure_threshold": 2, "recovery_timeout": 10.0},
+        }
+    )
+
+
 class PerformanceConfig(BaseModel):
     """Performance settings."""
 
@@ -344,6 +381,7 @@ class Config(BaseSettings):
     rag: RAGConfig = Field(default_factory=RAGConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
+    circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
 

@@ -14,8 +14,10 @@ from fastapi import Request
 from src.config import Config
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.cache.manager import CacheManager
-from src.services.embeddings.manager import EmbeddingManager
+
+# Import new function-based dependencies
+from src.services.dependencies import get_cache_manager
+from src.services.dependencies import get_embedding_manager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
@@ -31,8 +33,8 @@ class DependencyContainer:
         self._config: Config | None = None
         self._client_manager: ClientManager | None = None
         self._vector_service: QdrantService | None = None
-        self._embedding_manager: EmbeddingManager | None = None
-        self._cache_manager: CacheManager | None = None
+        self._embedding_manager: Any | None = None
+        self._cache_manager: Any | None = None
         self._initialized = False
 
     async def initialize(self, config: Config | None = None) -> None:
@@ -51,16 +53,14 @@ class DependencyContainer:
 
             self._config = config
 
-            # Initialize core services
-            self._client_manager = ClientManager(config)
+            # Initialize core services using function-based approach
+            self._client_manager = ClientManager.from_unified_config()
             self._vector_service = QdrantService(config, self._client_manager)
             await self._vector_service.initialize()
 
-            self._embedding_manager = EmbeddingManager(config.embeddings)
-            await self._embedding_manager.initialize()
-
-            self._cache_manager = CacheManager(config.cache)
-            await self._cache_manager.initialize()
+            # Use function-based managers through client manager
+            self._embedding_manager = await get_embedding_manager(self._client_manager)
+            self._cache_manager = await get_cache_manager(self._client_manager)
 
             self._initialized = True
             logger.info("Dependency container initialized successfully")
@@ -72,12 +72,7 @@ class DependencyContainer:
     async def cleanup(self) -> None:
         """Clean up all dependencies."""
         try:
-            if self._cache_manager:
-                await self._cache_manager.cleanup()
-
-            if self._embedding_manager:
-                await self._embedding_manager.cleanup()
-
+            # Function-based managers are cleaned up through client manager
             if self._vector_service:
                 await self._vector_service.cleanup()
 
@@ -110,14 +105,14 @@ class DependencyContainer:
         return self._vector_service
 
     @property
-    def embedding_manager(self) -> EmbeddingManager:
+    def embedding_manager(self) -> Any:
         """Get embedding manager."""
         if not self._embedding_manager:
             raise RuntimeError("Embedding manager not initialized")
         return self._embedding_manager
 
     @property
-    def cache_manager(self) -> CacheManager:
+    def cache_manager(self) -> Any:
         """Get cache manager."""
         if not self._cache_manager:
             raise RuntimeError("Cache manager not initialized")
@@ -217,11 +212,11 @@ async def get_vector_service() -> QdrantService:
         ) from e
 
 
-async def get_embedding_manager() -> EmbeddingManager:
-    """FastAPI dependency for embedding manager.
+async def get_embedding_manager_legacy() -> Any:
+    """FastAPI dependency for embedding manager (legacy container approach).
 
     Returns:
-        Embedding manager instance
+        Embedding manager instance via legacy container
 
     Raises:
         HTTPException: If service is not available
@@ -242,11 +237,11 @@ async def get_embedding_manager() -> EmbeddingManager:
         ) from e
 
 
-async def get_cache_manager() -> CacheManager:
-    """FastAPI dependency for cache manager.
+async def get_cache_manager_legacy() -> Any:
+    """FastAPI dependency for cache manager (legacy container approach).
 
     Returns:
-        Cache manager instance
+        Cache manager instance via legacy container
 
     Raises:
         HTTPException: If service is not available
