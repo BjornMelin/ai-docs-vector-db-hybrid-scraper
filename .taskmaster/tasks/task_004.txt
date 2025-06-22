@@ -1,15 +1,15 @@
 # Task ID: 4
 # Title: Flatten Service Layer Architecture
-# Status: pending
+# Status: in-progress
 # Dependencies: 1, 2, 3
 # Priority: high
 # Description: Refactor 50+ Manager/service classes into modern, function-based service patterns using FastAPI dependency injection, inspired by Netflix and Google SRE patterns. Emphasize maintainability, performance, and reliability through domain-driven modularization, async-first design, and robust resource management.
 # Details:
 1. Convert 50+ Manager/service classes to function-based patterns using FastAPI 0.115.12's enhanced dependency injection with Annotated[Depends] patterns and async context managers.
-2. Organize codebase into clear domain-driven modules (e.g., documents/, search/, auth/, analytics/) following 2025 DDD principles with bounded contexts and aggregate design.
-3. Implement clean 3-tier architecture: routers (API layer), services (business logic), and dependencies (resource providers) with FastAPI's modern dependency injection factories and lifespan management.
-4. Leverage Pydantic V2 Pipeline API with TypeAdapter caching for 80%+ performance gains in data validation and transformation.
-5. Ensure all services are async-first with proper async context managers, connection pooling, and resource lifecycle management using Python 3.13+ patterns.
+2. Build upon existing domain-driven modules (browser/, cache/, content_intelligence/, core/, crawling/, embeddings/, fastapi/, hyde/, monitoring/, query_processing/, rag/, task_queue/, utilities/, vector_db/) to complete the DDD architecture.
+3. Leverage the established dependency injection patterns in services/fastapi/dependencies/ while extending them to remaining Manager classes.
+4. Maintain the existing async-first patterns while ensuring all remaining services follow the same principles.
+5. Leverage Pydantic V2 Pipeline API with TypeAdapter caching for 80%+ performance gains in data validation and transformation.
 6. Integrate advanced connection pooling and circuit breaker patterns (using circuitbreaker library) for all external service calls, ensuring graceful degradation and 99.9% uptime.
 7. Implement streaming validation for large datasets using Pydantic V2 streaming APIs to optimize memory usage and processing efficiency.
 8. Replace inheritance with composition and dependency injection throughout the service layer, following 2025 SOLID principles.
@@ -18,6 +18,8 @@
 11. Implement comprehensive health checks for all service dependencies with OpenTelemetry integration and automated remediation.
 12. Maintain performance benchmarks: 887.9% throughput improvement and sub-100ms P95 latency with modern async patterns and connection optimization.
 13. Incorporate security-first development with zero-trust architecture, input validation, and comprehensive audit logging for SOC 2 compliance.
+
+NOTE (2025-06-24): Current analysis shows limited progress with 9 manager files still requiring conversion, including unified_manager.py, cache/manager.py, embeddings/manager.py, and task_queue/manager.py. The 60% complexity reduction target appears overstated based on current metrics. Systematic work is needed to complete the remaining conversions and achieve the specified patterns.
 
 # Test Strategy:
 1. Unit test each refactored service function and dependency using pytest 8.x+ with async fixtures and proper scoping.
@@ -32,25 +34,29 @@
 10. Validate Pydantic V2 Pipeline API performance gains with comprehensive benchmarking and memory profiling.
 11. Test streaming validation efficiency with large datasets using memory profiling and performance regression detection.
 12. Verify Redis 8 Vector Sets integration with semantic similarity caching and performance optimization.
+13. Implement before/after complexity metrics for each refactored manager to track actual progress toward the 60% complexity reduction goal.
 
 # Subtasks:
-## 1. Refactor Service Classes to Function-Based, Async-First Patterns [pending]
+## 1. Refactor Service Classes to Function-Based, Async-First Patterns [in-progress]
 ### Dependencies: None
 ### Description: Transform all 50+ Manager/service classes into function-based, async-first service patterns using FastAPI dependency injection. Replace inheritance with composition and ensure all business logic is encapsulated in stateless, testable functions.
 ### Details:
-Eliminate deep class hierarchies in favor of composable, dependency-injected functions. Use FastAPI's Depends and @lru_cache for shared resources. Ensure all services are async and leverage async context managers for resource lifecycle management. Maintain interface compatibility to avoid breaking changes.
+Identify and refactor remaining Manager classes across all domain modules. Follow established patterns in existing refactored services. Eliminate deep class hierarchies in favor of composable, dependency-injected functions. Use FastAPI's Depends and @lru_cache for shared resources. Ensure all services are async and leverage async context managers for resource lifecycle management. Maintain interface compatibility to avoid breaking changes.
+<info added on 2025-06-22T20:12:04.089Z>
+PARTIAL PROGRESS UPDATE: Service layer refactoring is incomplete. 9 manager files still require conversion, including unified_manager.py, cache/manager.py, embeddings/manager.py, and task_queue/manager.py. The 60% complexity reduction claim appears overstated based on current codebase analysis. Priority should be given to these remaining files to implement the function-based, async-first patterns specified in the requirements. Each remaining manager should be decomposed into smaller, composable async functions with proper dependency injection using FastAPI's Depends and @lru_cache decorations. Track progress systematically with before/after metrics on cyclomatic complexity.
+</info added on 2025-06-22T20:12:04.089Z>
 
-## 2. Modularize Codebase with Domain-Driven Design (DDD) [pending]
+## 2. Modularize Codebase with Domain-Driven Design (DDD) [in-progress]
 ### Dependencies: 4.1
 ### Description: Organize the codebase into clear, domain-driven modules (e.g., documents, search, auth, analytics) following DDD principles to enhance maintainability and scalability.
 ### Details:
-Restructure the project into logical domains, each with its own routers, services, and dependencies. Ensure clean separation of concerns and encapsulation of business logic per domain. Align module boundaries with business capabilities.
+Build upon existing domain modules (browser/, cache/, content_intelligence/, core/, crawling/, embeddings/, fastapi/, hyde/, monitoring/, query_processing/, rag/, task_queue/, utilities/, vector_db/). Ensure any remaining services are properly categorized into these domains. Refine module boundaries and interfaces where needed. Ensure clean separation of concerns and encapsulation of business logic per domain.
 
-## 3. Implement Clean 3-Tier Architecture with Dependency Injection [pending]
+## 3. Implement Clean 3-Tier Architecture with Dependency Injection [in-progress]
 ### Dependencies: 4.2
 ### Description: Establish a clean 3-tier architecture: routers (API layer), services (business logic), and dependencies (resource/configuration providers), leveraging FastAPI's dependency injection system.
 ### Details:
-Define routers for API endpoints, services for business logic, and dependency providers for shared resources. Use factory patterns to manage service instantiation and resource injection. Ensure all layers are decoupled and independently testable.
+Extend the existing dependency injection patterns in services/fastapi/dependencies/ to cover all remaining Manager classes. Ensure consistent application of the 3-tier architecture across all domain modules. Use factory patterns to manage service instantiation and resource injection. Ensure all layers are decoupled and independently testable.
 
 ## 4. Integrate Observability, Resource Management, and Resilience Patterns [pending]
 ### Dependencies: 4.3
@@ -64,11 +70,11 @@ Instrument all service calls with OpenTelemetry tracing and metrics. Use async c
 ### Details:
 Implement property-based and mutation testing for all services. Enforce security via dependency validation, input sanitization, and least-privilege resource access. Automate deployment with CI/CD pipelines, configuration management, and blue/green deployments. Set up monitoring and alerting for uptime and latency SLAs.
 
-## 6. Implement Enhanced FastAPI Dependency Injection with Annotated Patterns [pending]
+## 6. Implement Enhanced FastAPI Dependency Injection with Annotated Patterns [in-progress]
 ### Dependencies: 4.1
 ### Description: Upgrade dependency injection system to use FastAPI's enhanced Annotated patterns for cleaner, more maintainable code.
 ### Details:
-Refactor existing dependency injection to use the Annotated syntax for type hints. Implement dependency factories that leverage Annotated patterns for clearer dependency declaration. Ensure backward compatibility during migration.
+Extend existing dependency injection patterns to use the Annotated syntax for type hints consistently across all services. Implement dependency factories that leverage Annotated patterns for clearer dependency declaration. Ensure backward compatibility during migration.
 
 ## 7. Integrate Pydantic V2 Pipeline API for Performance Optimization [pending]
 ### Dependencies: 4.1, 4.3
@@ -93,4 +99,24 @@ Set up Redis 8 with Vector Sets configuration. Implement caching strategies for 
 ### Description: Integrate feature flag capabilities and support for blue-green deployments to enable safer, more controlled releases.
 ### Details:
 Implement a feature flag system that works with dependency injection. Create deployment configurations supporting blue-green deployment patterns. Ensure all new features can be toggled via configuration. Develop monitoring for feature flag usage and impact.
+
+## 11. Complete Refactoring of Remaining Manager Classes [pending]
+### Dependencies: 4.1, 4.2, 4.3
+### Description: Identify and refactor all remaining Manager classes across the codebase to align with the established function-based patterns.
+### Details:
+Create an inventory of all remaining Manager classes that need refactoring. Prioritize based on complexity and usage frequency. Apply consistent function-based patterns following the established architecture. Ensure backward compatibility during transition. Document any API changes required for consumers.
+
+Focus on the 9 identified manager files requiring immediate conversion: unified_manager.py, cache/manager.py, embeddings/manager.py, task_queue/manager.py, and others. Create a tracking document with before/after metrics for each conversion to accurately measure complexity reduction.
+
+## 12. Standardize Patterns Across Domain Modules [pending]
+### Dependencies: 4.2, 4.3, 4.11
+### Description: Ensure consistent implementation patterns across all domain modules (browser/, cache/, content_intelligence/, etc.) to maintain architectural integrity.
+### Details:
+Review all domain modules for consistency in implementation patterns. Create standardized templates and examples for common patterns. Refactor any inconsistent implementations to follow established standards. Document architectural patterns and best practices for future development.
+
+## 13. Establish Metrics and Progress Tracking for Refactoring [pending]
+### Dependencies: 4.1
+### Description: Implement systematic tracking of refactoring progress with concrete metrics to validate complexity reduction claims and ensure project goals are met.
+### Details:
+Create a tracking system to measure progress on the remaining 9 manager files (unified_manager.py, cache/manager.py, embeddings/manager.py, task_queue/manager.py, etc.). Implement before/after metrics collection for each refactored file, including cyclomatic complexity, cognitive complexity, and maintainability index. Establish a dashboard to visualize progress toward the 60% complexity reduction goal. Document actual metrics to validate or adjust claims based on real data.
 
