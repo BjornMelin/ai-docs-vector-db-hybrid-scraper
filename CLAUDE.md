@@ -88,39 +88,40 @@ Each level allocates progressively more thinking budget for Claude to use.
 
 ```javascript
 // === PROJECT SETUP ===
-initialize_project                    // task-master init
-parse_prd                            // task-master parse-prd .taskmaster/docs/prd.txt
-parse_prd({append: true})            // task-master parse-prd --append (for additional PRDs)
+initialize_project; // task-master init
+parse_prd; // task-master parse-prd .taskmaster/docs/prd.txt
+parse_prd({ append: true }); // task-master parse-prd --append (for additional PRDs)
 
 // === DAILY WORKFLOW ===
-next_task                            // task-master next (find next available task)
-get_task({id: "1.2"})               // task-master show 1.2 (view task details)
-set_task_status({id: "1.2", status: "in-progress"})  // task-master set-status --id=1.2 --status=in-progress
-set_task_status({id: "1.2", status: "done"})        // task-master set-status --id=1.2 --status=done
+next_task; // task-master next (find next available task)
+get_task({ id: "1.2" }); // task-master show 1.2 (view task details)
+set_task_status({ id: "1.2", status: "in-progress" }); // task-master set-status --id=1.2 --status=in-progress
+set_task_status({ id: "1.2", status: "done" }); // task-master set-status --id=1.2 --status=done
 
 // === TASK MANAGEMENT ===
-get_tasks                            // task-master list (show all tasks)
-add_task({prompt: "description", research: true})    // task-master add-task --prompt="..." --research
-expand_task({id: "1", research: true})               // task-master expand --id=1 --research
-expand_all({research: true})         // task-master expand --all --research
-update_task({id: "1", prompt: "changes"})           // task-master update-task --id=1 --prompt="..."
-update_subtask({id: "1.2", prompt: "notes"})        // task-master update-subtask --id=1.2 --prompt="..."
-update({from: "3", prompt: "changes"})               // task-master update --from=3 --prompt="..."
+get_tasks; // task-master list (show all tasks)
+add_task({ prompt: "description", research: true }); // task-master add-task --prompt="..." --research
+expand_task({ id: "1", research: true }); // task-master expand --id=1 --research
+expand_all({ research: true }); // task-master expand --all --research
+update_task({ id: "1", prompt: "changes" }); // task-master update-task --id=1 --prompt="..."
+update_subtask({ id: "1.2", prompt: "notes" }); // task-master update-subtask --id=1.2 --prompt="..."
+update({ from: "3", prompt: "changes" }); // task-master update --from=3 --prompt="..."
 
 // === ANALYSIS & ORGANIZATION ===
-analyze_project_complexity({research: true})         // task-master analyze-complexity --research
-complexity_report                    // task-master complexity-report
-add_dependency({id: "2", dependsOn: "1"})           // task-master add-dependency --id=2 --depends-on=1
-move_task({from: "2", to: "3"})                     // task-master move --from=2 --to=3
+analyze_project_complexity({ research: true }); // task-master analyze-complexity --research
+complexity_report; // task-master complexity-report
+add_dependency({ id: "2", dependsOn: "1" }); // task-master add-dependency --id=2 --depends-on=1
+move_task({ from: "2", to: "3" }); // task-master move --from=2 --to=3
 
 // === MAINTENANCE ===
-generate                             // task-master generate (regenerate task files)
-validate_dependencies                // task-master validate-dependencies
-fix_dependencies                     // task-master fix-dependencies
-help                                 // shows available commands
+generate; // task-master generate (regenerate task files)
+validate_dependencies; // task-master validate-dependencies
+fix_dependencies; // task-master fix-dependencies
+help; // shows available commands
 ```
 
 **Quick Start Workflow:**
+
 1. `initialize_project` → `parse_prd` → `analyze_project_complexity` → `expand_all`
 2. Daily: `next_task` → `get_task` → work → `update_subtask` → `set_task_status`
 
@@ -160,8 +161,9 @@ help                                 // shows available commands
 ## Implementation Workflow
 
 **Iterative Development Process:**
+
 1. `get_task({id: "subtask-id"})` - Understand requirements
-2. Explore codebase and plan implementation  
+2. Explore codebase and plan implementation
 3. `update_subtask({id: "1.2", prompt: "detailed plan"})` - Log plan
 4. `set_task_status({id: "1.2", status: "in-progress"})` - Start work
 5. Implement code following logged plan
@@ -173,8 +175,9 @@ help                                 // shows available commands
 **AI-Powered Operations** (may take up to a minute): `parse_prd`, `analyze_project_complexity`, `expand_task`, `expand_all`, `add_task`, `update`, `update_task`, `update_subtask`
 
 **File Management:**
-- Never manually edit `tasks.json` or `.taskmaster/config.json` 
+
+- Never manually edit `tasks.json` or `.taskmaster/config.json`
 - Task markdown files are auto-generated
 - Use `generate` to regenerate task files after manual changes
 
-**Research Mode:** Add `{research: true}` to any MCP call for enhanced AI analysis (requires `PERPLEXITY_API_KEY`)
+**Research Mode:** Add `{research: true}` to any MCP call for enhanced AI analysis
