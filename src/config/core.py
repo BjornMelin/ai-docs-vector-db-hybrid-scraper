@@ -242,9 +242,15 @@ class DocumentationSite(BaseModel):
 class MonitoringConfig(BaseModel):
     """Basic monitoring configuration."""
 
+    enabled: bool = Field(default=True)
     enable_metrics: bool = Field(default=False)
     enable_health_checks: bool = Field(default=True)
     metrics_port: int = Field(default=8001, gt=0, le=65535)
+    metrics_path: str = Field(default="/metrics")
+    health_path: str = Field(default="/health")
+    include_system_metrics: bool = Field(default=True)
+    system_metrics_interval: float = Field(default=30.0, gt=0)
+    health_check_timeout: float = Field(default=10.0, gt=0)
 
 
 class ObservabilityConfig(BaseModel):

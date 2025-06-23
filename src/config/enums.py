@@ -10,6 +10,7 @@ class Environment(str, Enum):
     """Application environment."""
 
     DEVELOPMENT = "development"
+    TESTING = "testing"
     STAGING = "staging"
     PRODUCTION = "production"
 
