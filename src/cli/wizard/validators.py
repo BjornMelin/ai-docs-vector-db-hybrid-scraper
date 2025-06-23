@@ -40,15 +40,15 @@ class WizardValidator:
 
         validation_rules = {
             "openai": {
-                "pattern": r"^sk-[a-zA-Z0-9]{20,}$",
+                "pattern": r"^sk-[a-zA-Z0-9_-]{20,}$",
                 "message": "OpenAI API key must start with 'sk-' and be at least 20 characters",
             },
             "firecrawl": {
-                "pattern": r"^fc-[a-zA-Z0-9]{20,}$",
+                "pattern": r"^fc-[a-zA-Z0-9_-]{20,}$",
                 "message": "Firecrawl API key must start with 'fc-' and be at least 20 characters",
             },
             "anthropic": {
-                "pattern": r"^sk-ant-[a-zA-Z0-9]{20,}$",
+                "pattern": r"^sk-ant-[a-zA-Z0-9_-]{20,}$",
                 "message": "Anthropic API key must start with 'sk-ant-' and be at least 20 characters",
             },
         }
@@ -252,6 +252,84 @@ class WizardValidator:
                 suggestions["batch_size"] = "Recommended: 100 (must be positive integer)"
 
         return suggestions
+
+    def validate_file_path(self, path: str, must_exist: bool = False) -> Tuple[bool, Optional[str]]:
+        """Validate file path.
+        
+        Args:
+            path: File path to validate
+            must_exist: Whether file must already exist
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
+
+    def validate_directory_path(self, path: str, must_exist: bool = False) -> Tuple[bool, Optional[str]]:
+        """Validate directory path.
+        
+        Args:
+            path: Directory path to validate
+            must_exist: Whether directory must already exist
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
+
+    def validate_json_string(self, json_str: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
+        """Validate JSON string.
+        
+        Args:
+            json_str: JSON string to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message, parsed_data)
+        """
+        if not json_str:
+            return False, "JSON string cannot be empty", None
+
+        try:
+            import json
+            parsed = json.loads(json_str)
+            return True, None, parsed
+        except json.JSONDecodeError as e:
+            return False, f"Invalid JSON: {e}", None
+
+    def show_validation_summary(self, config) -> None:
+        """Show validation summary for successful configuration.
+        
+        Args:
+            config: Validated configuration object
+        """
+        summary_text = Text()
+        summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
+        
+        summary_text.append("Configuration Summary:\n", style="bold")
+        
+        # Show key configuration points
+        if hasattr(config, 'qdrant'):
+            if hasattr(config.qdrant, 'host'):
+                summary_text.append(f"• Database: Qdrant at {config.qdrant.host}:{config.qdrant.port}\n", style="cyan")
+            elif hasattr(config.qdrant, 'url'):
+                summary_text.append(f"• Database: Qdrant Cloud at {config.qdrant.url}\n", style="cyan")
+        
+        if hasattr(config, 'openai') and hasattr(config.openai, 'model'):
+            summary_text.append(f"• Embeddings: OpenAI {config.openai.model}\n", style="cyan")
+        
+        if hasattr(config, 'debug') and config.debug:
+            summary_text.append("• Debug mode: Enabled\n", style="yellow")
+        
+        summary_text.append("\n🎉 Ready to start processing documents!", style="bold green")
+
+        panel = Panel(
+            summary_text,
+            title="✅ Configuration Valid",
+            title_align="left",
+            border_style="green",
+            padding=(1, 2),
+        )
+        console.print(panel)
 
     def validate_template_customization(
         self, 
