@@ -1,0 +1,99 @@
+# YAML Linting Configuration
+# https://yamllint.readthedocs.io/en/stable/configuration.html
+
+extends: default
+
+# Override default rules
+rules:
+  # Line length
+  line-length:
+    max: 120
+    level: warning
+    allow-non-breakable-inline-mappings: true
+
+  # Indentation
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Brackets and braces
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  # Comments
+  comments:
+    min-spaces-from-content: 2
+    require-starting-space: true
+
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # Trailing spaces
+  trailing-spaces: enable
+
+  # Document markers
+  document-start:
+    present: false
+
+  document-end:
+    present: false
+
+  # Truthy values
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Quotes
+  quoted-strings:
+    quote-type: any
+    required: only-when-needed
+    extra-required: []
+    extra-allowed: []
+
+  # Keys
+  key-duplicates: enable
+  key-ordering: disable
+
+  # New lines
+  new-line-at-end-of-file: enable
+  new-lines:
+    type: unix
+
+  # Colons
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: 1
+
+  # Commas
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+
+# Ignore paths
+ignore: |
+  .venv/
+  venv/
+  node_modules/
+  .git/
+  dist/
+  build/
+  *.egg-info/
+  htmlcov/
+  .mypy_cache/
+  .pytest_cache/
+  .ruff_cache/
+  .tox/
