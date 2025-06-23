@@ -1,12 +1,16 @@
-"""Pytest configuration and shared fixtures."""
+"""Pytest configuration and shared fixtures.
+
+This module provides the core testing infrastructure with standardized fixtures,
+configuration, and utilities that follow 2025 testing best practices.
+"""
 
 import os
 import sys
 import tempfile
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from typing import Any, Dict, List, Optional, Union
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -140,8 +144,12 @@ def setup_browser_environment():
 
 # Platform-specific fixtures
 @pytest.fixture(scope="session")
-def platform_info():
-    """Provide platform information for tests."""
+def platform_info() -> Dict[str, Union[bool, str]]:
+    """Provide platform information for tests.
+    
+    Returns:
+        Dict containing platform detection flags and system information
+    """
     return {
         "is_windows": is_windows(),
         "is_macos": is_macos(),
@@ -152,46 +160,66 @@ def platform_info():
 
 
 @pytest.fixture(scope="session")
-def skip_if_windows():
-    """Skip test if running on Windows."""
+def skip_if_windows() -> None:
+    """Skip test if running on Windows.
+    
+    Raises:
+        pytest.skip: If running on Windows platform
+    """
     if is_windows():
         pytest.skip("Test not supported on Windows")
 
 
 @pytest.fixture(scope="session")
-def skip_if_macos():
-    """Skip test if running on macOS."""
+def skip_if_macos() -> None:
+    """Skip test if running on macOS.
+    
+    Raises:
+        pytest.skip: If running on macOS platform
+    """
     if is_macos():
         pytest.skip("Test not supported on macOS")
 
 
 @pytest.fixture(scope="session")
-def skip_if_linux():
-    """Skip test if running on Linux."""
+def skip_if_linux() -> None:
+    """Skip test if running on Linux.
+    
+    Raises:
+        pytest.skip: If running on Linux platform
+    """
     if is_linux():
         pytest.skip("Test not supported on Linux")
 
 
 @pytest.fixture(scope="session")
-def skip_if_ci():
-    """Skip test if running in CI environment."""
+def skip_if_ci() -> None:
+    """Skip test if running in CI environment.
+    
+    Raises:
+        pytest.skip: If running in CI environment
+    """
     if is_ci_environment():
         pytest.skip("Test not supported in CI environment")
 
 
 @pytest.fixture(scope="session")
-def require_ci():
-    """Require test to run in CI environment."""
+def require_ci() -> None:
+    """Require test to run in CI environment.
+    
+    Raises:
+        pytest.skip: If not running in CI environment
+    """
     if not is_ci_environment():
         pytest.skip("Test requires CI environment")
 
 
 @pytest.fixture
-def mock_browser_config():
+def mock_browser_config() -> Dict[str, Any]:
     """Provide a platform-aware mock browser configuration for testing.
 
     Returns:
-        dict: Browser configuration suitable for testing on current platform
+        Browser configuration suitable for testing on current platform
     """
     # Base configuration
     config = {
@@ -217,11 +245,11 @@ def mock_browser_config():
 
 
 @pytest.fixture
-def test_urls():
+def test_urls() -> Dict[str, str]:
     """Provide test URLs for browser automation testing.
 
     Returns:
-        dict: Collection of test URLs for different scenarios
+        Collection of test URLs for different scenarios
     """
     return {
         "simple": "https://httpbin.org/html",
@@ -237,15 +265,25 @@ def test_urls():
 
 
 @pytest.fixture()
-def temp_dir() -> Generator[Path]:
-    """Create a temporary directory for test files."""
+def temp_dir() -> Generator[Path, None, None]:
+    """Create a temporary directory for test files.
+    
+    Yields:
+        Path to temporary directory that is automatically cleaned up
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
 
 
 @pytest.fixture()
-def mock_env_vars() -> Generator[None]:
-    """Mock environment variables for testing."""
+def mock_env_vars() -> Generator[None, None, None]:
+    """Mock environment variables for testing.
+    
+    Sets up test environment variables and restores original values on cleanup.
+    
+    Yields:
+        None
+    """
     # Save current values
     saved_vars = {
         "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
@@ -268,7 +306,11 @@ def mock_env_vars() -> Generator[None]:
 
 @pytest.fixture()
 def mock_qdrant_client() -> MagicMock:
-    """Mock Qdrant client for testing."""
+    """Mock Qdrant client for testing.
+    
+    Returns:
+        Configured MagicMock simulating Qdrant client behavior
+    """
     client = MagicMock()
     client.create_collection = AsyncMock()
     client.delete_collection = AsyncMock()
@@ -282,7 +324,11 @@ def mock_qdrant_client() -> MagicMock:
 
 @pytest.fixture()
 def mock_openai_client() -> MagicMock:
-    """Mock OpenAI client for testing."""
+    """Mock OpenAI client for testing.
+    
+    Returns:
+        Configured MagicMock simulating OpenAI client behavior
+    """
     client = MagicMock()
     client.embeddings.create = AsyncMock(
         return_value=MagicMock(
@@ -294,7 +340,11 @@ def mock_openai_client() -> MagicMock:
 
 @pytest.fixture()
 def mock_crawl4ai() -> MagicMock:
-    """Mock Crawl4AI AsyncWebCrawler for testing."""
+    """Mock Crawl4AI AsyncWebCrawler for testing.
+    
+    Returns:
+        Configured MagicMock simulating Crawl4AI AsyncWebCrawler behavior
+    """
     crawler = MagicMock()
     crawler.__aenter__ = AsyncMock(return_value=crawler)
     crawler.__aexit__ = AsyncMock(return_value=None)
@@ -311,8 +361,12 @@ def mock_crawl4ai() -> MagicMock:
 
 
 @pytest.fixture()
-def sample_documentation_site() -> dict:
-    """Sample documentation site configuration."""
+def sample_documentation_site() -> Dict[str, Any]:
+    """Sample documentation site configuration.
+    
+    Returns:
+        Sample configuration dictionary for documentation site testing
+    """
     return {
         "name": "test-docs",
         "url": "https://test.example.com",
@@ -322,8 +376,12 @@ def sample_documentation_site() -> dict:
 
 
 @pytest.fixture()
-def sample_crawl_result() -> dict:
-    """Sample crawl result data."""
+def sample_crawl_result() -> Dict[str, Any]:
+    """Sample crawl result data.
+    
+    Returns:
+        Sample crawl result dictionary for testing
+    """
     return {
         "url": "https://test.example.com/docs/page1",
         "title": "Test Page",
@@ -341,8 +399,12 @@ def sample_crawl_result() -> dict:
 
 
 @pytest.fixture()
-def sample_vector_points() -> list[PointStruct]:
-    """Sample vector points for testing."""
+def sample_vector_points() -> List[PointStruct]:
+    """Sample vector points for testing.
+    
+    Returns:
+        List of sample PointStruct objects for testing vector operations
+    """
     return [
         PointStruct(
             id=1,
