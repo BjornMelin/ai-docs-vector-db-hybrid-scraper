@@ -1,3 +1,4 @@
+import typing
 """Metrics collection and aggregation for benchmarking.
 
 This module provides comprehensive metrics collection capabilities
@@ -419,7 +420,7 @@ class MetricsCollector:
         current_time = time.time()
 
         # Add to all windows
-        for _window_name, window_deque in self.real_time_windows.items():
+        for window_deque in self.real_time_windows.values():
             window_deque.append(point)
 
         # Clean old points from windows

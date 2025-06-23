@@ -1,3 +1,4 @@
+import typing
 """Metadata filtering with advanced boolean logic and nested expressions.
 
 This module provides sophisticated metadata filtering capabilities including
@@ -490,7 +491,9 @@ class MetadataFilter(BaseFilter):
                 return None
 
         except Exception as e:
-            self._logger.error(f"Failed to build condition for field '{field}': {e}")
+            self._logger.exception(
+                f"Failed to build condition for field '{field}': {e}"
+            )
             return None
 
     def _build_boolean_expression(

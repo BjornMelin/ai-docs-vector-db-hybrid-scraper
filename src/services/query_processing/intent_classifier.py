@@ -1,3 +1,4 @@
+import typing
 """Advanced Query Intent Classification.
 
 This module provides comprehensive query intent classification using both
@@ -701,7 +702,7 @@ class QueryIntentClassifier:
             return scores
 
         except Exception as e:
-            logger.error(f"Semantic intent classification failed: {e}")
+            logger.exception(f"Semantic intent classification failed: {e}")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

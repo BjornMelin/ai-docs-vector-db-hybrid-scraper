@@ -1,3 +1,4 @@
+import typing
 """Analytics and monitoring tools for MCP server."""
 
 import logging
@@ -110,7 +111,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Failed to collect analytics: {e}")
-            logger.error(f"Failed to collect analytics: {e}")
+            logger.exception(f"Failed to collect analytics: {e}")
             raise
 
     @mcp.tool()

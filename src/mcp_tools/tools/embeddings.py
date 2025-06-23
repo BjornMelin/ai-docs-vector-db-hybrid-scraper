@@ -1,3 +1,4 @@
+import typing
 """Embedding management tools for MCP server."""
 
 import logging
@@ -82,7 +83,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Embedding generation failed: {e}")
-            logger.error(f"Embedding generation failed: {e}")
+            logger.exception(f"Embedding generation failed: {e}")
             raise
 
     @mcp.tool()
@@ -175,5 +176,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list embedding providers: {e}")
-            logger.error(f"Failed to list embedding providers: {e}")
+            logger.exception(f"Failed to list embedding providers: {e}")
             raise

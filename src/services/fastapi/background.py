@@ -1,3 +1,4 @@
+import typing
 """Background task management for FastAPI production deployment.
 
 This module provides comprehensive background task management including
@@ -343,7 +344,7 @@ class BackgroundTaskManager:
                     break
                 continue
             except Exception as e:
-                logger.error(f"Worker {worker_name} error: {e}")
+                logger.exception(f"Worker {worker_name} error: {e}")
 
         logger.debug(f"Worker {worker_name} stopped")
 
@@ -419,7 +420,7 @@ class BackgroundTaskManager:
             result.error = str(e)
             result.end_time = datetime.utcnow()
 
-            logger.error(f"Task {task_id} failed: {e}")
+            logger.exception(f"Task {task_id} failed: {e}")
             await self._handle_task_retry(task, result)
 
     async def _handle_task_retry(
@@ -472,7 +473,7 @@ class BackgroundTaskManager:
             try:
                 await self._task_queue.put(task_id)
             except asyncio.QueueFull:
-                logger.error(f"Failed to retry task {task_id}: queue is full")
+                logger.exception(f"Failed to retry task {task_id}: queue is full")
 
     def get_statistics(self) -> dict[str, Any]:
         """Get task manager statistics.

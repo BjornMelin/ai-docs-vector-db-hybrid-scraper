@@ -1,3 +1,4 @@
+import typing
 """Main benchmark orchestrator for Advanced Hybrid Search system.
 
 This module provides the primary benchmarking interface for comprehensive

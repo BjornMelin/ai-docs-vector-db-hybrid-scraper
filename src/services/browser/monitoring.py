@@ -1,3 +1,4 @@
+import typing
 """Monitoring and alerting for 5-tier browser automation system.
 
 This module provides comprehensive monitoring capabilities including:
@@ -417,7 +418,7 @@ class BrowserAutomationMonitor:
             try:
                 handler(alert)
             except Exception as e:
-                logger.error(f"Alert handler failed: {e}")
+                logger.exception(f"Alert handler failed: {e}")
 
         logger.warning(f"Alert raised: {alert.message}")
 
@@ -437,7 +438,7 @@ class BrowserAutomationMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring loop error: {e}")
+                logger.exception(f"Monitoring loop error: {e}")
                 await asyncio.sleep(5)  # Brief pause before retry
 
     async def _cleanup_old_data(self):

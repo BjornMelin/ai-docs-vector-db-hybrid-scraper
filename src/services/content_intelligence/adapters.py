@@ -1,3 +1,4 @@
+import typing
 """Site-specific adaptation patterns and optimization strategies.
 
 This module provides automated site adaptation analysis and recommendations

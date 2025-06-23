@@ -1,3 +1,4 @@
+import typing
 """Enhanced Anti-Detection System for browser automation.
 
 This module provides sophisticated anti-detection capabilities for browser automation,
@@ -13,6 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
+
 from src.config import PlaywrightConfig
 
 
@@ -604,7 +606,7 @@ class EnhancedAntiDetection:
     def get_recommended_strategy(self, domain: str) -> str:
         """Get recommended strategy based on domain and success rates."""
         # Check if domain has specific profile
-        for profile_domain, _profile in self.site_profiles.items():
+        for profile_domain in self.site_profiles:
             if profile_domain in domain or domain in profile_domain:
                 return profile_domain
 

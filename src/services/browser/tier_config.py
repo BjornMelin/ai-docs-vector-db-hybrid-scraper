@@ -1,3 +1,4 @@
+import typing
 """Configuration models for browser automation tiers."""
 
 import logging

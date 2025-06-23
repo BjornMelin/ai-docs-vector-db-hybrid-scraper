@@ -1,3 +1,4 @@
+import typing
 """Performance monitoring and analysis for AI/ML operations and system resources.
 
 This module provides comprehensive performance monitoring including database queries,
@@ -5,20 +6,22 @@ external API calls, resource utilization, and AI/ML operation performance analys
 with automated performance degradation detection and alerting.
 """
 
-import asyncio
 import logging
-import psutil
 import time
-from contextlib import asynccontextmanager, contextmanager
-from dataclasses import dataclass, field
+from collections import defaultdict
+from collections import deque
+from contextlib import asynccontextmanager
+from contextlib import contextmanager
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
-from collections import deque, defaultdict
-from collections.abc import Mapping
 
+import psutil
 from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import Status
+from opentelemetry.trace import StatusCode
 
-from .instrumentation import get_tracer, add_span_attribute, add_span_event
+from .instrumentation import get_tracer
 from .metrics_bridge import get_metrics_bridge
 
 logger = logging.getLogger(__name__)
@@ -134,7 +137,7 @@ class PerformanceMonitor:
             Performance metrics dictionary for updating
         """
         start_time = time.time()
-        start_metrics = self._get_system_metrics() if track_resources else {}
+        self._get_system_metrics() if track_resources else {}
 
         performance_data = {"custom_metrics": {}}
 
@@ -219,7 +222,7 @@ class PerformanceMonitor:
             Performance metrics dictionary for updating
         """
         start_time = time.time()
-        start_metrics = self._get_system_metrics() if track_resources else {}
+        self._get_system_metrics() if track_resources else {}
 
         performance_data = {"custom_metrics": {}}
 

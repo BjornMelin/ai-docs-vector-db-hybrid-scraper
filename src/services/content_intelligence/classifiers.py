@@ -1,3 +1,4 @@
+import typing
 """Content type classification using local models and semantic analysis.
 
 This module provides lightweight semantic analysis for content type detection
@@ -646,7 +647,7 @@ class ContentClassifier:
             return scores
 
         except Exception as e:
-            logger.error(f"Semantic classification failed: {e}")
+            logger.exception(f"Semantic classification failed: {e}")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

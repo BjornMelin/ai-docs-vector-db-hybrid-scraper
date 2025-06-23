@@ -1,9 +1,12 @@
+import typing
 """ARQ worker for processing background tasks."""
 
 import logging
-from typing import Any, ClassVar
+from typing import Any
+from typing import ClassVar
 
 from arq.connections import RedisSettings
+
 from src.config import get_config
 
 from .tasks import TASK_REGISTRY

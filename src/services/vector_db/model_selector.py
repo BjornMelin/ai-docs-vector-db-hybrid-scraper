@@ -1,3 +1,4 @@
+import typing
 """Model selector for dynamic embedding model selection.
 
 This module implements intelligent embedding model selection based on query

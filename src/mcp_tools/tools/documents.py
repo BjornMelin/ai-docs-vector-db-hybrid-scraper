@@ -1,3 +1,4 @@
+import typing
 """Document management tools for MCP server."""
 
 import asyncio
@@ -267,7 +268,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Failed to process document {doc_id}: {e}")
-            logger.error(f"Failed to add document: {e}")
+            logger.exception(f"Failed to add document: {e}")
             raise
 
     @mcp.tool()

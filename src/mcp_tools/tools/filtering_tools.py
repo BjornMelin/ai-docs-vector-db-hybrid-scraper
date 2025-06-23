@@ -1,3 +1,4 @@
+import typing
 """Advanced filtering tools for MCP server.
 
 This module exposes advanced filtering capabilities through the Model Context Protocol,
@@ -6,7 +7,8 @@ composition with boolean logic.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 from uuid import uuid4
 
 if TYPE_CHECKING:

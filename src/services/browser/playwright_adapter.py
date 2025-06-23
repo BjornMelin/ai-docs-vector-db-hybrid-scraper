@@ -1,3 +1,4 @@
+import typing
 """Playwright adapter for maximum control browser automation."""
 
 import asyncio
@@ -7,6 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from pydantic import ValidationError
+
 from src.config import PlaywrightConfig
 
 from ..base import BaseService
@@ -129,7 +131,7 @@ class PlaywrightAdapter(BaseService):
             self.logger.info("Playwright adapter cleaned up")
 
         except Exception as e:
-            self.logger.error(f"Error cleaning up Playwright: {e}")
+            self.logger.exception(f"Error cleaning up Playwright: {e}")
 
     async def scrape(
         self,

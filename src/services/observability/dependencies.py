@@ -1,3 +1,4 @@
+import typing
 """FastAPI dependencies for OpenTelemetry observability integration.
 
 Provides dependency injection functions that integrate OpenTelemetry
@@ -222,7 +223,7 @@ async def get_observability_health(
         return health
 
     except Exception as e:
-        logger.error(f"Failed to get observability health: {e}")
+        logger.exception(f"Failed to get observability health: {e}")
         return {
             "enabled": False,
             "status": "error",

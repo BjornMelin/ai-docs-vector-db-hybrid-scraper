@@ -1,3 +1,4 @@
+import typing
 """Similarity threshold management for adaptive threshold controls.
 
 This module provides sophisticated similarity threshold management including
@@ -676,7 +677,7 @@ class SimilarityThresholdManager(BaseFilter):
             )
 
         except Exception as e:
-            self._logger.error(f"Clustering analysis failed: {e}")
+            self._logger.exception(f"Clustering analysis failed: {e}")
             return None
 
     def _get_recent_data(

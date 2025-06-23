@@ -1,3 +1,4 @@
+import typing
 """Blue-Green Deployment Service for Zero-Downtime Releases.
 
 This module provides enterprise-grade blue-green deployment capabilities including:
@@ -147,7 +148,9 @@ class BlueGreenDeployment:
             logger.info("Blue-green deployment manager initialized successfully")
 
         except Exception as e:
-            logger.error("Failed to initialize blue-green deployment manager: %s", e)
+            logger.exception(
+                "Failed to initialize blue-green deployment manager: %s", e
+            )
             self._initialized = False
             raise
 
@@ -258,7 +261,7 @@ class BlueGreenDeployment:
             return True
 
         except Exception as e:
-            logger.error("Failed to switch environments: %s", e)
+            logger.exception("Failed to switch environments: %s", e)
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -287,7 +290,7 @@ class BlueGreenDeployment:
                 return False
 
         except Exception as e:
-            logger.error("Error during rollback: %s", e)
+            logger.exception("Error during rollback: %s", e)
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -366,7 +369,7 @@ class BlueGreenDeployment:
                 logger.info("Automatic switch disabled, manual intervention required")
 
         except Exception as e:
-            logger.error("Deployment failed: %s", e)
+            logger.exception("Deployment failed: %s", e)
             self._deployment_status = BlueGreenStatus.FAILED
 
             # Automatic rollback on failure
@@ -403,7 +406,7 @@ class BlueGreenDeployment:
             )
 
         except Exception as e:
-            logger.error("Failed to deploy to %s environment: %s", env.name, e)
+            logger.exception("Failed to deploy to %s environment: %s", env.name, e)
             raise
 
     async def _perform_health_checks(
@@ -474,7 +477,7 @@ class BlueGreenDeployment:
             logger.info("Traffic switch completed")
 
         except Exception as e:
-            logger.error("Failed to switch traffic: %s", e)
+            logger.exception("Failed to switch traffic: %s", e)
             raise
 
     async def _health_check_loop(self) -> None:
@@ -491,7 +494,7 @@ class BlueGreenDeployment:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("Error in health check loop: %s", e)
+                logger.exception("Error in health check loop: %s", e)
                 await asyncio.sleep(30)
 
     async def _check_environment_health(self, env: BlueGreenEnvironment) -> None:
@@ -503,7 +506,9 @@ class BlueGreenDeployment:
                 env.health.last_check = datetime.utcnow()
 
         except Exception as e:
-            logger.error("Error checking health for %s environment: %s", env.name, e)
+            logger.exception(
+                "Error checking health for %s environment: %s", env.name, e
+            )
 
     async def _load_environment_state(self) -> None:
         """Load environment state from storage."""

@@ -1,3 +1,4 @@
+import typing
 """Search orchestrator with essential features.
 
 This module provides a streamlined search orchestrator that maintains core functionality
@@ -413,7 +414,7 @@ class SearchOrchestrator(BaseService):
             return result
 
         except Exception as e:
-            self._logger.error(f"Search failed: {e}")
+            self._logger.exception(f"Search failed: {e}")
             # Return minimal result on error
             return SearchResult(
                 results=[],

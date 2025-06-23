@@ -1,3 +1,4 @@
+import typing
 """Advanced OpenTelemetry instrumentation for AI/ML operations and custom business logic.
 
 This module provides comprehensive auto-instrumentation that builds upon OpenTelemetry's
@@ -9,12 +10,16 @@ import asyncio
 import functools
 import logging
 import time
-from collections.abc import Awaitable, Callable
-from contextlib import asynccontextmanager, contextmanager
-from typing import Any, TypeVar
+from collections.abc import Callable
+from contextlib import asynccontextmanager
+from contextlib import contextmanager
+from typing import Any
+from typing import TypeVar
 
-from opentelemetry import baggage, trace
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry import baggage
+from opentelemetry import trace
+from opentelemetry.trace import Status
+from opentelemetry.trace import StatusCode
 
 logger = logging.getLogger(__name__)
 

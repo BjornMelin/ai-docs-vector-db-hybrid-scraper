@@ -1,3 +1,4 @@
+import typing
 """Local in-memory LRU cache implementation with TTL support."""
 
 import asyncio

@@ -1,3 +1,4 @@
+import typing
 """FastAPI dependency injection functions for service layer.
 
 Provides centralized dependency management with resource lifecycle handling.
@@ -5,8 +6,9 @@ Uses yield dependencies for proper cleanup and circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated
 from collections.abc import AsyncGenerator
+from typing import Annotated
+
 from fastapi import Depends
 
 from src.config import Config

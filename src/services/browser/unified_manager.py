@@ -1,3 +1,4 @@
+import typing
 """Unified browser automation manager providing single interface to all 5 tiers.
 
 This module provides a clean, unified interface for browser automation that
@@ -7,11 +8,13 @@ complexity, requirements, and performance characteristics.
 
 import logging
 import time
-from typing import Any, Literal
+from typing import Any
+from typing import Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel
 from pydantic import Field
+
 from src.config import Config
 
 from ..base import BaseService
@@ -193,7 +196,7 @@ class UnifiedBrowserManager(BaseService):
             logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
         except Exception as e:
-            logger.error(f"Failed to initialize UnifiedBrowserManager: {e}")
+            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
             raise CrawlServiceError(
                 f"Failed to initialize unified browser manager: {e}"
             ) from e
@@ -422,7 +425,7 @@ class UnifiedBrowserManager(BaseService):
                         f"Failed to record error monitoring metrics: {monitor_error}"
                     )
 
-            logger.error(f"Unified scraping failed for {request.url}: {e}")
+            logger.exception(f"Unified scraping failed for {request.url}: {e}")
 
             return UnifiedScrapingResponse(
                 success=False,
@@ -471,7 +474,7 @@ class UnifiedBrowserManager(BaseService):
             return analysis
 
         except Exception as e:
-            logger.error(f"URL analysis failed for {url}: {e}")
+            logger.exception(f"URL analysis failed for {url}: {e}")
             return {
                 "url": url,
                 "error": str(e),

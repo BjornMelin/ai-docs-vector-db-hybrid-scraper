@@ -1,3 +1,4 @@
+import typing
 """Load testing framework for Advanced Hybrid Search system.
 
 This module provides comprehensive load testing capabilities with
@@ -210,7 +211,7 @@ class LoadTestUser:
                 await asyncio.sleep(think_time)
 
             except Exception as e:
-                logger.error(f"User {self.user_id} session error: {e}")
+                logger.exception(f"User {self.user_id} session error: {e}")
                 self.failures += 1
                 break
 
@@ -474,7 +475,7 @@ class LoadTestRunner:
                     break
 
             except Exception as e:
-                logger.error(f"Stress test failed at {user_count} users: {e}")
+                logger.exception(f"Stress test failed at {user_count} users: {e}")
                 break
 
         return stress_results

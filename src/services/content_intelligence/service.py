@@ -1,3 +1,4 @@
+import typing
 """Main Content Intelligence Service for AI-powered adaptive extraction.
 
 This module provides the main ContentIntelligenceService class that orchestrates
@@ -115,7 +116,7 @@ class ContentIntelligenceService(BaseService):
             logger.info("ContentIntelligenceService initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize ContentIntelligenceService: {e}")
+            logger.exception(f"Failed to initialize ContentIntelligenceService: {e}")
             raise APIError(f"Content intelligence initialization failed: {e}") from e
 
     async def cleanup(self) -> None:
@@ -129,7 +130,7 @@ class ContentIntelligenceService(BaseService):
             logger.info("ContentIntelligenceService cleaned up successfully")
 
         except Exception as e:
-            logger.error(f"Error during ContentIntelligenceService cleanup: {e}")
+            logger.exception(f"Error during ContentIntelligenceService cleanup: {e}")
 
     async def analyze_content(
         self,
@@ -183,7 +184,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.error(f"Content analysis failed: {e}")
+            logger.exception(f"Content analysis failed: {e}")
             return ContentAnalysisResponse(
                 success=False,
                 error=f"Analysis failed: {e!s}",
@@ -220,7 +221,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.error(f"Quality assessment failed: {e}")
+            logger.exception(f"Quality assessment failed: {e}")
             # Return minimal quality score on failure
             return QualityScore(
                 overall_score=0.1,
@@ -258,7 +259,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.error(f"Content classification failed: {e}")
+            logger.exception(f"Content classification failed: {e}")
             # Return unknown classification on failure
             from .models import ContentType
 
@@ -298,7 +299,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.error(f"Metadata extraction failed: {e}")
+            logger.exception(f"Metadata extraction failed: {e}")
             # Return minimal metadata on failure
             return ContentMetadata(
                 url=url,
@@ -358,7 +359,7 @@ class ContentIntelligenceService(BaseService):
             return recommendations[:5]  # Return top 5 recommendations
 
         except Exception as e:
-            logger.error(f"Adaptation recommendation failed: {e}")
+            logger.exception(f"Adaptation recommendation failed: {e}")
             return []
 
     async def _perform_analysis(

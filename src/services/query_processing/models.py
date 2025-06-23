@@ -1,3 +1,4 @@
+import typing
 """Advanced Query Processing Models.
 
 This module defines all data models for the advanced query processing pipeline,

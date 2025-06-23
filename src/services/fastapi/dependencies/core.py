@@ -1,3 +1,4 @@
+import typing
 """Core dependency injection components for FastAPI production deployment.
 
 This module provides essential dependencies for database sessions,
@@ -11,6 +12,8 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi import Request
+from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
+
 from src.config import Config
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
@@ -20,7 +23,6 @@ from src.services.dependencies import get_cache_manager
 from src.services.dependencies import get_embedding_manager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
-from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +68,7 @@ class DependencyContainer:
             logger.info("Dependency container initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize dependency container: {e}")
+            logger.exception(f"Failed to initialize dependency container: {e}")
             raise
 
     async def cleanup(self) -> None:
@@ -83,7 +85,7 @@ class DependencyContainer:
             logger.info("Dependency container cleaned up")
 
         except Exception as e:
-            logger.error(f"Error during dependency cleanup: {e}")
+            logger.exception(f"Error during dependency cleanup: {e}")
 
     @property
     def is_initialized(self) -> bool:
@@ -205,7 +207,7 @@ async def get_vector_service() -> QdrantService:
             )
         return container.vector_service
     except Exception as e:
-        logger.error(f"Failed to get vector service: {e}")
+        logger.exception(f"Failed to get vector service: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
@@ -230,7 +232,7 @@ async def get_embedding_manager_legacy() -> Any:
             )
         return container.embedding_manager
     except Exception as e:
-        logger.error(f"Failed to get embedding manager: {e}")
+        logger.exception(f"Failed to get embedding manager: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
@@ -255,7 +257,7 @@ async def get_cache_manager_legacy() -> Any:
             )
         return container.cache_manager
     except Exception as e:
-        logger.error(f"Failed to get cache manager: {e}")
+        logger.exception(f"Failed to get cache manager: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
@@ -280,7 +282,7 @@ def get_client_manager() -> ClientManager:
             )
         return container.client_manager
     except Exception as e:
-        logger.error(f"Failed to get client manager: {e}")
+        logger.exception(f"Failed to get client manager: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",

@@ -1,3 +1,4 @@
+import typing
 """RAG (Retrieval-Augmented Generation) API endpoints.
 
 This module provides FastAPI endpoints for generating contextual answers
@@ -64,7 +65,7 @@ async def generate_answer(
         return response
 
     except Exception as e:
-        logger.error(f"RAG answer generation failed: {e}")
+        logger.exception(f"RAG answer generation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate RAG answer: {e!s}",
@@ -96,7 +97,7 @@ async def get_metrics(
             "metrics": metrics,
         }
     except Exception as e:
-        logger.error(f"Failed to get RAG metrics: {e}")
+        logger.exception(f"Failed to get RAG metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get RAG metrics: {e!s}",
@@ -125,7 +126,7 @@ async def clear_cache(
         result = await clear_rag_cache(rag_generator)
         return result
     except Exception as e:
-        logger.error(f"Failed to clear RAG cache: {e}")
+        logger.exception(f"Failed to clear RAG cache: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear RAG cache: {e!s}",

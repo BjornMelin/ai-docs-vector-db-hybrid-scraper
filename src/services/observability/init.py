@@ -1,3 +1,4 @@
+import typing
 """OpenTelemetry initialization and setup for the AI documentation system.
 
 Provides clean initialization patterns that integrate with the existing
@@ -125,7 +126,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         logger.warning(f"OpenTelemetry packages not available: {e}")
         return False
     except Exception as e:
-        logger.error(f"Failed to initialize OpenTelemetry: {e}")
+        logger.exception(f"Failed to initialize OpenTelemetry: {e}")
         return False
 
 
@@ -136,8 +137,6 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         config: Observability configuration
     """
     try:
-        instrumentations = []
-
         # FastAPI instrumentation
         if config.instrument_fastapi:
             try:
@@ -198,7 +197,7 @@ def shutdown_observability() -> None:
             logger.info("Shutting down OpenTelemetry tracer provider...")
             _tracer_provider.shutdown()
         except Exception as e:
-            logger.error(f"Error during tracer provider shutdown: {e}")
+            logger.exception(f"Error during tracer provider shutdown: {e}")
         finally:
             _tracer_provider = None
 
@@ -208,7 +207,7 @@ def shutdown_observability() -> None:
             logger.info("Shutting down OpenTelemetry meter provider...")
             _meter_provider.shutdown()
         except Exception as e:
-            logger.error(f"Error during meter provider shutdown: {e}")
+            logger.exception(f"Error during meter provider shutdown: {e}")
         finally:
             _meter_provider = None
 

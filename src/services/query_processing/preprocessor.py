@@ -1,3 +1,4 @@
+import typing
 """Query Preprocessing and Enhancement Pipeline.
 
 This module provides comprehensive query preprocessing including normalization,

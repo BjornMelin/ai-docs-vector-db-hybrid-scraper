@@ -1,3 +1,4 @@
+import typing
 """Function-based crawling service with FastAPI dependency injection.
 
 Transforms the CrawlManager class into pure functions with dependency injection.
@@ -5,12 +6,15 @@ Provides crawling operations with circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated
+from typing import Any
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
+from fastapi import HTTPException
 
-from .dependencies import get_crawling_client, get_rate_limiter
-from .circuit_breaker import circuit_breaker, CircuitBreakerConfig
+from .circuit_breaker import CircuitBreakerConfig
+from .circuit_breaker import circuit_breaker
+from .dependencies import get_crawling_client
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +22,7 @@ logger = logging.getLogger(__name__)
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def crawl_url(
     url: str,
-    preferred_provider: Optional[str] = None,
+    preferred_provider: typing.Optional[str] = None,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> dict[str, Any]:
     """Scrape URL with intelligent 5-tier AutomationRouter selection.
@@ -64,15 +68,15 @@ async def crawl_url(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"URL crawling failed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Crawling failed: {str(e)}")
+        logger.exception(f"URL crawling failed for {url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}")
 
 
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def crawl_site(
     url: str,
     max_pages: int = 50,
-    preferred_provider: Optional[str] = None,
+    preferred_provider: typing.Optional[str] = None,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL using AutomationRouter.
@@ -124,8 +128,8 @@ async def crawl_site(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Site crawling failed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Site crawling failed: {str(e)}")
+        logger.exception(f"Site crawling failed for {url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Site crawling failed: {e!s}")
 
 
 async def get_crawl_metrics(
@@ -154,7 +158,7 @@ async def get_crawl_metrics(
         return metrics
 
     except Exception as e:
-        logger.error(f"Crawl metrics retrieval failed: {e}")
+        logger.exception(f"Crawl metrics retrieval failed: {e}")
         return {}
 
 
@@ -191,7 +195,7 @@ async def get_recommended_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Tool recommendation failed for {url}: {e}")
+        logger.exception(f"Tool recommendation failed for {url}: {e}")
         return "crawl4ai"  # Graceful fallback
 
 
@@ -221,7 +225,7 @@ async def get_provider_info(
         return info
 
     except Exception as e:
-        logger.error(f"Provider info retrieval failed: {e}")
+        logger.exception(f"Provider info retrieval failed: {e}")
         return {}
 
 
@@ -251,7 +255,7 @@ async def get_tier_metrics(
         return metrics
 
     except Exception as e:
-        logger.error(f"Tier metrics retrieval failed: {e}")
+        logger.exception(f"Tier metrics retrieval failed: {e}")
         return {}
 
 
@@ -259,7 +263,7 @@ async def get_tier_metrics(
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def batch_crawl_urls(
     urls: list[str],
-    preferred_provider: Optional[str] = None,
+    preferred_provider: typing.Optional[str] = None,
     max_parallel: int = 5,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> list[dict[str, Any]]:
@@ -332,8 +336,8 @@ async def batch_crawl_urls(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Batch URL crawling failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {str(e)}")
+        logger.exception(f"Batch URL crawling failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {e!s}")
 
 
 async def validate_url(url: str) -> dict[str, Any]:
@@ -348,8 +352,8 @@ async def validate_url(url: str) -> dict[str, Any]:
         Validation result with status and details
     """
     try:
-        from urllib.parse import urlparse
         import re
+        from urllib.parse import urlparse
 
         if not url:
             return {"valid": False, "error": "URL is required", "details": {}}
@@ -396,8 +400,8 @@ async def validate_url(url: str) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"URL validation failed for {url}: {e}")
-        return {"valid": False, "error": f"Validation error: {str(e)}", "details": {}}
+        logger.exception(f"URL validation failed for {url}: {e}")
+        return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
 
 
 async def estimate_crawl_cost(
@@ -457,7 +461,7 @@ async def estimate_crawl_cost(
         }
 
     except Exception as e:
-        logger.error(f"Crawl cost estimation failed: {e}")
+        logger.exception(f"Crawl cost estimation failed: {e}")
         return {
             "total_urls": len(urls),
             "estimated_time_minutes": 0,

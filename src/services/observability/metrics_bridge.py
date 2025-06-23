@@ -1,3 +1,4 @@
+import typing
 """OpenTelemetry metrics bridge with existing Prometheus monitoring system.
 
 This module provides a bridge between OpenTelemetry metrics and the existing
@@ -6,11 +7,12 @@ trace and metric data while maintaining backward compatibility.
 """
 
 import logging
-import time
 from typing import Any
 
 from opentelemetry import metrics
-from opentelemetry.metrics import Counter, Histogram, UpDownCounter
+from opentelemetry.metrics import Counter
+from opentelemetry.metrics import Histogram
+from opentelemetry.metrics import UpDownCounter
 
 from ..monitoring.metrics import MetricsRegistry
 
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 class OpenTelemetryMetricsBridge:
     """Bridge between OpenTelemetry metrics and existing Prometheus metrics."""
 
-    def __init__(self, prometheus_registry: Optional[MetricsRegistry] = None):
+    def __init__(self, prometheus_registry: typing.Optional[MetricsRegistry] = None):
         """Initialize metrics bridge.
 
         Args:
@@ -136,8 +138,8 @@ class OpenTelemetryMetricsBridge:
         provider: str,
         model: str,
         duration_ms: float,
-        tokens_used: Optional[int] = None,
-        cost_usd: Optional[float] = None,
+        tokens_used: typing.Optional[int] = None,
+        cost_usd: typing.Optional[float] = None,
         success: bool = True,
     ) -> None:
         """Record AI/ML operation metrics.
@@ -181,7 +183,7 @@ class OpenTelemetryMetricsBridge:
         query_type: str,
         duration_ms: float,
         results_count: int,
-        top_score: Optional[float] = None,
+        top_score: typing.Optional[float] = None,
         success: bool = True,
     ) -> None:
         """Record vector search operation metrics.
@@ -263,8 +265,8 @@ class OpenTelemetryMetricsBridge:
         endpoint: str,
         status_code: int,
         duration_ms: float,
-        request_size_bytes: Optional[int] = None,
-        response_size_bytes: Optional[int] = None,
+        request_size_bytes: typing.Optional[int] = None,
+        response_size_bytes: typing.Optional[int] = None,
     ) -> None:
         """Record HTTP request metrics.
 
@@ -378,9 +380,7 @@ class OpenTelemetryMetricsBridge:
                     value = metric_data.get("value")
                     labels = metric_data.get("labels", {})
 
-                    if isinstance(instrument, Counter):
-                        instrument.add(value, labels)
-                    elif isinstance(instrument, UpDownCounter):
+                    if isinstance(instrument, Counter | UpDownCounter):
                         instrument.add(value, labels)
                     elif isinstance(instrument, Histogram):
                         instrument.record(value, labels)
@@ -427,7 +427,7 @@ class OpenTelemetryMetricsBridge:
         name: str,
         description: str,
         unit: str = "",
-        boundaries: Optional[list] = None,
+        boundaries: typing.Optional[list] = None,
     ) -> Histogram:
         """Create a custom histogram instrument.
 
@@ -450,7 +450,7 @@ class OpenTelemetryMetricsBridge:
         self._instruments[name] = histogram
         return histogram
 
-    def get_instrument(self, name: str) -> Optional[Any]:
+    def get_instrument(self, name: str) -> typing.Optional[Any]:
         """Get metric instrument by name.
 
         Args:
@@ -463,11 +463,11 @@ class OpenTelemetryMetricsBridge:
 
 
 # Global metrics bridge instance
-_metrics_bridge: Optional[OpenTelemetryMetricsBridge] = None
+_metrics_bridge: typing.Optional[OpenTelemetryMetricsBridge] = None
 
 
 def initialize_metrics_bridge(
-    prometheus_registry: Optional[MetricsRegistry] = None,
+    prometheus_registry: typing.Optional[MetricsRegistry] = None,
 ) -> OpenTelemetryMetricsBridge:
     """Initialize global metrics bridge.
 

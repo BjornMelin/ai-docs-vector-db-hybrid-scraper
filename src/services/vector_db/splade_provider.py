@@ -1,3 +1,4 @@
+import typing
 """SPLADE provider for sparse vector generation.
 
 This module implements SPLADE (Sparse Lexical And Expansion model for Passage retrieval)
@@ -9,6 +10,7 @@ import re
 from typing import Any
 
 import numpy as np
+
 from src.config import Config
 
 from ...models.vector_search import SPLADEConfig
@@ -68,7 +70,7 @@ class SPLADEProvider:
                 "Transformers library not available, using fallback sparse generation"
             )
         except Exception as e:
-            logger.error(f"Failed to load SPLADE model: {e}")
+            logger.exception(f"Failed to load SPLADE model: {e}")
             raise
 
     async def generate_sparse_vector(

@@ -1,3 +1,4 @@
+import typing
 """Base cache interface for all cache implementations."""
 
 from abc import ABC

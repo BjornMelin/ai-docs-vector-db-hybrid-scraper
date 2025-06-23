@@ -1,3 +1,4 @@
+import typing
 """Lightweight HTTP scraper for static content using httpx + BeautifulSoup.
 
 This module implements Tier 0 of the 5-tier browser automation system,
@@ -16,6 +17,7 @@ import httpx
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from pydantic import Field
+
 from src.config import Config
 
 from ..base import BaseService

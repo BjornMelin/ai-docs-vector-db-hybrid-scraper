@@ -1,3 +1,4 @@
+import typing
 """Additional tool registration functions for query processing MCP tools."""
 
 import logging
@@ -52,7 +53,7 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
 
         except Exception as e:
             await ctx.error(f"Pipeline health check {request_id} failed: {e}")
-            logger.error(f"Pipeline health check failed: {e}")
+            logger.exception(f"Pipeline health check failed: {e}")
             return {
                 "pipeline_healthy": False,
                 "error": str(e),
@@ -87,7 +88,7 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
 
         except Exception as e:
             await ctx.error(f"Pipeline metrics collection {request_id} failed: {e}")
-            logger.error(f"Pipeline metrics collection failed: {e}")
+            logger.exception(f"Pipeline metrics collection failed: {e}")
             return {"error": str(e), "metrics_available": False}
 
 

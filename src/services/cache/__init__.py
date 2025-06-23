@@ -1,3 +1,4 @@
+import typing
 """Simplified cache system using DragonflyDB with specialized cache layers."""
 
 from .base import CacheInterface

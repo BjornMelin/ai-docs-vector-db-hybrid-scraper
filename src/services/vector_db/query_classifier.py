@@ -1,3 +1,4 @@
+import typing
 """Query classifier for adaptive hybrid search optimization.
 
 This module implements ML-based query classification to determine optimal

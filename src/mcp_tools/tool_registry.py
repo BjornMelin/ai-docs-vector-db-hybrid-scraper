@@ -1,3 +1,4 @@
+import typing
 """Dynamic tool registration system for FastMCP server.
 
 This module provides a clean, modular way to register all MCP tools
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+
     from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)

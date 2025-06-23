@@ -1,3 +1,4 @@
+import typing
 """Base crawl provider interface."""
 
 from abc import ABC

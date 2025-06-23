@@ -1,3 +1,4 @@
+import typing
 """Base filter architecture for advanced vector database filtering.
 
 This module provides the abstract base class and common interfaces for all
@@ -281,7 +282,7 @@ class FilterRegistry:
             try:
                 return filter_class(**kwargs)
             except Exception as e:
-                self._logger.error(f"Failed to create filter {filter_name}: {e}")
+                self._logger.exception(f"Failed to create filter {filter_name}: {e}")
                 return None
 
         self._logger.warning(f"Unknown filter type: {filter_name}")

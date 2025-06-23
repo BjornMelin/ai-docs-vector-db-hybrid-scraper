@@ -1,3 +1,4 @@
+import typing
 """Lightweight HTTP scraper using httpx and BeautifulSoup for simple static pages."""
 
 import logging
@@ -7,6 +8,7 @@ from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+
 from src.config import Config  # LightweightScraperConfig not in simplified config
 
 from ..errors import CrawlServiceError
@@ -243,7 +245,7 @@ class LightweightScraper(CrawlProvider):
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
         except Exception as e:
-            logger.error(f"Error scraping {url} with lightweight tier: {e}")
+            logger.exception(f"Error scraping {url} with lightweight tier: {e}")
             return {
                 "success": False,
                 "error": str(e),

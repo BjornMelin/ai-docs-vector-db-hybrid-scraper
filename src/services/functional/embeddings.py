@@ -1,3 +1,4 @@
+import typing
 """Function-based embedding service with FastAPI dependency injection.
 
 Transforms the complex EmbeddingManager class into pure functions with
@@ -5,14 +6,17 @@ dependency injection. Maintains all functionality while improving testability.
 """
 
 import logging
-import time
-from typing import Annotated, Any
+from typing import Annotated
+from typing import Any
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
+from fastapi import HTTPException
 
-from .dependencies import get_embedding_client, get_cache_client, get_config
-from .circuit_breaker import circuit_breaker, CircuitBreakerConfig
-from ..embeddings.manager import QualityTier, TextAnalysis
+from ..embeddings.manager import QualityTier
+from ..embeddings.manager import TextAnalysis
+from .circuit_breaker import CircuitBreakerConfig
+from .circuit_breaker import circuit_breaker
+from .dependencies import get_embedding_client
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +24,9 @@ logger = logging.getLogger(__name__)
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def generate_embeddings(
     texts: list[str],
-    quality_tier: Optional[QualityTier] = None,
-    provider_name: Optional[str] = None,
-    max_cost: Optional[float] = None,
+    quality_tier: typing.Optional[QualityTier] = None,
+    provider_name: typing.Optional[str] = None,
+    max_cost: typing.Optional[float] = None,
     speed_priority: bool = False,
     auto_select: bool = True,
     generate_sparse: bool = False,
@@ -73,9 +77,9 @@ async def generate_embeddings(
         return result
 
     except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
+        logger.exception(f"Embedding generation failed: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Embedding generation failed: {str(e)}"
+            status_code=500, detail=f"Embedding generation failed: {e!s}"
         )
 
 
@@ -111,7 +115,7 @@ async def rerank_results(
         return reranked
 
     except Exception as e:
-        logger.error(f"Reranking failed: {e}")
+        logger.exception(f"Reranking failed: {e}")
         # Return original results on failure (graceful degradation)
         return results
 
@@ -151,13 +155,13 @@ async def analyze_text_characteristics(
         return analysis
 
     except Exception as e:
-        logger.error(f"Text analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Text analysis failed: {str(e)}")
+        logger.exception(f"Text analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Text analysis failed: {e!s}")
 
 
 async def estimate_embedding_cost(
     texts: list[str],
-    provider_name: Optional[str] = None,
+    provider_name: typing.Optional[str] = None,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> dict[str, Dict[str, float]]:
     """Estimate embedding generation cost.
@@ -187,8 +191,8 @@ async def estimate_embedding_cost(
         return costs
 
     except Exception as e:
-        logger.error(f"Cost estimation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {str(e)}")
+        logger.exception(f"Cost estimation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {e!s}")
 
 
 async def get_provider_info(
@@ -217,16 +221,16 @@ async def get_provider_info(
         return info
 
     except Exception as e:
-        logger.error(f"Provider info retrieval failed: {e}")
+        logger.exception(f"Provider info retrieval failed: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Provider info retrieval failed: {str(e)}"
+            status_code=500, detail=f"Provider info retrieval failed: {e!s}"
         )
 
 
 async def get_smart_recommendation(
     texts: list[str],
-    quality_tier: Optional[QualityTier] = None,
-    max_cost: Optional[float] = None,
+    quality_tier: typing.Optional[QualityTier] = None,
+    max_cost: typing.Optional[float] = None,
     speed_priority: bool = False,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> dict[str, Any]:
@@ -272,9 +276,9 @@ async def get_smart_recommendation(
         return recommendation
 
     except Exception as e:
-        logger.error(f"Smart recommendation failed: {e}")
+        logger.exception(f"Smart recommendation failed: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Smart recommendation failed: {str(e)}"
+            status_code=500, detail=f"Smart recommendation failed: {e!s}"
         )
 
 
@@ -309,9 +313,9 @@ async def get_usage_report(
         return report
 
     except Exception as e:
-        logger.error(f"Usage report retrieval failed: {e}")
+        logger.exception(f"Usage report retrieval failed: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Usage report retrieval failed: {str(e)}"
+            status_code=500, detail=f"Usage report retrieval failed: {e!s}"
         )
 
 
@@ -319,7 +323,7 @@ async def get_usage_report(
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def batch_generate_embeddings(
     text_batches: list[List[str]],
-    quality_tier: Optional[QualityTier] = None,
+    quality_tier: typing.Optional[QualityTier] = None,
     max_parallel: int = 3,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> list[dict[str, Any]]:
@@ -379,7 +383,5 @@ async def batch_generate_embeddings(
         return processed_results
 
     except Exception as e:
-        logger.error(f"Batch embedding generation failed: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Batch processing failed: {str(e)}"
-        )
+        logger.exception(f"Batch embedding generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Batch processing failed: {e!s}")

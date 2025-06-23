@@ -1,3 +1,4 @@
+import typing
 """Browser-use adapter for AI-powered browser automation."""
 
 import asyncio
@@ -138,7 +139,7 @@ class BrowserUseAdapter(BaseService):
             try:
                 await self._browser.close()
             except Exception as e:
-                self.logger.error(f"Error cleaning up browser-use: {e}")
+                self.logger.exception(f"Error cleaning up browser-use: {e}")
             finally:
                 # Always reset state even if close() fails
                 self._browser = None

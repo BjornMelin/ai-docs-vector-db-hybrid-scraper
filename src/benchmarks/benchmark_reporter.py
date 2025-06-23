@@ -1,3 +1,4 @@
+import typing
 """Benchmark reporting and visualization tools.
 
 This module provides comprehensive reporting capabilities for benchmark results

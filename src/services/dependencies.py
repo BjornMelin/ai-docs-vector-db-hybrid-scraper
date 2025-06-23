@@ -1,3 +1,4 @@
+import typing
 """FastAPI dependency injection functions replacing Manager classes.
 
 This module provides function-based dependency injection for services,
@@ -8,10 +9,12 @@ Achieves 60% complexity reduction while maintaining full functionality.
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import Annotated, Any
+from typing import Annotated
+from typing import Any
 
 from fastapi import Depends
 from pydantic import BaseModel
+
 from src.config import Config
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
@@ -128,7 +131,7 @@ async def generate_embeddings(
         return EmbeddingResponse(**result)
 
     except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
+        logger.exception(f"Embedding generation failed: {e}")
         raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
 
@@ -177,7 +180,7 @@ async def cache_get(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
     except Exception as e:
-        logger.error(f"Cache get failed for key {key}: {e}")
+        logger.exception(f"Cache get failed for key {key}: {e}")
         return None
 
 
@@ -198,7 +201,7 @@ async def cache_set(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
     except Exception as e:
-        logger.error(f"Cache set failed for key {key}: {e}")
+        logger.exception(f"Cache set failed for key {key}: {e}")
         return False
 
 
@@ -217,7 +220,7 @@ async def cache_delete(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
     except Exception as e:
-        logger.error(f"Cache delete failed for key {key}: {e}")
+        logger.exception(f"Cache delete failed for key {key}: {e}")
         return False
 
 
@@ -291,7 +294,7 @@ async def scrape_url(
         )
         return CrawlResponse(**result)
     except Exception as e:
-        logger.error(f"URL scraping failed for {request.url}: {e}")
+        logger.exception(f"URL scraping failed for {request.url}: {e}")
         raise CrawlServiceError(f"Failed to scrape URL: {e}") from e
 
 
@@ -311,7 +314,7 @@ async def crawl_site(
         )
         return result
     except Exception as e:
-        logger.error(f"Site crawling failed for {request.url}: {e}")
+        logger.exception(f"Site crawling failed for {request.url}: {e}")
         raise CrawlServiceError(f"Failed to crawl site: {e}") from e
 
 
@@ -357,7 +360,7 @@ async def enqueue_task(
         )
         return job_id
     except Exception as e:
-        logger.error(f"Task enqueue failed for {request.task_name}: {e}")
+        logger.exception(f"Task enqueue failed for {request.task_name}: {e}")
         raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
 
 
@@ -372,7 +375,7 @@ async def get_task_status(
     try:
         return await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.error(f"Task status check failed for {job_id}: {e}")
+        logger.exception(f"Task status check failed for {job_id}: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -586,7 +589,7 @@ async def generate_rag_answer(
         )
 
     except Exception as e:
-        logger.error(f"RAG answer generation failed: {e}")
+        logger.exception(f"RAG answer generation failed: {e}")
         raise EmbeddingServiceError(f"Failed to generate RAG answer: {e}") from e
 
 
@@ -600,7 +603,7 @@ async def get_rag_metrics(
     try:
         return rag_generator.get_metrics()
     except Exception as e:
-        logger.error(f"Failed to get RAG metrics: {e}")
+        logger.exception(f"Failed to get RAG metrics: {e}")
         return {"error": str(e)}
 
 
@@ -618,7 +621,7 @@ async def clear_rag_cache(
             "message": "RAG answer cache cleared successfully",
         }
     except Exception as e:
-        logger.error(f"Failed to clear RAG cache: {e}")
+        logger.exception(f"Failed to clear RAG cache: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -687,7 +690,7 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             "circuits": all_status,
         }
     except Exception as e:
-        logger.error(f"Circuit breaker status check failed: {e}")
+        logger.exception(f"Circuit breaker status check failed: {e}")
         return {
             "error": str(e),
             "summary": {
@@ -726,7 +729,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.error(f"Failed to reset circuit breaker for {service_name}: {e}")
+        logger.exception(f"Failed to reset circuit breaker for {service_name}: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -759,7 +762,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
             "results": results,
         }
     except Exception as e:
-        logger.error(f"Failed to reset all circuit breakers: {e}")
+        logger.exception(f"Failed to reset all circuit breakers: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -789,7 +792,7 @@ async def get_service_health() -> dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.exception(f"Health check failed: {e}")
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -834,7 +837,7 @@ async def get_service_metrics() -> dict[str, Any]:
         return metrics
 
     except Exception as e:
-        logger.error(f"Metrics collection failed: {e}")
+        logger.exception(f"Metrics collection failed: {e}")
         return {"error": str(e)}
 
 
@@ -849,5 +852,5 @@ async def cleanup_services() -> None:
         await client_manager.cleanup()
         logger.info("All services cleaned up successfully")
     except Exception as e:
-        logger.error(f"Service cleanup failed: {e}")
+        logger.exception(f"Service cleanup failed: {e}")
         raise

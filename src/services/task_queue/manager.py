@@ -1,3 +1,4 @@
+import typing
 """Task queue manager for ARQ integration."""
 
 import logging
@@ -6,6 +7,7 @@ from typing import Any
 from arq import ArqRedis
 from arq import create_pool
 from arq.connections import RedisSettings
+
 from src.config import Config
 
 from ..base import BaseService
@@ -84,7 +86,7 @@ class TaskQueueManager(BaseService):
             logger.info("Task queue manager initialized")
             self._initialized = True
         except Exception as e:
-            logger.error(f"Failed to initialize task queue: {e}")
+            logger.exception(f"Failed to initialize task queue: {e}")
             raise
 
     async def cleanup(self) -> None:
@@ -149,7 +151,7 @@ class TaskQueueManager(BaseService):
                 return None
 
         except Exception as e:
-            logger.error(f"Error enqueueing task {task_name}: {e}")
+            logger.exception(f"Error enqueueing task {task_name}: {e}")
             return None
 
     async def get_job_status(self, job_id: str) -> dict[str, Any]:
@@ -185,7 +187,7 @@ class TaskQueueManager(BaseService):
             }
 
         except Exception as e:
-            logger.error(f"Error getting job status: {e}")
+            logger.exception(f"Error getting job status: {e}")
             return {"status": "error", "message": str(e)}
 
     async def cancel_job(self, job_id: str) -> bool:
@@ -209,7 +211,7 @@ class TaskQueueManager(BaseService):
             return False
 
         except Exception as e:
-            logger.error(f"Error cancelling job: {e}")
+            logger.exception(f"Error cancelling job: {e}")
             return False
 
     async def get_queue_stats(self, queue_name: str | None = None) -> dict[str, int]:
@@ -242,7 +244,7 @@ class TaskQueueManager(BaseService):
             return stats
 
         except Exception as e:
-            logger.error(f"Error getting queue stats: {e}")
+            logger.exception(f"Error getting queue stats: {e}")
             return {"error": -1}
 
     def get_redis_settings(self) -> RedisSettings:

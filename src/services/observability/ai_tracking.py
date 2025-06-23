@@ -1,3 +1,4 @@
+import typing
 """AI/ML operation tracking with cost attribution and performance monitoring.
 
 This module provides specialized instrumentation for AI/ML operations including
@@ -7,14 +8,16 @@ with detailed cost tracking and performance analysis.
 
 import logging
 import time
-from typing import Any
-from dataclasses import dataclass
 from contextlib import contextmanager
+from dataclasses import dataclass
 
-from opentelemetry import metrics, trace
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry import metrics
+from opentelemetry.trace import Status
+from opentelemetry.trace import StatusCode
 
-from .instrumentation import get_tracer, add_span_attribute, add_span_event
+from .instrumentation import add_span_attribute
+from .instrumentation import add_span_event
+from .instrumentation import get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +30,13 @@ class AIOperationMetrics:
     provider: str
     model: str
     duration_ms: float
-    tokens_used: Optional[int] = None
-    cost_usd: Optional[float] = None
+    tokens_used: typing.Optional[int] = None
+    cost_usd: typing.Optional[float] = None
     success: bool = True
-    error_message: Optional[str] = None
-    input_size: Optional[int] = None
-    output_size: Optional[int] = None
-    quality_score: Optional[float] = None
+    error_message: typing.Optional[str] = None
+    input_size: typing.Optional[int] = None
+    output_size: typing.Optional[int] = None
+    quality_score: typing.Optional[float] = None
 
 
 class AIOperationTracker:
@@ -107,7 +110,7 @@ class AIOperationTracker:
         provider: str,
         model: str,
         input_texts: list[str] | str,
-        expected_dimensions: Optional[int] = None,
+        expected_dimensions: typing.Optional[int] = None,
     ):
         """Context manager for tracking embedding generation operations.
 
@@ -216,7 +219,7 @@ class AIOperationTracker:
         provider: str,
         model: str,
         operation: str = "completion",
-        expected_max_tokens: Optional[int] = None,
+        expected_max_tokens: typing.Optional[int] = None,
     ):
         """Context manager for tracking LLM API calls.
 
@@ -325,7 +328,7 @@ class AIOperationTracker:
         self,
         collection_name: str,
         query_type: str = "semantic",
-        top_k: Optional[int] = None,
+        top_k: typing.Optional[int] = None,
     ):
         """Context manager for tracking vector search operations.
 
@@ -557,7 +560,7 @@ class AIOperationTracker:
         operation_type: str,
         success_rate: float,
         avg_latency_ms: float,
-        cost_per_operation: Optional[float] = None,
+        cost_per_operation: typing.Optional[float] = None,
     ) -> None:
         """Record aggregated model performance metrics.
 
@@ -569,11 +572,6 @@ class AIOperationTracker:
             avg_latency_ms: Average latency in milliseconds
             cost_per_operation: Average cost per operation
         """
-        labels = {
-            "provider": provider,
-            "model": model,
-            "operation_type": operation_type,
-        }
 
         # Record performance metrics
         add_span_event(
@@ -589,7 +587,7 @@ class AIOperationTracker:
 
 
 # Global AI operation tracker instance
-_ai_tracker: Optional[AIOperationTracker] = None
+_ai_tracker: typing.Optional[AIOperationTracker] = None
 
 
 def get_ai_tracker() -> AIOperationTracker:
@@ -608,7 +606,7 @@ def track_embedding_generation(
     provider: str,
     model: str,
     input_texts: list[str] | str,
-    expected_dimensions: Optional[int] = None,
+    expected_dimensions: typing.Optional[int] = None,
 ):
     """Convenience function for tracking embedding generation.
 
@@ -631,7 +629,7 @@ def track_llm_call(
     provider: str,
     model: str,
     operation: str = "completion",
-    expected_max_tokens: Optional[int] = None,
+    expected_max_tokens: typing.Optional[int] = None,
 ):
     """Convenience function for tracking LLM calls.
 
@@ -649,7 +647,7 @@ def track_llm_call(
 
 
 def track_vector_search(
-    collection_name: str, query_type: str = "semantic", top_k: Optional[int] = None
+    collection_name: str, query_type: str = "semantic", top_k: typing.Optional[int] = None
 ):
     """Convenience function for tracking vector search.
 

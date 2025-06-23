@@ -1,3 +1,4 @@
+import typing
 """Specialized cache for search results with intelligent invalidation."""
 
 import hashlib

@@ -1,3 +1,4 @@
+import typing
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
 import json

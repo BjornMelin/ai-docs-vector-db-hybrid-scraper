@@ -1,3 +1,4 @@
+import typing
 """Content type filtering for document classification and semantic filtering.
 
 This module provides sophisticated content type filtering capabilities including

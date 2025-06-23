@@ -1,3 +1,4 @@
+import typing
 """RAG (Retrieval-Augmented Generation) MCP tools.
 
 This module provides MCP tools for generating contextual answers from search results
@@ -11,6 +12,7 @@ from typing import Any
 from fastmcp import FastMCP
 from pydantic import BaseModel
 from pydantic import Field
+
 from src.config import get_config
 
 from ...services.rag import RAGGenerator
@@ -168,7 +170,7 @@ def register_tools(app: FastMCP) -> None:
             )
 
         except Exception as e:
-            logger.error(f"RAG answer generation failed: {e}")
+            logger.exception(f"RAG answer generation failed: {e}")
             raise RuntimeError(f"Failed to generate RAG answer: {e}") from e
 
     @app.tool()
@@ -208,7 +210,7 @@ def register_tools(app: FastMCP) -> None:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get RAG metrics: {e}")
+            logger.exception(f"Failed to get RAG metrics: {e}")
             raise RuntimeError(f"Failed to get RAG metrics: {e}") from e
 
     @app.tool()
@@ -253,7 +255,7 @@ def register_tools(app: FastMCP) -> None:
 
         except Exception as e:
             results["error"] = str(e)
-            logger.error(f"RAG configuration test failed: {e}")
+            logger.exception(f"RAG configuration test failed: {e}")
 
         return results
 
@@ -286,7 +288,7 @@ def register_tools(app: FastMCP) -> None:
             }
 
         except Exception as e:
-            logger.error(f"Failed to clear RAG cache: {e}")
+            logger.exception(f"Failed to clear RAG cache: {e}")
             raise RuntimeError(f"Failed to clear RAG cache: {e}") from e
 
     logger.info("RAG MCP tools registered successfully")

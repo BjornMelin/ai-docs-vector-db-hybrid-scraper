@@ -1,3 +1,4 @@
+import typing
 """Focused QdrantSearch module for vector search operations.
 
 This module provides a clean, focused implementation of search functionality
@@ -10,6 +11,7 @@ from typing import Any
 import numpy as np
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
+
 from src.config import Config
 from src.config import SearchAccuracy
 from src.config import VectorType

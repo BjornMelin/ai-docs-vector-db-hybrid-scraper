@@ -1,3 +1,4 @@
+import typing
 """Base embedding provider interface."""
 
 from abc import ABC

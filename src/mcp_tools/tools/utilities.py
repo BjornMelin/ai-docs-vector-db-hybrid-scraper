@@ -1,3 +1,4 @@
+import typing
 """Utility tools for MCP server."""
 
 import logging
@@ -90,7 +91,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to estimate costs: {e}")
-            logger.error(f"Failed to estimate costs: {e}")
+            logger.exception(f"Failed to estimate costs: {e}")
             raise
 
     @mcp.tool()
@@ -168,5 +169,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to validate configuration: {e}")
-            logger.error(f"Failed to validate configuration: {e}")
+            logger.exception(f"Failed to validate configuration: {e}")
             raise

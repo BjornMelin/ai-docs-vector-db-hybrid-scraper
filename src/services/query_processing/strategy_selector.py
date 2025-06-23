@@ -1,3 +1,4 @@
+import typing
 """Intelligent Search Strategy Selection.
 
 This module provides intelligent strategy selection based on query intent,

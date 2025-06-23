@@ -1,3 +1,4 @@
+import typing
 """Circuit breaker implementation for resilient service patterns.
 
 Provides configurable circuit breaker patterns with simple/enterprise modes.
@@ -7,13 +8,17 @@ Based on modern async patterns with FastAPI integration.
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from collections.abc import Awaitable
+from collections.abc import Callable
+from dataclasses import dataclass
+from dataclasses import field
 from enum import Enum
-from typing import Any, TypeVar
-from collections.abc import Callable, Awaitable
 from functools import wraps
+from typing import Any
+from typing import TypeVar
 
-from fastapi import Request, Response
+from fastapi import Request
+from fastapi import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
@@ -182,7 +187,7 @@ class CircuitBreaker:
 
             return result
 
-        except self.config.monitored_exceptions as e:
+        except self.config.monitored_exceptions:
             execution_time = time.time() - start_time
             await self._record_failure(execution_time)
             raise
@@ -250,7 +255,6 @@ class CircuitBreaker:
     async def _open_circuit(self) -> None:
         """Transition to OPEN state."""
         if self.state != CircuitBreakerState.OPEN:
-            old_state = self.state
             self.state = CircuitBreakerState.OPEN
             self.metrics.state_changes += 1
             logger.warning(

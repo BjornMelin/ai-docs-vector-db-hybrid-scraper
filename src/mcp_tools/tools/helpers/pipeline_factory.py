@@ -1,3 +1,4 @@
+import typing
 """Query Processing Pipeline Factory for MCP server."""
 
 import logging
@@ -70,5 +71,5 @@ class QueryProcessingPipelineFactory:
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to initialize query processing pipeline: {e}")
-            logger.error(f"Pipeline initialization failed: {e}")
+            logger.exception(f"Pipeline initialization failed: {e}")
             raise

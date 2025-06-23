@@ -1,3 +1,4 @@
+import typing
 """Embedding manager with smart provider selection."""
 
 import logging
@@ -190,7 +191,7 @@ class EmbeddingManager:
                 await provider.cleanup()
                 logger.info(f"Cleaned up {name} provider")
             except Exception as e:
-                logger.error(f"Error cleaning up {name} provider: {e}")
+                logger.exception(f"Error cleaning up {name} provider: {e}")
 
         self.providers.clear()
         self._initialized = False
@@ -537,7 +538,7 @@ class EmbeddingManager:
             return result
 
         except Exception as e:
-            logger.error(f"Embedding generation failed: {e}")
+            logger.exception(f"Embedding generation failed: {e}")
             raise
 
     async def rerank_results(
@@ -581,7 +582,7 @@ class EmbeddingManager:
             return reranked
 
         except Exception as e:
-            logger.error(f"Reranking failed: {e}")
+            logger.exception(f"Reranking failed: {e}")
             # Return original results on failure
             return results
 

@@ -1,3 +1,4 @@
+import typing
 """HyDE Query Engine with Query API integration."""
 
 import asyncio
@@ -313,7 +314,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.error(f"Query API search failed: {e}")
+            logger.exception(f"Query API search failed: {e}")
             raise QdrantServiceError(f"HyDE search execution failed: {e}") from e
 
     async def _apply_reranking(
@@ -363,7 +364,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.error(f"Fallback search failed: {e}")
+            logger.exception(f"Fallback search failed: {e}")
             raise EmbeddingServiceError(
                 f"Both HyDE and fallback search failed: {e}"
             ) from e

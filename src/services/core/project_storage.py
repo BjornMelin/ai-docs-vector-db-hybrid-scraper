@@ -1,3 +1,4 @@
+import typing
 """Project storage service for persistent project management."""
 
 import asyncio
@@ -88,7 +89,7 @@ class ProjectStorage:
                 self._projects_cache = {}
                 return {}
             except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON in project storage: {e}")
+                logger.exception(f"Invalid JSON in project storage: {e}")
                 # Backup corrupted file
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():

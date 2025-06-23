@@ -1,3 +1,4 @@
+import typing
 """Function-based cache service with FastAPI dependency injection.
 
 Transforms the CacheManager class into pure functions with dependency injection.
@@ -5,13 +6,16 @@ Provides simple cache operations with circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated
+from typing import Any
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 
-from .dependencies import get_cache_client
-from .circuit_breaker import circuit_breaker, CircuitBreakerConfig
 from src.config.enums import CacheType
+
+from .circuit_breaker import CircuitBreakerConfig
+from .circuit_breaker import circuit_breaker
+from .dependencies import get_cache_client
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +58,7 @@ async def cache_get(
         return result
 
     except Exception as e:
-        logger.error(f"Cache get failed for key {key}: {e}")
+        logger.exception(f"Cache get failed for key {key}: {e}")
         # Return default on cache failure (graceful degradation)
         return default
 
@@ -64,7 +68,7 @@ async def cache_set(
     key: str,
     value: Any,
     cache_type: CacheType = CacheType.CRAWL,
-    ttl: Optional[int] = None,
+    ttl: typing.Optional[int] = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Set value in both cache layers.
@@ -99,7 +103,7 @@ async def cache_set(
         return success
 
     except Exception as e:
-        logger.error(f"Cache set failed for key {key}: {e}")
+        logger.exception(f"Cache set failed for key {key}: {e}")
         # Don't raise exception for cache failures
         return False
 
@@ -140,13 +144,13 @@ async def cache_delete(
         return success
 
     except Exception as e:
-        logger.error(f"Cache delete failed for key {key}: {e}")
+        logger.exception(f"Cache delete failed for key {key}: {e}")
         return False
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_clear(
-    cache_type: Optional[CacheType] = None,
+    cache_type: typing.Optional[CacheType] = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Clear cache layers.
@@ -179,7 +183,7 @@ async def cache_clear(
         return success
 
     except Exception as e:
-        logger.error(f"Cache clear failed: {e}")
+        logger.exception(f"Cache clear failed: {e}")
         return False
 
 
@@ -212,10 +216,10 @@ async def get_cache_stats(
         return stats
 
     except Exception as e:
-        logger.error(f"Cache stats retrieval failed: {e}")
+        logger.exception(f"Cache stats retrieval failed: {e}")
         return {
             "manager": {"enabled_layers": []},
-            "error": f"Stats retrieval failed: {str(e)}",
+            "error": f"Stats retrieval failed: {e!s}",
         }
 
 
@@ -245,7 +249,7 @@ async def get_performance_stats(
         return stats
 
     except Exception as e:
-        logger.error(f"Cache performance stats retrieval failed: {e}")
+        logger.exception(f"Cache performance stats retrieval failed: {e}")
         return {}
 
 
@@ -284,7 +288,7 @@ async def cache_embedding(
         return False
 
     except Exception as e:
-        logger.error(f"Embedding cache failed: {e}")
+        logger.exception(f"Embedding cache failed: {e}")
         return False
 
 
@@ -292,7 +296,7 @@ async def get_cached_embedding(
     content_hash: str,
     model: str,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
-) -> Optional[list[float]]:
+) -> typing.Optional[list[float]]:
     """Get cached embedding vector.
 
     Specialized function for embedding cache retrieval.
@@ -320,7 +324,7 @@ async def get_cached_embedding(
         return None
 
     except Exception as e:
-        logger.error(f"Cached embedding retrieval failed: {e}")
+        logger.exception(f"Cached embedding retrieval failed: {e}")
         return None
 
 
@@ -328,7 +332,7 @@ async def cache_search_results(
     query_hash: str,
     collection: str,
     results: list[dict[str, Any]],
-    ttl: Optional[int] = None,
+    ttl: typing.Optional[int] = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Cache search results.
@@ -360,7 +364,7 @@ async def cache_search_results(
         return False
 
     except Exception as e:
-        logger.error(f"Search results cache failed: {e}")
+        logger.exception(f"Search results cache failed: {e}")
         return False
 
 
@@ -368,7 +372,7 @@ async def get_cached_search_results(
     query_hash: str,
     collection: str,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
-) -> Optional[list[dict[str, Any]]]:
+) -> typing.Optional[list[dict[str, Any]]]:
     """Get cached search results.
 
     Specialized function for search result cache retrieval.
@@ -398,7 +402,7 @@ async def get_cached_search_results(
         return None
 
     except Exception as e:
-        logger.error(f"Cached search results retrieval failed: {e}")
+        logger.exception(f"Cached search results retrieval failed: {e}")
         return None
 
 
@@ -471,7 +475,7 @@ async def bulk_cache_operations(
 
             except Exception as e:
                 results["failed"] += 1
-                results["errors"].append(f"Operation {i} failed: {str(e)}")
+                results["errors"].append(f"Operation {i} failed: {e!s}")
 
         logger.info(
             f"Bulk cache operations completed: "
@@ -481,10 +485,10 @@ async def bulk_cache_operations(
         return results
 
     except Exception as e:
-        logger.error(f"Bulk cache operations failed: {e}")
+        logger.exception(f"Bulk cache operations failed: {e}")
         return {
             "total": len(operations),
             "successful": 0,
             "failed": len(operations),
-            "errors": [f"Bulk operation failed: {str(e)}"],
+            "errors": [f"Bulk operation failed: {e!s}"],
         }

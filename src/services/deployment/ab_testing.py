@@ -1,3 +1,4 @@
+import typing
 """A/B Testing Service for Enterprise Deployment.
 
 This module provides comprehensive A/B testing capabilities including:
@@ -163,7 +164,7 @@ class ABTestingManager:
             logger.info("A/B testing manager initialized successfully")
 
         except Exception as e:
-            logger.error("Failed to initialize A/B testing manager: %s", e)
+            logger.exception("Failed to initialize A/B testing manager: %s", e)
             self._initialized = False
             raise
 
@@ -462,7 +463,7 @@ class ABTestingManager:
             return uplift, is_significant
 
         except Exception as e:
-            logger.error("Error calculating statistical significance: %s", e)
+            logger.exception("Error calculating statistical significance: %s", e)
             return None, False
 
     async def _monitoring_loop(self) -> None:
@@ -478,7 +479,7 @@ class ABTestingManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("Error in A/B testing monitoring loop: %s", e)
+                logger.exception("Error in A/B testing monitoring loop: %s", e)
                 await asyncio.sleep(60)
 
     async def _check_test_completion(self, test_id: str, config: ABTestConfig) -> None:
@@ -506,7 +507,7 @@ class ABTestingManager:
                     return
 
         except Exception as e:
-            logger.error("Error checking test completion for %s: %s", test_id, e)
+            logger.exception("Error checking test completion for %s: %s", test_id, e)
 
     async def _load_active_tests(self) -> None:
         """Load active tests from storage."""

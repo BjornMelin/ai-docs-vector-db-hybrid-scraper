@@ -1,3 +1,4 @@
+import typing
 """Request tracing and correlation middleware for production observability.
 
 This middleware provides request correlation IDs, distributed tracing support,
@@ -118,7 +119,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             duration = end_time - start_time
 
             # Log error
-            logger.error(
+            logger.exception(
                 "Request failed",
                 extra={
                     "correlation_id": correlation_id,

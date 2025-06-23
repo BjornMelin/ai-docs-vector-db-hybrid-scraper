@@ -1,3 +1,4 @@
+import typing
 """Core services for the AI Documentation Vector DB."""
 
 from .project_storage import ProjectStorage

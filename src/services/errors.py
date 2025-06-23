@@ -1,3 +1,4 @@
+import typing
 """Consolidated error classes for all services and MCP server.
 
 This module provides a comprehensive error hierarchy for the AI Documentation Vector DB project,
@@ -28,7 +29,9 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, ClassVar, TypeVar
+from typing import Any
+from typing import ClassVar
+from typing import TypeVar
 
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
@@ -294,7 +297,9 @@ def retry_async(
                     last_exception = e
 
                     if attempt == max_attempts - 1:
-                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
+                        logger.exception(
+                            f"Final attempt failed for {func.__name__}: {e}"
+                        )
                         break
 
                     delay = min(base_delay * (backoff_factor**attempt), max_delay)
@@ -307,7 +312,7 @@ def retry_async(
                     await asyncio.sleep(delay)
                 except Exception as e:
                     # Non-retryable error
-                    logger.error(f"Non-retryable error in {func.__name__}: {e}")
+                    logger.exception(f"Non-retryable error in {func.__name__}: {e}")
                     raise
 
             raise last_exception or Exception("All retry attempts failed")

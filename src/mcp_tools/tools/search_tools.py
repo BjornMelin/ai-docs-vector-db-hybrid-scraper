@@ -1,3 +1,4 @@
+import typing
 """Advanced search tools for MCP server."""
 
 import logging
@@ -194,7 +195,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Multi-stage search {request_id} failed: {e}")
-            logger.error(f"Multi-stage search failed: {e}")
+            logger.exception(f"Multi-stage search failed: {e}")
             raise
 
     @mcp.tool()
@@ -328,7 +329,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"HyDE search {request_id} failed: {e}")
-            logger.error(f"HyDE search failed: {e}")
+            logger.exception(f"HyDE search failed: {e}")
             # Fallback to regular search on error
             try:
                 await ctx.warning(
@@ -515,7 +516,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Advanced HyDE search {request_id} failed: {e}")
-            logger.error(f"Advanced HyDE search failed: {e}")
+            logger.exception(f"Advanced HyDE search failed: {e}")
             raise
 
     @mcp.tool()
@@ -583,5 +584,5 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Filtered search {request_id} failed: {e}")
-            logger.error(f"Filtered search failed: {e}")
+            logger.exception(f"Filtered search failed: {e}")
             raise

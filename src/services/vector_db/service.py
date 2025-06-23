@@ -1,3 +1,4 @@
+import typing
 """Unified QdrantService facade that delegates to focused modules.
 
 This module provides a clean facade over the modularized Qdrant functionality,

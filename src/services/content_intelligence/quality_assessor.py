@@ -1,3 +1,4 @@
+import typing
 """Content quality assessment with multi-metric scoring system.
 
 This module provides comprehensive quality assessment for extracted content,

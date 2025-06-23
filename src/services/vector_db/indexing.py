@@ -1,3 +1,4 @@
+import typing
 """Focused QdrantIndexing module for payload indexing operations.
 
 This module provides a clean, focused implementation of indexing functionality
@@ -10,6 +11,7 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
+
 from src.config import Config
 
 from ..errors import QdrantServiceError

@@ -1,3 +1,4 @@
+import typing
 """Federated search service for cross-collection search orchestration.
 
 This module provides sophisticated federated search capabilities enabling unified
@@ -486,7 +487,9 @@ class FederatedSearchService:
             self._logger.info(f"Registered collection: {collection_name}")
 
         except Exception as e:
-            self._logger.error(f"Failed to register collection {collection_name}: {e}")
+            self._logger.exception(
+                f"Failed to register collection {collection_name}: {e}"
+            )
             raise
 
     async def unregister_collection(self, collection_name: str) -> None:
@@ -504,7 +507,7 @@ class FederatedSearchService:
             self._logger.info(f"Unregistered collection: {collection_name}")
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Failed to unregister collection {collection_name}: {e}"
             )
 
@@ -715,7 +718,7 @@ class FederatedSearchService:
                     self._create_error_result("Collection timeout", collection_name)
                 )
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Search failed for collection {collection_name}: {e}"
                 )
                 results.append(self._create_error_result(str(e), collection_name))

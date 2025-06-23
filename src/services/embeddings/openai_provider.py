@@ -1,3 +1,4 @@
+import typing
 """OpenAI embedding provider with batch support."""
 
 import contextlib
@@ -5,7 +6,8 @@ import json
 import logging
 import os
 import tempfile
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 from typing import ClassVar
 
 from openai import AsyncOpenAI

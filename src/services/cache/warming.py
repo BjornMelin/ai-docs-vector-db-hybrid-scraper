@@ -1,3 +1,4 @@
+import typing
 """Cache warming functionality - V2 feature placeholder."""
 
 import logging

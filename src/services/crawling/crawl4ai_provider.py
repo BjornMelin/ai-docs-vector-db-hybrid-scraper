@@ -1,3 +1,4 @@
+import typing
 """Enhanced Crawl4AI provider with Memory-Adaptive Dispatcher for intelligent concurrency control."""
 
 import asyncio
@@ -184,14 +185,16 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 await self.dispatcher.cleanup()
                 self.logger.info("MemoryAdaptiveDispatcher cleaned up")
             except Exception as e:
-                self.logger.error(f"Error cleaning up MemoryAdaptiveDispatcher: {e}")
+                self.logger.exception(
+                    f"Error cleaning up MemoryAdaptiveDispatcher: {e}"
+                )
 
         # Cleanup crawler
         if self._crawler:
             try:
                 await self._crawler.close()
             except Exception as e:
-                self.logger.error(f"Error closing crawler: {e}")
+                self.logger.exception(f"Error closing crawler: {e}")
             finally:
                 # Always reset state even if close() fails
                 self._crawler = None
@@ -519,7 +522,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 return self._build_error_result(url, error_msg, extraction_type)
 
         except Exception as e:
-            self.logger.error(f"Streaming crawl failed for {url}: {e}")
+            self.logger.exception(f"Streaming crawl failed for {url}: {e}")
             return self._build_error_result(url, e, extraction_type)
 
     def _get_dispatcher_stats(self) -> dict[str, object]:
@@ -724,7 +727,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "max_pages_target": max_pages,
             }
 
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to crawl site {url}: {e} | Context: {error_context}"
             )
             return {

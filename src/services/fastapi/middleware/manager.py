@@ -1,3 +1,4 @@
+import typing
 """Simplified middleware manager for FastAPI with essential middleware only.
 
 This module provides basic middleware management following KISS principles.
@@ -6,10 +7,11 @@ Only includes essential middleware for V1 release.
 
 import logging
 
-from src.config import get_config
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
+
+from src.config import get_config
 
 from .performance import PerformanceMiddleware
 from .security import SecurityMiddleware

@@ -1,3 +1,4 @@
+import typing
 """RAG (Retrieval-Augmented Generation) service for answer generation.
 
 This service generates contextual answers from search results using LLMs,

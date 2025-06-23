@@ -1,3 +1,4 @@
+import typing
 """Browser automation result caching for UnifiedBrowserManager.
 
 This module provides caching functionality for browser automation results

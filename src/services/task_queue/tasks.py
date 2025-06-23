@@ -1,3 +1,4 @@
+import typing
 """ARQ task definitions for background processing."""
 
 import asyncio
@@ -6,6 +7,7 @@ import time
 from typing import Any
 
 from arq import func
+
 from src.config import get_config
 
 from ...infrastructure.client_manager import ClientManager
@@ -84,7 +86,7 @@ async def delete_collection(
             "duration": time.time() - start_time,
         }
     except Exception as e:
-        logger.error(f"Failed to delete collection {collection_name}: {e}")
+        logger.exception(f"Failed to delete collection {collection_name}: {e}")
         return {
             "status": "failed",
             "collection": collection_name,
@@ -145,7 +147,7 @@ async def persist_cache(
         }
 
     except Exception as e:
-        logger.error(f"Failed to persist data for {key}: {e}")
+        logger.exception(f"Failed to persist data for {key}: {e}")
         return {
             "status": "failed",
             "key": key,

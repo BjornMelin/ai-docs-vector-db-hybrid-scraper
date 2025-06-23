@@ -1,3 +1,4 @@
+import typing
 """Central metrics registry and monitoring decorators for application observability.
 
 This module provides a comprehensive metrics collection system using Prometheus
@@ -8,7 +9,8 @@ import asyncio
 import functools
 import time
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any
+from typing import TypeVar
 
 import psutil
 from prometheus_client import Counter

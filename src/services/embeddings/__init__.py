@@ -1,3 +1,4 @@
+import typing
 """Embedding providers package."""
 
 from .base import EmbeddingProvider

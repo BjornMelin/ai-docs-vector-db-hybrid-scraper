@@ -1,3 +1,4 @@
+import typing
 """Search and retrieval tools for MCP server."""
 
 import logging
@@ -135,5 +136,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Similar search failed: {e}")
-            logger.error(f"Similar search failed: {e}")
+            logger.exception(f"Similar search failed: {e}")
             raise

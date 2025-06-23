@@ -1,3 +1,4 @@
+import typing
 """Simplified production FastMCP server with essential middleware only.
 
 This module provides a basic production wrapper around FastMCP server,
@@ -12,12 +13,13 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
-from src.config import get_config
-from src.services.fastapi.middleware.manager import get_middleware_manager
-from src.services.logging_config import configure_logging
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+
+from src.config import get_config
+from src.services.fastapi.middleware.manager import get_middleware_manager
+from src.services.logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ class ProductionMCPServer:
             yield
 
         except Exception as e:
-            logger.error(f"Startup failed: {e}")
+            logger.exception(f"Startup failed: {e}")
             raise
 
         finally:
@@ -87,7 +89,7 @@ class ProductionMCPServer:
                 logger.info("FastMCP server cleanup complete")
 
         except Exception as e:
-            logger.error(f"Error during shutdown: {e}")
+            logger.exception(f"Error during shutdown: {e}")
 
         logger.info("Production MCP server shutdown complete")
 
@@ -146,7 +148,7 @@ class ProductionMCPServer:
             await server.serve()
 
         except Exception as e:
-            logger.error(f"Server error: {e}")
+            logger.exception(f"Server error: {e}")
             raise
 
 
@@ -180,7 +182,7 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
-        logger.error(f"Server error: {e}")
+        logger.exception(f"Server error: {e}")
         sys.exit(1)
 
 

@@ -1,3 +1,4 @@
+import typing
 """Qdrant alias manager for zero-downtime collection updates."""
 
 import logging
@@ -9,6 +10,7 @@ from qdrant_client.models import CreateAlias
 from qdrant_client.models import CreateAliasOperation
 from qdrant_client.models import DeleteAlias
 from qdrant_client.models import DeleteAliasOperation
+
 from src.config import Config
 
 from ..base import BaseService
@@ -125,7 +127,7 @@ class QdrantAliasManager(BaseService):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to create alias: {e}")
+            logger.exception(f"Failed to create alias: {e}")
             raise QdrantServiceError(f"Failed to create alias: {e}") from e
 
     async def switch_alias(
@@ -193,7 +195,7 @@ class QdrantAliasManager(BaseService):
             return old_collection
 
         except Exception as e:
-            logger.error(f"Failed to switch alias: {e}")
+            logger.exception(f"Failed to switch alias: {e}")
             raise QdrantServiceError(f"Failed to switch alias: {e}") from e
 
     async def delete_alias(self, alias_name: str) -> bool:
@@ -221,7 +223,7 @@ class QdrantAliasManager(BaseService):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete alias: {e}")
+            logger.exception(f"Failed to delete alias: {e}")
             return False
 
     async def alias_exists(self, alias_name: str) -> bool:
@@ -269,7 +271,7 @@ class QdrantAliasManager(BaseService):
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
         except Exception as e:
-            logger.error(f"Failed to list aliases: {e}")
+            logger.exception(f"Failed to list aliases: {e}")
             return {}
 
     async def safe_delete_collection(
@@ -363,7 +365,7 @@ class QdrantAliasManager(BaseService):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to clone collection schema: {e}")
+            logger.exception(f"Failed to clone collection schema: {e}")
             raise QdrantServiceError(f"Failed to clone collection schema: {e}") from e
 
     async def copy_collection_data(
@@ -445,7 +447,7 @@ class QdrantAliasManager(BaseService):
             return total_copied
 
         except Exception as e:
-            logger.error(f"Failed to copy collection data: {e}")
+            logger.exception(f"Failed to copy collection data: {e}")
             raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
 
     async def validate_collection_compatibility(
@@ -505,5 +507,5 @@ class QdrantAliasManager(BaseService):
             return True, "Collections are compatible"
 
         except Exception as e:
-            logger.error(f"Failed to validate collection compatibility: {e}")
+            logger.exception(f"Failed to validate collection compatibility: {e}")
             return False, f"Validation error: {e!s}"

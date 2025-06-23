@@ -1,3 +1,4 @@
+import typing
 """Base service class for all services."""
 
 import logging

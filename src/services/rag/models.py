@@ -1,3 +1,4 @@
+import typing
 """RAG service models and configuration."""
 
 from typing import Any

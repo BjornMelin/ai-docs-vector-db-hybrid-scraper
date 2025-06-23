@@ -1,3 +1,4 @@
+import typing
 """Filter composition for combining multiple filters with boolean logic.
 
 This module provides sophisticated filter composition capabilities including
@@ -339,14 +340,14 @@ class FilterComposer(BaseFilter):
                         result = await task
                         results[name] = result
                     except Exception as e:
-                        self._logger.error(f"Filter {name} failed: {e}")
+                        self._logger.exception(f"Filter {name} failed: {e}")
                         if criteria.fail_fast:
                             raise
                 else:
                     self._logger.warning(f"Filter {name} timed out")
 
         except TimeoutError as e:
-            self._logger.error("Filter composition timed out")
+            self._logger.exception("Filter composition timed out")
             raise FilterError("Filter composition execution timed out") from e
 
         return results
@@ -376,7 +377,7 @@ class FilterComposer(BaseFilter):
                     )
 
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Filter {filter_ref.filter_instance.name} failed: {e}"
                 )
                 if criteria.fail_fast and filter_ref.required:
@@ -443,7 +444,7 @@ class FilterComposer(BaseFilter):
             return await filter_ref.filter_instance.apply(filter_ref.criteria, context)
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Filter {filter_ref.filter_instance.name} execution failed: {e}"
             )
             raise FilterError(

@@ -1,3 +1,4 @@
+import typing
 """Query expansion service for synonym and related term discovery.
 
 This module provides advanced query expansion capabilities including synonym generation,
@@ -749,7 +750,7 @@ class QueryExpansionService:
         synonyms = []
 
         # Check custom domain vocabularies
-        for _domain, vocab in self.domain_vocabularies.items():
+        for vocab in self.domain_vocabularies.values():
             if term in vocab:
                 synonyms.extend(vocab[term])
 

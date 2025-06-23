@@ -1,3 +1,4 @@
+import typing
 """Advanced hybrid search service - backward compatibility wrapper.
 
 This module provides a backward compatibility wrapper around the new AdvancedSearchOrchestrator.
@@ -11,6 +12,7 @@ import uuid
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
+
 from src.config import ABTestVariant
 from src.config import Config
 from src.config import OptimizationStrategy

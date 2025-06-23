@@ -1,3 +1,4 @@
+import typing
 """Enhanced automation router with performance tracking and intelligent routing.
 
 This module extends the basic AutomationRouter with:
@@ -208,7 +209,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.error(f"{selected_tier} failed for {url}: {e}")
+            logger.exception(f"{selected_tier} failed for {url}: {e}")
 
             # Record failure
             await self._record_performance(
@@ -438,7 +439,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.error(f"Fallback {fallback_tier} also failed: {e}")
+                logger.exception(f"Fallback {fallback_tier} also failed: {e}")
 
                 # Record failure
                 await self._record_performance(

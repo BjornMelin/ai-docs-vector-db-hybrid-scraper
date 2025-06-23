@@ -1,3 +1,4 @@
+import typing
 """OpenTelemetry tracking utilities for AI/ML operations and cost monitoring.
 
 Provides decorators and utilities for tracking AI operations, costs, and
@@ -7,7 +8,8 @@ performance metrics that integrate with the existing function-based services.
 import functools
 import logging
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any
+from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -342,12 +344,12 @@ class _NoOpMeter:
 class _NoOpHistogram:
     """No-op histogram when OpenTelemetry is not available."""
 
-    def record(self, value: float, attributes: dict = None) -> None:
+    def record(self, value: float, attributes: dict | None = None) -> None:
         pass
 
 
 class _NoOpCounter:
     """No-op counter when OpenTelemetry is not available."""
 
-    def add(self, value: float | int, attributes: dict = None) -> None:
+    def add(self, value: float | int, attributes: dict | None = None) -> None:
         pass
