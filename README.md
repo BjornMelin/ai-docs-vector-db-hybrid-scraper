@@ -1,6 +1,6 @@
 # Intelligent Vector RAG Knowledge Base with Multi-Tier Web Crawling
 
-[![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.11--3.12-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0+-green.svg)](https://fastapi.tiangolo.com)
 [![Qdrant](https://img.shields.io/badge/Qdrant-1.12+-red.svg)](https://qdrant.tech)
 [![Pydantic](https://img.shields.io/badge/Pydantic-2.0+-purple.svg)](https://pydantic-docs.helpmanual.io)
@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-1.0+-yellow.svg)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-500%2B-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-33%25-yellow.svg)](tests/)
 
 A production-grade vector RAG system implementing research-backed best practices for intelligent
 document processing, multi-tier web crawling, and hybrid search with reranking. Built with modern
@@ -56,7 +56,7 @@ strategies to achieve superior performance compared to existing solutions.
 - **Memory-Adaptive Processing**: Dynamic concurrency control based on system resources
 - **Vector Quantization**: Storage optimization with minimal accuracy loss
 - **Collection Aliases**: Zero-downtime deployments with blue-green switching
-- **MCP Protocol Integration**: Unified server for Claude Desktop/Code integration
+- **MCP Protocol Integration**: Unified server with 24 tools for Claude Desktop/Code integration
 - **Comprehensive Caching**: DragonflyDB + in-memory LRU with intelligent warming
 
 ### Technology Stack
@@ -248,7 +248,7 @@ Production Benchmarks (1000-document corpus):
 
 ### Prerequisites
 
-- Python 3.13+ (recommended for optimal performance)
+- Python 3.11 or 3.12 (3.13 not yet supported due to dependency constraints)
 - Docker Desktop with WSL2 integration (Windows) or Docker Engine (Linux/macOS)
 - OpenAI API key
 - 4GB+ RAM (8GB+ recommended for production)
@@ -355,7 +355,7 @@ embedding_config = EmbeddingConfig(
 
 ### Configuration Templates
 
-Five optimized templates are available for different deployment scenarios:
+Multiple optimized templates are available for different deployment scenarios:
 
 ```bash
 # Development environment
@@ -364,14 +364,20 @@ uv run python -m src.cli.main config template apply development
 # Production with security hardening
 uv run python -m src.cli.main config template apply production
 
-# High-performance for maximum throughput
-uv run python -m src.cli.main config template apply high_performance
+# Minimal configuration
+uv run python -m src.cli.main config template apply minimal
 
-# Memory-optimized for resource-constrained environments
-uv run python -m src.cli.main config template apply memory_optimized
+# Personal use configuration
+uv run python -m src.cli.main config template apply personal-use
 
-# Distributed multi-node deployment
-uv run python -m src.cli.main config template apply distributed
+# Testing configuration
+uv run python -m src.cli.main config template apply testing
+
+# Local-only configuration (no external services)
+uv run python -m src.cli.main config template apply local-only
+
+# Custom benchmarks configuration
+uv run python -m src.cli.main config template apply custom-benchmarks
 ```
 
 ### Crawling Configuration

@@ -17,8 +17,14 @@ env:
   PYTHONDONTWRITEBYTECODE: 1
   PIP_DISABLE_PIP_VERSION_CHECK: 1
   UV_SYSTEM_PYTHON: 1
-  # Optimization: Enable UV cache compression
+  # UV Optimizations
   UV_CACHE_COMPRESSION: 1
+  UV_COMPILE_BYTECODE: 1
+  UV_LINK_MODE: copy
+  # Python optimizations
+  PYTHONOPTIMIZE: 1
+  # Pytest optimizations
+  PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
