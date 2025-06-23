@@ -1,3 +1,4 @@
+import typing
 #!/usr/bin/env python3
 """Crawl4AI Bulk Embedder - High-performance bulk web scraping and embedding pipeline.
 
@@ -294,7 +295,7 @@ class BulkEmbedder:
 
         except Exception as e:
             result["error"] = str(e)
-            logger.error(f"Failed to process {url}: {e}")
+            logger.exception(f"Failed to process {url}: {e}")
 
         return result
 

@@ -1,3 +1,4 @@
+import typing
 #!/usr/bin/env python3
 """Security utilities for MCP server with unified configuration integration."""
 

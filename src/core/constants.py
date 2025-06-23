@@ -1,3 +1,4 @@
+import typing
 """Constants and configuration values for the AI Documentation Vector DB system.
 
 This module centralizes all constants, default values, and magic numbers

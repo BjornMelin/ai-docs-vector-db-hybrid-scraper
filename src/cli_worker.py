@@ -1,3 +1,4 @@
+import typing
 #!/usr/bin/env python3
 """CLI script to run the ARQ task queue worker."""
 
@@ -65,5 +66,5 @@ if __name__ == "__main__":
         logger.info("Worker stopped by user")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"Worker failed: {e}")
+        logger.exception(f"Worker failed: {e}")
         sys.exit(1)

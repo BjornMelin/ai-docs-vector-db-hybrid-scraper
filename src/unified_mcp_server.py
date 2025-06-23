@@ -1,3 +1,4 @@
+import typing
 #!/usr/bin/env python3
 """Unified MCP Server for AI Documentation Vector DB.
 
@@ -12,6 +13,7 @@ from contextlib import asynccontextmanager
 from contextlib import suppress
 
 from fastmcp import FastMCP
+
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging

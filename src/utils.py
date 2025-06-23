@@ -1,9 +1,11 @@
+import typing
 """Shared utility functions for the AI documentation vector database system."""
 
 import asyncio
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any
+from typing import TypeVar
 
 import click
 
