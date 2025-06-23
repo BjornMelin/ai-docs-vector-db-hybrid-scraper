@@ -26,6 +26,7 @@
     "quantization_enabled": true
   },
   "openai": {
+    "api_key": "sk-your_openai_api_key_here_template_placeholder_12345678901234567890",
     "model": "text-embedding-3-small",
     "dimensions": 1536,
     "batch_size": 100,

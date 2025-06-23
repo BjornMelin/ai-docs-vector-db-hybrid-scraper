@@ -23,6 +23,7 @@ from .core import PlaywrightConfig
 from .core import QdrantConfig
 from .core import SecurityConfig
 from .core import SQLAlchemyConfig
+from .core import TaskQueueConfig
 from .core import get_config
 from .core import reset_config
 from .core import set_config
@@ -94,6 +95,7 @@ __all__ = [
     "SearchAccuracy",
     "SearchStrategy",
     "SecurityConfig",
+    "TaskQueueConfig",
     "TierCapability",
     "TierConfiguration",
     "TierManager",
