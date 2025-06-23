@@ -2,207 +2,307 @@
 
 This module provides a step-by-step configuration wizard that guides
 users through setting up their AI Documentation Scraper instance.
+Modern template-driven approach with real-time validation.
 """
 
+import json
 from pathlib import Path
 from typing import Any
 
 import click
+import questionary
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm
-from rich.prompt import Prompt
-from rich.table import Table
 from rich.text import Text
+from src.cli.wizard import ProfileManager
+from src.cli.wizard import TemplateManager
+from src.cli.wizard import WizardValidator
 
 console = Console()
 
 
 class ConfigurationWizard:
-    """Interactive configuration wizard for step-by-step setup."""
+    """Modern template-driven configuration wizard with real-time validation."""
 
-    def __init__(self):
-        """Initialize the configuration wizard."""
+    def __init__(self, config_dir: Path | None = None):
+        """Initialize the configuration wizard.
+
+        Args:
+            config_dir: Directory for configuration files
+        """
         self.console = Console()
+        self.template_manager = TemplateManager()
+        self.profile_manager = ProfileManager(config_dir)
+        self.validator = WizardValidator()
+
+        self.selected_template: str | None = None
+        self.selected_profile: str | None = None
         self.config_data: dict[str, Any] = {}
+        self.customizations: dict[str, Any] = {}
 
     def welcome(self):
         """Display welcome message for the wizard."""
         welcome_text = Text()
-        welcome_text.append("🧙 Configuration Wizard\n", style="bold magenta")
+        welcome_text.append("🧙 Modern Configuration Wizard\n", style="bold magenta")
         welcome_text.append(
-            "Let's set up your AI Documentation Scraper!\n\n", style="dim"
+            "Welcome to the AI Documentation Scraper setup wizard!\n\n", style="dim"
+        )
+        welcome_text.append("This modern wizard offers:\n", style="")
+        welcome_text.append(
+            "• 🎯 Profile-based configuration templates\n", style="cyan"
         )
         welcome_text.append(
-            "This wizard will guide you through configuring:\n", style=""
+            "• ⚡ Real-time validation with helpful feedback\n", style="cyan"
         )
-        welcome_text.append("• Vector database connection\n", style="cyan")
-        welcome_text.append("• API keys for embedding providers\n", style="cyan")
-        welcome_text.append("• Caching and performance settings\n", style="cyan")
-        welcome_text.append("• Browser automation preferences", style="cyan")
+        welcome_text.append("• 🛠️ Smart customization options\n", style="cyan")
+        welcome_text.append("• 📋 Template preview and comparison\n", style="cyan")
+        welcome_text.append("• 🔧 Environment-specific optimizations", style="cyan")
 
         panel = Panel(
             welcome_text,
-            title="Welcome to Setup",
+            title="🚀 Template-Driven Setup",
             title_align="left",
             border_style="magenta",
             padding=(1, 2),
         )
         self.console.print(panel)
 
-    def configure_database(self) -> dict[str, Any]:
-        """Configure vector database settings."""
-        self.console.print("\n[bold cyan]📊 Vector Database Configuration[/bold cyan]")
+    def select_profile(self) -> str:
+        """Let user select a configuration profile."""
+        self.console.print("\n[bold cyan]🎯 Profile Selection[/bold cyan]")
 
-        # Qdrant configuration
-        db_config = {}
+        # Show available profiles
+        self.profile_manager.show_profiles_table()
 
-        use_local = Confirm.ask("Use local Qdrant instance?", default=True)
+        # Get user choice using questionary
+        profile_choices = [
+            questionary.Choice(
+                title=f"🏆 {name} (Recommended for most users)", value=name
+            )
+            if name == "personal"
+            else questionary.Choice(
+                title=f"🛠️ {name} (Development and debugging)", value=name
+            )
+            if name == "development"
+            else questionary.Choice(
+                title=f"🚀 {name} (Production deployment)", value=name
+            )
+            if name == "production"
+            else questionary.Choice(title=name, value=name)
+            for name in self.profile_manager.list_profiles()
+        ]
 
-        if use_local:
-            host = Prompt.ask("Qdrant host", default="localhost")
-            port = Prompt.ask("Qdrant port", default="6333")
-            db_config["qdrant"] = {"host": host, "port": int(port), "use_memory": False}
-        else:
-            url = Prompt.ask("Qdrant Cloud URL", default="")
-            api_key = Prompt.ask("Qdrant API key (optional)", default="", password=True)
-            db_config["qdrant"] = {"url": url, "api_key": api_key if api_key else None}
+        selected_profile = questionary.select(
+            "Choose a configuration profile:",
+            choices=profile_choices,
+            default="personal",
+        ).ask()
 
-        return db_config
+        if not selected_profile:
+            raise click.Abort("Profile selection cancelled")
 
-    def configure_embeddings(self) -> dict[str, Any]:
-        """Configure embedding providers and API keys."""
+        # Show profile details
+        self.profile_manager.show_profile_setup_instructions(selected_profile)
+
+        # Confirm selection
+        confirm = questionary.confirm(
+            f"Use the '{selected_profile}' profile as your starting point?",
+            default=True,
+        ).ask()
+
+        if not confirm:
+            return self.select_profile()  # Recursively ask again
+
+        return selected_profile
+
+    def customize_template(self, template_name: str) -> dict[str, Any]:
+        """Allow user to customize the selected template."""
         self.console.print(
-            "\n[bold cyan]🔑 Embedding Provider Configuration[/bold cyan]"
+            f"\n[bold cyan]🛠️ Customizing '{template_name}' Template[/bold cyan]"
         )
 
-        embedding_config = {}
+        template_data = self.template_manager.get_template(template_name)
+        if not template_data:
+            raise ValueError(f"Template '{template_name}' not found")
 
-        # Provider selection
-        provider_table = Table(title="Available Embedding Providers")
-        provider_table.add_column("Option", style="cyan")
-        provider_table.add_column("Provider", style="")
-        provider_table.add_column("Description", style="dim")
+        customizations = {}
 
-        provider_table.add_row(
-            "1", "OpenAI", "High-quality embeddings, requires API key"
-        )
-        provider_table.add_row("2", "FastEmbed", "Local embeddings, no API key needed")
-        provider_table.add_row("3", "Both", "Use both providers (recommended)")
+        # Show template preview
+        preview_choice = questionary.confirm(
+            "Would you like to preview the template configuration?", default=True
+        ).ask()
 
-        self.console.print(provider_table)
+        if preview_choice:
+            self.template_manager.preview_template(template_name)
 
-        choice = Prompt.ask(
-            "Select embedding provider", choices=["1", "2", "3"], default="3"
-        )
+        # Ask if user wants to customize
+        customize_choice = questionary.confirm(
+            "Do you want to customize any settings? (or use template as-is)",
+            default=False,
+        ).ask()
 
-        if choice in ["1", "3"]:  # OpenAI
-            openai_key = Prompt.ask("OpenAI API key", password=True)
+        if not customize_choice:
+            return customizations
 
-            if openai_key:
-                embedding_config["openai"] = {
-                    "api_key": openai_key,
-                    "model": "text-embedding-3-small",
-                }
+        # Guide through key customization options
+        customization_sections = [
+            ("API Keys", self._customize_api_keys),
+            ("Database Connection", self._customize_database),
+            ("Performance Settings", self._customize_performance),
+            ("Advanced Options", self._customize_advanced),
+        ]
 
-        if choice in ["2", "3"]:  # FastEmbed
-            embedding_config["fastembed"] = {
-                "model": "BAAI/bge-small-en-v1.5",
-                "cache_dir": "~/.cache/fastembed",
-            }
+        for section_name, customize_func in customization_sections:
+            if questionary.confirm(f"Customize {section_name}?", default=False).ask():
+                section_customizations = customize_func(template_data)
+                customizations.update(section_customizations)
 
-        return embedding_config
+        return customizations
 
-    def configure_browser(self) -> dict[str, Any]:
-        """Configure browser automation settings."""
-        self.console.print(
-            "\n[bold cyan]🌐 Browser Automation Configuration[/bold cyan]"
-        )
+    def _customize_api_keys(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize API key settings."""
+        customizations = {}
 
-        browser_config = {}
+        # OpenAI API Key
+        if questionary.confirm("Set OpenAI API key?", default=True).ask():
+            while True:
+                api_key = questionary.password("Enter OpenAI API key:").ask()
+                if api_key:
+                    is_valid, error = self.validator.validate_api_key("openai", api_key)
+                    if is_valid:
+                        customizations.setdefault("openai", {})["api_key"] = api_key
+                        break
+                    else:
+                        self.console.print(f"[red]Invalid API key: {error}[/red]")
+                        if not questionary.confirm("Try again?", default=True).ask():
+                            break
 
-        # Browser selection
-        headless = Confirm.ask(
-            "Run browsers in headless mode? (recommended for servers)", default=True
-        )
+        # Firecrawl API Key (optional)
+        if questionary.confirm(
+            "Set Firecrawl API key? (optional)", default=False
+        ).ask():
+            while True:
+                api_key = questionary.password("Enter Firecrawl API key:").ask()
+                if api_key:
+                    is_valid, error = self.validator.validate_api_key(
+                        "firecrawl", api_key
+                    )
+                    if is_valid:
+                        customizations.setdefault("firecrawl", {})["api_key"] = api_key
+                        break
+                    else:
+                        self.console.print(f"[red]Invalid API key: {error}[/red]")
+                        if not questionary.confirm("Try again?", default=True).ask():
+                            break
 
-        # Anti-detection settings
-        use_stealth = Confirm.ask("Enable anti-detection features?", default=True)
+        return customizations
 
-        browser_config["browser"] = {
-            "headless": headless,
-            "anti_detection": use_stealth,
-            "timeout": 30000,  # 30 seconds
-            "max_concurrent": 3,
-        }
+    def _customize_database(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize database connection settings."""
+        customizations = {}
 
-        return browser_config
+        connection_type = questionary.select(
+            "Qdrant connection type:",
+            choices=[
+                "Local (localhost:6333)",
+                "Custom host/port",
+                "Qdrant Cloud URL",
+                "Keep template default",
+            ],
+            default="Keep template default",
+        ).ask()
 
-    def configure_performance(self) -> dict[str, Any]:
-        """Configure performance and caching settings."""
-        self.console.print("\n[bold cyan]⚡ Performance Configuration[/bold cyan]")
+        if connection_type == "Custom host/port":
+            host = questionary.text("Qdrant host:", default="localhost").ask()
+            port = questionary.text("Qdrant port:", default="6333").ask()
 
-        perf_config = {}
+            is_valid, error = self.validator.validate_url(f"http://{host}:{port}")
+            if is_valid:
+                customizations["qdrant"] = {"host": host, "port": int(port)}
+            else:
+                self.console.print(f"[red]Invalid connection: {error}[/red]")
 
-        # Cache settings
-        enable_cache = Confirm.ask(
-            "Enable Redis caching? (improves performance)", default=True
-        )
+        elif connection_type == "Qdrant Cloud URL":
+            url = questionary.text("Qdrant Cloud URL:").ask()
+            api_key = questionary.password("Qdrant API key:").ask()
 
-        if enable_cache:
-            redis_host = Prompt.ask("Redis host", default="localhost")
-            redis_port = Prompt.ask("Redis port", default="6379")
+            is_valid, error = self.validator.validate_url(url, allow_localhost=False)
+            if is_valid:
+                customizations["qdrant"] = {"url": url, "api_key": api_key}
+            else:
+                self.console.print(f"[red]Invalid URL: {error}[/red]")
 
-            perf_config["cache"] = {
-                "redis": {"host": redis_host, "port": int(redis_port), "db": 0}
-            }
+        return customizations
 
-        # Task queue
-        enable_queue = Confirm.ask("Enable background task queue?", default=True)
+    def _customize_performance(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize performance settings."""
+        customizations = {}
 
-        if enable_queue:
-            perf_config["task_queue"] = {
-                "redis_url": f"redis://{redis_host}:{redis_port}/1"
-            }
+        # Chunk size customization
+        if questionary.confirm(
+            "Customize text processing settings?", default=False
+        ).ask():
+            chunk_size = questionary.text(
+                "Chunk size (characters per text chunk):", default="1600"
+            ).ask()
 
-        return perf_config
+            try:
+                chunk_size_int = int(chunk_size)
+                if chunk_size_int > 0:
+                    customizations.setdefault("text_processing", {})["chunk_size"] = (
+                        chunk_size_int
+                    )
+            except ValueError:
+                self.console.print("[red]Invalid chunk size[/red]")
 
-    def save_configuration(self, config_data: dict[str, Any]) -> Path:
-        """Save the configuration to file."""
+        return customizations
+
+    def _customize_advanced(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize advanced settings."""
+        customizations = {}
+
+        # Debug mode
+        if questionary.confirm("Enable debug mode?", default=False).ask():
+            customizations["debug"] = True
+            customizations["log_level"] = "DEBUG"
+
+        return customizations
+
+    def save_configuration(
+        self, profile_name: str, config_data: dict[str, Any]
+    ) -> Path:
+        """Save the configuration using profile manager."""
         self.console.print("\n[bold cyan]💾 Saving Configuration[/bold cyan]")
 
-        # Choose config format
-        format_choice = Prompt.ask(
-            "Configuration format", choices=["json", "yaml", "toml"], default="json"
-        )
-
-        # Choose config location
-        default_path = Path.cwd() / f"ai_docs_config.{format_choice}"
-        config_path = Prompt.ask("Configuration file path", default=str(default_path))
-
-        config_path = Path(config_path)
-
         try:
-            # Save configuration using ConfigLoader
-            if format_choice == "json":
-                import json
-
-                with open(config_path, "w") as f:
-                    json.dump(config_data, f, indent=2)
-            elif format_choice == "yaml":
-                import yaml
-
-                with open(config_path, "w") as f:
-                    yaml.dump(config_data, f, default_flow_style=False)
-            elif format_choice == "toml":
-                import tomli_w
-
-                with open(config_path, "wb") as f:
-                    tomli_w.dump(config_data, f)
-
-            self.console.print(
-                f"✅ Configuration saved to: [green]{config_path}[/green]"
+            # Create profile configuration
+            profile_config_path = self.profile_manager.create_profile_config(
+                profile_name, customizations=config_data
             )
+
+            # Ask if user wants to activate this profile
+            activate_choice = questionary.confirm(
+                f"Activate '{profile_name}' profile as your default configuration?",
+                default=True,
+            ).ask()
+
+            if activate_choice:
+                config_path = self.profile_manager.activate_profile(profile_name)
+            else:
+                config_path = profile_config_path
+
+            # Generate .env file
+            env_choice = questionary.confirm(
+                "Generate .env file with recommended environment variables?",
+                default=True,
+            ).ask()
+
+            if env_choice:
+                env_path = self.profile_manager.generate_env_file(profile_name)
+                self.console.print(
+                    f"📄 Environment file created: [green]{env_path}[/green]"
+                )
+
             return config_path
 
         except Exception as e:
@@ -210,98 +310,200 @@ class ConfigurationWizard:
             raise
 
     def run_setup(self) -> Path:
-        """Run the complete setup wizard."""
+        """Run the complete modern template-driven setup wizard."""
         self.welcome()
 
-        if not Confirm.ask("\nReady to start configuration?", default=True):
+        # Check if user wants to proceed
+        ready = questionary.confirm(
+            "Ready to start the modern configuration wizard?", default=True
+        ).ask()
+
+        if not ready:
             self.console.print("Setup cancelled.")
             raise click.Abort()
 
-        # Collect configuration
-        config_data = {}
+        try:
+            # Step 1: Profile Selection (unless pre-selected)
+            if not self.selected_profile:
+                self.selected_profile = self.select_profile()
 
-        # Database configuration
-        config_data.update(self.configure_database())
+            # Get template name for the selected profile
+            template_name = self.profile_manager.profile_templates.get(
+                self.selected_profile
+            )
+            if not template_name:
+                raise ValueError(
+                    f"No template found for profile '{self.selected_profile}'"
+                )
 
-        # Embedding configuration
-        config_data.update(self.configure_embeddings())
+            # Step 2: Template Customization
+            self.customizations = self.customize_template(template_name)
 
-        # Browser configuration
-        config_data.update(self.configure_browser())
+            # Step 3: Validation
+            self.console.print("\n[bold cyan]✅ Validating Configuration[/bold cyan]")
 
-        # Performance configuration
-        config_data.update(self.configure_performance())
+            # Create config from template + customizations
+            config = self.template_manager.create_config_from_template(
+                template_name, self.customizations
+            )
 
-        # Save configuration
-        config_path = self.save_configuration(config_data)
+            # Validate configuration
+            is_valid = self.validator.validate_and_show_errors(config.model_dump())
 
-        # Success message
+            if is_valid:
+                self.validator.show_validation_summary(config)
+            else:
+                fix_choice = questionary.confirm(
+                    "Configuration has validation errors. Continue anyway?",
+                    default=False,
+                ).ask()
+                if not fix_choice:
+                    raise click.Abort("Setup cancelled due to validation errors")
+
+            # Step 4: Save Configuration
+            config_path = self.save_configuration(
+                self.selected_profile, self.customizations
+            )
+
+            # Step 5: Success Message
+            self._show_success_message(config_path)
+
+            return config_path
+
+        except KeyboardInterrupt:
+            self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
+            raise click.Abort() from None
+        except Exception as e:
+            self.console.print(f"\n[red]Setup failed: {e}[/red]")
+            raise
+
+    def _show_success_message(self, config_path: Path) -> None:
+        """Show final success message with next steps."""
         success_text = Text()
-        success_text.append("🎉 Setup Complete!\n\n", style="bold green")
+        success_text.append("🎉 Modern Setup Complete!\n\n", style="bold green")
         success_text.append(
-            "Your AI Documentation Scraper is now configured.\n\n", style=""
+            f"Your '{self.selected_profile}' profile is now configured and ready to use.\n\n",
+            style="",
         )
-        success_text.append("Next steps:\n", style="bold")
+
+        success_text.append("Configuration details:\n", style="bold")
+        success_text.append(f"• Profile: {self.selected_profile}\n", style="cyan")
+        success_text.append(f"• Config file: {config_path}\n", style="cyan")
         success_text.append(
-            f"1. Test your configuration: ai-docs config validate {config_path}\n",
+            f"• Template: {self.profile_manager.profile_templates.get(self.selected_profile)}\n",
             style="cyan",
         )
-        success_text.append("2. Check system status: ai-docs status\n", style="cyan")
+
+        success_text.append("\nNext steps:\n", style="bold")
         success_text.append(
-            "3. Create your first collection: ai-docs database create my-docs",
+            "1. Test configuration: uv run python -m src.cli.main config validate\n",
             style="cyan",
+        )
+        success_text.append(
+            "2. Start services: ./scripts/start-services.sh\n", style="cyan"
+        )
+        success_text.append(
+            "3. Check system status: uv run python -m src.cli.main status\n",
+            style="cyan",
+        )
+        success_text.append(
+            "4. Create your first collection: uv run python -m src.cli.main database create my-docs\n",
+            style="cyan",
+        )
+
+        success_text.append(
+            f"\n💡 To use this profile again: ./setup.sh --profile {self.selected_profile}",
+            style="dim",
         )
 
         panel = Panel(
             success_text,
-            title="Setup Complete",
+            title="🚀 Template-Driven Setup Complete",
             title_align="left",
             border_style="green",
             padding=(1, 2),
         )
         self.console.print(panel)
 
-        return config_path
-
 
 @click.command()
+@click.option(
+    "--profile",
+    "-p",
+    type=str,
+    help="Pre-select a configuration profile (personal, development, production, etc.)",
+)
 @click.option(
     "--output",
     "-o",
     type=click.Path(path_type=Path),
-    help="Output configuration file path",
+    help="Output configuration file path (optional, uses profile default)",
 )
 @click.option(
-    "--format",
-    "config_format",
-    type=click.Choice(["json", "yaml", "toml"]),
-    default="json",
-    help="Configuration file format",
+    "--config-dir",
+    type=click.Path(path_type=Path, exists=True),
+    default=Path("config"),
+    help="Configuration directory (default: config/)",
 )
 @click.pass_context
-def setup(ctx: click.Context, output: Path | None, config_format: str):
-    """🧙 Interactive configuration wizard.
+def setup(
+    ctx: click.Context, profile: str | None, output: Path | None, config_dir: Path
+):
+    """🧙 Modern template-driven configuration wizard.
 
-    This wizard will guide you through setting up your AI Documentation Scraper
-    with step-by-step configuration for all components.
+    This wizard uses configuration profiles and templates to guide you through
+    setting up your AI Documentation Scraper with best practices and validation.
 
     \b
-    The wizard configures:
-    • Vector database connection (Qdrant)
-    • Embedding providers (OpenAI, FastEmbed)
-    • Browser automation settings
-    • Caching and performance options
+    Features:
+    • 🎯 Profile-based templates (personal, development, production)
+    • ⚡ Real-time validation with helpful error messages
+    • 🛠️ Smart customization with questionary interactions
+    • 📋 Template preview and comparison
+    • 🔧 Environment-specific optimizations
+
+    \b
+    Available profiles:
+    • personal     - Recommended for individual developers
+    • development  - Local development with debugging
+    • production   - High-performance deployment
+    • testing      - CI/CD and automated testing
+    • local-only   - Privacy-focused, no cloud services
+    • minimal      - Quick start with essential settings
     """
-    wizard = ConfigurationWizard()
+    wizard = ConfigurationWizard(config_dir)
 
     try:
+        # If profile is pre-selected, use it
+        if profile:
+            available_profiles = wizard.profile_manager.list_profiles()
+            if profile not in available_profiles:
+                console.print(
+                    f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
+                )
+                raise click.Abort()
+            wizard.selected_profile = profile
+            console.print(f"[cyan]Using pre-selected profile: {profile}[/cyan]")
+
         config_path = wizard.run_setup()
 
         # Validate the created configuration
-        if Confirm.ask("\nValidate the new configuration?", default=True):
-            from .config import validate_config
+        validate_choice = questionary.confirm(
+            "Validate the new configuration?", default=True
+        ).ask()
 
-            ctx.invoke(validate_config, config_file=config_path)
+        if validate_choice:
+            try:
+                from .config import validate_config
+
+                ctx.invoke(validate_config, config_file=config_path)
+            except ImportError:
+                # Fallback validation using our wizard validator
+                console.print(
+                    "[yellow]Using wizard validation (config command not available)[/yellow]"
+                )
+                config_data = json.loads(config_path.read_text())
+                wizard.validator.validate_and_show_errors(config_data)
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")

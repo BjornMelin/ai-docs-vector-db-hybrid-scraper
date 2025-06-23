@@ -1,8 +1,56 @@
 #!/bin/bash
 # AI Documentation Vector Database Hybrid Scraper Setup Script
-# Optimized for Python 3.13 and uv package manager
+# Optimized for Python 3.13 and uv package manager with profile support
 
 set -e
+
+# Profile-aware setup with modern wizard integration
+PROFILE=""
+SKIP_WIZARD=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --profile|-p)
+            PROFILE="$2"
+            shift 2
+            ;;
+        --skip-wizard)
+            SKIP_WIZARD=true
+            shift
+            ;;
+        --help|-h)
+            echo "AI Documentation Vector Database Hybrid Scraper Setup Script"
+            echo ""
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --profile, -p PROFILE    Use a specific configuration profile"
+            echo "                          (personal, development, production, testing, local-only, minimal)"
+            echo "  --skip-wizard           Skip the configuration wizard"
+            echo "  --help, -h              Show this help message"
+            echo ""
+            echo "Available profiles:"
+            echo "  personal     - Recommended for individual developers (default)"
+            echo "  development  - Local development with debugging enabled"
+            echo "  production   - High-performance production deployment"
+            echo "  testing      - CI/CD pipeline and automated testing"
+            echo "  local-only   - Privacy-focused, no cloud services"
+            echo "  minimal      - Quick start with essential settings only"
+            echo ""
+            echo "Examples:"
+            echo "  $0                        # Interactive wizard (recommended)"
+            echo "  $0 --profile personal     # Quick setup with personal profile"
+            echo "  $0 --profile production   # Production deployment setup"
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 echo "🚀 Setting up AI Documentation Vector Database Hybrid Scraper..."
 
@@ -90,17 +138,48 @@ until curl -s http://localhost:6333/health >/dev/null; do
     sleep 2
 done
 
-echo -e "${GREEN}✅ Setup complete!${NC}"
-echo -e "${YELLOW}🔑 Required API keys:${NC}"
-echo -e "   export OPENAI_API_KEY='your_openai_api_key'"
-echo -e "${YELLOW}🔑 Optional API keys:${NC}"
-echo -e "   export FIRECRAWL_API_KEY='your_firecrawl_api_key'  # For premium scraping"
-echo -e "   export ANTHROPIC_API_KEY='your_anthropic_api_key'  # For browser-use with Claude"
-echo -e "   export GEMINI_API_KEY='your_gemini_api_key'        # For browser-use with Gemini"
+# Run configuration wizard
+if [ "$SKIP_WIZARD" = false ]; then
+    echo -e "${BLUE}🧙 Running configuration wizard...${NC}"
+    if [ -n "$PROFILE" ]; then
+        echo -e "${YELLOW}📋 Using profile: $PROFILE${NC}"
+        uv run python -m src.cli.main setup --profile "$PROFILE"
+    else
+        echo -e "${YELLOW}🎯 Interactive wizard (recommended for first-time setup)${NC}"
+        uv run python -m src.cli.main setup
+    fi
+    echo -e "${GREEN}✅ Configuration complete!${NC}"
+else
+    echo -e "${YELLOW}⚠️ Wizard skipped - you'll need to configure manually${NC}"
+fi
+
 echo ""
-echo -e "${BLUE}🚀 Quick start with UV:${NC}"
-echo -e "   1. Set your API keys (above)"
-echo -e "   2. Run: uv run python src/crawl4ai_bulk_embedder.py"
-echo -e "   3. Configure Claude Desktop with config/claude-mcp-config.json"
+echo -e "${GREEN}✅ Setup complete!${NC}"
+
+# Show profile-specific next steps
+if [ -n "$PROFILE" ]; then
+    echo -e "${BLUE}🎯 Profile '$PROFILE' configured successfully${NC}"
+fi
+
+echo -e "${YELLOW}🔑 API Keys Setup:${NC}"
+if [ -f ".env.$PROFILE" ]; then
+    echo -e "   📄 Environment variables template created: .env.$PROFILE"
+    echo -e "   💡 Edit .env.$PROFILE with your API keys, then:"
+    echo -e "      source .env.$PROFILE"
+else
+    echo -e "   💡 Set these environment variables:"
+fi
+echo -e "   export AI_DOCS__OPENAI__API_KEY='your_openai_api_key'"
+echo -e "${YELLOW}🔑 Optional API keys:${NC}"
+echo -e "   export AI_DOCS__FIRECRAWL__API_KEY='your_firecrawl_api_key'  # For premium scraping"
+echo -e "   export AI_DOCS__ANTHROPIC__API_KEY='your_anthropic_api_key'  # For browser-use with Claude"
+
+echo ""
+echo -e "${BLUE}🚀 Next Steps:${NC}"
+echo -e "   1. Configure your API keys (see above)"
+echo -e "   2. Test configuration: uv run python -m src.cli.main config validate"
+echo -e "   3. Check system status: uv run python -m src.cli.main status"
+echo -e "   4. Create your first collection: uv run python -m src.cli.main database create my-docs"
 echo ""
 echo -e "${GREEN}✨ Using Python $(uv python find --quiet) with UV package manager${NC}"
+echo -e "${BLUE}💡 For help: uv run python -m src.cli.main --help${NC}"
