@@ -7,7 +7,7 @@ from initial document ingestion through final search and discovery.
 import asyncio
 import pytest
 import time
-from typing import Dict, Any
+from typing import Any
 
 from tests.integration.end_to_end.user_journeys.conftest import (
     JourneyStep,

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
 import argparse
 import logging
 
@@ -41,7 +41,7 @@ class SecurityTestRunner:
         )
         self.logger = logging.getLogger(__name__)
 
-    def run_all_security_tests(self, test_categories: Optional[List[str]] = None) -> Dict[str, Any]:
+    def run_all_security_tests(self, test_categories: Optional[list[str]] = None) -> dict[str, Any]:
         """Run all security tests and generate comprehensive report.
         
         Args:
@@ -110,7 +110,7 @@ class SecurityTestRunner:
         self.logger.info(f"Security test suite completed in {results['execution_info']['duration']:.2f} seconds")
         return results
 
-    def _run_input_validation_tests(self) -> Dict[str, Any]:
+    def _run_input_validation_tests(self) -> dict[str, Any]:
         """Run input validation security tests."""
         return self._run_pytest_category("input_validation", [
             "tests/security/input_validation/test_sql_injection.py",
@@ -118,43 +118,43 @@ class SecurityTestRunner:
             "tests/security/input_validation/test_command_injection.py"
         ])
 
-    def _run_authentication_tests(self) -> Dict[str, Any]:
+    def _run_authentication_tests(self) -> dict[str, Any]:
         """Run authentication security tests."""
         return self._run_pytest_category("authentication", [
             "tests/security/authentication/test_jwt_security.py"
         ])
 
-    def _run_authorization_tests(self) -> Dict[str, Any]:
+    def _run_authorization_tests(self) -> dict[str, Any]:
         """Run authorization security tests."""
         return self._run_pytest_category("authorization", [
             "tests/security/authorization/test_access_control.py"
         ])
 
-    def _run_vulnerability_tests(self) -> Dict[str, Any]:
+    def _run_vulnerability_tests(self) -> dict[str, Any]:
         """Run vulnerability scanning tests."""
         return self._run_pytest_category("vulnerability", [
             "tests/security/vulnerability/test_dependency_scanning.py"
         ])
 
-    def _run_penetration_tests(self) -> Dict[str, Any]:
+    def _run_penetration_tests(self) -> dict[str, Any]:
         """Run penetration testing scenarios."""
         return self._run_pytest_category("penetration", [
             "tests/security/penetration/test_api_security.py"
         ])
 
-    def _run_compliance_tests(self) -> Dict[str, Any]:
+    def _run_compliance_tests(self) -> dict[str, Any]:
         """Run compliance validation tests."""
         return self._run_pytest_category("compliance", [
             "tests/security/compliance/test_owasp_top10.py"
         ])
 
-    def _run_encryption_tests(self) -> Dict[str, Any]:
+    def _run_encryption_tests(self) -> dict[str, Any]:
         """Run encryption and data protection tests."""
         return self._run_pytest_category("encryption", [
             "tests/security/encryption/test_data_protection.py"
         ])
 
-    def _run_static_analysis(self) -> Dict[str, Any]:
+    def _run_static_analysis(self) -> dict[str, Any]:
         """Run static security analysis with Bandit."""
         self.logger.info("Running Bandit static security analysis...")
         
@@ -191,7 +191,7 @@ class SecurityTestRunner:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    def _run_dependency_scan(self) -> Dict[str, Any]:
+    def _run_dependency_scan(self) -> dict[str, Any]:
         """Run dependency vulnerability scanning with Safety."""
         self.logger.info("Running Safety dependency vulnerability scan...")
         
@@ -235,7 +235,7 @@ class SecurityTestRunner:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    def _run_pytest_category(self, category: str, test_files: List[str]) -> Dict[str, Any]:
+    def _run_pytest_category(self, category: str, test_files: list[str]) -> dict[str, Any]:
         """Run pytest for a specific security category.
         
         Args:
@@ -336,7 +336,7 @@ class SecurityTestRunner:
         match = re.search(pattern, text)
         return int(match.group(1)) if match else 0
 
-    def _calculate_summary(self, category_results: Dict[str, Any]) -> Dict[str, Any]:
+    def _calculate_summary(self, category_results: dict[str, Any]) -> dict[str, Any]:
         """Calculate overall test summary."""
         total_tests = 0
         total_passed = 0
@@ -370,7 +370,7 @@ class SecurityTestRunner:
             "overall_status": "PASS" if total_failed == 0 and categories_failed == 0 else "FAIL"
         }
 
-    def _generate_recommendations(self, results: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, results: dict[str, Any]) -> list[str]:
         """Generate security recommendations based on test results."""
         recommendations = []
         
@@ -401,7 +401,7 @@ class SecurityTestRunner:
         
         return recommendations
 
-    def _generate_reports(self, results: Dict[str, Any]) -> None:
+    def _generate_reports(self, results: dict[str, Any]) -> None:
         """Generate comprehensive security reports."""
         # JSON report
         json_report_file = self.output_dir / "security_test_results.json"
@@ -416,7 +416,7 @@ class SecurityTestRunner:
         
         self.logger.info(f"Reports generated in {self.output_dir}")
 
-    def _generate_html_report(self, results: Dict[str, Any]) -> None:
+    def _generate_html_report(self, results: dict[str, Any]) -> None:
         """Generate HTML summary report."""
         html_content = f"""
 <!DOCTYPE html>
@@ -493,7 +493,7 @@ class SecurityTestRunner:
         with open(html_report_file, 'w') as f:
             f.write(html_content)
 
-    def _generate_executive_summary(self, results: Dict[str, Any]) -> None:
+    def _generate_executive_summary(self, results: dict[str, Any]) -> None:
         """Generate executive summary report."""
         summary_content = f"""
 SECURITY TEST EXECUTIVE SUMMARY

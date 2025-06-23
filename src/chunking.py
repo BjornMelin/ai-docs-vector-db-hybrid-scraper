@@ -6,8 +6,7 @@ Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST p
 
 import logging
 import re
-from typing import Any
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from src.config import ChunkingConfig
 

@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List
+
 
 
 class TestRunner:
@@ -158,7 +158,7 @@ class TestRunner:
         
         return self._execute_command(cmd)
     
-    def _execute_command(self, cmd: List[str]) -> int:
+    def _execute_command(self, cmd: list[str]) -> int:
         """Execute command and return exit code."""
         print(f"Executing: {' '.join(cmd)}")
         start_time = time.time()

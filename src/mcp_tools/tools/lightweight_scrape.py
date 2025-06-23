@@ -1,8 +1,7 @@
 """Lightweight HTTP scraping tool for MCP server."""
 
 import logging
-from typing import TYPE_CHECKING
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from fastmcp import Context

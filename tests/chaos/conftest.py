@@ -11,7 +11,7 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Callable
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -44,7 +44,7 @@ class ChaosExperiment:
     failure_rate: float  # 0.0 to 1.0
     blast_radius: str  # "single", "service", "system"
     recovery_time_seconds: float
-    success_criteria: List[str]
+    success_criteria: list[str]
     rollback_strategy: str
 
 
@@ -59,9 +59,9 @@ class ExperimentResult:
     failure_injected: bool
     system_recovered: bool
     recovery_time: float
-    success_criteria_met: List[bool]
-    metrics: Dict[str, Any]
-    errors: List[str]
+    success_criteria_met: list[bool]
+    metrics: dict[str, Any]
+    errors: list[str]
 
 
 @pytest.fixture(scope="session")
@@ -295,11 +295,11 @@ def fault_injector():
                 # Clean up the fault
                 self.remove_fault(fault_id)
         
-        def get_active_faults(self) -> Dict[str, Any]:
+        def get_active_faults(self) -> dict[str, Any]:
             """Get information about active faults."""
             return self.active_faults
         
-        def get_fault_history(self) -> List[Dict[str, Any]]:
+        def get_fault_history(self) -> list[dict[str, Any]]:
             """Get history of injected faults."""
             return self.fault_history
     
@@ -320,7 +320,7 @@ def resilience_validator():
             service_func: Callable,
             failure_threshold: int = 5,
             recovery_timeout: float = 30.0
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Validate circuit breaker behavior."""
             results = {
                 "circuit_breaker_triggered": False,
@@ -362,7 +362,7 @@ def resilience_validator():
             service_func: Callable,
             max_retries: int = 3,
             backoff_factor: float = 1.0
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Validate retry behavior."""
             results = {
                 "retry_attempts": 0,
@@ -402,7 +402,7 @@ def resilience_validator():
             self, 
             service_func: Callable,
             fallback_func: Callable
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Validate graceful degradation behavior."""
             results = {
                 "primary_service_failed": False,
@@ -433,7 +433,7 @@ def resilience_validator():
             health_check_func: Callable,
             recovery_timeout: float = 60.0,
             check_interval: float = 1.0
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Measure system recovery time after failure."""
             start_time = time.time()
             recovery_time = None
@@ -458,8 +458,8 @@ def resilience_validator():
         
         def calculate_resilience_score(
             self, 
-            test_results: List[Dict[str, Any]]
-        ) -> Dict[str, Any]:
+            test_results: list[dict[str, Any]]
+        ) -> dict[str, Any]:
             """Calculate overall resilience score."""
             if not test_results:
                 return {"score": 0.0, "breakdown": {}}
@@ -663,7 +663,7 @@ def chaos_experiment_runner():
             self, 
             experiment: ChaosExperiment, 
             target_system: Any
-        ) -> List[bool]:
+        ) -> list[bool]:
             """Evaluate success criteria for the experiment."""
             results = []
             
@@ -687,7 +687,7 @@ def chaos_experiment_runner():
             
             return results
         
-        def get_experiment_summary(self, results: List[ExperimentResult]) -> Dict[str, Any]:
+        def get_experiment_summary(self, results: list[ExperimentResult]) -> dict[str, Any]:
             """Generate summary of experiment results."""
             if not results:
                 return {"total_experiments": 0}

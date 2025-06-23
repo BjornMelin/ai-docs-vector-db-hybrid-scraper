@@ -7,8 +7,7 @@ performance metrics that integrate with the existing function-based services.
 import functools
 import logging
 from collections.abc import Callable
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -129,11 +128,11 @@ def instrument_function(
                     try:
                         # Only record simple types to avoid large attributes
                         for i, arg in enumerate(args[:3]):  # Limit to first 3 args
-                            if isinstance(arg, (str, int, float, bool)):
+                            if isinstance(arg, str | int | float | bool):
                                 span.set_attribute(f"function.arg.{i}", str(arg)[:100])
 
                         for key, value in list(kwargs.items())[:5]:  # Limit to 5 kwargs
-                            if isinstance(value, (str, int, float, bool)):
+                            if isinstance(value, str | int | float | bool):
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
@@ -145,7 +144,7 @@ def instrument_function(
                     span.set_attribute("function.success", True)
 
                     # Record result if requested (be careful with large objects)
-                    if record_result and isinstance(result, (str, int, float, bool)):
+                    if record_result and isinstance(result, str | int | float | bool):
                         span.set_attribute("function.result", str(result)[:100])
 
                     return result
@@ -172,11 +171,11 @@ def instrument_function(
                 if record_args:
                     try:
                         for i, arg in enumerate(args[:3]):
-                            if isinstance(arg, (str, int, float, bool)):
+                            if isinstance(arg, str | int | float | bool):
                                 span.set_attribute(f"function.arg.{i}", str(arg)[:100])
 
                         for key, value in list(kwargs.items())[:5]:
-                            if isinstance(value, (str, int, float, bool)):
+                            if isinstance(value, str | int | float | bool):
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
@@ -187,7 +186,7 @@ def instrument_function(
                     result = func(*args, **kwargs)
                     span.set_attribute("function.success", True)
 
-                    if record_result and isinstance(result, (str, int, float, bool)):
+                    if record_result and isinstance(result, str | int | float | bool):
                         span.set_attribute("function.result", str(result)[:100])
 
                     return result

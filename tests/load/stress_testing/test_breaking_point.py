@@ -8,7 +8,7 @@ thresholds, and response time degradation points.
 import asyncio
 import time
 import statistics
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest

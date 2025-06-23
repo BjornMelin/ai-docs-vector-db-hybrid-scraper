@@ -10,9 +10,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+
 
 import pytest
 import pytest_asyncio
@@ -26,7 +24,7 @@ class TestInfrastructureAsCode:
     
     @pytest.mark.infrastructure
     def test_terraform_configuration_validation(
-        self, mock_infrastructure_config: Dict[str, Any],
+        self, mock_infrastructure_config: dict[str, Any],
         temp_deployment_dir: Path
     ):
         """Test Terraform configuration validation."""
@@ -710,7 +708,7 @@ class TerraformValidator:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    def validate_configuration(self, terraform_file: Path) -> Dict[str, Any]:
+    def validate_configuration(self, terraform_file: Path) -> dict[str, Any]:
         """Validate Terraform configuration file."""
         with open(terraform_file) as f:
             config = json.load(f)
@@ -736,7 +734,7 @@ class TerraformValidator:
 class DockerComposeValidator:
     """Validator for Docker Compose configurations."""
     
-    def validate_configuration(self, compose_file: Path) -> Dict[str, Any]:
+    def validate_configuration(self, compose_file: Path) -> dict[str, Any]:
         """Validate Docker Compose configuration."""
         import yaml
         
@@ -770,7 +768,7 @@ class DockerComposeValidator:
 class KubernetesValidator:
     """Validator for Kubernetes manifests."""
     
-    def validate_manifests(self, manifest_files: List[Path]) -> Dict[str, Any]:
+    def validate_manifests(self, manifest_files: list[Path]) -> dict[str, Any]:
         """Validate Kubernetes manifest files."""
         import yaml
         
@@ -792,7 +790,7 @@ class KubernetesValidator:
             "manifests": manifests,
         }
     
-    def _validate_single_manifest(self, manifest: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_single_manifest(self, manifest: dict[str, Any]) -> dict[str, Any]:
         """Validate a single Kubernetes manifest."""
         kind = manifest.get("kind", "")
         metadata = manifest.get("metadata", {})
@@ -830,7 +828,7 @@ class ContainerProvisioner:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    async def provision_containers(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def provision_containers(self, config: dict[str, Any]) -> dict[str, Any]:
         """Provision containers based on configuration."""
         provisioned_containers = []
         
@@ -859,7 +857,7 @@ class ContainerProvisioner:
 class StorageProvisioner:
     """Provisioner for storage resources."""
     
-    async def provision_storage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def provision_storage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Provision storage volumes."""
         provisioned_volumes = []
         
@@ -888,7 +886,7 @@ class StorageProvisioner:
 class NetworkProvisioner:
     """Provisioner for network resources."""
     
-    async def provision_networks(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def provision_networks(self, config: dict[str, Any]) -> dict[str, Any]:
         """Provision network infrastructure."""
         provisioned_networks = []
         
@@ -916,7 +914,7 @@ class NetworkProvisioner:
 class ScalingManager:
     """Manager for service scaling operations."""
     
-    async def scale_service(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def scale_service(self, config: dict[str, Any]) -> dict[str, Any]:
         """Scale service to specified replica count."""
         # Simulate scaling operation
         await asyncio.sleep(2)
@@ -937,7 +935,7 @@ class ScalingManager:
 class AutoScaler:
     """Auto-scaling manager."""
     
-    async def configure_autoscaling(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def configure_autoscaling(self, config: dict[str, Any]) -> dict[str, Any]:
         """Configure auto-scaling policies."""
         # Simulate autoscaling configuration
         await asyncio.sleep(1)
@@ -951,7 +949,7 @@ class AutoScaler:
             "max_replicas": config["max_replicas"],
         }
     
-    async def simulate_metric_trigger(self, metric_type: str, value: float) -> Dict[str, Any]:
+    async def simulate_metric_trigger(self, metric_type: str, value: float) -> dict[str, Any]:
         """Simulate metric-based scaling trigger."""
         # Simulate metric evaluation
         await asyncio.sleep(0.5)
@@ -978,7 +976,7 @@ class AutoScaler:
 class VerticalScaler:
     """Vertical scaling manager."""
     
-    async def apply_resources(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def apply_resources(self, config: dict[str, Any]) -> dict[str, Any]:
         """Apply resource configuration to service."""
         # Simulate resource application
         await asyncio.sleep(1)
@@ -1001,9 +999,9 @@ class ConnectivityTester:
     """Tester for service connectivity."""
     
     async def test_connectivity(
-        self, services: Dict[str, Dict[str, Any]],
-        expected_connections: List[tuple]
-    ) -> Dict[str, Any]:
+        self, services: dict[str, Dict[str, Any]],
+        expected_connections: list[tuple]
+    ) -> dict[str, Any]:
         """Test connectivity between services."""
         successful_connections = []
         connection_details = []
@@ -1032,7 +1030,7 @@ class ConnectivityTester:
 class LoadBalancerTester:
     """Tester for load balancer functionality."""
     
-    async def test_load_balancer(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_load_balancer(self, config: dict[str, Any]) -> dict[str, Any]:
         """Test load balancer configuration and functionality."""
         # Simulate load balancer testing
         await asyncio.sleep(1)
@@ -1049,7 +1047,7 @@ class LoadBalancerTester:
 class NetworkSecurityTester:
     """Tester for network security configuration."""
     
-    async def test_security_groups(self, security_rules: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def test_security_groups(self, security_rules: list[dict[str, Any]]) -> dict[str, Any]:
         """Test network security group configuration."""
         # Simulate security testing
         await asyncio.sleep(0.5)

@@ -8,8 +8,7 @@ Achieves 60% complexity reduction while maintaining full functionality.
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import Annotated
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends
 from pydantic import BaseModel

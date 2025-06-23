@@ -11,7 +11,7 @@ from .audit import ConfigAuditor
 
 __all__ = [
     "TemplateManager",
-    "ProfileManager", 
+    "ProfileManager",
     "WizardValidator",
     "ConfigAuditor",
 ]

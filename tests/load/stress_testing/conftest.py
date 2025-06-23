@@ -16,7 +16,7 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -35,8 +35,8 @@ class StressTestProfile:
     target_rps: float
     duration_seconds: int
     failure_injection_rate: float = 0.0
-    resource_constraints: Optional[Dict[str, Any]] = None
-    chaos_scenarios: List[str] = field(default_factory=list)
+    resource_constraints: Optional[dict[str, Any]] = None
+    chaos_scenarios: list[str] = field(default_factory=list)
     recovery_validation: bool = True
 
 
@@ -50,7 +50,7 @@ class ChaosScenario:
     intensity: float  # 0.0 to 1.0
     duration: float  # seconds
     recovery_time: float  # seconds
-    target_components: List[str] = field(default_factory=list)
+    target_components: list[str] = field(default_factory=list)
 
 
 class ResourceConstraintManager:
@@ -319,7 +319,7 @@ class FailureInjector:
                 "end_time": time.time(),
             })
     
-    def get_failure_status(self) -> Dict[str, Any]:
+    def get_failure_status(self) -> dict[str, Any]:
         """Get current failure injection status."""
         return {
             "active_failures": len(self.active_failures),
@@ -338,7 +338,7 @@ class StressTestOrchestrator:
         self.monitoring_active = False
         self.test_phases = []
     
-    async def run_chaos_scenario(self, scenario: ChaosScenario) -> Dict[str, Any]:
+    async def run_chaos_scenario(self, scenario: ChaosScenario) -> dict[str, Any]:
         """Run a chaos engineering scenario."""
         logger.info(f"Starting chaos scenario: {scenario.name}")
         
@@ -401,7 +401,7 @@ class StressTestOrchestrator:
         logger.info(f"Completed chaos scenario: {scenario.name}")
         return scenario_result
     
-    async def run_multi_phase_stress_test(self, phases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def run_multi_phase_stress_test(self, phases: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Run multi-phase stress test with different conditions."""
         phase_results = []
         

@@ -11,12 +11,9 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from typing import AsyncGenerator
-from typing import Dict
+from typing import Any, AsyncGenerator
 from typing import Generator
-from typing import List
-from typing import Optional
+
 
 import pytest
 import pytest_asyncio
@@ -85,7 +82,7 @@ class DeploymentTestFixtures:
     """Shared fixtures for deployment testing."""
     
     @staticmethod
-    def get_environment_configs() -> Dict[str, DeploymentEnvironment]:
+    def get_environment_configs() -> dict[str, DeploymentEnvironment]:
         """Get predefined environment configurations."""
         return {
             "development": DeploymentEnvironment(
@@ -149,7 +146,7 @@ def deployment_config() -> DeploymentTestConfig:
 
 
 @pytest.fixture(scope="session")
-def environment_configs() -> Dict[str, DeploymentEnvironment]:
+def environment_configs() -> dict[str, DeploymentEnvironment]:
     """Environment configurations fixture."""
     return DeploymentTestFixtures.get_environment_configs()
 
@@ -157,7 +154,7 @@ def environment_configs() -> Dict[str, DeploymentEnvironment]:
 @pytest.fixture
 def deployment_environment(
     deployment_config: DeploymentTestConfig,
-    environment_configs: Dict[str, DeploymentEnvironment]
+    environment_configs: dict[str, DeploymentEnvironment]
 ) -> DeploymentEnvironment:
     """Current deployment environment fixture."""
     return environment_configs[deployment_config.target_environment]
@@ -179,7 +176,7 @@ def mock_docker_registry() -> Generator[str, None, None]:
 
 
 @pytest.fixture
-def mock_infrastructure_config(temp_deployment_dir: Path) -> Dict[str, Any]:
+def mock_infrastructure_config(temp_deployment_dir: Path) -> dict[str, Any]:
     """Mock infrastructure configuration for testing."""
     config = {
         "terraform": {
@@ -260,7 +257,7 @@ class DeploymentHealthChecker:
         ]
         self.initialized = True
     
-    async def check_health(self, endpoint: str, timeout: int = 30) -> Dict[str, Any]:
+    async def check_health(self, endpoint: str, timeout: int = 30) -> dict[str, Any]:
         """Check health of a specific endpoint."""
         if not self.initialized:
             await self.initialize()
@@ -282,7 +279,7 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.utcnow().isoformat(),
             }
     
-    async def check_all_health(self, timeout: int = 30) -> Dict[str, Dict[str, Any]]:
+    async def check_all_health(self, timeout: int = 30) -> dict[str, Dict[str, Any]]:
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:
@@ -313,10 +310,10 @@ class DeploymentRollbackManager:
     """Manager for deployment rollback operations."""
     
     def __init__(self):
-        self.deployment_history: List[Dict[str, Any]] = []
-        self.current_deployment: Optional[Dict[str, Any]] = None
+        self.deployment_history: list[dict[str, Any]] = []
+        self.current_deployment: Optional[dict[str, Any]] = None
     
-    def record_deployment(self, deployment_info: Dict[str, Any]) -> None:
+    def record_deployment(self, deployment_info: dict[str, Any]) -> None:
         """Record a deployment for rollback capability."""
         deployment_info["timestamp"] = datetime.utcnow().isoformat()
         deployment_info["rollback_available"] = True
@@ -324,7 +321,7 @@ class DeploymentRollbackManager:
         self.deployment_history.append(deployment_info)
         self.current_deployment = deployment_info
     
-    def get_rollback_target(self) -> Optional[Dict[str, Any]]:
+    def get_rollback_target(self) -> Optional[dict[str, Any]]:
         """Get the target deployment for rollback."""
         if len(self.deployment_history) < 2:
             return None
@@ -332,7 +329,7 @@ class DeploymentRollbackManager:
         # Return the second-to-last deployment
         return self.deployment_history[-2]
     
-    async def execute_rollback(self) -> Dict[str, Any]:
+    async def execute_rollback(self) -> dict[str, Any]:
         """Execute deployment rollback."""
         rollback_target = self.get_rollback_target()
         
@@ -368,7 +365,7 @@ class DeploymentRollbackManager:
                 "rollback_time": datetime.utcnow().isoformat(),
             }
     
-    def get_deployment_history(self) -> List[Dict[str, Any]]:
+    def get_deployment_history(self) -> list[dict[str, Any]]:
         """Get deployment history."""
         return self.deployment_history.copy()
 
@@ -381,7 +378,7 @@ class BlueGreenDeploymentManager:
         self.green_env = {"name": "green", "active": True, "healthy": True}
         self.switch_in_progress = False
     
-    async def deploy_to_inactive(self, deployment_info: Dict[str, Any]) -> Dict[str, Any]:
+    async def deploy_to_inactive(self, deployment_info: dict[str, Any]) -> dict[str, Any]:
         """Deploy to the inactive environment."""
         inactive_env = self.blue_env if self.green_env["active"] else self.green_env
         
@@ -409,7 +406,7 @@ class BlueGreenDeploymentManager:
                 "environment": inactive_env["name"],
             }
     
-    async def switch_traffic(self, force: bool = False) -> Dict[str, Any]:
+    async def switch_traffic(self, force: bool = False) -> dict[str, Any]:
         """Switch traffic between blue and green environments."""
         if self.switch_in_progress:
             return {
@@ -454,7 +451,7 @@ class BlueGreenDeploymentManager:
         finally:
             self.switch_in_progress = False
     
-    def get_environment_status(self) -> Dict[str, Any]:
+    def get_environment_status(self) -> dict[str, Any]:
         """Get current environment status."""
         return {
             "blue": self.blue_env.copy(),

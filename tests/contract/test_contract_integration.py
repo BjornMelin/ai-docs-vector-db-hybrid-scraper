@@ -6,7 +6,7 @@ and provides end-to-end contract validation scenarios.
 
 import json
 import pytest
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from src.config import get_config

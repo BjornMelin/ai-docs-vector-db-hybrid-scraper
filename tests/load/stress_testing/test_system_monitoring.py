@@ -16,7 +16,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -41,7 +41,7 @@ class SystemMetrics:
     open_files: int
     tcp_connections: int
     process_count: int
-    load_average: Optional[Tuple[float, float, float]] = None
+    load_average: Optional[tuple[float, float, float]] = None
 
 
 @dataclass
@@ -51,7 +51,7 @@ class ApplicationMetrics:
     timestamp: float
     active_requests: int
     request_queue_size: int
-    response_times: List[float]
+    response_times: list[float]
     error_rate: float
     throughput_rps: float
     cache_hit_rate: float
@@ -78,9 +78,9 @@ class SystemMonitor:
     
     def __init__(self, collection_interval: float = 1.0):
         self.collection_interval = collection_interval
-        self.system_metrics: List[SystemMetrics] = []
-        self.application_metrics: List[ApplicationMetrics] = []
-        self.performance_alerts: List[PerformanceAlert] = []
+        self.system_metrics: list[SystemMetrics] = []
+        self.application_metrics: list[ApplicationMetrics] = []
+        self.performance_alerts: list[PerformanceAlert] = []
         self.monitoring = False
         self.monitor_thread = None
         self.process = psutil.Process()
@@ -142,8 +142,8 @@ class SystemMonitor:
             
             time.sleep(self.collection_interval)
     
-    def _collect_system_metrics(self, last_disk_io: Optional[Tuple[float, float]], 
-                               last_network_io: Optional[Tuple[float, float]]) -> SystemMetrics:
+    def _collect_system_metrics(self, last_disk_io: Optional[tuple[float, float]], 
+                               last_network_io: Optional[tuple[float, float]]) -> SystemMetrics:
         """Collect system-level metrics."""
         # CPU and memory
         cpu_percent = psutil.cpu_percent()
@@ -265,7 +265,7 @@ class SystemMonitor:
             self.performance_alerts.append(alert)
             logger.warning(f"Performance alert: {message}")
     
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of collected metrics."""
         if not self.system_metrics:
             return {"error": "No metrics collected"}
@@ -305,7 +305,7 @@ class SystemMonitor:
         }
     
     @staticmethod
-    def _percentile(data: List[float], percentile: int) -> float:
+    def _percentile(data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
             return 0.0
@@ -349,7 +349,7 @@ class MetricsCollector:
         """Record custom metric."""
         self.custom_metrics[name].append(value)
     
-    def get_performance_analysis(self) -> Dict[str, Any]:
+    def get_performance_analysis(self) -> dict[str, Any]:
         """Get comprehensive performance analysis."""
         if not self.response_times:
             return {"error": "No performance data collected"}
@@ -401,7 +401,7 @@ class MetricsCollector:
         }
     
     @staticmethod
-    def _percentile(data: List[float], percentile: int) -> float:
+    def _percentile(data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
             return 0.0

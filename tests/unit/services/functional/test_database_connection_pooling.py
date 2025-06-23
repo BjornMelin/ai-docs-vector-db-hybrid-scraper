@@ -9,7 +9,7 @@ import asyncio
 import pytest
 import time
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typing import Dict, List, Any
+from typing import Any
 
 import pytest_asyncio
 
@@ -63,7 +63,7 @@ class MockMLScalingPredictor:
         self.latency_reduction = 50.9  # 50.9% latency reduction target
         self.throughput_increase = 887.9  # 887.9% throughput increase target
     
-    def predict_optimal_pool_size(self, current_metrics: Dict[str, Any]) -> int:
+    def predict_optimal_pool_size(self, current_metrics: dict[str, Any]) -> int:
         """Predict optimal pool size based on metrics."""
         self.prediction_calls += 1
         
@@ -77,7 +77,7 @@ class MockMLScalingPredictor:
             return max(base_size // 2, 5)  # Scale down
         return base_size  # No change
     
-    def get_performance_metrics(self) -> Dict[str, float]:
+    def get_performance_metrics(self) -> dict[str, float]:
         """Get performance metrics."""
         return {
             'latency_reduction_percent': self.latency_reduction,

@@ -5,7 +5,7 @@ the global test infrastructure components are functioning properly.
 """
 
 import pytest
-from typing import Dict, Any
+from typing import Any
 
 
 class TestInfrastructureIntegration:

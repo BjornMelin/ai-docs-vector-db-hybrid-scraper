@@ -17,7 +17,7 @@ import asyncio
 import pytest
 import time
 import json
-from typing import Dict, List, Any, Optional, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import dataclass
 from enum import Enum
@@ -38,10 +38,10 @@ class ServiceContract:
     """Service contract definition."""
     service_name: str
     version: ContractVersion
-    endpoints: Dict[str, Dict]
-    data_schemas: Dict[str, Dict]
-    dependencies: List[str]
-    breaking_changes: List[str]
+    endpoints: dict[str, Dict]
+    data_schemas: dict[str, Dict]
+    dependencies: list[str]
+    breaking_changes: list[str]
 
 
 @dataclass
@@ -49,8 +49,8 @@ class ContractValidationResult:
     """Contract validation result."""
     is_valid: bool
     contract_name: str
-    validation_errors: List[str]
-    warnings: List[str]
+    validation_errors: list[str]
+    warnings: list[str]
     compatibility_score: float
 
 
@@ -403,7 +403,7 @@ class TestAPIEndpointContracts:
         class ServiceIntegrationTester:
             def check_integration_compatibility(self, producer_contract: ServiceContract, 
                                               consumer_contract: ServiceContract,
-                                              integration_points: List[Dict]) -> Dict:
+                                              integration_points: list[Dict]) -> Dict:
                 """Check compatibility between service contracts."""
                 compatibility_issues = []
                 compatibility_score = 1.0
@@ -745,7 +745,7 @@ class TestDataSchemaValidation:
                     }
                 }
             
-            def transform_document_to_vector_point(self, document: Dict, embeddings: List[float]) -> Dict:
+            def transform_document_to_vector_point(self, document: Dict, embeddings: list[float]) -> Dict:
                 """Transform document to vector point schema."""
                 return {
                     "id": document["id"],

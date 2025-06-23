@@ -8,7 +8,7 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from contextlib import contextmanager
 import yaml
 import json
@@ -27,7 +27,7 @@ class EnvironmentConfig:
     temp_dir: str
     log_level: str = "INFO"
     debug_mode: bool = False
-    additional_config: Dict[str, Any] = None
+    additional_config: dict[str, Any] = None
     
     def __post_init__(self):
         if self.additional_config is None:
@@ -217,7 +217,7 @@ class ConfigManager:
                 shutil.rmtree(temp_dir, ignore_errors=True)
         self._temp_dirs.clear()
     
-    def get_all_environments(self) -> Dict[str, EnvironmentConfig]:
+    def get_all_environments(self) -> dict[str, EnvironmentConfig]:
         """Get all available test environments.
         
         Returns:
@@ -283,7 +283,7 @@ def get_test_environment(name: Optional[str] = None) -> EnvironmentConfig:
     return _config_manager.get_environment(name)
 
 
-def setup_test_database(environment_name: str = "unit") -> Dict[str, Any]:
+def setup_test_database(environment_name: str = "unit") -> dict[str, Any]:
     """Setup test database for the specified environment.
     
     Args:
@@ -319,7 +319,7 @@ def setup_test_database(environment_name: str = "unit") -> Dict[str, Any]:
     }
 
 
-def cleanup_test_data(environment_name: str = "unit") -> Dict[str, Any]:
+def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
     """Clean up test data for the specified environment.
     
     Args:
@@ -373,7 +373,7 @@ def cleanup_test_data(environment_name: str = "unit") -> Dict[str, Any]:
 
 def create_test_config(
     name: str,
-    overrides: Optional[Dict[str, Any]] = None
+    overrides: Optional[dict[str, Any]] = None
 ) -> EnvironmentConfig:
     """Create a custom test configuration.
     
@@ -446,7 +446,7 @@ def create_test_file(
     return file_path
 
 
-def setup_mock_services(environment_name: str = "unit") -> Dict[str, Any]:
+def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """Setup mock services for testing.
     
     Args:
@@ -487,7 +487,7 @@ def setup_mock_services(environment_name: str = "unit") -> Dict[str, Any]:
     return mock_services
 
 
-def validate_test_environment(environment_name: str) -> Dict[str, Any]:
+def validate_test_environment(environment_name: str) -> dict[str, Any]:
     """Validate a test environment configuration.
     
     Args:

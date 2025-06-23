@@ -18,7 +18,7 @@ import asyncio
 import pytest
 import time
 import random
-from typing import Dict, List, Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch, call
 from dataclasses import dataclass
 
@@ -31,7 +31,7 @@ from src.services.functional.circuit_breaker import CircuitBreaker, CircuitBreak
 @dataclass
 class NetworkPartition:
     """Represents a network partition scenario."""
-    affected_services: List[str]
+    affected_services: list[str]
     partition_type: str  # 'complete', 'intermittent', 'latency'
     duration_seconds: float
     partition_probability: float = 1.0  # For intermittent partitions
@@ -44,7 +44,7 @@ class ServiceNode:
     node_id: str
     health_status: str
     last_heartbeat: float
-    load_metrics: Dict[str, Any]
+    load_metrics: dict[str, Any]
     network_reachable: bool = True
 
 
@@ -612,7 +612,7 @@ class TestServiceDiscoveryAndRegistration:
                 self.request_counts = {}
                 self.response_times = {}
             
-            def round_robin(self, services: List[Dict]) -> Dict:
+            def round_robin(self, services: list[Dict]) -> Dict:
                 """Round-robin load balancing."""
                 if not services:
                     return None
@@ -629,7 +629,7 @@ class TestServiceDiscoveryAndRegistration:
                 
                 return selected_service
             
-            def least_response_time(self, services: List[Dict]) -> Dict:
+            def least_response_time(self, services: list[Dict]) -> Dict:
                 """Least response time load balancing."""
                 if not services:
                     return None
@@ -1169,7 +1169,7 @@ class TestCrossServiceAuthentication:
                 self.audit_logs.append(audit_entry)
                 return audit_entry['audit_id']
             
-            def get_audit_logs(self, event_type: str = None) -> List[Dict]:
+            def get_audit_logs(self, event_type: str = None) -> list[Dict]:
                 """Retrieve audit logs by event type."""
                 if event_type:
                     return [log for log in self.audit_logs if log['event_type'] == event_type]

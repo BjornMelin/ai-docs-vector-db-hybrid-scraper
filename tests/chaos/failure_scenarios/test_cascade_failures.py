@@ -6,7 +6,7 @@ system resilience against failure propagation and system-wide outages.
 
 import asyncio
 import time
-from typing import Dict, Any, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass
 from enum import Enum
@@ -29,7 +29,7 @@ class ServiceNode:
     """Represents a service node in the dependency graph."""
     name: str
     state: ServiceState = ServiceState.HEALTHY
-    dependencies: List[str] = None
+    dependencies: list[str] = None
     failure_threshold: int = 3
     recovery_time: float = 5.0
     circuit_breaker_open: bool = False
@@ -72,7 +72,7 @@ class TestCascadeFailures:
         
         failure_count = {}
         
-        async def simulate_service_call(service_name: str, topology: Dict[str, ServiceNode]):
+        async def simulate_service_call(service_name: str, topology: dict[str, ServiceNode]):
             """Simulate service call with dependency checking."""
             service = topology[service_name]
             
@@ -124,7 +124,7 @@ class TestCascadeFailures:
         failure_counts = {}
         circuit_breakers = {}
         
-        async def resilient_service_call(service_name: str, topology: Dict[str, ServiceNode]):
+        async def resilient_service_call(service_name: str, topology: dict[str, ServiceNode]):
             """Service call with circuit breaker protection."""
             service = topology[service_name]
             

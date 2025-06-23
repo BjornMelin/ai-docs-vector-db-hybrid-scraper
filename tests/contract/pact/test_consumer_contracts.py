@@ -6,7 +6,7 @@ for testing service interactions and API contracts.
 
 import json
 import pytest
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from src.models.api_contracts import SearchRequest, SearchResponse, DocumentRequest

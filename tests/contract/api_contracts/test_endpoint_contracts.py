@@ -6,7 +6,7 @@ backward compatibility, and breaking change detection.
 
 import json
 import pytest
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from datetime import datetime
 

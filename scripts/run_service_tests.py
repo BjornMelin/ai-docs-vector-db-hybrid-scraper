@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 import pytest
 
@@ -37,7 +37,7 @@ class ServiceTestRunner:
         self.test_root = project_root / "tests"
         self.results = {}
         
-    def run_dependency_injection_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_dependency_injection_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run function-based dependency injection tests."""
         print("🔧 Running Dependency Injection Tests...")
         
@@ -65,7 +65,7 @@ class ServiceTestRunner:
         
         return self.results['dependency_injection']
     
-    def run_circuit_breaker_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_circuit_breaker_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run circuit breaker pattern tests."""
         print("⚡ Running Circuit Breaker Tests...")
         
@@ -94,7 +94,7 @@ class ServiceTestRunner:
         
         return self.results['circuit_breaker']
     
-    def run_database_pooling_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_database_pooling_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run database connection pooling and ML-based scaling tests."""
         print("🗄️ Running Database Connection Pooling Tests...")
         
@@ -123,7 +123,7 @@ class ServiceTestRunner:
         
         return self.results['database_pooling']
     
-    def run_browser_monitoring_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_browser_monitoring_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run browser automation tier health monitoring tests."""
         print("🌐 Running Browser Automation Monitoring Tests...")
         
@@ -153,7 +153,7 @@ class ServiceTestRunner:
         
         return self.results['browser_monitoring']
     
-    def run_service_integration_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_service_integration_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run service interaction integration tests."""
         print("🔗 Running Service Integration Tests...")
         
@@ -184,7 +184,7 @@ class ServiceTestRunner:
         
         return self.results['service_integration']
     
-    def run_performance_benchmarks(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_performance_benchmarks(self, verbose: bool = False) -> dict[str, Any]:
         """Run service performance benchmarks."""
         print("🚀 Running Performance Benchmarks...")
         
@@ -214,7 +214,7 @@ class ServiceTestRunner:
         
         return self.results['performance_benchmarks']
     
-    def run_mutation_tests(self, verbose: bool = False) -> Dict[str, Any]:
+    def run_mutation_tests(self, verbose: bool = False) -> dict[str, Any]:
         """Run mutation testing for service logic validation."""
         print("🧬 Running Mutation Tests...")
         
@@ -243,7 +243,7 @@ class ServiceTestRunner:
         
         return self.results['mutation_testing']
     
-    def run_coverage_analysis(self) -> Dict[str, Any]:
+    def run_coverage_analysis(self) -> dict[str, Any]:
         """Run comprehensive coverage analysis."""
         print("📊 Running Coverage Analysis...")
         
@@ -274,7 +274,7 @@ class ServiceTestRunner:
     def run_all_tests(self, 
                      verbose: bool = False,
                      include_benchmarks: bool = True,
-                     include_mutation: bool = False) -> Dict[str, Any]:
+                     include_mutation: bool = False) -> dict[str, Any]:
         """Run all service layer tests.
         
         Args:

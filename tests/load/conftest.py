@@ -10,7 +10,7 @@ import statistics
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable
 from unittest.mock import AsyncMock
 
 import pytest
@@ -38,7 +38,7 @@ class LoadTestConfig:
     ramp_up_seconds: float = 0
     ramp_down_seconds: float = 0
     data_size_mb: float = 0
-    success_criteria: Dict[str, Any] = field(default_factory=dict)
+    success_criteria: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,14 +48,14 @@ class LoadTestMetrics:
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
-    response_times: List[float] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+    response_times: list[float] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     throughput_rps: float = 0.0
     start_time: float = 0.0
     end_time: float = 0.0
     peak_concurrent_users: int = 0
-    memory_usage_mb: List[float] = field(default_factory=list)
-    cpu_usage_percent: List[float] = field(default_factory=list)
+    memory_usage_mb: list[float] = field(default_factory=list)
+    cpu_usage_percent: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -67,8 +67,8 @@ class LoadTestResult:
     metrics: LoadTestMetrics
     success: bool = False
     performance_grade: str = "F"
-    bottlenecks_identified: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    bottlenecks_identified: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
 
 @pytest.fixture(scope="session")
@@ -482,7 +482,7 @@ def load_test_runner():
             else:
                 return "F"
         
-        def _identify_bottlenecks(self, result: LoadTestResult) -> List[str]:
+        def _identify_bottlenecks(self, result: LoadTestResult) -> list[str]:
             """Identify performance bottlenecks from test results."""
             bottlenecks = []
             metrics = result.metrics
@@ -512,7 +512,7 @@ def load_test_runner():
             
             return bottlenecks
         
-        def _generate_recommendations(self, result: LoadTestResult) -> List[str]:
+        def _generate_recommendations(self, result: LoadTestResult) -> list[str]:
             """Generate recommendations based on test results."""
             recommendations = []
             bottlenecks = result.bottlenecks_identified
@@ -538,7 +538,7 @@ def load_test_runner():
             return list(set(recommendations))
         
         @staticmethod
-        def _percentile(data: List[float], percentile: int) -> float:
+        def _percentile(data: list[float], percentile: int) -> float:
             """Calculate percentile of data."""
             if not data:
                 return 0.0
@@ -547,7 +547,7 @@ def load_test_runner():
             index = int(len(sorted_data) * percentile / 100)
             return sorted_data[min(index, len(sorted_data) - 1)]
         
-        def generate_load_test_report(self, results: List[LoadTestResult]) -> Dict[str, Any]:
+        def generate_load_test_report(self, results: list[LoadTestResult]) -> dict[str, Any]:
             """Generate comprehensive load test report."""
             if not results:
                 return {"error": "No test results provided"}

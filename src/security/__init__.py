@@ -13,9 +13,15 @@ from .ml_security import MLSecurityValidator
 from .ml_security import SecurityCheckResult
 from .ml_security import SimpleRateLimiter
 
+# Add aliases for test compatibility
+SecurityError = Exception  # Simple alias for backward compatibility
+SecurityValidator = MLSecurityValidator  # Alias for test compatibility
+
 __all__ = [
     "MLSecurityValidator",
     "MinimalMLSecurityConfig",
     "SecurityCheckResult",
     "SimpleRateLimiter",
+    "SecurityError",
+    "SecurityValidator",
 ]

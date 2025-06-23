@@ -10,7 +10,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -44,7 +44,7 @@ class CircuitBreakerMetrics:
     failed_requests: int = 0
     circuit_opened_count: int = 0
     circuit_closed_count: int = 0
-    state_changes: List[Dict[str, Any]] = field(default_factory=list)
+    state_changes: list[dict[str, Any]] = field(default_factory=list)
     rejection_count: int = 0
 
 
@@ -162,7 +162,7 @@ class RateLimiterMetrics:
     rejected_requests: int = 0
     current_rate: float = 0.0
     peak_rate: float = 0.0
-    time_windows: List[Dict[str, Any]] = field(default_factory=list)
+    time_windows: list[dict[str, Any]] = field(default_factory=list)
 
 
 class MockRateLimiter:

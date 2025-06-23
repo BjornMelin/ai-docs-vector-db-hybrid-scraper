@@ -7,7 +7,7 @@ under sudden traffic spikes and auto-scaling scenarios.
 import asyncio
 import logging
 import time
-from typing import Dict, List, Optional
+
 
 import pytest
 from locust.env import Environment
@@ -416,7 +416,7 @@ class TestSpikeLoad:
             "recovery_avg": recovery_avg * 1000,
         }
     
-    def _analyze_double_spike_recovery(self, metrics: List[Dict]) -> Dict:
+    def _analyze_double_spike_recovery(self, metrics: list[Dict]) -> Dict:
         """Analyze recovery between double spikes."""
         if len(metrics) < 10:
             return {
@@ -449,7 +449,7 @@ class TestSpikeLoad:
             "error_spikes": error_spikes,
         }
     
-    def _analyze_auto_scaling(self, utilization_history: List[Dict]) -> Dict:
+    def _analyze_auto_scaling(self, utilization_history: list[Dict]) -> Dict:
         """Analyze auto-scaling effectiveness."""
         if not utilization_history:
             return {"scaling_events": 0, "peak_capacity": 100, "avg_utilization": 0}
@@ -471,7 +471,7 @@ class TestSpikeLoad:
             "capacity_variance": max(capacities) - min(capacities),
         }
     
-    def _analyze_circuit_breaker(self, events: List[Dict]) -> Dict:
+    def _analyze_circuit_breaker(self, events: list[Dict]) -> Dict:
         """Analyze circuit breaker effectiveness."""
         open_events = [e for e in events if e["event"] == "OPEN"]
         closed_events = [e for e in events if e["event"] == "CLOSED"]
@@ -489,7 +489,7 @@ class TestSpikeLoad:
             "total_events": len(events),
         }
     
-    def _analyze_connection_pool(self, metrics: List[Dict]) -> Dict:
+    def _analyze_connection_pool(self, metrics: list[Dict]) -> Dict:
         """Analyze database connection pool behavior."""
         if not metrics:
             return {"max_pool_size": 0, "max_queue_length": 0, "avg_utilization": 0}

@@ -9,7 +9,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Type, TypeVar
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -18,8 +18,8 @@ T = TypeVar('T')
 
 
 def assert_valid_response(
-    response: Dict[str, Any],
-    expected_keys: Optional[List[str]] = None,
+    response: dict[str, Any],
+    expected_keys: Optional[list[str]] = None,
     status_key: str = "status",
     expected_status: str = "success"
 ) -> None:
@@ -46,7 +46,7 @@ def assert_valid_response(
 
 
 def assert_error_response(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     expected_error_type: Optional[str] = None,
     error_key: str = "error",
     message_key: str = "message"
@@ -74,7 +74,7 @@ def assert_error_response(
 
 
 def assert_pagination_response(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     items_key: str = "items",
     total_key: str = "total",
     page_key: str = "page",
@@ -114,7 +114,7 @@ class AssertionHelpers:
     """Collection of advanced assertion utilities for testing."""
     
     @staticmethod
-    def assert_document_structure(document: Dict[str, Any]) -> None:
+    def assert_document_structure(document: dict[str, Any]) -> None:
         """Assert that a document has the expected structure.
         
         Args:
@@ -130,7 +130,7 @@ class AssertionHelpers:
         assert isinstance(document["metadata"], dict), "Document metadata must be a dictionary"
     
     @staticmethod
-    def assert_search_result(result: Dict[str, Any], min_score: float = 0.0) -> None:
+    def assert_search_result(result: dict[str, Any], min_score: float = 0.0) -> None:
         """Assert that a search result has proper structure and score.
         
         Args:
@@ -146,7 +146,7 @@ class AssertionHelpers:
         assert result["score"] <= 1.0, f"Score {result['score']} above maximum 1.0"
     
     @staticmethod
-    def assert_embedding_vector(vector: List[float], expected_dimension: int) -> None:
+    def assert_embedding_vector(vector: list[float], expected_dimension: int) -> None:
         """Assert that an embedding vector has correct structure.
         
         Args:
@@ -181,7 +181,7 @@ class AssertionHelpers:
         )
     
     @staticmethod
-    def assert_configuration_valid(config: Dict[str, Any], required_sections: List[str]) -> None:
+    def assert_configuration_valid(config: dict[str, Any], required_sections: list[str]) -> None:
         """Assert that a configuration dictionary is valid.
         
         Args:
@@ -214,7 +214,7 @@ class AssertionHelpers:
     
     @staticmethod
     def assert_timestamp_recent(
-        timestamp: Union[str, datetime, float],
+        timestamp: str | datetime | float,
         max_age_seconds: float = 60.0
     ) -> None:
         """Assert that a timestamp is recent (within specified age).
@@ -249,9 +249,9 @@ class AssertionHelpers:
 # New standardized assertion helpers
 
 def assert_successful_response(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     expected_data: Any = None,
-    required_fields: Optional[List[str]] = None
+    required_fields: Optional[list[str]] = None
 ) -> None:
     """Assert that response indicates success with optional data validation.
     
@@ -280,7 +280,7 @@ def assert_successful_response(
 
 
 def assert_error_response_standardized(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     expected_error_code: Optional[str] = None,
     expected_message_fragment: Optional[str] = None,
     should_have_details: bool = False
@@ -320,8 +320,8 @@ def assert_error_response_standardized(
 
 
 def assert_valid_document_chunk(
-    chunk: Dict[str, Any],
-    required_fields: Optional[List[str]] = None
+    chunk: dict[str, Any],
+    required_fields: Optional[list[str]] = None
 ) -> None:
     """Assert that document chunk has all required fields and valid values.
     
@@ -350,9 +350,9 @@ def assert_valid_document_chunk(
 
 
 def assert_valid_vector_point(
-    point: Dict[str, Any],
+    point: dict[str, Any],
     expected_vector_dim: Optional[int] = None,
-    required_payload_fields: Optional[List[str]] = None
+    required_payload_fields: Optional[list[str]] = None
 ) -> None:
     """Assert that vector point has valid structure and content.
     
@@ -431,8 +431,8 @@ def assert_memory_usage_within_limit(
 
 
 def assert_mock_called_with_pattern(
-    mock_obj: Union[MagicMock, AsyncMock],
-    expected_calls: List[Dict[str, Any]],
+    mock_obj: MagicMock | AsyncMock,
+    expected_calls: list[dict[str, Any]],
     exact_match: bool = False
 ) -> None:
     """Assert that mock was called with expected pattern.
@@ -508,7 +508,7 @@ async def assert_async_operation_completes(
 
 
 def assert_collection_has_size(
-    collection: Union[List, Dict, str],
+    collection: List | Dict | str,
     expected_size: int,
     collection_name: str = "Collection"
 ) -> None:
@@ -530,7 +530,7 @@ def assert_collection_has_size(
 
 
 def assert_all_items_have_type(
-    collection: List[Any],
+    collection: list[Any],
     expected_type: Type[T],
     collection_name: str = "Collection"
 ) -> None:
@@ -552,8 +552,8 @@ def assert_all_items_have_type(
 
 
 def assert_security_headers_present(
-    headers: Dict[str, str],
-    required_headers: Optional[List[str]] = None
+    headers: dict[str, str],
+    required_headers: Optional[list[str]] = None
 ) -> None:
     """Assert that security headers are present in HTTP response.
     
@@ -605,7 +605,7 @@ def assert_api_rate_limit_respected(
 
 
 def assert_accessibility_compliant(
-    accessibility_report: Dict[str, Any],
+    accessibility_report: dict[str, Any],
     max_violations: int = 0,
     severity_threshold: str = "minor"
 ) -> None:
@@ -639,8 +639,8 @@ def assert_accessibility_compliant(
 
 
 def assert_contract_compliance(
-    actual_response: Dict[str, Any],
-    expected_schema: Dict[str, Any],
+    actual_response: dict[str, Any],
+    expected_schema: dict[str, Any],
     strict_mode: bool = True
 ) -> None:
     """Assert that API response complies with contract schema.

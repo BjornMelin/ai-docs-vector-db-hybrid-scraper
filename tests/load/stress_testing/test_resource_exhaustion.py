@@ -18,7 +18,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -44,13 +44,13 @@ class ResourceConstraints:
 class ResourceMetrics:
     """Track resource usage metrics during tests."""
     
-    memory_usage_mb: List[float] = field(default_factory=list)
-    cpu_usage_percent: List[float] = field(default_factory=list)
-    connection_count: List[int] = field(default_factory=list)
-    file_descriptor_count: List[int] = field(default_factory=list)
-    network_io_mb: List[float] = field(default_factory=list)
-    gc_collections: List[int] = field(default_factory=list)
-    timestamps: List[float] = field(default_factory=list)
+    memory_usage_mb: list[float] = field(default_factory=list)
+    cpu_usage_percent: list[float] = field(default_factory=list)
+    connection_count: list[int] = field(default_factory=list)
+    file_descriptor_count: list[int] = field(default_factory=list)
+    network_io_mb: list[float] = field(default_factory=list)
+    gc_collections: list[int] = field(default_factory=list)
+    timestamps: list[float] = field(default_factory=list)
 
 
 class ResourceMonitor:
@@ -128,7 +128,7 @@ class ResourceMonitor:
             
             time.sleep(self.interval)
     
-    def get_peak_usage(self) -> Dict[str, float]:
+    def get_peak_usage(self) -> dict[str, float]:
         """Get peak resource usage values."""
         return {
             "peak_memory_mb": max(self.metrics.memory_usage_mb) if self.metrics.memory_usage_mb else 0,

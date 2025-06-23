@@ -5,7 +5,7 @@ following 2025 standardized patterns with proper type annotations, standardized
 assertions, and modern test patterns.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 
@@ -478,7 +478,7 @@ var anotherVar = "test";
             chunker: EnhancedChunker instance for testing
         """
         content = "Some text\n```python\ndef hello():\n    pass\n```\nMore text"
-        chunks: List[Chunk] = []
+        chunks: list[Chunk] = []
         code_block = CodeBlock(
             content="def hello():\n    pass",
             start_pos=10,

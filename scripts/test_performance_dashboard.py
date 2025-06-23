@@ -7,9 +7,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
+
+
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -83,7 +82,7 @@ class TestPerformanceDatabase:
             ))
             return cursor.lastrowid
     
-    def record_test_timings(self, run_id: int, timings: List[Dict]):
+    def record_test_timings(self, run_id: int, timings: list[Dict]):
         """Record individual test timings."""
         with sqlite3.connect(self.db_path) as conn:
             conn.executemany("""
@@ -107,7 +106,7 @@ class TestPerformanceDatabase:
                 time.time(), alert_type, test_name, current, baseline, threshold, message
             ))
     
-    def get_recent_runs(self, days: int = 30) -> List[Dict]:
+    def get_recent_runs(self, days: int = 30) -> list[Dict]:
         """Get recent test runs."""
         cutoff = time.time() - (days * 24 * 3600)
         
@@ -121,7 +120,7 @@ class TestPerformanceDatabase:
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
     
-    def get_test_history(self, test_name: str, days: int = 30) -> List[Dict]:
+    def get_test_history(self, test_name: str, days: int = 30) -> list[Dict]:
         """Get performance history for a specific test."""
         cutoff = time.time() - (days * 24 * 3600)
         
@@ -191,7 +190,7 @@ class PerformanceRegressionDetector:
             "minimum_runs": 5,  # Minimum runs to establish baseline
         }
     
-    def detect_regressions(self, current_results: Dict) -> List[Dict]:
+    def detect_regressions(self, current_results: Dict) -> list[Dict]:
         """Detect performance regressions in current test run."""
         regressions = []
         
@@ -241,7 +240,7 @@ class PerformanceRegressionDetector:
         
         return regressions
     
-    def record_regressions(self, regressions: List[Dict]):
+    def record_regressions(self, regressions: list[Dict]):
         """Record detected regressions as alerts."""
         for regression in regressions:
             self.db.record_alert(

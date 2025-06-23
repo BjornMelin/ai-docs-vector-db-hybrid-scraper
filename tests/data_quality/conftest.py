@@ -12,7 +12,7 @@ import statistics
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,7 +30,7 @@ class DataQualityRule:
     field_name: Optional[str] = None
     threshold: Optional[float] = None
     pattern: Optional[str] = None
-    reference_data: Optional[Dict[str, Any]] = None
+    reference_data: Optional[dict[str, Any]] = None
 
 
 @dataclass
@@ -43,8 +43,8 @@ class DataQualityResult:
     total_records: int
     failed_records: int
     passed_records: int
-    details: Dict[str, Any] = field(default_factory=dict)
-    errors: List[str] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
+    errors: list[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
 
 
@@ -57,7 +57,7 @@ class DataIntegrityCheck:
     check_type: str  # "referential", "domain", "format", "range"
     table_name: str
     column_name: str
-    constraint: Dict[str, Any]
+    constraint: dict[str, Any]
     severity: str = "high"
     auto_fix: bool = False
 
@@ -136,7 +136,7 @@ def data_quality_validator():
             """Add a data quality rule."""
             self.rules[rule.rule_id] = rule
         
-        def validate_completeness(self, data: List[Dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
+        def validate_completeness(self, data: list[dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
             """Validate data completeness."""
             total_records = len(data)
             
@@ -172,7 +172,7 @@ def data_quality_validator():
                 }
             )
         
-        def validate_validity(self, data: List[Dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
+        def validate_validity(self, data: list[dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
             """Validate data validity (format, type, pattern)."""
             total_records = len(data)
             failed_records = 0
@@ -233,7 +233,7 @@ def data_quality_validator():
                 errors=validation_errors[:10],  # Limit to first 10 errors
             )
         
-        def validate_uniqueness(self, data: List[Dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
+        def validate_uniqueness(self, data: list[dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
             """Validate data uniqueness."""
             total_records = len(data)
             
@@ -272,7 +272,7 @@ def data_quality_validator():
                 }
             )
         
-        def validate_consistency(self, data: List[Dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
+        def validate_consistency(self, data: list[dict[str, Any]], rule: DataQualityRule) -> DataQualityResult:
             """Validate data consistency across fields or records."""
             total_records = len(data)
             failed_records = 0
@@ -321,7 +321,7 @@ def data_quality_validator():
                 errors=consistency_errors[:10],
             )
         
-        def run_all_validations(self, data: List[Dict[str, Any]]) -> List[DataQualityResult]:
+        def run_all_validations(self, data: list[dict[str, Any]]) -> list[DataQualityResult]:
             """Run all registered validation rules."""
             results = []
             
@@ -351,7 +351,7 @@ def data_quality_validator():
             
             return results
         
-        def generate_data_profile(self, data: List[Dict[str, Any]], dataset_name: str) -> Dict[str, Any]:
+        def generate_data_profile(self, data: list[dict[str, Any]], dataset_name: str) -> dict[str, Any]:
             """Generate comprehensive data profile."""
             if not data:
                 return {"error": "No data provided for profiling"}
@@ -444,7 +444,7 @@ def data_integrity_checker():
             """Add an integrity check."""
             self.checks[check.check_id] = check
         
-        def check_referential_integrity(self, data: List[Dict[str, Any]], reference_data: List[Dict[str, Any]], check: DataIntegrityCheck) -> Dict[str, Any]:
+        def check_referential_integrity(self, data: list[dict[str, Any]], reference_data: list[dict[str, Any]], check: DataIntegrityCheck) -> dict[str, Any]:
             """Check referential integrity between datasets."""
             foreign_key = check.constraint.get("foreign_key")
             reference_key = check.constraint.get("reference_key", foreign_key)
@@ -476,7 +476,7 @@ def data_integrity_checker():
                 "status": "pass" if len(violations) == 0 else "fail"
             }
         
-        def check_domain_integrity(self, data: List[Dict[str, Any]], check: DataIntegrityCheck) -> Dict[str, Any]:
+        def check_domain_integrity(self, data: list[dict[str, Any]], check: DataIntegrityCheck) -> dict[str, Any]:
             """Check domain integrity (valid values)."""
             field_name = check.column_name
             allowed_values = check.constraint.get("allowed_values", [])
@@ -502,7 +502,7 @@ def data_integrity_checker():
                 "status": "pass" if len(violations) == 0 else "fail"
             }
         
-        def check_format_integrity(self, data: List[Dict[str, Any]], check: DataIntegrityCheck) -> Dict[str, Any]:
+        def check_format_integrity(self, data: list[dict[str, Any]], check: DataIntegrityCheck) -> dict[str, Any]:
             """Check format integrity (regex patterns)."""
             field_name = check.column_name
             pattern = check.constraint.get("pattern")
@@ -534,7 +534,7 @@ def data_integrity_checker():
                 "status": "pass" if len(violations) == 0 else "fail"
             }
         
-        def run_all_checks(self, data: List[Dict[str, Any]], reference_datasets: Dict[str, List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        def run_all_checks(self, data: list[dict[str, Any]], reference_datasets: dict[str, list[Dict[str, Any]]] = None) -> list[dict[str, Any]]:
             """Run all registered integrity checks."""
             results = []
             reference_datasets = reference_datasets or {}
@@ -574,7 +574,7 @@ def mock_data_generator():
             self.seed = 42
             random.seed(self.seed)
         
-        def generate_document_records(self, count: int = 100, introduce_quality_issues: bool = False) -> List[Dict[str, Any]]:
+        def generate_document_records(self, count: int = 100, introduce_quality_issues: bool = False) -> list[dict[str, Any]]:
             """Generate mock document records."""
             records = []
             
@@ -623,7 +623,7 @@ def mock_data_generator():
             
             return records
         
-        def generate_user_records(self, count: int = 50) -> List[Dict[str, Any]]:
+        def generate_user_records(self, count: int = 50) -> list[dict[str, Any]]:
             """Generate mock user records."""
             records = []
             

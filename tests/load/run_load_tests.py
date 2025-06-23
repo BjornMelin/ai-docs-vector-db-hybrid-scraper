@@ -12,7 +12,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -148,7 +148,7 @@ class LoadTestRunner:
             
             return {"status": "completed_web_mode"}
     
-    def run_pytest_load_tests(self, test_type: str = "all", markers: List[str] = None) -> Dict:
+    def run_pytest_load_tests(self, test_type: str = "all", markers: list[str] = None) -> Dict:
         """Run load tests using pytest."""
         logger.info(f"Running pytest load tests: {test_type}")
         
@@ -238,7 +238,7 @@ class LoadTestRunner:
                 "scenario_file": scenario_file,
             }
     
-    def benchmark_endpoints(self, endpoints: List[str], config: Dict) -> Dict:
+    def benchmark_endpoints(self, endpoints: list[str], config: Dict) -> Dict:
         """Benchmark specific endpoints."""
         logger.info(f"Benchmarking endpoints: {endpoints}")
         
@@ -477,7 +477,7 @@ class LoadTestRunner:
         else:
             return "F"
     
-    def _generate_recommendations(self, stats) -> List[str]:
+    def _generate_recommendations(self, stats) -> list[str]:
         """Generate performance recommendations based on test results."""
         recommendations = []
         
@@ -508,7 +508,7 @@ class LoadTestRunner:
         
         return recommendations
     
-    def _percentile(self, data: List[float], percentile: int) -> float:
+    def _percentile(self, data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
             return 0.0

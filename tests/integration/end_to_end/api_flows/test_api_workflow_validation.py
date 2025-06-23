@@ -8,7 +8,7 @@ import asyncio
 import json
 import pytest
 import time
-from typing import Dict, Any, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 try:
@@ -46,7 +46,7 @@ class TestAPIWorkflowValidation:
                     "message": message,
                 }
             
-            async def request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+            async def request(self, method: str, endpoint: str, **kwargs) -> dict[str, Any]:
                 """Mock API request."""
                 start_time = time.perf_counter()
                 
@@ -76,7 +76,7 @@ class TestAPIWorkflowValidation:
                 # Generate mock responses based on endpoint
                 return await self._generate_mock_response(method, endpoint, **kwargs)
             
-            async def _generate_mock_response(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+            async def _generate_mock_response(self, method: str, endpoint: str, **kwargs) -> dict[str, Any]:
                 """Generate appropriate mock response based on endpoint."""
                 base_response = {
                     "status": "success",
@@ -245,7 +245,7 @@ class TestAPIWorkflowValidation:
                         "message": f"Mock response for {method} {endpoint}",
                     }
             
-            def get_request_history(self) -> List[Dict[str, Any]]:
+            def get_request_history(self) -> list[dict[str, Any]]:
                 """Get history of all requests made."""
                 return self.request_history.copy()
             

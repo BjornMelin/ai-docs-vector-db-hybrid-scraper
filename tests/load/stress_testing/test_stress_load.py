@@ -7,7 +7,7 @@ and behavior under extreme load conditions.
 import asyncio
 import logging
 import time
-from typing import Dict, List, Optional
+
 
 import pytest
 from locust.env import Environment
@@ -331,7 +331,7 @@ class TestStressLoad:
         # Simulate I/O wait
         return asyncio.sleep(random.uniform(0.05, 0.5))
     
-    def _analyze_degradation(self, step_metrics: List[Dict]) -> Dict:
+    def _analyze_degradation(self, step_metrics: list[Dict]) -> Dict:
         """Analyze system degradation pattern."""
         if len(step_metrics) < 3:
             return {"is_gradual": False, "failure_point": None}
@@ -375,7 +375,7 @@ class TestStressLoad:
             "recovery_avg_response": recovery_avg,
         }
     
-    def _analyze_memory_usage(self, memory_samples: List[Dict]) -> Dict:
+    def _analyze_memory_usage(self, memory_samples: list[Dict]) -> Dict:
         """Analyze memory usage for leak detection."""
         if len(memory_samples) < 10:
             return {"leak_detected": False, "insufficient_data": True}

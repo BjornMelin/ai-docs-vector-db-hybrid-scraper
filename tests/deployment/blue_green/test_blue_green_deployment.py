@@ -7,7 +7,6 @@ switching, traffic routing, health checks, and zero-downtime deployment validati
 import asyncio
 from datetime import datetime
 from typing import Any
-from typing import Dict
 
 import pytest
 import pytest_asyncio
@@ -465,7 +464,7 @@ class BlueGreenTester:
     
     async def validate_environment_health(
         self, bg_manager: BlueGreenDeploymentManager
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate environment health before switch."""
         await asyncio.sleep(1)
         
@@ -482,7 +481,7 @@ class BlueGreenTester:
     
     async def check_switch_readiness(
         self, bg_manager: BlueGreenDeploymentManager
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if environment is ready for traffic switch."""
         await asyncio.sleep(0.5)
         
@@ -519,7 +518,7 @@ class ZeroDowntimeTester:
             "start_time": datetime.utcnow(),
         }
     
-    async def monitor_service_availability(self) -> Dict[str, Any]:
+    async def monitor_service_availability(self) -> dict[str, Any]:
         """Monitor service availability during deployment."""
         try:
             while True:
@@ -536,7 +535,7 @@ class ZeroDowntimeTester:
         except asyncio.CancelledError:
             return self.get_availability_report()
     
-    def get_availability_report(self) -> Dict[str, Any]:
+    def get_availability_report(self) -> dict[str, Any]:
         """Get availability report."""
         total_time = (datetime.utcnow() - self.availability_data["start_time"]).total_seconds()
         
@@ -552,7 +551,7 @@ class ZeroDowntimeTester:
 class GradualTrafficRouter:
     """Router for gradual traffic switching."""
     
-    async def execute_gradual_switch(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_gradual_switch(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute gradual traffic switch."""
         step_results = []
         
@@ -603,7 +602,7 @@ class GradualTrafficRouter:
 class LoadBalancerConfigurator:
     """Configurator for load balancer in blue-green deployments."""
     
-    async def reconfigure_for_switch(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def reconfigure_for_switch(self, config: dict[str, Any]) -> dict[str, Any]:
         """Reconfigure load balancer for environment switch."""
         await asyncio.sleep(2)
         
@@ -615,7 +614,7 @@ class LoadBalancerConfigurator:
             "switch_duration_seconds": 3,
         }
     
-    async def get_load_balancer_status(self) -> Dict[str, Any]:
+    async def get_load_balancer_status(self) -> dict[str, Any]:
         """Get current load balancer status."""
         await asyncio.sleep(0.5)
         
@@ -632,7 +631,7 @@ class StatefulServiceManager:
     
     async def coordinate_stateful_services(
         self, services: list, source_env: str, target_env: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Coordinate stateful services during deployment."""
         await asyncio.sleep(3)
         
@@ -656,8 +655,8 @@ class DatabaseMigrationCoordinator:
     """Coordinator for database migrations in blue-green deployments."""
     
     async def coordinate_migration(
-        self, migration_config: Dict[str, Any], source_env: str, target_env: str
-    ) -> Dict[str, Any]:
+        self, migration_config: dict[str, Any], source_env: str, target_env: str
+    ) -> dict[str, Any]:
         """Coordinate database migration."""
         await asyncio.sleep(4)
         
@@ -668,7 +667,7 @@ class DatabaseMigrationCoordinator:
             "migration_duration_seconds": 45,
         }
     
-    async def test_rollback_capability(self, migration_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_rollback_capability(self, migration_config: dict[str, Any]) -> dict[str, Any]:
         """Test migration rollback capability."""
         await asyncio.sleep(2)
         

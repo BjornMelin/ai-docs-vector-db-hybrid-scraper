@@ -8,8 +8,7 @@ import asyncio
 import functools
 import time
 from collections.abc import Callable
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import psutil
 from prometheus_client import Counter

@@ -6,7 +6,7 @@ validating system performance under expected user loads.
 
 import logging
 import os
-from typing import Dict, List
+
 
 import pytest
 from locust import events

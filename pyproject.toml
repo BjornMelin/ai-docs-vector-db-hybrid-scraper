@@ -388,4 +388,6 @@ dev = [
     "hypothesis>=6.135.14",
     "pytest-xdist>=3.7.0",
     "mutmut>=2.5.1",
+    "locust>=2.37.10",
+    "pyjwt>=2.10.1",
 ]

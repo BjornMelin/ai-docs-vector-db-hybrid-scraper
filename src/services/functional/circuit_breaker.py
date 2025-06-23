@@ -9,7 +9,8 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Any, TypeVar, Awaitable
+from typing import Any, TypeVar
+from collections.abc import Callable, Awaitable
 from functools import wraps
 
 from fastapi import Request, Response
@@ -17,41 +18,43 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class CircuitBreakerState(Enum):
     """Circuit breaker states."""
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Blocking requests
+
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Blocking requests
     HALF_OPEN = "half_open"  # Testing recovery
 
 
 @dataclass
 class CircuitBreakerConfig:
     """Circuit breaker configuration.
-    
+
     Supports both simple and enterprise modes based on environment.
     """
+
     # Core settings
     failure_threshold: int = 5
     recovery_timeout: int = 60  # seconds
     test_request_timeout: int = 30  # seconds
-    
+
     # Enterprise features (enabled based on environment)
     enable_metrics: bool = True
     enable_fallback: bool = True
     enable_adaptive_timeout: bool = False
-    
+
     # Exception handling
     monitored_exceptions: tuple[type[Exception], ...] = field(
         default_factory=lambda: (Exception,)
     )
-    
+
     # Metrics
     failure_rate_threshold: float = 0.5  # 50% failure rate
     min_requests_for_rate: int = 10
-    
+
     @classmethod
     def simple_mode(cls) -> "CircuitBreakerConfig":
         """Create simple circuit breaker configuration (50 lines equivalent)."""
@@ -63,8 +66,8 @@ class CircuitBreakerConfig:
             enable_fallback=False,
             enable_adaptive_timeout=False,
         )
-    
-    @classmethod  
+
+    @classmethod
     def enterprise_mode(cls) -> "CircuitBreakerConfig":
         """Create enterprise circuit breaker configuration with advanced features."""
         return cls(
@@ -82,6 +85,7 @@ class CircuitBreakerConfig:
 @dataclass
 class CircuitBreakerMetrics:
     """Circuit breaker metrics tracking."""
+
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
@@ -89,14 +93,14 @@ class CircuitBreakerMetrics:
     state_changes: int = 0
     last_failure_time: float = 0
     average_response_time: float = 0
-    
+
     @property
     def failure_rate(self) -> float:
         """Calculate current failure rate."""
         if self.total_requests == 0:
             return 0.0
         return self.failed_requests / self.total_requests
-    
+
     @property
     def success_rate(self) -> float:
         """Calculate current success rate."""
@@ -107,10 +111,10 @@ class CircuitBreakerMetrics:
 
 class CircuitBreaker:
     """Async circuit breaker with configurable complexity modes."""
-    
+
     def __init__(self, config: CircuitBreakerConfig):
         """Initialize circuit breaker.
-        
+
         Args:
             config: Circuit breaker configuration
         """
@@ -121,28 +125,25 @@ class CircuitBreaker:
         self.last_test_time = 0
         self.metrics = CircuitBreakerMetrics()
         self._lock = asyncio.Lock()
-        
+
         logger.info(
             f"Circuit breaker initialized: {config.failure_threshold} threshold, "
             f"{config.recovery_timeout}s recovery"
         )
-    
+
     async def call(
-        self, 
-        func: Callable[..., Awaitable[T]], 
-        *args: Any, 
-        **kwargs: Any
+        self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
     ) -> T:
         """Execute function with circuit breaker protection.
-        
+
         Args:
             func: Async function to execute
             *args: Function arguments
             **kwargs: Function keyword arguments
-            
+
         Returns:
             Function result
-            
+
         Raises:
             CircuitBreakerError: If circuit is open
             Original exception: If function fails and circuit allows
@@ -151,7 +152,7 @@ class CircuitBreaker:
             # Check if circuit should be opened based on metrics
             if self.config.enable_metrics and self._should_open_circuit():
                 await self._open_circuit()
-            
+
             # Handle different states
             if self.state == CircuitBreakerState.OPEN:
                 if self._should_attempt_reset():
@@ -162,48 +163,51 @@ class CircuitBreaker:
                         f"Circuit breaker is OPEN. Retry after "
                         f"{self.config.recovery_timeout - (time.time() - self.last_failure_time):.0f}s"
                     )
-            
+
             elif self.state == CircuitBreakerState.HALF_OPEN:
                 if time.time() - self.last_test_time > self.config.test_request_timeout:
                     await self._open_circuit()
                     self.metrics.blocked_requests += 1
                     raise CircuitBreakerError("Circuit breaker test timeout")
-        
+
         # Execute function
         start_time = time.time()
         try:
             self.metrics.total_requests += 1
             result = await func(*args, **kwargs)
-            
+
             # Success - reset failure count and close circuit if needed
             execution_time = time.time() - start_time
             await self._record_success(execution_time)
-            
+
             return result
-            
+
         except self.config.monitored_exceptions as e:
             execution_time = time.time() - start_time
             await self._record_failure(execution_time)
             raise
-    
+
     async def _record_success(self, execution_time: float) -> None:
         """Record successful execution."""
         async with self._lock:
             self.metrics.successful_requests += 1
             self.failure_count = 0
-            
+
             # Update average response time
             if self.config.enable_metrics:
                 total_time = (
-                    self.metrics.average_response_time * (self.metrics.total_requests - 1) +
-                    execution_time
+                    self.metrics.average_response_time
+                    * (self.metrics.total_requests - 1)
+                    + execution_time
                 )
-                self.metrics.average_response_time = total_time / self.metrics.total_requests
-            
+                self.metrics.average_response_time = (
+                    total_time / self.metrics.total_requests
+                )
+
             # Close circuit if in half-open state
             if self.state == CircuitBreakerState.HALF_OPEN:
                 await self._close_circuit()
-    
+
     async def _record_failure(self, execution_time: float) -> None:
         """Record failed execution."""
         async with self._lock:
@@ -211,34 +215,38 @@ class CircuitBreaker:
             self.failure_count += 1
             self.last_failure_time = time.time()
             self.metrics.last_failure_time = self.last_failure_time
-            
+
             # Update average response time
             if self.config.enable_metrics:
                 total_time = (
-                    self.metrics.average_response_time * (self.metrics.total_requests - 1) +
-                    execution_time
+                    self.metrics.average_response_time
+                    * (self.metrics.total_requests - 1)
+                    + execution_time
                 )
-                self.metrics.average_response_time = total_time / self.metrics.total_requests
-            
+                self.metrics.average_response_time = (
+                    total_time / self.metrics.total_requests
+                )
+
             # Check if circuit should open
-            if (self.failure_count >= self.config.failure_threshold or
-                (self.config.enable_metrics and self._should_open_circuit())):
+            if self.failure_count >= self.config.failure_threshold or (
+                self.config.enable_metrics and self._should_open_circuit()
+            ):
                 await self._open_circuit()
-    
+
     def _should_open_circuit(self) -> bool:
         """Check if circuit should open based on failure rate."""
         if not self.config.enable_metrics:
             return False
-            
+
         if self.metrics.total_requests < self.config.min_requests_for_rate:
             return False
-            
+
         return self.metrics.failure_rate >= self.config.failure_rate_threshold
-    
+
     def _should_attempt_reset(self) -> bool:
         """Check if circuit should attempt reset."""
         return (time.time() - self.last_failure_time) >= self.config.recovery_timeout
-    
+
     async def _open_circuit(self) -> None:
         """Transition to OPEN state."""
         if self.state != CircuitBreakerState.OPEN:
@@ -249,7 +257,7 @@ class CircuitBreaker:
                 f"Circuit breaker OPEN: {self.failure_count} failures, "
                 f"failure_rate={self.metrics.failure_rate:.2%}"
             )
-    
+
     async def _close_circuit(self) -> None:
         """Transition to CLOSED state."""
         if self.state != CircuitBreakerState.CLOSED:
@@ -257,20 +265,18 @@ class CircuitBreaker:
             self.state = CircuitBreakerState.CLOSED
             self.failure_count = 0
             self.metrics.state_changes += 1
-            logger.info(
-                f"Circuit breaker CLOSED: recovered from {old_state.value}"
-            )
-    
+            logger.info(f"Circuit breaker CLOSED: recovered from {old_state.value}")
+
     async def _transition_to_half_open(self) -> None:
         """Transition to HALF_OPEN state."""
         self.state = CircuitBreakerState.HALF_OPEN
         self.last_test_time = time.time()
         self.metrics.state_changes += 1
         logger.info("Circuit breaker HALF_OPEN: testing recovery")
-    
+
     def get_metrics(self) -> dict[str, Any]:
         """Get circuit breaker metrics.
-        
+
         Returns:
             Dictionary with current metrics
         """
@@ -290,45 +296,43 @@ class CircuitBreaker:
 
 class CircuitBreakerError(Exception):
     """Circuit breaker specific exception."""
+
     pass
 
 
 def circuit_breaker(config: CircuitBreakerConfig | None = None):
     """Decorator for circuit breaker functionality.
-    
+
     Args:
         config: Circuit breaker configuration
-        
+
     Returns:
         Decorated function with circuit breaker protection
     """
     if config is None:
         config = CircuitBreakerConfig.simple_mode()
-    
+
     breaker = CircuitBreaker(config)
-    
+
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             return await breaker.call(func, *args, **kwargs)
-        
+
         # Attach circuit breaker for metrics access
         wrapper._circuit_breaker = breaker  # type: ignore
         return wrapper
-    
+
     return decorator
 
 
-def create_circuit_breaker(
-    mode: str = "simple",
-    **kwargs: Any
-) -> CircuitBreaker:
+def create_circuit_breaker(mode: str = "simple", **kwargs: Any) -> CircuitBreaker:
     """Factory function for creating circuit breakers.
-    
+
     Args:
-        mode: "simple" or "enterprise" 
+        mode: "simple" or "enterprise"
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         Configured CircuitBreaker instance
     """
@@ -338,21 +342,21 @@ def create_circuit_breaker(
         config = CircuitBreakerConfig.enterprise_mode()
     else:
         config = CircuitBreakerConfig()
-    
+
     # Apply any overrides
     for key, value in kwargs.items():
         if hasattr(config, key):
             setattr(config, key, value)
-    
+
     return CircuitBreaker(config)
 
 
 class CircuitBreakerMiddleware(BaseHTTPMiddleware):
     """FastAPI middleware for circuit breaker protection."""
-    
+
     def __init__(self, app, config: CircuitBreakerConfig | None = None):
         """Initialize circuit breaker middleware.
-        
+
         Args:
             app: FastAPI application
             config: Circuit breaker configuration
@@ -360,14 +364,14 @@ class CircuitBreakerMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.config = config or CircuitBreakerConfig.simple_mode()
         self.circuit_breaker = CircuitBreaker(self.config)
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with circuit breaker protection.
-        
+
         Args:
             request: HTTP request
             call_next: Next middleware in chain
-            
+
         Returns:
             HTTP response
         """
@@ -375,17 +379,14 @@ class CircuitBreakerMiddleware(BaseHTTPMiddleware):
             return await self.circuit_breaker.call(call_next, request)
         except CircuitBreakerError as e:
             from fastapi import HTTPException
+
             raise HTTPException(status_code=503, detail=str(e))
 
 
 # Convenience function for middleware setup
-def circuit_breaker_middleware(
-    app, 
-    mode: str = "simple",
-    **kwargs: Any
-) -> None:
+def circuit_breaker_middleware(app, mode: str = "simple", **kwargs: Any) -> None:
     """Add circuit breaker middleware to FastAPI app.
-    
+
     Args:
         app: FastAPI application
         mode: "simple" or "enterprise"
@@ -397,10 +398,10 @@ def circuit_breaker_middleware(
         config = CircuitBreakerConfig.enterprise_mode()
     else:
         config = CircuitBreakerConfig()
-    
+
     # Apply overrides
     for key, value in kwargs.items():
         if hasattr(config, key):
             setattr(config, key, value)
-    
+
     app.add_middleware(CircuitBreakerMiddleware, config=config)

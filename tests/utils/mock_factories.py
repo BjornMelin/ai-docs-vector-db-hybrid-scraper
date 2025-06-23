@@ -7,7 +7,7 @@ configurable mock objects that simulate the behavior of real system components.
 import asyncio
 import random
 import time
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock, Mock
 from datetime import datetime
 import uuid
@@ -32,8 +32,8 @@ class MockFactory:
     def create_mock_response(
         self, 
         status_code: int = 200,
-        json_data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
         delay: float = 0.0
     ) -> Mock:
         """Create a mock HTTP response object.
@@ -93,8 +93,8 @@ class MockFactory:
     
     def create_stateful_mock(
         self,
-        initial_state: Dict[str, Any],
-        state_transitions: Dict[str, Callable] = None
+        initial_state: dict[str, Any],
+        state_transitions: dict[str, Callable] = None
     ) -> Mock:
         """Create a mock that maintains state across calls.
         
@@ -156,7 +156,7 @@ def create_mock_vector_db(
     mock_db.dimension = dimension
     mock_db._documents = mock_documents
     
-    def mock_search(query_vector: List[float], limit: int = 10, **kwargs):
+    def mock_search(query_vector: list[float], limit: int = 10, **kwargs):
         """Mock search implementation."""
         # Simple similarity based on random scoring
         results = []
@@ -177,7 +177,7 @@ def create_mock_vector_db(
         results.sort(key=lambda x: x["score"], reverse=True)
         return results
     
-    def mock_add_documents(documents: List[Dict[str, Any]]):
+    def mock_add_documents(documents: list[dict[str, Any]]):
         """Mock add documents implementation."""
         added_ids = []
         for doc in documents:
@@ -228,12 +228,12 @@ def create_mock_embedding_service(
     """
     generator = TestDataGenerator()
     
-    async def mock_embed_text(text: str) -> List[float]:
+    async def mock_embed_text(text: str) -> list[float]:
         """Mock text embedding."""
         await asyncio.sleep(processing_delay)
         return generator._generate_normalized_vector(dimension)
     
-    async def mock_embed_batch(texts: List[str]) -> List[List[float]]:
+    async def mock_embed_batch(texts: list[str]) -> list[List[float]]:
         """Mock batch text embedding."""
         await asyncio.sleep(processing_delay * len(texts) * 0.1)  # Batch efficiency
         return [
@@ -275,7 +275,7 @@ def create_mock_web_scraper(
     """
     generator = TestDataGenerator()
     
-    async def mock_scrape_url(url: str, **kwargs) -> Dict[str, Any]:
+    async def mock_scrape_url(url: str, **kwargs) -> dict[str, Any]:
         """Mock URL scraping."""
         # Simulate processing delay
         delay = random.uniform(*processing_delay_range)
@@ -308,7 +308,7 @@ def create_mock_web_scraper(
             ],
         }
     
-    async def mock_scrape_batch(urls: List[str], **kwargs) -> List[Dict[str, Any]]:
+    async def mock_scrape_batch(urls: list[str], **kwargs) -> list[dict[str, Any]]:
         """Mock batch URL scraping."""
         results = []
         for url in urls:
@@ -397,7 +397,7 @@ def create_mock_cache_service(
         access_times.clear()
         return count
     
-    def mock_stats() -> Dict[str, Any]:
+    def mock_stats() -> dict[str, Any]:
         """Mock cache statistics."""
         return {
             "items_count": len(cache_storage),
@@ -442,7 +442,7 @@ def create_mock_api_client(
         params: Optional[Dict] = None,
         json_data: Optional[Dict] = None,
         headers: Optional[Dict] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock API request."""
         nonlocal request_count, last_reset
         

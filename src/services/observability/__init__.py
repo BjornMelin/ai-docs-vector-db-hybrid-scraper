@@ -13,8 +13,16 @@ Modern 2025 Features:
 """
 
 # Core configuration and initialization
-from .config import ObservabilityConfig, get_observability_config, get_resource_attributes
-from .init import initialize_observability, shutdown_observability, is_observability_enabled
+from .config import (
+    ObservabilityConfig,
+    get_observability_config,
+    get_resource_attributes,
+)
+from .init import (
+    initialize_observability,
+    shutdown_observability,
+    is_observability_enabled,
+)
 
 # Advanced instrumentation
 from .instrumentation import (
@@ -95,12 +103,11 @@ __all__ = [
     "initialize_observability",
     "shutdown_observability",
     "is_observability_enabled",
-    
     # Advanced instrumentation
     "get_tracer",
     "instrument_function",
     "instrument_vector_search",
-    "instrument_embedding_generation", 
+    "instrument_embedding_generation",
     "instrument_llm_call",
     "trace_operation",
     "trace_async_operation",
@@ -110,7 +117,6 @@ __all__ = [
     "set_business_context",
     "get_current_trace_id",
     "get_current_span_id",
-    
     # AI/ML tracking
     "AIOperationMetrics",
     "AIOperationTracker",
@@ -119,7 +125,6 @@ __all__ = [
     "track_llm_call",
     "track_vector_search",
     "track_rag_pipeline",
-    
     # Correlation and context
     "TraceCorrelationManager",
     "ErrorCorrelationTracker",
@@ -129,7 +134,6 @@ __all__ = [
     "correlated_operation",
     "record_error",
     "get_current_trace_context",
-    
     # Metrics bridge
     "OpenTelemetryMetricsBridge",
     "initialize_metrics_bridge",
@@ -138,7 +142,6 @@ __all__ = [
     "record_vector_metrics",
     "record_cache_metrics",
     "update_service_health",
-    
     # Performance monitoring
     "PerformanceMonitor",
     "PerformanceMetrics",
@@ -152,7 +155,6 @@ __all__ = [
     "monitor_ai_model_inference",
     "get_operation_statistics",
     "get_system_performance_summary",
-    
     # Legacy compatibility
     "FastAPIObservabilityMiddleware",
     "record_ai_operation",

@@ -7,7 +7,7 @@ and ARIA attribute validation.
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -100,7 +100,7 @@ def wcag_validator():
                 "4.1.3": "Status Messages",
             }
         
-        def validate_html_structure(self, html_content: str) -> Dict[str, Any]:
+        def validate_html_structure(self, html_content: str) -> dict[str, Any]:
             """Validate HTML structure for accessibility."""
             issues = []
             
@@ -165,7 +165,7 @@ def wcag_validator():
                 "warnings": len([i for i in issues if i["severity"] == "warning"]),
             }
         
-        def validate_aria_attributes(self, html_content: str) -> Dict[str, Any]:
+        def validate_aria_attributes(self, html_content: str) -> dict[str, Any]:
             """Validate ARIA attributes."""
             issues = []
             
@@ -238,14 +238,14 @@ def color_contrast_analyzer():
             self.wcag_aaa_normal = 7.0
             self.wcag_aaa_large = 4.5
         
-        def hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
+        def hex_to_rgb(self, hex_color: str) -> tuple[int, int, int]:
             """Convert hex color to RGB tuple."""
             hex_color = hex_color.lstrip('#')
             if len(hex_color) == 3:
                 hex_color = ''.join([c*2 for c in hex_color])
             return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
         
-        def get_relative_luminance(self, rgb: Tuple[int, int, int]) -> float:
+        def get_relative_luminance(self, rgb: tuple[int, int, int]) -> float:
             """Calculate relative luminance of RGB color."""
             def gamma_correct(value):
                 value = value / 255.0
@@ -280,7 +280,7 @@ def color_contrast_analyzer():
             foreground: str, 
             background: str, 
             text_size: str = "normal"
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Check if color combination meets WCAG contrast requirements."""
             ratio = self.calculate_contrast_ratio(foreground, background)
             
@@ -308,7 +308,7 @@ def color_contrast_analyzer():
             self, 
             base_color: str, 
             target_background: str
-        ) -> List[Dict[str, Any]]:
+        ) -> list[dict[str, Any]]:
             """Generate accessible color suggestions."""
             suggestions = []
             base_rgb = self.hex_to_rgb(base_color)
@@ -352,7 +352,7 @@ def keyboard_navigation_tester():
                 'summary',
             ]
         
-        def validate_tab_order(self, html_content: str) -> Dict[str, Any]:
+        def validate_tab_order(self, html_content: str) -> dict[str, Any]:
             """Validate tab order in HTML content."""
             issues = []
             
@@ -398,7 +398,7 @@ def keyboard_navigation_tester():
                 "positive_tabindex_count": len(positive_tabindex),
             }
         
-        def check_focus_indicators(self, css_content: str = "") -> Dict[str, Any]:
+        def check_focus_indicators(self, css_content: str = "") -> dict[str, Any]:
             """Check for focus indicators in CSS."""
             issues = []
             
@@ -454,7 +454,7 @@ def keyboard_navigation_tester():
                 "outline_none_count": len(outline_none_matches),
             }
         
-        def validate_skip_links(self, html_content: str) -> Dict[str, Any]:
+        def validate_skip_links(self, html_content: str) -> dict[str, Any]:
             """Validate presence and implementation of skip links."""
             issues = []
             
@@ -509,7 +509,7 @@ def screen_reader_validator():
                 'complementary', 'search', 'region'
             ]
         
-        def validate_semantic_structure(self, html_content: str) -> Dict[str, Any]:
+        def validate_semantic_structure(self, html_content: str) -> dict[str, Any]:
             """Validate semantic HTML structure for screen readers."""
             issues = []
             
@@ -556,7 +556,7 @@ def screen_reader_validator():
                 "nav_count": len(nav_matches),
             }
         
-        def validate_form_accessibility(self, html_content: str) -> Dict[str, Any]:
+        def validate_form_accessibility(self, html_content: str) -> dict[str, Any]:
             """Validate form accessibility for screen readers."""
             issues = []
             
@@ -618,7 +618,7 @@ def mock_axe_core():
     """Mock axe-core accessibility testing engine."""
     axe = MagicMock()
     
-    def mock_run_axe(html_content: str, options: Dict[str, Any] = None) -> Dict[str, Any]:
+    def mock_run_axe(html_content: str, options: dict[str, Any] = None) -> dict[str, Any]:
         """Mock axe-core analysis."""
         return {
             "violations": [

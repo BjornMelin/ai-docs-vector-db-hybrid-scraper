@@ -8,7 +8,7 @@ import random
 import string
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from urllib.parse import urljoin
 try:
     import hypothesis.strategies as st
@@ -216,7 +216,7 @@ class TestDataGenerator:
         include_embedding: bool = True,
         embedding_dimension: int = 384,
         content_length_range: tuple = (100, 2000)
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a realistic document for testing.
         
         Args:
@@ -256,7 +256,7 @@ class TestDataGenerator:
         self,
         query: str,
         base_score_range: tuple = (0.6, 0.95)
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a search result for a given query.
         
         Args:
@@ -330,7 +330,7 @@ class TestDataGenerator:
         success: bool = True,
         include_pagination: bool = False,
         items_count: Optional[int] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a mock API response.
         
         Args:
@@ -405,7 +405,7 @@ class TestDataGenerator:
         
         return content
     
-    def _generate_normalized_vector(self, dimension: int) -> List[float]:
+    def _generate_normalized_vector(self, dimension: int) -> list[float]:
         """Generate a normalized embedding vector."""
         vector = [random.gauss(0, 1) for _ in range(dimension)]
         magnitude = sum(x**2 for x in vector) ** 0.5
@@ -415,7 +415,7 @@ class TestDataGenerator:
         
         return vector
     
-    def _generate_highlighted_content(self, content: str, terms: List[str]) -> str:
+    def _generate_highlighted_content(self, content: str, terms: list[str]) -> str:
         """Generate content with highlighted search terms."""
         highlighted = content
         for term in terms:
@@ -438,7 +438,7 @@ class TestDataGenerator:
 
 
 # Convenience functions for quick data generation
-def generate_test_documents(count: int = 10, **kwargs) -> List[Dict[str, Any]]:
+def generate_test_documents(count: int = 10, **kwargs) -> list[dict[str, Any]]:
     """Generate a list of test documents.
     
     Args:
@@ -452,7 +452,7 @@ def generate_test_documents(count: int = 10, **kwargs) -> List[Dict[str, Any]]:
     return [generator.generate_document(**kwargs) for _ in range(count)]
 
 
-def generate_search_queries(count: int = 10, query_type: str = "mixed") -> List[str]:
+def generate_search_queries(count: int = 10, query_type: str = "mixed") -> list[str]:
     """Generate a list of search queries.
     
     Args:

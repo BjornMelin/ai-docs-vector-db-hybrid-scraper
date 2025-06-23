@@ -8,7 +8,7 @@ import math
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable
 
 from locust import LoadTestShape
 
@@ -30,7 +30,7 @@ class BaseLoadProfile(LoadTestShape, ABC):
         super().__init__()
         self.start_time = None
     
-    def tick(self) -> Tuple[int, float] | None:
+    def tick(self) -> tuple[int, float] | None:
         """Determine current users and spawn rate.
         
         Returns:
@@ -43,7 +43,7 @@ class BaseLoadProfile(LoadTestShape, ABC):
         return self.get_target_users(run_time)
     
     @abstractmethod
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Get target users for current run time."""
         pass
 
@@ -57,7 +57,7 @@ class SteadyLoadProfile(BaseLoadProfile):
         self.duration = duration
         self.spawn_rate = spawn_rate
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Maintain steady number of users."""
         if run_time < self.duration:
             return (self.users, self.spawn_rate)
@@ -82,7 +82,7 @@ class RampUpLoadProfile(BaseLoadProfile):
         self.hold_time = hold_time
         self.spawn_rate = spawn_rate
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Gradually increase users then hold steady."""
         if run_time < self.ramp_time:
             # Ramp up phase
@@ -115,7 +115,7 @@ class SpikeLoadProfile(BaseLoadProfile):
         self.recovery_time = recovery_time
         self.spawn_rate = spawn_rate
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Create spike pattern."""
         if run_time < self.baseline_time:
             # Initial baseline
@@ -132,11 +132,11 @@ class SpikeLoadProfile(BaseLoadProfile):
 class StepLoadProfile(BaseLoadProfile):
     """Step load profile - increase users in steps."""
     
-    def __init__(self, stages: List[LoadStage]):
+    def __init__(self, stages: list[LoadStage]):
         super().__init__()
         self.stages = stages
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Step through user levels."""
         current_time = 0
         
@@ -166,7 +166,7 @@ class WaveLoadProfile(BaseLoadProfile):
         self.total_duration = total_duration
         self.spawn_rate = spawn_rate
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Create wave pattern."""
         if run_time < self.total_duration:
             # Sinusoidal wave
@@ -191,7 +191,7 @@ class DoubleSpike(BaseLoadProfile):
             LoadStage(duration=120, users=50, spawn_rate=20, name="cooldown"),
         ]
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Execute double spike pattern."""
         current_time = 0
         
@@ -221,7 +221,7 @@ class BreakpointLoadProfile(BaseLoadProfile):
         self.max_users = max_users
         self.spawn_rate = spawn_rate
     
-    def get_target_users(self, run_time: float) -> Tuple[int, float] | None:
+    def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Incrementally increase load until breakpoint."""
         current_step = int(run_time / self.step_duration)
         current_users = self.start_users + (current_step * self.user_increment)
@@ -260,7 +260,7 @@ def get_load_profile(profile_name: str) -> Optional[BaseLoadProfile]:
     return LOAD_PROFILES.get(profile_name)
 
 
-def create_custom_step_profile(steps: List[Dict[str, any]]) -> StepLoadProfile:
+def create_custom_step_profile(steps: list[dict[str, any]]) -> StepLoadProfile:
     """Create a custom step load profile.
     
     Args:

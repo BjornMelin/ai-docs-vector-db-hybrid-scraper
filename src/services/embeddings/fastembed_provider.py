@@ -1,8 +1,7 @@
 """FastEmbed provider for local embedding generation."""
 
 import logging
-from typing import Any
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 

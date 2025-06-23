@@ -9,7 +9,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -754,7 +754,7 @@ class TestAutomatedAccessibilityTools:
         assert report["testing_tools"]["lighthouse"]["accessibility_score"] == 0.85
         assert report["testing_tools"]["pa11y"]["errors"] == 2
 
-    def _calculate_axe_score(self, axe_result: Dict[str, Any]) -> float:
+    def _calculate_axe_score(self, axe_result: dict[str, Any]) -> float:
         """Calculate score from axe-core results."""
         violations = axe_result["violations"]
         passes = axe_result["passes"]
@@ -775,7 +775,7 @@ class TestAutomatedAccessibilityTools:
         
         return max(0.0, 1.0 - (violation_score / total_tests))
 
-    def _consolidate_issues(self, axe_result: Dict[str, Any], pa11y_result: List[Dict[str, Any]], lighthouse_result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _consolidate_issues(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], lighthouse_result: dict[str, Any]) -> list[dict[str, Any]]:
         """Consolidate issues from multiple testing tools."""
         consolidated = []
         
@@ -819,7 +819,7 @@ class TestAutomatedAccessibilityTools:
         
         return consolidated
 
-    def _check_wcag_level(self, axe_result: Dict[str, Any], pa11y_result: List[Dict[str, Any]], level: str) -> Dict[str, Any]:
+    def _check_wcag_level(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], level: str) -> dict[str, Any]:
         """Check WCAG compliance level."""
         level_tag = f"wcag2{level.lower()}"
         
@@ -844,7 +844,7 @@ class TestAutomatedAccessibilityTools:
             "percentage": 100.0 if total_issues == 0 else 0.0,
         }
 
-    def _generate_priority_fixes(self, axe_result: Dict[str, Any], pa11y_result: List[Dict[str, Any]], lighthouse_result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _generate_priority_fixes(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], lighthouse_result: dict[str, Any]) -> list[dict[str, Any]]:
         """Generate prioritized list of accessibility fixes."""
         fixes = []
         

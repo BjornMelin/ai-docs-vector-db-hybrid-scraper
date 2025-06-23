@@ -6,7 +6,7 @@ web accessibility, including automated validation and manual test guidance.
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

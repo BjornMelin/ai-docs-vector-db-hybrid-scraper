@@ -10,7 +10,7 @@ import hashlib
 import secrets
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from urllib.parse import urlparse
 
@@ -86,7 +86,7 @@ def mock_penetration_tester():
     """Mock penetration testing framework."""
     tester = MagicMock()
     
-    async def mock_sql_injection_test(target_url: str) -> Dict[str, Any]:
+    async def mock_sql_injection_test(target_url: str) -> dict[str, Any]:
         """Mock SQL injection testing."""
         return {
             "vulnerable": False,
@@ -95,7 +95,7 @@ def mock_penetration_tester():
             "confidence": 0.95,
         }
     
-    async def mock_xss_test(target_url: str) -> Dict[str, Any]:
+    async def mock_xss_test(target_url: str) -> dict[str, Any]:
         """Mock XSS testing."""
         return {
             "vulnerable": False,
@@ -104,7 +104,7 @@ def mock_penetration_tester():
             "confidence": 0.90,
         }
     
-    async def mock_csrf_test(target_url: str) -> Dict[str, Any]:
+    async def mock_csrf_test(target_url: str) -> dict[str, Any]:
         """Mock CSRF testing."""
         return {
             "vulnerable": False,
@@ -141,7 +141,7 @@ def mock_auth_system():
         },
     }
     
-    async def mock_authenticate(username: str, password: str) -> Dict[str, Any]:
+    async def mock_authenticate(username: str, password: str) -> dict[str, Any]:
         """Mock authentication."""
         user = test_users.get(username)
         if not user:
@@ -183,7 +183,7 @@ def mock_encryption_service():
     """Mock encryption service for testing."""
     service = MagicMock()
     
-    async def mock_encrypt(data: str, key: Optional[str] = None) -> Dict[str, str]:
+    async def mock_encrypt(data: str, key: Optional[str] = None) -> dict[str, str]:
         """Mock encryption."""
         # Simple base64-like mock encryption for testing
         encrypted = data.encode().hex()
@@ -214,7 +214,7 @@ def mock_compliance_checker():
     """Mock compliance checking service."""
     checker = MagicMock()
     
-    async def mock_owasp_check() -> Dict[str, Any]:
+    async def mock_owasp_check() -> dict[str, Any]:
         """Mock OWASP Top 10 compliance check."""
         return {
             "compliant": True,
@@ -233,7 +233,7 @@ def mock_compliance_checker():
             "score": 95,
         }
     
-    async def mock_gdpr_check() -> Dict[str, Any]:
+    async def mock_gdpr_check() -> dict[str, Any]:
         """Mock GDPR compliance check."""
         return {
             "compliant": True,
@@ -318,7 +318,7 @@ def security_test_data():
 def security_headers_validator():
     """Validator for security headers."""
     
-    def validate_security_headers(headers: Dict[str, str]) -> Dict[str, Any]:
+    def validate_security_headers(headers: dict[str, str]) -> dict[str, Any]:
         """Validate security headers in HTTP response."""
         required_headers = {
             "x-content-type-options": "nosniff",
@@ -384,7 +384,7 @@ def input_sanitizer():
             return True
         
         @staticmethod
-        def generate_attack_vectors(base_payload: str) -> List[str]:
+        def generate_attack_vectors(base_payload: str) -> list[str]:
             """Generate variations of attack vectors."""
             vectors = [base_payload]
             
@@ -443,7 +443,7 @@ def security_performance_tracker():
                 self.metrics[operation]["duration"] = duration
                 self.metrics[operation]["end"] = end_time
         
-        def get_metrics(self) -> Dict[str, float]:
+        def get_metrics(self) -> dict[str, float]:
             """Get all timing metrics."""
             return {
                 op: data.get("duration", 0.0) 
@@ -471,7 +471,7 @@ def vulnerability_scanner(mock_security_scanner):
         def __init__(self, base_scanner):
             self._scanner = base_scanner
         
-        async def scan_for_sql_injection(self, target_url: str) -> Dict[str, Any]:
+        async def scan_for_sql_injection(self, target_url: str) -> dict[str, Any]:
             """Scan for SQL injection vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -480,7 +480,7 @@ def vulnerability_scanner(mock_security_scanner):
                 "details": "No SQL injection vulnerabilities detected"
             }
         
-        async def scan_for_xss(self, target_url: str) -> Dict[str, Any]:
+        async def scan_for_xss(self, target_url: str) -> dict[str, Any]:
             """Scan for XSS vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -504,7 +504,7 @@ def input_validator(input_sanitizer):
         def __init__(self, sanitizer):
             self._sanitizer = sanitizer
         
-        def validate_user_input(self, user_input: str) -> Dict[str, Any]:
+        def validate_user_input(self, user_input: str) -> dict[str, Any]:
             """Validate user input for security threats."""
             dangerous_patterns = [
                 r"(?i)<script.*?>.*?</script>",
@@ -547,7 +547,7 @@ def penetration_tester(mock_penetration_tester):
         def __init__(self, base_tester):
             self._tester = base_tester
         
-        async def test_authentication_bypass(self, target_url: str) -> Dict[str, Any]:
+        async def test_authentication_bypass(self, target_url: str) -> dict[str, Any]:
             """Test for authentication bypass vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -560,7 +560,7 @@ def penetration_tester(mock_penetration_tester):
                 "details": "Strong authentication controls in place"
             }
         
-        async def test_authorization_flaws(self, target_url: str, user_role: str = "user") -> Dict[str, Any]:
+        async def test_authorization_flaws(self, target_url: str, user_role: str = "user") -> dict[str, Any]:
             """Test for authorization bypass vulnerabilities."""
             return {
                 "vulnerable": False,

@@ -6,7 +6,7 @@ using Pydantic models and user-friendly error messages.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from pydantic import ValidationError
 from rich.console import Console
@@ -23,15 +23,17 @@ class WizardValidator:
 
     def __init__(self):
         """Initialize validator."""
-        self.validation_cache: Dict[str, bool] = {}
+        self.validation_cache: dict[str, bool] = {}
 
-    def validate_api_key(self, provider: str, api_key: str) -> Tuple[bool, Optional[str]]:
+    def validate_api_key(
+        self, provider: str, api_key: str
+    ) -> tuple[bool, Optional[str]]:
         """Validate API key format for specific providers.
-        
+
         Args:
             provider: Provider name (openai, firecrawl, etc.)
             api_key: API key to validate
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
@@ -57,7 +59,10 @@ class WizardValidator:
         if not rule:
             # Generic validation for unknown providers
             if len(api_key) < 10:
-                return False, f"API key for {provider} seems too short (minimum 10 characters)"
+                return (
+                    False,
+                    f"API key for {provider} seems too short (minimum 10 characters)",
+                )
             return True, None
 
         if not re.match(rule["pattern"], api_key):
@@ -65,13 +70,15 @@ class WizardValidator:
 
         return True, None
 
-    def validate_url(self, url: str, allow_localhost: bool = True) -> Tuple[bool, Optional[str]]:
+    def validate_url(
+        self, url: str, allow_localhost: bool = True
+    ) -> tuple[bool, Optional[str]]:
         """Validate URL format.
-        
+
         Args:
             url: URL to validate
             allow_localhost: Whether to allow localhost URLs
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
@@ -80,7 +87,7 @@ class WizardValidator:
 
         # Basic URL pattern
         url_pattern = r"^https?://[a-zA-Z0-9.-]+(?::[0-9]+)?(?:/.*)?$"
-        
+
         if not re.match(url_pattern, url):
             return False, "Invalid URL format. Must start with http:// or https://"
 
@@ -89,12 +96,12 @@ class WizardValidator:
 
         return True, None
 
-    def validate_port(self, port: Union[str, int]) -> Tuple[bool, Optional[str]]:
+    def validate_port(self, port: str | int) -> tuple[bool, Optional[str]]:
         """Validate port number.
-        
+
         Args:
             port: Port number to validate
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
@@ -111,14 +118,16 @@ class WizardValidator:
 
         return True, None
 
-    def validate_path(self, path: str, must_exist: bool = False, must_be_dir: bool = False) -> Tuple[bool, Optional[str]]:
+    def validate_path(
+        self, path: str, must_exist: bool = False, must_be_dir: bool = False
+    ) -> tuple[bool, Optional[str]]:
         """Validate file/directory path.
-        
+
         Args:
             path: Path to validate
             must_exist: Whether path must already exist
             must_be_dir: Whether path must be a directory
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
@@ -145,12 +154,14 @@ class WizardValidator:
 
         return True, None
 
-    def validate_config_partial(self, config_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_config_partial(
+        self, config_data: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """Validate partial configuration data.
-        
+
         Args:
             config_data: Partial configuration dictionary
-            
+
         Returns:
             Tuple of (is_valid, error_messages)
         """
@@ -163,9 +174,9 @@ class WizardValidator:
                 "environment": "development",
                 "debug": False,
                 "log_level": "INFO",
-                **config_data
+                **config_data,
             }
-            
+
             Config(**validation_data)
             return True, []
 
@@ -180,12 +191,12 @@ class WizardValidator:
 
         return False, errors
 
-    def validate_and_show_errors(self, config_data: Dict[str, Any]) -> bool:
+    def validate_and_show_errors(self, config_data: dict[str, Any]) -> bool:
         """Validate configuration and show user-friendly error messages.
-        
+
         Args:
             config_data: Configuration data to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
@@ -196,7 +207,7 @@ class WizardValidator:
 
         return is_valid
 
-    def _show_validation_errors(self, errors: List[str]) -> None:
+    def _show_validation_errors(self, errors: list[str]) -> None:
         """Display validation errors in a user-friendly format."""
         if not errors:
             return
@@ -208,7 +219,9 @@ class WizardValidator:
             error_text.append(f"{i}. ", style="red")
             error_text.append(f"{error}\n", style="")
 
-        error_text.append("\n💡 Tip: Check your input values and try again.", style="dim")
+        error_text.append(
+            "\n💡 Tip: Check your input values and try again.", style="dim"
+        )
 
         panel = Panel(
             error_text,
@@ -218,12 +231,12 @@ class WizardValidator:
         )
         console.print(panel)
 
-    def suggest_fixes(self, errors: List[str]) -> Dict[str, str]:
+    def suggest_fixes(self, errors: list[str]) -> dict[str, str]:
         """Suggest automatic fixes for common validation errors.
-        
+
         Args:
             errors: List of validation error messages
-            
+
         Returns:
             Dictionary of field -> suggested_fix
         """
@@ -246,43 +259,53 @@ class WizardValidator:
                 suggestions["port"] = "Use a port number between 1024-65535"
 
             elif "chunk_size" in error.lower():
-                suggestions["chunk_size"] = "Recommended: 1600 (must be positive integer)"
+                suggestions["chunk_size"] = (
+                    "Recommended: 1600 (must be positive integer)"
+                )
 
             elif "batch_size" in error.lower():
-                suggestions["batch_size"] = "Recommended: 100 (must be positive integer)"
+                suggestions["batch_size"] = (
+                    "Recommended: 100 (must be positive integer)"
+                )
 
         return suggestions
 
-    def validate_file_path(self, path: str, must_exist: bool = False) -> Tuple[bool, Optional[str]]:
+    def validate_file_path(
+        self, path: str, must_exist: bool = False
+    ) -> tuple[bool, Optional[str]]:
         """Validate file path.
-        
+
         Args:
             path: File path to validate
             must_exist: Whether file must already exist
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
         return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
 
-    def validate_directory_path(self, path: str, must_exist: bool = False) -> Tuple[bool, Optional[str]]:
+    def validate_directory_path(
+        self, path: str, must_exist: bool = False
+    ) -> tuple[bool, Optional[str]]:
         """Validate directory path.
-        
+
         Args:
             path: Directory path to validate
             must_exist: Whether directory must already exist
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
         return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
 
-    def validate_json_string(self, json_str: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def validate_json_string(
+        self, json_str: str
+    ) -> tuple[bool, Optional[str], Optional[Dict]]:
         """Validate JSON string.
-        
+
         Args:
             json_str: JSON string to validate
-            
+
         Returns:
             Tuple of (is_valid, error_message, parsed_data)
         """
@@ -291,6 +314,7 @@ class WizardValidator:
 
         try:
             import json
+
             parsed = json.loads(json_str)
             return True, None, parsed
         except json.JSONDecodeError as e:
@@ -298,29 +322,38 @@ class WizardValidator:
 
     def show_validation_summary(self, config) -> None:
         """Show validation summary for successful configuration.
-        
+
         Args:
             config: Validated configuration object
         """
         summary_text = Text()
         summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
-        
+
         summary_text.append("Configuration Summary:\n", style="bold")
-        
+
         # Show key configuration points
-        if hasattr(config, 'qdrant'):
-            if hasattr(config.qdrant, 'host'):
-                summary_text.append(f"• Database: Qdrant at {config.qdrant.host}:{config.qdrant.port}\n", style="cyan")
-            elif hasattr(config.qdrant, 'url'):
-                summary_text.append(f"• Database: Qdrant Cloud at {config.qdrant.url}\n", style="cyan")
-        
-        if hasattr(config, 'openai') and hasattr(config.openai, 'model'):
-            summary_text.append(f"• Embeddings: OpenAI {config.openai.model}\n", style="cyan")
-        
-        if hasattr(config, 'debug') and config.debug:
+        if hasattr(config, "qdrant"):
+            if hasattr(config.qdrant, "host"):
+                summary_text.append(
+                    f"• Database: Qdrant at {config.qdrant.host}:{config.qdrant.port}\n",
+                    style="cyan",
+                )
+            elif hasattr(config.qdrant, "url"):
+                summary_text.append(
+                    f"• Database: Qdrant Cloud at {config.qdrant.url}\n", style="cyan"
+                )
+
+        if hasattr(config, "openai") and hasattr(config.openai, "model"):
+            summary_text.append(
+                f"• Embeddings: OpenAI {config.openai.model}\n", style="cyan"
+            )
+
+        if hasattr(config, "debug") and config.debug:
             summary_text.append("• Debug mode: Enabled\n", style="yellow")
-        
-        summary_text.append("\n🎉 Ready to start processing documents!", style="bold green")
+
+        summary_text.append(
+            "\n🎉 Ready to start processing documents!", style="bold green"
+        )
 
         panel = Panel(
             summary_text,
@@ -332,28 +365,26 @@ class WizardValidator:
         console.print(panel)
 
     def validate_template_customization(
-        self, 
-        template_data: Dict[str, Any], 
-        customizations: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
+        self, template_data: dict[str, Any], customizations: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """Validate template customizations.
-        
+
         Args:
             template_data: Base template data
             customizations: User customizations to apply
-            
+
         Returns:
             Tuple of (is_valid, error_messages)
         """
         # Merge template with customizations
         merged_data = {**template_data, **customizations}
-        
+
         # Validate the merged configuration
         return self.validate_config_partial(merged_data)
 
     def show_validation_summary(self, config: Config) -> None:
         """Show a summary of the validated configuration.
-        
+
         Args:
             config: Validated configuration object
         """

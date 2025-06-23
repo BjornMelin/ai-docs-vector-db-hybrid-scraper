@@ -8,7 +8,7 @@ import asyncio
 import json
 import pytest
 import time
-from typing import Dict, List, Any
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urlencode
 
@@ -33,7 +33,7 @@ class TestAPISecurity:
             
             async def request(self, method: str, endpoint: str, 
                             headers: Dict = None, data: Any = None,
-                            params: Dict = None, cookies: Dict = None) -> Dict[str, Any]:
+                            params: Dict = None, cookies: Dict = None) -> dict[str, Any]:
                 """Mock API request."""
                 # Simulate request
                 request_time = time.time()

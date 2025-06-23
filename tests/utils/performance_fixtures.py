@@ -6,7 +6,6 @@ import time
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from typing import Any
-from typing import Dict
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
@@ -16,8 +15,8 @@ import pytest
 class FixtureCache:
     """Global fixture cache for expensive objects."""
     
-    _cache: Dict[str, Any] = {}
-    _creation_times: Dict[str, float] = {}
+    _cache: dict[str, Any] = {}
+    _creation_times: dict[str, float] = {}
     
     @classmethod
     def get(cls, key: str, factory, ttl: float = 300.0):

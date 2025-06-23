@@ -9,7 +9,7 @@ import asyncio
 import pytest
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Dict, Any, AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from src.config import Config
 from src.services.functional.circuit_breaker import (

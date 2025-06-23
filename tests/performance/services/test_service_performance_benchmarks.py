@@ -12,7 +12,7 @@ import asyncio
 import pytest
 import time
 from unittest.mock import AsyncMock, MagicMock
-from typing import List, Dict, Any
+from typing import Any
 
 from src.services.functional.dependencies import (
     get_config,

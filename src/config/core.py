@@ -120,7 +120,9 @@ class ChunkingConfig(BaseModel):
     preserve_code_blocks: bool = Field(default=True)
     detect_language: bool = Field(default=True)
     max_function_chunk_size: int = Field(default=2000, gt=0)
-    supported_languages: list[str] = Field(default_factory=lambda: ["python", "javascript", "typescript", "markdown"])
+    supported_languages: list[str] = Field(
+        default_factory=lambda: ["python", "javascript", "typescript", "markdown"]
+    )
 
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> "ChunkingConfig":
@@ -262,58 +264,68 @@ class ObservabilityConfig(BaseModel):
     """OpenTelemetry observability configuration."""
 
     # Core observability toggle
-    enabled: bool = Field(default=False, description="Enable OpenTelemetry observability")
+    enabled: bool = Field(
+        default=False, description="Enable OpenTelemetry observability"
+    )
 
     # Service identification
-    service_name: str = Field(default="ai-docs-vector-db", description="Service name for traces")
+    service_name: str = Field(
+        default="ai-docs-vector-db", description="Service name for traces"
+    )
     service_version: str = Field(default="1.0.0", description="Service version")
     service_namespace: str = Field(default="ai-docs", description="Service namespace")
 
     # OTLP Exporter configuration
     otlp_endpoint: str = Field(
         default="http://localhost:4317",
-        description="OTLP gRPC endpoint for trace export"
+        description="OTLP gRPC endpoint for trace export",
     )
     otlp_headers: dict[str, str] = Field(
-        default_factory=dict,
-        description="Headers for OTLP export"
+        default_factory=dict, description="Headers for OTLP export"
     )
-    otlp_insecure: bool = Field(default=True, description="Use insecure OTLP connection")
+    otlp_insecure: bool = Field(
+        default=True, description="Use insecure OTLP connection"
+    )
 
     # Sampling configuration
     trace_sample_rate: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=1.0,
-        description="Trace sampling rate (0.0-1.0)"
+        default=1.0, ge=0.0, le=1.0, description="Trace sampling rate (0.0-1.0)"
     )
 
     # AI/ML specific configuration
     track_ai_operations: bool = Field(
-        default=True,
-        description="Track AI operations (embeddings, LLM calls)"
+        default=True, description="Track AI operations (embeddings, LLM calls)"
     )
     track_costs: bool = Field(default=True, description="Track AI service costs")
 
     # Instrumentation configuration
-    instrument_fastapi: bool = Field(default=True, description="Auto-instrument FastAPI")
-    instrument_httpx: bool = Field(default=True, description="Auto-instrument HTTP clients")
+    instrument_fastapi: bool = Field(
+        default=True, description="Auto-instrument FastAPI"
+    )
+    instrument_httpx: bool = Field(
+        default=True, description="Auto-instrument HTTP clients"
+    )
     instrument_redis: bool = Field(default=True, description="Auto-instrument Redis")
-    instrument_sqlalchemy: bool = Field(default=True, description="Auto-instrument SQLAlchemy")
+    instrument_sqlalchemy: bool = Field(
+        default=True, description="Auto-instrument SQLAlchemy"
+    )
 
     # Console debugging (development)
     console_exporter: bool = Field(
-        default=False,
-        description="Export traces to console (development)"
+        default=False, description="Export traces to console (development)"
     )
 
 
 class TaskQueueConfig(BaseModel):
     """Task queue configuration for ARQ Redis integration."""
 
-    redis_url: str = Field(default="redis://localhost:6379", description="Redis URL for task queue")
+    redis_url: str = Field(
+        default="redis://localhost:6379", description="Redis URL for task queue"
+    )
     redis_password: str | None = Field(default=None, description="Redis password")
-    redis_database: int = Field(default=0, ge=0, le=15, description="Redis database number")
+    redis_database: int = Field(
+        default=0, ge=0, le=15, description="Redis database number"
+    )
     max_jobs: int = Field(default=10, gt=0, description="Maximum concurrent jobs")
     job_timeout: int = Field(default=300, gt=0, description="Job timeout in seconds")
     default_queue_name: str = Field(default="default", description="Default queue name")

@@ -8,9 +8,7 @@ import time
 from contextlib import asynccontextmanager
 
 # Import for type hints (avoid circular import by using TYPE_CHECKING)
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Optional
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 from firecrawl import AsyncFirecrawlApp

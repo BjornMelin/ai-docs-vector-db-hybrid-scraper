@@ -10,7 +10,7 @@ import logging
 import os
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
@@ -136,7 +136,7 @@ class VectorDBSearchBehavior(TaskSet):
             else:
                 response.failure(f"Advanced search failed: {response.text}")
 
-    def _track_search_quality(self, data: Dict[str, Any]):
+    def _track_search_quality(self, data: dict[str, Any]):
         """Track search quality metrics."""
         # Store metrics for later analysis
         if hasattr(self.user, "search_metrics"):
@@ -331,7 +331,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
             else:
                 response.failure(f"Batch embedding generation failed: {response.text}")
 
-    def _track_embedding_metrics(self, data: Dict[str, Any]):
+    def _track_embedding_metrics(self, data: dict[str, Any]):
         """Track embedding generation metrics."""
         if hasattr(self.user, "embedding_metrics"):
             embeddings = data.get("embeddings", [])
@@ -476,7 +476,7 @@ class LoadTestMetricsCollector:
             "error": str(exception) if exception else None,
         })
     
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """Get comprehensive performance summary."""
         if not self.request_metrics:
             return {"error": "No metrics collected"}
@@ -492,7 +492,7 @@ class LoadTestMetricsCollector:
         response_times_sorted = sorted(response_times)
         total_requests = len(response_times_sorted)
         
-        def percentile(data: List[float], p: int) -> float:
+        def percentile(data: list[float], p: int) -> float:
             if not data:
                 return 0.0
             index = int(len(data) * p / 100)
@@ -552,7 +552,7 @@ class LoadTestMetricsCollector:
         else:
             return "F"
     
-    def _check_thresholds(self) -> List[str]:
+    def _check_thresholds(self) -> list[str]:
         """Check performance threshold violations."""
         violations = []
         
@@ -615,7 +615,7 @@ def on_request(
     response_time: float,
     response_length: int,
     response: Any,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     exception: Optional[Exception],
     **kwargs,
 ):
@@ -625,7 +625,7 @@ def on_request(
     )
 
 
-def save_load_test_report(summary: Dict[str, Any], environment: Environment):
+def save_load_test_report(summary: dict[str, Any], environment: Environment):
     """Save load test report to file."""
     timestamp = int(time.time())
     report_file = f"load_test_report_{timestamp}.json"

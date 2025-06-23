@@ -10,7 +10,7 @@ import logging
 import os
 import random
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
@@ -186,7 +186,7 @@ class PerformanceMetricsCollector:
     """Collect and analyze performance metrics during load tests."""
     
     def __init__(self):
-        self.metrics: Dict[str, List[float]] = {
+        self.metrics: dict[str, list[float]] = {
             "response_times": [],
             "error_rates": [],
             "throughput": [],
@@ -221,7 +221,7 @@ class PerformanceMetricsCollector:
         """Add concurrent users count."""
         self.metrics["concurrent_users"].append(count)
     
-    def get_percentile(self, data: List[float], percentile: int) -> float:
+    def get_percentile(self, data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
             return 0.0
@@ -229,7 +229,7 @@ class PerformanceMetricsCollector:
         index = int(len(sorted_data) * percentile / 100)
         return sorted_data[min(index, len(sorted_data) - 1)]
     
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get performance metrics summary."""
         if not self.metrics["response_times"]:
             return {"error": "No metrics collected"}
@@ -294,7 +294,7 @@ def on_request(
     response_time: float,
     response_length: int,
     response: Any,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     exception: Optional[Exception],
     start_time: float,
     url: str,
@@ -312,7 +312,7 @@ def on_request(
 
 
 @events.report_to_master.add_listener
-def on_report_to_master(client_id: str, data: Dict[str, Any]):
+def on_report_to_master(client_id: str, data: dict[str, Any]):
     """Handle reporting to master in distributed mode."""
     # Add custom metrics to report
     data["custom_metrics"] = {
@@ -321,7 +321,7 @@ def on_report_to_master(client_id: str, data: Dict[str, Any]):
 
 
 @events.worker_report.add_listener
-def on_worker_report(client_id: str, data: Dict[str, Any]):
+def on_worker_report(client_id: str, data: dict[str, Any]):
     """Handle worker reports in distributed mode."""
     if "custom_metrics" in data:
         logger.info(f"Worker {client_id} metrics: {data['custom_metrics']}")

@@ -9,7 +9,7 @@ import asyncio
 import pytest
 import time
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 import pytest_asyncio
 
@@ -30,7 +30,7 @@ class MockBrowserTier:
         self.total_requests = 0
         self.failed_requests = 0
         
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on tier."""
         self.total_requests += 1
         
@@ -55,7 +55,7 @@ class MockBrowserTier:
             'max_sessions': self.max_sessions
         }
     
-    async def execute_request(self, request_type: str) -> Dict[str, Any]:
+    async def execute_request(self, request_type: str) -> dict[str, Any]:
         """Execute browser automation request."""
         if not self.is_healthy:
             raise Exception(f"Tier {self.name} is unhealthy")
@@ -76,7 +76,7 @@ class MockBrowserTier:
         finally:
             self.active_sessions -= 1
     
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get tier performance metrics."""
         return {
             'tier_name': self.name,
@@ -126,7 +126,7 @@ class MockBrowserMonitoringSystem:
         self.load_balancing = 'round_robin'
         self.monitoring_interval = 30  # seconds
     
-    async def comprehensive_health_check(self) -> Dict[str, Any]:
+    async def comprehensive_health_check(self) -> dict[str, Any]:
         """Perform comprehensive health check across all tiers."""
         health_results = {}
         
@@ -145,7 +145,7 @@ class MockBrowserMonitoringSystem:
             'timestamp': time.time()
         }
     
-    async def execute_with_failover(self, request_type: str, preferred_tier: str = None) -> Dict[str, Any]:
+    async def execute_with_failover(self, request_type: str, preferred_tier: str = None) -> dict[str, Any]:
         """Execute request with automatic failover."""
         # Determine tier order (prefer lighter tiers first)
         tier_order = ['lightweight', 'playwright', 'crawl4ai', 'browser_use', 'firecrawl']
@@ -179,7 +179,7 @@ class MockBrowserMonitoringSystem:
         # All tiers failed
         raise Exception(f"All tiers failed. Last error: {last_error}")
     
-    def get_system_metrics(self) -> Dict[str, Any]:
+    def get_system_metrics(self) -> dict[str, Any]:
         """Get comprehensive system metrics."""
         tier_metrics = {}
         
@@ -207,7 +207,7 @@ class MockBrowserMonitoringSystem:
             }
         }
     
-    def optimize_tier_allocation(self) -> Dict[str, Any]:
+    def optimize_tier_allocation(self) -> dict[str, Any]:
         """Optimize tier allocation based on current metrics."""
         metrics = self.get_system_metrics()
         optimization_results = {}

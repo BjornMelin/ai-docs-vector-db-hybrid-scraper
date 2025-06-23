@@ -10,7 +10,7 @@ import logging
 import statistics
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -32,7 +32,7 @@ class BreakingPointMetrics:
     degradation_start_users: Optional[int] = None
     recovery_time_seconds: Optional[float] = None
     max_stable_users: Optional[int] = None
-    performance_curve: List[Dict[str, float]] = field(default_factory=list)
+    performance_curve: list[dict[str, float]] = field(default_factory=list)
     failure_cascade_detected: bool = False
     graceful_degradation: bool = False
 
@@ -54,7 +54,7 @@ class BreakingPointAnalyzer:
     """Analyze system performance to identify breaking points."""
     
     def __init__(self):
-        self.performance_points: List[PerformancePoint] = []
+        self.performance_points: list[PerformancePoint] = []
         self.breaking_point_threshold = {
             "error_rate": 10.0,  # 10% error rate
             "response_time": 3000.0,  # 3 second response time
@@ -134,7 +134,7 @@ class BreakingPointAnalyzer:
             failure_cascade_detected=failure_cascade,
         )
     
-    def _analyze_graceful_degradation(self, sorted_points: List[PerformancePoint]) -> bool:
+    def _analyze_graceful_degradation(self, sorted_points: list[PerformancePoint]) -> bool:
         """Analyze if system degrades gracefully."""
         if len(sorted_points) < 3:
             return False
@@ -155,7 +155,7 @@ class BreakingPointAnalyzer:
         # Check if max increase is not too much larger than average
         return max_delta < avg_delta * 3
     
-    def _detect_failure_cascade(self, sorted_points: List[PerformancePoint]) -> bool:
+    def _detect_failure_cascade(self, sorted_points: list[PerformancePoint]) -> bool:
         """Detect if failures cascade rapidly."""
         if len(sorted_points) < 3:
             return False

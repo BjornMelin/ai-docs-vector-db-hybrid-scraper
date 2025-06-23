@@ -6,7 +6,7 @@ behavior under different concurrency levels and user interaction patterns.
 
 import asyncio
 import time
-from typing import Dict, List, Any
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest

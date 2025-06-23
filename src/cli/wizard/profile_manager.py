@@ -7,7 +7,7 @@ profile switching, environment-specific settings, and template mapping.
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional
+
 
 from rich.console import Console
 from rich.panel import Panel
@@ -25,16 +25,16 @@ class ProfileManager:
 
     def __init__(self, config_dir: Optional[Path] = None):
         """Initialize profile manager.
-        
+
         Args:
             config_dir: Directory for storing profile configurations
         """
         self.config_dir = config_dir or Path("config")
         self.profiles_dir = self.config_dir / "profiles"
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.template_manager = TemplateManager()
-        
+
         # Profile to template mapping
         self.profile_templates = {
             "development": "development",
@@ -46,11 +46,11 @@ class ProfileManager:
             "minimal": "minimal",
         }
 
-    def list_profiles(self) -> List[str]:
+    def list_profiles(self) -> list[str]:
         """Get list of available profiles."""
         return list(self.profile_templates.keys())
 
-    def get_profile_info(self, profile_name: str) -> Optional[Dict[str, str]]:
+    def get_profile_info(self, profile_name: str) -> dict[str, str] | None:
         """Get information about a specific profile."""
         template_name = self.profile_templates.get(profile_name)
         if not template_name:
@@ -79,8 +79,10 @@ class ProfileManager:
             "minimal": "Quick start with minimal configuration",
         }
 
-        profile_info["setup"] = setup_instructions.get(profile_name, "Custom profile configuration")
-        
+        profile_info["setup"] = setup_instructions.get(
+            profile_name, "Custom profile configuration"
+        )
+
         return profile_info
 
     def show_profiles_table(self) -> None:
@@ -91,7 +93,7 @@ class ProfileManager:
             header_style="bold cyan",
             border_style="cyan",
         )
-        
+
         table.add_column("Profile", style="bold", width=12)
         table.add_column("Template", style="cyan", width=15)
         table.add_column("Use Case", width=25)
@@ -99,7 +101,9 @@ class ProfileManager:
 
         # Group profiles by recommendation
         recommended_profiles = ["personal", "development", "production"]
-        other_profiles = [p for p in self.list_profiles() if p not in recommended_profiles]
+        other_profiles = [
+            p for p in self.list_profiles() if p not in recommended_profiles
+        ]
 
         # Add recommended profiles first
         for profile_name in recommended_profiles:
@@ -141,21 +145,21 @@ class ProfileManager:
         console.print("\n[dim]💡 Most users should start with 'personal' profile[/dim]")
 
     def create_profile_config(
-        self, 
-        profile_name: str, 
+        self,
+        profile_name: str,
         output_path: Optional[Path] = None,
-        customizations: Optional[Dict] = None
+        customizations: dict | None = None,
     ) -> Path:
         """Create configuration file for a specific profile.
-        
+
         Args:
             profile_name: Name of the profile to create
             output_path: Optional custom output path
             customizations: Optional customizations to apply
-            
+
         Returns:
             Path to created configuration file
-            
+
         Raises:
             ValueError: If profile not found
         """
@@ -174,20 +178,21 @@ class ProfileManager:
 
         # Save configuration
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(output_path, "w") as f:
             import json
+
             json.dump(config.model_dump(), f, indent=2)
 
         return output_path
 
     def activate_profile(self, profile_name: str, target_path: Path = None) -> Path:
         """Activate a profile by copying it to the main config location.
-        
+
         Args:
             profile_name: Name of profile to activate
             target_path: Target path for active config (default: config.json)
-            
+
         Returns:
             Path to activated configuration file
         """
@@ -201,16 +206,16 @@ class ProfileManager:
 
         # Copy to target location
         shutil.copy2(profile_config_path, target_path)
-        
+
         console.print(f"✅ Activated profile '{profile_name}' -> {target_path}")
         return target_path
 
-    def get_environment_overrides(self, profile_name: str) -> Dict[str, str]:
+    def get_environment_overrides(self, profile_name: str) -> dict[str, str]:
         """Get recommended environment variable overrides for a profile.
-        
+
         Args:
             profile_name: Name of the profile
-            
+
         Returns:
             Dictionary of environment variable overrides
         """
@@ -222,7 +227,7 @@ class ProfileManager:
                 "AI_DOCS__LOG_LEVEL": "DEBUG",
             },
             "production": {
-                "AI_DOCS__ENVIRONMENT": "production", 
+                "AI_DOCS__ENVIRONMENT": "production",
                 "AI_DOCS__DEBUG": "false",
                 "AI_DOCS__LOG_LEVEL": "INFO",
                 "AI_DOCS__SECURITY__REQUIRE_API_KEYS": "true",
@@ -249,16 +254,16 @@ class ProfileManager:
 
         # Resolve aliases
         resolved_profile = profile_aliases.get(profile_name, profile_name)
-        
+
         return env_overrides.get(resolved_profile, {})
 
     def generate_env_file(self, profile_name: str, output_path: Path = None) -> Path:
         """Generate .env file for a profile.
-        
+
         Args:
             profile_name: Name of the profile
             output_path: Output path for .env file (default: .env.{profile})
-            
+
         Returns:
             Path to generated .env file
         """
@@ -266,7 +271,7 @@ class ProfileManager:
             output_path = Path(f".env.{profile_name}")
 
         env_overrides = self.get_environment_overrides(profile_name)
-        
+
         # Create .env file content
         env_content = [
             f"# Environment configuration for {profile_name} profile",
@@ -279,13 +284,15 @@ class ProfileManager:
             env_content.append(f"{key}={value}")
 
         # Add common API key placeholders
-        env_content.extend([
-            "",
-            "# API Keys (replace with your actual keys)",
-            "# AI_DOCS__OPENAI__API_KEY=sk-your_openai_key_here",
-            "# AI_DOCS__FIRECRAWL__API_KEY=fc-your_firecrawl_key_here",
-            "# AI_DOCS__ANTHROPIC__API_KEY=sk-ant-your_anthropic_key_here",
-        ])
+        env_content.extend(
+            [
+                "",
+                "# API Keys (replace with your actual keys)",
+                "# AI_DOCS__OPENAI__API_KEY=sk-your_openai_key_here",
+                "# AI_DOCS__FIRECRAWL__API_KEY=fc-your_firecrawl_key_here",
+                "# AI_DOCS__ANTHROPIC__API_KEY=sk-ant-your_anthropic_key_here",
+            ]
+        )
 
         # Write .env file
         with open(output_path, "w") as f:
@@ -301,33 +308,43 @@ class ProfileManager:
             return
 
         instructions_text = Text()
-        instructions_text.append(f"🎯 Setup Instructions for '{profile_name}' Profile\n\n", style="bold cyan")
-        
+        instructions_text.append(
+            f"🎯 Setup Instructions for '{profile_name}' Profile\n\n", style="bold cyan"
+        )
+
         instructions_text.append(f"Description: {info['description']}\n", style="")
         instructions_text.append(f"Use Case: {info['use_case']}\n\n", style="dim")
 
         # Profile-specific instructions
         instructions_text.append("Setup Steps:\n", style="bold")
-        
+
         instructions_text.append("1. Activate this profile:\n", style="")
-        instructions_text.append(f"   ./setup.sh --profile {profile_name}\n\n", style="cyan")
-        
+        instructions_text.append(
+            f"   ./setup.sh --profile {profile_name}\n\n", style="cyan"
+        )
+
         instructions_text.append("2. Set required API keys in environment:\n", style="")
         env_vars = self.get_environment_overrides(profile_name)
         if env_vars:
             for key, value in env_vars.items():
                 instructions_text.append(f"   export {key}={value}\n", style="green")
-        instructions_text.append("   export AI_DOCS__OPENAI__API_KEY=sk-your_key_here\n", style="green")
+        instructions_text.append(
+            "   export AI_DOCS__OPENAI__API_KEY=sk-your_key_here\n", style="green"
+        )
         instructions_text.append("\n")
 
         instructions_text.append("3. Start services:\n", style="")
         if profile_name == "production":
             instructions_text.append("   docker-compose up -d\n\n", style="cyan")
         else:
-            instructions_text.append("   docker-compose -f docker-compose.yml up -d\n\n", style="cyan")
+            instructions_text.append(
+                "   docker-compose -f docker-compose.yml up -d\n\n", style="cyan"
+            )
 
         instructions_text.append("4. Verify setup:\n", style="")
-        instructions_text.append("   uv run python -m src.cli.main config validate\n", style="cyan")
+        instructions_text.append(
+            "   uv run python -m src.cli.main config validate\n", style="cyan"
+        )
 
         panel = Panel(
             instructions_text,

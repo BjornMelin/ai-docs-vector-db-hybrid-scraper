@@ -8,7 +8,7 @@ isolation scenarios.
 import asyncio
 import time
 import json
-from typing import Dict, Any, List, Optional, Set
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass, field
 from enum import Enum
@@ -32,8 +32,8 @@ class NetworkNode:
     node_id: str
     zone: NetworkZone
     is_leader: bool = False
-    can_communicate_with: Set[str] = field(default_factory=set)
-    data: Dict[str, Any] = field(default_factory=dict)
+    can_communicate_with: set[str] = field(default_factory=set)
+    data: dict[str, Any] = field(default_factory=dict)
     last_heartbeat: float = field(default_factory=time.time)
 
 
@@ -41,11 +41,11 @@ class NetworkPartitionSimulator:
     """Simulates network partitions for testing."""
     
     def __init__(self):
-        self.nodes: Dict[str, NetworkNode] = {}
-        self.partitions: Dict[NetworkZone, Set[str]] = {}
-        self.communication_matrix: Dict[str, Set[str]] = {}
+        self.nodes: dict[str, NetworkNode] = {}
+        self.partitions: dict[NetworkZone, set[str]] = {}
+        self.communication_matrix: dict[str, set[str]] = {}
         
-    def add_node(self, node_id: str, zone: NetworkZone, initial_data: Dict[str, Any] = None):
+    def add_node(self, node_id: str, zone: NetworkZone, initial_data: dict[str, Any] = None):
         """Add a node to the network."""
         self.nodes[node_id] = NetworkNode(
             node_id=node_id,
@@ -65,7 +65,7 @@ class NetworkPartitionSimulator:
             if existing_node_id != node_id:
                 self.communication_matrix[existing_node_id].add(node_id)
     
-    def create_partition(self, isolated_zones: List[NetworkZone]):
+    def create_partition(self, isolated_zones: list[NetworkZone]):
         """Create network partition by isolating specified zones."""
         isolated_nodes = set()
         for zone in isolated_zones:
@@ -95,7 +95,7 @@ class NetworkPartitionSimulator:
         
         return to_node in self.communication_matrix.get(from_node, set())
     
-    async def send_message(self, from_node: str, to_node: str, message: Dict[str, Any]) -> bool:
+    async def send_message(self, from_node: str, to_node: str, message: dict[str, Any]) -> bool:
         """Send message between nodes if they can communicate."""
         if await self.can_communicate(from_node, to_node):
             # Simulate network latency
@@ -104,11 +104,11 @@ class NetworkPartitionSimulator:
         else:
             raise ConnectionError(f"Cannot send message from {from_node} to {to_node} - network partition")
     
-    def get_reachable_nodes(self, node_id: str) -> Set[str]:
+    def get_reachable_nodes(self, node_id: str) -> set[str]:
         """Get set of nodes reachable from given node."""
         return self.communication_matrix.get(node_id, set())
     
-    def get_partition_info(self) -> Dict[str, Any]:
+    def get_partition_info(self) -> dict[str, Any]:
         """Get current partition information."""
         partitions = {}
         processed_nodes = set()
@@ -194,7 +194,7 @@ class TestNetworkPartitions:
                 self.term = 1
                 self.votes = {}
                 
-            async def elect_leader(self, candidate_node: str) -> Dict[str, Any]:
+            async def elect_leader(self, candidate_node: str) -> dict[str, Any]:
                 """Elect leader using majority consensus."""
                 candidate_votes = 0
                 total_nodes = 0
@@ -233,7 +233,7 @@ class TestNetworkPartitions:
                     "reachable_nodes": len(reachable_nodes)
                 }
             
-            async def check_split_brain(self) -> Dict[str, Any]:
+            async def check_split_brain(self) -> dict[str, Any]:
                 """Check for potential split-brain scenarios."""
                 partition_info = self.network.get_partition_info()
                 
@@ -295,7 +295,7 @@ class TestNetworkPartitions:
                 self.network = network_sim
                 self.storage = {node_id: {} for node_id in network_sim.nodes}
                 
-            async def write_with_quorum(self, key: str, value: Any, initiator_node: str) -> Dict[str, Any]:
+            async def write_with_quorum(self, key: str, value: Any, initiator_node: str) -> dict[str, Any]:
                 """Perform write operation with quorum consensus."""
                 reachable_nodes = self.network.get_reachable_nodes(initiator_node)
                 reachable_nodes.add(initiator_node)
@@ -331,7 +331,7 @@ class TestNetworkPartitions:
                     "reachable_nodes": len(reachable_nodes)
                 }
             
-            async def read_with_quorum(self, key: str, initiator_node: str) -> Dict[str, Any]:
+            async def read_with_quorum(self, key: str, initiator_node: str) -> dict[str, Any]:
                 """Perform read operation with quorum consensus."""
                 reachable_nodes = self.network.get_reachable_nodes(initiator_node)
                 reachable_nodes.add(initiator_node)
@@ -411,7 +411,7 @@ class TestNetworkPartitions:
                 self.last_heartbeat = {node_id: time.time() for node_id in network_sim.nodes}
                 self.suspected_partitions = set()
                 
-            async def send_heartbeat(self, from_node: str) -> Dict[str, Any]:
+            async def send_heartbeat(self, from_node: str) -> dict[str, Any]:
                 """Send heartbeat from node to all other nodes."""
                 successful_heartbeats = 0
                 failed_heartbeats = 0
@@ -437,7 +437,7 @@ class TestNetworkPartitions:
                     "total_nodes": len(self.network.nodes) - 1
                 }
             
-            async def detect_partitions(self, timeout_threshold: float = 5.0) -> Dict[str, Any]:
+            async def detect_partitions(self, timeout_threshold: float = 5.0) -> dict[str, Any]:
                 """Detect network partitions based on heartbeat timeouts."""
                 current_time = time.time()
                 suspected_down_nodes = []
@@ -505,7 +505,7 @@ class TestNetworkPartitions:
                 self.node_data = {node_id: {} for node_id in network_sim.nodes}
                 self.vector_clocks = {node_id: {} for node_id in network_sim.nodes}
                 
-            async def record_operation(self, node_id: str, operation: Dict[str, Any]):
+            async def record_operation(self, node_id: str, operation: dict[str, Any]):
                 """Record operation with vector clock."""
                 # Increment vector clock for this node
                 if node_id not in self.vector_clocks[node_id]:
@@ -522,7 +522,7 @@ class TestNetworkPartitions:
                 
                 return op_id
             
-            async def sync_after_partition_heal(self) -> Dict[str, Any]:
+            async def sync_after_partition_heal(self) -> dict[str, Any]:
                 """Synchronize data after partition healing."""
                 # Collect all operations from all nodes
                 all_operations = {}
@@ -568,7 +568,7 @@ class TestNetworkPartitions:
                     "merged_vector_clock": merged_vector_clock
                 }
             
-            async def repair_inconsistencies(self) -> Dict[str, Any]:
+            async def repair_inconsistencies(self) -> dict[str, Any]:
                 """Repair data inconsistencies after partition."""
                 repairs_needed = []
                 repairs_completed = []
@@ -654,7 +654,7 @@ class TestNetworkPartitions:
                 self.operations_log = []
                 self.reads_log = []
                 
-            async def perform_write(self, key: str, value: Any, node_id: str) -> Dict[str, Any]:
+            async def perform_write(self, key: str, value: Any, node_id: str) -> dict[str, Any]:
                 """Perform write operation and log it."""
                 write_op = {
                     "type": "write",
@@ -690,7 +690,7 @@ class TestNetworkPartitions:
                 self.operations_log.append(write_op)
                 return write_op
             
-            async def perform_read(self, key: str, node_id: str) -> Dict[str, Any]:
+            async def perform_read(self, key: str, node_id: str) -> dict[str, Any]:
                 """Perform read operation and log it."""
                 read_op = {
                     "type": "read",
@@ -712,7 +712,7 @@ class TestNetworkPartitions:
                 self.reads_log.append(read_op)
                 return read_op
             
-            def check_consistency(self) -> Dict[str, Any]:
+            def check_consistency(self) -> dict[str, Any]:
                 """Check consistency properties of operations."""
                 violations = []
                 

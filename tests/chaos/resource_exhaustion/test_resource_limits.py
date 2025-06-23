@@ -8,7 +8,7 @@ pool exhaustion.
 import asyncio
 import time
 import psutil
-from typing import Dict, Any, List, Optional, Generator
+from typing import Any, Generator
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass, field
 from enum import Enum
@@ -37,7 +37,7 @@ class ResourceMonitor:
     max_capacity: float = 100.0
     warning_threshold: float = 80.0
     critical_threshold: float = 95.0
-    history: List[float] = field(default_factory=list)
+    history: list[float] = field(default_factory=list)
     
     def update_usage(self, usage: float):
         """Update resource usage."""
@@ -154,7 +154,7 @@ class ResourceExhaustionSimulator:
             "is_critical": monitor.is_critical()
         }
     
-    def get_system_health(self) -> Dict[str, Any]:
+    def get_system_health(self) -> dict[str, Any]:
         """Get overall system health based on resource usage."""
         critical_resources = []
         warning_resources = []
@@ -416,7 +416,7 @@ class TestResourceExhaustion:
             
             return file_handle
         
-        async def close_file(file_handle: Dict[str, Any]):
+        async def close_file(file_handle: dict[str, Any]):
             """Simulate closing a file."""
             if file_handle in open_files:
                 open_files.remove(file_handle)
@@ -600,7 +600,7 @@ class TestResourceExhaustion:
                 self.alerts.extend(new_alerts)
                 return new_alerts
             
-            def get_alert_summary(self) -> Dict[str, Any]:
+            def get_alert_summary(self) -> dict[str, Any]:
                 """Get summary of all alerts."""
                 critical_alerts = [a for a in self.alerts if a["level"] == "critical"]
                 warning_alerts = [a for a in self.alerts if a["level"] == "warning"]
@@ -656,7 +656,7 @@ class TestResourceExhaustion:
                     "service_c": {"memory": 0, "cpu": 0, "connections": 0}
                 }
             
-            async def allocate_resource(self, service: str, resource_type: str, amount: float) -> Dict[str, Any]:
+            async def allocate_resource(self, service: str, resource_type: str, amount: float) -> dict[str, Any]:
                 """Allocate resource with quota checking."""
                 if service not in self.quotas:
                     return {"status": "error", "reason": "unknown_service"}
@@ -685,7 +685,7 @@ class TestResourceExhaustion:
                     "quota": quota
                 }
             
-            def get_quota_status(self, service: str) -> Dict[str, Any]:
+            def get_quota_status(self, service: str) -> dict[str, Any]:
                 """Get quota status for service."""
                 if service not in self.quotas:
                     return {"error": "unknown_service"}

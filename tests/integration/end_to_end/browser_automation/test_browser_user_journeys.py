@@ -8,7 +8,7 @@ import asyncio
 import pytest
 import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 try:
     from playwright.async_api import async_playwright, Browser, BrowserContext, Page
@@ -72,7 +72,7 @@ class TestBrowserUserJourneys:
     async def test_documentation_discovery_journey(
         self, 
         page: Page,
-        test_urls: Dict[str, str],
+        test_urls: dict[str, str],
         journey_data_manager,
     ):
         """Test complete documentation discovery workflow through browser."""
@@ -239,7 +239,7 @@ class TestBrowserUserJourneys:
     async def test_multi_page_crawling_journey(
         self, 
         page: Page,
-        test_urls: Dict[str, str],
+        test_urls: dict[str, str],
         journey_data_manager,
     ):
         """Test multi-page crawling workflow through browser."""
@@ -527,7 +527,7 @@ class TestBrowserUserJourneys:
     async def test_performance_monitoring_journey(
         self, 
         page: Page,
-        test_urls: Dict[str, str],
+        test_urls: dict[str, str],
         journey_data_manager,
     ):
         """Test performance monitoring during browser interactions."""
@@ -642,7 +642,7 @@ class TestBrowserUserJourneys:
     async def test_error_handling_journey(
         self, 
         page: Page,
-        test_urls: Dict[str, str],
+        test_urls: dict[str, str],
         journey_data_manager,
     ):
         """Test error handling and recovery in browser automation."""

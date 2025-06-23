@@ -15,7 +15,7 @@ import asyncio
 import pytest
 import time
 import uuid
-from typing import Dict, List, Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.config import Config
@@ -1009,7 +1009,7 @@ class TestServiceDependencyValidation:
         startup_order = []
         startup_times = {}
         
-        async def mock_service_startup(service_name: str, dependencies: List[str]):
+        async def mock_service_startup(service_name: str, dependencies: list[str]):
             # Verify dependencies are already started
             for dep in dependencies:
                 assert dep in startup_order, f"Dependency {dep} not started before {service_name}"

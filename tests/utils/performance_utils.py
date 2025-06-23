@@ -17,7 +17,7 @@ import time
 import tracemalloc
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable
 from datetime import datetime
 import statistics
 
@@ -32,7 +32,7 @@ class PerformanceMetrics:
     cpu_percent: float = 0.0
     operation_name: str = ""
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    additional_metrics: Dict[str, Any] = field(default_factory=dict)
+    additional_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 class PerformanceTracker:
@@ -96,7 +96,7 @@ class PerformanceTracker:
             
             self.measurements.append(metrics)
     
-    def get_statistics(self, operation_name: Optional[str] = None) -> Dict[str, Any]:
+    def get_statistics(self, operation_name: Optional[str] = None) -> dict[str, Any]:
         """Get performance statistics for all or specific operations.
         
         Args:
@@ -141,7 +141,7 @@ class PerformanceTracker:
             }
         }
     
-    def _percentile(self, data: List[float], percentile: int) -> float:
+    def _percentile(self, data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
             return 0.0
@@ -153,7 +153,7 @@ class PerformanceTracker:
         """Clear all stored measurements."""
         self.measurements.clear()
     
-    def export_measurements(self) -> List[Dict[str, Any]]:
+    def export_measurements(self) -> list[dict[str, Any]]:
         """Export measurements as list of dictionaries."""
         return [
             {
@@ -416,12 +416,12 @@ class BenchmarkSuite:
     
     def compare_functions(
         self,
-        functions: List[Callable],
-        names: Optional[List[str]] = None,
+        functions: list[Callable],
+        names: Optional[list[str]] = None,
         iterations: int = 100,
         *args,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare performance of multiple functions.
         
         Args:
@@ -463,7 +463,7 @@ class BenchmarkSuite:
             ]
         }
     
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of all benchmark results."""
         if not self.results:
             return {"message": "No benchmarks run yet"}
@@ -514,7 +514,7 @@ def time_function(func: Callable, *args, **kwargs) -> float:
     return time.perf_counter() - start_time
 
 
-def profile_memory_usage(func: Callable, *args, **kwargs) -> Dict[str, float]:
+def profile_memory_usage(func: Callable, *args, **kwargs) -> dict[str, float]:
     """Profile memory usage of a function.
     
     Args:

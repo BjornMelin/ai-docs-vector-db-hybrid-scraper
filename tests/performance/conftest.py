@@ -12,7 +12,7 @@ import resource
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -271,7 +271,7 @@ def performance_timer():
             
             return duration
         
-        def get_stats(self, name: str) -> Dict[str, float]:
+        def get_stats(self, name: str) -> dict[str, float]:
             """Get timing statistics for an operation."""
             if name not in self.timings or not self.timings[name]:
                 return {}
@@ -289,7 +289,7 @@ def performance_timer():
             }
         
         @staticmethod
-        def _percentile(data: List[float], percentile: int) -> float:
+        def _percentile(data: list[float], percentile: int) -> float:
             """Calculate percentile of data."""
             sorted_data = sorted(data)
             index = int(len(sorted_data) * percentile / 100)
@@ -338,7 +338,7 @@ def throughput_calculator():
             
             return self.operation_counts[operation] / elapsed
         
-        def get_all_throughputs(self) -> Dict[str, float]:
+        def get_all_throughputs(self) -> dict[str, float]:
             """Get throughput for all measured operations."""
             return {
                 op: self.calculate_throughput(op) or 0.0
@@ -381,7 +381,7 @@ def database_performance_monitor():
             
             return result
         
-        def get_query_stats(self, query_name: str) -> Dict[str, Any]:
+        def get_query_stats(self, query_name: str) -> dict[str, Any]:
             """Get statistics for a specific query."""
             if query_name not in self.query_times:
                 return {}
@@ -405,7 +405,7 @@ def database_performance_monitor():
             """Record connection pool statistics."""
             self.connection_pool_stats[time.time()] = stats
         
-        def get_connection_pool_trends(self) -> Dict[str, Any]:
+        def get_connection_pool_trends(self) -> dict[str, Any]:
             """Get connection pool performance trends."""
             if not self.connection_pool_stats:
                 return {}
@@ -464,7 +464,7 @@ def network_latency_monitor():
                 
                 raise e
         
-        def get_latency_stats(self, endpoint: str) -> Dict[str, Any]:
+        def get_latency_stats(self, endpoint: str) -> dict[str, Any]:
             """Get latency statistics for an endpoint."""
             if endpoint not in self.latency_measurements:
                 return {}
@@ -488,7 +488,7 @@ def network_latency_monitor():
             }
         
         @staticmethod
-        def _percentile(data: List[float], percentile: int) -> float:
+        def _percentile(data: list[float], percentile: int) -> float:
             """Calculate percentile of data."""
             sorted_data = sorted(data)
             index = int(len(sorted_data) * percentile / 100)
@@ -505,7 +505,7 @@ def resource_limit_monitor():
         def __init__(self):
             self.initial_limits = self._get_current_limits()
         
-        def _get_current_limits(self) -> Dict[str, int]:
+        def _get_current_limits(self) -> dict[str, int]:
             """Get current resource limits."""
             return {
                 "max_open_files": resource.getrlimit(resource.RLIMIT_NOFILE)[0],
@@ -513,7 +513,7 @@ def resource_limit_monitor():
                 "max_cpu_time": resource.getrlimit(resource.RLIMIT_CPU)[0],
             }
         
-        def check_resource_usage(self) -> Dict[str, Any]:
+        def check_resource_usage(self) -> dict[str, Any]:
             """Check current resource usage against limits."""
             process = psutil.Process()
             
@@ -542,7 +542,7 @@ def resource_limit_monitor():
                 },
             }
         
-        def is_approaching_limits(self, threshold_percent: float = 80.0) -> Dict[str, bool]:
+        def is_approaching_limits(self, threshold_percent: float = 80.0) -> dict[str, bool]:
             """Check if resource usage is approaching limits."""
             usage = self.check_resource_usage()
             

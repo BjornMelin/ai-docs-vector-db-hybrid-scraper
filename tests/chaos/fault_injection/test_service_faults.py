@@ -6,7 +6,7 @@ against service failures, resource exhaustion, and degraded performance.
 
 import asyncio
 import time
-from typing import Dict, Any, List
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
@@ -272,7 +272,7 @@ class TestServiceFaultInjection:
         """Test data corruption scenarios."""
         corruption_rate = 0.2
         
-        async def data_processing_service(data: Dict[str, Any]):
+        async def data_processing_service(data: dict[str, Any]):
             import random
             
             # Simulate data corruption
@@ -289,7 +289,7 @@ class TestServiceFaultInjection:
             processed_data["checksum_valid"] = True
             return processed_data
         
-        async def data_validator(data: Dict[str, Any]):
+        async def data_validator(data: dict[str, Any]):
             # Validate data integrity
             if data.get("checksum_invalid"):
                 raise ValueError("Data integrity check failed")

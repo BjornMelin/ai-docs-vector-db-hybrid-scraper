@@ -7,7 +7,7 @@ against major outages, data loss, and catastrophic failures.
 import asyncio
 import json
 import time
-from typing import Dict, Any, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass, field
 from enum import Enum
@@ -32,7 +32,7 @@ class DisasterType(Enum):
 class BackupData:
     """Represents backup data for disaster recovery."""
     timestamp: float
-    data: Dict[str, Any]
+    data: dict[str, Any]
     checksum: str
     location: str
     type: str = "full"  # full, incremental, differential
@@ -42,7 +42,7 @@ class BackupData:
 class RecoveryPlan:
     """Disaster recovery plan definition."""
     disaster_type: DisasterType
-    recovery_steps: List[str]
+    recovery_steps: list[str]
     rto: float  # Recovery Time Objective (seconds)
     rpo: float  # Recovery Point Objective (seconds)
     priority: int = 1  # 1=highest, 5=lowest
@@ -63,7 +63,7 @@ class TestDisasterRecovery:
                 self.backups = backups
                 self.replication_lag = 0.0
             
-            async def create_backup(self, data: Dict[str, Any], backup_type: str = "full"):
+            async def create_backup(self, data: dict[str, Any], backup_type: str = "full"):
                 backup = BackupData(
                     timestamp=time.time(),
                     data=data.copy(),
@@ -74,7 +74,7 @@ class TestDisasterRecovery:
                 self.backups.append(backup)
                 return backup
             
-            async def restore_from_backup(self, backup_id: Optional[str] = None) -> Dict[str, Any]:
+            async def restore_from_backup(self, backup_id: Optional[str] = None) -> dict[str, Any]:
                 if not self.backups:
                     raise Exception("No backups available")
                 
@@ -117,7 +117,7 @@ class TestDisasterRecovery:
             def register_recovery_plan(self, disaster_type: DisasterType, plan: RecoveryPlan):
                 self.recovery_plans[disaster_type] = plan
             
-            async def execute_recovery(self, disaster_type: DisasterType) -> Dict[str, Any]:
+            async def execute_recovery(self, disaster_type: DisasterType) -> dict[str, Any]:
                 if self.recovery_in_progress:
                     raise Exception("Recovery already in progress")
                 
@@ -250,7 +250,7 @@ class TestDisasterRecovery:
         corrupted_data["documents"]["doc1"]["content"] = "CORRUPTED_DATA_###"
         corrupted_data["embeddings"]["doc1"] = [999.9, 999.9]  # Corrupted embeddings
         
-        async def detect_corruption(data: Dict[str, Any]) -> bool:
+        async def detect_corruption(data: dict[str, Any]) -> bool:
             """Detect data corruption."""
             # Check for corruption markers
             for doc_id, doc in data.get("documents", {}).items():
@@ -387,7 +387,7 @@ class TestDisasterRecovery:
         # Simulate security breach detection
         breach_indicators = []
         
-        async def detect_security_breach() -> Dict[str, Any]:
+        async def detect_security_breach() -> dict[str, Any]:
             """Detect security breach indicators."""
             suspicious_activities = [
                 {"type": "unauthorized_access", "severity": "high", "source": "unknown_ip"},
@@ -488,7 +488,7 @@ class TestDisasterRecovery:
             }
             return wrong_config
         
-        async def detect_human_error(current_config: Dict, current_data: Dict) -> Dict[str, Any]:
+        async def detect_human_error(current_config: Dict, current_data: Dict) -> dict[str, Any]:
             """Detect human error by comparing with expected state."""
             errors = []
             
@@ -585,7 +585,7 @@ class TestDisasterRecovery:
             }
         }
         
-        async def region_health_check(region: str) -> Dict[str, Any]:
+        async def region_health_check(region: str) -> dict[str, Any]:
             """Check health of a specific region."""
             region_info = regions[region]
             
@@ -681,7 +681,7 @@ class TestDisasterRecovery:
         assert not integrity_ok, "Backup corruption should be detected"
         
         # Test partial restoration capabilities
-        async def restore_partial_data(backup_data: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+        async def restore_partial_data(backup_data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
             """Restore only specific keys from backup."""
             partial_data = {}
             for key in keys:
@@ -708,7 +708,7 @@ class TestDisasterRecovery:
             "recovery_test_frequency": 3600  # Every hour
         }
         
-        async def check_rpo_compliance(target_rpo: float) -> Dict[str, Any]:
+        async def check_rpo_compliance(target_rpo: float) -> dict[str, Any]:
             """Check if current backup age meets RPO requirements."""
             backup_age = time.time() - recovery_metrics["last_backup_time"]
             
@@ -719,7 +719,7 @@ class TestDisasterRecovery:
                 "next_backup_due": recovery_metrics["last_backup_time"] + recovery_metrics["backup_frequency"]
             }
         
-        async def check_rto_compliance(target_rto: float) -> Dict[str, Any]:
+        async def check_rto_compliance(target_rto: float) -> dict[str, Any]:
             """Check if recovery procedures can meet RTO requirements."""
             last_test_age = time.time() - recovery_metrics["last_recovery_test"]
             test_overdue = last_test_age > recovery_metrics["recovery_test_frequency"]
@@ -731,7 +731,7 @@ class TestDisasterRecovery:
                 "next_test_due": recovery_metrics["last_recovery_test"] + recovery_metrics["recovery_test_frequency"]
             }
         
-        async def automated_recovery_test() -> Dict[str, Any]:
+        async def automated_recovery_test() -> dict[str, Any]:
             """Perform automated recovery test."""
             test_start = time.time()
             

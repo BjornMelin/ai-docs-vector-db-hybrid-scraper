@@ -10,9 +10,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+
 
 import pytest
 import pytest_asyncio
@@ -289,8 +287,8 @@ class DeploymentTestOrchestrator:
         }
     
     async def execute_comprehensive_test(
-        self, test_config: Dict[str, Any], deployment_config: DeploymentTestConfig
-    ) -> Dict[str, Any]:
+        self, test_config: dict[str, Any], deployment_config: DeploymentTestConfig
+    ) -> dict[str, Any]:
         """Execute comprehensive deployment test."""
         start_time = datetime.utcnow()
         
@@ -346,7 +344,7 @@ class DeploymentTestOrchestrator:
             "end_time": end_time.isoformat(),
         }
     
-    async def _execute_environment_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_environment_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute environment validation tests."""
         await asyncio.sleep(2)
         
@@ -358,7 +356,7 @@ class DeploymentTestOrchestrator:
             "coverage": 0.95,
         }
     
-    async def _execute_pipeline_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_pipeline_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute pipeline validation tests."""
         await asyncio.sleep(3)
         
@@ -370,7 +368,7 @@ class DeploymentTestOrchestrator:
             "coverage": 0.90,
         }
     
-    async def _execute_infrastructure_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_infrastructure_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute infrastructure validation tests."""
         await asyncio.sleep(4)
         
@@ -382,7 +380,7 @@ class DeploymentTestOrchestrator:
             "coverage": 0.88,
         }
     
-    async def _execute_post_deployment_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_post_deployment_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute post-deployment validation tests."""
         await asyncio.sleep(2)
         
@@ -394,7 +392,7 @@ class DeploymentTestOrchestrator:
             "coverage": 0.92,
         }
     
-    async def _execute_blue_green_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_blue_green_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute blue-green deployment tests."""
         await asyncio.sleep(3)
         
@@ -406,7 +404,7 @@ class DeploymentTestOrchestrator:
             "coverage": 0.85,
         }
     
-    async def _execute_disaster_recovery_tests(self, config: DeploymentTestConfig) -> Dict[str, Any]:
+    async def _execute_disaster_recovery_tests(self, config: DeploymentTestConfig) -> dict[str, Any]:
         """Execute disaster recovery tests."""
         await asyncio.sleep(5)
         
@@ -426,8 +424,8 @@ class DeploymentReadinessAssessor:
         self.work_dir = work_dir
     
     async def assess_deployment_readiness(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Assess deployment readiness."""
         check_results = {}
         total_score = 0
@@ -459,7 +457,7 @@ class DeploymentReadinessAssessor:
             "check_results": check_results,
         }
     
-    async def _execute_readiness_check(self, check_name: str, critical: bool) -> Dict[str, Any]:
+    async def _execute_readiness_check(self, check_name: str, critical: bool) -> dict[str, Any]:
         """Execute individual readiness check."""
         await asyncio.sleep(0.5)
         
@@ -483,8 +481,8 @@ class DeploymentRollbackTester:
         self.work_dir = work_dir
     
     async def test_rollback_readiness(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Test rollback readiness."""
         scenario_results = {}
         all_scenarios_passed = True
@@ -504,8 +502,8 @@ class DeploymentRollbackTester:
         }
     
     async def _test_rollback_scenario(
-        self, scenario: str, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, scenario: str, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Test individual rollback scenario."""
         # Simulate rollback time based on scenario complexity
         rollback_times = {
@@ -529,7 +527,7 @@ class DeploymentRollbackTester:
 class DeploymentTestCoverageAnalyzer:
     """Analyzer for deployment test coverage."""
     
-    def analyze_test_coverage(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def analyze_test_coverage(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Analyze test coverage for deployment environment."""
         category_coverage = {
             "environment_configuration": 0.95,
@@ -563,7 +561,7 @@ class DeploymentTestReportGenerator:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    def generate_deployment_report(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_deployment_report(self, config: dict[str, Any]) -> dict[str, Any]:
         """Generate deployment test report."""
         report_content = {
             "report_metadata": {
@@ -610,7 +608,7 @@ class DeploymentTestReportGenerator:
 class DeploymentMetricsCollector:
     """Collector for deployment metrics."""
     
-    def collect_deployment_metrics(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def collect_deployment_metrics(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Collect deployment metrics."""
         base_metrics = {
             "deployment_duration": 15.5,

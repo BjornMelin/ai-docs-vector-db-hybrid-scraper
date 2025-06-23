@@ -5,7 +5,7 @@ and ensures data structure compliance.
 """
 
 import pytest
-from typing import Any, Dict, List
+from typing import Any
 from datetime import datetime
 
 from src.models.api_contracts import (

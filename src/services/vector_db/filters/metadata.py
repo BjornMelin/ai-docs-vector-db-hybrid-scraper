@@ -8,7 +8,6 @@ and integration with custom metadata schemas.
 import logging
 from enum import Enum
 from typing import Any
-from typing import Union
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -107,7 +106,7 @@ class BooleanExpressionModel(BaseModel):
     """Boolean expression for combining multiple conditions."""
 
     operator: BooleanOperator = Field(..., description="Boolean operator")
-    conditions: list[Union["BooleanExpressionModel", FieldConditionModel]] = Field(
+    conditions: list["BooleanExpressionModel" | FieldConditionModel] = Field(
         default_factory=list, description="List of sub-conditions"
     )
 

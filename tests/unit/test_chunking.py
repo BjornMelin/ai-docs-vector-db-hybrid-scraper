@@ -4,7 +4,7 @@ This module tests the enhanced chunking functionality with proper type annotatio
 standardized assertions, and modern test patterns.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 import pytest
 
 from src.chunking import EnhancedChunker

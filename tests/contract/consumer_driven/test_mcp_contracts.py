@@ -6,7 +6,7 @@ ensuring compatibility and proper behavior.
 
 import json
 import pytest
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from src.models.api_contracts import SearchRequest, SearchResponse

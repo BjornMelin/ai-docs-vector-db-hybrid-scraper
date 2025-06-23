@@ -10,7 +10,7 @@ import os
 import pytest
 import secrets
 import time
-from typing import Dict, List, Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes, serialization
@@ -68,7 +68,7 @@ class TestDataProtection:
                     )
                 )
             
-            def hash_password(self, password: str, salt: Optional[bytes] = None) -> Dict[str, bytes]:
+            def hash_password(self, password: str, salt: Optional[bytes] = None) -> dict[str, bytes]:
                 """Hash password with salt."""
                 if salt is None:
                     salt = os.urandom(32)
@@ -117,7 +117,7 @@ class TestDataProtection:
                 self.key_versions = {}
                 self.rotation_schedule = {}
             
-            def generate_key(self, key_id: str, algorithm: str = "AES-256") -> Dict[str, Any]:
+            def generate_key(self, key_id: str, algorithm: str = "AES-256") -> dict[str, Any]:
                 """Generate and store encryption key."""
                 if algorithm == "AES-256":
                     key_material = os.urandom(32)  # 256 bits
@@ -141,7 +141,7 @@ class TestDataProtection:
                 self.keys[f"{key_id}_v{version}"] = key_metadata
                 return key_metadata
             
-            def rotate_key(self, key_id: str) -> Dict[str, Any]:
+            def rotate_key(self, key_id: str) -> dict[str, Any]:
                 """Rotate encryption key."""
                 # Deactivate current key
                 current_version = self.key_versions.get(key_id, 0)
@@ -153,14 +153,14 @@ class TestDataProtection:
                 # Generate new key
                 return self.generate_key(key_id)
             
-            def get_key(self, key_id: str, version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+            def get_key(self, key_id: str, version: Optional[int] = None) -> Optional[dict[str, Any]]:
                 """Get encryption key by ID and version."""
                 if version is None:
                     version = self.key_versions.get(key_id, 0)
                 
                 return self.keys.get(f"{key_id}_v{version}")
             
-            def list_keys(self) -> List[Dict[str, Any]]:
+            def list_keys(self) -> list[dict[str, Any]]:
                 """List all encryption keys."""
                 return list(self.keys.values())
             
@@ -382,7 +382,7 @@ class TestDataProtection:
         
         # Test certificate validation (mock)
         class TLSValidator:
-            def validate_certificate_chain(self, certificate_chain: List[str]) -> bool:
+            def validate_certificate_chain(self, certificate_chain: list[str]) -> bool:
                 """Validate TLS certificate chain."""
                 # In real implementation, this would validate:
                 # - Certificate is not expired
@@ -391,7 +391,7 @@ class TestDataProtection:
                 # - Certificate chain is complete
                 return len(certificate_chain) > 0
             
-            def check_cipher_suites(self, cipher_suites: List[str]) -> Dict[str, bool]:
+            def check_cipher_suites(self, cipher_suites: list[str]) -> dict[str, bool]:
                 """Check TLS cipher suite security."""
                 secure_ciphers = [
                     "TLS_AES_256_GCM_SHA384",
@@ -674,7 +674,7 @@ class TestDataProtection:
                 self.backup_storage = {}
                 self.recovery_log = []
             
-            def create_backup(self, keys: List[Dict[str, Any]], backup_password: str) -> str:
+            def create_backup(self, keys: list[dict[str, Any]], backup_password: str) -> str:
                 """Create encrypted backup of keys."""
                 # In real implementation, this would:
                 # 1. Serialize key data
@@ -695,7 +695,7 @@ class TestDataProtection:
                 self.backup_storage[backup_id] = backup_data
                 return backup_id
             
-            def restore_backup(self, backup_id: str, backup_password: str) -> List[Dict[str, Any]]:
+            def restore_backup(self, backup_id: str, backup_password: str) -> list[dict[str, Any]]:
                 """Restore keys from backup."""
                 if backup_id not in self.backup_storage:
                     raise ValueError("Backup not found")

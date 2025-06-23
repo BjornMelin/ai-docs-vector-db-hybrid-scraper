@@ -9,7 +9,7 @@ error handling patterns.
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List, Dict, Any
+from typing import Any
 
 from src.services.functional.circuit_breaker import (
     CircuitBreaker,

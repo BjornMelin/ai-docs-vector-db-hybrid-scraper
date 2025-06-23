@@ -6,7 +6,7 @@ failure detection, fast-fail behavior, and automatic recovery mechanisms.
 
 import asyncio
 import time
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass
 from enum import Enum
@@ -87,7 +87,7 @@ class CircuitBreaker:
             self.failure_count >= self.config.failure_threshold):
             self.state = CircuitState.OPEN
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get circuit breaker statistics."""
         return {
             "state": self.state.value,

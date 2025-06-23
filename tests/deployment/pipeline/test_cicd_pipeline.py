@@ -11,9 +11,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+
 
 import pytest
 import pytest_asyncio
@@ -488,7 +486,7 @@ class PipelineExecutor:
             "verification": self._execute_verification_stage,
         }
     
-    async def execute_pipeline(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_pipeline(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute complete pipeline."""
         pipeline_id = config["pipeline_id"]
         environment = config["environment"]
@@ -528,7 +526,7 @@ class PipelineExecutor:
         result["end_time"] = datetime.utcnow().isoformat()
         return result
     
-    async def _execute_stage(self, stage_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_stage(self, stage_config: dict[str, Any]) -> dict[str, Any]:
         """Execute a single pipeline stage."""
         stage_name = stage_config["name"]
         stage_type = stage_config["type"]
@@ -578,7 +576,7 @@ class PipelineExecutor:
                 "end_time": end_time.isoformat(),
             }
     
-    async def _execute_build_stage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_build_stage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute build stage."""
         await asyncio.sleep(2)  # Simulate build time
         
@@ -590,7 +588,7 @@ class PipelineExecutor:
             }
         }
     
-    async def _execute_test_stage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_test_stage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute test stage."""
         await asyncio.sleep(5)  # Simulate test time
         
@@ -603,7 +601,7 @@ class PipelineExecutor:
             }
         }
     
-    async def _execute_security_stage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_security_stage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute security stage."""
         await asyncio.sleep(3)  # Simulate security scan time
         
@@ -615,7 +613,7 @@ class PipelineExecutor:
             }
         }
     
-    async def _execute_deploy_stage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_deploy_stage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute deployment stage."""
         await asyncio.sleep(4)  # Simulate deployment time
         
@@ -627,7 +625,7 @@ class PipelineExecutor:
             }
         }
     
-    async def _execute_verification_stage(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_verification_stage(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute verification stage."""
         await asyncio.sleep(2)  # Simulate verification time
         
@@ -639,7 +637,7 @@ class PipelineExecutor:
             }
         }
     
-    async def _execute_rollback(self, pipeline_id: str) -> Dict[str, Any]:
+    async def _execute_rollback(self, pipeline_id: str) -> dict[str, Any]:
         """Execute rollback procedure."""
         await asyncio.sleep(3)  # Simulate rollback time
         
@@ -654,7 +652,7 @@ class PipelineExecutor:
 class PipelineConfigValidator:
     """Validator for pipeline configuration."""
     
-    def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """Validate pipeline configuration."""
         errors = []
         warnings = []
@@ -681,7 +679,7 @@ class PipelineConfigValidator:
             "warnings": warnings,
         }
     
-    def _validate_stage(self, stage: Dict[str, Any], index: int) -> List[str]:
+    def _validate_stage(self, stage: dict[str, Any], index: int) -> list[str]:
         """Validate individual stage configuration."""
         errors = []
         
@@ -711,7 +709,7 @@ class DockerBuildManager:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    async def build_image(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def build_image(self, config: dict[str, Any]) -> dict[str, Any]:
         """Build Docker image."""
         start_time = datetime.utcnow()
         
@@ -753,7 +751,7 @@ class DockerBuildManager:
 class BuildSecurityScanner:
     """Security scanner for build artifacts."""
     
-    async def scan_build_artifacts(self, artifacts: Dict[str, Any]) -> Dict[str, Any]:
+    async def scan_build_artifacts(self, artifacts: dict[str, Any]) -> dict[str, Any]:
         """Scan build artifacts for security vulnerabilities."""
         # Simulate security scanning
         await asyncio.sleep(2)
@@ -782,7 +780,7 @@ class PipelineTestExecutor:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    async def execute_tests(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_tests(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute tests based on configuration."""
         test_type = config["test_type"]
         timeout = config.get("timeout_seconds", 600)
@@ -821,7 +819,7 @@ class PipelineTestExecutor:
                 "duration_seconds": (datetime.utcnow() - start_time).total_seconds(),
             }
     
-    def _simulate_unit_test_results(self) -> Dict[str, Any]:
+    def _simulate_unit_test_results(self) -> dict[str, Any]:
         """Simulate unit test results."""
         return {
             "tests_run": 120,
@@ -831,7 +829,7 @@ class PipelineTestExecutor:
             "coverage_percentage": 85.2,
         }
     
-    def _simulate_integration_test_results(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _simulate_integration_test_results(self, config: dict[str, Any]) -> dict[str, Any]:
         """Simulate integration test results."""
         return {
             "tests_run": 45,
@@ -841,7 +839,7 @@ class PipelineTestExecutor:
             "services_validated": config.get("services_required", []),
         }
     
-    def _simulate_load_test_results(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _simulate_load_test_results(self, config: dict[str, Any]) -> dict[str, Any]:
         """Simulate load test results."""
         return {
             "tests_run": 1,
@@ -862,7 +860,7 @@ class AutomatedDeploymentManager:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
     
-    async def deploy(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def deploy(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute automated deployment."""
         deployment_strategy = config.get("deployment_strategy", "rolling_update")
         
@@ -871,7 +869,7 @@ class AutomatedDeploymentManager:
         else:
             return await self._deploy_rolling_update(config)
     
-    async def _deploy_rolling_update(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _deploy_rolling_update(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute rolling update deployment."""
         # Simulate rolling update
         await asyncio.sleep(3)
@@ -885,7 +883,7 @@ class AutomatedDeploymentManager:
             "instances_updated": 3,
         }
     
-    async def _deploy_blue_green(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _deploy_blue_green(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute blue-green deployment."""
         # Simulate blue-green deployment
         await asyncio.sleep(5)

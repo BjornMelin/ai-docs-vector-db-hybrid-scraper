@@ -7,7 +7,7 @@ and ensures proper security controls are in place.
 import pytest
 import re
 import time
-from typing import Dict, List, Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.security import SecurityError, SecurityValidator
@@ -31,7 +31,7 @@ class TestOWASPTop10Compliance:
             def __init__(self):
                 self.compliance_results = {}
             
-            def check_a01_broken_access_control(self) -> Dict[str, Any]:
+            def check_a01_broken_access_control(self) -> dict[str, Any]:
                 """A01:2021 - Broken Access Control."""
                 return {
                     "category": "A01:2021 - Broken Access Control",
@@ -46,7 +46,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a02_cryptographic_failures(self) -> Dict[str, Any]:
+            def check_a02_cryptographic_failures(self) -> dict[str, Any]:
                 """A02:2021 - Cryptographic Failures."""
                 return {
                     "category": "A02:2021 - Cryptographic Failures",
@@ -62,7 +62,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a03_injection(self) -> Dict[str, Any]:
+            def check_a03_injection(self) -> dict[str, Any]:
                 """A03:2021 - Injection."""
                 return {
                     "category": "A03:2021 - Injection",
@@ -77,7 +77,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a04_insecure_design(self) -> Dict[str, Any]:
+            def check_a04_insecure_design(self) -> dict[str, Any]:
                 """A04:2021 - Insecure Design."""
                 return {
                     "category": "A04:2021 - Insecure Design",
@@ -92,7 +92,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a05_security_misconfiguration(self) -> Dict[str, Any]:
+            def check_a05_security_misconfiguration(self) -> dict[str, Any]:
                 """A05:2021 - Security Misconfiguration."""
                 return {
                     "category": "A05:2021 - Security Misconfiguration",
@@ -108,7 +108,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a06_vulnerable_components(self) -> Dict[str, Any]:
+            def check_a06_vulnerable_components(self) -> dict[str, Any]:
                 """A06:2021 - Vulnerable and Outdated Components."""
                 return {
                     "category": "A06:2021 - Vulnerable and Outdated Components", 
@@ -123,7 +123,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a07_authentication_failures(self) -> Dict[str, Any]:
+            def check_a07_authentication_failures(self) -> dict[str, Any]:
                 """A07:2021 - Identification and Authentication Failures."""
                 return {
                     "category": "A07:2021 - Identification and Authentication Failures",
@@ -138,7 +138,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a08_software_integrity_failures(self) -> Dict[str, Any]:
+            def check_a08_software_integrity_failures(self) -> dict[str, Any]:
                 """A08:2021 - Software and Data Integrity Failures."""
                 return {
                     "category": "A08:2021 - Software and Data Integrity Failures",
@@ -153,7 +153,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a09_logging_monitoring_failures(self) -> Dict[str, Any]:
+            def check_a09_logging_monitoring_failures(self) -> dict[str, Any]:
                 """A09:2021 - Security Logging and Monitoring Failures."""
                 return {
                     "category": "A09:2021 - Security Logging and Monitoring Failures",
@@ -168,7 +168,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def check_a10_ssrf(self) -> Dict[str, Any]:
+            def check_a10_ssrf(self) -> dict[str, Any]:
                 """A10:2021 - Server-Side Request Forgery (SSRF)."""
                 return {
                     "category": "A10:2021 - Server-Side Request Forgery",
@@ -183,7 +183,7 @@ class TestOWASPTop10Compliance:
                     "compliant": True
                 }
             
-            def run_full_assessment(self) -> Dict[str, Any]:
+            def run_full_assessment(self) -> dict[str, Any]:
                 """Run full OWASP Top 10 assessment."""
                 results = {
                     "assessment_date": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -409,7 +409,7 @@ class TestOWASPTop10Compliance:
                 self.baseline_security_score = 95
                 self.security_metrics = {}
             
-            def check_security_regression(self, current_score: float) -> Dict[str, Any]:
+            def check_security_regression(self, current_score: float) -> dict[str, Any]:
                 """Check for security regression."""
                 regression_threshold = 5  # 5 point drop threshold
                 
@@ -450,7 +450,7 @@ class TestOWASPTop10Compliance:
                 self.alert_threshold = 90
                 self.compliance_history = []
             
-            def daily_compliance_check(self) -> Dict[str, Any]:
+            def daily_compliance_check(self) -> dict[str, Any]:
                 """Perform daily compliance check."""
                 if not self.monitoring_enabled:
                     return {"status": "monitoring_disabled"}
@@ -511,7 +511,7 @@ class TestOWASPTop10Compliance:
             def __init__(self, checker):
                 self.checker = checker
             
-            def generate_executive_summary(self) -> Dict[str, Any]:
+            def generate_executive_summary(self) -> dict[str, Any]:
                 """Generate executive summary report."""
                 assessment = self.checker.run_full_assessment()
                 
@@ -540,7 +540,7 @@ class TestOWASPTop10Compliance:
                     "next_assessment_date": "2024-01-01"
                 }
             
-            def _generate_recommendations(self, assessment: Dict[str, Any]) -> List[str]:
+            def _generate_recommendations(self, assessment: dict[str, Any]) -> list[str]:
                 """Generate recommendations based on assessment."""
                 recommendations = []
                 
@@ -581,7 +581,7 @@ class TestOWASPTop10Compliance:
                     "enabled": True
                 })
             
-            def integrate_with_ci_cd(self, pipeline_config: Dict[str, Any]):
+            def integrate_with_ci_cd(self, pipeline_config: dict[str, Any]):
                 """Integrate compliance checks with CI/CD pipeline."""
                 required_stages = [
                     "security_scan",
@@ -596,7 +596,7 @@ class TestOWASPTop10Compliance:
                 
                 return pipeline_config
             
-            def run_automated_checks(self) -> Dict[str, Any]:
+            def run_automated_checks(self) -> dict[str, Any]:
                 """Run all automated compliance checks."""
                 results = {}
                 

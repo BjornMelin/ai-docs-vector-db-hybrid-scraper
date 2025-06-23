@@ -8,7 +8,7 @@ normal operations after chaos events.
 import asyncio
 import time
 import json
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass, field
 from enum import Enum
@@ -43,10 +43,10 @@ class RecoveryMetrics:
 @dataclass
 class SystemState:
     """Represents system state for recovery validation."""
-    services: Dict[str, Any] = field(default_factory=dict)
-    data_stores: Dict[str, Any] = field(default_factory=dict)
-    connections: Dict[str, Any] = field(default_factory=dict)
-    performance_metrics: Dict[str, Any] = field(default_factory=dict)
+    services: dict[str, Any] = field(default_factory=dict)
+    data_stores: dict[str, Any] = field(default_factory=dict)
+    connections: dict[str, Any] = field(default_factory=dict)
+    performance_metrics: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
 
@@ -101,7 +101,7 @@ class TestRecoveryValidation:
                     self.current_state = self.baseline_state
                 return self.current_state
             
-            async def detect_failure(self) -> Dict[str, Any]:
+            async def detect_failure(self) -> dict[str, Any]:
                 """Detect system failures."""
                 current = await self.monitor_current_state()
                 
@@ -133,7 +133,7 @@ class TestRecoveryValidation:
                     "severity": "high" if len(failures) > 2 else "medium" if failures else "low"
                 }
             
-            async def validate_recovery(self) -> Dict[str, Any]:
+            async def validate_recovery(self) -> dict[str, Any]:
                 """Validate system recovery."""
                 current = await self.monitor_current_state()
                 
@@ -189,7 +189,7 @@ class TestRecoveryValidation:
                 """Register recovery procedure for failure type."""
                 self.recovery_procedures[failure_type] = procedure
             
-            async def execute_recovery(self, failure_type: str, context: Dict[str, Any] = None) -> RecoveryMetrics:
+            async def execute_recovery(self, failure_type: str, context: dict[str, Any] = None) -> RecoveryMetrics:
                 """Execute recovery procedure."""
                 if failure_type not in self.recovery_procedures:
                     raise Exception(f"No recovery procedure for {failure_type}")
@@ -269,7 +269,7 @@ class TestRecoveryValidation:
         assert "service_search_service_unhealthy" in failure_detection["failure_types"]
         
         # Define recovery procedure
-        async def search_service_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def search_service_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for search service."""
             start_time = time.time()
             
@@ -364,7 +364,7 @@ class TestRecoveryValidation:
         }
         
         # Define data recovery procedure
-        async def data_corruption_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def data_corruption_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for data corruption."""
             
             # Step 1: Detect corruption
@@ -448,7 +448,7 @@ class TestRecoveryValidation:
         )
         
         # Define cascade recovery procedure
-        async def cascade_failure_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def cascade_failure_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for cascade failures."""
             
             # Step 1: Rapid detection
@@ -559,7 +559,7 @@ class TestRecoveryValidation:
         )
         
         # Define partial recovery procedure
-        async def partial_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def partial_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure that achieves partial recovery."""
             
             # Attempt recovery but some components remain degraded
@@ -617,7 +617,7 @@ class TestRecoveryValidation:
         }
         
         # Mock fast recovery procedure
-        async def fast_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def fast_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Fast recovery procedure for RTO testing."""
             start_time = time.time()
             
@@ -636,7 +636,7 @@ class TestRecoveryValidation:
             }
         
         # Mock slow recovery procedure
-        async def slow_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def slow_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Slow recovery procedure for RTO testing."""
             start_time = time.time()
             
@@ -696,7 +696,7 @@ class TestRecoveryValidation:
             "archive_data": 3600.0    # 1 hour data loss acceptable
         }
         
-        async def rpo_compliant_recovery(context: Dict[str, Any]) -> Dict[str, Any]:
+        async def rpo_compliant_recovery(context: dict[str, Any]) -> dict[str, Any]:
             """Recovery that meets RPO requirements."""
             rpo_target = context.get("rpo_target", 300.0)  # 5 minutes default
             
@@ -760,7 +760,7 @@ class TestRecoveryValidation:
                 """Register automated validation check."""
                 self.validation_checks.append((check_name, check_func))
             
-            async def run_validation_suite(self) -> Dict[str, Any]:
+            async def run_validation_suite(self) -> dict[str, Any]:
                 """Run all registered validation checks."""
                 results = {}
                 

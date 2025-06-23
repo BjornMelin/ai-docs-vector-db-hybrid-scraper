@@ -9,7 +9,7 @@ import sys
 import tempfile
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -144,7 +144,7 @@ def setup_browser_environment():
 
 # Platform-specific fixtures
 @pytest.fixture(scope="session")
-def platform_info() -> Dict[str, Union[bool, str]]:
+def platform_info() -> dict[str, bool | str]:
     """Provide platform information for tests.
     
     Returns:
@@ -215,7 +215,7 @@ def require_ci() -> None:
 
 
 @pytest.fixture
-def mock_browser_config() -> Dict[str, Any]:
+def mock_browser_config() -> dict[str, Any]:
     """Provide a platform-aware mock browser configuration for testing.
 
     Returns:
@@ -245,7 +245,7 @@ def mock_browser_config() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def test_urls() -> Dict[str, str]:
+def test_urls() -> dict[str, str]:
     """Provide test URLs for browser automation testing.
 
     Returns:
@@ -361,7 +361,7 @@ def mock_crawl4ai() -> MagicMock:
 
 
 @pytest.fixture()
-def sample_documentation_site() -> Dict[str, Any]:
+def sample_documentation_site() -> dict[str, Any]:
     """Sample documentation site configuration.
     
     Returns:
@@ -376,7 +376,7 @@ def sample_documentation_site() -> Dict[str, Any]:
 
 
 @pytest.fixture()
-def sample_crawl_result() -> Dict[str, Any]:
+def sample_crawl_result() -> dict[str, Any]:
     """Sample crawl result data.
     
     Returns:
@@ -399,7 +399,7 @@ def sample_crawl_result() -> Dict[str, Any]:
 
 
 @pytest.fixture()
-def sample_vector_points() -> List[PointStruct]:
+def sample_vector_points() -> list[PointStruct]:
     """Sample vector points for testing.
     
     Returns:

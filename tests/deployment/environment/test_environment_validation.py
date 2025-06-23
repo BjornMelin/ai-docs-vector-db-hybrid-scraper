@@ -9,8 +9,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
+
 
 import pytest
 
@@ -23,7 +22,7 @@ class TestEnvironmentValidation:
     
     @pytest.mark.environment
     def test_development_environment_config(
-        self, environment_configs: Dict[str, DeploymentEnvironment]
+        self, environment_configs: dict[str, DeploymentEnvironment]
     ):
         """Test development environment configuration."""
         dev_env = environment_configs["development"]
@@ -44,7 +43,7 @@ class TestEnvironmentValidation:
     
     @pytest.mark.environment
     def test_staging_environment_config(
-        self, environment_configs: Dict[str, DeploymentEnvironment]
+        self, environment_configs: dict[str, DeploymentEnvironment]
     ):
         """Test staging environment configuration."""
         staging_env = environment_configs["staging"]
@@ -65,7 +64,7 @@ class TestEnvironmentValidation:
     
     @pytest.mark.environment
     def test_production_environment_config(
-        self, environment_configs: Dict[str, DeploymentEnvironment]
+        self, environment_configs: dict[str, DeploymentEnvironment]
     ):
         """Test production environment configuration."""
         prod_env = environment_configs["production"]
@@ -86,7 +85,7 @@ class TestEnvironmentValidation:
     
     @pytest.mark.environment
     def test_environment_progression(
-        self, environment_configs: Dict[str, DeploymentEnvironment]
+        self, environment_configs: dict[str, DeploymentEnvironment]
     ):
         """Test that environments progress logically from dev to production."""
         dev = environment_configs["development"]
@@ -114,7 +113,7 @@ class TestConfigurationDrift:
     """Test configuration drift detection between environments."""
     
     @pytest.fixture
-    def sample_configs(self, temp_deployment_dir: Path) -> Dict[str, Path]:
+    def sample_configs(self, temp_deployment_dir: Path) -> dict[str, Path]:
         """Create sample configuration files for drift testing."""
         configs = {}
         
@@ -176,7 +175,7 @@ class TestConfigurationDrift:
         return configs
     
     @pytest.mark.environment
-    def test_detect_configuration_drift(self, sample_configs: Dict[str, Path]):
+    def test_detect_configuration_drift(self, sample_configs: dict[str, Path]):
         """Test configuration drift detection between environments."""
         drift_detector = ConfigurationDriftDetector()
         
@@ -209,7 +208,7 @@ class TestConfigurationDrift:
         assert any("vector_db.collection_name" in drift["path"] for drift in staging_prod_drift)
     
     @pytest.mark.environment
-    def test_acceptable_drift_vs_problematic_drift(self, sample_configs: Dict[str, Path]):
+    def test_acceptable_drift_vs_problematic_drift(self, sample_configs: dict[str, Path]):
         """Test distinguishing between acceptable and problematic configuration drift."""
         drift_detector = ConfigurationDriftDetector()
         
@@ -352,8 +351,8 @@ class ConfigurationDriftDetector:
     """Detector for configuration drift between environments."""
     
     def detect_drift(
-        self, config1: Dict[str, Any], config2: Dict[str, Any], path: str = ""
-    ) -> List[Dict[str, Any]]:
+        self, config1: dict[str, Any], config2: dict[str, Any], path: str = ""
+    ) -> list[dict[str, Any]]:
         """Detect drift between two configurations."""
         drift = []
         
@@ -389,7 +388,7 @@ class ConfigurationDriftDetector:
         
         return drift
     
-    def categorize_drift(self, drift: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    def categorize_drift(self, drift: list[dict[str, Any]]) -> dict[str, list[Dict[str, Any]]]:
         """Categorize drift as acceptable or problematic."""
         acceptable_patterns = [
             "debug",
@@ -445,7 +444,7 @@ class SecretsValidator:
             r"^[a-f0-9]{32,}$",       # Hex strings (common for secrets)
         ]
     
-    def scan_for_secrets(self, config_file: Path) -> List[Dict[str, Any]]:
+    def scan_for_secrets(self, config_file: Path) -> list[dict[str, Any]]:
         """Scan configuration file for potential secrets."""
         violations = []
         
@@ -455,7 +454,7 @@ class SecretsValidator:
         self._scan_dict(config, violations)
         return violations
     
-    def _scan_dict(self, obj: Any, violations: List[Dict[str, Any]], path: str = "") -> None:
+    def _scan_dict(self, obj: Any, violations: list[dict[str, Any]], path: str = "") -> None:
         """Recursively scan dictionary for secrets."""
         if isinstance(obj, dict):
             for key, value in obj.items():
@@ -487,7 +486,7 @@ class SecretsValidator:
 class EnvironmentVariableValidator:
     """Validator for environment variable requirements."""
     
-    def check_required_variables(self, required_vars: List[str]) -> List[str]:
+    def check_required_variables(self, required_vars: list[str]) -> list[str]:
         """Check which required environment variables are missing."""
         missing_vars = []
         
@@ -497,7 +496,7 @@ class EnvironmentVariableValidator:
         
         return missing_vars
     
-    def validate_variable_values(self, var_definitions: Dict[str, Dict[str, Any]]) -> Dict[str, List[str]]:
+    def validate_variable_values(self, var_definitions: dict[str, Dict[str, Any]]) -> dict[str, list[str]]:
         """Validate environment variable values against requirements."""
         validation_errors = {}
         

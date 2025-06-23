@@ -7,7 +7,7 @@ focus management, and keyboard shortcut functionality.
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

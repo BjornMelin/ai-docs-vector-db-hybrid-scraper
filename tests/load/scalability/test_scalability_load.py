@@ -8,7 +8,7 @@ import asyncio
 import logging
 import math
 import time
-from typing import Dict, List, Optional, Tuple
+
 
 import pytest
 from locust.env import Environment
@@ -631,7 +631,7 @@ class TestScalabilityLoad:
         assert scaling_analysis["read_scaling_effectiveness"] > 0.7, "Read scaling not effective"
         assert scaling_analysis["connection_pool_efficiency"] > 0.8, "Poor connection pool efficiency"
     
-    def _analyze_horizontal_scaling(self, metrics: List[Dict], stages: List[LoadStage]) -> Dict:
+    def _analyze_horizontal_scaling(self, metrics: list[Dict], stages: list[LoadStage]) -> Dict:
         """Analyze horizontal scaling performance."""
         if len(metrics) < len(stages):
             return {"scaling_efficiency": 0, "linear_scaling_score": 0, "response_time_stability": 0}
@@ -692,8 +692,8 @@ class TestScalabilityLoad:
             "max_response_degradation": max_degradation,
         }
     
-    def _analyze_vertical_scaling(self, scaling_events: List[Dict], 
-                                resource_utilization: List[Dict]) -> Dict:
+    def _analyze_vertical_scaling(self, scaling_events: list[Dict], 
+                                resource_utilization: list[Dict]) -> Dict:
         """Analyze vertical scaling effectiveness."""
         if not scaling_events or not resource_utilization:
             return {"scaling_effectiveness": 0}
@@ -729,8 +729,8 @@ class TestScalabilityLoad:
             "total_scaling_events": len(scaling_events),
         }
     
-    def _analyze_auto_scaling(self, scaling_decisions: List[Dict], 
-                            metrics_history: List[Dict]) -> Dict:
+    def _analyze_auto_scaling(self, scaling_decisions: list[Dict], 
+                            metrics_history: list[Dict]) -> Dict:
         """Analyze auto-scaling behavior and effectiveness."""
         if not scaling_decisions or not metrics_history:
             return {"scaling_responsiveness": 0, "resource_efficiency": 0}
@@ -779,8 +779,8 @@ class TestScalabilityLoad:
             "avg_cpu_utilization": sum(m["cpu_utilization"] for m in metrics_history) / len(metrics_history) if metrics_history else 0,
         }
     
-    def _analyze_database_scaling(self, scaling_events: List[Dict], 
-                                performance_metrics: List[Dict]) -> Dict:
+    def _analyze_database_scaling(self, scaling_events: list[Dict], 
+                                performance_metrics: list[Dict]) -> Dict:
         """Analyze database scaling effectiveness."""
         if not performance_metrics:
             return {"read_scaling_effectiveness": 0, "connection_pool_efficiency": 0}

@@ -7,7 +7,7 @@ performance degradation over time, and system stability issues.
 import asyncio
 import logging
 import time
-from typing import Dict, List, Optional
+
 
 import pytest
 from locust.env import Environment
@@ -459,7 +459,7 @@ class TestEnduranceLoad:
         return asyncio.sleep(base_time + variation)
     
     def _analyze_endurance_performance(
-        self, time_series: List[Dict], memory_samples: List[Dict]
+        self, time_series: list[Dict], memory_samples: list[Dict]
     ) -> Dict:
         """Analyze performance over extended duration."""
         if len(time_series) < 10 or len(memory_samples) < 10:
@@ -509,7 +509,7 @@ class TestEnduranceLoad:
             "avg_error_rate": sum(error_rates) / len(error_rates) if error_rates else 0,
         }
     
-    def _analyze_cache_endurance(self, metrics_history: List[Dict]) -> Dict:
+    def _analyze_cache_endurance(self, metrics_history: list[Dict]) -> Dict:
         """Analyze cache performance over time."""
         if len(metrics_history) < 10:
             return {"hit_rate_stability": 0, "eviction_rate": 0}
@@ -533,7 +533,7 @@ class TestEnduranceLoad:
             "cache_efficiency": sum(hit_rates) / len(hit_rates) if hit_rates else 0,
         }
     
-    def _analyze_connection_pool_endurance(self, metrics: List[Dict]) -> Dict:
+    def _analyze_connection_pool_endurance(self, metrics: list[Dict]) -> Dict:
         """Analyze connection pool behavior over time."""
         if len(metrics) < 10:
             return {"pool_stability": 0, "cleanup_effectiveness": 0}

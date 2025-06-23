@@ -9,7 +9,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -21,12 +21,12 @@ class JourneyStep:
     
     name: str
     action: str
-    params: Dict[str, Any]
-    expected_result: Optional[Dict[str, Any]] = None
+    params: dict[str, Any]
+    expected_result: Optional[dict[str, Any]] = None
     validation_func: Optional[callable] = None
     timeout_seconds: float = 30.0
     retry_count: int = 0
-    dependencies: List[str] = None
+    dependencies: list[str] = None
     
     def __post_init__(self):
         if self.dependencies is None:
@@ -39,10 +39,10 @@ class UserJourney:
     
     name: str
     description: str
-    steps: List[JourneyStep]
+    steps: list[JourneyStep]
     setup_func: Optional[callable] = None
     teardown_func: Optional[callable] = None
-    success_criteria: Dict[str, Any] = None
+    success_criteria: dict[str, Any] = None
     
     def __post_init__(self):
         if self.success_criteria is None:
@@ -58,10 +58,10 @@ class JourneyResult:
     duration_seconds: float
     steps_completed: int
     steps_failed: int
-    step_results: List[Dict[str, Any]]
-    errors: List[str]
-    performance_metrics: Dict[str, Any]
-    artifacts: Dict[str, Any]
+    step_results: list[dict[str, Any]]
+    errors: list[str]
+    performance_metrics: dict[str, Any]
+    artifacts: dict[str, Any]
 
 
 @pytest.fixture(scope="session")
@@ -120,7 +120,7 @@ def journey_executor():
         async def execute_journey(
             self, 
             journey: UserJourney,
-            context: Optional[Dict[str, Any]] = None
+            context: Optional[dict[str, Any]] = None
         ) -> JourneyResult:
             """Execute a complete user journey."""
             journey_id = f"{journey.name}_{time.time()}"
@@ -203,8 +203,8 @@ def journey_executor():
         async def _execute_step(
             self, 
             step: JourneyStep, 
-            context: Dict[str, Any]
-        ) -> Dict[str, Any]:
+            context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Execute a single journey step."""
             start_time = time.perf_counter()
             
@@ -256,10 +256,10 @@ def journey_executor():
         async def _perform_action(
             self, 
             action: str, 
-            params: Dict[str, Any], 
-            context: Dict[str, Any],
+            params: dict[str, Any], 
+            context: dict[str, Any],
             timeout: float
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
             resolved_params = self._resolve_context_variables(params, context)
@@ -294,7 +294,7 @@ def journey_executor():
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Action '{action}' timed out after {timeout}s")
         
-        async def _action_crawl_url(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_crawl_url(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock URL crawling action."""
             url = params["url"]
             await asyncio.sleep(0.1)  # Simulate processing time
@@ -306,7 +306,7 @@ def journey_executor():
                 "success": True,
             }
         
-        async def _action_process_document(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_process_document(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock document processing action."""
             content = params.get("content", "")
             await asyncio.sleep(0.2)  # Simulate processing
@@ -317,7 +317,7 @@ def journey_executor():
                 "processing_time_ms": 200,
             }
         
-        async def _action_generate_embeddings(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_generate_embeddings(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock embedding generation action."""
             chunks = params.get("chunks", [])
             await asyncio.sleep(0.3)  # Simulate embedding generation
@@ -327,7 +327,7 @@ def journey_executor():
                 "total_tokens": len(chunks) * 100,
             }
         
-        async def _action_store_vectors(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_store_vectors(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock vector storage action."""
             embeddings = params.get("embeddings", [])
             collection = params.get("collection", "default")
@@ -338,7 +338,7 @@ def journey_executor():
                 "vector_ids": [f"vec_{i}" for i in range(len(embeddings))],
             }
         
-        async def _action_search_documents(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_search_documents(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock document search action."""
             query = params.get("query", "")
             limit = params.get("limit", 10)
@@ -358,7 +358,7 @@ def journey_executor():
                 "search_time_ms": 150,
             }
         
-        async def _action_create_project(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_create_project(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock project creation action."""
             project_name = params.get("name", "test-project")
             await asyncio.sleep(0.05)
@@ -369,7 +369,7 @@ def journey_executor():
                 "collections": [],
             }
         
-        async def _action_add_to_collection(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_add_to_collection(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock collection addition action."""
             collection = params.get("collection", "default")
             document_id = params.get("document_id", "doc_1")
@@ -380,7 +380,7 @@ def journey_executor():
                 "added": True,
             }
         
-        async def _action_validate_api(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_validate_api(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock API validation action."""
             endpoint = params.get("endpoint", "/health")
             await asyncio.sleep(0.02)
@@ -391,7 +391,7 @@ def journey_executor():
                 "valid": True,
             }
         
-        async def _action_check_health(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_check_health(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock health check action."""
             await asyncio.sleep(0.01)
             return {
@@ -400,7 +400,7 @@ def journey_executor():
                 "uptime_seconds": 3600,
             }
         
-        async def _action_wait_processing(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_wait_processing(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock wait for processing action."""
             duration = params.get("duration_seconds", 1.0)
             await asyncio.sleep(duration)
@@ -409,7 +409,7 @@ def journey_executor():
                 "processing_complete": True,
             }
         
-        async def _action_browser_navigate(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_browser_navigate(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock browser navigation action."""
             url = params.get("url", "")
             await asyncio.sleep(0.5)  # Simulate page load
@@ -420,7 +420,7 @@ def journey_executor():
                 "load_time_ms": 500,
             }
         
-        async def _action_browser_interact(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_browser_interact(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock browser interaction action."""
             action_type = params.get("type", "click")
             selector = params.get("selector", "")
@@ -432,7 +432,7 @@ def journey_executor():
                 "interaction_time_ms": 100,
             }
         
-        async def _action_validate_search_results(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        async def _action_validate_search_results(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Mock search results validation."""
             results = params.get("results", [])
             min_score = params.get("min_score", 0.5)
@@ -446,7 +446,7 @@ def journey_executor():
                 "min_score_threshold": min_score,
             }
         
-        def _resolve_context_variables(self, params: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        def _resolve_context_variables(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
             """Replace context variables in parameters."""
             resolved = {}
             for key, value in params.items():
@@ -458,7 +458,7 @@ def journey_executor():
                     resolved[key] = value
             return resolved
         
-        def _extract_context_updates(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        def _extract_context_updates(self, result: dict[str, Any]) -> dict[str, Any]:
             """Extract context updates from step result."""
             # Common patterns for context updates
             updates = {}
@@ -476,7 +476,7 @@ def journey_executor():
             
             return updates
         
-        def _validate_expected_result(self, actual: Dict[str, Any], expected: Dict[str, Any]) -> bool:
+        def _validate_expected_result(self, actual: dict[str, Any], expected: dict[str, Any]) -> bool:
             """Validate actual result against expected result."""
             for key, expected_value in expected.items():
                 if key not in actual:
@@ -498,7 +498,7 @@ def journey_executor():
             
             return True
         
-        def _evaluate_journey_success(self, journey: UserJourney, step_results: List[Dict[str, Any]], errors: List[str]) -> bool:
+        def _evaluate_journey_success(self, journey: UserJourney, step_results: list[dict[str, Any]], errors: list[str]) -> bool:
             """Evaluate overall journey success."""
             if not step_results:
                 return False
@@ -512,7 +512,7 @@ def journey_executor():
             
             return success_rate >= min_success_rate and len(errors) <= max_errors
         
-        def _calculate_performance_metrics(self, step_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        def _calculate_performance_metrics(self, step_results: list[dict[str, Any]]) -> dict[str, Any]:
             """Calculate performance metrics from step results."""
             if not step_results:
                 return {}

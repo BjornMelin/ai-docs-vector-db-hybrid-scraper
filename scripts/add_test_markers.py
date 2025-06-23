@@ -10,14 +10,14 @@ This script analyzes test files and adds markers based on:
 import ast
 import re
 from pathlib import Path
-from typing import Set, List
+
 
 
 class TestMarkerAnalyzer(ast.NodeVisitor):
     """AST visitor to analyze test functions and determine appropriate markers."""
     
     def __init__(self):
-        self.markers_needed: Set[str] = set()
+        self.markers_needed: set[str] = set()
         self.has_async_tests = False
         self.has_browser_imports = False
         self.has_network_imports = False
@@ -77,7 +77,7 @@ class TestMarkerAnalyzer(ast.NodeVisitor):
             self.has_hypothesis_imports = True
             self.markers_needed.add('hypothesis')
     
-    def analyze_file(self, file_path: Path) -> Set[str]:
+    def analyze_file(self, file_path: Path) -> set[str]:
         """Analyze a test file and return recommended markers."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -115,7 +115,7 @@ class TestMarkerAnalyzer(ast.NodeVisitor):
             return set()
 
 
-def add_markers_to_test_file(file_path: Path, markers: Set[str]) -> bool:
+def add_markers_to_test_file(file_path: Path, markers: set[str]) -> bool:
     """Add markers to a test file if they're not already present."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:

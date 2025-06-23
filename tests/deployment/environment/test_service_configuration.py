@@ -9,9 +9,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+
 
 import pytest
 import pytest_asyncio
@@ -292,7 +290,7 @@ class TestServiceIntegration:
 class DatabaseConfigValidator:
     """Validator for database configuration."""
     
-    def get_expected_config(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def get_expected_config(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Get expected database configuration for environment."""
         base_config = {
             "database_type": environment.database_type,
@@ -317,8 +315,8 @@ class DatabaseConfigValidator:
         return base_config
     
     async def validate_configuration(
-        self, environment: DeploymentEnvironment, expected_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, environment: DeploymentEnvironment, expected_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate database configuration."""
         # Simulate database configuration validation
         await asyncio.sleep(0.1)
@@ -339,7 +337,7 @@ class DatabaseConfigValidator:
 class CacheConfigValidator:
     """Validator for cache configuration."""
     
-    def get_expected_config(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def get_expected_config(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Get expected cache configuration for environment."""
         base_config = {
             "cache_type": environment.cache_type,
@@ -370,8 +368,8 @@ class CacheConfigValidator:
         return base_config
     
     async def validate_configuration(
-        self, environment: DeploymentEnvironment, expected_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, environment: DeploymentEnvironment, expected_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate cache configuration."""
         # Simulate cache configuration validation
         await asyncio.sleep(0.1)
@@ -392,7 +390,7 @@ class CacheConfigValidator:
 class VectorDatabaseConfigValidator:
     """Validator for vector database configuration."""
     
-    def get_expected_config(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def get_expected_config(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Get expected vector database configuration for environment."""
         base_config = {
             "vector_db_type": environment.vector_db_type,
@@ -416,8 +414,8 @@ class VectorDatabaseConfigValidator:
         return base_config
     
     async def validate_configuration(
-        self, environment: DeploymentEnvironment, expected_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, environment: DeploymentEnvironment, expected_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate vector database configuration."""
         # Simulate vector database configuration validation
         await asyncio.sleep(0.1)
@@ -448,7 +446,7 @@ class VectorDatabaseConfigValidator:
 class MonitoringConfigValidator:
     """Validator for monitoring configuration."""
     
-    def get_expected_config(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def get_expected_config(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Get expected monitoring configuration for environment."""
         base_config = {
             "monitoring_level": environment.monitoring_level,
@@ -478,8 +476,8 @@ class MonitoringConfigValidator:
         return base_config
     
     async def validate_configuration(
-        self, environment: DeploymentEnvironment, expected_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, environment: DeploymentEnvironment, expected_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate monitoring configuration."""
         # Simulate monitoring configuration validation
         await asyncio.sleep(0.1)
@@ -503,7 +501,7 @@ class MonitoringConfigValidator:
 class LoadBalancerConfigValidator:
     """Validator for load balancer configuration."""
     
-    def validate_configuration(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def validate_configuration(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Validate load balancer configuration."""
         if not environment.load_balancer:
             return {"valid": False, "reason": "Load balancer not enabled"}
@@ -531,7 +529,7 @@ class LoadBalancerConfigValidator:
 class SSLConfigValidator:
     """Validator for SSL/TLS configuration."""
     
-    def validate_configuration(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    def validate_configuration(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Validate SSL configuration."""
         if not environment.ssl_enabled:
             return {"valid": False, "reason": "SSL not enabled"}
@@ -559,7 +557,7 @@ class SSLConfigValidator:
 class ServiceDiscoveryValidator:
     """Validator for service discovery."""
     
-    async def test_service_discovery(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    async def test_service_discovery(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Test service discovery for the environment."""
         # Simulate service discovery
         await asyncio.sleep(0.2)
@@ -582,7 +580,7 @@ class ServiceDiscoveryValidator:
 class ServiceDependencyValidator:
     """Validator for service dependencies."""
     
-    async def validate_dependencies(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    async def validate_dependencies(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Validate service dependencies."""
         # Simulate dependency validation
         await asyncio.sleep(0.1)
@@ -615,7 +613,7 @@ class ServiceDependencyValidator:
 class ServiceConfigurationConsistencyValidator:
     """Validator for service configuration consistency."""
     
-    async def validate_consistency(self, environment: DeploymentEnvironment) -> Dict[str, Any]:
+    async def validate_consistency(self, environment: DeploymentEnvironment) -> dict[str, Any]:
         """Validate configuration consistency across services."""
         # Simulate consistency validation
         await asyncio.sleep(0.1)

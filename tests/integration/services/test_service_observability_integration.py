@@ -18,12 +18,12 @@ import pytest
 import time
 import uuid
 import json
-from typing import Dict, List, Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import dataclass
 
 from src.config import Config
-from src.services.observability.tracking import TrackingManager
+# from src.services.observability.tracking import TrackingManager  # Not implemented yet
 
 
 @dataclass
@@ -36,8 +36,8 @@ class TraceSpan:
     operation_name: str
     start_time: float
     end_time: Optional[float] = None
-    tags: Dict[str, Any] = None
-    logs: List[Dict] = None
+    tags: dict[str, Any] = None
+    logs: list[Dict] = None
     
     def __post_init__(self):
         if self.tags is None:
@@ -52,7 +52,7 @@ class Metric:
     name: str
     value: float
     timestamp: float
-    tags: Dict[str, str]
+    tags: dict[str, str]
     metric_type: str  # counter, gauge, histogram
 
 
@@ -108,7 +108,7 @@ class TestDistributedTracing:
                 self.current_span = span
                 return span
             
-            def finish_span(self, span: TraceSpan, tags: Dict[str, Any] = None):
+            def finish_span(self, span: TraceSpan, tags: dict[str, Any] = None):
                 """Finish a span and add tags."""
                 span.end_time = time.time()
                 if tags:
@@ -227,7 +227,7 @@ class TestDistributedTracing:
         
         # Test context propagation headers
         class TraceContextPropagator:
-            def inject_headers(self, trace_id: str, span_id: str) -> Dict[str, str]:
+            def inject_headers(self, trace_id: str, span_id: str) -> dict[str, str]:
                 """Inject trace context into HTTP headers."""
                 return {
                     "X-Trace-Id": trace_id,
@@ -235,7 +235,7 @@ class TestDistributedTracing:
                     "X-Sampled": "1" if sampler.is_sampled(trace_id) else "0"
                 }
             
-            def extract_context(self, headers: Dict[str, str]) -> Optional[Dict[str, str]]:
+            def extract_context(self, headers: dict[str, str]) -> Optional[dict[str, str]]:
                 """Extract trace context from HTTP headers."""
                 if "X-Trace-Id" not in headers:
                     return None
@@ -411,7 +411,7 @@ class TestMetricsCollection:
             def __init__(self):
                 self.metrics_buffer = []
             
-            def record_counter(self, name: str, value: float = 1, tags: Dict[str, str] = None):
+            def record_counter(self, name: str, value: float = 1, tags: dict[str, str] = None):
                 """Record a counter metric."""
                 metric = Metric(
                     name=name,
@@ -422,7 +422,7 @@ class TestMetricsCollection:
                 )
                 self.metrics_buffer.append(metric)
             
-            def record_gauge(self, name: str, value: float, tags: Dict[str, str] = None):
+            def record_gauge(self, name: str, value: float, tags: dict[str, str] = None):
                 """Record a gauge metric."""
                 metric = Metric(
                     name=name,
@@ -433,7 +433,7 @@ class TestMetricsCollection:
                 )
                 self.metrics_buffer.append(metric)
             
-            def record_histogram(self, name: str, value: float, tags: Dict[str, str] = None):
+            def record_histogram(self, name: str, value: float, tags: dict[str, str] = None):
                 """Record a histogram metric."""
                 metric = Metric(
                     name=name,
@@ -559,7 +559,7 @@ class TestMetricsCollection:
         metrics_storage.extend(sample_metrics)
         
         class MetricsAggregator:
-            def __init__(self, metrics: List[Metric]):
+            def __init__(self, metrics: list[Metric]):
                 self.metrics = metrics
             
             def calculate_rate(self, metric_name: str, time_window: float = 60) -> float:
@@ -741,7 +741,7 @@ class TestMetricsCollection:
         
         # Analyze business metrics
         class BusinessMetricsAnalyzer:
-            def __init__(self, metrics: List[Metric]):
+            def __init__(self, metrics: list[Metric]):
                 self.metrics = metrics
             
             def analyze_search_quality_by_type(self) -> Dict:
@@ -975,7 +975,7 @@ class TestLogCorrelation:
                 
                 self.error_contexts[error_id] = error_record
             
-            def get_error_chain(self, correlation_id: str) -> List[Dict]:
+            def get_error_chain(self, correlation_id: str) -> list[Dict]:
                 """Get all errors in a correlation chain."""
                 return self.error_chains.get(correlation_id, [])
             
@@ -1252,7 +1252,7 @@ class TestHealthMonitoring:
                     "critical_threshold": baseline_duration * (1 + tolerance * 2)
                 }
             
-            def analyze_performance_degradation(self) -> List[Dict]:
+            def analyze_performance_degradation(self) -> list[Dict]:
                 """Analyze performance degradation against baselines."""
                 degradations = []
                 

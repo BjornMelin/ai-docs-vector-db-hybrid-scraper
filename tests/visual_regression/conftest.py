@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -29,12 +29,12 @@ class VisualTestConfig:
     viewport_height: int = 720
     wait_for_selector: Optional[str] = None
     wait_time: float = 1.0
-    hide_selectors: List[str] = field(default_factory=list)
-    mask_selectors: List[str] = field(default_factory=list)
+    hide_selectors: list[str] = field(default_factory=list)
+    mask_selectors: list[str] = field(default_factory=list)
     full_page: bool = False
     threshold: float = 0.01  # Difference threshold (0-1)
     ignore_antialiasing: bool = True
-    ignore_colors: List[str] = field(default_factory=list)
+    ignore_colors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -47,7 +47,7 @@ class Screenshot:
     height: int
     format: str = "png"
     timestamp: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     
     @property
     def base64_data(self) -> str:
@@ -71,21 +71,21 @@ class VisualComparisonResult:
     threshold: float
     passed: bool
     diff_image_data: Optional[bytes] = None
-    regions_changed: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    regions_changed: list[dict[str, Any]] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ResponsiveTestConfig:
     """Configuration for responsive visual testing."""
     
-    viewports: List[Dict[str, int]] = field(default_factory=lambda: [
+    viewports: list[dict[str, int]] = field(default_factory=lambda: [
         {"width": 320, "height": 568, "name": "mobile"},
         {"width": 768, "height": 1024, "name": "tablet"},
         {"width": 1280, "height": 720, "name": "desktop"},
         {"width": 1920, "height": 1080, "name": "desktop_hd"},
     ])
-    orientations: List[str] = field(default_factory=lambda: ["portrait", "landscape"])
+    orientations: list[str] = field(default_factory=lambda: ["portrait", "landscape"])
     test_interactions: bool = True
     test_hover_states: bool = True
 
@@ -347,7 +347,7 @@ def visual_comparator():
             # For mock, return a placeholder diff image
             return b"MOCK_DIFF_IMAGE_DATA"
         
-        def analyze_differences(self, result: VisualComparisonResult) -> Dict[str, Any]:
+        def analyze_differences(self, result: VisualComparisonResult) -> dict[str, Any]:
             """Analyze differences in detail."""
             analysis = {
                 "total_changed_pixels": int(result.difference_percentage * 1000000),  # Mock calculation
@@ -380,7 +380,7 @@ def responsive_tester():
         def __init__(self):
             self.test_results = []
         
-        async def test_responsive_design(self, page, url: str, config: ResponsiveTestConfig) -> List[Dict[str, Any]]:
+        async def test_responsive_design(self, page, url: str, config: ResponsiveTestConfig) -> list[dict[str, Any]]:
             """Test responsive design across multiple viewports."""
             results = []
             
@@ -436,7 +436,7 @@ def responsive_tester():
             self.test_results.extend(results)
             return results
         
-        async def _check_layout_issues(self, page, width: int, height: int) -> List[Dict[str, Any]]:
+        async def _check_layout_issues(self, page, width: int, height: int) -> list[dict[str, Any]]:
             """Check for common responsive layout issues."""
             issues = []
             
@@ -528,7 +528,7 @@ def responsive_tester():
             
             return issues
         
-        async def _test_interactions(self, page) -> Dict[str, Any]:
+        async def _test_interactions(self, page) -> dict[str, Any]:
             """Test basic interactions on responsive design."""
             results = {
                 "clickable_elements": 0,
@@ -562,7 +562,7 @@ def responsive_tester():
             
             return results
         
-        async def _test_hover_states(self, page) -> Dict[str, Any]:
+        async def _test_hover_states(self, page) -> dict[str, Any]:
             """Test hover states on interactive elements."""
             results = {
                 "elements_with_hover": 0,

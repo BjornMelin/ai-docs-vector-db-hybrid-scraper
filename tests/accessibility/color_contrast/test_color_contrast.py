@@ -7,7 +7,7 @@ color-blind friendly design verification.
 
 import json
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest

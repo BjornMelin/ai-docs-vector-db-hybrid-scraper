@@ -8,7 +8,7 @@ reporting and analysis capabilities.
 import asyncio
 import json
 import time
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, patch, MagicMock
 from dataclasses import dataclass, field, asdict
 from enum import Enum
@@ -36,11 +36,11 @@ class ExperimentStatus(Enum):
 class ChaosTestSuite:
     """Represents a collection of chaos experiments."""
     suite_name: str
-    experiments: List[ChaosExperiment] = field(default_factory=list)
+    experiments: list[ChaosExperiment] = field(default_factory=list)
     parallel_execution: bool = False
     max_concurrent_experiments: int = 3
     timeout_seconds: float = 3600.0  # 1 hour
-    prerequisites: List[str] = field(default_factory=list)
+    prerequisites: list[str] = field(default_factory=list)
     cleanup_required: bool = True
 
 
@@ -61,9 +61,9 @@ class ChaosTestRunner:
     """Orchestrates chaos engineering experiments."""
     
     def __init__(self):
-        self.test_suites: Dict[str, ChaosTestSuite] = {}
-        self.execution_history: List[ExperimentExecution] = []
-        self.active_experiments: Dict[str, ExperimentExecution] = {}
+        self.test_suites: dict[str, ChaosTestSuite] = {}
+        self.execution_history: list[ExperimentExecution] = []
+        self.active_experiments: dict[str, ExperimentExecution] = {}
         self.global_config = {
             "safety_mode": True,
             "max_failure_rate": 0.5,
@@ -130,7 +130,7 @@ class ChaosTestRunner:
         self, 
         suite_name: str,
         target_system: Any = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a complete chaos test suite."""
         if suite_name not in self.test_suites:
             raise ValueError(f"Test suite '{suite_name}' not found")
@@ -194,10 +194,10 @@ class ChaosTestRunner:
     
     async def _execute_parallel(
         self, 
-        experiments: List[ChaosExperiment], 
+        experiments: list[ChaosExperiment], 
         target_system: Any,
         max_concurrent: int
-    ) -> List[ExperimentExecution]:
+    ) -> list[ExperimentExecution]:
         """Execute experiments in parallel with concurrency limit."""
         semaphore = asyncio.Semaphore(max_concurrent)
         
@@ -226,9 +226,9 @@ class ChaosTestRunner:
     
     async def _execute_sequential(
         self, 
-        experiments: List[ChaosExperiment], 
+        experiments: list[ChaosExperiment], 
         target_system: Any
-    ) -> List[ExperimentExecution]:
+    ) -> list[ExperimentExecution]:
         """Execute experiments sequentially."""
         executions = []
         
@@ -305,7 +305,7 @@ class ChaosTestRunner:
         
         return result
     
-    async def _perform_safety_checks(self, experiment: ChaosExperiment) -> Dict[str, Any]:
+    async def _perform_safety_checks(self, experiment: ChaosExperiment) -> dict[str, Any]:
         """Perform safety checks before experiment execution."""
         safety_checks = []
         
@@ -341,7 +341,7 @@ class ChaosTestRunner:
             "checks": safety_checks
         }
     
-    async def _check_prerequisites(self, prerequisites: List[str]) -> Dict[str, Any]:
+    async def _check_prerequisites(self, prerequisites: list[str]) -> dict[str, Any]:
         """Check if prerequisites are met."""
         # Mock prerequisite checking
         met_prerequisites = []
@@ -385,7 +385,7 @@ class ChaosTestRunner:
         self, 
         experiment: ChaosExperiment, 
         target_system: Any
-    ) -> List[bool]:
+    ) -> list[bool]:
         """Evaluate experiment success criteria."""
         results = []
         
@@ -403,7 +403,7 @@ class ChaosTestRunner:
         
         return results
     
-    def _analyze_suite_results(self, executions: List[ExperimentExecution]) -> Dict[str, Any]:
+    def _analyze_suite_results(self, executions: list[ExperimentExecution]) -> dict[str, Any]:
         """Analyze results of experiment executions."""
         successful = len([e for e in executions if e.status == ExperimentStatus.COMPLETED])
         failed = len([e for e in executions if e.status == ExperimentStatus.FAILED])
@@ -441,7 +441,7 @@ class ChaosTestRunner:
         # Mock cleanup operations
         await asyncio.sleep(0.1)
     
-    def generate_report(self, suite_name: Optional[str] = None) -> Dict[str, Any]:
+    def generate_report(self, suite_name: Optional[str] = None) -> dict[str, Any]:
         """Generate comprehensive chaos engineering report."""
         if suite_name:
             # Report for specific suite
@@ -501,7 +501,7 @@ class ChaosTestRunner:
             "recommendations": self._generate_recommendations(executions)
         }
     
-    def _generate_recommendations(self, executions: List[ExperimentExecution]) -> List[str]:
+    def _generate_recommendations(self, executions: list[ExperimentExecution]) -> list[str]:
         """Generate recommendations based on experiment results."""
         recommendations = []
         

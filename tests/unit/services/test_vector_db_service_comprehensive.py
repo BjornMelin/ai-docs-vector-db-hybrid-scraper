@@ -5,7 +5,7 @@ following 2025 standardized patterns with proper type annotations, standardized
 assertions, and modern test patterns.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch, call
 from contextlib import contextmanager
 import pytest

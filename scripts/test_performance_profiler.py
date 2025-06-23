@@ -9,7 +9,7 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+
 
 
 class TestPerformanceProfiler:
@@ -64,7 +64,7 @@ class TestPerformanceProfiler:
         
         return self.results
     
-    def _parse_timing_output(self, output: str) -> List[Dict]:
+    def _parse_timing_output(self, output: str) -> list[Dict]:
         """Parse pytest timing output."""
         timings = []
         
@@ -88,7 +88,7 @@ class TestPerformanceProfiler:
         
         return sorted(timings, key=lambda x: x["duration"], reverse=True)
     
-    def _analyze_performance(self, timings: List[Dict]) -> Dict:
+    def _analyze_performance(self, timings: list[Dict]) -> Dict:
         """Analyze test performance and identify issues."""
         if not timings:
             return {"error": "No timing data available"}
@@ -151,7 +151,7 @@ class TestPerformanceProfiler:
             "optimization_opportunities": self._identify_optimizations(timings, file_stats),
         }
     
-    def _identify_optimizations(self, timings: List[Dict], file_stats: Dict) -> List[Dict]:
+    def _identify_optimizations(self, timings: list[Dict], file_stats: Dict) -> list[Dict]:
         """Identify specific optimization opportunities."""
         optimizations = []
         

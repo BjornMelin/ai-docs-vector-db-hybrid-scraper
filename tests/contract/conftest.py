@@ -8,7 +8,7 @@ OpenAPI specification testing, and Pact integration.
 import json
 import jsonschema
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from urllib.parse import urljoin, urlparse
 
@@ -58,11 +58,11 @@ def json_schema_validator():
         def __init__(self):
             self.schemas = {}
         
-        def register_schema(self, name: str, schema: Dict[str, Any]):
+        def register_schema(self, name: str, schema: dict[str, Any]):
             """Register a JSON schema for validation."""
             self.schemas[name] = schema
         
-        def validate_data(self, data: Any, schema_name: str) -> Dict[str, Any]:
+        def validate_data(self, data: Any, schema_name: str) -> dict[str, Any]:
             """Validate data against a registered schema."""
             if schema_name not in self.schemas:
                 return {
@@ -87,7 +87,7 @@ def json_schema_validator():
                     "errors": [f"Invalid schema: {str(e)}"],
                 }
         
-        def validate_against_schema(self, data: Any, schema: Dict[str, Any]) -> Dict[str, Any]:
+        def validate_against_schema(self, data: Any, schema: dict[str, Any]) -> dict[str, Any]:
             """Validate data against a provided schema."""
             try:
                 jsonschema.validate(data, schema)
@@ -106,7 +106,7 @@ def json_schema_validator():
                     "errors": [f"Invalid schema: {str(e)}"],
                 }
         
-        def generate_test_data(self, schema: Dict[str, Any]) -> List[Dict[str, Any]]:
+        def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
             """Generate test data based on schema."""
             test_cases = []
             
@@ -124,7 +124,7 @@ def json_schema_validator():
             
             return test_cases
         
-        def _generate_valid_data(self, schema: Dict[str, Any]) -> Any:
+        def _generate_valid_data(self, schema: dict[str, Any]) -> Any:
             """Generate valid data based on schema."""
             schema_type = schema.get("type", "object")
             
@@ -167,7 +167,7 @@ def json_schema_validator():
             
             return None
         
-        def _generate_invalid_data(self, schema: Dict[str, Any]) -> List[Dict[str, Any]]:
+        def _generate_invalid_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
             """Generate invalid data based on schema."""
             invalid_cases = []
             schema_type = schema.get("type", "object")
@@ -221,11 +221,11 @@ def api_contract_validator():
             self.contracts = {}
             self.base_url = "http://localhost:8000"
         
-        def register_contract(self, endpoint: str, contract: Dict[str, Any]):
+        def register_contract(self, endpoint: str, contract: dict[str, Any]):
             """Register an API contract for validation."""
             self.contracts[endpoint] = contract
         
-        def validate_request(self, endpoint: str, method: str, **kwargs) -> Dict[str, Any]:
+        def validate_request(self, endpoint: str, method: str, **kwargs) -> dict[str, Any]:
             """Validate a request against its contract."""
             if endpoint not in self.contracts:
                 return {
@@ -279,8 +279,8 @@ def api_contract_validator():
             method: str, 
             status_code: int, 
             response_data: Any,
-            headers: Dict[str, str] = None
-        ) -> Dict[str, Any]:
+            headers: dict[str, str] = None
+        ) -> dict[str, Any]:
             """Validate a response against its contract."""
             if endpoint not in self.contracts:
                 return {
@@ -335,7 +335,7 @@ def api_contract_validator():
                 "status_code": status_code,
             }
         
-        def _validate_parameters(self, params: Dict[str, Any], param_contracts: List[Dict[str, Any]]) -> List[str]:
+        def _validate_parameters(self, params: dict[str, Any], param_contracts: list[dict[str, Any]]) -> list[str]:
             """Validate request parameters."""
             errors = []
             
@@ -363,7 +363,7 @@ def api_contract_validator():
             
             return errors
         
-        def _validate_request_body(self, body: Any, body_contract: Dict[str, Any]) -> List[str]:
+        def _validate_request_body(self, body: Any, body_contract: dict[str, Any]) -> list[str]:
             """Validate request body."""
             errors = []
             
@@ -378,7 +378,7 @@ def api_contract_validator():
             
             return errors
         
-        def _validate_headers(self, headers: Dict[str, str], header_contracts: Dict[str, Any]) -> List[str]:
+        def _validate_headers(self, headers: dict[str, str], header_contracts: dict[str, Any]) -> list[str]:
             """Validate request headers."""
             errors = []
             
@@ -390,7 +390,7 @@ def api_contract_validator():
             
             return errors
         
-        def _validate_response_headers(self, headers: Dict[str, str], header_contracts: Dict[str, Any]) -> List[str]:
+        def _validate_response_headers(self, headers: dict[str, str], header_contracts: dict[str, Any]) -> list[str]:
             """Validate response headers."""
             errors = []
             
@@ -413,11 +413,11 @@ def openapi_contract_manager():
         def __init__(self):
             self.specs = {}
         
-        def load_spec(self, name: str, spec: Dict[str, Any]):
+        def load_spec(self, name: str, spec: dict[str, Any]):
             """Load an OpenAPI specification."""
             self.specs[name] = spec
         
-        def validate_spec(self, spec_name: str) -> Dict[str, Any]:
+        def validate_spec(self, spec_name: str) -> dict[str, Any]:
             """Validate OpenAPI specification format."""
             if spec_name not in self.specs:
                 return {
@@ -459,7 +459,7 @@ def openapi_contract_manager():
                 "spec_name": spec_name,
             }
         
-        def extract_endpoints(self, spec_name: str) -> List[Dict[str, Any]]:
+        def extract_endpoints(self, spec_name: str) -> list[dict[str, Any]]:
             """Extract all endpoints from OpenAPI specification."""
             if spec_name not in self.specs:
                 return []
@@ -484,7 +484,7 @@ def openapi_contract_manager():
             
             return endpoints
         
-        def generate_contract_tests(self, spec_name: str) -> List[Dict[str, Any]]:
+        def generate_contract_tests(self, spec_name: str) -> list[dict[str, Any]]:
             """Generate contract test cases from OpenAPI specification."""
             endpoints = self.extract_endpoints(spec_name)
             test_cases = []
@@ -505,7 +505,7 @@ def openapi_contract_manager():
             
             return test_cases
         
-        def _validate_paths(self, paths: Dict[str, Any]) -> List[str]:
+        def _validate_paths(self, paths: dict[str, Any]) -> list[str]:
             """Validate paths object in OpenAPI spec."""
             errors = []
             
@@ -523,7 +523,7 @@ def openapi_contract_manager():
             
             return errors
         
-        def _generate_valid_test_data(self, endpoint: Dict[str, Any]) -> Dict[str, Any]:
+        def _generate_valid_test_data(self, endpoint: dict[str, Any]) -> dict[str, Any]:
             """Generate valid test data for an endpoint."""
             test_data = {
                 "params": {},
@@ -554,7 +554,7 @@ def openapi_contract_manager():
             
             return test_data
         
-        def _generate_negative_test_cases(self, endpoint: Dict[str, Any]) -> List[Dict[str, Any]]:
+        def _generate_negative_test_cases(self, endpoint: dict[str, Any]) -> list[dict[str, Any]]:
             """Generate negative test cases for an endpoint."""
             negative_cases = []
             
@@ -589,7 +589,7 @@ def openapi_contract_manager():
             
             return negative_cases
         
-        def _generate_simple_test_data(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        def _generate_simple_test_data(self, schema: dict[str, Any]) -> dict[str, Any]:
             """Generate simple test data based on JSON schema."""
             if not schema:
                 return {"test": "data"}
@@ -678,7 +678,7 @@ def pact_contract_builder():
             self.interactions[-1]["response"] = response
             return self
         
-        def build_pact(self) -> Dict[str, Any]:
+        def build_pact(self) -> dict[str, Any]:
             """Build the complete Pact contract."""
             return {
                 "consumer": {"name": self.consumer},
@@ -690,7 +690,7 @@ def pact_contract_builder():
                 },
             }
         
-        def verify_interaction(self, actual_request: Dict[str, Any], actual_response: Dict[str, Any]) -> Dict[str, Any]:
+        def verify_interaction(self, actual_request: dict[str, Any], actual_response: dict[str, Any]) -> dict[str, Any]:
             """Verify an interaction against the contract."""
             # This is a simplified verification - in practice, you'd use the Pact library
             errors = []
@@ -714,7 +714,7 @@ def pact_contract_builder():
                 "errors": errors,
             }
         
-        def _match_request(self, actual: Dict[str, Any], expected: Dict[str, Any]) -> Dict[str, Any]:
+        def _match_request(self, actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
             """Match actual request against expected request."""
             errors = []
             
@@ -731,7 +731,7 @@ def pact_contract_builder():
                 "errors": errors,
             }
         
-        def _match_response(self, actual: Dict[str, Any], expected: Dict[str, Any]) -> Dict[str, Any]:
+        def _match_response(self, actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
             """Match actual response against expected response."""
             errors = []
             

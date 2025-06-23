@@ -9,7 +9,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import uuid4
 
 
@@ -22,10 +22,10 @@ class DocumentFactory:
         url: str = "https://example.com/doc",
         title: str = "Test Document",
         content: str = "This is test content for the document.",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         doc_id: Optional[str] = None,
         timestamp: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a test document with specified or default values.
         
         Args:
@@ -60,7 +60,7 @@ class DocumentFactory:
         url_template: str = "https://example.com/doc{i}",
         title_template: str = "Test Document {i}",
         content_template: str = "This is test content for document {i}."
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Create a batch of test documents.
         
         Args:
@@ -91,7 +91,7 @@ class VectorFactory:
         dimension: int = 1536,
         value_range: tuple[float, float] = (-1.0, 1.0),
         normalize: bool = False
-    ) -> List[float]:
+    ) -> list[float]:
         """Create a test vector with specified characteristics.
         
         Args:
@@ -116,10 +116,10 @@ class VectorFactory:
     
     @staticmethod
     def create_point(
-        point_id: Union[int, str],
+        point_id: int | str,
         vector_dim: int = 1536,
-        payload: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        payload: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Create a vector point for testing.
         
         Args:
@@ -143,11 +143,11 @@ class VectorFactory:
     
     @staticmethod
     def create_search_result(
-        point_id: Union[int, str],
+        point_id: int | str,
         score: float = 0.95,
         vector_dim: int = 1536,
-        payload: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        payload: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Create a search result for testing.
         
         Args:
@@ -180,8 +180,8 @@ class ResponseFactory:
     def create_success_response(
         data: Any = None,
         message: str = "Operation completed successfully",
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        metadata: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Create a successful API response.
         
         Args:
@@ -205,9 +205,9 @@ class ResponseFactory:
     def create_error_response(
         error_code: str = "GENERAL_ERROR",
         message: str = "An error occurred",
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
         status_code: int = 400
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create an error API response.
         
         Args:
@@ -233,11 +233,11 @@ class ResponseFactory:
     
     @staticmethod
     def create_paginated_response(
-        items: List[Any],
+        items: list[Any],
         page: int = 1,
         per_page: int = 10,
         total: Optional[int] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a paginated API response.
         
         Args:
@@ -280,8 +280,8 @@ class ChunkFactory:
         total_chunks: int = 1,
         start_pos: int = 0,
         end_pos: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        metadata: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Create a document chunk for testing.
         
         Args:
@@ -322,7 +322,7 @@ class ChunkFactory:
         language: str = "python",
         function_name: str = "test_function",
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a code chunk for testing.
         
         Args:
@@ -358,7 +358,7 @@ class TestDataBuilder:
     
     def __init__(self):
         """Initialize empty test data builder."""
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
     
     def with_id(self, doc_id: str) -> "TestDataBuilder":
         """Add ID to test data."""
@@ -380,7 +380,7 @@ class TestDataBuilder:
         self._data["content"] = content
         return self
     
-    def with_metadata(self, metadata: Dict[str, Any]) -> "TestDataBuilder":
+    def with_metadata(self, metadata: dict[str, Any]) -> "TestDataBuilder":
         """Add metadata to test data."""
         self._data["metadata"] = metadata
         return self
@@ -400,7 +400,7 @@ class TestDataBuilder:
         self._data["status"] = status
         return self
     
-    def with_vector(self, vector: List[float]) -> "TestDataBuilder":
+    def with_vector(self, vector: list[float]) -> "TestDataBuilder":
         """Add vector to test data."""
         self._data["vector"] = vector
         return self
@@ -410,7 +410,7 @@ class TestDataBuilder:
         self._data["score"] = score
         return self
     
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         """Build the final test data structure.
         
         Returns:
@@ -428,7 +428,7 @@ class ConfigFactory:
         pool_size: int = 5,
         echo: bool = False,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create database configuration for testing.
         
         Args:
@@ -458,7 +458,7 @@ class ConfigFactory:
         collection_name: str = "test_collection",
         vector_dim: int = 1536,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create vector database configuration for testing.
         
         Args:
@@ -488,7 +488,7 @@ class ConfigFactory:
         timeout: float = 30.0,
         max_retries: int = 3,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create API configuration for testing.
         
         Args:
@@ -525,7 +525,7 @@ class PerformanceDataFactory:
         cpu_usage_percent: float = 15.0,
         success: bool = True,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create performance metrics for testing.
         
         Args:
@@ -558,7 +558,7 @@ class PerformanceDataFactory:
         duration_seconds: float = 60.0,
         success_rate: float = 0.98,
         avg_response_time: float = 0.2
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create load test data for testing.
         
         Args:
@@ -593,26 +593,26 @@ class PerformanceDataFactory:
 
 # Convenience functions for quick test data generation
 
-def quick_document(title: str = "Quick Test Doc") -> Dict[str, Any]:
+def quick_document(title: str = "Quick Test Doc") -> dict[str, Any]:
     """Quickly create a test document with minimal setup."""
     return DocumentFactory.create_document(title=title)
 
 
-def quick_vector_point(point_id: Union[int, str] = 1) -> Dict[str, Any]:
+def quick_vector_point(point_id: int | str = 1) -> dict[str, Any]:
     """Quickly create a vector point with minimal setup."""
     return VectorFactory.create_point(point_id)
 
 
-def quick_success_response(data: Any = None) -> Dict[str, Any]:
+def quick_success_response(data: Any = None) -> dict[str, Any]:
     """Quickly create a success response with minimal setup."""
     return ResponseFactory.create_success_response(data)
 
 
-def quick_error_response(message: str = "Test error") -> Dict[str, Any]:
+def quick_error_response(message: str = "Test error") -> dict[str, Any]:
     """Quickly create an error response with minimal setup."""
     return ResponseFactory.create_error_response(message=message)
 
 
-def quick_chunk(content: str = "Test chunk content") -> Dict[str, Any]:
+def quick_chunk(content: str = "Test chunk content") -> dict[str, Any]:
     """Quickly create a document chunk with minimal setup."""
     return ChunkFactory.create_chunk(content=content)

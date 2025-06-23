@@ -6,7 +6,7 @@ and managing contract validation results.
 
 import json
 import pytest
-from typing import Any, Dict, List, Optional
+from typing import Any
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
@@ -27,9 +27,9 @@ class ContractValidationResult:
     test_name: str
     contract_type: str
     result: ContractTestResult
-    details: Dict[str, Any]
-    errors: List[str]
-    warnings: List[str]
+    details: dict[str, Any]
+    errors: list[str]
+    warnings: list[str]
     execution_time_ms: float
     timestamp: datetime
 
@@ -43,8 +43,8 @@ class ContractTestReport:
     skipped_tests: int
     warning_tests: int
     execution_time_ms: float
-    test_results: List[ContractValidationResult]
-    summary: Dict[str, Any]
+    test_results: list[ContractValidationResult]
+    summary: dict[str, Any]
     generated_at: datetime
 
 
@@ -53,7 +53,7 @@ class ContractTestRunner:
 
     def __init__(self):
         """Initialize contract test runner."""
-        self.results: List[ContractValidationResult] = []
+        self.results: list[ContractValidationResult] = []
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
 

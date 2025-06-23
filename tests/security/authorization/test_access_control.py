@@ -6,7 +6,7 @@ and authorization boundary enforcement.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Dict, List, Any
+from typing import Any
 
 from src.security import SecurityError
 
@@ -85,13 +85,13 @@ class TestAccessControl:
                 
                 return True
             
-            def get_user_permissions(self, user_role: str) -> List[str]:
+            def get_user_permissions(self, user_role: str) -> list[str]:
                 """Get all permissions for a user role."""
                 if user_role not in self.roles:
                     return []
                 return self.roles[user_role]["permissions"]
             
-            def get_accessible_resources(self, user_role: str) -> List[str]:
+            def get_accessible_resources(self, user_role: str) -> list[str]:
                 """Get all resources accessible by a user role."""
                 if user_role not in self.roles:
                     return []
@@ -240,7 +240,7 @@ class TestAccessControl:
                 self.rbac = rbac_system
             
             def check_contextual_access(self, user_role: str, permission: str, 
-                                      resource: str, context: Dict[str, Any]) -> bool:
+                                      resource: str, context: dict[str, Any]) -> bool:
                 # Basic permission check
                 if not self.rbac.check_permission(user_role, permission, resource):
                     return False
@@ -490,7 +490,7 @@ class TestAccessControl:
             def __init__(self):
                 self.sessions = {}
             
-            def create_session(self, user_id: str, role: str, permissions: List[str]):
+            def create_session(self, user_id: str, role: str, permissions: list[str]):
                 """Create authenticated session."""
                 session_id = f"session_{user_id}_{int(time.time())}"
                 self.sessions[session_id] = {
@@ -543,14 +543,14 @@ class TestAccessControl:
             def __init__(self):
                 self.policies = []
             
-            def add_policy(self, policy: Dict[str, Any]):
+            def add_policy(self, policy: dict[str, Any]):
                 """Add ABAC policy."""
                 self.policies.append(policy)
             
-            def evaluate_access(self, subject: Dict[str, Any], 
-                              resource: Dict[str, Any], 
+            def evaluate_access(self, subject: dict[str, Any], 
+                              resource: dict[str, Any], 
                               action: str, 
-                              environment: Dict[str, Any]) -> bool:
+                              environment: dict[str, Any]) -> bool:
                 """Evaluate access using ABAC policies."""
                 for policy in self.policies:
                     if self._matches_policy(policy, subject, resource, action, environment):
@@ -558,11 +558,11 @@ class TestAccessControl:
                 
                 return False  # Deny by default
             
-            def _matches_policy(self, policy: Dict[str, Any], 
-                               subject: Dict[str, Any], 
-                               resource: Dict[str, Any], 
+            def _matches_policy(self, policy: dict[str, Any], 
+                               subject: dict[str, Any], 
+                               resource: dict[str, Any], 
                                action: str, 
-                               environment: Dict[str, Any]) -> bool:
+                               environment: dict[str, Any]) -> bool:
                 """Check if request matches policy conditions."""
                 # Subject conditions
                 subject_conditions = policy.get("subject", {})

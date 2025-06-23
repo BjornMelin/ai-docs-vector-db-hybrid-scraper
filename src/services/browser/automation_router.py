@@ -4,8 +4,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from src.config import Config

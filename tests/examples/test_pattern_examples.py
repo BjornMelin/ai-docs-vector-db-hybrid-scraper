@@ -7,7 +7,7 @@ These examples serve as templates for consistent test implementation.
 
 import asyncio
 import time
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -46,7 +46,7 @@ class TestStandardizedPatterns:
     async def test_async_operation_standard_pattern(
         self,
         mock_service: AsyncMock,
-        sample_document_data: Dict[str, Any]
+        sample_document_data: dict[str, Any]
     ) -> None:
         """Test async operation using standardized patterns.
         
@@ -85,8 +85,8 @@ class TestStandardizedPatterns:
     ])
     async def test_parametrized_search_standard_pattern(
         self,
-        input_data: Dict[str, Any],
-        expected_output: Dict[str, Any],
+        input_data: dict[str, Any],
+        expected_output: dict[str, Any],
         mock_search_service: AsyncMock
     ) -> None:
         """Test search with various inputs using parametrization.
@@ -262,7 +262,7 @@ class TestStandardizedPatterns:
     async def test_database_integration_pattern(
         self,
         test_database_session: Any,
-        sample_document_data: Dict[str, Any]
+        sample_document_data: dict[str, Any]
     ) -> None:
         """Test database integration using standardized patterns.
         
@@ -320,7 +320,7 @@ class TestStandardizedPatterns:
     async def test_security_validation_pattern(
         self,
         mock_auth_service: AsyncMock,
-        security_test_data: Dict[str, Any]
+        security_test_data: dict[str, Any]
     ) -> None:
         """Test security validation using standardized patterns.
         
@@ -465,7 +465,7 @@ async def mock_api_client() -> AsyncMock:
 
 
 @pytest.fixture
-def sample_document_data() -> Dict[str, Any]:
+def sample_document_data() -> dict[str, Any]:
     """Sample document data following standardized structure.
     
     Returns:
@@ -480,22 +480,22 @@ def sample_document_data() -> Dict[str, Any]:
 
 # Example functions being tested (would normally be imported)
 
-async def some_async_service_function(data: Dict[str, Any]) -> Dict[str, Any]:
+async def some_async_service_function(data: dict[str, Any]) -> dict[str, Any]:
     """Example async function for testing."""
     return quick_success_response({"processed": True})
 
 
-async def search_function(**kwargs) -> Dict[str, Any]:
+async def search_function(**kwargs) -> dict[str, Any]:
     """Example search function for testing."""
     return {"results": [], "total": 0}
 
 
-def process_document_sync(document: Dict[str, Any]) -> List[Dict[str, Any]]:
+def process_document_sync(document: dict[str, Any]) -> list[dict[str, Any]]:
     """Example sync document processing function."""
     return [ChunkFactory.create_chunk(content=document["content"])]
 
 
-async def batch_process_vectors(vectors: List[List[float]]) -> Dict[str, Any]:
+async def batch_process_vectors(vectors: list[List[float]]) -> dict[str, Any]:
     """Example batch vector processing function."""
     return quick_success_response()
 
@@ -505,28 +505,28 @@ async def failing_service_operation() -> None:
     raise ServiceError("Operation failed", error_code="CONNECTION_ERROR")
 
 
-async def api_service_call(data: Dict[str, Any]) -> Dict[str, Any]:
+async def api_service_call(data: dict[str, Any]) -> dict[str, Any]:
     """Example API service call function."""
     return quick_success_response()
 
 
-async def save_document_to_db(document: Dict[str, Any], session: Any) -> Dict[str, Any]:
+async def save_document_to_db(document: dict[str, Any], session: Any) -> dict[str, Any]:
     """Example database save function."""
     document["id"] = "saved-123"
     return document
 
 
-async def get_document_from_db(doc_id: str, session: Any) -> Dict[str, Any]:
+async def get_document_from_db(doc_id: str, session: Any) -> dict[str, Any]:
     """Example database retrieval function."""
     return {"id": doc_id, "title": "Retrieved Document"}
 
 
-def process_complex_data(data: Dict[str, Any]) -> Dict[str, Any]:
+def process_complex_data(data: dict[str, Any]) -> dict[str, Any]:
     """Example complex data processing function."""
     return {"processed": True, "metadata": data.get("metadata", {})}
 
 
-async def validate_user_input(user_input: str) -> Dict[str, Any]:
+async def validate_user_input(user_input: str) -> dict[str, Any]:
     """Example input validation function."""
     if "malicious" in user_input.lower():
         return ResponseFactory.create_error_response(
@@ -536,7 +536,7 @@ async def validate_user_input(user_input: str) -> Dict[str, Any]:
     return quick_success_response()
 
 
-def scan_for_accessibility_issues(url: str) -> Dict[str, Any]:
+def scan_for_accessibility_issues(url: str) -> dict[str, Any]:
     """Example accessibility scanning function."""
     return {
         "violations": [],
