@@ -24,13 +24,12 @@ Before you begin, ensure you have:
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
 
-# Option 1: Install with uv (recommended - faster)
+# Install with uv (recommended)
 pip install uv
 uv sync
 
-# Option 2: Install with standard pip
-# pip install -r requirements.txt  # Production only
-# pip install -r requirements-dev.txt  # Development
+# Alternative: Standard pip installation
+pip install -e ".[dev]"
 
 # Set up Crawl4AI for web scraping
 uv run crawl4ai-setup

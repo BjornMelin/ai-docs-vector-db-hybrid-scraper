@@ -22,7 +22,7 @@ systems.
 
 ```python
 # Install and basic usage
-pip install ai-docs-vector-db
+uv add ai-docs-vector-db
 
 from ai_docs_vector_db import DocumentDB
 
@@ -46,12 +46,12 @@ print(f"Found {len(results)} results")
 
 ```bash
 # Production installation
-pip install ai-docs-vector-db
+uv add ai-docs-vector-db
 
 # Development installation
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
-pip install -e .
+uv sync --dev
 ```
 
 #### Environment Configuration
