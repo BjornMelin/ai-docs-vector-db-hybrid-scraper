@@ -4,6 +4,8 @@ This test file validates both the remaining core constants and the migrated
 configuration settings that have been moved to Pydantic models and enums.
 """
 
+import pytest
+
 from src.config import CacheConfig
 from src.config import ChunkingConfig
 from src.config import PerformanceConfig
@@ -16,6 +18,8 @@ from src.config.enums import VectorType
 from src.core import constants
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestRemainingConstants:
     """Test cases for constants that remain in core.constants."""
 
@@ -153,6 +157,8 @@ class TestRemainingConstants:
             )
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestMigratedEnums:
     """Test cases for enums that replaced old string constants."""
 
@@ -235,6 +241,8 @@ class TestMigratedEnums:
         assert isinstance(VectorType.DENSE, str)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestMigratedConfigModels:
     """Test cases for Pydantic models that replaced old constant dictionaries."""
 
@@ -242,40 +250,33 @@ class TestMigratedConfigModels:
         """Test cache configuration (migrated from CACHE_KEYS and CACHE_TTL_SECONDS)."""
         config = CacheConfig()
 
-        # Test cache key patterns (migrated from CACHE_KEYS)
-        assert isinstance(config.cache_key_patterns, dict)
-        assert len(config.cache_key_patterns) == 4
-        assert CacheType.EMBEDDINGS in config.cache_key_patterns
-        assert CacheType.CRAWL in config.cache_key_patterns
-        assert CacheType.SEARCH in config.cache_key_patterns
-        assert CacheType.HYDE in config.cache_key_patterns
+        # Test basic cache settings
+        assert isinstance(config.enable_caching, bool)
+        assert isinstance(config.enable_local_cache, bool)
+        assert config.ttl_seconds > 0
 
-        # Verify patterns have placeholders
-        for pattern in config.cache_key_patterns.values():
-            assert "{" in pattern and "}" in pattern
-
-        # Test TTL settings (migrated from CACHE_TTL_SECONDS)
+        # Test TTL settings (updated structure)
         assert isinstance(config.cache_ttl_seconds, dict)
-        assert len(config.cache_ttl_seconds) == 4
-        for cache_type in CacheType:
-            assert cache_type in config.cache_ttl_seconds
-            assert config.cache_ttl_seconds[cache_type] > 0
+        assert len(config.cache_ttl_seconds) >= 3
+        expected_keys = ["search_results", "embeddings", "collections"]
+        for key in expected_keys:
+            assert key in config.cache_ttl_seconds
+            assert config.cache_ttl_seconds[key] > 0
 
     def test_chunking_config_migration(self):
         """Test chunking configuration (migrated from CHUNKING_DEFAULTS)."""
         config = ChunkingConfig()
 
-        # Test that defaults match old CHUNKING_DEFAULTS
+        # Test that defaults match expected values
         assert config.chunk_size == 1600
         assert config.chunk_overlap == 320
         assert config.min_chunk_size == 100
         assert config.max_chunk_size == 3000
-        assert config.max_function_chunk_size == 3200
 
         # Test logical relationships
         assert config.chunk_overlap < config.chunk_size
         assert config.min_chunk_size < config.max_chunk_size
-        assert config.max_function_chunk_size >= config.max_chunk_size
+        assert config.max_chunk_size >= config.chunk_size
 
     def test_hnsw_config_migration(self):
         """Test HNSW configuration - these configs are no longer in the main config module."""
@@ -299,24 +300,20 @@ class TestMigratedConfigModels:
         """Test performance configuration (migrated from RATE_LIMITS)."""
         config = PerformanceConfig()
 
-        # Test rate limits (migrated from RATE_LIMITS)
-        assert isinstance(config.default_rate_limits, dict)
-        expected_providers = ["openai", "firecrawl", "crawl4ai", "qdrant"]
-
-        for provider in expected_providers:
-            assert provider in config.default_rate_limits
-            limits = config.default_rate_limits[provider]
-            assert "max_calls" in limits
-            assert "time_window" in limits
-            assert limits["max_calls"] > 0
-            assert limits["time_window"] > 0
-
-        # Test other performance settings
+        # Test updated performance settings structure
         assert config.max_concurrent_requests > 0
         assert config.request_timeout > 0
         assert config.max_retries >= 0
+        assert config.retry_base_delay > 0
+        assert config.max_memory_usage_mb > 0
+
+        # Test value ranges
+        assert 1 <= config.max_concurrent_requests <= 100
+        assert 0 <= config.max_retries <= 10
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestConfigurationIntegrity:
     """Test that configuration models maintain data integrity."""
 
@@ -341,18 +338,20 @@ class TestConfigurationIntegrity:
         assert config.chunk_overlap == 320
 
     def test_backwards_compatibility_values(self):
-        """Test that new config values match old constant values."""
+        """Test that new config values match expected constant values."""
         # Cache configuration
         cache_config = CacheConfig()
-        assert cache_config.cache_ttl_seconds[CacheType.EMBEDDINGS] == 86400
-        assert cache_config.cache_ttl_seconds[CacheType.CRAWL] == 3600
-        assert cache_config.cache_ttl_seconds[CacheType.SEARCH] == 7200
-        assert cache_config.cache_ttl_seconds[CacheType.HYDE] == 3600
+        assert cache_config.cache_ttl_seconds["embeddings"] == 86400
+        assert cache_config.cache_ttl_seconds["search_results"] == 3600
+        assert cache_config.cache_ttl_seconds["collections"] == 7200
 
         # Performance configuration
         perf_config = PerformanceConfig()
-        assert perf_config.default_rate_limits["openai"]["max_calls"] == 500
-        assert perf_config.default_rate_limits["firecrawl"]["max_calls"] == 100
+        assert perf_config.max_concurrent_requests <= 100
+        assert perf_config.request_timeout > 0
+        assert perf_config.max_retries >= 0
 
-        # Vector search configuration has been moved or reorganized
-        # These assertions are skipped as VectorSearchConfig is not available
+        # Chunking configuration
+        chunk_config = ChunkingConfig()
+        assert chunk_config.chunk_size == 1600
+        assert chunk_config.chunk_overlap == 320

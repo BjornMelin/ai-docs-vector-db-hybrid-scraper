@@ -257,6 +257,20 @@ log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
+# Test execution profiles for optimized CI/CD
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:.*playwright.*",
+]
+
+# Parallel execution settings
+addopts_parallel = [
+    "--dist=worksteal",
+    "--tx=auto",
+    "-q",
+]
+
 # ===== Coverage Configuration =====
 [tool.coverage.run]
 source = ["src"]
