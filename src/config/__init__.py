@@ -1,3 +1,4 @@
+import typing
 """Simplified configuration system for AI Documentation Vector DB.
 
 Consolidated from 14 files (6,797 lines) to 3 files (~400 lines) following KISS principles.

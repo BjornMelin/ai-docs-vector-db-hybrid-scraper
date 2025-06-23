@@ -1,3 +1,4 @@
+import typing
 """ML Security implementation following KISS principle.
 
 This module provides essential ML security features without over-engineering:
@@ -19,6 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
+
 from src.config import get_config
 
 # Import SecurityValidator from the file module
@@ -140,7 +142,7 @@ class MLSecurityValidator:
             return result
 
         except Exception as e:
-            logger.error(f"Input validation error: {e}")
+            logger.exception(f"Input validation error: {e}")
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=False,
@@ -220,7 +222,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
         except Exception as e:
-            logger.error(f"Dependency check error: {e}")
+            logger.exception(f"Dependency check error: {e}")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,

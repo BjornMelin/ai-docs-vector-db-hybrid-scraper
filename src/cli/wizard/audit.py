@@ -1,3 +1,4 @@
+import typing
 """Configuration audit and change logging for wizard operations.
 
 Provides audit logging for configuration changes, validation history,
@@ -114,7 +115,7 @@ class ConfigAuditor:
             with open(audit_file, "w") as f:
                 json.dump(records, f, indent=2)
         except OSError as e:
-            self.logger.error(f"Failed to save audit record: {e}")
+            self.logger.exception(f"Failed to save audit record: {e}")
 
     def get_recent_activity(self, days: int = 7) -> list[dict[str, Any]]:
         """Get recent wizard activity from audit logs.
@@ -165,9 +166,7 @@ class ConfigAuditor:
         total_sessions = len(
             [r for r in recent_activity if r.get("action") == "wizard_completion"]
         )
-        profiles_used = set(
-            r.get("profile") for r in recent_activity if r.get("profile")
-        )
+        profiles_used = {r.get("profile") for r in recent_activity if r.get("profile")}
 
         console.print(f"• Total wizard sessions: {total_sessions}")
         console.print(f"• Profiles used: {', '.join(sorted(profiles_used))}")

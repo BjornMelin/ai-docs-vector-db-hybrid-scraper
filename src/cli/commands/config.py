@@ -1,3 +1,4 @@
+import typing
 """Simplified configuration management commands with Rich styling.
 
 Core configuration management functionality for V1 release.
@@ -10,6 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
+
 from src.config import Config
 
 console = Console()

@@ -1,3 +1,4 @@
+import typing
 """Enterprise database infrastructure with 2025 best practices.
 
 This module provides production-grade database connection management with:

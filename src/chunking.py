@@ -1,3 +1,4 @@
+import typing
 """chunking.py - Enhanced Chunking with Code Awareness.
 
 Implements research-backed chunking strategies for optimal RAG performance.
@@ -6,7 +7,8 @@ Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST p
 
 import logging
 import re
-from typing import Any, ClassVar
+from typing import Any
+from typing import ClassVar
 
 from src.config import ChunkingConfig
 

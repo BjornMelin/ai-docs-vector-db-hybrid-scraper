@@ -1,3 +1,4 @@
+import typing
 """Main unified CLI entry point for AI Documentation Scraper.
 
 This module provides a comprehensive CLI interface that integrates all
@@ -12,6 +13,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+
 from src.config import Config
 from src.config import get_config
 
@@ -209,6 +211,7 @@ def completion(shell: str):
 def status(ctx: click.Context):
     """Show system status and health check."""
     from rich.table import Table
+
     from src.utils.health_checks import ServiceHealthChecker
 
     rich_cli = ctx.obj["rich_cli"]

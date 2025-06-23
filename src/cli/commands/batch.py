@@ -1,3 +1,4 @@
+import typing
 """Batch operations with Rich progress tracking and confirmations.
 
 This module provides comprehensive batch processing capabilities with
@@ -20,6 +21,7 @@ from rich.progress import TimeRemainingColumn
 from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
+
 from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
 

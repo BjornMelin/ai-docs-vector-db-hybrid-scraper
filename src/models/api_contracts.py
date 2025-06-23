@@ -1,3 +1,4 @@
+import typing
 """API contract models for MCP (Model Context Protocol) requests and responses.
 
 This module consolidates all request and response models used in the MCP server

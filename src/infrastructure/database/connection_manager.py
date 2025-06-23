@@ -1,3 +1,4 @@
+import typing
 """Enterprise database connection manager with ML-driven optimization.
 
 Clean 2025 implementation of enterprise features:
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
+
 from src.config import Config
 
 from ..shared import CircuitBreaker
@@ -108,7 +110,7 @@ class DatabaseManager:
             )
 
         except Exception as e:
-            logger.error(f"Failed to initialize enterprise database manager: {e}")
+            logger.exception(f"Failed to initialize enterprise database manager: {e}")
             raise
 
     async def cleanup(self) -> None:
@@ -129,7 +131,7 @@ class DatabaseManager:
             logger.info("Enterprise database manager cleaned up")
 
         except Exception as e:
-            logger.error(f"Error during database cleanup: {e}")
+            logger.exception(f"Error during database cleanup: {e}")
 
     @asynccontextmanager
     async def session(self) -> Any:

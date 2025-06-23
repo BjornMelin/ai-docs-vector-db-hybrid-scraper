@@ -1,3 +1,4 @@
+import typing
 """Centralized API client management with singleton pattern and health checks."""
 
 import asyncio
@@ -8,12 +9,14 @@ import time
 from contextlib import asynccontextmanager
 
 # Import for type hints (avoid circular import by using TYPE_CHECKING)
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
 import redis.asyncio as redis
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
+
 from src.config import Config
 from src.infrastructure.shared import CircuitBreaker
 from src.infrastructure.shared import ClientHealth
@@ -32,7 +35,7 @@ logger = logging.getLogger(__name__)
 class ClientManager:
     """Centralized API client management with singleton pattern and health checks."""
 
-    _instance: Optional["ClientManager"] = None
+    _instance: typing.Optional["ClientManager"] = None
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()  # Thread-safe lock for singleton creation
 
@@ -165,7 +168,7 @@ class ClientManager:
                         await service.cleanup()
                         logger.info(f"Cleaned up {service_name}")
                     except Exception as e:
-                        logger.error(f"Error cleaning up {service_name}: {e}")
+                        logger.exception(f"Error cleaning up {service_name}: {e}")
                 setattr(self, service_name, None)
 
         # Close all clients
@@ -177,7 +180,7 @@ class ClientManager:
                     await client.aclose()
                 logger.info(f"Closed {name} client")
             except Exception as e:
-                logger.error(f"Error closing {name} client: {e}")
+                logger.exception(f"Error closing {name} client: {e}")
 
         self._clients.clear()
         self._health.clear()
@@ -729,7 +732,7 @@ class ClientManager:
                         logger.info(f"Created {name} client")
 
                     except Exception as e:
-                        logger.error(f"Failed to create {name} client: {e}")
+                        logger.exception(f"Failed to create {name} client: {e}")
                         raise APIError(f"Failed to create {name} client: {e}") from e
 
         # Check health status
@@ -895,10 +898,10 @@ class ClientManager:
                 health.last_error = "Health check returned false"
 
         except TimeoutError:
-            logger.error(f"{name} health check timed out")
+            logger.exception(f"{name} health check timed out")
             self._update_health_failure(name, "Health check timeout")
         except Exception as e:
-            logger.error(f"{name} health check error: {e}")
+            logger.exception(f"{name} health check error: {e}")
             self._update_health_failure(name, str(e))
 
     async def _recreate_client_if_needed(self, name: str) -> None:
@@ -971,7 +974,7 @@ class ClientManager:
                 logger.info("Health check loop cancelled")
                 break
             except Exception as e:
-                logger.error(f"Error in health check loop: {e}")
+                logger.exception(f"Error in health check loop: {e}")
                 await asyncio.sleep(10)  # Brief pause before retry
 
     def _update_health_failure(self, name: str, error: str) -> None:
@@ -1036,7 +1039,7 @@ class ClientManager:
             client = await client_getters[client_type]()
             yield client
         except Exception as e:
-            logger.error(f"Error using {client_type} client: {e}")
+            logger.exception(f"Error using {client_type} client: {e}")
             raise
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:

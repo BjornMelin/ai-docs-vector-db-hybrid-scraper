@@ -1,3 +1,4 @@
+import typing
 """Real-time validation for configuration wizard.
 
 Provides immediate validation feedback during wizard interaction
@@ -27,7 +28,7 @@ class WizardValidator:
 
     def validate_api_key(
         self, provider: str, api_key: str
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate API key format for specific providers.
 
         Args:
@@ -72,7 +73,7 @@ class WizardValidator:
 
     def validate_url(
         self, url: str, allow_localhost: bool = True
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate URL format.
 
         Args:
@@ -96,7 +97,7 @@ class WizardValidator:
 
         return True, None
 
-    def validate_port(self, port: str | int) -> tuple[bool, Optional[str]]:
+    def validate_port(self, port: str | int) -> tuple[bool, typing.Optional[str]]:
         """Validate port number.
 
         Args:
@@ -120,7 +121,7 @@ class WizardValidator:
 
     def validate_path(
         self, path: str, must_exist: bool = False, must_be_dir: bool = False
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate file/directory path.
 
         Args:
@@ -187,7 +188,7 @@ class WizardValidator:
                 errors.append(f"{field_path}: {error_msg}")
 
         except Exception as e:
-            errors.append(f"Validation error: {str(e)}")
+            errors.append(f"Validation error: {e!s}")
 
         return False, errors
 
@@ -272,7 +273,7 @@ class WizardValidator:
 
     def validate_file_path(
         self, path: str, must_exist: bool = False
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate file path.
 
         Args:
@@ -286,7 +287,7 @@ class WizardValidator:
 
     def validate_directory_path(
         self, path: str, must_exist: bool = False
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate directory path.
 
         Args:
@@ -300,7 +301,7 @@ class WizardValidator:
 
     def validate_json_string(
         self, json_str: str
-    ) -> tuple[bool, Optional[str], Optional[Dict]]:
+    ) -> tuple[bool, typing.Optional[str], typing.Optional[Dict]]:
         """Validate JSON string.
 
         Args:

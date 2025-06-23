@@ -1,3 +1,4 @@
+import typing
 """Interactive configuration wizard for initial setup.
 
 This module provides a step-by-step configuration wizard that guides
@@ -14,6 +15,7 @@ import questionary
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+
 from src.cli.wizard import ProfileManager
 from src.cli.wizard import TemplateManager
 from src.cli.wizard import WizardValidator

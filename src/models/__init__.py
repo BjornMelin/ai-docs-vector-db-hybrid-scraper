@@ -1,3 +1,4 @@
+import typing
 """Centralized Pydantic v2 models for the AI Documentation Vector DB.
 
 This module provides a unified import location for all Pydantic models used throughout

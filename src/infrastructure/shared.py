@@ -1,3 +1,4 @@
+import typing
 """Shared infrastructure components to avoid circular imports.
 
 This module contains classes that are used by multiple infrastructure components
@@ -128,15 +129,15 @@ class CircuitBreaker:
                 self._state = ClientState.HEALTHY
             return result
 
-        except Exception as e:
+        except Exception:
             async with self._lock:
                 self._failure_count += 1
                 self._last_failure_time = time.time()
 
                 if self._failure_count >= self.failure_threshold:
                     self._state = ClientState.FAILED
-                    logger.error(
+                    logger.exception(
                         f"Circuit breaker opened after {self._failure_count} failures"
                     )
 
-            raise e
+            raise

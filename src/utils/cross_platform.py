@@ -1,3 +1,4 @@
+import typing
 """Cross-platform utilities for handling platform-specific differences.
 
 This module provides utilities for consistent behavior across Windows, macOS, and Linux
@@ -122,7 +123,7 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
         browser: Browser name (chromium, chrome, firefox)
 
     Returns:
-        Optional[Path]: Path to browser executable if found
+        typing.Optional[Path]: Path to browser executable if found
     """
     browser_paths = {
         "chromium": {

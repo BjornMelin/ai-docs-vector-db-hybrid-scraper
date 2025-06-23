@@ -1,3 +1,4 @@
+import typing
 """Template management for configuration wizard.
 
 Handles loading, validating, and managing configuration templates
@@ -20,7 +21,7 @@ console = Console()
 class TemplateManager:
     """Manages configuration templates for the wizard."""
 
-    def __init__(self, templates_dir: Optional[Path] = None):
+    def __init__(self, templates_dir: typing.Optional[Path] = None):
         """Initialize template manager.
 
         Args:
@@ -111,17 +112,17 @@ class TemplateManager:
         """Get list of available template names."""
         return list(self._templates.keys())
 
-    def get_template(self, name: str) -> Optional[dict[str, Any]]:
+    def get_template(self, name: str) -> typing.Optional[dict[str, Any]]:
         """Get template data by name."""
         return self._templates.get(name)
 
-    def get_template_metadata(self, name: str) -> Optional[dict[str, str]]:
+    def get_template_metadata(self, name: str) -> typing.Optional[dict[str, str]]:
         """Get template metadata by name."""
         return self._metadata.get(name)
 
     def validate_template(
         self, template_data: dict[str, Any]
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, typing.Optional[str]]:
         """Validate template data against Config model.
 
         Returns:
@@ -244,7 +245,7 @@ class TemplateManager:
                 console.print()
 
     def create_config_from_template(
-        self, template_name: str, overrides: Optional[dict[str, Any]] = None
+        self, template_name: str, overrides: typing.Optional[dict[str, Any]] = None
     ) -> Config:
         """Create a Config object from template with optional overrides.
 

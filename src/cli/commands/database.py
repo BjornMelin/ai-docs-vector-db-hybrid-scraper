@@ -1,3 +1,4 @@
+import typing
 """Enhanced vector database management commands with Rich styling.
 
 This module provides advanced database operations with Rich progress
@@ -17,6 +18,7 @@ from rich.progress import TextColumn
 from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
+
 from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
 

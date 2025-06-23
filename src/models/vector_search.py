@@ -1,3 +1,4 @@
+import typing
 """Vector search models for Qdrant Query API and search operations.
 
 This module consolidates all models related to vector search, HNSW configuration,

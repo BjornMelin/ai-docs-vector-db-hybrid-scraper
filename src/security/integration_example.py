@@ -1,3 +1,4 @@
+import typing
 """Example integration of simplified ML security with FastAPI.
 
 This shows how to integrate the minimal security features into existing endpoints.
@@ -8,6 +9,7 @@ from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Request
 from fastapi.security import APIKeyHeader
+
 from src.config import get_config
 from src.security.ml_security import MLSecurityValidator
 from src.security.ml_security import SimpleRateLimiter

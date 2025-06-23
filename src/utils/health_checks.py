@@ -1,3 +1,4 @@
+import typing
 """Centralized health check utilities for external service connections.
 
 This module provides a unified interface for checking connectivity to all
