@@ -107,7 +107,7 @@ dev = [
 # Browser automation (optional heavy dependencies)
 browser = [
     "playwright>=1.52.0,<2.0.0", # Python 3.13 compatible
-    "browser-use>=0.2.6,<0.3.0", # Partial Python 3.13 support
+    "browser-use>=0.2.6,<0.4.0", # Partial Python 3.13 support
 ]
 
 # LangChain integrations (optional AI features)  
