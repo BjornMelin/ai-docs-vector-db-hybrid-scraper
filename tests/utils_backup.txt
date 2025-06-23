@@ -1,0 +1,9 @@
+"""Test utilities package.
+
+This package provides reusable utilities for testing including assertion helpers,
+data generators, mock factories, test configuration helpers, and performance
+measurement utilities.
+"""
+
+# Make utils a proper Python package
+__version__ = "1.0.0"
