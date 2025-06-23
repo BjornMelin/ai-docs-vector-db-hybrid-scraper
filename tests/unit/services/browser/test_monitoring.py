@@ -4,6 +4,7 @@ import asyncio
 import time
 
 import pytest
+
 from src.services.browser.monitoring import Alert
 from src.services.browser.monitoring import AlertSeverity
 from src.services.browser.monitoring import AlertType

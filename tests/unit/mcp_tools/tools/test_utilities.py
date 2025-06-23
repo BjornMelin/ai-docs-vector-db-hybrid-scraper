@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from unittest.mock import PropertyMock
 
 import pytest
+
 from src.mcp_tools.models.responses import ConfigValidationResponse
 from src.mcp_tools.models.responses import GenericDictResponse
 

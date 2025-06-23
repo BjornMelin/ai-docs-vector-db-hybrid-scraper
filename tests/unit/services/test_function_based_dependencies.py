@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.dependencies import CrawlRequest
 from src.services.dependencies import CrawlResponse
 from src.services.dependencies import EmbeddingRequest  # Pydantic Models
@@ -91,7 +92,7 @@ def mock_task_manager():
 class TestCoreDependencies:
     """Test core dependency injection functions."""
 
-    @patch('src.services.dependencies.ClientManager.from_unified_config')
+    @patch("src.services.dependencies.ClientManager.from_unified_config")
     def test_get_client_manager_singleton(self, mock_from_config):
         """Test that get_client_manager returns singleton instance."""
         mock_manager = MagicMock()
@@ -107,11 +108,16 @@ class TestCoreDependencies:
         mock_from_config.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_embedding_manager(self, mock_client_manager, mock_embedding_manager):
+    async def test_get_embedding_manager(
+        self, mock_client_manager, mock_embedding_manager
+    ):
         """Test embedding manager dependency injection."""
         mock_client_manager.get_embedding_manager.return_value = mock_embedding_manager
 
-        with patch('src.services.dependencies.get_client_manager', return_value=mock_client_manager):
+        with patch(
+            "src.services.dependencies.get_client_manager",
+            return_value=mock_client_manager,
+        ):
             result = await get_embedding_manager(mock_client_manager)
 
         assert result == mock_embedding_manager
@@ -122,7 +128,10 @@ class TestCoreDependencies:
         """Test cache manager dependency injection."""
         mock_client_manager.get_cache_manager.return_value = mock_cache_manager
 
-        with patch('src.services.dependencies.get_client_manager', return_value=mock_client_manager):
+        with patch(
+            "src.services.dependencies.get_client_manager",
+            return_value=mock_client_manager,
+        ):
             result = await get_cache_manager(mock_client_manager)
 
         assert result == mock_cache_manager
@@ -175,7 +184,9 @@ class TestEmbeddingFunctions:
         """Test embedding generation error handling."""
         request = EmbeddingRequest(texts=["test"])
 
-        mock_embedding_manager.generate_embeddings.side_effect = Exception("Provider failed")
+        mock_embedding_manager.generate_embeddings.side_effect = Exception(
+            "Provider failed"
+        )
 
         with pytest.raises(EmbeddingServiceError) as exc_info:
             await generate_embeddings(request, mock_embedding_manager)
@@ -210,7 +221,9 @@ class TestCacheFunctions:
         """Test successful cache set operation."""
         mock_cache_manager.set.return_value = True
 
-        result = await cache_set("test_key", {"data": "value"}, "crawl", 3600, mock_cache_manager)
+        result = await cache_set(
+            "test_key", {"data": "value"}, "crawl", 3600, mock_cache_manager
+        )
 
         assert result is True
         mock_cache_manager.set.assert_called_once()
@@ -381,7 +394,10 @@ class TestUtilityFunctions:
 
         mock_client_manager.get_health_status.return_value = expected_health
 
-        with patch('src.services.dependencies.get_client_manager', return_value=mock_client_manager):
+        with patch(
+            "src.services.dependencies.get_client_manager",
+            return_value=mock_client_manager,
+        ):
             result = await get_service_health()
 
         assert result["status"] == "healthy"
@@ -391,22 +407,32 @@ class TestUtilityFunctions:
     @pytest.mark.asyncio
     async def test_get_service_health_error(self):
         """Test service health check error handling."""
-        with patch('src.services.dependencies.get_client_manager', side_effect=Exception("Health error")):
+        with patch(
+            "src.services.dependencies.get_client_manager",
+            side_effect=Exception("Health error"),
+        ):
             result = await get_service_health()
 
         assert result["status"] == "unhealthy"
         assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_get_service_metrics_success(self, mock_client_manager, mock_cache_manager, mock_crawl_manager):
+    async def test_get_service_metrics_success(
+        self, mock_client_manager, mock_cache_manager, mock_crawl_manager
+    ):
         """Test successful service metrics collection."""
         mock_cache_manager.get_performance_stats.return_value = {"hit_rate": 0.85}
-        mock_crawl_manager.get_tier_metrics.return_value = {"tier0": {"success_rate": 0.95}}
+        mock_crawl_manager.get_tier_metrics.return_value = {
+            "tier0": {"success_rate": 0.95}
+        }
 
         mock_client_manager.get_cache_manager.return_value = mock_cache_manager
         mock_client_manager.get_crawl_manager.return_value = mock_crawl_manager
 
-        with patch('src.services.dependencies.get_client_manager', return_value=mock_client_manager):
+        with patch(
+            "src.services.dependencies.get_client_manager",
+            return_value=mock_client_manager,
+        ):
             result = await get_service_metrics()
 
         assert "cache_service" in result

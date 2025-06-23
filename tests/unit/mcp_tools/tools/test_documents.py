@@ -11,6 +11,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.config.enums import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest

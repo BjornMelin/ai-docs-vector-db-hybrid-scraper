@@ -2,6 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
+
 from src.services.query_processing.models import MatryoshkaDimension
 from src.services.query_processing.models import QueryComplexity
 from src.services.query_processing.models import QueryIntent

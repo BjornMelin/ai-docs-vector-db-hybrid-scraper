@@ -15,6 +15,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.errors import AdvancedCircuitBreaker
 from src.services.errors import CircuitBreakerRegistry
 from src.services.errors import CircuitState
@@ -79,7 +80,9 @@ class TestAdvancedCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_rejects_calls_when_open(self):
         """Test that open circuit rejects calls immediately."""
-        breaker = AdvancedCircuitBreaker("test_service", failure_threshold=2, recovery_timeout=60.0)
+        breaker = AdvancedCircuitBreaker(
+            "test_service", failure_threshold=2, recovery_timeout=60.0
+        )
 
         async def failing_function():
             raise ExternalServiceError("Service unavailable")
@@ -98,7 +101,9 @@ class TestAdvancedCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_transitions_to_half_open(self):
         """Test circuit transition from OPEN to HALF_OPEN after timeout."""
-        breaker = AdvancedCircuitBreaker("test_service", failure_threshold=2, recovery_timeout=0.1)
+        breaker = AdvancedCircuitBreaker(
+            "test_service", failure_threshold=2, recovery_timeout=0.1
+        )
 
         async def failing_function():
             raise ExternalServiceError("Service unavailable")
@@ -125,7 +130,9 @@ class TestAdvancedCircuitBreaker:
     @pytest.mark.asyncio
     async def test_half_open_closes_on_success(self):
         """Test that HALF_OPEN circuit closes on successful call."""
-        breaker = AdvancedCircuitBreaker("test_service", failure_threshold=2, recovery_timeout=0.1)
+        breaker = AdvancedCircuitBreaker(
+            "test_service", failure_threshold=2, recovery_timeout=0.1
+        )
 
         async def failing_function():
             raise ExternalServiceError("Service unavailable")
@@ -152,7 +159,9 @@ class TestAdvancedCircuitBreaker:
     @pytest.mark.asyncio
     async def test_half_open_reopens_on_failure(self):
         """Test that HALF_OPEN circuit reopens on failure."""
-        breaker = AdvancedCircuitBreaker("test_service", failure_threshold=2, recovery_timeout=0.1)
+        breaker = AdvancedCircuitBreaker(
+            "test_service", failure_threshold=2, recovery_timeout=0.1
+        )
 
         async def failing_function():
             raise ExternalServiceError("Service unavailable")
@@ -175,7 +184,9 @@ class TestAdvancedCircuitBreaker:
 
     def test_adaptive_timeout_adjustment(self):
         """Test adaptive timeout adjustment based on success/failure patterns."""
-        breaker = AdvancedCircuitBreaker("test_service", enable_adaptive_timeout=True, recovery_timeout=60.0)
+        breaker = AdvancedCircuitBreaker(
+            "test_service", enable_adaptive_timeout=True, recovery_timeout=60.0
+        )
 
         # Test success pattern
         for _ in range(3):
@@ -203,7 +214,9 @@ class TestAdvancedCircuitBreaker:
         assert breaker.metrics.success_calls == 2
         assert breaker.metrics.failure_calls == 1
         assert abs(breaker.metrics.get_success_rate() - 66.67) < 0.01
-        assert abs(breaker.metrics.get_average_response_time() - 0.267) < 0.01  # (0.1 + 0.5 + 0.2) / 3
+        assert (
+            abs(breaker.metrics.get_average_response_time() - 0.267) < 0.01
+        )  # (0.1 + 0.5 + 0.2) / 3
 
     def test_get_status(self):
         """Test circuit breaker status reporting."""
@@ -285,9 +298,9 @@ class TestCircuitBreakerDecorators:
         assert result == "call_1"
 
         # Access circuit breaker instance
-        assert hasattr(test_function, 'circuit_breaker')
-        assert hasattr(test_function, 'get_circuit_status')
-        assert hasattr(test_function, 'reset_circuit')
+        assert hasattr(test_function, "circuit_breaker")
+        assert hasattr(test_function, "get_circuit_status")
+        assert hasattr(test_function, "reset_circuit")
 
         status = test_function.get_circuit_status()
         assert status["service_name"] == "test_decorator"
@@ -325,10 +338,11 @@ class TestCircuitBreakerDecorators:
     @pytest.mark.asyncio
     async def test_decorator_with_non_retryable_exception(self):
         """Test that non-retryable exceptions are not counted."""
+
         @circuit_breaker(
             service_name="test_non_retryable",
             failure_threshold=2,
-            expected_exceptions=(ExternalServiceError,)
+            expected_exceptions=(ExternalServiceError,),
         )
         async def test_function(exception_type="retryable"):
             if exception_type == "retryable":
@@ -376,7 +390,7 @@ class TestCircuitBreakerIntegration:
         """Test that health checks include circuit breaker information."""
         from src.services.dependencies import get_service_health
 
-        with patch('src.services.dependencies.get_client_manager') as mock_get_client:
+        with patch("src.services.dependencies.get_client_manager") as mock_get_client:
             mock_client = Mock()
             mock_client.get_health_status = AsyncMock(return_value={"status": "ok"})
             mock_get_client.return_value = mock_client

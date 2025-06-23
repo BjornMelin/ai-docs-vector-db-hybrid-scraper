@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
 
@@ -51,7 +52,7 @@ class TestFastEmbedProviderInitialization:
         assert "sentence-transformers/all-MiniLM-L6-v2" in models
 
         # Check structure of model configs
-        for _model_name, config in models.items():
+        for config in models.values():
             assert "dimensions" in config
             assert "description" in config
             assert "max_tokens" in config

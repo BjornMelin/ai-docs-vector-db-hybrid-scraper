@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
+
 from src.config.enums import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import SearchRequest

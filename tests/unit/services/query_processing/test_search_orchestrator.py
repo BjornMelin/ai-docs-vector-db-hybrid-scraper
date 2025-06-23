@@ -14,6 +14,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.query_processing.orchestrator import SearchMode
 from src.services.query_processing.orchestrator import SearchOrchestrator
 from src.services.query_processing.orchestrator import SearchPipeline

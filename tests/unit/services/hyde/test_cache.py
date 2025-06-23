@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+
 from src.services.errors import EmbeddingServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig

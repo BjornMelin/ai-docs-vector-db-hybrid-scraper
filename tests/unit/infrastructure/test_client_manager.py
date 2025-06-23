@@ -19,6 +19,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker

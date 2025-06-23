@@ -9,6 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+
 from src.services.monitoring.middleware import CustomMetricsMiddleware
 from src.services.monitoring.middleware import PrometheusMiddleware
 

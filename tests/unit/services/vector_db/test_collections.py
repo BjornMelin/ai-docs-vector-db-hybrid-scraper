@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException
+
 from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.collections import QdrantCollections

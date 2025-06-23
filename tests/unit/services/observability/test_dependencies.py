@@ -1,18 +1,18 @@
 """Tests for observability dependency injection."""
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-from src.services.observability.dependencies import (
-    get_observability_service,
-    get_ai_tracer,
-    get_service_meter,
-    create_span_context,
-    record_ai_operation_metrics,
-    track_ai_cost_metrics,
-    get_observability_health,
-)
+import pytest
+
 from src.services.observability.config import ObservabilityConfig
+from src.services.observability.dependencies import create_span_context
+from src.services.observability.dependencies import get_ai_tracer
+from src.services.observability.dependencies import get_observability_health
+from src.services.observability.dependencies import get_observability_service
+from src.services.observability.dependencies import get_service_meter
+from src.services.observability.dependencies import record_ai_operation_metrics
+from src.services.observability.dependencies import track_ai_cost_metrics
 
 
 class TestObservabilityDependencies:
@@ -42,27 +42,27 @@ class TestObservabilityDependencies:
         mock_get_config.return_value = config
         mock_is_enabled.return_value = False  # Not initialized yet
         mock_initialize.return_value = True
-        
+
         mock_tracer = MagicMock()
         mock_meter = MagicMock()
         mock_get_tracer.return_value = mock_tracer
         mock_get_meter.return_value = mock_meter
-        
+
         # Clear cache to ensure fresh call
         get_observability_service.cache_clear()
-        
+
         service = get_observability_service()
-        
+
         assert service["config"] == config
         assert service["tracer"] == mock_tracer
         assert service["meter"] == mock_meter
-        # Note: The enabled flag is determined by is_observability_enabled(), 
+        # Note: The enabled flag is determined by is_observability_enabled(),
         # which after init should return True
         mock_is_enabled.return_value = True  # After initialization
         get_observability_service.cache_clear()  # Clear cache to get updated state
         service = get_observability_service()
         assert service["enabled"] is True
-        
+
         # Verify initialization was called
         mock_initialize.assert_called_once_with(config)
 
@@ -81,16 +81,16 @@ class TestObservabilityDependencies:
         config = ObservabilityConfig(enabled=True, service_name="test-service")
         mock_get_config.return_value = config
         mock_is_enabled.return_value = True  # Already initialized
-        
+
         mock_tracer = MagicMock()
         mock_meter = MagicMock()
         mock_get_tracer.return_value = mock_tracer
         mock_get_meter.return_value = mock_meter
-        
+
         get_observability_service.cache_clear()
-        
+
         service = get_observability_service()
-        
+
         assert service["enabled"] is True
         assert service["tracer"] == mock_tracer
         assert service["meter"] == mock_meter
@@ -100,14 +100,16 @@ class TestObservabilityDependencies:
         """Test getting observability service when disabled."""
         config = ObservabilityConfig(enabled=False)
         mock_get_config.return_value = config
-        
+
         get_observability_service.cache_clear()
-        
+
         service = get_observability_service()
-        
+
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations, not None
-        from src.services.observability.tracking import _NoOpTracer, _NoOpMeter
+        from src.services.observability.tracking import _NoOpMeter
+        from src.services.observability.tracking import _NoOpTracer
+
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)
 
@@ -115,11 +117,11 @@ class TestObservabilityDependencies:
     def test_get_observability_service_exception_handling(self, mock_get_config):
         """Test observability service exception handling."""
         mock_get_config.side_effect = Exception("Config error")
-        
+
         get_observability_service.cache_clear()
-        
+
         service = get_observability_service()
-        
+
         assert service["enabled"] is False
         assert service["tracer"] is None
         assert service["meter"] is None
@@ -130,14 +132,14 @@ class TestObservabilityDependencies:
         """Test getting AI tracer when enabled."""
         mock_tracer = MagicMock()
         mock_get_tracer.return_value = mock_tracer
-        
+
         observability_service = {
             "enabled": True,
             "tracer": mock_tracer,
         }
-        
+
         tracer = get_ai_tracer(observability_service)
-        
+
         assert tracer == mock_tracer
         mock_get_tracer.assert_called_once_with("ai-operations")
 
@@ -147,11 +149,12 @@ class TestObservabilityDependencies:
             "enabled": False,
             "tracer": None,
         }
-        
+
         tracer = get_ai_tracer(observability_service)
-        
+
         # Should return NoOp tracer
         from src.services.observability.tracking import _NoOpTracer
+
         assert isinstance(tracer, _NoOpTracer)
 
     def test_get_ai_tracer_no_tracer(self):
@@ -160,10 +163,11 @@ class TestObservabilityDependencies:
             "enabled": True,
             "tracer": None,
         }
-        
+
         tracer = get_ai_tracer(observability_service)
-        
+
         from src.services.observability.tracking import _NoOpTracer
+
         assert isinstance(tracer, _NoOpTracer)
 
     @patch("src.services.observability.dependencies.get_meter")
@@ -171,14 +175,14 @@ class TestObservabilityDependencies:
         """Test getting service meter when enabled."""
         mock_meter = MagicMock()
         mock_get_meter.return_value = mock_meter
-        
+
         observability_service = {
             "enabled": True,
             "meter": mock_meter,
         }
-        
+
         meter = get_service_meter(observability_service)
-        
+
         assert meter == mock_meter
         mock_get_meter.assert_called_once_with("service-metrics")
 
@@ -188,10 +192,11 @@ class TestObservabilityDependencies:
             "enabled": False,
             "meter": None,
         }
-        
+
         meter = get_service_meter(observability_service)
-        
+
         from src.services.observability.tracking import _NoOpMeter
+
         assert isinstance(meter, _NoOpMeter)
 
     def test_create_span_context(self):
@@ -199,9 +204,9 @@ class TestObservabilityDependencies:
         mock_tracer = MagicMock()
         mock_span = MagicMock()
         mock_tracer.start_as_current_span.return_value = mock_span
-        
+
         span_context = create_span_context("test-operation", mock_tracer)
-        
+
         assert span_context == mock_span
         mock_tracer.start_as_current_span.assert_called_once_with("test-operation")
 
@@ -209,8 +214,10 @@ class TestObservabilityDependencies:
     async def test_record_ai_operation_metrics(self):
         """Test recording AI operation metrics."""
         mock_meter = MagicMock()
-        
-        with patch("src.services.observability.tracking.record_ai_operation") as mock_record:
+
+        with patch(
+            "src.services.observability.tracking.record_ai_operation"
+        ) as mock_record:
             await record_ai_operation_metrics(
                 operation_type="embedding",
                 provider="openai",
@@ -219,7 +226,7 @@ class TestObservabilityDependencies:
                 meter=mock_meter,
                 model="text-embedding-3-small",
             )
-            
+
             mock_record.assert_called_once_with(
                 operation_type="embedding",
                 provider="openai",
@@ -232,10 +239,12 @@ class TestObservabilityDependencies:
     async def test_record_ai_operation_metrics_exception_handling(self):
         """Test AI operation metrics recording handles exceptions."""
         mock_meter = MagicMock()
-        
-        with patch("src.services.observability.tracking.record_ai_operation") as mock_record:
+
+        with patch(
+            "src.services.observability.tracking.record_ai_operation"
+        ) as mock_record:
             mock_record.side_effect = Exception("Metrics error")
-            
+
             # Should not raise exception
             await record_ai_operation_metrics(
                 operation_type="embedding",
@@ -249,7 +258,7 @@ class TestObservabilityDependencies:
     async def test_track_ai_cost_metrics(self):
         """Test tracking AI cost metrics."""
         mock_meter = MagicMock()
-        
+
         with patch("src.services.observability.tracking.track_cost") as mock_track_cost:
             await track_ai_cost_metrics(
                 operation_type="completion",
@@ -258,7 +267,7 @@ class TestObservabilityDependencies:
                 meter=mock_meter,
                 model="gpt-3.5-turbo",
             )
-            
+
             mock_track_cost.assert_called_once_with(
                 operation_type="completion",
                 provider="openai",
@@ -270,10 +279,10 @@ class TestObservabilityDependencies:
     async def test_track_ai_cost_metrics_exception_handling(self):
         """Test AI cost metrics tracking handles exceptions."""
         mock_meter = MagicMock()
-        
+
         with patch("src.services.observability.tracking.track_cost") as mock_track_cost:
             mock_track_cost.side_effect = Exception("Cost tracking error")
-            
+
             # Should not raise exception
             await track_ai_cost_metrics(
                 operation_type="completion",
@@ -292,14 +301,14 @@ class TestObservabilityDependencies:
             track_ai_operations=True,
             track_costs=True,
         )
-        
+
         observability_service = {
             "config": config,
             "enabled": True,
         }
-        
+
         health = await get_observability_health(observability_service)
-        
+
         assert health["enabled"] is True
         assert health["service_name"] == "test-service"
         assert health["otlp_endpoint"] == "http://test.example.com:4317"
@@ -312,14 +321,14 @@ class TestObservabilityDependencies:
     async def test_get_observability_health_disabled(self):
         """Test getting observability health when disabled."""
         config = ObservabilityConfig(enabled=False)
-        
+
         observability_service = {
             "config": config,
             "enabled": False,
         }
-        
+
         health = await get_observability_health(observability_service)
-        
+
         assert health["enabled"] is False
         assert health["status"] == "disabled"
         assert health["otlp_endpoint"] is None
@@ -330,9 +339,9 @@ class TestObservabilityDependencies:
     async def test_get_observability_health_exception_handling(self):
         """Test observability health check handles exceptions."""
         observability_service = {"config": None}  # Invalid service
-        
+
         health = await get_observability_health(observability_service)
-        
+
         assert health["enabled"] is False
         assert health["status"] == "error"
         assert "error" in health
@@ -360,41 +369,43 @@ class TestObservabilityDependenciesCaching:
         config = ObservabilityConfig(enabled=False)
         mock_get_config.return_value = config
         mock_is_enabled.return_value = False
-        
+
         mock_tracer = MagicMock()
         mock_meter = MagicMock()
         mock_get_tracer.return_value = mock_tracer
         mock_get_meter.return_value = mock_meter
-        
+
         # Clear cache and call twice
         get_observability_service.cache_clear()
-        
+
         service1 = get_observability_service()
         service2 = get_observability_service()
-        
+
         # Should be the same instance due to caching
         assert service1 is service2
-        
+
         # Config should only be called once due to caching
         assert mock_get_config.call_count == 1
 
     def test_cache_clear_functionality(self):
         """Test cache clearing functionality."""
         get_observability_service.cache_clear()
-        
-        with patch("src.services.observability.dependencies.get_observability_config") as mock_get_config:
+
+        with patch(
+            "src.services.observability.dependencies.get_observability_config"
+        ) as mock_get_config:
             config = ObservabilityConfig(enabled=False)
             mock_get_config.return_value = config
-            
+
             # Call service
             service1 = get_observability_service()
-            
+
             # Clear cache and call again
             get_observability_service.cache_clear()
             service2 = get_observability_service()
-            
+
             # Should be different instances after cache clear
             assert service1 is not service2
-            
+
             # Config should be called twice (once per cache miss)
             assert mock_get_config.call_count == 2

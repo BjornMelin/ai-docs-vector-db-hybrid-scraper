@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-import questionary
 from click.testing import CliRunner
 from rich.console import Console
 
@@ -234,12 +233,12 @@ def rich_output_capturer():
         def __init__(self):
             self.string_io = StringIO()
             self.console = Console(
-                file=self.string_io, 
-                width=80, 
+                file=self.string_io,
+                width=80,
                 height=24,
                 force_terminal=True,
                 no_color=False,
-                _environ={}
+                _environ={},
             )
             self.captured_calls = []
 
@@ -250,6 +249,7 @@ def rich_output_capturer():
         def get_plain_output(self) -> str:
             """Get output without ANSI escape codes."""
             from rich.console import Console
+
             plain_console = Console(file=StringIO(), no_color=True, width=80)
             plain_console.file.write(self.get_output())
             return plain_console.file.getvalue()
@@ -258,11 +258,11 @@ def rich_output_capturer():
             """Reset the output buffer."""
             self.string_io = StringIO()
             self.console = Console(
-                file=self.string_io, 
-                width=80, 
+                file=self.string_io,
+                width=80,
                 height=24,
                 force_terminal=True,
-                no_color=False
+                no_color=False,
             )
             self.captured_calls.clear()
 
@@ -324,65 +324,72 @@ def async_context_manager():
 
 # Modern CLI Testing Fixtures
 
+
 @pytest.fixture
 def questionary_mocker():
     """Enhanced fixture for mocking questionary interactions with realistic flows."""
-    
+
     class QuestionaryMocker:
         def __init__(self):
             self.responses = {}
             self.call_history = []
             self.patches = []
-        
+
         def setup_responses(self, responses_dict: dict):
             """Setup responses for different questionary methods."""
             self.responses = responses_dict
-        
-        def mock_confirm(self, question: str = None, default: bool = True):
+
+        def mock_confirm(self, question: str | None = None, default: bool = True):
             """Mock questionary.confirm() calls."""
-            self.call_history.append(('confirm', question, default))
-            return self.responses.get('confirm', default)
-        
-        def mock_select(self, question: str = None, choices=None, default=None):
+            self.call_history.append(("confirm", question, default))
+            return self.responses.get("confirm", default)
+
+        def mock_select(self, question: str | None = None, choices=None, default=None):
             """Mock questionary.select() calls."""
-            self.call_history.append(('select', question, choices, default))
-            return self.responses.get('select', default or (choices[0].value if choices else None))
-        
-        def mock_text(self, question: str = None, default: str = ""):
+            self.call_history.append(("select", question, choices, default))
+            return self.responses.get(
+                "select", default or (choices[0].value if choices else None)
+            )
+
+        def mock_text(self, question: str | None = None, default: str = ""):
             """Mock questionary.text() calls."""
-            self.call_history.append(('text', question, default))
-            return self.responses.get('text', default)
-        
-        def mock_password(self, question: str = None):
+            self.call_history.append(("text", question, default))
+            return self.responses.get("text", default)
+
+        def mock_password(self, question: str | None = None):
             """Mock questionary.password() calls."""
-            self.call_history.append(('password', question))
-            return self.responses.get('password', 'test-password')
-        
+            self.call_history.append(("password", question))
+            return self.responses.get("password", "test-password")
+
         def start_mocking(self):
             """Start mocking questionary methods."""
             self.patches = [
-                patch('questionary.confirm', side_effect=self.mock_confirm),
-                patch('questionary.select', side_effect=self.mock_select),
-                patch('questionary.text', side_effect=self.mock_text),
-                patch('questionary.password', side_effect=self.mock_password),
+                patch("questionary.confirm", side_effect=self.mock_confirm),
+                patch("questionary.select", side_effect=self.mock_select),
+                patch("questionary.text", side_effect=self.mock_text),
+                patch("questionary.password", side_effect=self.mock_password),
             ]
             for p in self.patches:
                 p.start()
-        
+
         def stop_mocking(self):
             """Stop mocking questionary methods."""
             for p in self.patches:
                 p.stop()
             self.patches.clear()
-        
-        def assert_called_with(self, method: str, question_pattern: str = None):
+
+        def assert_called_with(self, method: str, question_pattern: str | None = None):
             """Assert that a method was called with specific question."""
             calls = [call for call in self.call_history if call[0] == method]
             assert len(calls) > 0, f"No {method} calls found in {self.call_history}"
             if question_pattern:
-                matching_calls = [call for call in calls if question_pattern in str(call[1])]
-                assert len(matching_calls) > 0, f"No {method} calls matching '{question_pattern}'"
-    
+                matching_calls = [
+                    call for call in calls if question_pattern in str(call[1])
+                ]
+                assert len(matching_calls) > 0, (
+                    f"No {method} calls matching '{question_pattern}'"
+                )
+
     mocker = QuestionaryMocker()
     yield mocker
     mocker.stop_mocking()
@@ -391,30 +398,30 @@ def questionary_mocker():
 @pytest.fixture
 def interactive_cli_runner():
     """Enhanced CLI runner for testing interactive flows."""
-    
+
     class InteractiveCLIRunner(CliRunner):
         def __init__(self):
             super().__init__(mix_stderr=False)
             self.input_responses = []
             self.current_response_index = 0
-        
+
         def set_input_responses(self, responses: list[str]):
             """Set pre-defined responses for interactive inputs."""
             self.input_responses = responses
             self.current_response_index = 0
-        
+
         def invoke_interactive(self, cli, args=None, input_data=None, **extra):
             """Invoke CLI with interactive input simulation."""
             if input_data is None and self.input_responses:
-                input_data = '\\n'.join(self.input_responses) + '\\n'
-            
+                input_data = "\\n".join(self.input_responses) + "\\n"
+
             return self.invoke(cli, args or [], input=input_data, **extra)
-        
+
         def simulate_keyboard_interrupt(self, cli, args=None, **extra):
             """Simulate keyboard interrupt during CLI execution."""
-            with patch('click.abort', side_effect=KeyboardInterrupt):
+            with patch("click.abort", side_effect=KeyboardInterrupt):
                 return self.invoke(cli, args or [], **extra)
-    
+
     return InteractiveCLIRunner()
 
 
@@ -422,30 +429,37 @@ def interactive_cli_runner():
 def mock_wizard_components():
     """Mock wizard components for isolated testing."""
     components = {
-        'template_manager': MagicMock(),
-        'profile_manager': MagicMock(),
-        'validator': MagicMock(),
-        'config_auditor': MagicMock()
+        "template_manager": MagicMock(),
+        "profile_manager": MagicMock(),
+        "validator": MagicMock(),
+        "config_auditor": MagicMock(),
     }
-    
+
     # Setup realistic returns
-    components['template_manager'].list_templates.return_value = [
-        'personal-use', 'development', 'production', 'minimal'
+    components["template_manager"].list_templates.return_value = [
+        "personal-use",
+        "development",
+        "production",
+        "minimal",
     ]
-    components['template_manager'].get_template.return_value = {
-        'qdrant': {'host': 'localhost', 'port': 6333},
-        'embeddings': {'provider': 'openai'}
+    components["template_manager"].get_template.return_value = {
+        "qdrant": {"host": "localhost", "port": 6333},
+        "embeddings": {"provider": "openai"},
     }
-    
-    components['profile_manager'].list_profiles.return_value = [
-        'personal', 'development', 'production'
+
+    components["profile_manager"].list_profiles.return_value = [
+        "personal",
+        "development",
+        "production",
     ]
-    components['profile_manager'].create_profile_config.return_value = Path('/tmp/config.json')
-    
-    components['validator'].validate_api_key.return_value = (True, None)
-    components['validator'].validate_url.return_value = (True, None)
-    components['validator'].validate_and_show_errors.return_value = True
-    
+    components["profile_manager"].create_profile_config.return_value = Path(
+        "/tmp/config.json"
+    )
+
+    components["validator"].validate_api_key.return_value = (True, None)
+    components["validator"].validate_url.return_value = (True, None)
+    components["validator"].validate_and_show_errors.return_value = True
+
     return components
 
 
@@ -454,28 +468,28 @@ def temp_profiles_dir(tmp_path):
     """Create temporary profiles directory with sample profiles."""
     profiles_dir = tmp_path / "profiles"
     profiles_dir.mkdir()
-    
+
     # Create sample profile files
     profiles = {
-        'personal.json': {
-            'qdrant': {'host': 'localhost', 'port': 6333},
-            'openai': {'model': 'text-embedding-3-small'},
-            'browser': {'headless': True}
+        "personal.json": {
+            "qdrant": {"host": "localhost", "port": 6333},
+            "openai": {"model": "text-embedding-3-small"},
+            "browser": {"headless": True},
         },
-        'development.json': {
-            'qdrant': {'host': 'localhost', 'port': 6333},
-            'debug': True,
-            'log_level': 'DEBUG'
+        "development.json": {
+            "qdrant": {"host": "localhost", "port": 6333},
+            "debug": True,
+            "log_level": "DEBUG",
         },
-        'production.json': {
-            'qdrant': {'url': 'https://qdrant.example.com', 'api_key': 'prod-key'},
-            'monitoring': {'enabled': True}
-        }
+        "production.json": {
+            "qdrant": {"url": "https://qdrant.example.com", "api_key": "prod-key"},
+            "monitoring": {"enabled": True},
+        },
     }
-    
+
     for filename, config in profiles.items():
         (profiles_dir / filename).write_text(json.dumps(config, indent=2))
-    
+
     return profiles_dir
 
 
@@ -483,22 +497,19 @@ def temp_profiles_dir(tmp_path):
 def cli_integration_setup(tmp_path, temp_profiles_dir):
     """Complete setup for CLI integration testing."""
     setup_data = {
-        'config_dir': tmp_path / "config",
-        'profiles_dir': temp_profiles_dir,
-        'temp_config': tmp_path / "test_config.json",
-        'env_file': tmp_path / ".env"
+        "config_dir": tmp_path / "config",
+        "profiles_dir": temp_profiles_dir,
+        "temp_config": tmp_path / "test_config.json",
+        "env_file": tmp_path / ".env",
     }
-    
+
     # Create directories
-    setup_data['config_dir'].mkdir(exist_ok=True)
-    
+    setup_data["config_dir"].mkdir(exist_ok=True)
+
     # Create base config
-    base_config = {
-        'qdrant': {'host': 'localhost', 'port': 6333},
-        'version': '1.0.0'
-    }
-    setup_data['temp_config'].write_text(json.dumps(base_config, indent=2))
-    
+    base_config = {"qdrant": {"host": "localhost", "port": 6333}, "version": "1.0.0"}
+    setup_data["temp_config"].write_text(json.dumps(base_config, indent=2))
+
     return setup_data
 
 

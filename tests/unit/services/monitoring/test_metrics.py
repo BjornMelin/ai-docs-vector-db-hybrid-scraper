@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from prometheus_client.registry import CollectorRegistry
+
 from src.services.monitoring.metrics import MetricsConfig
 from src.services.monitoring.metrics import MetricsRegistry
 

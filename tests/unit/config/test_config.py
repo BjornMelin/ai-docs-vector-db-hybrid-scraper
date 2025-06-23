@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+
 from src.config import CacheConfig
 from src.config import ChunkingConfig
 from src.config import Config

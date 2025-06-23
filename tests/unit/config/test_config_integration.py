@@ -12,6 +12,7 @@ import pytest
 import yaml
 from hypothesis import given
 from hypothesis import strategies as st
+
 from src.config.core import Config
 from src.config.core import DocumentationSite
 from src.config.core import get_config
@@ -307,17 +308,17 @@ class TestConfigurationFileLoading:
         environment = "development"
         debug = true
         log_level = "DEBUG"
-        
+
         [openai]
         api_key = "sk-test-toml"
         model = "text-embedding-3-small"
         dimensions = 1536
-        
+
         [qdrant]
         url = "http://localhost:6333"
         collection_name = "test_collection"
         batch_size = 100
-        
+
         [chunking]
         chunk_size = 1600
         chunk_overlap = 320
@@ -379,7 +380,7 @@ class TestDirectoryCreation:
             assert not logs_dir.exists()
 
             # Create config with custom directories
-            config = Config(
+            Config(
                 data_dir=data_dir,
                 cache_dir=cache_dir,
                 logs_dir=logs_dir,
@@ -402,7 +403,7 @@ class TestDirectoryCreation:
             nested_cache_dir = temp_path / "app" / "cache" / "embeddings"
             nested_logs_dir = temp_path / "app" / "logs" / "application"
 
-            config = Config(
+            Config(
                 data_dir=nested_data_dir,
                 cache_dir=nested_cache_dir,
                 logs_dir=nested_logs_dir,
@@ -419,7 +420,7 @@ class TestDirectoryCreation:
             temp_path = Path(temp_dir)
             data_dir = temp_path / "test_data"
 
-            config = Config(data_dir=data_dir)
+            Config(data_dir=data_dir)
 
             # Check that directory is readable and writable
             assert data_dir.exists()

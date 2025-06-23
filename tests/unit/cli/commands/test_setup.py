@@ -12,6 +12,7 @@ from unittest.mock import patch
 import click
 import pytest
 from rich.console import Console
+
 from src.cli.commands.setup import ConfigurationWizard
 from src.cli.commands.setup import setup
 

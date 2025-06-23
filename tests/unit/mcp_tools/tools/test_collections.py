@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.mcp_tools.models.responses import CollectionInfo
 from src.mcp_tools.models.responses import CollectionOperationResponse
 

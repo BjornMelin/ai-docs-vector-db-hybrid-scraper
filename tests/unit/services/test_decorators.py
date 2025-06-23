@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
+
 from src.services.errors import ExternalServiceError
 from src.services.errors import RateLimitError
 from src.services.errors import ResourceError

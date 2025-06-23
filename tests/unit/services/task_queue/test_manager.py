@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Config
 from src.services.task_queue.manager import TaskQueueManager
 

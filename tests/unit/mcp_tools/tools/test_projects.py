@@ -240,6 +240,7 @@ async def test_create_project_invalid_quality_tier(mock_client_manager, mock_con
 
     # Test with invalid quality tier
     from pydantic import ValidationError
+
     from src.mcp_tools.models.requests import ProjectRequest
 
     with pytest.raises(ValidationError):

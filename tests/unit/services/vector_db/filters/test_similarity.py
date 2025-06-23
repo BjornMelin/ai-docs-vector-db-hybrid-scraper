@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pytest
+
 from src.services.vector_db.filters.base import FilterError
 from src.services.vector_db.filters.base import FilterResult
 from src.services.vector_db.filters.similarity import ClusteringAnalysis

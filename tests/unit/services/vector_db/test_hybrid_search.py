@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Config
 from src.config.enums import ABTestVariant
 from src.config.enums import ModelType

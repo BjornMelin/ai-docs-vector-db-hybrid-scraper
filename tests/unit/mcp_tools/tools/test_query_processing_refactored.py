@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import AdvancedQueryProcessingRequest
 from src.mcp_tools.models.requests import QueryAnalysisRequest

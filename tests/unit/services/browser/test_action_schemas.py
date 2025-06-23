@@ -10,6 +10,7 @@ This test module demonstrates:
 
 import pytest
 from pydantic import ValidationError
+
 from src.services.browser.action_schemas import BaseAction
 from src.services.browser.action_schemas import ClickAction
 from src.services.browser.action_schemas import DragAndDropAction

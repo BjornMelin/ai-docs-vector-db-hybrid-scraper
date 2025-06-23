@@ -1,6 +1,7 @@
 """Tests for search strategy selector."""
 
 import pytest
+
 from src.services.query_processing.models import MatryoshkaDimension
 from src.services.query_processing.models import QueryComplexity
 from src.services.query_processing.models import QueryIntent
@@ -378,7 +379,7 @@ class TestSearchStrategySelector:
     async def test_strategy_performance_estimates(self, strategy_selector):
         """Test strategy performance estimate consistency."""
         # All strategies should have performance estimates
-        for _strategy, perf in strategy_selector._strategy_performance.items():
+        for perf in strategy_selector._strategy_performance.values():
             assert "latency" in perf
             assert "quality" in perf
             assert 0 < perf["latency"] < 1000  # Reasonable latency range

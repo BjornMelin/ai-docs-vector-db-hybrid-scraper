@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import pytest
+
 from src.services.content_intelligence.metadata_extractor import MetadataExtractor
 from src.services.content_intelligence.models import ContentMetadata
 

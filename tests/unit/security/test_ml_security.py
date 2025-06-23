@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.security.ml_security import MinimalMLSecurityConfig
 from src.security.ml_security import MLSecurityValidator
 from src.security.ml_security import SecurityCheckResult

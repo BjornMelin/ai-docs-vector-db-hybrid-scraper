@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
 from src.services.errors import EmbeddingServiceError
 

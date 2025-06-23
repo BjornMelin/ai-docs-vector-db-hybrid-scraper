@@ -7,6 +7,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import ValidationError
+
 from src.config.core import BrowserUseConfig
 from src.config.core import Crawl4AIConfig
 from src.config.core import EmbeddingConfig

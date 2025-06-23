@@ -1,6 +1,7 @@
 """Tests for content intelligence site adapters."""
 
 import pytest
+
 from src.services.content_intelligence.adapters import SiteAdapter
 from src.services.content_intelligence.models import AdaptationStrategy
 

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
+
 from src.services.query_processing.models import MatryoshkaDimension
 from src.services.query_processing.models import QueryComplexity
 from src.services.query_processing.models import QueryIntent

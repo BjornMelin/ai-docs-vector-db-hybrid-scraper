@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.core.project_storage import ProjectStorage
 from src.services.core.project_storage import ProjectStorageError
 

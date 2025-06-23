@@ -7,6 +7,7 @@ from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
+
 from src.config import BrowserUseConfig
 from src.config import Config
 from src.config import Crawl4AIConfig

@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
 from src.services.errors import EmbeddingServiceError
 from src.services.hyde.config import HyDEConfig

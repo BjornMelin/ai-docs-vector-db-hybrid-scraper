@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
+
 from src.services.errors import APIError  # API errors
 from src.services.errors import BaseError  # Base errors
 from src.services.errors import CacheServiceError

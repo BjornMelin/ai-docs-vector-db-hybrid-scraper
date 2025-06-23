@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+
 from src.services.query_processing.ranking import ContentCategory
 from src.services.query_processing.ranking import InteractionEvent
 from src.services.query_processing.ranking import InteractionType

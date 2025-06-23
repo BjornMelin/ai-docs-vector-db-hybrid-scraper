@@ -4,16 +4,11 @@ This module tests the enhanced chunking functionality with proper type annotatio
 standardized assertions, and modern test patterns.
 """
 
-from typing import Any
-import pytest
-
 from src.chunking import EnhancedChunker
 from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
-from src.models.document_processing import Chunk, CodeBlock
-
-from tests.utils.assertion_helpers import assert_valid_document_chunk
-from tests.utils.test_factories import ChunkFactory, DocumentFactory
+from src.models.document_processing import Chunk
+from src.models.document_processing import CodeBlock
 
 
 class TestChunkingConfig:
@@ -21,7 +16,7 @@ class TestChunkingConfig:
 
     def test_default_config(self) -> None:
         """Test default configuration values.
-        
+
         Verifies that ChunkingConfig initializes with expected default values
         for all configuration parameters.
         """
@@ -34,7 +29,7 @@ class TestChunkingConfig:
 
     def test_custom_config(self) -> None:
         """Test custom configuration values.
-        
+
         Verifies that ChunkingConfig properly accepts and stores custom
         configuration values provided during initialization.
         """
@@ -43,7 +38,7 @@ class TestChunkingConfig:
             chunk_overlap=400,
             strategy=ChunkingStrategy.BASIC,
             min_chunk_size=200,
-            max_chunk_size=4000
+            max_chunk_size=4000,
         )
         assert config.chunk_size == 2000
         assert config.chunk_overlap == 400
@@ -53,7 +48,7 @@ class TestChunkingConfig:
 
     def test_configuration_validation(self) -> None:
         """Test configuration validation.
-        
+
         Verifies that ChunkingConfig properly validates configuration
         constraints and relationships between parameters.
         """

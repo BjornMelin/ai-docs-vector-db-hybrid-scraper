@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService

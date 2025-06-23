@@ -4,9 +4,9 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from src.utils.health_checks import ServiceHealthChecker
 
 from src.config import Config
+from src.utils.health_checks import ServiceHealthChecker
 
 
 @pytest.fixture

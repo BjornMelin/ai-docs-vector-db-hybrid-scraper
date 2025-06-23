@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from rich.console import Console
+
 from src.cli.main import RichCLI
 from src.cli.main import main
 

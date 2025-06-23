@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+
 from src.config import Config
 from src.manage_vector_db import CollectionInfo
 from src.manage_vector_db import DatabaseStats

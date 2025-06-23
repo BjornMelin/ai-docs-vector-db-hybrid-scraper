@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import ContentIntelligenceAnalysisRequest
 from src.mcp_tools.models.requests import ContentIntelligenceClassificationRequest

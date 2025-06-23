@@ -1,6 +1,7 @@
 """Simple tests for quality assessor functionality."""
 
 import pytest
+
 from src.services.content_intelligence.quality_assessor import QualityAssessor
 
 

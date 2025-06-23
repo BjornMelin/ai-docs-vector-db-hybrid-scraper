@@ -8,6 +8,7 @@ import asyncio
 from unittest.mock import Mock
 
 import pytest
+
 from src.config import Config
 from src.services.base import BaseService
 from src.services.errors import APIError

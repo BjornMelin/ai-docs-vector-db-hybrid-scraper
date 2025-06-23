@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models
+
 from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.documents import QdrantDocuments

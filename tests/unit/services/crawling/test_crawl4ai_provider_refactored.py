@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Crawl4AIConfig
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.errors import CrawlServiceError

@@ -15,6 +15,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.mcp_tools import tools
 from src.mcp_tools.tool_registry import register_all_tools
 
@@ -413,6 +414,7 @@ class TestToolRegistryIntegration:
 
         if TYPE_CHECKING:
             from fastmcp import FastMCP
+
             from src.infrastructure.client_manager import ClientManager
 
             # This should not raise type errors

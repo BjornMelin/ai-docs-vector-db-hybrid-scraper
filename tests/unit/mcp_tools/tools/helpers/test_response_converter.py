@@ -9,6 +9,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from src.mcp_tools.models.responses import AdvancedQueryProcessingResponse
 from src.mcp_tools.models.responses import QueryIntentResult
 from src.mcp_tools.models.responses import QueryPreprocessingResult

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.task_queue.tasks import TASK_MAP
 from src.services.task_queue.tasks import delete_collection
 from src.services.task_queue.tasks import persist_cache

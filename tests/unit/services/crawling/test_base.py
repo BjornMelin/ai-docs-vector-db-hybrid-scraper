@@ -4,6 +4,7 @@ from abc import ABC
 from typing import Any
 
 import pytest
+
 from src.services.crawling.base import CrawlProvider
 
 

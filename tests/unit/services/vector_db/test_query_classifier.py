@@ -7,6 +7,7 @@ including feature extraction, query type classification, and complexity assessme
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.config import Config
 from src.config.enums import QueryComplexity
 from src.config.enums import QueryType

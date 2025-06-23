@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Config
 from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.browser.unified_manager import UnifiedScrapingRequest

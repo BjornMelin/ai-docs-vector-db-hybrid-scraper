@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.query_processing.federated import CollectionMetadata
 from src.services.query_processing.federated import CollectionSearchResult
 from src.services.query_processing.federated import CollectionSelectionStrategy

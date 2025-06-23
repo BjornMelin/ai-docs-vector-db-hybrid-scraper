@@ -1,17 +1,16 @@
 """Tests for circuit breaker implementation."""
 
 import asyncio
-import pytest
-from unittest.mock import AsyncMock
+import contextlib
 
-from src.services.functional.circuit_breaker import (
-    CircuitBreaker,
-    CircuitBreakerConfig,
-    CircuitBreakerState,
-    CircuitBreakerError,
-    circuit_breaker,
-    create_circuit_breaker,
-)
+import pytest
+
+from src.services.functional.circuit_breaker import CircuitBreaker
+from src.services.functional.circuit_breaker import CircuitBreakerConfig
+from src.services.functional.circuit_breaker import CircuitBreakerError
+from src.services.functional.circuit_breaker import CircuitBreakerState
+from src.services.functional.circuit_breaker import circuit_breaker
+from src.services.functional.circuit_breaker import create_circuit_breaker
 
 
 class TestCircuitBreakerConfig:
@@ -20,7 +19,7 @@ class TestCircuitBreakerConfig:
     def test_simple_mode_config(self):
         """Test simple mode configuration."""
         config = CircuitBreakerConfig.simple_mode()
-        
+
         assert config.failure_threshold == 3
         assert config.recovery_timeout == 30
         assert config.enable_metrics is False
@@ -30,7 +29,7 @@ class TestCircuitBreakerConfig:
     def test_enterprise_mode_config(self):
         """Test enterprise mode configuration."""
         config = CircuitBreakerConfig.enterprise_mode()
-        
+
         assert config.failure_threshold == 5
         assert config.recovery_timeout == 60
         assert config.enable_metrics is True
@@ -57,6 +56,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_closed_state_success(self, simple_breaker):
         """Test successful operation in closed state."""
+
         async def success_func():
             return "success"
 
@@ -68,6 +68,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_closed_state_single_failure(self, simple_breaker):
         """Test single failure in closed state."""
+
         async def failing_func():
             raise ValueError("Test error")
 
@@ -80,11 +81,12 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_opens_after_threshold(self, simple_breaker):
         """Test circuit opens after failure threshold."""
+
         async def failing_func():
             raise ValueError("Test error")
 
         # Fail until threshold is reached
-        for i in range(simple_breaker.config.failure_threshold):
+        for _i in range(simple_breaker.config.failure_threshold):
             with pytest.raises(ValueError):
                 await simple_breaker.call(failing_func)
 
@@ -98,6 +100,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_recovery_after_timeout(self, simple_breaker):
         """Test circuit recovery after timeout."""
+
         async def failing_func():
             raise ValueError("Test error")
 
@@ -105,7 +108,7 @@ class TestCircuitBreaker:
             return "recovered"
 
         # Force circuit to open
-        for i in range(simple_breaker.config.failure_threshold):
+        for _i in range(simple_breaker.config.failure_threshold):
             with pytest.raises(ValueError):
                 await simple_breaker.call(failing_func)
 
@@ -123,11 +126,12 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_half_open_to_open_on_failure(self, simple_breaker):
         """Test half-open transitions back to open on failure."""
+
         async def failing_func():
             raise ValueError("Test error")
 
         # Force circuit to open
-        for i in range(simple_breaker.config.failure_threshold):
+        for _i in range(simple_breaker.config.failure_threshold):
             with pytest.raises(ValueError):
                 await simple_breaker.call(failing_func)
 
@@ -143,6 +147,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_enterprise_mode_failure_rate(self, enterprise_breaker):
         """Test enterprise mode failure rate monitoring."""
+
         async def success_func():
             return "success"
 
@@ -165,6 +170,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_metrics_tracking(self, enterprise_breaker):
         """Test metrics tracking in enterprise mode."""
+
         async def success_func():
             return "success"
 
@@ -173,10 +179,8 @@ class TestCircuitBreaker:
 
         # Execute some operations
         await enterprise_breaker.call(success_func)
-        try:
+        with contextlib.suppress(ValueError):
             await enterprise_breaker.call(failing_func)
-        except ValueError:
-            pass
 
         metrics = enterprise_breaker.get_metrics()
         assert metrics["total_requests"] == 2
@@ -193,7 +197,7 @@ class TestCircuitBreakerDecorator:
     async def test_decorator_success(self):
         """Test decorator with successful function."""
         config = CircuitBreakerConfig.simple_mode()
-        
+
         @circuit_breaker(config)
         async def decorated_func(value):
             return f"result: {value}"
@@ -205,9 +209,9 @@ class TestCircuitBreakerDecorator:
     async def test_decorator_failure_and_recovery(self):
         """Test decorator with failure and recovery."""
         config = CircuitBreakerConfig.simple_mode()
-        
+
         call_count = 0
-        
+
         @circuit_breaker(config)
         async def sometimes_failing_func():
             nonlocal call_count
@@ -217,7 +221,7 @@ class TestCircuitBreakerDecorator:
             return "success"
 
         # First 3 calls should fail and open circuit
-        for i in range(3):
+        for _i in range(3):
             with pytest.raises(ValueError):
                 await sometimes_failing_func()
 
@@ -237,13 +241,13 @@ class TestCircuitBreakerDecorator:
     async def test_decorator_metrics_access(self):
         """Test access to circuit breaker metrics through decorator."""
         config = CircuitBreakerConfig.enterprise_mode()
-        
+
         @circuit_breaker(config)
         async def test_func():
             return "test"
 
         await test_func()
-        
+
         # Access metrics through attached circuit breaker
         breaker = test_func._circuit_breaker
         metrics = breaker.get_metrics()
@@ -285,9 +289,9 @@ class TestConcurrentAccess:
         """Test circuit breaker with concurrent operations."""
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
-        
+
         call_count = 0
-        
+
         async def test_func():
             nonlocal call_count
             call_count += 1
@@ -297,7 +301,7 @@ class TestConcurrentAccess:
         # Run multiple concurrent operations
         tasks = [breaker.call(test_func) for _ in range(10)]
         results = await asyncio.gather(*tasks)
-        
+
         assert len(results) == 10
         assert len(set(results)) == 10  # All results should be unique
         assert breaker.metrics.total_requests == 10
@@ -308,14 +312,14 @@ class TestConcurrentAccess:
         """Test circuit breaker with concurrent failures."""
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
-        
+
         async def failing_func():
             await asyncio.sleep(0.01)
             raise ValueError("Concurrent failure")
 
         # Run concurrent failing operations
         tasks = [breaker.call(failing_func) for _ in range(5)]
-        
+
         with pytest.raises(ValueError):
             await asyncio.gather(*tasks, return_exceptions=False)
 
@@ -328,13 +332,13 @@ async def test_real_world_scenario():
     """Test a real-world scenario with varying load and failures."""
     config = CircuitBreakerConfig.enterprise_mode()
     breaker = CircuitBreaker(config)
-    
+
     failure_count = 0
-    
+
     async def simulated_service():
         nonlocal failure_count
         await asyncio.sleep(0.001)  # Simulate network delay
-        
+
         # Simulate 30% failure rate
         failure_count += 1
         if failure_count % 3 == 0:
@@ -343,19 +347,19 @@ async def test_real_world_scenario():
 
     results = []
     errors = []
-    
+
     # Simulate 50 requests
-    for i in range(50):
+    for _i in range(50):
         try:
             result = await breaker.call(simulated_service)
             results.append(result)
         except (ConnectionError, CircuitBreakerError) as e:
             errors.append(type(e).__name__)
-    
+
     metrics = breaker.get_metrics()
-    
+
     # Verify that circuit breaker protected the system
     assert len(results) > 0  # Some requests succeeded
-    assert len(errors) > 0   # Some requests failed
+    assert len(errors) > 0  # Some requests failed
     assert metrics["total_requests"] <= 50  # Circuit may have opened early
     assert "CircuitBreakerError" in errors  # Circuit breaker activated

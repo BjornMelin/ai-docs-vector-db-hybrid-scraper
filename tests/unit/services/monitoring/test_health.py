@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.monitoring.health import HealthCheckConfig
 from src.services.monitoring.health import HealthCheckManager
 from src.services.monitoring.health import HealthCheckResult

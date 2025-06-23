@@ -1,17 +1,17 @@
 """Tests for function-based embedding service."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 
-from src.services.functional.embeddings import (
-    generate_embeddings,
-    rerank_results,
-    analyze_text_characteristics,
-    estimate_embedding_cost,
-    batch_generate_embeddings,
-)
-from src.services.embeddings.manager import QualityTier, TextAnalysis
+from src.services.embeddings.manager import QualityTier
+from src.services.embeddings.manager import TextAnalysis
+from src.services.functional.embeddings import analyze_text_characteristics
+from src.services.functional.embeddings import batch_generate_embeddings
+from src.services.functional.embeddings import estimate_embedding_cost
+from src.services.functional.embeddings import generate_embeddings
+from src.services.functional.embeddings import rerank_results
 
 
 class TestGenerateEmbeddings:
@@ -49,7 +49,7 @@ class TestGenerateEmbeddings:
                 texts=["test text"],
                 embedding_client=None,
             )
-        
+
         assert exc_info.value.status_code == 500
         assert "not available" in str(exc_info.value.detail)
 
@@ -64,7 +64,7 @@ class TestGenerateEmbeddings:
                 texts=["test text"],
                 embedding_client=mock_client,
             )
-        
+
         assert exc_info.value.status_code == 500
         assert "Embedding generation failed" in str(exc_info.value.detail)
 
@@ -93,13 +93,15 @@ class TestRerankResults:
         )
 
         assert result == reranked_results
-        mock_client.rerank_results.assert_called_once_with("test query", original_results)
+        mock_client.rerank_results.assert_called_once_with(
+            "test query", original_results
+        )
 
     @pytest.mark.asyncio
     async def test_rerank_results_no_client(self):
         """Test reranking with no client (graceful degradation)."""
         original_results = [{"content": "result 1"}]
-        
+
         result = await rerank_results(
             query="test query",
             results=original_results,
@@ -157,7 +159,7 @@ class TestAnalyzeTextCharacteristics:
                 texts=["test text"],
                 embedding_client=None,
             )
-        
+
         assert exc_info.value.status_code == 500
 
 
@@ -194,7 +196,7 @@ class TestBatchGenerateEmbeddings:
     async def test_batch_generate_embeddings_success(self):
         """Test successful batch embedding generation."""
         mock_client = AsyncMock()
-        
+
         # Mock successful responses for each batch
         def mock_generate(texts, **kwargs):
             return {
@@ -202,7 +204,7 @@ class TestBatchGenerateEmbeddings:
                 "provider": "openai",
                 "success": True,
             }
-        
+
         mock_client.generate_embeddings.side_effect = mock_generate
 
         text_batches = [
@@ -225,9 +227,10 @@ class TestBatchGenerateEmbeddings:
     async def test_batch_generate_embeddings_partial_failure(self):
         """Test batch generation with some failures."""
         mock_client = AsyncMock()
-        
+
         # Mock one success and one failure
         call_count = 0
+
         def mock_generate(texts, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -235,7 +238,7 @@ class TestBatchGenerateEmbeddings:
                 return {"embeddings": [[0.1, 0.2]], "success": True}
             else:
                 raise Exception("Provider error")
-        
+
         mock_client.generate_embeddings.side_effect = mock_generate
 
         text_batches = [["text 1"], ["text 2"]]
@@ -270,7 +273,7 @@ class TestCircuitBreakerIntegration:
         mock_client.generate_embeddings.side_effect = Exception("Persistent error")
 
         # Multiple attempts should trigger circuit breaker
-        for i in range(5):
+        for _i in range(5):
             try:
                 await generate_embeddings(
                     texts=["test"],

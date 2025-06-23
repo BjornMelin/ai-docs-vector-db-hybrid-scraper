@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from src.services.vector_db.filters.base import FilterError
 from src.services.vector_db.filters.base import FilterResult
 from src.services.vector_db.filters.content_type import ContentCategory

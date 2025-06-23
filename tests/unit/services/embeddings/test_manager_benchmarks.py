@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from src.config import Config
 from src.services.embeddings.manager import EmbeddingManager
 

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools.helpers.pipeline_factory import QueryProcessingPipelineFactory
 

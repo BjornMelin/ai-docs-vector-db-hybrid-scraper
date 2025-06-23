@@ -2,6 +2,7 @@
 
 import pytest
 from qdrant_client import models
+
 from src.services.vector_db.filters.base import FilterError
 from src.services.vector_db.filters.base import FilterResult
 from src.services.vector_db.filters.metadata import BooleanExpressionModel

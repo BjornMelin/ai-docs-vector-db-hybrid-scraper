@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from src.mcp_tools.models.responses import GenericDictResponse
 from src.mcp_tools.models.responses import ReindexCollectionResponse
 

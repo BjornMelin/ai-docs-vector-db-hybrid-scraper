@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError
 from src.services.errors import QdrantServiceError

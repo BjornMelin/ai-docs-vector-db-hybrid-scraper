@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
+
 from src.services.query_processing.expansion import ExpandedTerm
 from src.services.query_processing.expansion import ExpansionScope
 from src.services.query_processing.expansion import ExpansionStrategy

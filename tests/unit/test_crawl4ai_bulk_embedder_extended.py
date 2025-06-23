@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+
 from src.config import Config
 from src.crawl4ai_bulk_embedder import BulkEmbedder
 from src.crawl4ai_bulk_embedder import ProcessingState

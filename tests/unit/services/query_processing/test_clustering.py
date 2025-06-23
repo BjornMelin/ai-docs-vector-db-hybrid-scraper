@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+
 from src.services.query_processing.clustering import ClusterGroup
 from src.services.query_processing.clustering import ClusteringMethod
 from src.services.query_processing.clustering import ClusteringScope

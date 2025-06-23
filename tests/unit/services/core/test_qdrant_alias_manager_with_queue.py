@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
 import pytest
+
 from src.config import Config
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 

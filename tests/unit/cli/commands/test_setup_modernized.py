@@ -4,51 +4,55 @@ This module provides comprehensive testing for the interactive configuration wiz
 with focus on Rich CLI components, questionary interactions, and user experience flows.
 """
 
-import json
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+from unittest.mock import MagicMock
+from unittest.mock import mock_open
+from unittest.mock import patch
 
 import click
 import pytest
-import questionary
 from rich.console import Console
 
-from src.cli.commands.setup import ConfigurationWizard, setup
+from src.cli.commands.setup import ConfigurationWizard
+from src.cli.commands.setup import setup
 
 
 @pytest.fixture
 def mock_wizard():
     """Create a ConfigurationWizard with mocked components."""
-    with patch('src.cli.commands.setup.TemplateManager') as mock_template_mgr, \
-         patch('src.cli.commands.setup.ProfileManager') as mock_profile_mgr, \
-         patch('src.cli.commands.setup.WizardValidator') as mock_validator:
-        
+    with (
+        patch("src.cli.commands.setup.TemplateManager") as mock_template_mgr,
+        patch("src.cli.commands.setup.ProfileManager") as mock_profile_mgr,
+        patch("src.cli.commands.setup.WizardValidator") as mock_validator,
+    ):
         wizard = ConfigurationWizard()
-        
+
         # Configure mocks with reasonable defaults
         wizard.template_manager = mock_template_mgr.return_value
         wizard.profile_manager = mock_profile_mgr.return_value
         wizard.validator = mock_validator.return_value
-        
+
         # Setup default return values
         wizard.template_manager.get_template.return_value = {
-            'qdrant': {'host': 'localhost', 'port': 6333},
-            'openai': {'model': 'text-embedding-3-small'}
+            "qdrant": {"host": "localhost", "port": 6333},
+            "openai": {"model": "text-embedding-3-small"},
         }
-        
+
         wizard.profile_manager.list_profiles.return_value = [
-            'personal', 'development', 'production'
+            "personal",
+            "development",
+            "production",
         ]
         wizard.profile_manager.profile_templates = {
-            'personal': 'personal-use',
-            'development': 'development', 
-            'production': 'production'
+            "personal": "personal-use",
+            "development": "development",
+            "production": "production",
         }
-        
+
         wizard.validator.validate_api_key.return_value = (True, None)
         wizard.validator.validate_url.return_value = (True, None)
         wizard.validator.validate_and_show_errors.return_value = True
-        
+
         return wizard
 
 
@@ -92,7 +96,9 @@ class TestModernConfigurationWizard:
         rich_output_capturer.assert_contains("Template preview and comparison")
 
     @patch("src.cli.commands.setup.questionary")
-    def test_select_profile_interactive_flow(self, mock_questionary, mock_wizard, rich_output_capturer):
+    def test_select_profile_interactive_flow(
+        self, mock_questionary, mock_wizard, rich_output_capturer
+    ):
         """Test profile selection with complete interactive flow."""
         mock_wizard.console = rich_output_capturer.console
 
@@ -108,7 +114,9 @@ class TestModernConfigurationWizard:
 
         assert result == "personal"
         mock_wizard.profile_manager.show_profiles_table.assert_called_once()
-        mock_wizard.profile_manager.show_profile_setup_instructions.assert_called_once_with("personal")
+        mock_wizard.profile_manager.show_profile_setup_instructions.assert_called_once_with(
+            "personal"
+        )
         rich_output_capturer.assert_contains("🎯 Profile Selection")
 
     @patch("src.cli.commands.setup.questionary")
@@ -135,7 +143,10 @@ class TestModernConfigurationWizard:
 
         # First attempt: user selects but then declines confirmation
         # Second attempt: user selects and confirms
-        mock_questionary.select.return_value.ask.side_effect = ["development", "personal"]
+        mock_questionary.select.return_value.ask.side_effect = [
+            "development",
+            "personal",
+        ]
         mock_questionary.confirm.return_value.ask.side_effect = [False, True]
 
         result = wizard.select_profile()
@@ -161,8 +172,12 @@ class TestModernConfigurationWizard:
             result = wizard.customize_template("test-template")
 
             assert result == {}
-            wizard.template_manager.preview_template.assert_called_once_with("test-template")
-            rich_output_capturer.assert_contains("🛠️ Customizing 'test-template' Template")
+            wizard.template_manager.preview_template.assert_called_once_with(
+                "test-template"
+            )
+            rich_output_capturer.assert_contains(
+                "🛠️ Customizing 'test-template' Template"
+            )
 
     def test_customize_api_keys_openai_valid(self):
         """Test API key customization with valid OpenAI key."""
@@ -173,13 +188,20 @@ class TestModernConfigurationWizard:
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
             # User chooses to set OpenAI key
-            mock_questionary.confirm.return_value.ask.side_effect = [True, False]  # OpenAI yes, Firecrawl no
-            mock_questionary.password.return_value.ask.return_value = "sk-test-valid-key"
+            mock_questionary.confirm.return_value.ask.side_effect = [
+                True,
+                False,
+            ]  # OpenAI yes, Firecrawl no
+            mock_questionary.password.return_value.ask.return_value = (
+                "sk-test-valid-key"
+            )
 
             result = wizard._customize_api_keys({})
 
             assert result == {"openai": {"api_key": "sk-test-valid-key"}}
-            wizard.validator.validate_api_key.assert_called_with("openai", "sk-test-valid-key")
+            wizard.validator.validate_api_key.assert_called_with(
+                "openai", "sk-test-valid-key"
+            )
 
     def test_customize_api_keys_openai_invalid_retry(self, rich_output_capturer):
         """Test API key customization with invalid key and retry."""
@@ -189,14 +211,18 @@ class TestModernConfigurationWizard:
         # Mock validator to return invalid first, then valid
         wizard.validator.validate_api_key.side_effect = [
             (False, "Invalid key format"),
-            (True, None)
+            (True, None),
         ]
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
-            mock_questionary.confirm.return_value.ask.side_effect = [True, True, False]  # OpenAI yes, retry yes, Firecrawl no
+            mock_questionary.confirm.return_value.ask.side_effect = [
+                True,
+                True,
+                False,
+            ]  # OpenAI yes, retry yes, Firecrawl no
             mock_questionary.password.return_value.ask.side_effect = [
                 "invalid-key",
-                "sk-valid-key"
+                "sk-valid-key",
             ]
 
             result = wizard._customize_api_keys({})
@@ -228,16 +254,15 @@ class TestModernConfigurationWizard:
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
             mock_questionary.select.return_value.ask.return_value = "Qdrant Cloud URL"
-            mock_questionary.text.return_value.ask.return_value = "https://cloud.qdrant.io"
+            mock_questionary.text.return_value.ask.return_value = (
+                "https://cloud.qdrant.io"
+            )
             mock_questionary.password.return_value.ask.return_value = "cloud-api-key"
 
             result = wizard._customize_database({})
 
             assert result == {
-                "qdrant": {
-                    "url": "https://cloud.qdrant.io",
-                    "api_key": "cloud-api-key"
-                }
+                "qdrant": {"url": "https://cloud.qdrant.io", "api_key": "cloud-api-key"}
             }
 
     def test_customize_performance_chunk_size(self):
@@ -284,12 +309,17 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Mock profile manager
-        wizard.profile_manager.create_profile_config.return_value = Path("/tmp/profile_config.json")
+        wizard.profile_manager.create_profile_config.return_value = Path(
+            "/tmp/profile_config.json"
+        )
         wizard.profile_manager.activate_profile.return_value = Path("/tmp/config.json")
         wizard.profile_manager.generate_env_file.return_value = Path("/tmp/.env")
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
-            mock_questionary.confirm.return_value.ask.side_effect = [True, True]  # activate profile, generate env
+            mock_questionary.confirm.return_value.ask.side_effect = [
+                True,
+                True,
+            ]  # activate profile, generate env
 
             config_data = {"test": "config"}
             result = wizard.save_configuration("test-profile", config_data)
@@ -298,7 +328,9 @@ class TestModernConfigurationWizard:
             wizard.profile_manager.create_profile_config.assert_called_once_with(
                 "test-profile", customizations=config_data
             )
-            wizard.profile_manager.activate_profile.assert_called_once_with("test-profile")
+            wizard.profile_manager.activate_profile.assert_called_once_with(
+                "test-profile"
+            )
             rich_output_capturer.assert_contains("💾 Saving Configuration")
 
     def test_save_configuration_error_handling(self, rich_output_capturer):
@@ -307,7 +339,9 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Mock profile manager to raise exception
-        wizard.profile_manager.create_profile_config.side_effect = Exception("Save failed")
+        wizard.profile_manager.create_profile_config.side_effect = Exception(
+            "Save failed"
+        )
 
         with pytest.raises(Exception, match="Save failed"):
             wizard.save_configuration("test-profile", {})
@@ -324,7 +358,7 @@ class TestModernConfigurationWizard:
         mock_select_profile,
         mock_customize,
         mock_save,
-        rich_output_capturer
+        rich_output_capturer,
     ):
         """Test complete setup wizard flow."""
         wizard = ConfigurationWizard()
@@ -393,7 +427,10 @@ class TestModernConfigurationWizard:
         wizard.validator.validate_and_show_errors.return_value = False
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
-            mock_questionary.confirm.return_value.ask.side_effect = [True, False]  # proceed, don't continue with errors
+            mock_questionary.confirm.return_value.ask.side_effect = [
+                True,
+                False,
+            ]  # proceed, don't continue with errors
 
             with pytest.raises(click.Abort):
                 wizard.run_setup()
@@ -429,10 +466,15 @@ class TestSetupCommandModernized:
             mock_wizard_class.return_value = mock_wizard
 
             # Mock profile manager
-            mock_wizard.profile_manager.list_profiles.return_value = ["personal", "development"]
+            mock_wizard.profile_manager.list_profiles.return_value = [
+                "personal",
+                "development",
+            ]
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                mock_questionary.confirm.return_value.ask.return_value = False  # Skip validation
+                mock_questionary.confirm.return_value.ask.return_value = (
+                    False  # Skip validation
+                )
 
                 result = interactive_cli_runner.invoke(setup, ["--profile", "personal"])
 
@@ -445,7 +487,10 @@ class TestSetupCommandModernized:
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
             mock_wizard_class.return_value = mock_wizard
-            mock_wizard.profile_manager.list_profiles.return_value = ["personal", "development"]
+            mock_wizard.profile_manager.list_profiles.return_value = [
+                "personal",
+                "development",
+            ]
 
             result = interactive_cli_runner.invoke(setup, ["--profile", "invalid"])
 
@@ -459,9 +504,11 @@ class TestSetupCommandModernized:
             mock_wizard.run_setup.return_value = Path("/tmp/config.json")
             mock_wizard_class.return_value = mock_wizard
 
-            with patch("src.cli.commands.config.validate_config") as mock_validate:
+            with patch("src.cli.commands.config.validate_config"):
                 with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                    mock_questionary.confirm.return_value.ask.return_value = True  # Accept validation
+                    mock_questionary.confirm.return_value.ask.return_value = (
+                        True  # Accept validation
+                    )
 
                     result = interactive_cli_runner.invoke(setup, [])
 
@@ -534,24 +581,30 @@ class TestSetupIntegrationModernized:
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             # Create realistic wizard mock
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = setup_data['temp_config']
+            mock_wizard.run_setup.return_value = setup_data["temp_config"]
             mock_wizard_class.return_value = mock_wizard
 
             # Mock the profile manager
-            mock_wizard.profile_manager.list_profiles.return_value = ["personal", "development"]
+            mock_wizard.profile_manager.list_profiles.return_value = [
+                "personal",
+                "development",
+            ]
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                mock_questionary.confirm.return_value.ask.return_value = False  # Skip validation
+                mock_questionary.confirm.return_value.ask.return_value = (
+                    False  # Skip validation
+                )
 
                 result = interactive_cli_runner.invoke(
-                    setup,
-                    ["--config-dir", str(setup_data['config_dir'])]
+                    setup, ["--config-dir", str(setup_data["config_dir"])]
                 )
 
                 assert result.exit_code == 0
                 mock_wizard.run_setup.assert_called_once()
 
-    def test_setup_with_existing_profiles(self, temp_profiles_dir, interactive_cli_runner):
+    def test_setup_with_existing_profiles(
+        self, temp_profiles_dir, interactive_cli_runner
+    ):
         """Test setup with existing profile files."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
@@ -559,8 +612,7 @@ class TestSetupIntegrationModernized:
             mock_wizard_class.return_value = mock_wizard
 
             result = interactive_cli_runner.invoke(
-                setup,
-                ["--config-dir", str(temp_profiles_dir.parent)]
+                setup, ["--config-dir", str(temp_profiles_dir.parent)]
             )
 
             # Should succeed even with existing profiles
@@ -575,15 +627,15 @@ class TestSetupIntegrationModernized:
 
         # Check for accessibility-friendly elements
         output = rich_output_capturer.get_output()
-        
+
         # Should have clear visual hierarchy
         assert "🧙" in output  # Clear visual indicator
         assert "Modern Configuration Wizard" in output
-        
+
         # Should have helpful descriptions
         assert "Profile-based configuration" in output
         assert "Real-time validation" in output
-        
+
         # Should use consistent styling
         lines = rich_output_capturer.get_lines()
         assert len(lines) > 5  # Multi-line output for readability
@@ -592,11 +644,12 @@ class TestSetupIntegrationModernized:
         """Test that ConfigurationWizard imports safely."""
         try:
             from src.cli.commands.setup import ConfigurationWizard
+
             wizard = ConfigurationWizard()
             assert wizard is not None
-            assert hasattr(wizard, 'run_setup')
-            assert hasattr(wizard, 'welcome')
-            assert hasattr(wizard, 'select_profile')
+            assert hasattr(wizard, "run_setup")
+            assert hasattr(wizard, "welcome")
+            assert hasattr(wizard, "select_profile")
         except ImportError as e:
             pytest.fail(f"Failed to import ConfigurationWizard: {e}")
 
@@ -604,8 +657,9 @@ class TestSetupIntegrationModernized:
         """Test that setup command imports safely."""
         try:
             from src.cli.commands.setup import setup
+
             assert setup is not None
-            assert hasattr(setup, 'invoke')
+            assert hasattr(setup, "invoke")
             assert setup.name == "setup"
         except ImportError as e:
             pytest.fail(f"Failed to import setup command: {e}")
