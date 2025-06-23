@@ -7,6 +7,12 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
+[manifest]
+constraints = [
+    { name = "hatchling", specifier = ">=1.25.0" },
+    { name = "setuptools", specifier = ">=70.0.0" },
+]
+
 [[package]]
 name = "accelerate"
 version = "1.7.0"
@@ -202,7 +208,7 @@ requires-dist = [
     { name = "browser-use", marker = "extra == 'browser'", specifier = ">=0.2.6,<0.3.0" },
     { name = "click", specifier = ">=8.2.1,<9.0.0" },
     { name = "colorlog", specifier = ">=6.9.0,<7.0.0" },
-    { name = "crawl4ai", extras = ["all"], specifier = ">=0.6.3" },
+    { name = "crawl4ai", extras = ["all"], specifier = ">=0.6.3,<0.8.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<0.8.0" },
     { name = "factory-boy", marker = "extra == 'contract'", specifier = ">=3.3.1,<4.0.0" },
     { name = "faker", marker = "extra == 'contract'", specifier = ">=36.1.0,<37.0.0" },
@@ -227,15 +233,15 @@ requires-dist = [
     { name = "mkdocstrings", marker = "extra == 'docs'", specifier = ">=0.24.0,<1.0.0" },
     { name = "mkdocstrings-python", marker = "extra == 'docs'", specifier = ">=1.8.0,<2.0.0" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=2.5.1,<3.0.0" },
-    { name = "numpy", specifier = ">=1.24.0,<2.0.0" },
+    { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
     { name = "openai", specifier = ">=1.82.1,<2.0.0" },
     { name = "openapi-spec-validator", marker = "extra == 'contract'", specifier = ">=0.7.0,<0.9.0" },
-    { name = "opentelemetry-api", specifier = ">=1.34.1" },
+    { name = "opentelemetry-api", specifier = ">=1.34.1,<2.0.0" },
     { name = "opentelemetry-api", marker = "extra == 'observability'", specifier = ">=1.34.1,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", marker = "extra == 'observability'", specifier = ">=0.54b1,<1.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'observability'", specifier = ">=0.54b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-starlette", marker = "extra == 'observability'", specifier = ">=0.54b0,<1.0.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.34.1" },
+    { name = "opentelemetry-sdk", specifier = ">=1.34.1,<2.0.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'observability'", specifier = ">=1.34.1,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.3,<3.0.0" },
     { name = "pdoc3", marker = "extra == 'docs'", specifier = ">=0.11.6,<1.0.0" },
