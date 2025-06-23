@@ -19,21 +19,17 @@ from urllib.parse import urlparse
 import click
 import httpx
 from defusedxml import ElementTree
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from rich.console import Console
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TextColumn
-from rich.progress import TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from .chunking import EnhancedChunker
-from .config import Config
-from .config import get_config
+from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
+
 
 logger = logging.getLogger(__name__)
 console = Console()

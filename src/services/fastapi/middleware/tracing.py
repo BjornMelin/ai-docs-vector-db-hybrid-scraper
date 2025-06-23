@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -320,8 +321,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         # Try to import OpenTelemetry
         try:
             from opentelemetry import trace
-            from opentelemetry.trace import Status
-            from opentelemetry.trace import StatusCode
+            from opentelemetry.trace import Status, StatusCode
 
             self.tracer = trace.get_tracer(__name__)
             self.Status = Status

@@ -10,18 +10,18 @@ This module tests the advanced circuit breaker implementation including:
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.services.errors import AdvancedCircuitBreaker
-from src.services.errors import CircuitBreakerRegistry
-from src.services.errors import CircuitState
-from src.services.errors import ExternalServiceError
-from src.services.errors import circuit_breaker
-from src.services.errors import tenacity_circuit_breaker
+from src.services.errors import (
+    AdvancedCircuitBreaker,
+    CircuitBreakerRegistry,
+    CircuitState,
+    ExternalServiceError,
+    circuit_breaker,
+    tenacity_circuit_breaker,
+)
 
 
 class TestAdvancedCircuitBreaker:
@@ -365,9 +365,11 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_service_dependency_protection(self):
         """Test that service dependencies are protected by circuit breakers."""
-        from src.services.dependencies import get_circuit_breaker_status
-        from src.services.dependencies import reset_all_circuit_breakers
-        from src.services.dependencies import reset_circuit_breaker
+        from src.services.dependencies import (
+            get_circuit_breaker_status,
+            reset_all_circuit_breakers,
+            reset_circuit_breaker,
+        )
 
         # Test circuit breaker status endpoint
         status = await get_circuit_breaker_status()

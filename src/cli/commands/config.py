@@ -13,6 +13,7 @@ from rich.table import Table
 
 from src.config import Config
 
+
 console = Console()
 
 

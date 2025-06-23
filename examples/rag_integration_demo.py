@@ -21,15 +21,19 @@ import logging
 import sys
 from pathlib import Path
 
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.dependencies import RAGRequest
-from src.services.dependencies import RAGResponse
-from src.services.dependencies import clear_rag_cache
-from src.services.dependencies import generate_rag_answer
-from src.services.dependencies import get_rag_metrics
+from src.services.dependencies import (
+    RAGRequest,
+    RAGResponse,
+    clear_rag_cache,
+    generate_rag_answer,
+    get_rag_metrics,
+)
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

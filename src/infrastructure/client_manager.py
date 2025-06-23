@@ -1,5 +1,6 @@
 import typing
 
+
 """Centralized API client management with singleton pattern and health checks."""
 
 import asyncio
@@ -10,8 +11,7 @@ import time
 from contextlib import asynccontextmanager
 
 # Import for type hints (avoid circular import by using TYPE_CHECKING)
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 from firecrawl import AsyncFirecrawlApp
@@ -19,16 +19,16 @@ from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 
 from src.config import Config
-from src.infrastructure.shared import CircuitBreaker
-from src.infrastructure.shared import ClientHealth
-from src.infrastructure.shared import ClientState
+from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
+
 
 if TYPE_CHECKING:
     pass
 
 # Import for actual usage
 from .database import DatabaseManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -357,9 +357,11 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    from src.services.hyde.config import HyDEConfig
-                    from src.services.hyde.config import HyDEMetricsConfig
-                    from src.services.hyde.config import HyDEPromptConfig
+                    from src.services.hyde.config import (
+                        HyDEConfig,
+                        HyDEMetricsConfig,
+                        HyDEPromptConfig,
+                    )
                     from src.services.hyde.engine import HyDEQueryEngine
 
                     # Get dependencies
@@ -506,8 +508,7 @@ class ClientManager:
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
                     # Create enterprise monitoring components
-                    from .database.monitoring import LoadMonitor
-                    from .database.monitoring import QueryMonitor
+                    from .database.monitoring import LoadMonitor, QueryMonitor
 
                     load_monitor = LoadMonitor()
                     query_monitor = QueryMonitor()
@@ -559,8 +560,10 @@ class ClientManager:
 
             async with self._service_locks["feature_flag_manager"]:
                 if self._feature_flag_manager is None:
-                    from src.services.deployment.feature_flags import FeatureFlagConfig
-                    from src.services.deployment.feature_flags import FeatureFlagManager
+                    from src.services.deployment.feature_flags import (
+                        FeatureFlagConfig,
+                        FeatureFlagManager,
+                    )
 
                     # Create feature flag config from deployment config
                     flag_config = FeatureFlagConfig(

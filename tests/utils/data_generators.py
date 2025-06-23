@@ -10,10 +10,10 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+
 try:
     import hypothesis.strategies as st
-    from hypothesis import given
-    from hypothesis import settings
+    from hypothesis import given, settings
 
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
@@ -82,8 +82,7 @@ except ImportError:
         @staticmethod
         def date_time_between(start_date, end_date):
             # Simple date generation
-            from datetime import datetime
-            from datetime import timedelta
+            from datetime import datetime, timedelta
 
             start = datetime.now() - timedelta(days=365)
             end = datetime.now()

@@ -11,6 +11,7 @@ from arq import run_worker
 from config.loader import load_config
 from services.task_queue.worker import WorkerSettings
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

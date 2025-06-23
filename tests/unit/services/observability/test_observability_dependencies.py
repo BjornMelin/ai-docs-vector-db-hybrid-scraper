@@ -4,25 +4,26 @@ Tests FastAPI dependency injection patterns for observability services,
 including setup, initialization, and lifecycle management.
 """
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.dependencies import AITracerDep
-from src.services.observability.dependencies import ObservabilityConfigDep
-from src.services.observability.dependencies import ObservabilityServiceDep
-from src.services.observability.dependencies import ServiceMeterDep
-from src.services.observability.dependencies import create_span_context
-from src.services.observability.dependencies import get_ai_tracer
-from src.services.observability.dependencies import get_observability_health
-from src.services.observability.dependencies import get_observability_service
-from src.services.observability.dependencies import get_service_meter
-from src.services.observability.dependencies import record_ai_operation_metrics
-from src.services.observability.dependencies import track_ai_cost_metrics
+from src.services.observability.dependencies import (
+    AITracerDep,
+    ObservabilityConfigDep,
+    ObservabilityServiceDep,
+    ServiceMeterDep,
+    create_span_context,
+    get_ai_tracer,
+    get_observability_health,
+    get_observability_service,
+    get_service_meter,
+    record_ai_operation_metrics,
+    track_ai_cost_metrics,
+)
 
 
 class TestObservabilityServiceDependency:

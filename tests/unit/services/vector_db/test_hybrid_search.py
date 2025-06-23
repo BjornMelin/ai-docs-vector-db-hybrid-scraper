@@ -5,25 +5,27 @@ including query classification, model selection, adaptive fusion, and A/B testin
 """
 
 import uuid
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import Config
-from src.config.enums import ABTestVariant
-from src.config.enums import ModelType
-from src.config.enums import OptimizationStrategy
-from src.config.enums import QueryComplexity
-from src.config.enums import QueryType
-from src.models.vector_search import ABTestConfig
-from src.models.vector_search import AdvancedHybridSearchRequest
-from src.models.vector_search import AdvancedSearchResponse
-from src.models.vector_search import FusionConfig
-from src.models.vector_search import QueryClassification
-from src.models.vector_search import SearchAccuracy
-from src.models.vector_search import SearchParams
+from src.config.enums import (
+    ABTestVariant,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+)
+from src.models.vector_search import (
+    ABTestConfig,
+    AdvancedHybridSearchRequest,
+    AdvancedSearchResponse,
+    FusionConfig,
+    QueryClassification,
+    SearchAccuracy,
+    SearchParams,
+)
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
@@ -158,8 +160,10 @@ class TestAdvancedHybridSearchService:
             )
 
             # Mock orchestrator response
-            from src.services.query_processing.orchestrator import SearchMode
-            from src.services.query_processing.orchestrator import SearchPipeline
+            from src.services.query_processing.orchestrator import (
+                SearchMode,
+                SearchPipeline,
+            )
 
             mock_orchestrator.return_value = AdvancedSearchResult(
                 results=[
@@ -467,9 +471,11 @@ class TestAdvancedHybridSearchService:
 
     async def test_empty_results_handling(self, service, sample_request):
         """Test handling of empty search results."""
-        from src.services.query_processing.orchestrator import AdvancedSearchResult
-        from src.services.query_processing.orchestrator import SearchMode
-        from src.services.query_processing.orchestrator import SearchPipeline
+        from src.services.query_processing.orchestrator import (
+            AdvancedSearchResult,
+            SearchMode,
+            SearchPipeline,
+        )
 
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
             mock_orchestrator.return_value = AdvancedSearchResult(
@@ -497,9 +503,11 @@ class TestAdvancedHybridSearchService:
 
     async def test_large_result_set_handling(self, service, sample_request):
         """Test handling of large result sets."""
-        from src.services.query_processing.orchestrator import AdvancedSearchResult
-        from src.services.query_processing.orchestrator import SearchMode
-        from src.services.query_processing.orchestrator import SearchPipeline
+        from src.services.query_processing.orchestrator import (
+            AdvancedSearchResult,
+            SearchMode,
+            SearchPipeline,
+        )
 
         # Mock large result set limited by orchestrator
         large_results = [

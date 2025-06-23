@@ -9,6 +9,7 @@ from src.config import Config
 
 from ..errors import APIError
 
+
 logger = logging.getLogger(__name__)
 
 # Type variable for generic function return type

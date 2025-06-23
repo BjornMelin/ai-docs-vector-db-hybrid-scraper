@@ -5,15 +5,18 @@ import re
 from collections.abc import Callable
 
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import CreateAlias
-from qdrant_client.models import CreateAliasOperation
-from qdrant_client.models import DeleteAlias
-from qdrant_client.models import DeleteAliasOperation
+from qdrant_client.models import (
+    CreateAlias,
+    CreateAliasOperation,
+    DeleteAlias,
+    DeleteAliasOperation,
+)
 
 from src.config import Config
 
 from ..base import BaseService
 from ..errors import QdrantServiceError
+
 
 logger = logging.getLogger(__name__)
 

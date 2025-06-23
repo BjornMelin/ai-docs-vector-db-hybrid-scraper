@@ -11,8 +11,7 @@ This module extends the basic AutomationRouter with:
 import asyncio
 import logging
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from typing import Any
 from urllib.parse import urlparse
 
@@ -20,11 +19,13 @@ from src.config import Config
 
 from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
-from .tier_config import PerformanceHistoryEntry
-from .tier_config import TierConfiguration
-from .tier_config import TierPerformanceAnalysis
-from .tier_rate_limiter import RateLimitContext
-from .tier_rate_limiter import TierRateLimiter
+from .tier_config import (
+    PerformanceHistoryEntry,
+    TierConfiguration,
+    TierPerformanceAnalysis,
+)
+from .tier_rate_limiter import RateLimitContext, TierRateLimiter
+
 
 logger = logging.getLogger(__name__)
 

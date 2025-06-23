@@ -1,23 +1,25 @@
 """Integration tests for OpenTelemetry observability."""
 
 import asyncio
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.config.core import get_config
-from src.config.core import reset_config
+from src.config.core import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.dependencies import get_ai_tracer
-from src.services.observability.dependencies import get_observability_health
-from src.services.observability.dependencies import get_observability_service
-from src.services.observability.dependencies import get_service_meter
-from src.services.observability.init import initialize_observability
-from src.services.observability.init import is_observability_enabled
-from src.services.observability.init import shutdown_observability
+from src.services.observability.dependencies import (
+    get_ai_tracer,
+    get_observability_health,
+    get_observability_service,
+    get_service_meter,
+)
+from src.services.observability.init import (
+    initialize_observability,
+    is_observability_enabled,
+    shutdown_observability,
+)
 from src.services.observability.middleware import FastAPIObservabilityMiddleware
 
 
@@ -108,8 +110,7 @@ class TestObservabilityIntegration:
 
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations
-        from src.services.observability.tracking import _NoOpMeter
-        from src.services.observability.tracking import _NoOpTracer
+        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)
@@ -172,8 +173,7 @@ class TestObservabilityIntegration:
         assert meter is not None
 
         # With disabled observability, should get NoOp implementations
-        from src.services.observability.tracking import _NoOpMeter
-        from src.services.observability.tracking import _NoOpTracer
+        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
         assert isinstance(tracer, _NoOpTracer)
         assert isinstance(meter, _NoOpMeter)
@@ -583,9 +583,11 @@ class TestEndToEndObservabilityFlow:
     @pytest.mark.asyncio
     async def test_observability_with_ai_operations(self):
         """Test observability integration with AI operations."""
-        from src.services.observability.tracking import instrument_function
-        from src.services.observability.tracking import record_ai_operation
-        from src.services.observability.tracking import track_cost
+        from src.services.observability.tracking import (
+            instrument_function,
+            record_ai_operation,
+            track_cost,
+        )
 
         # Test AI operation recording (should work even when disabled)
         record_ai_operation(
@@ -614,8 +616,7 @@ class TestEndToEndObservabilityFlow:
     def test_observability_graceful_degradation(self):
         """Test observability graceful degradation when packages unavailable."""
         # Test that observability functions work even when OpenTelemetry is unavailable
-        from src.services.observability.tracking import get_meter
-        from src.services.observability.tracking import get_tracer
+        from src.services.observability.tracking import get_meter, get_tracer
 
         with patch("src.services.observability.tracking.trace") as mock_trace:
             mock_trace.side_effect = ImportError("OpenTelemetry not available")

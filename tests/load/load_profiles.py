@@ -6,8 +6,7 @@ and step patterns for comprehensive performance testing.
 
 import math
 import time
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from locust import LoadTestShape

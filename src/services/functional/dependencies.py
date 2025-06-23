@@ -13,6 +13,7 @@ from fastapi import Depends
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 
+
 logger = logging.getLogger(__name__)
 
 

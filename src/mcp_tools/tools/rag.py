@@ -9,13 +9,13 @@ import logging
 from typing import Any
 
 from fastmcp import FastMCP
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.config import get_config
 
 from ...services.rag import RAGGenerator
 from ...services.rag.models import RAGRequest
+
 
 logger = logging.getLogger(__name__)
 

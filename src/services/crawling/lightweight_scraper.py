@@ -13,6 +13,7 @@ from src.config import Config  # LightweightScraperConfig not in simplified conf
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
 
+
 logger = logging.getLogger(__name__)
 
 

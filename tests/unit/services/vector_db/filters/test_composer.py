@@ -6,14 +6,14 @@ from typing import Any
 import pytest
 from qdrant_client import models
 
-from src.services.vector_db.filters.base import BaseFilter
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.composer import CompositionOperator
-from src.services.vector_db.filters.composer import CompositionRule
-from src.services.vector_db.filters.composer import FilterComposer
-from src.services.vector_db.filters.composer import FilterCompositionCriteria
-from src.services.vector_db.filters.composer import FilterReference
+from src.services.vector_db.filters.base import BaseFilter, FilterError, FilterResult
+from src.services.vector_db.filters.composer import (
+    CompositionOperator,
+    CompositionRule,
+    FilterComposer,
+    FilterCompositionCriteria,
+    FilterReference,
+)
 
 
 class MockFilter(BaseFilter):

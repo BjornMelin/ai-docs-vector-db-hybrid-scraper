@@ -10,10 +10,8 @@ import time
 
 import pytest
 
-from tests.chaos.conftest import ChaosExperiment
-from tests.chaos.conftest import FailureType
-from tests.chaos.test_chaos_runner import ChaosTestRunner
-from tests.chaos.test_chaos_runner import ChaosTestSuite
+from tests.chaos.conftest import ChaosExperiment, FailureType
+from tests.chaos.test_chaos_runner import ChaosTestRunner, ChaosTestSuite
 
 
 @pytest.mark.chaos

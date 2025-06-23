@@ -4,9 +4,7 @@ This test suite ensures ≥90% coverage of the Memory-Adaptive Dispatcher functi
 including configuration, initialization, streaming, performance monitoring, and fallback.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError

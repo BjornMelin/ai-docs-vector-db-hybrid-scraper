@@ -3,12 +3,12 @@
 import contextlib
 import json
 import logging
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import yaml
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -29,14 +29,14 @@ from ...infrastructure.client_manager import ClientManager
 from ..models.requests import ProjectRequest
 from ..models.responses import SearchResult
 
+
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
-    from ..models.responses import OperationStatus
-    from ..models.responses import ProjectInfo
+    from ..models.responses import OperationStatus, ProjectInfo
 
     @mcp.tool()
     async def create_project(

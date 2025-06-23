@@ -9,10 +9,8 @@ import hashlib
 import json
 import random
 import statistics
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest

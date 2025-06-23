@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,6 +19,7 @@ else:
 
 from ....infrastructure.client_manager import ClientManager
 from ....services.query_processing.pipeline import QueryProcessingPipeline
+
 
 logger = logging.getLogger(__name__)
 

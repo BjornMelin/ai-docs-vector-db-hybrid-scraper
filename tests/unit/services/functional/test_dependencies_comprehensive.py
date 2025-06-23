@@ -6,27 +6,27 @@ circuit breaker patterns, and async service lifecycle management.
 
 import asyncio
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import Depends
-from fastapi import FastAPI
-from fastapi import HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from src.config import Config
-from src.services.functional.circuit_breaker import CircuitBreaker
-from src.services.functional.circuit_breaker import CircuitBreakerConfig
-from src.services.functional.circuit_breaker import CircuitBreakerError
-from src.services.functional.circuit_breaker import create_circuit_breaker
-from src.services.functional.dependencies import get_cache_client
-from src.services.functional.dependencies import get_client_manager
-from src.services.functional.dependencies import get_config
-from src.services.functional.dependencies import get_crawling_client
-from src.services.functional.dependencies import get_embedding_client
-from src.services.functional.dependencies import get_vector_db_client
+from src.services.functional.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerError,
+    create_circuit_breaker,
+)
+from src.services.functional.dependencies import (
+    get_cache_client,
+    get_client_manager,
+    get_config,
+    get_crawling_client,
+    get_embedding_client,
+    get_vector_db_client,
+)
 
 
 class TestDependencyLifecycle:

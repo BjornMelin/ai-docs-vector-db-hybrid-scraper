@@ -2,19 +2,19 @@
 
 import time
 from collections import deque
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.config import Config
 from src.services.browser.browser_router import EnhancedAutomationRouter
-from src.services.browser.tier_config import CircuitBreakerState
-from src.services.browser.tier_config import DomainPreference
-from src.services.browser.tier_config import TierConfiguration
-from src.services.browser.tier_config import TierPerformanceAnalysis
-from src.services.browser.tier_config import URLPattern
+from src.services.browser.tier_config import (
+    CircuitBreakerState,
+    DomainPreference,
+    TierConfiguration,
+    TierPerformanceAnalysis,
+    URLPattern,
+)
 from src.services.errors import CrawlServiceError
 
 

@@ -2,20 +2,21 @@
 
 import asyncio
 from datetime import datetime
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.query_processing.federated import CollectionMetadata
-from src.services.query_processing.federated import CollectionSearchResult
-from src.services.query_processing.federated import CollectionSelectionStrategy
-from src.services.query_processing.federated import FederatedSearchRequest
-from src.services.query_processing.federated import FederatedSearchResult
-from src.services.query_processing.federated import FederatedSearchScope
-from src.services.query_processing.federated import FederatedSearchService
-from src.services.query_processing.federated import ResultMergingStrategy
-from src.services.query_processing.federated import SearchMode
+from src.services.query_processing.federated import (
+    CollectionMetadata,
+    CollectionSearchResult,
+    CollectionSelectionStrategy,
+    FederatedSearchRequest,
+    FederatedSearchResult,
+    FederatedSearchScope,
+    FederatedSearchService,
+    ResultMergingStrategy,
+    SearchMode,
+)
 
 
 class TestEnums:

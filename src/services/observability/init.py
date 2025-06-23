@@ -7,6 +7,7 @@ service architecture while following OpenTelemetry best practices.
 import logging
 from typing import Any
 
+
 logger = logging.getLogger(__name__)
 
 # Global references for cleanup
@@ -39,8 +40,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
     try:
         # Import OpenTelemetry components
-        from opentelemetry import metrics
-        from opentelemetry import trace
+        from opentelemetry import metrics, trace
         from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
             OTLPMetricExporter,
         )

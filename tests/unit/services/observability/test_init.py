@@ -1,13 +1,14 @@
 """Tests for OpenTelemetry initialization."""
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.init import _setup_auto_instrumentation
-from src.services.observability.init import initialize_observability
-from src.services.observability.init import is_observability_enabled
-from src.services.observability.init import shutdown_observability
+from src.services.observability.init import (
+    _setup_auto_instrumentation,
+    initialize_observability,
+    is_observability_enabled,
+    shutdown_observability,
+)
 
 
 class TestObservabilityInitialization:

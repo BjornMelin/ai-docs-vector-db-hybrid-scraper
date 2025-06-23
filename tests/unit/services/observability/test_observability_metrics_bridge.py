@@ -1,17 +1,18 @@
 """Tests for OpenTelemetry metrics bridge module."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.metrics_bridge import OpenTelemetryMetricsBridge
-from src.services.observability.metrics_bridge import get_metrics_bridge
-from src.services.observability.metrics_bridge import initialize_metrics_bridge
-from src.services.observability.metrics_bridge import record_ai_operation
-from src.services.observability.metrics_bridge import record_cache_operation
-from src.services.observability.metrics_bridge import record_vector_search
-from src.services.observability.metrics_bridge import update_service_health
+from src.services.observability.metrics_bridge import (
+    OpenTelemetryMetricsBridge,
+    get_metrics_bridge,
+    initialize_metrics_bridge,
+    record_ai_operation,
+    record_cache_operation,
+    record_vector_search,
+    update_service_health,
+)
 
 
 class TestOpenTelemetryMetricsBridge:

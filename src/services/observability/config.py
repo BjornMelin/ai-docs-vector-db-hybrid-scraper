@@ -8,8 +8,8 @@ import logging
 from functools import lru_cache
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 

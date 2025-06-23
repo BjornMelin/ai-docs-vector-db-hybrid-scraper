@@ -9,19 +9,16 @@ import time
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..base import BaseService
 from ..rag import RAGGenerator
 from ..rag.models import RAGRequest
-from .clustering import ResultClusteringRequest
-from .clustering import ResultClusteringService
-from .expansion import QueryExpansionRequest
-from .expansion import QueryExpansionService
+from .clustering import ResultClusteringRequest, ResultClusteringService
+from .expansion import QueryExpansionRequest, QueryExpansionService
 from .federated import FederatedSearchService
-from .ranking import PersonalizedRankingRequest
-from .ranking import PersonalizedRankingService
+from .ranking import PersonalizedRankingRequest, PersonalizedRankingService
+
 
 logger = logging.getLogger(__name__)
 
@@ -461,10 +458,12 @@ class SearchOrchestrator(BaseService):
         # Check if federated search is enabled
         if request.enable_federation:
             try:
-                from .federated import CollectionSelectionStrategy
-                from .federated import FederatedSearchRequest
-                from .federated import ResultMergingStrategy
-                from .federated import SearchMode as FedSearchMode
+                from .federated import (
+                    CollectionSelectionStrategy,
+                    FederatedSearchRequest,
+                    ResultMergingStrategy,
+                    SearchMode as FedSearchMode,
+                )
 
                 # Create federated search request
                 fed_request = FederatedSearchRequest(

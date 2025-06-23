@@ -13,16 +13,15 @@ import os
 import statistics
 import threading
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any
 
 import psutil
 import pytest
 
-from ..conftest import LoadTestConfig
-from ..conftest import LoadTestType
+from ..conftest import LoadTestConfig, LoadTestType
+
 
 logger = logging.getLogger(__name__)
 

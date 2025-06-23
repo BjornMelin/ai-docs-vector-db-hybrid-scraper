@@ -7,18 +7,15 @@ Based on modern async patterns with FastAPI integration.
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable
-from collections.abc import Callable
-from dataclasses import dataclass
-from dataclasses import field
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
-from fastapi import Request
-from fastapi import Response
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
 
 logger = logging.getLogger(__name__)
 

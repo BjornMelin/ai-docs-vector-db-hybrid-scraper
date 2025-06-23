@@ -1,20 +1,21 @@
 """Tests for trace correlation and context propagation module."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from opentelemetry import context
 
-from src.services.observability.correlation import ErrorCorrelationTracker
-from src.services.observability.correlation import TraceCorrelationManager
-from src.services.observability.correlation import correlated_operation
-from src.services.observability.correlation import get_correlation_manager
-from src.services.observability.correlation import get_current_trace_context
-from src.services.observability.correlation import get_error_tracker
-from src.services.observability.correlation import record_error
-from src.services.observability.correlation import set_business_context
-from src.services.observability.correlation import set_request_context
+from src.services.observability.correlation import (
+    ErrorCorrelationTracker,
+    TraceCorrelationManager,
+    correlated_operation,
+    get_correlation_manager,
+    get_current_trace_context,
+    get_error_tracker,
+    record_error,
+    set_business_context,
+    set_request_context,
+)
 
 
 class TestTraceCorrelationManager:

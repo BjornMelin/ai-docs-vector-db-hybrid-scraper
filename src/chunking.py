@@ -6,21 +6,15 @@ Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST p
 
 import logging
 import re
-from typing import Any
-from typing import ClassVar
-
-from src.config import ChunkingConfig
+from typing import Any, ClassVar
 
 # Handle both module and script imports
-from src.config import ChunkingStrategy
-from src.models.document_processing import Chunk
-from src.models.document_processing import CodeBlock
-from src.models.document_processing import CodeLanguage
+from src.config import ChunkingConfig, ChunkingStrategy
+from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
+
 
 try:
-    from tree_sitter import Language
-    from tree_sitter import Node
-    from tree_sitter import Parser
+    from tree_sitter import Language, Node, Parser
 
     TREE_SITTER_AVAILABLE = True
 

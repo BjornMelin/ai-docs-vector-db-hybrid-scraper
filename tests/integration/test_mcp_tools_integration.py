@@ -6,29 +6,23 @@ and validation of request/response models following FastMCP 2.0 best practices.
 
 import asyncio
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
-from src.config import Config
-from src.config import FirecrawlConfig
-from src.config import OpenAIConfig
-from src.config import QdrantConfig
+from src.config import Config, FirecrawlConfig, OpenAIConfig, QdrantConfig
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import AnalyticsRequest
-from src.mcp_tools.models.requests import DocumentRequest
-from src.mcp_tools.models.requests import EmbeddingRequest
-from src.mcp_tools.models.requests import HyDESearchRequest
-from src.mcp_tools.models.requests import ProjectRequest
-from src.mcp_tools.models.requests import SearchRequest
-from src.mcp_tools.models.responses import CollectionInfo
-from src.mcp_tools.models.responses import OperationStatus
-from src.mcp_tools.models.responses import SearchResult
-from tests.mocks.mock_tools import MockMCPServer
-from tests.mocks.mock_tools import register_mock_tools
+from src.mcp_tools.models.requests import (
+    AnalyticsRequest,
+    DocumentRequest,
+    EmbeddingRequest,
+    HyDESearchRequest,
+    ProjectRequest,
+    SearchRequest,
+)
+from src.mcp_tools.models.responses import CollectionInfo, OperationStatus, SearchResult
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 class TestMCPToolsIntegration:

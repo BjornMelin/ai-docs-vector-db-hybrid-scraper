@@ -4,8 +4,7 @@ This module implements comprehensive WCAG 2.1 Level AA compliance tests for
 web accessibility, including automated validation and manual test guidance.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 

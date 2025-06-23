@@ -5,8 +5,7 @@ WCAG 2.1 compliance for keyboard accessibility, including tab order validation,
 focus management, and keyboard shortcut functionality.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

@@ -12,24 +12,27 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 
-from src.config import ABTestVariant
-from src.config import Config
-from src.config import OptimizationStrategy
+from src.config import ABTestVariant, Config, OptimizationStrategy
 
-from ...models.vector_search import AdvancedHybridSearchRequest
-from ...models.vector_search import AdvancedSearchResponse
-from ...models.vector_search import RetrievalMetrics
-from ...models.vector_search import SearchResult
+from ...models.vector_search import (
+    AdvancedHybridSearchRequest,
+    AdvancedSearchResponse,
+    RetrievalMetrics,
+    SearchResult,
+)
 from ..errors import QdrantServiceError
-from ..query_processing import AdvancedSearchOrchestrator
-from ..query_processing import AdvancedSearchRequest
-from ..query_processing import SearchMode
-from ..query_processing import SearchPipeline
+from ..query_processing import (
+    AdvancedSearchOrchestrator,
+    AdvancedSearchRequest,
+    SearchMode,
+    SearchPipeline,
+)
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
 from .model_selector import ModelSelector
 from .query_classifier import QueryClassifier
 from .search import QdrantSearch
 from .splade_provider import SPLADEProvider
+
 
 logger = logging.getLogger(__name__)
 

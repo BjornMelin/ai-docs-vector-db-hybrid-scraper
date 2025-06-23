@@ -11,15 +11,16 @@ Tests the integration between different service layers including:
 import asyncio
 import contextlib
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.config import Config
-from src.services.functional.circuit_breaker import CircuitBreaker
-from src.services.functional.circuit_breaker import CircuitBreakerConfig
-from src.services.functional.circuit_breaker import create_circuit_breaker
+from src.services.functional.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    create_circuit_breaker,
+)
 
 
 class TestEmbeddingCacheIntegration:

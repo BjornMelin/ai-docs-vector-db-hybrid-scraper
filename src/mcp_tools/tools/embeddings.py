@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -19,14 +20,14 @@ else:
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import EmbeddingRequest
 
+
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register embedding management tools with the MCP server."""
 
-    from ..models.responses import EmbeddingGenerationResponse
-    from ..models.responses import EmbeddingProviderInfo
+    from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo
 
     @mcp.tool()
     async def generate_embeddings(

@@ -7,13 +7,13 @@ extracted from QdrantService, focusing specifically on point CRUD operations.
 import logging
 from typing import Any
 
-from qdrant_client import AsyncQdrantClient
-from qdrant_client import models
+from qdrant_client import AsyncQdrantClient, models
 
 from src.config import Config
 
 from ..errors import QdrantServiceError
 from .utils import build_filter
+
 
 logger = logging.getLogger(__name__)
 

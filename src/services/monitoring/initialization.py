@@ -7,13 +7,11 @@ for FastMCP-based applications.
 import asyncio
 import logging
 
-from src.config import Config
-from src.config import MonitoringConfig
+from src.config import Config, MonitoringConfig
 
 from .health import HealthCheckManager
-from .metrics import MetricsConfig
-from .metrics import MetricsRegistry
-from .metrics import initialize_metrics
+from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
+
 
 logger = logging.getLogger(__name__)
 

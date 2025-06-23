@@ -9,17 +9,17 @@ This test suite provides extensive coverage for the SearchOrchestrator including
 - Error handling and edge cases
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.services.query_processing.orchestrator import SearchMode
-from src.services.query_processing.orchestrator import SearchOrchestrator
-from src.services.query_processing.orchestrator import SearchPipeline
-from src.services.query_processing.orchestrator import SearchRequest
-from src.services.query_processing.orchestrator import SearchResult
+from src.services.query_processing.orchestrator import (
+    SearchMode,
+    SearchOrchestrator,
+    SearchPipeline,
+    SearchRequest,
+    SearchResult,
+)
 
 
 @pytest.fixture

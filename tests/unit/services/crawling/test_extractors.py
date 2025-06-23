@@ -1,7 +1,6 @@
 """Tests for crawling extractors module."""
 
-from src.services.crawling.extractors import DocumentationExtractor
-from src.services.crawling.extractors import JavaScriptExecutor
+from src.services.crawling.extractors import DocumentationExtractor, JavaScriptExecutor
 
 
 class TestJavaScriptExecutor:

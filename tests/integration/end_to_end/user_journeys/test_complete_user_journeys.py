@@ -9,8 +9,7 @@ import time
 
 import pytest
 
-from tests.integration.end_to_end.user_journeys.conftest import JourneyStep
-from tests.integration.end_to_end.user_journeys.conftest import UserJourney
+from tests.integration.end_to_end.user_journeys.conftest import JourneyStep, UserJourney
 
 
 @pytest.mark.integration

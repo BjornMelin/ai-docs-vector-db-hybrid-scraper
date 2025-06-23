@@ -10,12 +10,10 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from .config import ObservabilityConfig
-from .config import get_observability_config
-from .init import initialize_observability
-from .init import is_observability_enabled
-from .tracking import get_meter
-from .tracking import get_tracer
+from .config import ObservabilityConfig, get_observability_config
+from .init import initialize_observability, is_observability_enabled
+from .tracking import get_meter, get_tracer
+
 
 logger = logging.getLogger(__name__)
 

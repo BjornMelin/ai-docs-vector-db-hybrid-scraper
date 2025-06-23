@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+
 try:
     import httpx
 

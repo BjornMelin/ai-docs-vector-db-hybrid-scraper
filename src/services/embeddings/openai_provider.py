@@ -5,9 +5,7 @@ import json
 import logging
 import os
 import tempfile
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from openai import AsyncOpenAI
 
@@ -15,6 +13,7 @@ from ..errors import EmbeddingServiceError
 from ..monitoring.metrics import get_metrics_registry
 from ..utilities.rate_limiter import RateLimitManager
 from .base import EmbeddingProvider
+
 
 if TYPE_CHECKING:
     from ...infrastructure.client_manager import ClientManager

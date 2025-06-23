@@ -7,9 +7,7 @@ import asyncio
 
 import pytest
 
-from src.config.core import Config
-from src.config.core import get_config
-from src.config.core import reset_config
+from src.config.core import Config, get_config, reset_config
 
 
 class TestAsyncConfigurationLoading:

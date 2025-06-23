@@ -15,9 +15,7 @@ import pytest
 from sqlalchemy import text
 
 from src.config.core import Config
-from src.infrastructure.database import DatabaseManager
-from src.infrastructure.database import LoadMonitor
-from src.infrastructure.database import QueryMonitor
+from src.infrastructure.database import DatabaseManager, LoadMonitor, QueryMonitor
 from src.infrastructure.shared import CircuitBreaker
 
 

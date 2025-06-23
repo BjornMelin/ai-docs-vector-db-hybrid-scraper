@@ -2,23 +2,24 @@
 
 import asyncio
 import time
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.performance import PerformanceMetrics
-from src.services.observability.performance import PerformanceMonitor
-from src.services.observability.performance import PerformanceThresholds
-from src.services.observability.performance import get_operation_statistics
-from src.services.observability.performance import get_performance_monitor
-from src.services.observability.performance import get_system_performance_summary
-from src.services.observability.performance import initialize_performance_monitor
-from src.services.observability.performance import monitor_ai_model_inference
-from src.services.observability.performance import monitor_async_operation
-from src.services.observability.performance import monitor_database_query
-from src.services.observability.performance import monitor_external_api_call
-from src.services.observability.performance import monitor_operation
+from src.services.observability.performance import (
+    PerformanceMetrics,
+    PerformanceMonitor,
+    PerformanceThresholds,
+    get_operation_statistics,
+    get_performance_monitor,
+    get_system_performance_summary,
+    initialize_performance_monitor,
+    monitor_ai_model_inference,
+    monitor_async_operation,
+    monitor_database_query,
+    monitor_external_api_call,
+    monitor_operation,
+)
 
 
 class TestPerformanceMetrics:

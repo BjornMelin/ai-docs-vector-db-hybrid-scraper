@@ -2,16 +2,16 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import FastAPI
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from src.services.monitoring.middleware import CustomMetricsMiddleware
-from src.services.monitoring.middleware import PrometheusMiddleware
+from src.services.monitoring.middleware import (
+    CustomMetricsMiddleware,
+    PrometheusMiddleware,
+)
 
 
 class TestPrometheusMiddleware:

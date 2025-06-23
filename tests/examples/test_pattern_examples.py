@@ -8,24 +8,26 @@ These examples serve as templates for consistent test implementation.
 import asyncio
 import time
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.utils.assertion_helpers import assert_async_operation_completes
-from tests.utils.assertion_helpers import assert_error_response_standardized
-from tests.utils.assertion_helpers import assert_mock_called_with_pattern
-from tests.utils.assertion_helpers import assert_performance_within_threshold
-
 # Import standardized helpers
-from tests.utils.assertion_helpers import assert_successful_response
-from tests.utils.assertion_helpers import assert_valid_document_chunk
-from tests.utils.test_factories import ChunkFactory
-from tests.utils.test_factories import DocumentFactory
-from tests.utils.test_factories import ResponseFactory
-from tests.utils.test_factories import VectorFactory
-from tests.utils.test_factories import quick_success_response
+from tests.utils.assertion_helpers import (
+    assert_async_operation_completes,
+    assert_error_response_standardized,
+    assert_mock_called_with_pattern,
+    assert_performance_within_threshold,
+    assert_successful_response,
+    assert_valid_document_chunk,
+)
+from tests.utils.test_factories import (
+    ChunkFactory,
+    DocumentFactory,
+    ResponseFactory,
+    VectorFactory,
+    quick_success_response,
+)
 
 
 class TestStandardizedPatterns:

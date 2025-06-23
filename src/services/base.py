@@ -1,13 +1,13 @@
 """Base service class for all services."""
 
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 
 from src.config import Config
 
 from .errors import APIError
+
 
 logger = logging.getLogger(__name__)
 

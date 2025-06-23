@@ -8,15 +8,14 @@ recovery behavior, and cascading failure prevention.
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 import pytest
 
-from ..conftest import LoadTestConfig
-from ..conftest import LoadTestType
+from ..conftest import LoadTestConfig, LoadTestType
+
 
 logger = logging.getLogger(__name__)
 

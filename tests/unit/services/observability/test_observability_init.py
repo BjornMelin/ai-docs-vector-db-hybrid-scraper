@@ -1,13 +1,14 @@
 """Tests for observability initialization and setup."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.init import _setup_auto_instrumentation
-from src.services.observability.init import initialize_observability
-from src.services.observability.init import is_observability_enabled
-from src.services.observability.init import shutdown_observability
+from src.services.observability.init import (
+    _setup_auto_instrumentation,
+    initialize_observability,
+    is_observability_enabled,
+    shutdown_observability,
+)
 
 
 class TestObservabilityInitialization:

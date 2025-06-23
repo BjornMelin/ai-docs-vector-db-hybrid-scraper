@@ -1,21 +1,17 @@
 """Tests for MCP advanced search tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config.enums import FusionAlgorithm
-from src.config.enums import SearchAccuracy
-from src.config.enums import SearchStrategy
-from src.mcp_tools.models.requests import FilteredSearchRequest
-from src.mcp_tools.models.requests import HyDESearchRequest
-from src.mcp_tools.models.requests import MultiStageSearchRequest
-from src.mcp_tools.models.requests import SearchRequest
-from src.mcp_tools.models.responses import HyDEAdvancedResponse
-from src.mcp_tools.models.responses import SearchResult
+from src.config.enums import FusionAlgorithm, SearchAccuracy, SearchStrategy
+from src.mcp_tools.models.requests import (
+    FilteredSearchRequest,
+    HyDESearchRequest,
+    MultiStageSearchRequest,
+    SearchRequest,
+)
+from src.mcp_tools.models.responses import HyDEAdvancedResponse, SearchResult
 
 
 @pytest.fixture

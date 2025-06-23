@@ -1,5 +1,6 @@
 import typing
 
+
 """Core utilities package for the AI Documentation Vector DB system.
 
 This package provides shared utilities, constants, and common patterns
@@ -10,11 +11,14 @@ for better organization and to eliminate duplication.
 """
 
 # Basic application constants (non-configurable)
-from .constants import DEFAULT_CACHE_TTL
-from .constants import DEFAULT_CHUNK_SIZE
-from .constants import DEFAULT_REQUEST_TIMEOUT
-from .constants import EMBEDDING_BATCH_SIZE
-from .constants import MAX_RETRIES
+from .constants import (
+    DEFAULT_CACHE_TTL,
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_REQUEST_TIMEOUT,
+    EMBEDDING_BATCH_SIZE,
+    MAX_RETRIES,
+)
+
 
 __all__ = [
     # Basic application constants

@@ -8,14 +8,13 @@ import json
 import logging
 import statistics
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..config import Config
+
 
 logger = logging.getLogger(__name__)
 

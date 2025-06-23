@@ -2,24 +2,25 @@
 
 import asyncio
 import time
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.instrumentation import add_span_attribute
-from src.services.observability.instrumentation import add_span_event
-from src.services.observability.instrumentation import get_current_span_id
-from src.services.observability.instrumentation import get_current_trace_id
-from src.services.observability.instrumentation import get_tracer
-from src.services.observability.instrumentation import instrument_embedding_generation
-from src.services.observability.instrumentation import instrument_function
-from src.services.observability.instrumentation import instrument_llm_call
-from src.services.observability.instrumentation import instrument_vector_search
-from src.services.observability.instrumentation import set_business_context
-from src.services.observability.instrumentation import set_user_context
-from src.services.observability.instrumentation import trace_async_operation
-from src.services.observability.instrumentation import trace_operation
+from src.services.observability.instrumentation import (
+    add_span_attribute,
+    add_span_event,
+    get_current_span_id,
+    get_current_trace_id,
+    get_tracer,
+    instrument_embedding_generation,
+    instrument_function,
+    instrument_llm_call,
+    instrument_vector_search,
+    set_business_context,
+    set_user_context,
+    trace_async_operation,
+    trace_operation,
+)
 
 
 class TestInstrumentationBasics:

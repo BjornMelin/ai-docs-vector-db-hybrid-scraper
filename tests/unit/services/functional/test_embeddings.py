@@ -5,13 +5,14 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 
-from src.services.embeddings.manager import QualityTier
-from src.services.embeddings.manager import TextAnalysis
-from src.services.functional.embeddings import analyze_text_characteristics
-from src.services.functional.embeddings import batch_generate_embeddings
-from src.services.functional.embeddings import estimate_embedding_cost
-from src.services.functional.embeddings import generate_embeddings
-from src.services.functional.embeddings import rerank_results
+from src.services.embeddings.manager import QualityTier, TextAnalysis
+from src.services.functional.embeddings import (
+    analyze_text_characteristics,
+    batch_generate_embeddings,
+    estimate_embedding_cost,
+    generate_embeddings,
+    rerank_results,
+)
 
 
 class TestGenerateEmbeddings:

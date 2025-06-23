@@ -1,15 +1,11 @@
 """Tests for EmbeddingManager with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import Config
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.embeddings.manager import QualityTier
-from src.services.embeddings.manager import TextAnalysis
+from src.services.embeddings.manager import EmbeddingManager, QualityTier, TextAnalysis
 from src.services.errors import EmbeddingServiceError
 
 

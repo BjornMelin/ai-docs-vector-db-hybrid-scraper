@@ -4,21 +4,23 @@ Tests remaining configuration models with comprehensive validation.
 """
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
-from src.config.core import BrowserUseConfig
-from src.config.core import Crawl4AIConfig
-from src.config.core import EmbeddingConfig
-from src.config.core import FastEmbedConfig
-from src.config.core import HyDEConfig
-from src.config.core import ObservabilityConfig
-from src.config.core import PerformanceConfig
-from src.config.core import PlaywrightConfig
-from src.config.core import SecurityConfig
-from src.config.core import SQLAlchemyConfig
-from src.config.core import TaskQueueConfig
+from src.config.core import (
+    BrowserUseConfig,
+    Crawl4AIConfig,
+    EmbeddingConfig,
+    FastEmbedConfig,
+    HyDEConfig,
+    ObservabilityConfig,
+    PerformanceConfig,
+    PlaywrightConfig,
+    SecurityConfig,
+    SQLAlchemyConfig,
+    TaskQueueConfig,
+)
+
 
 # Hypothesis strategies
 positive_int = st.integers(min_value=1, max_value=10000)
@@ -620,9 +622,7 @@ class TestEmbeddingConfig:
 
     def test_provider_configuration(self):
         """Test embedding provider configuration."""
-        from src.config.enums import EmbeddingModel
-        from src.config.enums import EmbeddingProvider
-        from src.config.enums import SearchStrategy
+        from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
 
         config = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,

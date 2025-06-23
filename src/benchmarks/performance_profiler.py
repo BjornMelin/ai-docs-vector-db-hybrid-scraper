@@ -12,11 +12,11 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..models.vector_search import AdvancedHybridSearchRequest
 from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+
 
 logger = logging.getLogger(__name__)
 

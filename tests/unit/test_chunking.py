@@ -7,8 +7,7 @@ standardized assertions, and modern test patterns.
 from src.chunking import EnhancedChunker
 from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
-from src.models.document_processing import Chunk
-from src.models.document_processing import CodeBlock
+from src.models.document_processing import Chunk, CodeBlock
 
 
 class TestChunkingConfig:

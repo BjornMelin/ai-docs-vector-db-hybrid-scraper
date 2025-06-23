@@ -11,6 +11,7 @@ from typing import Any
 from ...config import Config
 from ...models.vector_search import QueryClassification
 
+
 logger = logging.getLogger(__name__)
 
 

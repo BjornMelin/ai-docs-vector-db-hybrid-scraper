@@ -4,14 +4,11 @@ This module tests protection against SQL injection attacks across all
 data inputs and database interactions.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.security import SecurityError
-from src.security import SecurityValidator
+from src.security import SecurityError, SecurityValidator
 
 
 @pytest.mark.security

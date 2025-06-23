@@ -1,12 +1,10 @@
 """Comprehensive test suite for MCP collections tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mcp_tools.models.responses import CollectionInfo
-from src.mcp_tools.models.responses import CollectionOperationResponse
+from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
 
 
 class TestCollectionsTools:

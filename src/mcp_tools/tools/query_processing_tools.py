@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -20,17 +21,19 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ...infrastructure.client_manager import ClientManager
 
 # ProcessingStage removed from simplified orchestrator
-from ...services.query_processing import SearchMode
-from ...services.query_processing import SearchOrchestrator
-from ...services.query_processing import SearchPipeline
-from ...services.query_processing import SearchRequest
+from ...services.query_processing import (
+    SearchMode,
+    SearchOrchestrator,
+    SearchPipeline,
+    SearchRequest,
+)
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 

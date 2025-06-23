@@ -12,6 +12,7 @@ from src.config import get_config
 from ...infrastructure.client_manager import ClientManager
 from ..core.qdrant_alias_manager import QdrantAliasManager
 
+
 logger = logging.getLogger(__name__)
 
 

@@ -6,18 +6,14 @@ time-based content relevance analysis.
 """
 
 import logging
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
-from .base import BaseFilter
-from .base import FilterError
-from .base import FilterResult
+from .base import BaseFilter, FilterError, FilterResult
+
 
 logger = logging.getLogger(__name__)
 

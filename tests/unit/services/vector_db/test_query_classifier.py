@@ -9,10 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.config import Config
-from src.config.enums import QueryComplexity
-from src.config.enums import QueryType
-from src.models.vector_search import QueryClassification
-from src.models.vector_search import QueryFeatures
+from src.config.enums import QueryComplexity, QueryType
+from src.models.vector_search import QueryClassification, QueryFeatures
 from src.services.vector_db.query_classifier import QueryClassifier
 
 

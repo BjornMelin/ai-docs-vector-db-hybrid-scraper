@@ -13,15 +13,16 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config import Config
-from src.config import get_config
-
-from .commands import batch as batch_commands
+from src.config import Config, get_config
 
 # Import command groups
-from .commands import config as config_commands
-from .commands import database as db_commands
-from .commands import setup as setup_commands
+from .commands import (
+    batch as batch_commands,
+    config as config_commands,
+    database as db_commands,
+    setup as setup_commands,
+)
+
 
 console = Console()
 

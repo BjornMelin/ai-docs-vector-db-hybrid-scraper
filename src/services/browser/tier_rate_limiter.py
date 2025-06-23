@@ -7,11 +7,11 @@ browser automation providers and ensure fair usage across tiers.
 import asyncio
 import logging
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from typing import Any
 
 from .tier_config import TierConfiguration
+
 
 logger = logging.getLogger(__name__)
 

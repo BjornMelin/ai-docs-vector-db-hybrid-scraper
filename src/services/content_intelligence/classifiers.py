@@ -9,8 +9,8 @@ import logging
 import re
 from typing import Any
 
-from .models import ContentClassification
-from .models import ContentType
+from .models import ContentClassification, ContentType
+
 
 logger = logging.getLogger(__name__)
 

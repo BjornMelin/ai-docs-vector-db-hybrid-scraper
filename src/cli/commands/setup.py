@@ -15,9 +15,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.cli.wizard import ProfileManager
-from src.cli.wizard import TemplateManager
-from src.cli.wizard import WizardValidator
+from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
+
 
 console = Console()
 

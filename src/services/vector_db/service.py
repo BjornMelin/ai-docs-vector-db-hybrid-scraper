@@ -16,6 +16,7 @@ from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
 
+
 # Removed search interceptor (over-engineered deployment infrastructure)
 
 if TYPE_CHECKING:

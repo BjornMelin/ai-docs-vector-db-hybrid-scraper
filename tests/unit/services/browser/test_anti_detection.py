@@ -1,19 +1,19 @@
 """Test suite for Enhanced Anti-Detection System."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import PlaywrightConfig
-from src.services.browser.anti_detection import BrowserStealthConfig
-from src.services.browser.anti_detection import EnhancedAntiDetection
-from src.services.browser.anti_detection import SiteProfile
-from src.services.browser.anti_detection import SuccessRateMonitor
-from src.services.browser.anti_detection import TimingPattern
-from src.services.browser.anti_detection import UserAgentPool
-from src.services.browser.anti_detection import ViewportProfile
+from src.services.browser.anti_detection import (
+    BrowserStealthConfig,
+    EnhancedAntiDetection,
+    SiteProfile,
+    SuccessRateMonitor,
+    TimingPattern,
+    UserAgentPool,
+    ViewportProfile,
+)
 
 
 class TestUserAgentPool:

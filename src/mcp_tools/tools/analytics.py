@@ -1,9 +1,9 @@
 """Analytics and monitoring tools for MCP server."""
 
 import logging
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -21,14 +21,14 @@ else:
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import AnalyticsRequest
 
+
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register analytics and monitoring tools with the MCP server."""
 
-    from ..models.responses import AnalyticsResponse
-    from ..models.responses import SystemHealthResponse
+    from ..models.responses import AnalyticsResponse, SystemHealthResponse
 
     @mcp.tool()
     async def get_analytics(

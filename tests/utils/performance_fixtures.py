@@ -4,8 +4,7 @@ import asyncio
 import gc
 import time
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

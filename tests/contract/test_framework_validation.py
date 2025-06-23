@@ -9,9 +9,7 @@ from datetime import datetime
 
 import pytest
 
-from src.models.api_contracts import ErrorResponse
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import SearchResponse
+from src.models.api_contracts import ErrorResponse, SearchRequest, SearchResponse
 
 
 class TestContractFrameworkValidation:

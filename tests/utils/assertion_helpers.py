@@ -10,12 +10,11 @@ import json
 import time
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
-from typing import TypeVar
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from typing import Any, TypeVar
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 
 T = TypeVar("T")
 

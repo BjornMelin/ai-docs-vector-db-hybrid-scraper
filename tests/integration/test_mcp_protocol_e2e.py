@@ -7,16 +7,13 @@ protocol compliance following JSON-RPC 2.0 specifications.
 import asyncio
 import json
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
-from tests.mocks.mock_tools import MockMCPServer
-from tests.mocks.mock_tools import register_mock_tools
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 class TestMCPProtocolE2E:

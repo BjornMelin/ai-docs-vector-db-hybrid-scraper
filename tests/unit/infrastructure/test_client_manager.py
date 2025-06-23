@@ -9,22 +9,16 @@ This test module demonstrates modern testing patterns including:
 
 import asyncio
 import time
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.shared import CircuitBreaker
-from src.infrastructure.shared import ClientHealth
-from src.infrastructure.shared import ClientState
+from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
 
 

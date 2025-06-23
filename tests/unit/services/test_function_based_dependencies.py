@@ -5,34 +5,36 @@ provides equivalent functionality to the original Manager classes
 while achieving the target 60% complexity reduction.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.services.dependencies import CrawlRequest
-from src.services.dependencies import CrawlResponse
-from src.services.dependencies import EmbeddingRequest  # Pydantic Models
-from src.services.dependencies import EmbeddingResponse
-from src.services.dependencies import TaskRequest
-from src.services.dependencies import cache_delete
-from src.services.dependencies import cache_get
-from src.services.dependencies import cache_set
-from src.services.dependencies import crawl_site
-from src.services.dependencies import enqueue_task
-from src.services.dependencies import generate_embeddings  # Service Functions
-from src.services.dependencies import get_cache_manager
-from src.services.dependencies import get_client_manager  # Core Dependencies
-from src.services.dependencies import get_embedding_manager
-from src.services.dependencies import get_service_health
-from src.services.dependencies import get_service_metrics
-from src.services.dependencies import get_task_status
-from src.services.dependencies import scrape_url
-from src.services.errors import CacheServiceError
-from src.services.errors import CrawlServiceError
-from src.services.errors import EmbeddingServiceError
-from src.services.errors import TaskQueueServiceError
+from src.services.dependencies import (
+    CrawlRequest,
+    CrawlResponse,
+    EmbeddingRequest,  # Pydantic Models
+    EmbeddingResponse,
+    TaskRequest,
+    cache_delete,
+    cache_get,
+    cache_set,
+    crawl_site,
+    enqueue_task,
+    generate_embeddings,  # Service Functions
+    get_cache_manager,
+    get_client_manager,  # Core Dependencies
+    get_embedding_manager,
+    get_service_health,
+    get_service_metrics,
+    get_task_status,
+    scrape_url,
+)
+from src.services.errors import (
+    CacheServiceError,
+    CrawlServiceError,
+    EmbeddingServiceError,
+    TaskQueueServiceError,
+)
 
 
 @pytest.fixture
@@ -519,8 +521,7 @@ class TestComplexityReduction:
     def test_dependency_injection_clarity(self):
         """Test that dependency injection is explicit and clear."""
         # All dependencies are explicitly typed with Annotated
-        from src.services.dependencies import CacheManagerDep
-        from src.services.dependencies import EmbeddingManagerDep
+        from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
 
         # Dependencies use clear naming convention
         assert str(EmbeddingManagerDep).startswith("typing.Annotated")
@@ -529,9 +530,11 @@ class TestComplexityReduction:
     def test_error_handling_consistency(self):
         """Test that error handling is consistent across functions."""
         # All service functions use consistent error types
-        from src.services.errors import CrawlServiceError
-        from src.services.errors import EmbeddingServiceError
-        from src.services.errors import TaskQueueServiceError
+        from src.services.errors import (
+            CrawlServiceError,
+            EmbeddingServiceError,
+            TaskQueueServiceError,
+        )
 
         # Error classes follow consistent naming pattern
         error_classes = [

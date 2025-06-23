@@ -1,16 +1,17 @@
 """Tests for error tracking and correlation across observability systems."""
 
 import asyncio
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from src.services.observability.ai_tracking import get_ai_tracker
-from src.services.observability.correlation import correlated_operation
-from src.services.observability.correlation import get_correlation_manager
-from src.services.observability.correlation import get_error_tracker
-from src.services.observability.correlation import record_error
+from src.services.observability.correlation import (
+    correlated_operation,
+    get_correlation_manager,
+    get_error_tracker,
+    record_error,
+)
 from src.services.observability.instrumentation import instrument_function
 
 

@@ -12,8 +12,8 @@ The framework ensures reliable deployments across all environments with
 zero-downtime deployment capabilities and comprehensive rollback procedures.
 """
 
-from .conftest import DeploymentTestConfig
-from .conftest import DeploymentTestFixtures
+from .conftest import DeploymentTestConfig, DeploymentTestFixtures
+
 
 __all__ = [
     "DeploymentTestConfig",

@@ -15,14 +15,13 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 import psutil
 import pytest
 
-from ..conftest import LoadTestConfig
-from ..conftest import LoadTestType
+from ..conftest import LoadTestConfig, LoadTestType
+
 
 logger = logging.getLogger(__name__)
 

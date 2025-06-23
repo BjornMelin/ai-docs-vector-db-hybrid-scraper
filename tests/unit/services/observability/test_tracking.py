@@ -1,22 +1,23 @@
 """Tests for OpenTelemetry tracking utilities."""
 
 import asyncio
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.observability.tracking import _initialize_metrics
-from src.services.observability.tracking import _NoOpCounter
-from src.services.observability.tracking import _NoOpHistogram
-from src.services.observability.tracking import _NoOpMeter
-from src.services.observability.tracking import _NoOpSpan
-from src.services.observability.tracking import _NoOpTracer
-from src.services.observability.tracking import get_meter
-from src.services.observability.tracking import get_tracer
-from src.services.observability.tracking import instrument_function
-from src.services.observability.tracking import record_ai_operation
-from src.services.observability.tracking import track_cost
+from src.services.observability.tracking import (
+    _initialize_metrics,
+    _NoOpCounter,
+    _NoOpHistogram,
+    _NoOpMeter,
+    _NoOpSpan,
+    _NoOpTracer,
+    get_meter,
+    get_tracer,
+    instrument_function,
+    record_ai_operation,
+    track_cost,
+)
 
 
 class TestTracerAndMeter:

@@ -10,9 +10,7 @@ import pytest
 from src.chunking import EnhancedChunker
 from src.config.core import ChunkingConfig
 from src.config.enums import ChunkingStrategy
-from src.models.document_processing import Chunk
-from src.models.document_processing import CodeBlock
-from src.models.document_processing import CodeLanguage
+from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
 from tests.utils.assertion_helpers import assert_valid_document_chunk
 
 

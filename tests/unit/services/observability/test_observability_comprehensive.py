@@ -2,16 +2,14 @@
 
 import asyncio
 import time
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from src.services.observability.ai_tracking import get_ai_tracker
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.correlation import get_correlation_manager
-from src.services.observability.instrumentation import get_tracer
-from src.services.observability.instrumentation import instrument_function
+from src.services.observability.instrumentation import get_tracer, instrument_function
 
 
 class TestObservabilitySystemCoverage:
@@ -128,11 +126,11 @@ class TestObservabilitySystemCoverage:
 
         # Test performance monitoring initialization
         try:
-            from src.services.observability.performance import PerformanceThresholds
             from src.services.observability.performance import (
+                PerformanceThresholds,
                 initialize_performance_monitor,
+                monitor_operation,
             )
-            from src.services.observability.performance import monitor_operation
 
             # Initialize with custom thresholds
             thresholds = PerformanceThresholds(

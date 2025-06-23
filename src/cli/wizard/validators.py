@@ -15,6 +15,7 @@ from rich.text import Text
 
 from src.config.core import Config
 
+
 console = Console()
 
 

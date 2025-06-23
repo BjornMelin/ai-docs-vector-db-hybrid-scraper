@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -19,6 +20,7 @@ else:
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 

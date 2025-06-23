@@ -1,18 +1,17 @@
 """Integration tests for RAG patterns with service dependencies."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.services.dependencies import RAGRequest
-from src.services.dependencies import RAGResponse
-from src.services.dependencies import clear_rag_cache
-from src.services.dependencies import generate_rag_answer
-from src.services.dependencies import get_rag_metrics
-from src.services.rag.models import AnswerMetrics
-from src.services.rag.models import RAGResult
-from src.services.rag.models import SourceAttribution
+from src.services.dependencies import (
+    RAGRequest,
+    RAGResponse,
+    clear_rag_cache,
+    generate_rag_answer,
+    get_rag_metrics,
+)
+from src.services.rag.models import AnswerMetrics, RAGResult, SourceAttribution
 
 
 class TestRAGIntegration:

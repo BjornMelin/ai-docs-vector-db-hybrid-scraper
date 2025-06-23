@@ -11,10 +11,9 @@ import time
 import pytest
 
 from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig
-from ..conftest import LoadTestType
-from ..load_profiles import DoubleSpike
-from ..load_profiles import SpikeLoadProfile
+from ..conftest import LoadTestConfig, LoadTestType
+from ..load_profiles import DoubleSpike, SpikeLoadProfile
+
 
 logger = logging.getLogger(__name__)
 

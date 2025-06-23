@@ -9,8 +9,8 @@ import logging
 import pytest
 
 from ..base_load_test import create_load_test_runner
-from ..load_profiles import RampUpLoadProfile
-from ..load_profiles import SteadyLoadProfile
+from ..load_profiles import RampUpLoadProfile, SteadyLoadProfile
+
 
 logger = logging.getLogger(__name__)
 

@@ -9,8 +9,7 @@ import os
 import shutil
 import tempfile
 from contextlib import contextmanager
-from dataclasses import asdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 

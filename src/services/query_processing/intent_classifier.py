@@ -11,9 +11,8 @@ from typing import Any
 
 import numpy as np
 
-from .models import QueryComplexity
-from .models import QueryIntent
-from .models import QueryIntentClassification
+from .models import QueryComplexity, QueryIntent, QueryIntentClassification
+
 
 logger = logging.getLogger(__name__)
 

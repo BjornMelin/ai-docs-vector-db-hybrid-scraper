@@ -14,6 +14,7 @@ from src.config import Config
 
 from ...models.vector_search import SPLADEConfig
 
+
 logger = logging.getLogger(__name__)
 
 

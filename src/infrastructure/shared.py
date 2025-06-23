@@ -12,6 +12,7 @@ from enum import Enum
 
 from src.services.errors import APIError
 
+
 logger = logging.getLogger(__name__)
 
 

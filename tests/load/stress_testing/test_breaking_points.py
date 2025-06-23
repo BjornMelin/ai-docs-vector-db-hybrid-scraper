@@ -9,15 +9,14 @@ import asyncio
 import logging
 import statistics
 import time
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 import pytest
 
 from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig
-from ..conftest import LoadTestType
+from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SpikeLoadProfile
+
 
 logger = logging.getLogger(__name__)
 

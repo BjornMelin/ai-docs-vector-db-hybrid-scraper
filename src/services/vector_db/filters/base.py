@@ -5,14 +5,13 @@ filtering operations in the vector database system.
 """
 
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from qdrant_client import models
+
 
 logger = logging.getLogger(__name__)
 

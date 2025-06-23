@@ -17,10 +17,10 @@ import subprocess
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.config import get_config
+
 
 # Import SecurityValidator from the file module
 spec = importlib.util.spec_from_file_location("security_module", "src/security.py")

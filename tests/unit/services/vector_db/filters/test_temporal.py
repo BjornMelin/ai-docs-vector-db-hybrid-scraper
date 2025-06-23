@@ -1,15 +1,15 @@
 """Tests for the temporal filter implementation."""
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.temporal import FreshnessScore
-from src.services.vector_db.filters.temporal import TemporalCriteria
-from src.services.vector_db.filters.temporal import TemporalFilter
+from src.services.vector_db.filters.base import FilterError, FilterResult
+from src.services.vector_db.filters.temporal import (
+    FreshnessScore,
+    TemporalCriteria,
+    TemporalFilter,
+)
 
 
 class TestTemporalCriteria:

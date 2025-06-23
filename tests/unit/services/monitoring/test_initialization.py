@@ -2,22 +2,22 @@
 
 import asyncio
 import contextlib
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from prometheus_client.registry import CollectorRegistry
 
 from src.config import MonitoringConfig
-from src.services.monitoring.initialization import cleanup_monitoring
-from src.services.monitoring.initialization import initialize_monitoring_system
-from src.services.monitoring.initialization import run_periodic_health_checks
-from src.services.monitoring.initialization import setup_fastmcp_monitoring
-from src.services.monitoring.initialization import start_background_monitoring_tasks
-from src.services.monitoring.initialization import stop_background_monitoring_tasks
-from src.services.monitoring.initialization import update_cache_metrics_periodically
-from src.services.monitoring.initialization import update_system_metrics_periodically
+from src.services.monitoring.initialization import (
+    cleanup_monitoring,
+    initialize_monitoring_system,
+    run_periodic_health_checks,
+    setup_fastmcp_monitoring,
+    start_background_monitoring_tasks,
+    stop_background_monitoring_tasks,
+    update_cache_metrics_periodically,
+    update_system_metrics_periodically,
+)
 
 
 class TestMonitoringInitialization:

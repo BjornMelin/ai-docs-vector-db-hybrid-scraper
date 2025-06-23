@@ -1,14 +1,11 @@
 """Tests for task queue task functions."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.services.task_queue.tasks import TASK_MAP
-from src.services.task_queue.tasks import delete_collection
-from src.services.task_queue.tasks import persist_cache
+from src.services.task_queue.tasks import TASK_MAP, delete_collection, persist_cache
+
 
 # NOTE: Many task functions were removed during V1 simplification
 # as they were over-engineered for a system with 0 users.

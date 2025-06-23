@@ -1,14 +1,15 @@
 """Tests for observability configuration."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
 
-from src.services.observability.config import ObservabilityConfig
-from src.services.observability.config import get_observability_config
-from src.services.observability.config import get_resource_attributes
+from src.services.observability.config import (
+    ObservabilityConfig,
+    get_observability_config,
+    get_resource_attributes,
+)
 
 
 class TestObservabilityConfig:

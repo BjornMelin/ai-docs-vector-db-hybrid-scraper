@@ -5,9 +5,7 @@ import time
 
 import pytest
 
-from src.infrastructure.shared import CircuitBreaker
-from src.infrastructure.shared import ClientHealth
-from src.infrastructure.shared import ClientState
+from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
 
 

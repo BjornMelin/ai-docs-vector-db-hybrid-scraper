@@ -17,8 +17,7 @@ Consolidates functionality from:
 """
 
 import sys
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.chunking import EnhancedChunker
 from src.config import ChunkingConfig

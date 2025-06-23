@@ -11,8 +11,7 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from .data_generators import TestDataGenerator
 

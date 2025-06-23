@@ -4,13 +4,14 @@ This module tests configuration management commands including creation,
 validation, display, and conversion functionality with Rich console output.
 """
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from src.cli.commands.config import _show_config_json
-from src.cli.commands.config import _show_config_table
-from src.cli.commands.config import _show_config_yaml
-from src.cli.commands.config import config
+from src.cli.commands.config import (
+    _show_config_json,
+    _show_config_table,
+    _show_config_yaml,
+    config,
+)
 
 
 class TestConfigCommandGroup:

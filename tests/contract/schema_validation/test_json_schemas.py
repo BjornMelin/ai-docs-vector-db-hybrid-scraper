@@ -8,14 +8,16 @@ from datetime import datetime
 
 import pytest
 
-from src.models.api_contracts import AdvancedSearchRequest
-from src.models.api_contracts import BulkDocumentRequest
-from src.models.api_contracts import CollectionRequest
-from src.models.api_contracts import DocumentRequest
-from src.models.api_contracts import ErrorResponse
-from src.models.api_contracts import HealthCheckResponse
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import SearchResponse
+from src.models.api_contracts import (
+    AdvancedSearchRequest,
+    BulkDocumentRequest,
+    CollectionRequest,
+    DocumentRequest,
+    ErrorResponse,
+    HealthCheckResponse,
+    SearchRequest,
+    SearchResponse,
+)
 
 
 class TestPydanticModelValidation:

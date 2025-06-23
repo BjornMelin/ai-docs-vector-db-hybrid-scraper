@@ -10,13 +10,10 @@ import uuid
 from contextlib import contextmanager
 from typing import Any
 
-from opentelemetry import baggage
-from opentelemetry import context
-from opentelemetry import trace
-from opentelemetry.propagate import extract
-from opentelemetry.propagate import inject
-from opentelemetry.trace import Status
-from opentelemetry.trace import StatusCode
+from opentelemetry import baggage, context, trace
+from opentelemetry.propagate import extract, inject
+from opentelemetry.trace import Status, StatusCode
+
 
 logger = logging.getLogger(__name__)
 

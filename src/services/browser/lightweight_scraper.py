@@ -9,17 +9,16 @@ import logging
 import re
 import time
 from typing import Any
-from urllib.parse import urljoin
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.config import Config
 
 from ..base import BaseService
+
 
 logger = logging.getLogger(__name__)
 

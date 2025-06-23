@@ -7,11 +7,13 @@ from typing import Any
 import pytest
 from qdrant_client import models
 
-from src.services.vector_db.filters.base import BaseFilter
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterRegistry
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.base import filter_registry
+from src.services.vector_db.filters.base import (
+    BaseFilter,
+    FilterError,
+    FilterRegistry,
+    FilterResult,
+    filter_registry,
+)
 
 
 class TestFilterResult:

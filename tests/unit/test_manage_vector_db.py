@@ -1,21 +1,21 @@
 """Tests for manage_vector_db.py with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
 from src.config import Config
-from src.manage_vector_db import CollectionInfo
-from src.manage_vector_db import DatabaseStats
-from src.manage_vector_db import VectorDBManager
-from src.manage_vector_db import _create_manager_from_context
-from src.manage_vector_db import cli
-from src.manage_vector_db import create_embeddings
-from src.manage_vector_db import main
-from src.manage_vector_db import setup_logging
+from src.manage_vector_db import (
+    CollectionInfo,
+    DatabaseStats,
+    VectorDBManager,
+    _create_manager_from_context,
+    cli,
+    create_embeddings,
+    main,
+    setup_logging,
+)
 
 
 @pytest.fixture

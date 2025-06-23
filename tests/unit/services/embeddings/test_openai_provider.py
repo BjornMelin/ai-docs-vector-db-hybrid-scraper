@@ -1,7 +1,6 @@
 """Tests for OpenAI embedding provider with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

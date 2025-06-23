@@ -14,18 +14,13 @@ import os
 import time
 import tracemalloc
 from dataclasses import dataclass
-from statistics import mean
-from statistics import median
-from statistics import stdev
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from statistics import mean, median, stdev
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
-from tests.mocks.mock_tools import MockMCPServer
-from tests.mocks.mock_tools import register_mock_tools
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 def _get_performance_thresholds():

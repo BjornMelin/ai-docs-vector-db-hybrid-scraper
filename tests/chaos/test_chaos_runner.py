@@ -8,17 +8,13 @@ reporting and analysis capabilities.
 import asyncio
 import time
 from collections.abc import Callable
-from dataclasses import asdict
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
 import pytest
 
-from tests.chaos.conftest import ChaosExperiment
-from tests.chaos.conftest import ExperimentResult
-from tests.chaos.conftest import FailureType
+from tests.chaos.conftest import ChaosExperiment, ExperimentResult, FailureType
 
 
 class ExperimentStatus(Enum):

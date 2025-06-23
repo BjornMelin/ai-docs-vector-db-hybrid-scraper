@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,14 +19,13 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from src.config import ChunkingConfig
-from src.config import ChunkingStrategy
+from src.config import ChunkingConfig, ChunkingStrategy
 
 from ...chunking import EnhancedChunker
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import BatchRequest
-from ..models.requests import DocumentRequest
+from ..models.requests import BatchRequest, DocumentRequest
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register document management tools with the MCP server."""
 
-    from ..models.responses import AddDocumentResponse
-    from ..models.responses import DocumentBatchResponse
+    from ..models.responses import AddDocumentResponse, DocumentBatchResponse
 
     @mcp.tool()
     async def add_document(

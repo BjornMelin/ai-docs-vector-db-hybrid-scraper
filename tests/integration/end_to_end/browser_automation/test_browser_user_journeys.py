@@ -9,11 +9,9 @@ import time
 
 import pytest
 
+
 try:
-    from playwright.async_api import Browser
-    from playwright.async_api import BrowserContext
-    from playwright.async_api import Page
-    from playwright.async_api import async_playwright
+    from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:

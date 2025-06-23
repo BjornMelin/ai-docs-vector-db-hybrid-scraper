@@ -3,8 +3,7 @@
 import asyncio
 import contextlib
 import time
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -12,8 +11,10 @@ from src.services.observability.ai_tracking import get_ai_tracker
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.correlation import get_correlation_manager
 from src.services.observability.instrumentation import instrument_function
-from src.services.observability.performance import initialize_performance_monitor
-from src.services.observability.performance import monitor_operation
+from src.services.observability.performance import (
+    initialize_performance_monitor,
+    monitor_operation,
+)
 
 
 class TestObservabilityE2E:
@@ -666,8 +667,10 @@ class TestObservabilityCompliance:
 
     def test_trace_context_propagation_standards(self):
         """Test trace context propagation follows W3C standards."""
-        from src.services.observability.correlation import extract_context_from_headers
-        from src.services.observability.correlation import inject_context_to_headers
+        from src.services.observability.correlation import (
+            extract_context_from_headers,
+            inject_context_to_headers,
+        )
 
         # Test W3C trace context format
         headers = {}

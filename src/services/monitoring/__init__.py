@@ -1,5 +1,6 @@
 import typing
 
+
 """Monitoring and observability services for ML/vector search application.
 
 This package provides comprehensive monitoring infrastructure including:
@@ -11,10 +12,10 @@ This package provides comprehensive monitoring infrastructure including:
 """
 
 from .health import HealthCheckManager
-from .initialization import initialize_monitoring_system
-from .initialization import setup_fastmcp_monitoring
+from .initialization import initialize_monitoring_system, setup_fastmcp_monitoring
 from .metrics import MetricsRegistry
 from .middleware import PrometheusMiddleware
+
 
 __all__ = [
     "HealthCheckManager",

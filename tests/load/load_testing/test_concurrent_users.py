@@ -6,8 +6,7 @@ behavior under different concurrency levels and user interaction patterns.
 
 import pytest
 
-from tests.load.conftest import LoadTestConfig
-from tests.load.conftest import LoadTestType
+from tests.load.conftest import LoadTestConfig, LoadTestType
 
 
 @pytest.mark.load

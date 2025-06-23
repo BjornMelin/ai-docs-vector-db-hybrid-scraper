@@ -11,13 +11,12 @@ from src.config import BrowserUseConfig
 from ..base import BaseService
 from ..errors import CrawlServiceError
 
+
 logger = logging.getLogger(__name__)
 
 # Try to import browser-use and langchain, handle gracefully if not available
 try:
-    from browser_use import Agent
-    from browser_use import Browser
-    from browser_use import BrowserConfig
+    from browser_use import Agent, Browser, BrowserConfig
     from langchain_anthropic import ChatAnthropic
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_openai import ChatOpenAI

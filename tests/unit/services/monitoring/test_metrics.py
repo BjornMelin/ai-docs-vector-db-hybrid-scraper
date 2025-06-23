@@ -1,14 +1,12 @@
 """Comprehensive tests for monitoring metrics functionality."""
 
 import asyncio
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from prometheus_client.registry import CollectorRegistry
 
-from src.services.monitoring.metrics import MetricsConfig
-from src.services.monitoring.metrics import MetricsRegistry
+from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
 
 
 class TestMetricsConfig:

@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+
 # from src.services.observability.tracking import TrackingManager  # Not implemented yet
 
 

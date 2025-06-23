@@ -15,15 +15,17 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from .feature_flags import FeatureFlagManager
-from .models import DeploymentConfig
-from .models import DeploymentEnvironment
-from .models import DeploymentHealth
-from .models import DeploymentMetrics
-from .models import DeploymentStatus
+from .models import (
+    DeploymentConfig,
+    DeploymentEnvironment,
+    DeploymentHealth,
+    DeploymentMetrics,
+    DeploymentStatus,
+)
+
 
 logger = logging.getLogger(__name__)
 

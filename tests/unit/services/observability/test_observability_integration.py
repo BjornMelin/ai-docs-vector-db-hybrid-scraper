@@ -2,20 +2,27 @@
 
 import asyncio
 import time
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from src.services.observability.ai_tracking import get_ai_tracker
-from src.services.observability.ai_tracking import track_embedding_generation
-from src.services.observability.correlation import correlated_operation
-from src.services.observability.correlation import get_correlation_manager
-from src.services.observability.correlation import set_request_context
+from src.services.observability.ai_tracking import (
+    get_ai_tracker,
+    track_embedding_generation,
+)
+from src.services.observability.correlation import (
+    correlated_operation,
+    get_correlation_manager,
+    set_request_context,
+)
 from src.services.observability.instrumentation import instrument_function
-from src.services.observability.metrics_bridge import get_metrics_bridge
-from src.services.observability.metrics_bridge import initialize_metrics_bridge
-from src.services.observability.performance import get_performance_monitor
-from src.services.observability.performance import initialize_performance_monitor
-from src.services.observability.performance import monitor_operation
+from src.services.observability.metrics_bridge import (
+    get_metrics_bridge,
+    initialize_metrics_bridge,
+)
+from src.services.observability.performance import (
+    get_performance_monitor,
+    initialize_performance_monitor,
+    monitor_operation,
+)
 
 
 class TestObservabilitySystemIntegration:

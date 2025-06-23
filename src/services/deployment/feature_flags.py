@@ -8,10 +8,10 @@ simplicity for personal use.
 import logging
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.config import DeploymentTier
+
 
 logger = logging.getLogger(__name__)
 

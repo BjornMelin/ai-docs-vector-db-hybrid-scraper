@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+
 try:
     from FlagEmbedding import FlagReranker
 except ImportError:
@@ -20,6 +21,7 @@ from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
 from .openai_provider import OpenAIEmbeddingProvider
+
 
 if TYPE_CHECKING:
     from ...infrastructure.client_manager import ClientManager

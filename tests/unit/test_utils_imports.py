@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.utils.imports import resolve_imports
-from src.utils.imports import setup_import_paths
+from src.utils.imports import resolve_imports, setup_import_paths
 
 
 class TestSetupImportPaths:

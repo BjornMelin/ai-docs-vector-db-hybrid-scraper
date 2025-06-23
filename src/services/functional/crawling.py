@@ -5,15 +5,13 @@ Provides crawling operations with circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import Depends
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 
-from .circuit_breaker import CircuitBreakerConfig
-from .circuit_breaker import circuit_breaker
+from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_crawling_client
+
 
 logger = logging.getLogger(__name__)
 

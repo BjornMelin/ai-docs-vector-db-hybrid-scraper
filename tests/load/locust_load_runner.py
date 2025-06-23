@@ -12,12 +12,9 @@ import random
 import time
 from typing import Any
 
-from locust import HttpUser
-from locust import TaskSet
-from locust import between
-from locust import events
-from locust import task
+from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
+
 
 logger = logging.getLogger(__name__)
 

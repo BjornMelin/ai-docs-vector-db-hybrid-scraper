@@ -12,6 +12,7 @@ from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimitManager
 from .base import CrawlProvider
 
+
 logger = logging.getLogger(__name__)
 
 

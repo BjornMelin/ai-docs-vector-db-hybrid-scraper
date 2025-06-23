@@ -20,6 +20,7 @@ from src.config import get_config
 from src.services.fastapi.middleware.manager import get_middleware_manager
 from src.services.logging_config import configure_logging
 
+
 logger = logging.getLogger(__name__)
 
 

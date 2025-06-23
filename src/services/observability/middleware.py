@@ -14,6 +14,7 @@ from starlette.responses import Response
 
 from .tracking import get_tracer
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -123,8 +124,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
 
                 # Set span status based on response
                 if 400 <= response.status_code < 600:
-                    from opentelemetry.trace import Status
-                    from opentelemetry.trace import StatusCode
+                    from opentelemetry.trace import Status, StatusCode
 
                     span.set_status(
                         Status(StatusCode.ERROR, f"HTTP {response.status_code}")
@@ -139,8 +139,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 # Record exception
                 span.record_exception(e)
-                from opentelemetry.trace import Status
-                from opentelemetry.trace import StatusCode
+                from opentelemetry.trace import Status, StatusCode
 
                 span.set_status(Status(StatusCode.ERROR, str(e)))
 

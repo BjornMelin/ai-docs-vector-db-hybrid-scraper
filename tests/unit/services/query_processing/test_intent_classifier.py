@@ -5,9 +5,11 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.query_processing.intent_classifier import QueryIntentClassifier
-from src.services.query_processing.models import QueryComplexity
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import QueryIntentClassification
+from src.services.query_processing.models import (
+    QueryComplexity,
+    QueryIntent,
+    QueryIntentClassification,
+)
 
 
 @pytest.fixture

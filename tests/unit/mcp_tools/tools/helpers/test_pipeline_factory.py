@@ -7,8 +7,7 @@ Following TEST_SUITE_MODERNISATION_v1 principles:
 - Modern pytest patterns
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 

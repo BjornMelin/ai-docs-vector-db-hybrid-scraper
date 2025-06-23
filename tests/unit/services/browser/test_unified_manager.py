@@ -1,15 +1,15 @@
 """Comprehensive tests for UnifiedBrowserManager."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.config import Config
-from src.services.browser.unified_manager import UnifiedBrowserManager
-from src.services.browser.unified_manager import UnifiedScrapingRequest
-from src.services.browser.unified_manager import UnifiedScrapingResponse
+from src.services.browser.unified_manager import (
+    UnifiedBrowserManager,
+    UnifiedScrapingRequest,
+    UnifiedScrapingResponse,
+)
 from src.services.errors import CrawlServiceError
 
 

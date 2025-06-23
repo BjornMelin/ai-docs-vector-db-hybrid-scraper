@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -21,12 +22,14 @@ from src.config import SearchStrategy
 
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import FilteredSearchRequest
-from ..models.requests import HyDESearchRequest
-from ..models.requests import MultiStageSearchRequest
-from ..models.requests import SearchRequest
-from ..models.responses import HyDEAdvancedResponse
-from ..models.responses import SearchResult
+from ..models.requests import (
+    FilteredSearchRequest,
+    HyDESearchRequest,
+    MultiStageSearchRequest,
+    SearchRequest,
+)
+from ..models.responses import HyDEAdvancedResponse, SearchResult
+
 
 logger = logging.getLogger(__name__)
 

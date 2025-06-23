@@ -1,13 +1,11 @@
 """Comprehensive test suite for MCP analytics tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.models.requests import AnalyticsRequest
-from src.mcp_tools.models.responses import AnalyticsResponse
-from src.mcp_tools.models.responses import SystemHealthResponse
+from src.mcp_tools.models.responses import AnalyticsResponse, SystemHealthResponse
 
 
 class TestAnalyticsTools:

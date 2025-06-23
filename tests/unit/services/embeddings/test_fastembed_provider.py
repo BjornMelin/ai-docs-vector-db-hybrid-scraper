@@ -4,8 +4,7 @@ This module tests the FastEmbed provider that provides local embedding model man
 model loading and inference optimization, memory management, and performance tuning.
 """
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest

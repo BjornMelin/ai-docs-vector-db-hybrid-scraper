@@ -11,9 +11,8 @@ from enum import Enum
 from typing import Any
 
 import numpy as np
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
+
 
 logger = logging.getLogger(__name__)
 
@@ -847,9 +846,11 @@ class ResultClusteringService:
             return metrics
 
         try:
-            from sklearn.metrics import calinski_harabasz_score
-            from sklearn.metrics import davies_bouldin_score
-            from sklearn.metrics import silhouette_score
+            from sklearn.metrics import (
+                calinski_harabasz_score,
+                davies_bouldin_score,
+                silhouette_score,
+            )
 
             # Filter out noise points for metrics calculation
             valid_mask = cluster_labels != -1

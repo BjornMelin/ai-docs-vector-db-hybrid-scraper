@@ -5,8 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.content_intelligence.classifiers import ContentClassifier
-from src.services.content_intelligence.models import ContentClassification
-from src.services.content_intelligence.models import ContentType
+from src.services.content_intelligence.models import ContentClassification, ContentType
 
 
 @pytest.fixture

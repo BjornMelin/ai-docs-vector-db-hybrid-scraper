@@ -12,17 +12,20 @@ import click
 from click.shell_completion import CompletionItem
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import BarColumn
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TextColumn
-from rich.progress import TimeRemainingColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
 
 from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
+
 
 console = Console()
 

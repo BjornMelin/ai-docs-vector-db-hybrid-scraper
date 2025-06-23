@@ -1,17 +1,13 @@
 """Tests for HyDE hypothetical document generator."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.errors import EmbeddingServiceError
-from src.services.hyde.config import HyDEConfig
-from src.services.hyde.config import HyDEPromptConfig
-from src.services.hyde.generator import GenerationResult
-from src.services.hyde.generator import HypotheticalDocumentGenerator
+from src.services.hyde.config import HyDEConfig, HyDEPromptConfig
+from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 
 
 class TestGenerationResult:

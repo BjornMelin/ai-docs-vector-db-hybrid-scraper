@@ -10,10 +10,10 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 
 # Add src to path for all tests - eliminates need for import path manipulation
 src_path = str(Path(__file__).parent.parent / "src")
@@ -51,12 +51,14 @@ if _test_env_path.exists():
 
 # Import cross-platform utilities
 try:
-    from src.utils.cross_platform import get_playwright_browser_path
-    from src.utils.cross_platform import is_ci_environment
-    from src.utils.cross_platform import is_linux
-    from src.utils.cross_platform import is_macos
-    from src.utils.cross_platform import is_windows
-    from src.utils.cross_platform import set_platform_environment_defaults
+    from src.utils.cross_platform import (
+        get_playwright_browser_path,
+        is_ci_environment,
+        is_linux,
+        is_macos,
+        is_windows,
+        set_platform_environment_defaults,
+    )
 except ImportError:
     # Fallback implementations for when utils aren't available
     def is_windows():
@@ -512,11 +514,9 @@ def enhanced_db_config():
 def mock_multi_level_circuit_breaker():
     """Mock simple CircuitBreaker for testing (renamed for compatibility)."""
     import asyncio
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
-    from src.infrastructure.shared import CircuitBreaker
-    from src.infrastructure.shared import ClientState
+    from src.infrastructure.shared import CircuitBreaker, ClientState
 
     # Create a properly spec'd mock with all expected attributes
     breaker = Mock(spec=CircuitBreaker)
@@ -560,8 +560,7 @@ def mock_multi_level_circuit_breaker():
 @pytest.fixture()
 def mock_connection_affinity_manager():
     """Mock ConnectionAffinityManager for testing."""
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
     from src.infrastructure.database.connection_affinity import (
         ConnectionAffinityManager,
@@ -632,11 +631,12 @@ def mock_connection_affinity_manager():
 @pytest.fixture()
 def mock_adaptive_config_manager():
     """Mock AdaptiveConfigManager for testing."""
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
-    from src.infrastructure.database.adaptive_config import AdaptationStrategy
-    from src.infrastructure.database.adaptive_config import AdaptiveConfigManager
+    from src.infrastructure.database.adaptive_config import (
+        AdaptationStrategy,
+        AdaptiveConfigManager,
+    )
 
     # Create a properly spec'd mock
     manager = Mock(spec=AdaptiveConfigManager)

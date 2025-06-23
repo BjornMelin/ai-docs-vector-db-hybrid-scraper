@@ -8,21 +8,22 @@ Achieves 60% complexity reduction while maintaining full functionality.
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import Annotated
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends
 from pydantic import BaseModel
 
-from src.config import Config
-from src.config import get_config
+from src.config import Config, get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.errors import CircuitBreakerRegistry
-from src.services.errors import CrawlServiceError
-from src.services.errors import EmbeddingServiceError
-from src.services.errors import TaskQueueServiceError
-from src.services.errors import circuit_breaker
-from src.services.errors import tenacity_circuit_breaker
+from src.services.errors import (
+    CircuitBreakerRegistry,
+    CrawlServiceError,
+    EmbeddingServiceError,
+    TaskQueueServiceError,
+    circuit_breaker,
+    tenacity_circuit_breaker,
+)
+
 
 logger = logging.getLogger(__name__)
 

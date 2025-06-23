@@ -5,16 +5,13 @@ with focus on Rich CLI components, questionary interactions, and user experience
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import mock_open
-from unittest.mock import patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import click
 import pytest
 from rich.console import Console
 
-from src.cli.commands.setup import ConfigurationWizard
-from src.cli.commands.setup import setup
+from src.cli.commands.setup import ConfigurationWizard, setup
 
 
 @pytest.fixture

@@ -5,16 +5,15 @@ Provides simple cache operations with circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends
 
 from src.config.enums import CacheType
 
-from .circuit_breaker import CircuitBreakerConfig
-from .circuit_breaker import circuit_breaker
+from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_cache_client
+
 
 logger = logging.getLogger(__name__)
 

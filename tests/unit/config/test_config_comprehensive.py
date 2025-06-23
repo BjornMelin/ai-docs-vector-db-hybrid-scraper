@@ -10,38 +10,36 @@ import tempfile
 
 import pytest
 import yaml
-from hypothesis import given
-from hypothesis import strategies as st
-from pydantic import TypeAdapter
-from pydantic import ValidationError
+from hypothesis import given, strategies as st
+from pydantic import TypeAdapter, ValidationError
 
 # Import all configuration models
-from src.config.core import BrowserUseConfig
-from src.config.core import CacheConfig
-from src.config.core import ChunkingConfig
-from src.config.core import CircuitBreakerConfig
-from src.config.core import Config
-from src.config.core import Crawl4AIConfig
-from src.config.core import DeploymentConfig
-from src.config.core import EmbeddingConfig
-from src.config.core import FastEmbedConfig
-from src.config.core import FirecrawlConfig
-from src.config.core import HyDEConfig
-from src.config.core import MonitoringConfig
-from src.config.core import ObservabilityConfig
-from src.config.core import OpenAIConfig
-from src.config.core import PerformanceConfig
-from src.config.core import PlaywrightConfig
-from src.config.core import QdrantConfig
-from src.config.core import RAGConfig
-from src.config.core import SecurityConfig
-from src.config.core import TaskQueueConfig
-from src.config.core import get_config
-from src.config.core import reset_config
-from src.config.enums import CrawlProvider
-from src.config.enums import EmbeddingProvider
-from src.config.enums import Environment
-from src.config.enums import LogLevel
+from src.config.core import (
+    BrowserUseConfig,
+    CacheConfig,
+    ChunkingConfig,
+    CircuitBreakerConfig,
+    Config,
+    Crawl4AIConfig,
+    DeploymentConfig,
+    EmbeddingConfig,
+    FastEmbedConfig,
+    FirecrawlConfig,
+    HyDEConfig,
+    MonitoringConfig,
+    ObservabilityConfig,
+    OpenAIConfig,
+    PerformanceConfig,
+    PlaywrightConfig,
+    QdrantConfig,
+    RAGConfig,
+    SecurityConfig,
+    TaskQueueConfig,
+    get_config,
+    reset_config,
+)
+from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
+
 
 # Hypothesis strategies for property-based testing
 positive_int = st.integers(min_value=1, max_value=10000)

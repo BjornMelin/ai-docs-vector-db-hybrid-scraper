@@ -7,17 +7,18 @@ using RAG patterns with the integrated service dependencies.
 import logging
 from typing import Any
 
-from fastapi import APIRouter
-from fastapi import HTTPException
-from fastapi import status
+from fastapi import APIRouter, HTTPException, status
 
-from ...dependencies import ConfigDep
-from ...dependencies import RAGGeneratorDep
-from ...dependencies import RAGRequest
-from ...dependencies import RAGResponse
-from ...dependencies import clear_rag_cache
-from ...dependencies import generate_rag_answer
-from ...dependencies import get_rag_metrics
+from ...dependencies import (
+    ConfigDep,
+    RAGGeneratorDep,
+    RAGRequest,
+    RAGResponse,
+    clear_rag_cache,
+    generate_rag_answer,
+    get_rag_metrics,
+)
+
 
 logger = logging.getLogger(__name__)
 

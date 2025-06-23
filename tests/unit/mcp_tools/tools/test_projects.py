@@ -1,16 +1,13 @@
 """Tests for MCP project management tools."""
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 # Import the actual enums before any mocking happens
-from src.config.enums import QualityTier
-from src.config.enums import SearchStrategy
+from src.config.enums import QualityTier, SearchStrategy
+
 
 if TYPE_CHECKING:
     from fastmcp import Context

@@ -5,18 +5,21 @@ import logging
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
-from crawl4ai import AsyncWebCrawler
-from crawl4ai import BrowserConfig
-from crawl4ai import CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.async_configs import LLMConfig
-from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
-from crawl4ai.extraction_strategy import LLMExtractionStrategy
+from crawl4ai.extraction_strategy import (
+    JsonCssExtractionStrategy,
+    LLMExtractionStrategy,
+)
+
 
 try:
-    from crawl4ai import CrawlerMonitor
-    from crawl4ai import LXMLWebScrapingStrategy
-    from crawl4ai import MemoryAdaptiveDispatcher
-    from crawl4ai import RateLimiter as Crawl4AIRateLimiter
+    from crawl4ai import (
+        CrawlerMonitor,
+        LXMLWebScrapingStrategy,
+        MemoryAdaptiveDispatcher,
+        RateLimiter as Crawl4AIRateLimiter,
+    )
 
     MEMORY_ADAPTIVE_AVAILABLE = True
 except ImportError:
@@ -28,8 +31,8 @@ from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
-from .extractors import DocumentationExtractor
-from .extractors import JavaScriptExecutor
+from .extractors import DocumentationExtractor, JavaScriptExecutor
+
 
 logger = logging.getLogger(__name__)
 

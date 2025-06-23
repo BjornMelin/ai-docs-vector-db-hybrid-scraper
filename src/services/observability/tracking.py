@@ -7,8 +7,8 @@ performance metrics that integrate with the existing function-based services.
 import functools
 import logging
 from collections.abc import Callable
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
+
 
 logger = logging.getLogger(__name__)
 

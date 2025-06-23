@@ -10,8 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.deployment.conftest import BlueGreenDeploymentManager
-from tests.deployment.conftest import DeploymentEnvironment
+from tests.deployment.conftest import BlueGreenDeploymentManager, DeploymentEnvironment
 
 
 class TestBlueGreenDeployment:

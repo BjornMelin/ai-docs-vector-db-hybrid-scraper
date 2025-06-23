@@ -7,19 +7,18 @@ including Qdrant, Redis, external APIs, and internal services.
 import asyncio
 import logging
 import time
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
 import aiohttp
 import redis.asyncio as redis
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 from .metrics import MetricsRegistry
+
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,6 +19,7 @@ else:
 
 
 from .pipeline_factory import QueryProcessingPipelineFactory
+
 
 logger = logging.getLogger(__name__)
 

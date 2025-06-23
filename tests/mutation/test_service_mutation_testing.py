@@ -7,18 +7,20 @@ error handling patterns.
 """
 
 import asyncio
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.services.functional.circuit_breaker import CircuitBreaker
-from src.services.functional.circuit_breaker import CircuitBreakerConfig
-from src.services.functional.circuit_breaker import CircuitBreakerState
-from src.services.functional.dependencies import get_cache_client
-from src.services.functional.dependencies import get_client_manager
-from src.services.functional.dependencies import get_config
+from src.services.functional.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerState,
+)
+from src.services.functional.dependencies import (
+    get_cache_client,
+    get_client_manager,
+    get_config,
+)
 
 
 class TestCircuitBreakerMutationTesting:

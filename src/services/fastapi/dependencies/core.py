@@ -9,19 +9,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import HTTPException
-from fastapi import Request
+from fastapi import HTTPException, Request
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
-from src.config import Config
-from src.config import get_config
+from src.config import Config, get_config
 from src.infrastructure.client_manager import ClientManager
 
 # Import new function-based dependencies
-from src.services.dependencies import get_cache_manager
-from src.services.dependencies import get_embedding_manager
+from src.services.dependencies import get_cache_manager, get_embedding_manager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
+
 
 logger = logging.getLogger(__name__)
 

@@ -4,11 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config.core import get_config
-from src.config.core import reset_config
-from src.services.observability.config import ObservabilityConfig
-from src.services.observability.config import get_observability_config
-from src.services.observability.config import get_resource_attributes
+from src.config.core import get_config, reset_config
+from src.services.observability.config import (
+    ObservabilityConfig,
+    get_observability_config,
+    get_resource_attributes,
+)
 
 
 class TestObservabilityConfig:

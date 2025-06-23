@@ -1,18 +1,19 @@
 """Tests for observability dependency injection."""
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.dependencies import create_span_context
-from src.services.observability.dependencies import get_ai_tracer
-from src.services.observability.dependencies import get_observability_health
-from src.services.observability.dependencies import get_observability_service
-from src.services.observability.dependencies import get_service_meter
-from src.services.observability.dependencies import record_ai_operation_metrics
-from src.services.observability.dependencies import track_ai_cost_metrics
+from src.services.observability.dependencies import (
+    create_span_context,
+    get_ai_tracer,
+    get_observability_health,
+    get_observability_service,
+    get_service_meter,
+    record_ai_operation_metrics,
+    track_ai_cost_metrics,
+)
 
 
 class TestObservabilityDependencies:
@@ -107,8 +108,7 @@ class TestObservabilityDependencies:
 
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations, not None
-        from src.services.observability.tracking import _NoOpMeter
-        from src.services.observability.tracking import _NoOpTracer
+        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)

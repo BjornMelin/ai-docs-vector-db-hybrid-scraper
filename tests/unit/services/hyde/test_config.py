@@ -3,9 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.services.hyde.config import HyDEConfig
-from src.services.hyde.config import HyDEMetricsConfig
-from src.services.hyde.config import HyDEPromptConfig
+from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 
 
 class TestHyDEConfig:

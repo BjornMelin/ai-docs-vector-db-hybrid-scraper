@@ -9,8 +9,7 @@ from typing import Any
 
 import pytest
 
-from tests.deployment.conftest import DeploymentEnvironment
-from tests.deployment.conftest import DeploymentHealthChecker
+from tests.deployment.conftest import DeploymentEnvironment, DeploymentHealthChecker
 
 
 class TestServiceConfiguration:

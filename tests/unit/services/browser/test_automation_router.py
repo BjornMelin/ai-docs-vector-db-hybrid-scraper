@@ -1,17 +1,11 @@
 """Comprehensive tests for AutomationRouter with Pydantic configuration."""
 
 import json
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import mock_open
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from src.config import BrowserUseConfig
-from src.config import Config
-from src.config import Crawl4AIConfig
-from src.config import PlaywrightConfig
+from src.config import BrowserUseConfig, Config, Crawl4AIConfig, PlaywrightConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 

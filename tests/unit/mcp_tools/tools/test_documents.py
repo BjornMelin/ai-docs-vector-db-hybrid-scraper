@@ -6,18 +6,14 @@
 - Modern pytest patterns
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.config.enums import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import BatchRequest
-from src.mcp_tools.models.requests import DocumentRequest
-from src.mcp_tools.models.responses import AddDocumentResponse
-from src.mcp_tools.models.responses import DocumentBatchResponse
+from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
+from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.mcp_tools.tools.documents import register_tools
 
 

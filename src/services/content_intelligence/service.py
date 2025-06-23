@@ -16,15 +16,18 @@ from ..base import BaseService
 from ..errors import APIError
 from .classifiers import ContentClassifier
 from .metadata_extractor import MetadataExtractor
-from .models import AdaptationRecommendation
-from .models import AdaptationStrategy
-from .models import ContentAnalysisRequest
-from .models import ContentAnalysisResponse
-from .models import ContentClassification
-from .models import ContentMetadata
-from .models import EnrichedContent
-from .models import QualityScore
+from .models import (
+    AdaptationRecommendation,
+    AdaptationStrategy,
+    ContentAnalysisRequest,
+    ContentAnalysisResponse,
+    ContentClassification,
+    ContentMetadata,
+    EnrichedContent,
+    QualityScore,
+)
 from .quality_assessor import QualityAssessor
+
 
 logger = logging.getLogger(__name__)
 

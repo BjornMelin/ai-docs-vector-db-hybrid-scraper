@@ -13,8 +13,7 @@ class TestInfrastructureIntegration:
     def test_utils_package_available(self):
         """Test that utils package and modules are available."""
         # Test imports work
-        from tests.utils import MockFactory
-        from tests.utils import TestDataGenerator
+        from tests.utils import MockFactory, TestDataGenerator
 
         # Test basic functionality
         generator = TestDataGenerator()
@@ -37,8 +36,7 @@ class TestInfrastructureIntegration:
 
     def test_data_generation_integration(self):
         """Test data generation utilities integration."""
-        from tests.utils import generate_search_queries
-        from tests.utils import generate_test_documents
+        from tests.utils import generate_search_queries, generate_test_documents
 
         # Test document generation
         documents = generate_test_documents(count=5)
@@ -52,8 +50,7 @@ class TestInfrastructureIntegration:
 
     def test_mock_factories_integration(self):
         """Test mock factories integration."""
-        from tests.utils import create_mock_embedding_service
-        from tests.utils import create_mock_vector_db
+        from tests.utils import create_mock_embedding_service, create_mock_vector_db
 
         # Test vector DB mock
         mock_db = create_mock_vector_db()
@@ -67,8 +64,7 @@ class TestInfrastructureIntegration:
 
     def test_config_management_integration(self):
         """Test configuration management integration."""
-        from tests.utils import get_test_environment
-        from tests.utils import setup_test_database
+        from tests.utils import get_test_environment, setup_test_database
 
         # Test environment retrieval
         env = get_test_environment("unit")
@@ -81,9 +77,11 @@ class TestInfrastructureIntegration:
 
     def test_assertion_helpers_integration(self):
         """Test assertion helpers integration."""
-        from tests.utils import AssertionHelpers
-        from tests.utils import assert_error_response
-        from tests.utils import assert_valid_response
+        from tests.utils import (
+            AssertionHelpers,
+            assert_error_response,
+            assert_valid_response,
+        )
 
         # Test valid response assertion
         valid_response = {"status": "success", "data": []}

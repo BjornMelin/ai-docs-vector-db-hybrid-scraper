@@ -13,6 +13,7 @@ import sys
 import time
 from pathlib import Path
 
+
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -23,11 +24,13 @@ from locust import main as locust_main
 from locust.env import Environment
 from locust.log import setup_logging
 
-from tests.load.load_profiles import LOAD_PROFILES
-from tests.load.load_profiles import get_load_profile
-from tests.load.locust_load_runner import AdminUser
-from tests.load.locust_load_runner import VectorDBUser
-from tests.load.locust_load_runner import create_load_test_environment
+from tests.load.load_profiles import LOAD_PROFILES, get_load_profile
+from tests.load.locust_load_runner import (
+    AdminUser,
+    VectorDBUser,
+    create_load_test_environment,
+)
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

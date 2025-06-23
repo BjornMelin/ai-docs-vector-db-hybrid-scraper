@@ -10,8 +10,8 @@ from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
+
 
 logger = logging.getLogger(__name__)
 

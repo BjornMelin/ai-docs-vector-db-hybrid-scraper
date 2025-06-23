@@ -10,16 +10,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.mcp_tools.models.responses import AdvancedQueryProcessingResponse
-from src.mcp_tools.models.responses import QueryIntentResult
-from src.mcp_tools.models.responses import QueryPreprocessingResult
-from src.mcp_tools.models.responses import SearchResult
-from src.mcp_tools.models.responses import SearchStrategyResult
+from src.mcp_tools.models.responses import (
+    AdvancedQueryProcessingResponse,
+    QueryIntentResult,
+    QueryPreprocessingResult,
+    SearchResult,
+    SearchStrategyResult,
+)
 from src.mcp_tools.tools.helpers.response_converter import ResponseConverter
-from src.services.query_processing.models import MatryoshkaDimension
-from src.services.query_processing.models import QueryComplexity
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import SearchStrategy
+from src.services.query_processing.models import (
+    MatryoshkaDimension,
+    QueryComplexity,
+    QueryIntent,
+    SearchStrategy,
+)
 
 
 @pytest.fixture

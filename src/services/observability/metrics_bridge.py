@@ -9,11 +9,10 @@ import logging
 from typing import Any
 
 from opentelemetry import metrics
-from opentelemetry.metrics import Counter
-from opentelemetry.metrics import Histogram
-from opentelemetry.metrics import UpDownCounter
+from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 
 from ..monitoring.metrics import MetricsRegistry
+
 
 logger = logging.getLogger(__name__)
 

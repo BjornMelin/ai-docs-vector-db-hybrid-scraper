@@ -10,18 +10,16 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
-from src.config.core import Config
-from src.config.core import DocumentationSite
-from src.config.core import get_config
-from src.config.core import reset_config
-from src.config.core import set_config
-from src.config.enums import CrawlProvider
-from src.config.enums import EmbeddingProvider
-from src.config.enums import Environment
-from src.config.enums import LogLevel
+from src.config.core import (
+    Config,
+    DocumentationSite,
+    get_config,
+    reset_config,
+    set_config,
+)
+from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
 
 
 class TestEnvironmentVariableLoading:

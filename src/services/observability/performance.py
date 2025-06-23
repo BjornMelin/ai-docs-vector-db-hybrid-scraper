@@ -7,21 +7,18 @@ with automated performance degradation detection and alerting.
 
 import logging
 import time
-from collections import defaultdict
-from collections import deque
-from contextlib import asynccontextmanager
-from contextlib import contextmanager
-from dataclasses import dataclass
-from dataclasses import field
+from collections import defaultdict, deque
+from contextlib import asynccontextmanager, contextmanager
+from dataclasses import dataclass, field
 from typing import Any
 
 import psutil
 from opentelemetry import trace
-from opentelemetry.trace import Status
-from opentelemetry.trace import StatusCode
+from opentelemetry.trace import Status, StatusCode
 
 from .instrumentation import get_tracer
 from .metrics_bridge import get_metrics_bridge
+
 
 logger = logging.getLogger(__name__)
 

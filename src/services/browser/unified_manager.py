@@ -7,18 +7,17 @@ complexity, requirements, and performance characteristics.
 
 import logging
 import time
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.config import Config
 
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
+
 
 logger = logging.getLogger(__name__)
 

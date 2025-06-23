@@ -11,20 +11,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..config import Config
-from ..models.vector_search import AdvancedHybridSearchRequest
-from ..models.vector_search import FusionConfig
-from ..models.vector_search import SearchParams
+from ..models.vector_search import (
+    AdvancedHybridSearchRequest,
+    FusionConfig,
+    SearchParams,
+)
 from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
-from .load_test_runner import LoadTestConfig
-from .load_test_runner import LoadTestRunner
+from .load_test_runner import LoadTestConfig, LoadTestRunner
 from .metrics_collector import MetricsCollector
 from .performance_profiler import PerformanceProfiler
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 """Tests for QdrantService with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

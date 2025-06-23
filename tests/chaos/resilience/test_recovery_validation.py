@@ -8,8 +8,7 @@ normal operations after chaos events.
 import asyncio
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 

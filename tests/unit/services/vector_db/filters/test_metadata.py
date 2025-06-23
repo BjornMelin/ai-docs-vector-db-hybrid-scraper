@@ -3,14 +3,15 @@
 import pytest
 from qdrant_client import models
 
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.metadata import BooleanExpressionModel
-from src.services.vector_db.filters.metadata import BooleanOperator
-from src.services.vector_db.filters.metadata import FieldConditionModel
-from src.services.vector_db.filters.metadata import FieldOperator
-from src.services.vector_db.filters.metadata import MetadataFilter
-from src.services.vector_db.filters.metadata import MetadataFilterCriteria
+from src.services.vector_db.filters.base import FilterError, FilterResult
+from src.services.vector_db.filters.metadata import (
+    BooleanExpressionModel,
+    BooleanOperator,
+    FieldConditionModel,
+    FieldOperator,
+    MetadataFilter,
+    MetadataFilterCriteria,
+)
 
 
 class TestFieldOperator:

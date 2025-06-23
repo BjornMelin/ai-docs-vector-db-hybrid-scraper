@@ -9,8 +9,7 @@ import logging
 from typing import Any
 
 import click
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.table import Table
 
@@ -18,6 +17,7 @@ from rich.table import Table
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.utils import async_command
+
 
 console = Console()
 

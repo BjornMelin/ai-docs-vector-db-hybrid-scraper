@@ -8,19 +8,21 @@ best practices with lazy initialization and modular tool registration.
 import asyncio
 import logging
 import os
-from contextlib import asynccontextmanager
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 
 from fastmcp import FastMCP
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
-from src.services.monitoring.initialization import initialize_monitoring_system
-from src.services.monitoring.initialization import run_periodic_health_checks
-from src.services.monitoring.initialization import setup_fastmcp_monitoring
-from src.services.monitoring.initialization import update_cache_metrics_periodically
-from src.services.monitoring.initialization import update_system_metrics_periodically
+from src.services.monitoring.initialization import (
+    initialize_monitoring_system,
+    run_periodic_health_checks,
+    setup_fastmcp_monitoring,
+    update_cache_metrics_periodically,
+    update_system_metrics_periodically,
+)
+
 
 # Initialize logging
 configure_logging()

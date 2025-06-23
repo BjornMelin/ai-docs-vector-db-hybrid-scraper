@@ -1,23 +1,24 @@
 """Tests for query_processing_tools.py to achieve coverage."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.models.responses import SearchResult
-from src.mcp_tools.tools.query_processing_tools import ClusteredSearchRequest
-from src.mcp_tools.tools.query_processing_tools import FederatedSearchRequest
-from src.mcp_tools.tools.query_processing_tools import OrchestrationRequest
-from src.mcp_tools.tools.query_processing_tools import PersonalizedSearchRequest
-from src.mcp_tools.tools.query_processing_tools import QueryExpansionRequest
-from src.mcp_tools.tools.query_processing_tools import clustered_search_tool
-from src.mcp_tools.tools.query_processing_tools import create_orchestrator
-from src.mcp_tools.tools.query_processing_tools import federated_search_tool
-from src.mcp_tools.tools.query_processing_tools import orchestrated_search_tool
-from src.mcp_tools.tools.query_processing_tools import personalized_search_tool
-from src.mcp_tools.tools.query_processing_tools import query_expansion_tool
-from src.mcp_tools.tools.query_processing_tools import register_query_processing_tools
+from src.mcp_tools.tools.query_processing_tools import (
+    ClusteredSearchRequest,
+    FederatedSearchRequest,
+    OrchestrationRequest,
+    PersonalizedSearchRequest,
+    QueryExpansionRequest,
+    clustered_search_tool,
+    create_orchestrator,
+    federated_search_tool,
+    orchestrated_search_tool,
+    personalized_search_tool,
+    query_expansion_tool,
+    register_query_processing_tools,
+)
 
 
 class MockContext:

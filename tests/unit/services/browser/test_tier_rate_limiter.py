@@ -7,8 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from src.services.browser.tier_config import TierConfiguration
-from src.services.browser.tier_rate_limiter import RateLimitContext
-from src.services.browser.tier_rate_limiter import TierRateLimiter
+from src.services.browser.tier_rate_limiter import RateLimitContext, TierRateLimiter
 
 
 @pytest.fixture

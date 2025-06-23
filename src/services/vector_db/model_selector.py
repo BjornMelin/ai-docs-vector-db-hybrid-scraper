@@ -7,15 +7,17 @@ characteristics, performance history, and cost optimization.
 import logging
 from typing import Any
 
-from src.config import Config
-from src.config import EmbeddingModel
-from src.config import ModelType
-from src.config import OptimizationStrategy
-from src.config import QueryComplexity
-from src.config import QueryType
+from src.config import (
+    Config,
+    EmbeddingModel,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+)
 
-from ...models.vector_search import ModelSelectionStrategy
-from ...models.vector_search import QueryClassification
+from ...models.vector_search import ModelSelectionStrategy, QueryClassification
+
 
 logger = logging.getLogger(__name__)
 

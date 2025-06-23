@@ -11,12 +11,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from opentelemetry import metrics
-from opentelemetry.trace import Status
-from opentelemetry.trace import StatusCode
+from opentelemetry.trace import Status, StatusCode
 
-from .instrumentation import add_span_attribute
-from .instrumentation import add_span_event
-from .instrumentation import get_tracer
+from .instrumentation import add_span_attribute, add_span_event, get_tracer
+
 
 logger = logging.getLogger(__name__)
 

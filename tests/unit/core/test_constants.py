@@ -6,15 +6,15 @@ configuration settings that have been moved to Pydantic models and enums.
 
 import pytest
 
-from src.config import CacheConfig
-from src.config import ChunkingConfig
-from src.config import PerformanceConfig
-from src.config.enums import CacheType
-from src.config.enums import DocumentStatus
-from src.config.enums import Environment
-from src.config.enums import LogLevel
-from src.config.enums import SearchAccuracy
-from src.config.enums import VectorType
+from src.config import CacheConfig, ChunkingConfig, PerformanceConfig
+from src.config.enums import (
+    CacheType,
+    DocumentStatus,
+    Environment,
+    LogLevel,
+    SearchAccuracy,
+    VectorType,
+)
 from src.core import constants
 
 

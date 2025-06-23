@@ -16,6 +16,7 @@ from .performance import PerformanceMiddleware
 from .security import SecurityMiddleware
 from .timeout import TimeoutMiddleware
 
+
 logger = logging.getLogger(__name__)
 
 

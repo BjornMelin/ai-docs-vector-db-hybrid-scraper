@@ -7,6 +7,7 @@ with the server, following FastMCP 2.0 best practices.
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 

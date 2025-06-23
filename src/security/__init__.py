@@ -1,5 +1,6 @@
 import typing
 
+
 """Security module for ML applications.
 
 This module provides essential ML security features following KISS principles:
@@ -10,10 +11,13 @@ This module provides essential ML security features following KISS principles:
 """
 
 # Avoid circular imports - import only what's needed
-from .ml_security import MinimalMLSecurityConfig
-from .ml_security import MLSecurityValidator
-from .ml_security import SecurityCheckResult
-from .ml_security import SimpleRateLimiter
+from .ml_security import (
+    MinimalMLSecurityConfig,
+    MLSecurityValidator,
+    SecurityCheckResult,
+    SimpleRateLimiter,
+)
+
 
 # Add aliases for test compatibility
 SecurityError = Exception  # Simple alias for backward compatibility

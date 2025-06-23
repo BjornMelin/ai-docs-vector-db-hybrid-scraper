@@ -9,8 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.security import SecurityError
-from src.security import SecurityValidator
+from src.security import SecurityError, SecurityValidator
 
 
 @pytest.mark.security

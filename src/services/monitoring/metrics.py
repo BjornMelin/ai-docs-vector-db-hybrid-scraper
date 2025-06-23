@@ -8,18 +8,13 @@ import asyncio
 import functools
 import time
 from collections.abc import Callable
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import psutil
-from prometheus_client import Counter
-from prometheus_client import Gauge
-from prometheus_client import Histogram
-from prometheus_client import start_http_server
-from prometheus_client.registry import REGISTRY
-from prometheus_client.registry import CollectorRegistry
-from pydantic import BaseModel
-from pydantic import Field
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
+from prometheus_client.registry import REGISTRY, CollectorRegistry
+from pydantic import BaseModel, Field
+
 
 F = TypeVar("F", bound=Callable[..., Any])
 

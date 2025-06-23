@@ -9,8 +9,7 @@ from typing import Any
 
 import pytest
 
-from src.security import SecurityError
-from src.security import SecurityValidator
+from src.security import SecurityError, SecurityValidator
 
 
 @pytest.mark.security

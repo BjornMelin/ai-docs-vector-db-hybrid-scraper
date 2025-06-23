@@ -9,6 +9,7 @@ from src.config import Config
 from ..base import BaseService
 from ..errors import QdrantServiceError
 
+
 logger = logging.getLogger(__name__)
 
 

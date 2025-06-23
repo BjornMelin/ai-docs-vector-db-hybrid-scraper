@@ -11,22 +11,24 @@ This test module demonstrates:
 import pytest
 from pydantic import ValidationError
 
-from src.services.browser.action_schemas import BaseAction
-from src.services.browser.action_schemas import ClickAction
-from src.services.browser.action_schemas import DragAndDropAction
-from src.services.browser.action_schemas import EvaluateAction
-from src.services.browser.action_schemas import FillAction
-from src.services.browser.action_schemas import HoverAction
-from src.services.browser.action_schemas import PressAction
-from src.services.browser.action_schemas import ScreenshotAction
-from src.services.browser.action_schemas import ScrollAction
-from src.services.browser.action_schemas import SelectAction
-from src.services.browser.action_schemas import TypeAction
-from src.services.browser.action_schemas import WaitAction
-from src.services.browser.action_schemas import WaitForLoadStateAction
-from src.services.browser.action_schemas import WaitForSelectorAction
-from src.services.browser.action_schemas import validate_action
-from src.services.browser.action_schemas import validate_actions
+from src.services.browser.action_schemas import (
+    BaseAction,
+    ClickAction,
+    DragAndDropAction,
+    EvaluateAction,
+    FillAction,
+    HoverAction,
+    PressAction,
+    ScreenshotAction,
+    ScrollAction,
+    SelectAction,
+    TypeAction,
+    WaitAction,
+    WaitForLoadStateAction,
+    WaitForSelectorAction,
+    validate_action,
+    validate_actions,
+)
 
 
 class TestBaseAction:

@@ -5,14 +5,12 @@ command routing, error handling, and user experience.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import click
 from rich.console import Console
 
-from src.cli.main import RichCLI
-from src.cli.main import main
+from src.cli.main import RichCLI, main
 
 
 class TestRichCLI:

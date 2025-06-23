@@ -11,12 +11,12 @@ import statistics
 import time
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
 from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+
 
 logger = logging.getLogger(__name__)
 

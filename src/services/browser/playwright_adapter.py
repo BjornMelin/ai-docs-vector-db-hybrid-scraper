@@ -15,14 +15,12 @@ from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
 from .anti_detection import EnhancedAntiDetection
 
+
 logger = logging.getLogger(__name__)
 
 # Try to import Playwright, handle gracefully if not available
 try:
-    from playwright.async_api import Browser
-    from playwright.async_api import BrowserContext
-    from playwright.async_api import Page
-    from playwright.async_api import async_playwright
+    from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:

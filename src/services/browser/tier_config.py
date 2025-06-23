@@ -1,9 +1,9 @@
 """Configuration models for browser automation tiers."""
 
 import logging
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from enum import Enum
+
 
 logger = logging.getLogger(__name__)
 

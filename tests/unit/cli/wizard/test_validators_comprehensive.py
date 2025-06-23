@@ -4,8 +4,7 @@ This module tests the WizardValidator class with focus on real-time validation,
 user-friendly error messages, and Rich console integration.
 """
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from pydantic import ValidationError
 

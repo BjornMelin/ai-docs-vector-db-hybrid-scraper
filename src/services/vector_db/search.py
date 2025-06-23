@@ -8,17 +8,15 @@ import logging
 from typing import Any
 
 import numpy as np
-from qdrant_client import AsyncQdrantClient
-from qdrant_client import models
+from qdrant_client import AsyncQdrantClient, models
 
-from src.config import Config
-from src.config import SearchAccuracy
-from src.config import VectorType
+from src.config import Config, SearchAccuracy, VectorType
 
 from ...models.vector_search import PrefetchConfig
 from ..errors import QdrantServiceError
 from ..monitoring.metrics import get_metrics_registry
 from .utils import build_filter
+
 
 logger = logging.getLogger(__name__)
 

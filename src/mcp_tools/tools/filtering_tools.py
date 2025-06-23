@@ -6,9 +6,9 @@ composition with boolean logic.
 """
 
 import logging
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -22,15 +22,17 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import AdvancedSearchOrchestrator
-from ...services.query_processing import AdvancedSearchRequest
-from ...services.query_processing import SearchMode
-from ...services.query_processing import SearchPipeline
+from ...services.query_processing import (
+    AdvancedSearchOrchestrator,
+    AdvancedSearchRequest,
+    SearchMode,
+    SearchPipeline,
+)
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 

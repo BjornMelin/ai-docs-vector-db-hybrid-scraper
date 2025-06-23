@@ -1,13 +1,11 @@
 """Tests for QueryValidationHelper."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from src.mcp_tools.tools.helpers.validation_helper import QueryValidationHelper
-from src.services.query_processing.models import MatryoshkaDimension
-from src.services.query_processing.models import SearchStrategy
+from src.services.query_processing.models import MatryoshkaDimension, SearchStrategy
 
 
 class MockContext:

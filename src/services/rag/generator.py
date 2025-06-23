@@ -13,11 +13,8 @@ from typing import Any
 from ...infrastructure.client_manager import ClientManager
 from ..base import BaseService
 from ..errors import EmbeddingServiceError
-from .models import AnswerMetrics
-from .models import RAGConfig
-from .models import RAGRequest
-from .models import RAGResult
-from .models import SourceAttribution
+from .models import AnswerMetrics, RAGConfig, RAGRequest, RAGResult, SourceAttribution
+
 
 logger = logging.getLogger(__name__)
 

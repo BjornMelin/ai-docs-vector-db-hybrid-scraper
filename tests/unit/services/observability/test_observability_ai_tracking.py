@@ -1,17 +1,18 @@
 """Tests for AI/ML operation tracking module."""
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.ai_tracking import AIOperationMetrics
-from src.services.observability.ai_tracking import AIOperationTracker
-from src.services.observability.ai_tracking import get_ai_tracker
-from src.services.observability.ai_tracking import track_embedding_generation
-from src.services.observability.ai_tracking import track_llm_call
-from src.services.observability.ai_tracking import track_rag_pipeline
-from src.services.observability.ai_tracking import track_vector_search
+from src.services.observability.ai_tracking import (
+    AIOperationMetrics,
+    AIOperationTracker,
+    get_ai_tracker,
+    track_embedding_generation,
+    track_llm_call,
+    track_rag_pipeline,
+    track_vector_search,
+)
 
 
 class TestAIOperationMetrics:

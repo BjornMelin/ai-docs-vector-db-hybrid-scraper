@@ -5,12 +5,14 @@ import contextlib
 
 import pytest
 
-from src.services.functional.circuit_breaker import CircuitBreaker
-from src.services.functional.circuit_breaker import CircuitBreakerConfig
-from src.services.functional.circuit_breaker import CircuitBreakerError
-from src.services.functional.circuit_breaker import CircuitBreakerState
-from src.services.functional.circuit_breaker import circuit_breaker
-from src.services.functional.circuit_breaker import create_circuit_breaker
+from src.services.functional.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerError,
+    CircuitBreakerState,
+    circuit_breaker,
+    create_circuit_breaker,
+)
 
 
 class TestCircuitBreakerConfig:

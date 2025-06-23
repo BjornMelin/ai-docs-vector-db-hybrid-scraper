@@ -8,13 +8,14 @@ import logging
 import tempfile
 from io import StringIO
 from pathlib import Path
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from src.services.logging_config import LogContext
-from src.services.logging_config import ServiceLayerFormatter
-from src.services.logging_config import configure_logging
-from src.services.logging_config import with_service_context
+from src.services.logging_config import (
+    LogContext,
+    ServiceLayerFormatter,
+    configure_logging,
+    with_service_context,
+)
 
 
 class TestServiceLayerFormatter:

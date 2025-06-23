@@ -8,12 +8,10 @@ import logging
 import re
 from typing import Any
 
-from src.config import Config
-from src.config import QueryComplexity
-from src.config import QueryType
+from src.config import Config, QueryComplexity, QueryType
 
-from ...models.vector_search import QueryClassification
-from ...models.vector_search import QueryFeatures
+from ...models.vector_search import QueryClassification, QueryFeatures
+
 
 logger = logging.getLogger(__name__)
 

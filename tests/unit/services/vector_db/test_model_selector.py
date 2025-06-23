@@ -9,13 +9,14 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.config import Config
-from src.config.enums import EmbeddingModel
-from src.config.enums import ModelType
-from src.config.enums import OptimizationStrategy
-from src.config.enums import QueryComplexity
-from src.config.enums import QueryType
-from src.models.vector_search import ModelSelectionStrategy
-from src.models.vector_search import QueryClassification
+from src.config.enums import (
+    EmbeddingModel,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+)
+from src.models.vector_search import ModelSelectionStrategy, QueryClassification
 from src.services.vector_db.model_selector import ModelSelector
 
 

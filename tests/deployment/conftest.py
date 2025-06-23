@@ -8,8 +8,7 @@ import asyncio
 import json
 import os
 import tempfile
-from collections.abc import AsyncGenerator
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path

@@ -14,6 +14,7 @@ from rich.text import Text
 
 from .template_manager import TemplateManager
 
+
 console = Console()
 
 

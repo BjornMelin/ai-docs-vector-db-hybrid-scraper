@@ -11,6 +11,7 @@ from ..base import BaseService
 from ..crawling.crawl4ai_provider import Crawl4AIProvider
 from ..errors import CrawlServiceError
 
+
 logger = logging.getLogger(__name__)
 
 

@@ -1,22 +1,23 @@
 """Comprehensive tests for the personalized ranking service."""
 
 import asyncio
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 
-from src.services.query_processing.ranking import ContentCategory
-from src.services.query_processing.ranking import InteractionEvent
-from src.services.query_processing.ranking import InteractionType
-from src.services.query_processing.ranking import PersonalizedRankingRequest
-from src.services.query_processing.ranking import PersonalizedRankingResult
-from src.services.query_processing.ranking import PersonalizedRankingService
-from src.services.query_processing.ranking import RankedResult
-from src.services.query_processing.ranking import RankingStrategy
-from src.services.query_processing.ranking import UserPreference
-from src.services.query_processing.ranking import UserProfile
+from src.services.query_processing.ranking import (
+    ContentCategory,
+    InteractionEvent,
+    InteractionType,
+    PersonalizedRankingRequest,
+    PersonalizedRankingResult,
+    PersonalizedRankingService,
+    RankedResult,
+    RankingStrategy,
+    UserPreference,
+    UserProfile,
+)
 
 
 class TestRankingStrategy:

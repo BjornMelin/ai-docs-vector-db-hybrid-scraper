@@ -1,17 +1,12 @@
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 import pytest
 
 from src.config import Config
-from src.crawl4ai_bulk_embedder import BulkEmbedder
-from src.crawl4ai_bulk_embedder import ProcessingState
-from src.crawl4ai_bulk_embedder import _async_main
+from src.crawl4ai_bulk_embedder import BulkEmbedder, ProcessingState, _async_main
 from src.infrastructure.client_manager import ClientManager
 
 

@@ -12,14 +12,13 @@ import resource
 import tempfile
 import threading
 import time
-from contextlib import contextmanager
-from contextlib import suppress
-from dataclasses import dataclass
-from dataclasses import field
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass, field
 from typing import Any
 
 import psutil
 import pytest
+
 
 logger = logging.getLogger(__name__)
 

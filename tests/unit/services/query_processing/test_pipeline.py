@@ -2,20 +2,21 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.services.query_processing.models import MatryoshkaDimension
-from src.services.query_processing.models import QueryComplexity
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import QueryIntentClassification
-from src.services.query_processing.models import QueryPreprocessingResult
-from src.services.query_processing.models import QueryProcessingRequest
-from src.services.query_processing.models import QueryProcessingResponse
-from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.models import SearchStrategySelection
+from src.services.query_processing.models import (
+    MatryoshkaDimension,
+    QueryComplexity,
+    QueryIntent,
+    QueryIntentClassification,
+    QueryPreprocessingResult,
+    QueryProcessingRequest,
+    QueryProcessingResponse,
+    SearchStrategy,
+    SearchStrategySelection,
+)
 from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 

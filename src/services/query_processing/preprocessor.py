@@ -11,6 +11,7 @@ from typing import Any
 
 from .models import QueryPreprocessingResult
 
+
 logger = logging.getLogger(__name__)
 
 

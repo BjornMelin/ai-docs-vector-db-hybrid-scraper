@@ -7,15 +7,12 @@ assertions, and modern test patterns.
 
 import asyncio
 from contextlib import contextmanager
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.config.core import Config
-from src.config.enums import Environment
-from src.config.enums import LogLevel
+from src.config.enums import Environment, LogLevel
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService
 
