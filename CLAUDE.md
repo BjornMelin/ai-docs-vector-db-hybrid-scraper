@@ -30,6 +30,87 @@
 4. **Iterate** until all tests pass, then commit
 5. **Typecheck** when done with code changes
 
+### Testing Quality Standards
+
+**Testing Anti-Patterns to AVOID:**
+
+❌ **Coverage-Driven Testing**: Never create tests solely to hit coverage metrics or line numbers  
+❌ **Implementation Detail Testing**: Don't test private methods or internal implementation details  
+❌ **Heavy Internal Mocking**: Avoid over-mocking internal components; mock at boundaries  
+❌ **Shared Mutable State**: Tests that depend on execution order or share state between functions  
+❌ **Magic Values**: Hardcoded test data without clear business meaning  
+❌ **Timing-Dependent Tests**: Don't rely on real timers or timing for async/cache tests  
+❌ **Giant Test Functions**: Tests that verify multiple behaviors in a single function
+
+**Testing Best Practices to FOLLOW:**
+
+✅ **Functional Organization**: Structure tests by business functionality (Unit, Integration, E2E)  
+✅ **Behavior-Driven Testing**: Test observable behavior, not implementation details  
+✅ **Boundary Mocking**: Mock external services (APIs, databases) not internal logic  
+✅ **AAA Pattern**: Arrange, Act, Assert structure for clear test flow  
+✅ **Property-Based Testing**: Use `hypothesis` for data generation and edge case discovery  
+✅ **Async Test Patterns**: Proper `pytest-asyncio` usage with `respx` for HTTP mocking  
+✅ **Descriptive Test Names**: Names that explain business value and expected behavior
+
+**Test Organization Standards:**
+
+```text
+tests/
+├── conftest.py              # Shared fixtures and configuration
+├── unit/                    # Fast, isolated tests (<100ms each)
+│   ├── test_embeddings.py   # Core business logic
+│   ├── test_search.py       # Search algorithms
+│   └── test_chunking.py     # Text processing
+├── integration/             # Component integration (<5s each)
+│   ├── test_api_endpoints.py
+│   ├── test_vector_db.py
+│   └── test_crawling.py
+├── e2e/                     # Full workflow tests
+│   └── test_complete_pipeline.py
+└── fixtures/                # Test data and samples
+    ├── sample_documents.json
+    └── test_embeddings.pkl
+```
+
+**AI/ML Testing Patterns:**
+
+```python
+# Mock expensive operations at boundaries
+@pytest.fixture
+def mock_openai_embeddings(respx_mock):
+    respx_mock.post("https://api.openai.com/v1/embeddings").mock(
+        return_value=httpx.Response(200, json={"data": [{"embedding": [0.1] * 1536}]})
+    )
+
+# Test properties, not exact values
+@pytest.mark.parametrize("text", ["short", "a much longer text with more content"])
+def test_embedding_dimensions(text, embedding_service):
+    """Embeddings should have consistent dimensions regardless of input length"""
+    embedding = embedding_service.generate_embedding(text)
+    assert len(embedding) == 1536
+    assert all(isinstance(x, float) for x in embedding)
+
+# Use hypothesis for property-based testing
+from hypothesis import given, strategies as st
+
+@given(st.lists(st.text(min_size=1), min_size=1, max_size=10))
+def test_batch_processing_preserves_count(documents, processor):
+    """Processing N documents should return N results"""
+    results = processor.process_batch(documents)
+    assert len(results) == len(documents)
+```
+
+**Test Quality Checklist:**
+
+- [ ] Tests organized by functionality, not coverage metrics
+- [ ] All scenarios represent realistic usage patterns
+- [ ] `respx` used for HTTP mocking with proper setup/teardown
+- [ ] Proper async/await patterns with `pytest-asyncio`
+- [ ] No artificial timing dependencies or private method testing
+- [ ] Test names describe business value and expected behavior
+- [ ] 80%+ coverage achieved through meaningful scenarios, not line-targeting
+- [ ] AI/ML operations tested for properties (dimensions, types) not exact values
+
 ### Tool Usage
 
 - **Parallel execution:** Invoke multiple independent tools simultaneously, not sequentially
