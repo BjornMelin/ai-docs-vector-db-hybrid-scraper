@@ -35,10 +35,10 @@ classifiers = [
 
 dependencies = [
     # Core web framework & API
-    "fastapi[standard]>=0.115.0,<0.120.0",
-    "starlette>=0.41.0,<0.45.0",         # Liberal constraint for better compatibility
+    "fastapi[standard]>=0.115.12,<0.120.0", # Latest stable with performance improvements
+    "starlette>=0.41.0,<0.45.0",            # Liberal constraint for better compatibility
     "uvicorn[standard]>=0.34.0,<0.40.0",
-    "python-multipart>=0.0.12,<0.1.0",   # For FastAPI file uploads
+    "python-multipart>=0.0.12,<0.1.0",      # For FastAPI file uploads
     # Data validation & configuration
     "pydantic>=2.11.5,<3.0.0",         # browser-use 0.2.6 compatibility
     "pydantic-settings>=2.8.0,<3.0.0",
@@ -53,7 +53,6 @@ dependencies = [
     "fastembed>=0.7.0,<0.8.0",                 # Python 3.13 compatible as of v0.7.0 (June 2025)
     "FlagEmbedding>=1.3.5,<2.0.0",
     # Data processing & ML (Python 3.13 compatible)
-    "pandas>=2.2.3,<3.0.0",
     "numpy>=1.26.0,<3.0.0",     # Allow NumPy 2.x for better Python 3.13 performance
     "scipy>=1.15.3,<2.0.0",     # Python 3.13 support from 1.13+
     "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
@@ -127,8 +126,7 @@ accessibility = [
 
 # Browser automation (optional heavy dependencies)
 browser = [
-    "playwright>=1.52.0,<2.0.0", # Python 3.13 compatible
-    "browser-use>=0.2.6,<0.3.0", # Python 3.13 compatibility
+    "playwright>=1.52.0,<2.0.0", # Python 3.13 compatibility (memory module optional in 0.3.0+)
 ]
 
 # LangChain integrations (optional AI features)  
@@ -155,6 +153,12 @@ parsing = [
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
 
+# High-performance data processing (optional replacement for pandas)
+dataframe = [
+    "polars>=1.17.0,<2.0.0",   # High-performance DataFrame library (pandas replacement)
+    "pyarrow>=18.1.0,<19.0.0", # Columnar data format for better performance
+]
+
 # Documentation tools (moved from docs/requirements.txt)
 docs = [
     "mkdocs>=1.6.0,<2.0.0",
@@ -169,7 +173,7 @@ docs = [
 
 # All optional dependencies combined
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,accessibility,browser,llm,observability,parsing,docs]",
+    "ai-docs-vector-db-hybrid-scraper[dev,accessibility,browser,llm,observability,parsing,docs,dataframe]",
 ]
 
 [project.urls]
@@ -197,15 +201,20 @@ managed = true
 package = true
 # UV performance optimizations
 compile-bytecode = true
-link-mode = "copy"                               # Better for Docker builds
-upgrade-package = ["pip", "setuptools", "wheel", "hatchling"] # Keep core tools updated
-resolution = "highest"                           # Prefer latest compatible versions
-python-preference = "managed"                    # Better Python version management
+link-mode = "copy" # Better for Docker builds
+upgrade-package = [
+    "pip",
+    "setuptools",
+    "wheel",
+    "hatchling",
+] # Keep core tools updated
+resolution = "highest" # Prefer latest compatible versions
+python-preference = "managed" # Better Python version management
 
 # Python 3.11-3.13 compatibility constraints
 constraint-dependencies = [
-    "setuptools>=70.0.0",  # Ensure Python 3.13 compatible setuptools
-    "hatchling>=1.25.0",   # Ensure Python 3.13 compatible hatchling
+    "setuptools>=70.0.0", # Ensure Python 3.13 compatible setuptools
+    "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
 ]
 
 # ===== Optimized Ruff Configuration =====
