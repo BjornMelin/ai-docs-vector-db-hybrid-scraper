@@ -114,11 +114,11 @@ async def get_vector_db_client(
         config: Application configuration
         
     Yields:
-        QdrantManager: Initialized vector database client
+        QdrantService: Initialized vector database client
     """
-    from ..vector_db.service import QdrantManager
+    from ..vector_db.service import QdrantService
     
-    qdrant_manager = QdrantManager(config)
+    qdrant_manager = QdrantService(config)
     
     try:
         await qdrant_manager.initialize()
