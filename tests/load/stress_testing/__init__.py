@@ -2,7 +2,7 @@
 
 This package provides comprehensive stress testing capabilities including:
 - Resource exhaustion testing
-- Breaking point identification  
+- Breaking point identification
 - Circuit breaker and rate limiter validation
 - System monitoring during stress conditions
 - Chaos engineering scenarios
@@ -16,7 +16,7 @@ __version__ = "1.0.0"
 # Test markers for categorization
 STRESS_TEST_MARKERS = [
     "stress",
-    "resource_exhaustion", 
+    "resource_exhaustion",
     "breaking_point",
     "chaos",
     "recovery",
@@ -26,7 +26,7 @@ STRESS_TEST_MARKERS = [
 # Available stress test profiles
 AVAILABLE_PROFILES = [
     "light_stress",
-    "moderate_stress", 
+    "moderate_stress",
     "heavy_stress",
     "extreme_stress",
 ]
@@ -35,6 +35,6 @@ AVAILABLE_PROFILES = [
 AVAILABLE_CHAOS_SCENARIOS = [
     "memory_pressure",
     "cpu_spike",
-    "network_failure", 
+    "network_failure",
     "disk_io_stress",
 ]

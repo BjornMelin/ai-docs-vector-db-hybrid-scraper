@@ -3,7 +3,7 @@
 This module contains comprehensive security testing suites including:
 - Vulnerability assessments
 - Penetration testing
-- Compliance validation  
+- Compliance validation
 - Authentication & authorization testing
 - Input validation testing
 - Encryption verification

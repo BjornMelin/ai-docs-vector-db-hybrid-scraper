@@ -5,12 +5,8 @@ pa11y, and Lighthouse to provide comprehensive accessibility validation
 for web interfaces and APIs.
 """
 
-import json
-import re
-import subprocess
-from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -24,19 +20,14 @@ class TestAutomatedAccessibilityTools:
     def mock_axe_core_result(self):
         """Mock axe-core analysis result."""
         return {
-            "testEngine": {
-                "name": "axe-core",
-                "version": "4.8.0"
-            },
-            "testRunner": {
-                "name": "pytest-axe"
-            },
+            "testEngine": {"name": "axe-core", "version": "4.8.0"},
+            "testRunner": {"name": "pytest-axe"},
             "testEnvironment": {
                 "userAgent": "Mozilla/5.0 (compatible; axe-core)",
                 "windowWidth": 1280,
                 "windowHeight": 720,
                 "orientationAngle": 0,
-                "orientationType": "landscape-primary"
+                "orientationType": "landscape-primary",
             },
             "timestamp": "2024-01-01T00:00:00.000Z",
             "url": "http://test.example.com",
@@ -62,23 +53,29 @@ class TestAutomatedAccessibilityTools:
                                         "fontSize": "12.0pt (16px)",
                                         "fontWeight": "normal",
                                         "messageKey": "",
-                                        "expectedContrastRatio": "4.5:1"
+                                        "expectedContrastRatio": "4.5:1",
                                     },
                                     "relatedNodes": [],
                                     "impact": "serious",
-                                    "message": "Element has insufficient color contrast of 4.48 (foreground color: #777777, background color: #ffffff, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+                                    "message": "Element has insufficient color contrast of 4.48 (foreground color: #777777, background color: #ffffff, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1",
                                 }
                             ],
-                            "html": "<p style=\"color: #777777;\">This text has insufficient contrast</p>",
+                            "html": '<p style="color: #777777;">This text has insufficient contrast</p>',
                             "target": ["p"],
-                            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.48 (foreground color: #777777, background color: #ffffff, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+                            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.48 (foreground color: #777777, background color: #ffffff, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1",
                         }
-                    ]
+                    ],
                 },
                 {
                     "id": "image-alt",
                     "impact": "critical",
-                    "tags": ["cat.text-alternatives", "wcag2a", "wcag111", "section508", "section508.22.a"],
+                    "tags": [
+                        "cat.text-alternatives",
+                        "wcag2a",
+                        "wcag111",
+                        "section508",
+                        "section508.22.a",
+                    ],
                     "description": "Ensures <img> elements have alternate text or a role of none or presentation",
                     "help": "Images must have alternate text",
                     "helpUrl": "https://dequeuniversity.com/rules/axe/4.8/image-alt",
@@ -90,16 +87,16 @@ class TestAutomatedAccessibilityTools:
                                     "data": None,
                                     "relatedNodes": [],
                                     "impact": "critical",
-                                    "message": "Element does not have an alt attribute"
+                                    "message": "Element does not have an alt attribute",
                                 }
                             ],
                             "all": [],
                             "none": [],
-                            "html": "<img src=\"test.jpg\">",
+                            "html": '<img src="test.jpg">',
                             "target": ["img"],
-                            "failureSummary": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+                            "failureSummary": 'Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element\'s default semantics were not overridden with role="none" or role="presentation"',
                         }
-                    ]
+                    ],
                 },
                 {
                     "id": "landmark-one-main",
@@ -116,17 +113,17 @@ class TestAutomatedAccessibilityTools:
                                     "data": None,
                                     "relatedNodes": [],
                                     "impact": "moderate",
-                                    "message": "Document does not have a main landmark"
+                                    "message": "Document does not have a main landmark",
                                 }
                             ],
                             "all": [],
                             "none": [],
-                            "html": "<html lang=\"en\"><head>...</head><body>...</body></html>",
+                            "html": '<html lang="en"><head>...</head><body>...</body></html>',
                             "target": ["html"],
-                            "failureSummary": "Fix any of the following:\n  Document does not have a main landmark"
+                            "failureSummary": "Fix any of the following:\n  Document does not have a main landmark",
                         }
-                    ]
-                }
+                    ],
+                },
             ],
             "passes": [
                 {
@@ -141,21 +138,19 @@ class TestAutomatedAccessibilityTools:
                             "any": [
                                 {
                                     "id": "has-lang",
-                                    "data": {
-                                        "value": "en"
-                                    },
+                                    "data": {"value": "en"},
                                     "relatedNodes": [],
                                     "impact": None,
-                                    "message": "The <html> element has a lang attribute"
+                                    "message": "The <html> element has a lang attribute",
                                 }
                             ],
                             "all": [],
                             "none": [],
-                            "html": "<html lang=\"en\">",
+                            "html": '<html lang="en">',
                             "target": ["html"],
-                            "failureSummary": ""
+                            "failureSummary": "",
                         }
-                    ]
+                    ],
                 },
                 {
                     "id": "document-title",
@@ -172,17 +167,17 @@ class TestAutomatedAccessibilityTools:
                                     "data": None,
                                     "relatedNodes": [],
                                     "impact": None,
-                                    "message": "Document has a non-empty <title> element"
+                                    "message": "Document has a non-empty <title> element",
                                 }
                             ],
                             "all": [],
                             "none": [],
                             "html": "<title>Test Page</title>",
                             "target": ["title"],
-                            "failureSummary": ""
+                            "failureSummary": "",
                         }
-                    ]
-                }
+                    ],
+                },
             ],
             "incomplete": [
                 {
@@ -197,21 +192,19 @@ class TestAutomatedAccessibilityTools:
                             "any": [
                                 {
                                     "id": "color-contrast",
-                                    "data": {
-                                        "messageKey": "bgImage"
-                                    },
+                                    "data": {"messageKey": "bgImage"},
                                     "relatedNodes": [],
                                     "impact": "serious",
-                                    "message": "Element's background color could not be determined due to a background image"
+                                    "message": "Element's background color could not be determined due to a background image",
                                 }
                             ],
                             "all": [],
                             "none": [],
                             "html": "<div style=\"background-image: url('bg.jpg'); color: white;\">Text over image</div>",
                             "target": ["div"],
-                            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
+                            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image",
                         }
-                    ]
+                    ],
                 }
             ],
             "inapplicable": [
@@ -222,16 +215,16 @@ class TestAutomatedAccessibilityTools:
                     "description": "Ensures every accesskey attribute value is unique",
                     "help": "accesskey attribute value should be unique",
                     "helpUrl": "https://dequeuniversity.com/rules/axe/4.8/accesskeys",
-                    "nodes": []
+                    "nodes": [],
                 }
-            ]
+            ],
         }
 
     def test_axe_core_integration(self, mock_axe_core_result):
         """Test axe-core accessibility testing integration."""
         # Simulate axe-core analysis
         result = mock_axe_core_result
-        
+
         # Verify result structure
         assert "violations" in result
         assert "passes" in result
@@ -240,21 +233,21 @@ class TestAutomatedAccessibilityTools:
         assert "testEngine" in result
         assert "timestamp" in result
         assert "url" in result
-        
+
         # Analyze violations
         violations = result["violations"]
         assert len(violations) == 3, "Should have expected number of violations"
-        
+
         # Check critical violations
         critical_violations = [v for v in violations if v["impact"] == "critical"]
         assert len(critical_violations) == 1, "Should have one critical violation"
         assert critical_violations[0]["id"] == "image-alt"
-        
+
         # Check serious violations
         serious_violations = [v for v in violations if v["impact"] == "serious"]
         assert len(serious_violations) == 1, "Should have one serious violation"
         assert serious_violations[0]["id"] == "color-contrast"
-        
+
         # Verify violation details
         color_contrast_violation = serious_violations[0]
         node_data = color_contrast_violation["nodes"][0]["none"][0]["data"]
@@ -262,15 +255,15 @@ class TestAutomatedAccessibilityTools:
         assert node_data["expectedContrastRatio"] == "4.5:1"
         assert node_data["fgColor"] == "#777777"
         assert node_data["bgColor"] == "#ffffff"
-        
+
         # Check passes
         passes = result["passes"]
         assert len(passes) >= 2, "Should have some passing tests"
-        
+
         # Verify specific passes
         lang_pass = next((p for p in passes if p["id"] == "html-has-lang"), None)
         assert lang_pass is not None, "Should pass html-has-lang test"
-        
+
         title_pass = next((p for p in passes if p["id"] == "document-title"), None)
         assert title_pass is not None, "Should pass document-title test"
 
@@ -283,30 +276,30 @@ class TestAutomatedAccessibilityTools:
                 "type": "error",
                 "typeCode": 1,
                 "message": "Img element missing an alt attribute. Use the alt attribute to specify a short text alternative.",
-                "context": "<img src=\"test.jpg\">",
+                "context": '<img src="test.jpg">',
                 "selector": "html > body > img",
                 "runner": "htmlcs",
-                "runnerExtras": {}
+                "runnerExtras": {},
             },
             {
                 "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
-                "type": "error", 
+                "type": "error",
                 "typeCode": 1,
                 "message": "This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 4.48:1.",
-                "context": "<p style=\"color: #777777;\">This text has insufficient contrast</p>",
+                "context": '<p style="color: #777777;">This text has insufficient contrast</p>',
                 "selector": "html > body > p",
                 "runner": "htmlcs",
-                "runnerExtras": {}
+                "runnerExtras": {},
             },
             {
                 "code": "WCAG2AA.Principle2.Guideline2_4.2_4_1.H64.1",
                 "type": "warning",
                 "typeCode": 2,
                 "message": "Iframe element requires a non-empty title attribute that identifies the frame.",
-                "context": "<iframe src=\"embed.html\"></iframe>",
+                "context": '<iframe src="embed.html"></iframe>',
                 "selector": "html > body > iframe",
                 "runner": "htmlcs",
-                "runnerExtras": {}
+                "runnerExtras": {},
             },
             {
                 "code": "WCAG2AA.Principle3.Guideline3_1.3_1_1.H57.2",
@@ -316,40 +309,36 @@ class TestAutomatedAccessibilityTools:
                 "context": "<html>",
                 "selector": "html",
                 "runner": "htmlcs",
-                "runnerExtras": {}
-            }
+                "runnerExtras": {},
+            },
         ]
 
     def test_pa11y_integration(self, mock_pa11y_result):
         """Test pa11y accessibility testing integration."""
         # Simulate pa11y analysis
         result = mock_pa11y_result
-        
+
         # Analyze results by type
         errors = [item for item in result if item["type"] == "error"]
         warnings = [item for item in result if item["type"] == "warning"]
         notices = [item for item in result if item["type"] == "notice"]
-        
+
         assert len(errors) == 2, "Should have expected number of errors"
         assert len(warnings) == 1, "Should have expected number of warnings"
         assert len(notices) == 1, "Should have expected number of notices"
-        
+
         # Check specific error codes
         error_codes = [error["code"] for error in errors]
         assert "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37" in error_codes
         assert "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail" in error_codes
-        
+
         # Verify error details
-        alt_text_error = next(
-            (e for e in errors if "H37" in e["code"]), None
-        )
+        alt_text_error = next((e for e in errors if "H37" in e["code"]), None)
         assert alt_text_error is not None
         assert "alt attribute" in alt_text_error["message"]
         assert "img" in alt_text_error["context"]
-        
-        contrast_error = next(
-            (e for e in errors if "G18.Fail" in e["code"]), None
-        )
+
+        contrast_error = next((e for e in errors if "G18.Fail" in e["code"]), None)
         assert contrast_error is not None
         assert "contrast ratio" in contrast_error["message"]
         assert "4.48:1" in contrast_error["message"]
@@ -365,8 +354,8 @@ class TestAutomatedAccessibilityTools:
                 "userAgent": "Mozilla/5.0 (compatible; Lighthouse)",
                 "environment": {
                     "networkUserAgent": "Mozilla/5.0 (compatible; Lighthouse)",
-                    "hostUserAgent": "Mozilla/5.0 (compatible; Lighthouse)", 
-                    "benchmarkIndex": 1000
+                    "hostUserAgent": "Mozilla/5.0 (compatible; Lighthouse)",
+                    "benchmarkIndex": 1000,
                 },
                 "categories": {
                     "accessibility": {
@@ -376,52 +365,204 @@ class TestAutomatedAccessibilityTools:
                         "score": 0.85,
                         "manualDescription": "These items address areas which an automated testing tool cannot cover.",
                         "auditRefs": [
-                            {"id": "accesskeys", "weight": 0, "group": "a11y-navigation"},
-                            {"id": "aria-allowed-attr", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-command-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-hidden-body", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-hidden-focus", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-input-field-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-meter-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-progressbar-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-required-attr", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-required-children", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-required-parent", "weight": 10, "group": "a11y-aria"},
+                            {
+                                "id": "accesskeys",
+                                "weight": 0,
+                                "group": "a11y-navigation",
+                            },
+                            {
+                                "id": "aria-allowed-attr",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-command-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-hidden-body",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-hidden-focus",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-input-field-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-meter-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-progressbar-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-required-attr",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-required-children",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-required-parent",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
                             {"id": "aria-roles", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-toggle-field-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-tooltip-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-treeitem-name", "weight": 3, "group": "a11y-aria"},
-                            {"id": "aria-valid-attr-value", "weight": 10, "group": "a11y-aria"},
-                            {"id": "aria-valid-attr", "weight": 10, "group": "a11y-aria"},
-                            {"id": "button-name", "weight": 10, "group": "a11y-names-labels"},
+                            {
+                                "id": "aria-toggle-field-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-tooltip-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-treeitem-name",
+                                "weight": 3,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-valid-attr-value",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "aria-valid-attr",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "button-name",
+                                "weight": 10,
+                                "group": "a11y-names-labels",
+                            },
                             {"id": "bypass", "weight": 3, "group": "a11y-navigation"},
-                            {"id": "color-contrast", "weight": 3, "group": "a11y-color-contrast"},
-                            {"id": "definition-list", "weight": 3, "group": "a11y-tables-lists"},
+                            {
+                                "id": "color-contrast",
+                                "weight": 3,
+                                "group": "a11y-color-contrast",
+                            },
+                            {
+                                "id": "definition-list",
+                                "weight": 3,
+                                "group": "a11y-tables-lists",
+                            },
                             {"id": "dlitem", "weight": 3, "group": "a11y-tables-lists"},
-                            {"id": "document-title", "weight": 3, "group": "a11y-names-labels"},
-                            {"id": "duplicate-id-active", "weight": 3, "group": "a11y-navigation"},
-                            {"id": "duplicate-id-aria", "weight": 10, "group": "a11y-aria"},
-                            {"id": "form-field-multiple-labels", "weight": 2, "group": "a11y-names-labels"},
-                            {"id": "frame-title", "weight": 3, "group": "a11y-names-labels"},
-                            {"id": "heading-order", "weight": 2, "group": "a11y-navigation"},
-                            {"id": "html-has-lang", "weight": 3, "group": "a11y-language"},
-                            {"id": "html-lang-valid", "weight": 3, "group": "a11y-language"},
-                            {"id": "image-alt", "weight": 10, "group": "a11y-names-labels"},
-                            {"id": "input-image-alt", "weight": 10, "group": "a11y-names-labels"},
+                            {
+                                "id": "document-title",
+                                "weight": 3,
+                                "group": "a11y-names-labels",
+                            },
+                            {
+                                "id": "duplicate-id-active",
+                                "weight": 3,
+                                "group": "a11y-navigation",
+                            },
+                            {
+                                "id": "duplicate-id-aria",
+                                "weight": 10,
+                                "group": "a11y-aria",
+                            },
+                            {
+                                "id": "form-field-multiple-labels",
+                                "weight": 2,
+                                "group": "a11y-names-labels",
+                            },
+                            {
+                                "id": "frame-title",
+                                "weight": 3,
+                                "group": "a11y-names-labels",
+                            },
+                            {
+                                "id": "heading-order",
+                                "weight": 2,
+                                "group": "a11y-navigation",
+                            },
+                            {
+                                "id": "html-has-lang",
+                                "weight": 3,
+                                "group": "a11y-language",
+                            },
+                            {
+                                "id": "html-lang-valid",
+                                "weight": 3,
+                                "group": "a11y-language",
+                            },
+                            {
+                                "id": "image-alt",
+                                "weight": 10,
+                                "group": "a11y-names-labels",
+                            },
+                            {
+                                "id": "input-image-alt",
+                                "weight": 10,
+                                "group": "a11y-names-labels",
+                            },
                             {"id": "label", "weight": 10, "group": "a11y-names-labels"},
-                            {"id": "landmark-one-main", "weight": 3, "group": "a11y-navigation"},
-                            {"id": "link-name", "weight": 3, "group": "a11y-names-labels"},
+                            {
+                                "id": "landmark-one-main",
+                                "weight": 3,
+                                "group": "a11y-navigation",
+                            },
+                            {
+                                "id": "link-name",
+                                "weight": 3,
+                                "group": "a11y-names-labels",
+                            },
                             {"id": "list", "weight": 3, "group": "a11y-tables-lists"},
-                            {"id": "listitem", "weight": 3, "group": "a11y-tables-lists"},
-                            {"id": "meta-refresh", "weight": 10, "group": "a11y-best-practices"},
-                            {"id": "meta-viewport", "weight": 10, "group": "a11y-best-practices"},
-                            {"id": "object-alt", "weight": 3, "group": "a11y-names-labels"},
+                            {
+                                "id": "listitem",
+                                "weight": 3,
+                                "group": "a11y-tables-lists",
+                            },
+                            {
+                                "id": "meta-refresh",
+                                "weight": 10,
+                                "group": "a11y-best-practices",
+                            },
+                            {
+                                "id": "meta-viewport",
+                                "weight": 10,
+                                "group": "a11y-best-practices",
+                            },
+                            {
+                                "id": "object-alt",
+                                "weight": 3,
+                                "group": "a11y-names-labels",
+                            },
                             {"id": "tabindex", "weight": 3, "group": "a11y-navigation"},
-                            {"id": "td-headers-attr", "weight": 3, "group": "a11y-tables-lists"},
-                            {"id": "th-has-data-cells", "weight": 3, "group": "a11y-tables-lists"},
+                            {
+                                "id": "td-headers-attr",
+                                "weight": 3,
+                                "group": "a11y-tables-lists",
+                            },
+                            {
+                                "id": "th-has-data-cells",
+                                "weight": 3,
+                                "group": "a11y-tables-lists",
+                            },
                             {"id": "valid-lang", "weight": 3, "group": "a11y-language"},
-                            {"id": "video-caption", "weight": 10, "group": "a11y-audio-video"}
-                        ]
+                            {
+                                "id": "video-caption",
+                                "weight": 10,
+                                "group": "a11y-audio-video",
+                            },
+                        ],
                     }
                 },
                 "audits": {
@@ -430,7 +571,7 @@ class TestAutomatedAccessibilityTools:
                         "title": "Accessibility",
                         "description": "These checks highlight opportunities to improve the accessibility of your web app.",
                         "score": 0.85,
-                        "scoreDisplayMode": "numeric"
+                        "scoreDisplayMode": "numeric",
                     },
                     "color-contrast": {
                         "id": "color-contrast",
@@ -441,7 +582,15 @@ class TestAutomatedAccessibilityTools:
                         "details": {
                             "type": "table",
                             "headings": [
-                                {"key": "node", "itemType": "node", "subItemsHeading": {"key": "relatedNode", "itemType": "node"}, "text": "Failing Elements"}
+                                {
+                                    "key": "node",
+                                    "itemType": "node",
+                                    "subItemsHeading": {
+                                        "key": "relatedNode",
+                                        "itemType": "node",
+                                    },
+                                    "text": "Failing Elements",
+                                }
                             ],
                             "items": [
                                 {
@@ -450,16 +599,23 @@ class TestAutomatedAccessibilityTools:
                                         "lhId": "9-0-P",
                                         "path": "1,HTML,1,BODY,0,P",
                                         "selector": "body > p",
-                                        "boundingRect": {"top": 100, "bottom": 120, "left": 50, "right": 200, "width": 150, "height": 20},
-                                        "snippet": "<p style=\"color: #777777;\">",
-                                        "nodeLabel": "This text has insufficient contrast"
+                                        "boundingRect": {
+                                            "top": 100,
+                                            "bottom": 120,
+                                            "left": 50,
+                                            "right": 200,
+                                            "width": 150,
+                                            "height": 20,
+                                        },
+                                        "snippet": '<p style="color: #777777;">',
+                                        "nodeLabel": "This text has insufficient contrast",
                                     }
                                 }
-                            ]
-                        }
+                            ],
+                        },
                     },
                     "image-alt": {
-                        "id": "image-alt", 
+                        "id": "image-alt",
                         "title": "Image elements have [alt] attributes",
                         "description": "Informative elements should aim for short, descriptive alternate text.",
                         "score": 0,
@@ -467,36 +623,47 @@ class TestAutomatedAccessibilityTools:
                         "details": {
                             "type": "table",
                             "headings": [
-                                {"key": "node", "itemType": "node", "text": "Failing Elements"}
+                                {
+                                    "key": "node",
+                                    "itemType": "node",
+                                    "text": "Failing Elements",
+                                }
                             ],
                             "items": [
                                 {
                                     "node": {
                                         "type": "node",
-                                        "lhId": "9-1-IMG", 
+                                        "lhId": "9-1-IMG",
                                         "path": "1,HTML,1,BODY,1,IMG",
                                         "selector": "body > img",
-                                        "boundingRect": {"top": 150, "bottom": 250, "left": 50, "right": 150, "width": 100, "height": 100},
-                                        "snippet": "<img src=\"test.jpg\">",
-                                        "nodeLabel": ""
+                                        "boundingRect": {
+                                            "top": 150,
+                                            "bottom": 250,
+                                            "left": 50,
+                                            "right": 150,
+                                            "width": 100,
+                                            "height": 100,
+                                        },
+                                        "snippet": '<img src="test.jpg">',
+                                        "nodeLabel": "",
                                     }
                                 }
-                            ]
-                        }
+                            ],
+                        },
                     },
                     "html-has-lang": {
                         "id": "html-has-lang",
                         "title": "<html> element has a [lang] attribute",
                         "description": "If a page doesn't specify a lang attribute, a screen reader assumes that the page is in the default language that the user chose when setting up the screen reader.",
                         "score": 1,
-                        "scoreDisplayMode": "binary"
+                        "scoreDisplayMode": "binary",
                     },
                     "document-title": {
                         "id": "document-title",
                         "title": "Document has a <title> element",
                         "description": "The title gives screen reader users an overview of the page, and search engine users rely on it to determine if a page is relevant to their search.",
                         "score": 1,
-                        "scoreDisplayMode": "binary"
+                        "scoreDisplayMode": "binary",
                     },
                     "landmark-one-main": {
                         "id": "landmark-one-main",
@@ -504,9 +671,9 @@ class TestAutomatedAccessibilityTools:
                         "description": "One main landmark helps screen reader users navigate to the primary content of the page.",
                         "score": 0,
                         "scoreDisplayMode": "binary",
-                        "explanation": "Document does not have a main landmark"
-                    }
-                }
+                        "explanation": "Document does not have a main landmark",
+                    },
+                },
             }
         }
 
@@ -514,33 +681,33 @@ class TestAutomatedAccessibilityTools:
         """Test Lighthouse accessibility audit integration."""
         # Simulate Lighthouse analysis
         result = mock_lighthouse_result["lhr"]
-        
+
         # Check overall accessibility score
         accessibility_category = result["categories"]["accessibility"]
         assert accessibility_category["score"] == 0.85
         assert accessibility_category["title"] == "Accessibility"
-        
+
         # Check individual audits
         audits = result["audits"]
-        
+
         # Failing audits
         color_contrast_audit = audits["color-contrast"]
         assert color_contrast_audit["score"] == 0
         assert "contrast ratio" in color_contrast_audit["description"]
-        
+
         image_alt_audit = audits["image-alt"]
         assert image_alt_audit["score"] == 0
         assert "alt attributes" in image_alt_audit["title"]
-        
+
         landmark_audit = audits["landmark-one-main"]
         assert landmark_audit["score"] == 0
         assert "main landmark" in landmark_audit["title"]
-        
+
         # Passing audits
         lang_audit = audits["html-has-lang"]
         assert lang_audit["score"] == 1
         assert "lang attribute" in lang_audit["title"]
-        
+
         title_audit = audits["document-title"]
         assert title_audit["score"] == 1
         assert "title element" in title_audit["title"]
@@ -553,7 +720,7 @@ class TestAutomatedAccessibilityTools:
         mock_page.goto = AsyncMock()
         mock_page.add_script_tag = AsyncMock()
         mock_page.evaluate = AsyncMock()
-        
+
         # Mock axe results
         mock_axe_results = {
             "violations": [
@@ -561,26 +728,28 @@ class TestAutomatedAccessibilityTools:
                     "id": "color-contrast",
                     "impact": "serious",
                     "description": "Elements must have sufficient color contrast",
-                    "nodes": [{"html": "<p style='color: #777;'>Low contrast</p>"}]
+                    "nodes": [{"html": "<p style='color: #777;'>Low contrast</p>"}],
                 }
             ],
             "passes": [
                 {
                     "id": "html-has-lang",
                     "description": "<html> element must have a lang attribute",
-                    "nodes": [{"html": "<html lang='en'>"}]
+                    "nodes": [{"html": "<html lang='en'>"}],
                 }
-            ]
+            ],
         }
-        
+
         mock_page.evaluate.return_value = mock_axe_results
-        
+
         # Simulate axe testing workflow
         await mock_page.goto("http://test.example.com")
-        
+
         # Inject axe-core
-        await mock_page.add_script_tag(url="https://unpkg.com/axe-core@4.8.0/axe.min.js")
-        
+        await mock_page.add_script_tag(
+            url="https://unpkg.com/axe-core@4.8.0/axe.min.js"
+        )
+
         # Run axe analysis
         axe_results = await mock_page.evaluate("""
             () => {
@@ -592,12 +761,12 @@ class TestAutomatedAccessibilityTools:
                 });
             }
         """)
-        
+
         # Verify integration
         mock_page.goto.assert_called_once_with("http://test.example.com")
         mock_page.add_script_tag.assert_called_once()
         mock_page.evaluate.assert_called_once()
-        
+
         # Verify results
         assert "violations" in axe_results
         assert "passes" in axe_results
@@ -616,15 +785,15 @@ class TestAutomatedAccessibilityTools:
                         {
                             "field": "email",
                             "issue": "Invalid email format",
-                            "suggestion": "Please provide a valid email address"
+                            "suggestion": "Please provide a valid email address",
                         },
                         {
                             "field": "password",
                             "issue": "Password too weak",
-                            "suggestion": "Password must contain at least 8 characters, one number, and one symbol"
-                        }
+                            "suggestion": "Password must contain at least 8 characters, one number, and one symbol",
+                        },
                     ],
-                    "help_url": "https://api.example.com/docs/validation-errors"
+                    "help_url": "https://api.example.com/docs/validation-errors",
                 }
             },
             "401_unauthorized": {
@@ -632,7 +801,7 @@ class TestAutomatedAccessibilityTools:
                     "code": "UNAUTHORIZED",
                     "message": "Authentication required",
                     "details": "Please provide a valid API key in the Authorization header",
-                    "help_url": "https://api.example.com/docs/authentication"
+                    "help_url": "https://api.example.com/docs/authentication",
                 }
             },
             "403_forbidden": {
@@ -640,48 +809,66 @@ class TestAutomatedAccessibilityTools:
                     "code": "FORBIDDEN",
                     "message": "Insufficient permissions",
                     "details": "Your account does not have permission to access this resource",
-                    "help_url": "https://api.example.com/docs/permissions"
+                    "help_url": "https://api.example.com/docs/permissions",
                 }
             },
             "429_rate_limit": {
                 "error": {
-                    "code": "RATE_LIMIT_EXCEEDED", 
+                    "code": "RATE_LIMIT_EXCEEDED",
                     "message": "Too many requests",
                     "details": "Rate limit of 1000 requests per hour exceeded",
                     "retry_after": 3600,
-                    "help_url": "https://api.example.com/docs/rate-limits"
+                    "help_url": "https://api.example.com/docs/rate-limits",
                 }
-            }
+            },
         }
-        
+
         # Check accessibility requirements for API responses
         for status_code, response in api_responses.items():
             error = response["error"]
-            
+
             # Clear error messages
             assert "message" in error, f"{status_code} should have clear error message"
-            assert len(error["message"]) > 0, f"{status_code} message should not be empty"
-            assert error["message"][0].isupper(), f"{status_code} message should be properly capitalized"
-            
-            # Actionable details
-            assert "details" in error, f"{status_code} should provide actionable details"
-            
-            # Help resources
-            assert "help_url" in error, f"{status_code} should provide help documentation"
-            assert error["help_url"].startswith("https://"), f"{status_code} help URL should be secure"
-            
-            # Machine-readable error codes
-            assert "code" in error, f"{status_code} should have machine-readable error code"
-            assert error["code"].isupper(), f"{status_code} error code should be uppercase"
-            assert "_" in error["code"], f"{status_code} error code should use snake_case"
+            assert len(error["message"]) > 0, (
+                f"{status_code} message should not be empty"
+            )
+            assert error["message"][0].isupper(), (
+                f"{status_code} message should be properly capitalized"
+            )
 
-    def test_accessibility_testing_report_generation(self, mock_axe_core_result, mock_pa11y_result, mock_lighthouse_result):
+            # Actionable details
+            assert "details" in error, (
+                f"{status_code} should provide actionable details"
+            )
+
+            # Help resources
+            assert "help_url" in error, (
+                f"{status_code} should provide help documentation"
+            )
+            assert error["help_url"].startswith("https://"), (
+                f"{status_code} help URL should be secure"
+            )
+
+            # Machine-readable error codes
+            assert "code" in error, (
+                f"{status_code} should have machine-readable error code"
+            )
+            assert error["code"].isupper(), (
+                f"{status_code} error code should be uppercase"
+            )
+            assert "_" in error["code"], (
+                f"{status_code} error code should use snake_case"
+            )
+
+    def test_accessibility_testing_report_generation(
+        self, mock_axe_core_result, mock_pa11y_result, mock_lighthouse_result
+    ):
         """Test generation of comprehensive accessibility testing reports."""
         # Combine results from multiple tools
         axe_result = mock_axe_core_result
         pa11y_result = mock_pa11y_result
         lighthouse_result = mock_lighthouse_result["lhr"]
-        
+
         # Generate comprehensive accessibility report
         report = {
             "timestamp": "2024-01-01T00:00:00Z",
@@ -696,24 +883,36 @@ class TestAutomatedAccessibilityTools:
                 },
                 "pa11y": {
                     "errors": len([r for r in pa11y_result if r["type"] == "error"]),
-                    "warnings": len([r for r in pa11y_result if r["type"] == "warning"]),
+                    "warnings": len(
+                        [r for r in pa11y_result if r["type"] == "warning"]
+                    ),
                     "notices": len([r for r in pa11y_result if r["type"] == "notice"]),
                     "total_issues": len(pa11y_result),
                 },
                 "lighthouse": {
                     "version": lighthouse_result["lighthouseVersion"],
-                    "accessibility_score": lighthouse_result["categories"]["accessibility"]["score"],
-                    "failing_audits": len([
-                        audit for audit in lighthouse_result["audits"].values() 
-                        if audit.get("score") == 0
-                    ]),
-                    "passing_audits": len([
-                        audit for audit in lighthouse_result["audits"].values() 
-                        if audit.get("score") == 1
-                    ]),
-                }
+                    "accessibility_score": lighthouse_result["categories"][
+                        "accessibility"
+                    ]["score"],
+                    "failing_audits": len(
+                        [
+                            audit
+                            for audit in lighthouse_result["audits"].values()
+                            if audit.get("score") == 0
+                        ]
+                    ),
+                    "passing_audits": len(
+                        [
+                            audit
+                            for audit in lighthouse_result["audits"].values()
+                            if audit.get("score") == 1
+                        ]
+                    ),
+                },
             },
-            "consolidated_issues": self._consolidate_issues(axe_result, pa11y_result, lighthouse_result),
+            "consolidated_issues": self._consolidate_issues(
+                axe_result, pa11y_result, lighthouse_result
+            ),
             "wcag_compliance": {
                 "level_a": self._check_wcag_level(axe_result, pa11y_result, "A"),
                 "level_aa": self._check_wcag_level(axe_result, pa11y_result, "AA"),
@@ -727,20 +926,27 @@ class TestAutomatedAccessibilityTools:
                 "Verify color contrast meets WCAG AA standards",
                 "Add proper landmarks and heading structure",
                 "Test with actual assistive technology",
-                "Conduct user testing with disabled users"
-            ]
+                "Conduct user testing with disabled users",
+            ],
         }
-        
+
         # Calculate overall score (weighted average)
         axe_score = report["testing_tools"]["axe_core"]["score"]
         lighthouse_score = report["testing_tools"]["lighthouse"]["accessibility_score"]
-        pa11y_score = 1.0 - (len([r for r in pa11y_result if r["type"] == "error"]) / max(len(pa11y_result), 1))
-        
-        report["overall_score"] = (axe_score * 0.4 + lighthouse_score * 0.4 + pa11y_score * 0.2)
-        
+        pa11y_score = 1.0 - (
+            len([r for r in pa11y_result if r["type"] == "error"])
+            / max(len(pa11y_result), 1)
+        )
+
+        report["overall_score"] = (
+            axe_score * 0.4 + lighthouse_score * 0.4 + pa11y_score * 0.2
+        )
+
         # Generate priority fixes
-        report["priority_fixes"] = self._generate_priority_fixes(axe_result, pa11y_result, lighthouse_result)
-        
+        report["priority_fixes"] = self._generate_priority_fixes(
+            axe_result, pa11y_result, lighthouse_result
+        )
+
         # Verify report structure
         assert "timestamp" in report
         assert "testing_tools" in report
@@ -748,7 +954,7 @@ class TestAutomatedAccessibilityTools:
         assert "wcag_compliance" in report
         assert 0.0 <= report["overall_score"] <= 1.0
         assert len(report["recommendations"]) > 0
-        
+
         # Verify tool-specific data
         assert report["testing_tools"]["axe_core"]["version"] == "4.8.0"
         assert report["testing_tools"]["lighthouse"]["accessibility_score"] == 0.85
@@ -758,85 +964,107 @@ class TestAutomatedAccessibilityTools:
         """Calculate score from axe-core results."""
         violations = axe_result["violations"]
         passes = axe_result["passes"]
-        
+
         if not violations and not passes:
             return 1.0
-        
+
         # Weight violations by impact
-        impact_weights = {"critical": 1.0, "serious": 0.7, "moderate": 0.4, "minor": 0.2}
+        impact_weights = {
+            "critical": 1.0,
+            "serious": 0.7,
+            "moderate": 0.4,
+            "minor": 0.2,
+        }
         violation_score = sum(
             impact_weights.get(v.get("impact", "minor"), 0.2) for v in violations
         )
-        
+
         # Calculate score (inverse of violations, normalized)
         total_tests = len(violations) + len(passes)
         if total_tests == 0:
             return 1.0
-        
+
         return max(0.0, 1.0 - (violation_score / total_tests))
 
-    def _consolidate_issues(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], lighthouse_result: dict[str, Any]) -> list[dict[str, Any]]:
+    def _consolidate_issues(
+        self,
+        axe_result: dict[str, Any],
+        pa11y_result: list[dict[str, Any]],
+        lighthouse_result: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         """Consolidate issues from multiple testing tools."""
         consolidated = []
-        
+
         # Process axe violations
         for violation in axe_result["violations"]:
-            consolidated.append({
-                "tool": "axe-core",
-                "id": violation["id"],
-                "impact": violation["impact"],
-                "description": violation["description"],
-                "help_url": violation.get("helpUrl"),
-                "wcag_tags": [tag for tag in violation.get("tags", []) if tag.startswith("wcag")],
-                "affected_elements": len(violation.get("nodes", [])),
-            })
-        
+            consolidated.append(
+                {
+                    "tool": "axe-core",
+                    "id": violation["id"],
+                    "impact": violation["impact"],
+                    "description": violation["description"],
+                    "help_url": violation.get("helpUrl"),
+                    "wcag_tags": [
+                        tag
+                        for tag in violation.get("tags", [])
+                        if tag.startswith("wcag")
+                    ],
+                    "affected_elements": len(violation.get("nodes", [])),
+                }
+            )
+
         # Process pa11y errors
         for error in pa11y_result:
             if error["type"] == "error":
-                consolidated.append({
-                    "tool": "pa11y",
-                    "id": error["code"],
-                    "impact": "error",
-                    "description": error["message"],
-                    "help_url": None,
-                    "wcag_tags": [error["code"]] if "WCAG" in error["code"] else [],
-                    "affected_elements": 1,
-                })
-        
+                consolidated.append(
+                    {
+                        "tool": "pa11y",
+                        "id": error["code"],
+                        "impact": "error",
+                        "description": error["message"],
+                        "help_url": None,
+                        "wcag_tags": [error["code"]] if "WCAG" in error["code"] else [],
+                        "affected_elements": 1,
+                    }
+                )
+
         # Process Lighthouse failing audits
         for audit_id, audit in lighthouse_result["audits"].items():
             if audit.get("score") == 0:
-                consolidated.append({
-                    "tool": "lighthouse",
-                    "id": audit_id,
-                    "impact": "error",
-                    "description": audit["description"],
-                    "help_url": None,
-                    "wcag_tags": [],
-                    "affected_elements": len(audit.get("details", {}).get("items", [])),
-                })
-        
+                consolidated.append(
+                    {
+                        "tool": "lighthouse",
+                        "id": audit_id,
+                        "impact": "error",
+                        "description": audit["description"],
+                        "help_url": None,
+                        "wcag_tags": [],
+                        "affected_elements": len(
+                            audit.get("details", {}).get("items", [])
+                        ),
+                    }
+                )
+
         return consolidated
 
-    def _check_wcag_level(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], level: str) -> dict[str, Any]:
+    def _check_wcag_level(
+        self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], level: str
+    ) -> dict[str, Any]:
         """Check WCAG compliance level."""
         level_tag = f"wcag2{level.lower()}"
-        
+
         # Check axe violations for this level
         level_violations = [
-            v for v in axe_result["violations"]
-            if level_tag in v.get("tags", [])
+            v for v in axe_result["violations"] if level_tag in v.get("tags", [])
         ]
-        
+
         # Check pa11y errors for this level
         level_pa11y_errors = [
-            e for e in pa11y_result
-            if e["type"] == "error" and level in e["code"]
+            e for e in pa11y_result if e["type"] == "error" and level in e["code"]
         ]
-        
+
         total_issues = len(level_violations) + len(level_pa11y_errors)
-        
+
         return {
             "compliant": total_issues == 0,
             "violations": total_issues,
@@ -844,36 +1072,52 @@ class TestAutomatedAccessibilityTools:
             "percentage": 100.0 if total_issues == 0 else 0.0,
         }
 
-    def _generate_priority_fixes(self, axe_result: dict[str, Any], pa11y_result: list[dict[str, Any]], lighthouse_result: dict[str, Any]) -> list[dict[str, Any]]:
+    def _generate_priority_fixes(
+        self,
+        axe_result: dict[str, Any],
+        pa11y_result: list[dict[str, Any]],
+        lighthouse_result: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         """Generate prioritized list of accessibility fixes."""
         fixes = []
-        
+
         # Critical axe violations
-        critical_violations = [v for v in axe_result["violations"] if v["impact"] == "critical"]
+        critical_violations = [
+            v for v in axe_result["violations"] if v["impact"] == "critical"
+        ]
         for violation in critical_violations:
-            fixes.append({
-                "priority": "critical",
-                "issue": violation["description"],
-                "affected_elements": len(violation.get("nodes", [])),
-                "tool": "axe-core",
-                "help_url": violation.get("helpUrl"),
-            })
-        
+            fixes.append(
+                {
+                    "priority": "critical",
+                    "issue": violation["description"],
+                    "affected_elements": len(violation.get("nodes", [])),
+                    "tool": "axe-core",
+                    "help_url": violation.get("helpUrl"),
+                }
+            )
+
         # Pa11y errors
         pa11y_errors = [e for e in pa11y_result if e["type"] == "error"]
         for error in pa11y_errors[:3]:  # Top 3 errors
-            fixes.append({
-                "priority": "high",
-                "issue": error["message"],
-                "affected_elements": 1,
-                "tool": "pa11y",
-                "help_url": None,
-            })
-        
+            fixes.append(
+                {
+                    "priority": "high",
+                    "issue": error["message"],
+                    "affected_elements": 1,
+                    "tool": "pa11y",
+                    "help_url": None,
+                }
+            )
+
         # Sort by priority and impact
         priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        fixes.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["affected_elements"]))
-        
+        fixes.sort(
+            key=lambda x: (
+                priority_order.get(x["priority"], 3),
+                -x["affected_elements"],
+            )
+        )
+
         return fixes[:10]  # Top 10 priority fixes
 
 
@@ -907,17 +1151,17 @@ class TestAccessibilityTestingWorkflow:
                 ],
             }
         }
-        
+
         # Verify CI configuration
         a11y_config = ci_config["accessibility_testing"]
         assert "axe-core" in a11y_config["tools"]
         assert "pa11y" in a11y_config["tools"]
         assert "lighthouse" in a11y_config["tools"]
-        
+
         # Check thresholds
         assert a11y_config["thresholds"]["axe_violations"]["critical"] == 0
         assert a11y_config["thresholds"]["lighthouse_score"] >= 0.8
-        
+
         # Check test coverage
         assert len(a11y_config["test_urls"]) >= 3
         assert len(a11y_config["browsers"]) >= 2
@@ -933,46 +1177,55 @@ class TestAccessibilityTestingWorkflow:
             "lighthouse_score": 0.87,
             "critical_issues": 0,
         }
-        
+
         # Mock current test results
         current = {
-            "timestamp": "2024-01-02T00:00:00Z", 
+            "timestamp": "2024-01-02T00:00:00Z",
             "axe_violations": 4,
             "pa11y_errors": 3,
             "lighthouse_score": 0.82,
             "critical_issues": 1,
         }
-        
+
         # Detect regressions
         regressions = []
-        
+
         if current["axe_violations"] > baseline["axe_violations"]:
-            regressions.append({
-                "type": "axe_violations_increased",
-                "baseline": baseline["axe_violations"],
-                "current": current["axe_violations"],
-                "difference": current["axe_violations"] - baseline["axe_violations"],
-            })
-        
+            regressions.append(
+                {
+                    "type": "axe_violations_increased",
+                    "baseline": baseline["axe_violations"],
+                    "current": current["axe_violations"],
+                    "difference": current["axe_violations"]
+                    - baseline["axe_violations"],
+                }
+            )
+
         if current["lighthouse_score"] < baseline["lighthouse_score"] - 0.05:
-            regressions.append({
-                "type": "lighthouse_score_decreased",
-                "baseline": baseline["lighthouse_score"],
-                "current": current["lighthouse_score"],
-                "difference": current["lighthouse_score"] - baseline["lighthouse_score"],
-            })
-        
+            regressions.append(
+                {
+                    "type": "lighthouse_score_decreased",
+                    "baseline": baseline["lighthouse_score"],
+                    "current": current["lighthouse_score"],
+                    "difference": current["lighthouse_score"]
+                    - baseline["lighthouse_score"],
+                }
+            )
+
         if current["critical_issues"] > baseline["critical_issues"]:
-            regressions.append({
-                "type": "critical_issues_introduced",
-                "baseline": baseline["critical_issues"],
-                "current": current["critical_issues"],
-                "difference": current["critical_issues"] - baseline["critical_issues"],
-            })
-        
+            regressions.append(
+                {
+                    "type": "critical_issues_introduced",
+                    "baseline": baseline["critical_issues"],
+                    "current": current["critical_issues"],
+                    "difference": current["critical_issues"]
+                    - baseline["critical_issues"],
+                }
+            )
+
         # Verify regression detection
         assert len(regressions) == 3, "Should detect all regressions"
-        
+
         regression_types = [r["type"] for r in regressions]
         assert "axe_violations_increased" in regression_types
         assert "lighthouse_score_decreased" in regression_types
@@ -1010,16 +1263,16 @@ class TestAccessibilityTestingWorkflow:
                 "level_aaa": {"compliant": False, "violations": 18},
             },
         }
-        
+
         # Generate documentation sections
         documentation = {
             "title": "Accessibility Testing Report",
             "executive_summary": f"""
-                Tested {test_results['summary']['total_pages_tested']} pages and found 
-                {test_results['summary']['total_issues_found']} accessibility issues. 
-                Overall accessibility score: {test_results['summary']['overall_score']:.1%}.
-                
-                Critical issues requiring immediate attention: {test_results['summary']['critical_issues']}
+                Tested {test_results["summary"]["total_pages_tested"]} pages and found
+                {test_results["summary"]["total_issues_found"]} accessibility issues.
+                Overall accessibility score: {test_results["summary"]["overall_score"]:.1%}.
+
+                Critical issues requiring immediate attention: {test_results["summary"]["critical_issues"]}
             """,
             "methodology": """
                 Accessibility testing was performed using:
@@ -1042,15 +1295,18 @@ class TestAccessibilityTestingWorkflow:
                 "Establish accessibility design system and guidelines",
             ],
         }
-        
+
         # Verify documentation structure
         assert "title" in documentation
         assert "executive_summary" in documentation
         assert "methodology" in documentation
         assert "key_findings" in documentation
         assert "recommendations" in documentation
-        
+
         # Verify content quality
-        assert str(test_results['summary']['total_pages_tested']) in documentation["executive_summary"]
+        assert (
+            str(test_results["summary"]["total_pages_tested"])
+            in documentation["executive_summary"]
+        )
         assert len(documentation["key_findings"]) >= 3
         assert len(documentation["recommendations"]) >= 5

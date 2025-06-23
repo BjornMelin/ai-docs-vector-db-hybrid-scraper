@@ -1,3 +1,4 @@
+import typing
 """Base load testing framework using Locust for AI Documentation Vector DB.
 
 This module provides the foundational load testing infrastructure using Locust,
@@ -12,9 +13,12 @@ import random
 import time
 from typing import Any
 
-from locust import HttpUser, TaskSet, between, events, task
+from locust import HttpUser
+from locust import TaskSet
+from locust import between
+from locust import events
+from locust import task
 from locust.env import Environment
-from locust.stats import StatsEntry
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ class VectorDBUserBehavior(TaskSet):
         ]
         self.test_queries = [
             "python async programming",
-            "FastAPI dependency injection", 
+            "FastAPI dependency injection",
             "pytest fixtures",
             "numpy array operations",
             "pandas dataframe filtering",
@@ -48,7 +52,7 @@ class VectorDBUserBehavior(TaskSet):
         """Simulate document search operations."""
         query = random.choice(self.test_queries)
         collection = random.choice(self.collections)
-        
+
         with self.client.post(
             "/api/v1/search",
             json={
@@ -74,7 +78,7 @@ class VectorDBUserBehavior(TaskSet):
         """Simulate document addition operations."""
         url = random.choice(self.test_documents)
         collection = random.choice(self.collections)
-        
+
         with self.client.post(
             "/api/v1/documents",
             json={
@@ -101,9 +105,9 @@ class VectorDBUserBehavior(TaskSet):
         """Simulate document update operations."""
         url = random.choice(self.test_documents)
         collection = random.choice(self.collections)
-        
+
         with self.client.put(
-            f"/api/v1/documents",
+            "/api/v1/documents",
             json={
                 "url": url,
                 "collection": collection,
@@ -128,7 +132,7 @@ class VectorDBUserBehavior(TaskSet):
     def generate_embeddings(self):
         """Simulate embedding generation operations."""
         text = f"This is a test document for load testing. Query: {random.choice(self.test_queries)}"
-        
+
         with self.client.post(
             "/api/v1/embeddings",
             json={
@@ -163,28 +167,32 @@ class VectorDBUserBehavior(TaskSet):
 
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
-    
+
     tasks = [VectorDBUserBehavior]
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
-    
+
     def on_start(self):
         """Initialize user session with authentication if needed."""
         # Add authentication headers if required
         if os.getenv("API_KEY"):
-            self.client.headers.update({
-                "Authorization": f"Bearer {os.getenv('API_KEY')}",
-            })
-        
+            self.client.headers.update(
+                {
+                    "Authorization": f"Bearer {os.getenv('API_KEY')}",
+                }
+            )
+
         # Set common headers
-        self.client.headers.update({
-            "Content-Type": "application/json",
-            "User-Agent": "VectorDB-LoadTest/1.0",
-        })
+        self.client.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": "VectorDB-LoadTest/1.0",
+            }
+        )
 
 
 class PerformanceMetricsCollector:
     """Collect and analyze performance metrics during load tests."""
-    
+
     def __init__(self):
         self.metrics: dict[str, list[float]] = {
             "response_times": [],
@@ -194,33 +202,33 @@ class PerformanceMetricsCollector:
         }
         self.start_time = None
         self.end_time = None
-    
+
     def start_collection(self):
         """Start metrics collection."""
         self.start_time = time.time()
         logger.info("Started performance metrics collection")
-    
+
     def stop_collection(self):
         """Stop metrics collection."""
         self.end_time = time.time()
         logger.info("Stopped performance metrics collection")
-    
+
     def add_response_time(self, response_time: float):
         """Add response time measurement."""
         self.metrics["response_times"].append(response_time)
-    
+
     def add_error(self, error_rate: float):
         """Add error rate measurement."""
         self.metrics["error_rates"].append(error_rate)
-    
+
     def add_throughput(self, rps: float):
         """Add throughput measurement."""
         self.metrics["throughput"].append(rps)
-    
+
     def add_concurrent_users(self, count: int):
         """Add concurrent users count."""
         self.metrics["concurrent_users"].append(count)
-    
+
     def get_percentile(self, data: list[float], percentile: int) -> float:
         """Calculate percentile of data."""
         if not data:
@@ -228,18 +236,18 @@ class PerformanceMetricsCollector:
         sorted_data = sorted(data)
         index = int(len(sorted_data) * percentile / 100)
         return sorted_data[min(index, len(sorted_data) - 1)]
-    
+
     def get_summary(self) -> dict[str, Any]:
         """Get performance metrics summary."""
         if not self.metrics["response_times"]:
             return {"error": "No metrics collected"}
-        
+
         response_times = self.metrics["response_times"]
         error_rates = self.metrics["error_rates"]
         throughput = self.metrics["throughput"]
-        
+
         duration = (self.end_time or time.time()) - (self.start_time or time.time())
-        
+
         return {
             "duration_seconds": duration,
             "total_requests": len(response_times),
@@ -260,7 +268,9 @@ class PerformanceMetricsCollector:
                 "max": max(throughput) if throughput else 0,
             },
             "concurrent_users": {
-                "max": max(self.metrics["concurrent_users"]) if self.metrics["concurrent_users"] else 0,
+                "max": max(self.metrics["concurrent_users"])
+                if self.metrics["concurrent_users"]
+                else 0,
             },
         }
 
@@ -281,7 +291,7 @@ def on_test_stop(environment: Environment, **kwargs):
     """Handle test stop event."""
     logger.info("Load test stopped")
     metrics_collector.stop_collection()
-    
+
     # Print summary
     summary = metrics_collector.get_summary()
     logger.info(f"Performance summary: {json.dumps(summary, indent=2)}")
@@ -295,19 +305,16 @@ def on_request(
     response_length: int,
     response: Any,
     context: dict[str, Any],
-    exception: Optional[Exception],
+    exception: typing.Optional[Exception],
     start_time: float,
     url: str,
     **kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_response_time(response_time)
-    
+
     # Track errors
-    if exception or (response and response.status_code >= 400):
-        error_rate = 1.0
-    else:
-        error_rate = 0.0
+    error_rate = 1.0 if exception or (response and response.status_code >= 400) else 0.0
     metrics_collector.add_error(error_rate)
 
 
@@ -329,19 +336,19 @@ def on_worker_report(client_id: str, data: dict[str, Any]):
 
 def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
     """Create a Locust environment for programmatic load testing.
-    
+
     Args:
         host: Target host URL
-        
+
     Returns:
         Configured Locust environment
     """
     from locust.env import Environment
     from locust.log import setup_logging
-    
+
     setup_logging("INFO", None)
-    
+
     # Create environment
     env = Environment(user_classes=[VectorDBUser], host=host)
-    
+
     return env

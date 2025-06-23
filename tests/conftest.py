@@ -7,10 +7,11 @@ configuration, and utilities that follow 2025 testing best practices.
 import os
 import sys
 import tempfile
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -146,7 +147,7 @@ def setup_browser_environment():
 @pytest.fixture(scope="session")
 def platform_info() -> dict[str, bool | str]:
     """Provide platform information for tests.
-    
+
     Returns:
         Dict containing platform detection flags and system information
     """
@@ -162,7 +163,7 @@ def platform_info() -> dict[str, bool | str]:
 @pytest.fixture(scope="session")
 def skip_if_windows() -> None:
     """Skip test if running on Windows.
-    
+
     Raises:
         pytest.skip: If running on Windows platform
     """
@@ -173,7 +174,7 @@ def skip_if_windows() -> None:
 @pytest.fixture(scope="session")
 def skip_if_macos() -> None:
     """Skip test if running on macOS.
-    
+
     Raises:
         pytest.skip: If running on macOS platform
     """
@@ -184,7 +185,7 @@ def skip_if_macos() -> None:
 @pytest.fixture(scope="session")
 def skip_if_linux() -> None:
     """Skip test if running on Linux.
-    
+
     Raises:
         pytest.skip: If running on Linux platform
     """
@@ -195,7 +196,7 @@ def skip_if_linux() -> None:
 @pytest.fixture(scope="session")
 def skip_if_ci() -> None:
     """Skip test if running in CI environment.
-    
+
     Raises:
         pytest.skip: If running in CI environment
     """
@@ -206,7 +207,7 @@ def skip_if_ci() -> None:
 @pytest.fixture(scope="session")
 def require_ci() -> None:
     """Require test to run in CI environment.
-    
+
     Raises:
         pytest.skip: If not running in CI environment
     """
@@ -267,7 +268,7 @@ def test_urls() -> dict[str, str]:
 @pytest.fixture()
 def temp_dir() -> Generator[Path, None, None]:
     """Create a temporary directory for test files.
-    
+
     Yields:
         Path to temporary directory that is automatically cleaned up
     """
@@ -278,9 +279,9 @@ def temp_dir() -> Generator[Path, None, None]:
 @pytest.fixture()
 def mock_env_vars() -> Generator[None, None, None]:
     """Mock environment variables for testing.
-    
+
     Sets up test environment variables and restores original values on cleanup.
-    
+
     Yields:
         None
     """
@@ -307,7 +308,7 @@ def mock_env_vars() -> Generator[None, None, None]:
 @pytest.fixture()
 def mock_qdrant_client() -> MagicMock:
     """Mock Qdrant client for testing.
-    
+
     Returns:
         Configured MagicMock simulating Qdrant client behavior
     """
@@ -325,7 +326,7 @@ def mock_qdrant_client() -> MagicMock:
 @pytest.fixture()
 def mock_openai_client() -> MagicMock:
     """Mock OpenAI client for testing.
-    
+
     Returns:
         Configured MagicMock simulating OpenAI client behavior
     """
@@ -341,7 +342,7 @@ def mock_openai_client() -> MagicMock:
 @pytest.fixture()
 def mock_crawl4ai() -> MagicMock:
     """Mock Crawl4AI AsyncWebCrawler for testing.
-    
+
     Returns:
         Configured MagicMock simulating Crawl4AI AsyncWebCrawler behavior
     """
@@ -363,7 +364,7 @@ def mock_crawl4ai() -> MagicMock:
 @pytest.fixture()
 def sample_documentation_site() -> dict[str, Any]:
     """Sample documentation site configuration.
-    
+
     Returns:
         Sample configuration dictionary for documentation site testing
     """
@@ -378,7 +379,7 @@ def sample_documentation_site() -> dict[str, Any]:
 @pytest.fixture()
 def sample_crawl_result() -> dict[str, Any]:
     """Sample crawl result data.
-    
+
     Returns:
         Sample crawl result dictionary for testing
     """
@@ -401,7 +402,7 @@ def sample_crawl_result() -> dict[str, Any]:
 @pytest.fixture()
 def sample_vector_points() -> list[PointStruct]:
     """Sample vector points for testing.
-    
+
     Returns:
         List of sample PointStruct objects for testing vector operations
     """

@@ -4,19 +4,16 @@ This module implements consumer-driven contract testing using Pact patterns
 for testing service interactions and API contracts.
 """
 
-import json
 import pytest
-from typing import Any
-from unittest.mock import AsyncMock, patch
-
-from src.models.api_contracts import SearchRequest, SearchResponse, DocumentRequest
 
 
 class TestVectorSearchConsumerContracts:
     """Test consumer contracts for vector search API."""
 
     @pytest.mark.pact
-    async def test_search_consumer_contract(self, pact_contract_builder, mock_contract_service):
+    async def test_search_consumer_contract(
+        self, pact_contract_builder, mock_contract_service
+    ):
         """Test search API consumer contract."""
         # Define the interaction
         pact_contract_builder.given("documents exist in the collection")
@@ -29,8 +26,8 @@ class TestVectorSearchConsumerContracts:
                 "query": "machine learning",
                 "collection_name": "documents",
                 "limit": 10,
-                "score_threshold": 0.7
-            }
+                "score_threshold": 0.7,
+            },
         )
         pact_contract_builder.will_respond_with(
             status=200,
@@ -43,24 +40,24 @@ class TestVectorSearchConsumerContracts:
                         "score": 0.95,
                         "title": "Machine Learning Guide",
                         "content": "Comprehensive guide to ML",
-                        "metadata": {"source": "documentation"}
+                        "metadata": {"source": "documentation"},
                     }
                 ],
                 "total_count": 1,
                 "query_time_ms": 45.0,
                 "search_strategy": "hybrid",
-                "cache_hit": False
-            }
+                "cache_hit": False,
+            },
         )
-        
+
         # Build the contract
         contract = pact_contract_builder.build_pact()
-        
+
         # Verify contract structure
         assert contract["consumer"]["name"] == "ai-docs-consumer"
         assert contract["provider"]["name"] == "ai-docs-provider"
         assert len(contract["interactions"]) == 1
-        
+
         interaction = contract["interactions"][0]
         assert interaction["description"] == "a search request for AI documentation"
         assert interaction["request"]["method"] == "POST"
@@ -71,7 +68,9 @@ class TestVectorSearchConsumerContracts:
     async def test_advanced_search_consumer_contract(self, pact_contract_builder):
         """Test advanced search API consumer contract."""
         pact_contract_builder.given("documents with embeddings exist")
-        pact_contract_builder.upon_receiving("an advanced search request with reranking")
+        pact_contract_builder.upon_receiving(
+            "an advanced search request with reranking"
+        )
         pact_contract_builder.with_request(
             method="POST",
             path="/api/search/advanced",
@@ -82,8 +81,8 @@ class TestVectorSearchConsumerContracts:
                 "search_strategy": "hybrid",
                 "accuracy_level": "accurate",
                 "enable_reranking": True,
-                "limit": 20
-            }
+                "limit": 20,
+            },
         )
         pact_contract_builder.will_respond_with(
             status=200,
@@ -96,22 +95,19 @@ class TestVectorSearchConsumerContracts:
                         "score": 0.98,
                         "title": "Deep Neural Networks",
                         "content": "Advanced deep learning concepts",
-                        "metadata": {
-                            "source": "research_paper",
-                            "reranked": True
-                        }
+                        "metadata": {"source": "research_paper", "reranked": True},
                     }
                 ],
                 "total_count": 15,
                 "query_time_ms": 120.0,
                 "search_strategy": "hybrid",
-                "cache_hit": False
-            }
+                "cache_hit": False,
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         assert len(contract["interactions"]) == 1
-        
+
         interaction = contract["interactions"][0]
         request_body = interaction["request"]["body"]
         assert request_body["search_strategy"] == "hybrid"
@@ -129,8 +125,8 @@ class TestVectorSearchConsumerContracts:
             body={
                 "query": "",  # Invalid empty query
                 "collection_name": "documents",
-                "limit": 10
-            }
+                "limit": 10,
+            },
         )
         pact_contract_builder.will_respond_with(
             status=400,
@@ -139,14 +135,14 @@ class TestVectorSearchConsumerContracts:
                 "success": False,
                 "error": "Query cannot be empty",
                 "error_type": "validation_error",
-                "context": {"field": "query", "value": ""}
-            }
+                "context": {"field": "query", "value": ""},
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         interaction = contract["interactions"][0]
         assert interaction["response"]["status"] == 400
-        
+
         response_body = interaction["response"]["body"]
         assert response_body["success"] is False
         assert "validation_error" in response_body["error_type"]
@@ -169,8 +165,8 @@ class TestDocumentProcessingConsumerContracts:
                 "collection_name": "documents",
                 "doc_type": "webpage",
                 "metadata": {"category": "tutorial"},
-                "force_recrawl": False
-            }
+                "force_recrawl": False,
+            },
         )
         pact_contract_builder.will_respond_with(
             status=201,
@@ -181,14 +177,14 @@ class TestDocumentProcessingConsumerContracts:
                 "url": "https://example.com/doc",
                 "chunks_created": 5,
                 "processing_time_ms": 1500.0,
-                "status": "processed"
-            }
+                "status": "processed",
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         interaction = contract["interactions"][0]
         assert interaction["response"]["status"] == 201
-        
+
         response_body = interaction["response"]["body"]
         assert "document_id" in response_body
         assert response_body["status"] == "processed"
@@ -206,12 +202,12 @@ class TestDocumentProcessingConsumerContracts:
                 "urls": [
                     "https://example.com/doc1",
                     "https://example.com/doc2",
-                    "https://example.com/doc3"
+                    "https://example.com/doc3",
                 ],
                 "collection_name": "bulk_docs",
                 "max_concurrent": 3,
-                "force_recrawl": False
-            }
+                "force_recrawl": False,
+            },
         )
         pact_contract_builder.will_respond_with(
             status=202,
@@ -228,17 +224,17 @@ class TestDocumentProcessingConsumerContracts:
                         "url": "https://example.com/doc1",
                         "chunks_created": 5,
                         "processing_time_ms": 1200.0,
-                        "status": "processed"
+                        "status": "processed",
                     }
                 ],
-                "errors": []
-            }
+                "errors": [],
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         interaction = contract["interactions"][0]
         assert interaction["response"]["status"] == 202
-        
+
         response_body = interaction["response"]["body"]
         assert response_body["processed_count"] == 3
         assert response_body["failed_count"] == 0
@@ -262,8 +258,8 @@ class TestCollectionManagementConsumerContracts:
                 "vector_size": 1024,
                 "distance_metric": "Cosine",
                 "enable_hybrid": True,
-                "hnsw_config": {"m": 16, "ef_construct": 100}
-            }
+                "hnsw_config": {"m": 16, "ef_construct": 100},
+            },
         )
         pact_contract_builder.will_respond_with(
             status=201,
@@ -275,15 +271,15 @@ class TestCollectionManagementConsumerContracts:
                 "details": {
                     "vector_size": 1024,
                     "distance_metric": "Cosine",
-                    "hybrid_enabled": True
-                }
-            }
+                    "hybrid_enabled": True,
+                },
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         interaction = contract["interactions"][0]
         assert interaction["response"]["status"] == 201
-        
+
         response_body = interaction["response"]["body"]
         assert response_body["operation"] == "created"
         assert response_body["collection_name"] == "new_collection"
@@ -296,7 +292,7 @@ class TestCollectionManagementConsumerContracts:
         pact_contract_builder.with_request(
             method="GET",
             path="/api/collections",
-            headers={"Accept": "application/json"}
+            headers={"Accept": "application/json"},
         )
         pact_contract_builder.will_respond_with(
             status=200,
@@ -310,18 +306,18 @@ class TestCollectionManagementConsumerContracts:
                         "vectors_count": 1000,
                         "indexed_fields": ["doc_type", "source"],
                         "status": "green",
-                        "config": {"vector_size": 1024}
+                        "config": {"vector_size": 1024},
                     }
                 ],
-                "total_count": 1
-            }
+                "total_count": 1,
+            },
         )
-        
+
         contract = pact_contract_builder.build_pact()
         interaction = contract["interactions"][0]
         assert interaction["request"]["method"] == "GET"
         assert interaction["response"]["status"] == 200
-        
+
         response_body = interaction["response"]["body"]
         assert "collections" in response_body
         assert response_body["total_count"] == 1
@@ -331,46 +327,46 @@ class TestPactContractVerification:
     """Test Pact contract verification against actual implementations."""
 
     @pytest.mark.pact
-    async def test_verify_search_contract(self, pact_contract_builder, mock_contract_service):
+    async def test_verify_search_contract(
+        self, pact_contract_builder, mock_contract_service
+    ):
         """Test verification of search contract against mock service."""
         # Set up the contract
         pact_contract_builder.given("documents exist")
         pact_contract_builder.upon_receiving("search request")
         pact_contract_builder.with_request(
-            method="POST",
-            path="/api/search",
-            body={"query": "test", "limit": 10}
+            method="POST", path="/api/search", body={"query": "test", "limit": 10}
         )
         pact_contract_builder.will_respond_with(
             status=200,
             body={
                 "success": True,
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total_count": 1
-            }
+                "total_count": 1,
+            },
         )
-        
+
         # Simulate actual service call
         actual_request = {
             "method": "POST",
             "path": "/api/search",
-            "body": {"query": "test", "limit": 10}
+            "body": {"query": "test", "limit": 10},
         }
-        
+
         actual_response = {
             "status": 200,
             "body": {
                 "success": True,
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total_count": 1
-            }
+                "total_count": 1,
+            },
         }
-        
+
         # Verify contract
         verification_result = pact_contract_builder.verify_interaction(
             actual_request, actual_response
         )
-        
+
         assert verification_result["verified"] is True
         assert len(verification_result["errors"]) == 0
 
@@ -381,35 +377,31 @@ class TestPactContractVerification:
         pact_contract_builder.given("documents exist")
         pact_contract_builder.upon_receiving("search request")
         pact_contract_builder.with_request(
-            method="POST",
-            path="/api/search",
-            body={"query": "test"}
+            method="POST", path="/api/search", body={"query": "test"}
         )
         pact_contract_builder.will_respond_with(
-            status=200,
-            body={"success": True, "results": []}
+            status=200, body={"success": True, "results": []}
         )
-        
+
         # Simulate contract violation (wrong method)
         violating_request = {
             "method": "GET",  # Expected POST
             "path": "/api/search",
-            "body": {"query": "test"}
+            "body": {"query": "test"},
         }
-        
-        violating_response = {
-            "status": 200,
-            "body": {"success": True, "results": []}
-        }
-        
+
+        violating_response = {"status": 200, "body": {"success": True, "results": []}}
+
         # Verify contract violation is detected
         verification_result = pact_contract_builder.verify_interaction(
             violating_request, violating_response
         )
-        
+
         assert verification_result["verified"] is False
         assert len(verification_result["errors"]) > 0
-        assert any("Method mismatch" in error for error in verification_result["errors"])
+        assert any(
+            "Method mismatch" in error for error in verification_result["errors"]
+        )
 
 
 class TestConsumerContractEvolution:
@@ -422,23 +414,21 @@ class TestConsumerContractEvolution:
         pact_contract_builder.given("API version 1")
         pact_contract_builder.upon_receiving("v1 search request")
         pact_contract_builder.with_request(
-            method="POST",
-            path="/api/v1/search",
-            body={"query": "test", "limit": 10}
+            method="POST", path="/api/v1/search", body={"query": "test", "limit": 10}
         )
         pact_contract_builder.will_respond_with(
             status=200,
             body={
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total": 1
-            }
+                "total": 1,
+            },
         )
-        
+
         v1_contract = pact_contract_builder.build_pact()
-        
+
         # Create new builder for v2
         pact_contract_builder.interactions = []  # Reset interactions
-        
+
         # Version 2 contract (backward compatible)
         pact_contract_builder.given("API version 2")
         pact_contract_builder.upon_receiving("v2 search request")
@@ -448,8 +438,8 @@ class TestConsumerContractEvolution:
             body={
                 "query": "test",
                 "limit": 10,
-                "search_strategy": "hybrid"  # New optional field
-            }
+                "search_strategy": "hybrid",  # New optional field
+            },
         )
         pact_contract_builder.will_respond_with(
             status=200,
@@ -457,20 +447,20 @@ class TestConsumerContractEvolution:
                 "success": True,  # New field
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
                 "total_count": 1,  # Renamed field
-                "search_strategy": "hybrid"  # New field
-            }
+                "search_strategy": "hybrid",  # New field
+            },
         )
-        
+
         v2_contract = pact_contract_builder.build_pact()
-        
+
         # Verify both contracts are valid
         assert len(v1_contract["interactions"]) == 1
         assert len(v2_contract["interactions"]) == 1
-        
+
         # Verify v2 has additional fields
         v2_request = v2_contract["interactions"][0]["request"]["body"]
         assert "search_strategy" in v2_request
-        
+
         v2_response = v2_contract["interactions"][0]["response"]["body"]
         assert "success" in v2_response
         assert "search_strategy" in v2_response
@@ -479,19 +469,22 @@ class TestConsumerContractEvolution:
     async def test_contract_compatibility_matrix(self, pact_contract_builder):
         """Test compatibility matrix between different contract versions."""
         compatibility_matrix = {
-            "consumer_v1_provider_v1": True,   # Same version
-            "consumer_v1_provider_v2": True,   # Backward compatible
+            "consumer_v1_provider_v1": True,  # Same version
+            "consumer_v1_provider_v2": True,  # Backward compatible
             "consumer_v2_provider_v1": False,  # Forward incompatible
-            "consumer_v2_provider_v2": True,   # Same version
+            "consumer_v2_provider_v2": True,  # Same version
         }
-        
+
         # Test scenarios
         for scenario, expected_compatibility in compatibility_matrix.items():
-            consumer_version, provider_version = scenario.split("_")[1], scenario.split("_")[3]
-            
+            _consumer_version, _provider_version = (
+                scenario.split("_")[1],
+                scenario.split("_")[3],
+            )
+
             # This would be expanded with actual compatibility testing logic
             assert isinstance(expected_compatibility, bool)
-            
+
         # For now, just verify the matrix structure
         assert len(compatibility_matrix) == 4
         assert compatibility_matrix["consumer_v1_provider_v1"] is True

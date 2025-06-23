@@ -14,6 +14,7 @@ import pytest_asyncio
 from hypothesis import given
 from hypothesis import settings
 from hypothesis import strategies as st
+
 from src.config import Config
 from src.config import TaskQueueConfig
 
@@ -76,9 +77,7 @@ class TestModernAsyncPatterns:
 
         # Test search functionality
         results = await mock_service.search(
-            query="test query",
-            collection_name="test_collection",
-            limit=10
+            query="test query", collection_name="test_collection", limit=10
         )
 
         assert isinstance(results, dict)
@@ -92,8 +91,7 @@ class TestModernAsyncPatterns:
 
         # Execute multiple searches concurrently
         tasks = [
-            mock_service.search(f"query_{i}", "test_collection", 5)
-            for i in range(3)
+            mock_service.search(f"query_{i}", "test_collection", 5) for i in range(3)
         ]
 
         results = await asyncio.gather(*tasks)
@@ -103,6 +101,7 @@ class TestModernAsyncPatterns:
     @pytest.mark.asyncio(loop_scope="function")
     async def test_timeout_handling(self, mock_service):
         """Test async timeout handling patterns."""
+
         # Mock a slow operation
         async def slow_search(*args, **kwargs):
             await asyncio.sleep(2.0)
@@ -113,8 +112,7 @@ class TestModernAsyncPatterns:
         # Test with timeout
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(
-                mock_service.search("test", "collection", 5),
-                timeout=0.1
+                mock_service.search("test", "collection", 5), timeout=0.1
             )
 
 
@@ -125,16 +123,14 @@ class TestPropertyBasedPatterns:
     @given(
         query=st.text(min_size=1, max_size=1000),
         limit=st.integers(min_value=1, max_value=100),
-        score_threshold=st.floats(min_value=0.0, max_value=1.0)
+        score_threshold=st.floats(min_value=0.0, max_value=1.0),
     )
-    def test_search_params_validation(self, query: str, limit: int, score_threshold: float):
+    def test_search_params_validation(
+        self, query: str, limit: int, score_threshold: float
+    ):
         """Property-based test for search parameter validation."""
         # Create a simple dict to represent search params
-        params = {
-            "query": query,
-            "limit": limit,
-            "score_threshold": score_threshold
-        }
+        params = {"query": query, "limit": limit, "score_threshold": score_threshold}
 
         # Test basic validation logic
         assert params["query"] == query
@@ -163,8 +159,8 @@ class TestPropertyBasedPatterns:
             settings = WorkerSettings.get_redis_settings()
 
             # Verify basic structure is maintained
-            assert hasattr(settings, 'host')
-            assert hasattr(settings, 'port')
+            assert hasattr(settings, "host")
+            assert hasattr(settings, "port")
             assert isinstance(settings.port, int)
             assert 1 <= settings.port <= 65535
 
@@ -175,7 +171,7 @@ class TestPropertyBasedPatterns:
     @pytest.mark.hypothesis
     @given(
         chunk_size=st.integers(min_value=100, max_value=3000),
-        chunk_overlap=st.integers(min_value=0, max_value=500)
+        chunk_overlap=st.integers(min_value=0, max_value=500),
     )
     def test_chunking_config_properties(self, chunk_size: int, chunk_overlap: int):
         """Property-based test for chunking configuration invariants."""
@@ -186,10 +182,7 @@ class TestPropertyBasedPatterns:
             chunk_overlap = chunk_size // 2
 
         try:
-            config = ChunkingConfig(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap
-            )
+            config = ChunkingConfig(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
             # Verify fundamental properties
             assert config.chunk_size > 0
@@ -198,8 +191,9 @@ class TestPropertyBasedPatterns:
 
         except ValueError as e:
             # If validation fails, it should be for expected reasons
-            assert "chunk_overlap must be less than chunk_size" in str(e) or \
-                   "max_chunk_size must be >= chunk_size" in str(e)
+            assert "chunk_overlap must be less than chunk_size" in str(
+                e
+            ) or "max_chunk_size must be >= chunk_size" in str(e)
 
 
 class TestModernFixturePatterns:
@@ -218,6 +212,7 @@ class TestModernFixturePatterns:
         """Function-scoped config that inherits from session config."""
         # Create a copy for isolation
         import copy
+
         return copy.deepcopy(app_config)
 
     @pytest_asyncio.fixture(scope="function")
@@ -231,21 +226,20 @@ class TestModernFixturePatterns:
     @pytest.fixture
     def caplog_with_level(self, caplog):
         """Fixture factory pattern for capturing logs at specific levels."""
+
         def _caplog_with_level(level: int = logging.INFO):
             caplog.set_level(level)
             return caplog
+
         return _caplog_with_level
 
     @pytest.mark.asyncio
     async def test_fixture_dependency_injection(
-        self,
-        isolated_config: Config,
-        mock_redis_pool,
-        caplog_with_level
+        self, isolated_config: Config, mock_redis_pool, caplog_with_level
     ):
         """Test modern dependency injection patterns."""
         # Use the factory fixture
-        caplog = caplog_with_level(logging.DEBUG)
+        caplog_with_level(logging.DEBUG)
 
         # Test config isolation
         isolated_config.debug = False
@@ -290,6 +284,7 @@ class TestErrorHandlingPatterns:
     @pytest.mark.asyncio
     async def test_exception_groups(self):
         """Test exception group handling (Python 3.11+ feature)."""
+
         async def failing_task(delay: float, error_msg: str):
             await asyncio.sleep(delay)
             raise ValueError(error_msg)
@@ -299,12 +294,13 @@ class TestErrorHandlingPatterns:
             await asyncio.gather(
                 failing_task(0.01, "Error 1"),
                 failing_task(0.02, "Error 2"),
-                return_exceptions=False
+                return_exceptions=False,
             )
 
     @pytest.mark.asyncio
     async def test_task_cancellation(self):
         """Test proper task cancellation patterns."""
+
         async def long_running_task():
             await asyncio.sleep(10)
             return "completed"
@@ -320,10 +316,13 @@ class TestErrorHandlingPatterns:
 
 
 # Parametrized tests with modern patterns
-@pytest.mark.parametrize("provider,expected_model", [
-    ("openai", "text-embedding-3-small"),
-    ("fastembed", "BAAI/bge-small-en-v1.5"),
-])
+@pytest.mark.parametrize(
+    "provider,expected_model",
+    [
+        ("openai", "text-embedding-3-small"),
+        ("fastembed", "BAAI/bge-small-en-v1.5"),
+    ],
+)
 def test_embedding_provider_defaults(provider: str, expected_model: str):
     """Test embedding provider defaults with parametrization."""
     from src.config.enums import EmbeddingProvider
@@ -337,11 +336,14 @@ def test_embedding_provider_defaults(provider: str, expected_model: str):
         assert config.fastembed.model == expected_model
 
 
-@pytest.mark.parametrize("config_method", [
-    "from_env",
-    "from_defaults",
-    "from_file_json",
-])
+@pytest.mark.parametrize(
+    "config_method",
+    [
+        "from_env",
+        "from_defaults",
+        "from_file_json",
+    ],
+)
 def test_config_loading_methods(config_method: str, tmp_path):
     """Test different configuration loading methods."""
     if config_method == "from_env":

@@ -4,13 +4,11 @@ This module tests JWT token validation, manipulation resistance,
 and authentication bypass prevention.
 """
 
+import time
+from unittest.mock import MagicMock
+
 import jwt
 import pytest
-import time
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
-from src.security import SecurityError
 
 
 @pytest.mark.security
@@ -57,17 +55,17 @@ class TestJWTSecurity:
     def jwt_service(self, jwt_secret):
         """Mock JWT service for testing."""
         service = MagicMock()
-        
+
         def mock_generate_token(payload):
             return jwt.encode(payload, jwt_secret, algorithm="HS256")
-        
+
         def mock_verify_token(token):
             try:
                 payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
                 return {"valid": True, "payload": payload}
             except jwt.InvalidTokenError as e:
                 return {"valid": False, "error": str(e)}
-        
+
         service.generate_token = mock_generate_token
         service.verify_token = mock_verify_token
         return service
@@ -77,16 +75,16 @@ class TestJWTSecurity:
         token = jwt_service.generate_token(valid_jwt_payload)
         assert isinstance(token, str)
         assert len(token) > 0
-        
+
         # Verify token structure (header.payload.signature)
-        parts = token.split('.')
+        parts = token.split(".")
         assert len(parts) == 3
 
     def test_valid_jwt_verification(self, jwt_service, valid_jwt_payload):
         """Test valid JWT token verification."""
         token = jwt_service.generate_token(valid_jwt_payload)
         result = jwt_service.verify_token(token)
-        
+
         assert result["valid"] is True
         assert result["payload"]["user_id"] == valid_jwt_payload["user_id"]
         assert result["payload"]["username"] == valid_jwt_payload["username"]
@@ -103,10 +101,10 @@ class TestJWTSecurity:
             "iss": "ai-docs-vector-db",
             "aud": "api-client",
         }
-        
+
         token = jwt.encode(expired_payload, jwt_secret, algorithm="HS256")
         result = jwt_service.verify_token(token)
-        
+
         assert result["valid"] is False
         assert "expired" in result["error"].lower()
 
@@ -122,7 +120,7 @@ class TestJWTSecurity:
             ".payload.signature",  # Empty header
             "header.payload.",  # Empty signature
         ]
-        
+
         for token in malformed_tokens:
             result = jwt_service.verify_token(token)
             assert result["valid"] is False
@@ -131,33 +129,35 @@ class TestJWTSecurity:
         """Test rejection of JWT tokens with invalid signatures."""
         # Generate token with correct secret
         token = jwt_service.generate_token(valid_jwt_payload)
-        
+
         # Try to verify with wrong secret
         wrong_secret = "wrong_secret_key"
         try:
             jwt.decode(token, wrong_secret, algorithms=["HS256"])
-            assert False, "Should have raised InvalidSignatureError"
+            raise AssertionError("Should have raised InvalidSignatureError")
         except jwt.InvalidSignatureError:
             # Expected behavior
             pass
 
-    def test_algorithm_confusion_prevention(self, jwt_service, valid_jwt_payload, jwt_secret):
+    def test_algorithm_confusion_prevention(
+        self, jwt_service, valid_jwt_payload, jwt_secret
+    ):
         """Test prevention of algorithm confusion attacks."""
         # Generate HS256 token
         token = jwt_service.generate_token(valid_jwt_payload)
-        
+
         # Try to verify as RS256 (should fail)
         try:
             jwt.decode(token, jwt_secret, algorithms=["RS256"])
-            assert False, "Should reject algorithm confusion"
+            raise AssertionError("Should reject algorithm confusion")
         except jwt.InvalidTokenError:
             # Expected behavior
             pass
-        
+
         # Try to verify with 'none' algorithm (should fail)
         try:
             jwt.decode(token, jwt_secret, algorithms=["none"])
-            assert False, "Should reject 'none' algorithm"
+            raise AssertionError("Should reject 'none' algorithm")
         except jwt.InvalidTokenError:
             # Expected behavior
             pass
@@ -167,54 +167,57 @@ class TestJWTSecurity:
         # Create token with 'none' algorithm (no signature)
         header = {"alg": "none", "typ": "JWT"}
         payload = valid_jwt_payload
-        
+
         import base64
         import json
-        
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).decode().rstrip('=')
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).decode().rstrip('=')
-        
+
+        header_b64 = (
+            base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
+        )
+        payload_b64 = (
+            base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        )
+
         # Token without signature
         none_token = f"{header_b64}.{payload_b64}."
-        
+
         # Should be rejected
         try:
             jwt.decode(none_token, verify=False, algorithms=["none"])
-            assert False, "Should reject 'none' algorithm tokens"
+            raise AssertionError("Should reject 'none' algorithm tokens")
         except jwt.InvalidTokenError:
             # Expected behavior
             pass
 
-    def test_jwt_payload_manipulation_detection(self, jwt_service, valid_jwt_payload, jwt_secret):
+    def test_jwt_payload_manipulation_detection(
+        self, jwt_service, valid_jwt_payload, jwt_secret
+    ):
         """Test detection of JWT payload manipulation."""
         token = jwt_service.generate_token(valid_jwt_payload)
-        
+
         # Decode without verification to manipulate payload
-        header, payload, signature = token.split('.')
-        
+        header, payload, signature = token.split(".")
+
         # Decode payload
         import base64
         import json
-        payload_data = json.loads(
-            base64.urlsafe_b64decode(payload + '==').decode()
-        )
-        
+
+        payload_data = json.loads(base64.urlsafe_b64decode(payload + "==").decode())
+
         # Manipulate payload (privilege escalation)
         payload_data["role"] = "admin"
         payload_data["permissions"] = ["read", "write", "admin", "delete"]
-        
+
         # Re-encode payload
-        manipulated_payload = base64.urlsafe_b64encode(
-            json.dumps(payload_data).encode()
-        ).decode().rstrip('=')
-        
+        manipulated_payload = (
+            base64.urlsafe_b64encode(json.dumps(payload_data).encode())
+            .decode()
+            .rstrip("=")
+        )
+
         # Create manipulated token
         manipulated_token = f"{header}.{manipulated_payload}.{signature}"
-        
+
         # Should be rejected due to invalid signature
         result = jwt_service.verify_token(manipulated_token)
         assert result["valid"] is False
@@ -222,26 +225,27 @@ class TestJWTSecurity:
     def test_jwt_header_manipulation_detection(self, jwt_service, valid_jwt_payload):
         """Test detection of JWT header manipulation."""
         token = jwt_service.generate_token(valid_jwt_payload)
-        header, payload, signature = token.split('.')
-        
+        header, payload, signature = token.split(".")
+
         # Decode and manipulate header
         import base64
         import json
-        header_data = json.loads(
-            base64.urlsafe_b64decode(header + '==').decode()
-        )
-        
+
+        header_data = json.loads(base64.urlsafe_b64decode(header + "==").decode())
+
         # Change algorithm
         header_data["alg"] = "none"
-        
+
         # Re-encode header
-        manipulated_header = base64.urlsafe_b64encode(
-            json.dumps(header_data).encode()
-        ).decode().rstrip('=')
-        
+        manipulated_header = (
+            base64.urlsafe_b64encode(json.dumps(header_data).encode())
+            .decode()
+            .rstrip("=")
+        )
+
         # Create manipulated token
         manipulated_token = f"{manipulated_header}.{payload}.{signature}"
-        
+
         # Should be rejected
         result = jwt_service.verify_token(manipulated_token)
         assert result["valid"] is False
@@ -249,7 +253,7 @@ class TestJWTSecurity:
     def test_jwt_time_claims_validation(self, jwt_service, jwt_secret):
         """Test validation of JWT time-based claims."""
         current_time = int(time.time())
-        
+
         # Test 'nbf' (not before) claim
         future_payload = {
             "user_id": "test_user",
@@ -261,12 +265,12 @@ class TestJWTSecurity:
             "iss": "ai-docs-vector-db",
             "aud": "api-client",
         }
-        
+
         token = jwt.encode(future_payload, jwt_secret, algorithm="HS256")
-        
+
         try:
             jwt.decode(token, jwt_secret, algorithms=["HS256"])
-            assert False, "Should reject token with future 'nbf'"
+            raise AssertionError("Should reject token with future 'nbf'")
         except jwt.ImmatureSignatureError:
             # Expected behavior
             pass
@@ -282,18 +286,15 @@ class TestJWTSecurity:
             "iss": "malicious-issuer",  # Wrong issuer
             "aud": "api-client",
         }
-        
+
         token = jwt.encode(invalid_issuer_payload, jwt_secret, algorithm="HS256")
-        
+
         # Verify with expected issuer
         try:
             jwt.decode(
-                token, 
-                jwt_secret, 
-                algorithms=["HS256"],
-                issuer="ai-docs-vector-db"
+                token, jwt_secret, algorithms=["HS256"], issuer="ai-docs-vector-db"
             )
-            assert False, "Should reject token with wrong issuer"
+            raise AssertionError("Should reject token with wrong issuer")
         except jwt.InvalidIssuerError:
             # Expected behavior
             pass
@@ -309,18 +310,13 @@ class TestJWTSecurity:
             "iss": "ai-docs-vector-db",
             "aud": "wrong-audience",  # Wrong audience
         }
-        
+
         token = jwt.encode(invalid_audience_payload, jwt_secret, algorithm="HS256")
-        
+
         # Verify with expected audience
         try:
-            jwt.decode(
-                token, 
-                jwt_secret, 
-                algorithms=["HS256"],
-                audience="api-client"
-            )
-            assert False, "Should reject token with wrong audience"
+            jwt.decode(token, jwt_secret, algorithms=["HS256"], audience="api-client")
+            raise AssertionError("Should reject token with wrong audience")
         except jwt.InvalidAudienceError:
             # Expected behavior
             pass
@@ -330,15 +326,15 @@ class TestJWTSecurity:
         # Generate token with HMAC secret
         hmac_secret = "hmac_secret_key"
         hmac_token = jwt.encode(valid_jwt_payload, hmac_secret, algorithm="HS256")
-        
+
         # Try to verify with RSA public key (should fail)
         rsa_public_key = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
 -----END PUBLIC KEY-----"""
-        
+
         try:
             jwt.decode(hmac_token, rsa_public_key, algorithms=["RS256"])
-            assert False, "Should prevent key confusion attack"
+            raise AssertionError("Should prevent key confusion attack")
         except jwt.InvalidTokenError:
             # Expected behavior
             pass
@@ -347,41 +343,41 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         """Test prevention of JWT replay attacks."""
         # Generate token
         token = jwt_service.generate_token(valid_jwt_payload)
-        
+
         # Verify token (should work first time)
         result1 = jwt_service.verify_token(token)
         assert result1["valid"] is True
-        
+
         # In a real implementation, there should be:
         # 1. Token blacklisting after logout
         # 2. Nonce/JTI tracking to prevent replay
         # 3. Short expiration times
         # 4. Token rotation/refresh mechanisms
-        
+
         # Simulate token blacklist check
         blacklisted_tokens = set()
         blacklisted_tokens.add(token)
-        
+
         # Token should be rejected if blacklisted
         if token in blacklisted_tokens:
             # Token is blacklisted, should be rejected
             assert True
         else:
-            assert False, "Token should be blacklisted after logout"
+            raise AssertionError("Token should be blacklisted after logout")
 
     def test_jwt_privilege_escalation_prevention(self, jwt_service, valid_jwt_payload):
         """Test prevention of privilege escalation via JWT manipulation."""
         # Generate regular user token
         user_token = jwt_service.generate_token(valid_jwt_payload)
         user_result = jwt_service.verify_token(user_token)
-        
+
         assert user_result["valid"] is True
         assert user_result["payload"]["role"] == "user"
         assert "admin" not in user_result["payload"]["permissions"]
-        
+
         # Attempting to modify token should fail signature verification
         # This is already tested in test_jwt_payload_manipulation_detection
-        
+
         # Verify that role-based access control is enforced
         user_permissions = user_result["payload"]["permissions"]
         assert "read" in user_permissions
@@ -394,26 +390,26 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # Generate token with session info
         session_payload = valid_jwt_payload.copy()
         session_payload["session_id"] = "session_123"
-        
+
         token = jwt_service.generate_token(session_payload)
         result = jwt_service.verify_token(token)
-        
+
         assert result["valid"] is True
         assert result["payload"]["session_id"] == "session_123"
-        
+
         # In a real implementation:
         # 1. Session ID should be regenerated after login
         # 2. Old session should be invalidated
         # 3. Session should be tied to user authentication
-        
+
         # Simulate session regeneration
         new_session_payload = session_payload.copy()
         new_session_payload["session_id"] = "session_456"
         new_session_payload["iat"] = int(time.time())
-        
+
         new_token = jwt_service.generate_token(new_session_payload)
         new_result = jwt_service.verify_token(new_token)
-        
+
         assert new_result["valid"] is True
         assert new_result["payload"]["session_id"] != session_payload["session_id"]
 
@@ -424,16 +420,16 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 1. Proper token storage (httpOnly cookies or secure localStorage)
         # 2. CSRF token validation for state-changing operations
         # 3. SameSite cookie attributes
-        
+
         csrf_token = "csrf_token_123"
-        
+
         # Simulate CSRF token validation
         def validate_csrf_token(request_csrf, session_csrf):
             return request_csrf == session_csrf
-        
+
         # Valid CSRF token should pass
         assert validate_csrf_token(csrf_token, csrf_token) is True
-        
+
         # Invalid CSRF token should fail
         assert validate_csrf_token("wrong_csrf", csrf_token) is False
         assert validate_csrf_token("", csrf_token) is False
@@ -446,20 +442,21 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 2. Referrer headers
         # 3. Logs
         # 4. Error messages
-        
-        sample_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdCJ9.signature"
-        
+
+        sample_token = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdCJ9.signature"
+        )
+
         # URLs should not contain tokens
         safe_url = "https://api.example.com/data"
-        unsafe_url = f"https://api.example.com/data?token={sample_token}"
-        
+
         assert "token=" not in safe_url
         # In practice, verify that the application doesn't include tokens in URLs
-        
+
         # Error messages should not leak tokens
         error_message = "Authentication failed"
         assert sample_token not in error_message
-        
+
         # Logs should not contain full tokens (only masked versions)
         masked_token = f"{sample_token[:10]}...{sample_token[-4:]}"
         assert len(masked_token) < len(sample_token)
@@ -471,19 +468,19 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 2. Secure flag for HTTPS
         # 3. SameSite attribute
         # 4. Appropriate expiration
-        
+
         cookie_attributes = {
             "httpOnly": True,
             "secure": True,
             "sameSite": "Strict",
             "maxAge": 3600,  # 1 hour
         }
-        
+
         # Verify security attributes
         assert cookie_attributes["httpOnly"] is True  # Prevent XSS access
-        assert cookie_attributes["secure"] is True    # HTTPS only
+        assert cookie_attributes["secure"] is True  # HTTPS only
         assert cookie_attributes["sameSite"] == "Strict"  # CSRF protection
-        assert cookie_attributes["maxAge"] <= 3600   # Reasonable expiration
+        assert cookie_attributes["maxAge"] <= 3600  # Reasonable expiration
 
     def test_jwt_refresh_token_security(self, jwt_service):
         """Test refresh token security implementation."""
@@ -492,7 +489,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 2. Stored securely
         # 3. Single-use (invalidated after use)
         # 4. Tied to specific client/device
-        
+
         refresh_payload = {
             "token_type": "refresh",
             "user_id": "test_user",
@@ -501,21 +498,21 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
             "iat": int(time.time()),
             "exp": int(time.time()) + (7 * 24 * 3600),  # 7 days
         }
-        
+
         refresh_token = jwt_service.generate_token(refresh_payload)
         result = jwt_service.verify_token(refresh_token)
-        
+
         assert result["valid"] is True
         assert result["payload"]["token_type"] == "refresh"
         assert result["payload"]["user_id"] == "test_user"
-        
+
         # Simulate refresh token rotation
         used_refresh_tokens = set()
         used_refresh_tokens.add(refresh_token)
-        
+
         # Old refresh token should be invalidated
         if refresh_token in used_refresh_tokens:
             # Should generate new refresh token and invalidate old one
             assert True
         else:
-            assert False, "Refresh token should be invalidated after use"
+            raise AssertionError("Refresh token should be invalidated after use")

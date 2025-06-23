@@ -1,3 +1,4 @@
+import typing
 """Visual regression testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive visual regression testing including
@@ -6,15 +7,15 @@ and UI component validation.
 """
 
 import base64
+import contextlib
 import hashlib
 import json
-import os
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -22,12 +23,12 @@ import pytest
 @dataclass
 class VisualTestConfig:
     """Configuration for visual regression testing."""
-    
+
     test_name: str
     url: str
     viewport_width: int = 1280
     viewport_height: int = 720
-    wait_for_selector: Optional[str] = None
+    wait_for_selector: typing.Optional[str] = None
     wait_time: float = 1.0
     hide_selectors: list[str] = field(default_factory=list)
     mask_selectors: list[str] = field(default_factory=list)
@@ -40,7 +41,7 @@ class VisualTestConfig:
 @dataclass
 class Screenshot:
     """Screenshot data and metadata."""
-    
+
     name: str
     data: bytes
     width: int
@@ -48,12 +49,12 @@ class Screenshot:
     format: str = "png"
     timestamp: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     @property
     def base64_data(self) -> str:
         """Get base64 encoded screenshot data."""
-        return base64.b64encode(self.data).decode('utf-8')
-    
+        return base64.b64encode(self.data).decode("utf-8")
+
     @property
     def hash(self) -> str:
         """Get SHA-256 hash of screenshot data."""
@@ -63,14 +64,14 @@ class Screenshot:
 @dataclass
 class VisualComparisonResult:
     """Result of visual comparison."""
-    
+
     test_name: str
     baseline_hash: str
     current_hash: str
     difference_percentage: float
     threshold: float
     passed: bool
-    diff_image_data: Optional[bytes] = None
+    diff_image_data: typing.Optional[bytes] = None
     regions_changed: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -78,13 +79,15 @@ class VisualComparisonResult:
 @dataclass
 class ResponsiveTestConfig:
     """Configuration for responsive visual testing."""
-    
-    viewports: list[dict[str, int]] = field(default_factory=lambda: [
-        {"width": 320, "height": 568, "name": "mobile"},
-        {"width": 768, "height": 1024, "name": "tablet"},
-        {"width": 1280, "height": 720, "name": "desktop"},
-        {"width": 1920, "height": 1080, "name": "desktop_hd"},
-    ])
+
+    viewports: list[dict[str, int]] = field(
+        default_factory=lambda: [
+            {"width": 320, "height": 568, "name": "mobile"},
+            {"width": 768, "height": 1024, "name": "tablet"},
+            {"width": 1280, "height": 720, "name": "desktop"},
+            {"width": 1920, "height": 1080, "name": "desktop_hd"},
+        ]
+    )
     orientations: list[str] = field(default_factory=lambda: ["portrait", "landscape"])
     test_interactions: bool = True
     test_hover_states: bool = True
@@ -145,53 +148,61 @@ def visual_regression_config():
 @pytest.fixture
 def screenshot_manager():
     """Screenshot capture and management utilities."""
-    
+
     class ScreenshotManager:
         def __init__(self):
             self.screenshots = {}
             self.baseline_dir = Path("tests/visual_regression/baseline")
             self.current_dir = Path("tests/visual_regression/screenshots/current")
             self.diff_dir = Path("tests/visual_regression/screenshots/diff")
-            
+
             # Ensure directories exist
             for directory in [self.baseline_dir, self.current_dir, self.diff_dir]:
                 directory.mkdir(parents=True, exist_ok=True)
-        
-        async def capture_screenshot(self, page, config: VisualTestConfig) -> Screenshot:
+
+        async def capture_screenshot(
+            self, page, config: VisualTestConfig
+        ) -> Screenshot:
             """Capture screenshot with configuration."""
             # Set viewport
             await page.set_viewport_size(config.viewport_width, config.viewport_height)
-            
+
             # Navigate to URL
             await page.goto(config.url)
-            
+
             # Wait for specific selector if provided
             if config.wait_for_selector:
                 await page.wait_for_selector(config.wait_for_selector)
-            
+
             # Wait for specified time
             if config.wait_time > 0:
                 await page.wait_for_timeout(int(config.wait_time * 1000))
-            
+
             # Hide elements if specified
             for selector in config.hide_selectors:
-                await page.evaluate(f"document.querySelectorAll('{selector}').forEach(el => el.style.visibility = 'hidden')")
-            
+                await page.evaluate(
+                    f"document.querySelectorAll('{selector}').forEach(el => el.style.visibility = 'hidden')"
+                )
+
             # Mask elements if specified
             for selector in config.mask_selectors:
-                await page.evaluate(f"document.querySelectorAll('{selector}').forEach(el => el.style.background = '#000000')")
-            
+                await page.evaluate(
+                    f"document.querySelectorAll('{selector}').forEach(el => el.style.background = '#000000')"
+                )
+
             # Capture screenshot
             screenshot_options = {
                 "full_page": config.full_page,
                 "type": "png",
             }
-            
+
             screenshot_data = await page.screenshot(**screenshot_options)
-            
+
             # Get viewport size for metadata
-            viewport = await page.evaluate("() => ({ width: window.innerWidth, height: window.innerHeight })")
-            
+            viewport = await page.evaluate(
+                "() => ({ width: window.innerWidth, height: window.innerHeight })"
+            )
+
             screenshot = Screenshot(
                 name=config.test_name,
                 data=screenshot_data,
@@ -199,23 +210,31 @@ def screenshot_manager():
                 height=viewport["height"],
                 metadata={
                     "url": config.url,
-                    "viewport": {"width": config.viewport_width, "height": config.viewport_height},
+                    "viewport": {
+                        "width": config.viewport_width,
+                        "height": config.viewport_height,
+                    },
                     "full_page": config.full_page,
                     "user_agent": await page.evaluate("navigator.userAgent"),
-                }
+                },
             )
-            
+
             self.screenshots[config.test_name] = screenshot
             return screenshot
-        
-        def save_screenshot(self, screenshot: Screenshot, directory: Path, filename: Optional[str] = None) -> Path:
+
+        def save_screenshot(
+            self,
+            screenshot: Screenshot,
+            directory: Path,
+            filename: typing.Optional[str] = None,
+        ) -> Path:
             """Save screenshot to disk."""
             if not filename:
                 filename = f"{screenshot.name}.png"
-            
+
             file_path = directory / filename
             file_path.write_bytes(screenshot.data)
-            
+
             # Save metadata
             metadata_path = directory / f"{screenshot.name}_metadata.json"
             metadata = {
@@ -228,80 +247,85 @@ def screenshot_manager():
                 "metadata": screenshot.metadata,
             }
             metadata_path.write_text(json.dumps(metadata, indent=2))
-            
+
             return file_path
-        
-        def load_screenshot(self, name: str, directory: Path) -> Optional[Screenshot]:
+
+        def load_screenshot(self, name: str, directory: Path) -> typing.Optional[Screenshot]:
             """Load screenshot from disk."""
             file_path = directory / f"{name}.png"
             metadata_path = directory / f"{name}_metadata.json"
-            
+
             if not file_path.exists():
                 return None
-            
+
             screenshot_data = file_path.read_bytes()
-            
+
             # Load metadata if available
             metadata = {}
             if metadata_path.exists():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     metadata = json.loads(metadata_path.read_text())
-                except json.JSONDecodeError:
-                    pass
-            
+
             return Screenshot(
                 name=name,
                 data=screenshot_data,
                 width=metadata.get("width", 0),
                 height=metadata.get("height", 0),
                 format=metadata.get("format", "png"),
-                timestamp=datetime.fromisoformat(metadata["timestamp"]) if "timestamp" in metadata else datetime.now(),
+                timestamp=datetime.fromisoformat(metadata["timestamp"])
+                if "timestamp" in metadata
+                else datetime.now(),
                 metadata=metadata.get("metadata", {}),
             )
-        
-        def get_baseline_screenshot(self, test_name: str) -> Optional[Screenshot]:
+
+        def get_baseline_screenshot(self, test_name: str) -> typing.Optional[Screenshot]:
             """Get baseline screenshot for comparison."""
             return self.load_screenshot(test_name, self.baseline_dir)
-        
+
         def save_as_baseline(self, screenshot: Screenshot) -> Path:
             """Save screenshot as new baseline."""
             return self.save_screenshot(screenshot, self.baseline_dir)
-        
+
         def cleanup_current_screenshots(self):
             """Clean up current screenshots directory."""
             for file_path in self.current_dir.glob("*"):
                 if file_path.is_file():
                     file_path.unlink()
-    
+
     return ScreenshotManager()
 
 
 @pytest.fixture
 def visual_comparator():
     """Visual comparison utilities."""
-    
+
     class VisualComparator:
         def __init__(self):
             self.comparison_results = []
-        
-        def compare_screenshots(self, baseline: Screenshot, current: Screenshot, config: VisualTestConfig) -> VisualComparisonResult:
+
+        def compare_screenshots(
+            self, baseline: Screenshot, current: Screenshot, config: VisualTestConfig
+        ) -> VisualComparisonResult:
             """Compare two screenshots."""
             # Simple hash-based comparison for mock implementation
             # In real implementation, you would use image comparison libraries
-            
+
             baseline_hash = baseline.hash
             current_hash = current.hash
-            
+
             # Calculate mock difference percentage
             if baseline_hash == current_hash:
                 difference_percentage = 0.0
             else:
                 # Mock calculation based on hash differences
-                hash_diff = sum(c1 != c2 for c1, c2 in zip(baseline_hash, current_hash))
+                hash_diff = sum(
+                    c1 != c2
+                    for c1, c2 in zip(baseline_hash, current_hash, strict=False)
+                )
                 difference_percentage = min(hash_diff / len(baseline_hash), 1.0)
-            
+
             passed = difference_percentage <= config.threshold
-            
+
             # Generate mock diff regions if there are differences
             regions_changed = []
             if difference_percentage > 0:
@@ -321,7 +345,7 @@ def visual_comparator():
                         "confidence": 0.6,
                     },
                 ]
-            
+
             result = VisualComparisonResult(
                 test_name=config.test_name,
                 baseline_hash=baseline_hash,
@@ -335,25 +359,36 @@ def visual_comparator():
                     "current_size": len(current.data),
                     "comparison_timestamp": datetime.now().isoformat(),
                     "comparison_algorithm": "hash_based_mock",
-                }
+                },
             )
-            
+
             self.comparison_results.append(result)
             return result
-        
-        def generate_diff_image(self, baseline: Screenshot, current: Screenshot) -> bytes:
+
+        def generate_diff_image(
+            self, baseline: Screenshot, current: Screenshot
+        ) -> bytes:
             """Generate difference image (mock implementation)."""
             # In real implementation, this would create an actual diff image
             # For mock, return a placeholder diff image
             return b"MOCK_DIFF_IMAGE_DATA"
-        
+
         def analyze_differences(self, result: VisualComparisonResult) -> dict[str, Any]:
             """Analyze differences in detail."""
             analysis = {
-                "total_changed_pixels": int(result.difference_percentage * 1000000),  # Mock calculation
-                "change_intensity": "high" if result.difference_percentage > 0.1 else "medium" if result.difference_percentage > 0.01 else "low",
+                "total_changed_pixels": int(
+                    result.difference_percentage * 1000000
+                ),  # Mock calculation
+                "change_intensity": "high"
+                if result.difference_percentage > 0.1
+                else "medium"
+                if result.difference_percentage > 0.01
+                else "low",
                 "affected_regions": len(result.regions_changed),
-                "largest_change_area": max((r["width"] * r["height"] for r in result.regions_changed), default=0),
+                "largest_change_area": max(
+                    (r["width"] * r["height"] for r in result.regions_changed),
+                    default=0,
+                ),
                 "change_distribution": {
                     "top_half": 0.6,
                     "bottom_half": 0.4,
@@ -366,24 +401,26 @@ def visual_comparator():
                     "brightness_change": 0.03,
                 },
             }
-            
+
             return analysis
-    
+
     return VisualComparator()
 
 
 @pytest.fixture
 def responsive_tester():
     """Responsive design testing utilities."""
-    
+
     class ResponsiveTester:
         def __init__(self):
             self.test_results = []
-        
-        async def test_responsive_design(self, page, url: str, config: ResponsiveTestConfig) -> list[dict[str, Any]]:
+
+        async def test_responsive_design(
+            self, page, url: str, config: ResponsiveTestConfig
+        ) -> list[dict[str, Any]]:
             """Test responsive design across multiple viewports."""
             results = []
-            
+
             for viewport in config.viewports:
                 viewport_result = {
                     "viewport": viewport,
@@ -391,55 +428,63 @@ def responsive_tester():
                     "layout_issues": [],
                     "performance_metrics": {},
                 }
-                
+
                 # Test both orientations if specified
-                orientations = config.orientations if len(config.orientations) > 1 else ["portrait"]
-                
+                orientations = (
+                    config.orientations
+                    if len(config.orientations) > 1
+                    else ["portrait"]
+                )
+
                 for orientation in orientations:
                     if orientation == "landscape":
                         width, height = viewport["height"], viewport["width"]
                     else:
                         width, height = viewport["width"], viewport["height"]
-                    
+
                     # Set viewport
                     await page.set_viewport_size(width, height)
                     await page.goto(url)
                     await page.wait_for_timeout(1000)  # Wait for layout
-                    
+
                     # Capture screenshot
                     screenshot_name = f"{viewport['name']}_{orientation}"
                     screenshot_data = await page.screenshot(full_page=True)
-                    
+
                     viewport_result["screenshots"][orientation] = {
                         "name": screenshot_name,
                         "data": screenshot_data,
                         "width": width,
                         "height": height,
                     }
-                    
+
                     # Check for layout issues
                     layout_issues = await self._check_layout_issues(page, width, height)
                     viewport_result["layout_issues"].extend(layout_issues)
-                    
+
                     # Test interactions if enabled
                     if config.test_interactions:
                         interaction_results = await self._test_interactions(page)
-                        viewport_result[f"interactions_{orientation}"] = interaction_results
-                    
+                        viewport_result[f"interactions_{orientation}"] = (
+                            interaction_results
+                        )
+
                     # Test hover states if enabled
                     if config.test_hover_states:
                         hover_results = await self._test_hover_states(page)
                         viewport_result[f"hover_states_{orientation}"] = hover_results
-                
+
                 results.append(viewport_result)
-            
+
             self.test_results.extend(results)
             return results
-        
-        async def _check_layout_issues(self, page, width: int, height: int) -> list[dict[str, Any]]:
+
+        async def _check_layout_issues(
+            self, page, width: int, height: int
+        ) -> list[dict[str, Any]]:
             """Check for common responsive layout issues."""
             issues = []
-            
+
             # Check for horizontal overflow
             overflow_check = await page.evaluate("""
                 () => {
@@ -459,15 +504,17 @@ def responsive_tester():
                     return overflowing;
                 }
             """)
-            
+
             if overflow_check:
-                issues.append({
-                    "type": "horizontal_overflow",
-                    "severity": "medium",
-                    "elements": overflow_check[:5],  # Limit to first 5
-                    "description": "Elements extending beyond viewport width"
-                })
-            
+                issues.append(
+                    {
+                        "type": "horizontal_overflow",
+                        "severity": "medium",
+                        "elements": overflow_check[:5],  # Limit to first 5
+                        "description": "Elements extending beyond viewport width",
+                    }
+                )
+
             # Check for tiny text
             tiny_text_check = await page.evaluate("""
                 () => {
@@ -487,15 +534,17 @@ def responsive_tester():
                     return tinyText;
                 }
             """)
-            
+
             if tiny_text_check:
-                issues.append({
-                    "type": "tiny_text",
-                    "severity": "low",
-                    "elements": tiny_text_check[:5],
-                    "description": "Text smaller than 12px may be hard to read"
-                })
-            
+                issues.append(
+                    {
+                        "type": "tiny_text",
+                        "severity": "low",
+                        "elements": tiny_text_check[:5],
+                        "description": "Text smaller than 12px may be hard to read",
+                    }
+                )
+
             # Check for overlapping elements
             overlap_check = await page.evaluate("""
                 () => {
@@ -505,7 +554,7 @@ def responsive_tester():
                     for (let i = 0; i < elements.length - 1; i++) {
                         const rect1 = elements[i].getBoundingClientRect();
                         const rect2 = elements[i + 1].getBoundingClientRect();
-                        
+
                         if (rect1.left < rect2.right && rect2.left < rect1.right &&
                             rect1.top < rect2.bottom && rect2.top < rect1.bottom) {
                             overlaps.push({
@@ -517,17 +566,19 @@ def responsive_tester():
                     return overlaps.slice(0, 3); // Limit results
                 }
             """)
-            
+
             if overlap_check:
-                issues.append({
-                    "type": "overlapping_elements",
-                    "severity": "high",
-                    "elements": overlap_check,
-                    "description": "Elements may be overlapping"
-                })
-            
+                issues.append(
+                    {
+                        "type": "overlapping_elements",
+                        "severity": "high",
+                        "elements": overlap_check,
+                        "description": "Elements may be overlapping",
+                    }
+                )
+
             return issues
-        
+
         async def _test_interactions(self, page) -> dict[str, Any]:
             """Test basic interactions on responsive design."""
             results = {
@@ -536,7 +587,7 @@ def responsive_tester():
                 "successful_interactions": 0,
                 "failed_interactions": 0,
             }
-            
+
             # Find clickable elements
             clickable_elements = await page.evaluate("""
                 () => {
@@ -553,28 +604,30 @@ def responsive_tester():
                     });
                 }
             """)
-            
+
             results["clickable_elements"] = len(clickable_elements)
-            
+
             # Check touch target sizes (should be at least 44x44px)
-            small_targets = [el for el in clickable_elements if el["width"] < 44 or el["height"] < 44]
+            small_targets = [
+                el for el in clickable_elements if el["width"] < 44 or el["height"] < 44
+            ]
             results["touch_targets_too_small"] = len(small_targets)
-            
+
             return results
-        
+
         async def _test_hover_states(self, page) -> dict[str, Any]:
             """Test hover states on interactive elements."""
             results = {
                 "elements_with_hover": 0,
                 "hover_effects_detected": 0,
             }
-            
+
             # Find elements with hover effects
             hover_elements = await page.evaluate("""
                 () => {
                     const styles = Array.from(document.styleSheets);
                     let hoverRules = 0;
-                    
+
                     try {
                         for (let sheet of styles) {
                             for (let rule of sheet.cssRules || []) {
@@ -586,15 +639,15 @@ def responsive_tester():
                     } catch (e) {
                         // Cross-origin stylesheets may not be accessible
                     }
-                    
+
                     return hoverRules;
                 }
             """)
-            
+
             results["hover_effects_detected"] = hover_elements
-            
+
             return results
-    
+
     return ResponsiveTester()
 
 
@@ -602,7 +655,7 @@ def responsive_tester():
 def mock_browser_page():
     """Mock browser page for testing without real browser."""
     page = AsyncMock()
-    
+
     # Mock basic page methods
     page.goto = AsyncMock()
     page.screenshot = AsyncMock(return_value=b"MOCK_SCREENSHOT_DATA")
@@ -610,7 +663,7 @@ def mock_browser_page():
     page.wait_for_selector = AsyncMock()
     page.wait_for_timeout = AsyncMock()
     page.evaluate = AsyncMock(return_value={"width": 1280, "height": 720})
-    
+
     return page
 
 
@@ -660,9 +713,7 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "visual_regression: mark test as visual regression test"
     )
-    config.addinivalue_line(
-        "markers", "visual: mark test as visual test"
-    )
+    config.addinivalue_line("markers", "visual: mark test as visual test")
     config.addinivalue_line(
         "markers", "responsive: mark test as responsive design test"
     )

@@ -4,10 +4,14 @@ This module tests protection against SQL injection attacks across all
 data inputs and database interactions.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-from src.security import SecurityError, SecurityValidator
+import pytest
+
+from src.security import SecurityError
+from src.security import SecurityValidator
 
 
 @pytest.mark.security
@@ -104,13 +108,12 @@ class TestSQLInjectionPrevention:
         """Test that database queries use parameterized statements."""
         # This would test actual database interaction code
         # For now, we'll mock the database layer
-        with patch('src.infrastructure.database.connection_manager') as mock_db:
+        with patch("src.infrastructure.database.connection_manager") as mock_db:
             mock_cursor = AsyncMock()
             mock_db.get_connection.return_value.__aenter__.return_value.cursor.return_value = mock_cursor
-            
+
             # Simulate a search query that should use parameters
-            test_query = "'; DROP TABLE users; --"
-            
+
             # The actual implementation should use parameterized queries
             # This test ensures the database layer properly escapes inputs
             mock_cursor.execute.assert_not_called()
@@ -124,8 +127,8 @@ class TestSQLInjectionPrevention:
             {"id": "1 OR 1=1"},
             {"filter": "admin'--"},
         ]
-        
-        for dangerous_input in dangerous_inputs:
+
+        for _dangerous_input in dangerous_inputs:
             # Simulate ORM query building that should sanitize inputs
             # This would test actual ORM code
             pass
@@ -140,7 +143,7 @@ class TestSQLInjectionPrevention:
             "'; WAITFOR DELAY '00:00:05'--",
             "' AND (SELECT COUNT(*) FROM information_schema.tables)>0--",
         ]
-        
+
         security_validator = SecurityValidator()
         for payload in blind_payloads:
             with pytest.raises(SecurityError):
@@ -156,7 +159,7 @@ class TestSQLInjectionPrevention:
             "'; pg_sleep(10)--",
             "' AND 1=(SELECT COUNT(*) FROM pg_sleep(10))--",
         ]
-        
+
         security_validator = SecurityValidator()
         for payload in time_based_payloads:
             with pytest.raises(SecurityError):
@@ -172,7 +175,7 @@ class TestSQLInjectionPrevention:
             "' UNION SELECT table_name FROM information_schema.tables--",
             "' UNION SELECT column_name FROM information_schema.columns--",
         ]
-        
+
         security_validator = SecurityValidator()
         for payload in union_payloads:
             with pytest.raises(SecurityError):
@@ -187,7 +190,7 @@ class TestSQLInjectionPrevention:
             "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT version()),0x7e),1)--",
             "' AND 1=CAST((SELECT version()) AS int)--",
         ]
-        
+
         security_validator = SecurityValidator()
         for payload in error_payloads:
             with pytest.raises(SecurityError):
@@ -203,7 +206,7 @@ class TestSQLInjectionPrevention:
             "'; EXEC xp_regwrite--",
             "'; EXEC sp_OACreate--",
         ]
-        
+
         security_validator = SecurityValidator()
         for payload in stored_proc_payloads:
             with pytest.raises(SecurityError):
@@ -218,7 +221,7 @@ class TestSQLInjectionPrevention:
             "database best practices",
             "security guidelines",
         ]
-        
+
         for query in valid_queries:
             # Should not raise any exception
             validated = security_validator.validate_query_string(query)
@@ -229,23 +232,22 @@ class TestSQLInjectionPrevention:
         """Test that parameterized queries are enforced in database operations."""
         # This test would verify that all database operations use parameterized queries
         # and never concatenate user input directly into SQL strings
-        
+
         # Mock database operations
-        with patch('sqlite3.connect') as mock_connect:
+        with patch("sqlite3.connect") as mock_connect:
             mock_cursor = MagicMock()
             mock_connect.return_value.cursor.return_value = mock_cursor
-            
+
             # Test that parameterized queries are used
             # In the actual implementation, verify that execute() is called with parameters
-            dangerous_input = "'; DROP TABLE users; --"
-            
+
             # The implementation should use parameterized queries like:
             # cursor.execute("SELECT * FROM users WHERE name = ?", (dangerous_input,))
             # Not: cursor.execute(f"SELECT * FROM users WHERE name = '{dangerous_input}'")
-            
+
             # Verify parameterized query usage
             # mock_cursor.execute.assert_called_with(
-            #     "SELECT * FROM table WHERE column = ?", 
+            #     "SELECT * FROM table WHERE column = ?",
             #     (dangerous_input,)
             # )
 
@@ -253,18 +255,28 @@ class TestSQLInjectionPrevention:
         """Test input length limits prevent buffer overflow attacks."""
         # Test extremely long inputs that could cause buffer overflows
         long_input = "A" * 10000
-        
+
         with pytest.raises(SecurityError, match="too long"):
             security_validator.validate_query_string(long_input)
 
     def test_special_character_handling(self, security_validator):
         """Test proper handling of special characters."""
         special_chars = [
-            "'", '"', ";", "--", "/*", "*/", 
-            "\x00", "\n", "\r", "\t",
-            "\\", "%", "_"
+            "'",
+            '"',
+            ";",
+            "--",
+            "/*",
+            "*/",
+            "\x00",
+            "\n",
+            "\r",
+            "\t",
+            "\\",
+            "%",
+            "_",
         ]
-        
+
         for char in special_chars:
             test_input = f"test{char}input"
             # Should either sanitize or reject
@@ -284,16 +296,16 @@ class TestSQLInjectionPrevention:
             {"filters": {"name": "' OR 1=1--"}},
             {"metadata": {"description": "' UNION SELECT password FROM users--"}},
         ]
-        
+
         security_validator = SecurityValidator()
-        
+
         for payload in json_payloads:
-            for key, value in payload.items():
+            for value in payload.values():
                 if isinstance(value, str):
                     with pytest.raises(SecurityError):
                         security_validator.validate_query_string(value)
                 elif isinstance(value, dict):
-                    for nested_key, nested_value in value.items():
+                    for nested_value in value.values():
                         if isinstance(nested_value, str):
                             with pytest.raises(SecurityError):
                                 security_validator.validate_query_string(nested_value)
@@ -311,7 +323,7 @@ class TestSQLInjectionPrevention:
             # Unicode encoded
             "\\u0027\\u0020OR\\u0020\\u0027\\u0031\\u0027\\u003d\\u0027\\u0031",
         ]
-        
+
         for payload in encoded_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)

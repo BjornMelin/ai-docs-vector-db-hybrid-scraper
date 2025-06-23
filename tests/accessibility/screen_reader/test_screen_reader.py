@@ -1,14 +1,9 @@
 """Screen reader accessibility testing.
 
-This module implements comprehensive screen reader compatibility testing to ensure 
+This module implements comprehensive screen reader compatibility testing to ensure
 WCAG 2.1 compliance for assistive technology, including semantic HTML validation,
 ARIA attribute testing, and screen reader text generation.
 """
-
-import json
-import re
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from bs4 import BeautifulSoup
@@ -39,25 +34,25 @@ class TestScreenReaderCompliance:
                     </ul>
                 </nav>
             </header>
-            
+
             <main>
                 <article>
                     <header>
                         <h1>Article Title</h1>
                         <p>Published on <time datetime="2024-01-01">January 1, 2024</time></p>
                     </header>
-                    
+
                     <section>
                         <h2>Section Heading</h2>
                         <p>Article content goes here.</p>
-                        
+
                         <figure>
                             <img src="chart.png" alt="Sales increased 50% over last year">
                             <figcaption>Sales performance chart for 2024</figcaption>
                         </figure>
                     </section>
                 </article>
-                
+
                 <aside>
                     <h2>Related Articles</h2>
                     <ul>
@@ -66,14 +61,14 @@ class TestScreenReaderCompliance:
                     </ul>
                 </aside>
             </main>
-            
+
             <footer>
                 <p>&copy; 2024 Company Name. All rights reserved.</p>
             </footer>
         </body>
         </html>
         """
-        
+
         # HTML with poor semantic structure
         non_semantic_html = """
         <!DOCTYPE html>
@@ -89,7 +84,7 @@ class TestScreenReaderCompliance:
                     <div><a href="/about">About</a></div>
                 </div>
             </div>
-            
+
             <div class="content">
                 <div class="article">
                     <div class="article-title">Article Title</div>
@@ -97,29 +92,30 @@ class TestScreenReaderCompliance:
                     <div class="text">Article content goes here.</div>
                 </div>
             </div>
-            
+
             <div class="sidebar">
                 <div class="sidebar-title">Related</div>
                 <div><a href="/related1">Related Article 1</a></div>
             </div>
-            
+
             <div class="footer">
                 <div>&copy; 2024 Company Name</div>
             </div>
         </body>
         </html>
         """
-        
+
         # Test semantic HTML
         result = screen_reader_validator.validate_semantic_structure(semantic_html)
-        assert result["compliant"], f"Semantic HTML should be compliant: {result['issues']}"
+        assert result["compliant"], (
+            f"Semantic HTML should be compliant: {result['issues']}"
+        )
         assert result["nav_count"] == 1, "Should have one navigation element"
-        
+
         # Test non-semantic HTML
         result = screen_reader_validator.validate_semantic_structure(non_semantic_html)
         main_errors = [
-            issue for issue in result["issues"] 
-            if "main landmark" in issue["issue"]
+            issue for issue in result["issues"] if "main landmark" in issue["issue"]
         ]
         assert len(main_errors) > 0, "Should detect missing main landmark"
 
@@ -129,79 +125,85 @@ class TestScreenReaderCompliance:
         good_headings_html = """
         <main>
             <h1>Main Page Title</h1>
-            
+
             <section>
                 <h2>First Section</h2>
                 <p>Content here.</p>
-                
+
                 <h3>Subsection A</h3>
                 <p>More content.</p>
-                
+
                 <h3>Subsection B</h3>
                 <p>Even more content.</p>
             </section>
-            
+
             <section>
                 <h2>Second Section</h2>
                 <p>Different content.</p>
-                
+
                 <h3>Another Subsection</h3>
                 <p>Content continues.</p>
-                
+
                 <h4>Deep Subsection</h4>
                 <p>Detailed content.</p>
             </section>
         </main>
         """
-        
+
         # Bad heading hierarchy
         bad_headings_html = """
         <main>
             <h3>Starting with H3 (Bad)</h3>
             <p>Content here.</p>
-            
+
             <h1>Main Title (Out of Order)</h1>
             <p>Content.</p>
-            
+
             <h5>Skipped H4 (Bad)</h5>
             <p>Content.</p>
-            
+
             <h2>Back to H2</h2>
             <p>Content.</p>
         </main>
         """
-        
+
         # Parse and analyze headings
         def analyze_headings(html_content):
-            soup = BeautifulSoup(html_content, 'html.parser')
-            headings = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+            soup = BeautifulSoup(html_content, "html.parser")
+            headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
             heading_levels = [int(h.name[1]) for h in headings]
-            
+
             issues = []
-            
+
             # Check if starts with h1
             if heading_levels and heading_levels[0] != 1:
                 issues.append("Page should start with h1")
-            
+
             # Check for skipped levels
             for i in range(1, len(heading_levels)):
-                if heading_levels[i] > heading_levels[i-1] + 1:
-                    issues.append(f"Skipped heading level: h{heading_levels[i-1]} to h{heading_levels[i]}")
-            
+                if heading_levels[i] > heading_levels[i - 1] + 1:
+                    issues.append(
+                        f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}"
+                    )
+
             return {
                 "levels": heading_levels,
                 "issues": issues,
-                "compliant": len(issues) == 0
+                "compliant": len(issues) == 0,
             }
-        
+
         # Test good headings
         result = analyze_headings(good_headings_html)
-        assert result["compliant"], f"Good headings should be compliant: {result['issues']}"
+        assert result["compliant"], (
+            f"Good headings should be compliant: {result['issues']}"
+        )
         assert result["levels"][0] == 1, "Should start with h1"
-        
+
         # Test bad headings
         result = analyze_headings(bad_headings_html)
-        assert not result["compliant"], f"Bad headings should not be compliant: {result['issues']}"
+        assert not result["compliant"], (
+            f"Bad headings should not be compliant: {result['issues']}"
+        )
         assert len(result["issues"]) > 0, "Should detect heading hierarchy issues"
 
     def test_form_accessibility_for_screen_readers(self, screen_reader_validator):
@@ -211,125 +213,130 @@ class TestScreenReaderCompliance:
         <form>
             <fieldset>
                 <legend>Personal Information</legend>
-                
+
                 <div class="form-group">
                     <label for="first-name">First Name (required):</label>
-                    <input type="text" 
-                           id="first-name" 
+                    <input type="text"
+                           id="first-name"
                            name="firstName"
-                           required 
+                           required
                            aria-describedby="first-name-error"
                            aria-invalid="false">
                     <div id="first-name-error" role="alert" aria-live="polite"></div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email">Email Address:</label>
-                    <input type="email" 
-                           id="email" 
+                    <input type="email"
+                           id="email"
                            name="email"
                            aria-describedby="email-help">
                     <div id="email-help">We'll never share your email with anyone</div>
                 </div>
-                
+
                 <div class="form-group">
                     <span id="phone-label">Phone Number:</span>
-                    <input type="tel" 
+                    <input type="tel"
                            name="phone"
                            aria-labelledby="phone-label"
                            aria-describedby="phone-format">
                     <div id="phone-format">Format: (123) 456-7890</div>
                 </div>
             </fieldset>
-            
+
             <fieldset>
                 <legend>Communication Preferences</legend>
-                
+
                 <div role="group" aria-labelledby="contact-methods">
                     <div id="contact-methods">How would you like to be contacted?</div>
-                    
+
                     <div class="checkbox-group">
                         <input type="checkbox" id="contact-email" name="contact" value="email">
                         <label for="contact-email">Email</label>
                     </div>
-                    
+
                     <div class="checkbox-group">
                         <input type="checkbox" id="contact-phone" name="contact" value="phone">
                         <label for="contact-phone">Phone</label>
                     </div>
-                    
+
                     <div class="checkbox-group">
                         <input type="checkbox" id="contact-mail" name="contact" value="mail">
                         <label for="contact-mail">Postal Mail</label>
                     </div>
                 </div>
-                
+
                 <div role="radiogroup" aria-labelledby="newsletter-label">
                     <div id="newsletter-label">Newsletter Subscription:</div>
-                    
+
                     <div class="radio-group">
                         <input type="radio" id="newsletter-yes" name="newsletter" value="yes">
                         <label for="newsletter-yes">Yes, send me newsletters</label>
                     </div>
-                    
+
                     <div class="radio-group">
                         <input type="radio" id="newsletter-no" name="newsletter" value="no">
                         <label for="newsletter-no">No newsletters</label>
                     </div>
                 </div>
             </fieldset>
-            
+
             <div class="form-actions">
                 <button type="submit">Submit Form</button>
                 <button type="reset">Clear Form</button>
             </div>
         </form>
         """
-        
+
         # Inaccessible form
         inaccessible_form_html = """
         <form>
             <div>
                 First Name: <input type="text" placeholder="Enter first name">
             </div>
-            
+
             <div>
                 Email: <input type="email">
             </div>
-            
+
             <div>
                 Phone: <input type="tel">
                 <small>Use format: (123) 456-7890</small>
             </div>
-            
+
             <div>
                 Contact preferences:
                 <input type="checkbox" value="email"> Email
-                <input type="checkbox" value="phone"> Phone  
+                <input type="checkbox" value="phone"> Phone
                 <input type="checkbox" value="mail"> Mail
             </div>
-            
+
             <div>
                 Newsletter:
                 <input type="radio" name="newsletter" value="yes"> Yes
                 <input type="radio" name="newsletter" value="no"> No
             </div>
-            
+
             <input type="submit" value="Submit">
         </form>
         """
-        
+
         # Test accessible form
-        result = screen_reader_validator.validate_form_accessibility(accessible_form_html)
-        assert result["compliant"], f"Accessible form should be compliant: {result['issues']}"
+        result = screen_reader_validator.validate_form_accessibility(
+            accessible_form_html
+        )
+        assert result["compliant"], (
+            f"Accessible form should be compliant: {result['issues']}"
+        )
         assert result["total_inputs"] > 0, "Should detect form inputs"
-        
+
         # Test inaccessible form
-        result = screen_reader_validator.validate_form_accessibility(inaccessible_form_html)
-        assert not result["compliant"], f"Inaccessible form should not be compliant"
+        result = screen_reader_validator.validate_form_accessibility(
+            inaccessible_form_html
+        )
+        assert not result["compliant"], "Inaccessible form should not be compliant"
         label_errors = [
-            issue for issue in result["issues"] 
-            if "label" in issue["issue"].lower()
+            issue for issue in result["issues"] if "label" in issue["issue"].lower()
         ]
         assert len(label_errors) > 0, "Should detect missing labels"
 
@@ -342,11 +349,11 @@ class TestScreenReaderCompliance:
                 Employee Sales Data for Q4 2024
                 <details>
                     <summary>Table Description</summary>
-                    <p>This table shows sales performance by employee including 
+                    <p>This table shows sales performance by employee including
                        total sales, commission, and performance rating.</p>
                 </details>
             </caption>
-            
+
             <thead>
                 <tr>
                     <th scope="col" id="emp-name">Employee Name</th>
@@ -356,7 +363,7 @@ class TestScreenReaderCompliance:
                     <th scope="col" id="rating">Rating</th>
                 </tr>
             </thead>
-            
+
             <tbody>
                 <tr>
                     <th scope="row" headers="emp-name">John Doe</th>
@@ -365,7 +372,7 @@ class TestScreenReaderCompliance:
                     <td headers="commission emp-name">$12,500</td>
                     <td headers="rating emp-name">Excellent</td>
                 </tr>
-                
+
                 <tr>
                     <th scope="row" headers="emp-name">Jane Smith</th>
                     <td headers="dept emp-name">Marketing</td>
@@ -374,7 +381,7 @@ class TestScreenReaderCompliance:
                     <td headers="rating emp-name">Good</td>
                 </tr>
             </tbody>
-            
+
             <tfoot>
                 <tr>
                     <th scope="row">Totals</th>
@@ -386,31 +393,9 @@ class TestScreenReaderCompliance:
             </tfoot>
         </table>
         """
-        
+
         # Layout table (should be avoided)
-        layout_table_html = """
-        <table>
-            <tr>
-                <td>
-                    <img src="logo.png" alt="Company Logo">
-                </td>
-                <td>
-                    <h1>Company Name</h1>
-                    <p>Tagline here</p>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <nav>
-                        <a href="/">Home</a> | 
-                        <a href="/about">About</a> | 
-                        <a href="/contact">Contact</a>
-                    </nav>
-                </td>
-            </tr>
-        </table>
-        """
-        
+
         # Simple data table without proper headers
         poor_table_html = """
         <table>
@@ -431,111 +416,115 @@ class TestScreenReaderCompliance:
             </tr>
         </table>
         """
-        
+
         # Check accessible table features
-        assert '<caption>' in accessible_table_html, "Should have caption"
+        assert "<caption>" in accessible_table_html, "Should have caption"
         assert 'scope="col"' in accessible_table_html, "Should have column headers"
         assert 'scope="row"' in accessible_table_html, "Should have row headers"
-        assert 'headers=' in accessible_table_html, "Should associate cells with headers"
-        assert '<thead>' in accessible_table_html, "Should have table head"
-        assert '<tbody>' in accessible_table_html, "Should have table body"
-        assert '<tfoot>' in accessible_table_html, "Should have table foot"
-        
+        assert "headers=" in accessible_table_html, (
+            "Should associate cells with headers"
+        )
+        assert "<thead>" in accessible_table_html, "Should have table head"
+        assert "<tbody>" in accessible_table_html, "Should have table body"
+        assert "<tfoot>" in accessible_table_html, "Should have table foot"
+
         # Check problematic tables
-        assert '<caption>' not in poor_table_html, "Poor table lacks caption"
-        assert 'scope=' not in poor_table_html, "Poor table lacks proper headers"
-        assert '<th>' not in poor_table_html, "Poor table uses bold instead of th elements"
+        assert "<caption>" not in poor_table_html, "Poor table lacks caption"
+        assert "scope=" not in poor_table_html, "Poor table lacks proper headers"
+        assert "<th>" not in poor_table_html, (
+            "Poor table uses bold instead of th elements"
+        )
 
     def test_aria_live_regions_for_dynamic_content(self):
         """Test ARIA live regions for dynamic content updates."""
         # Proper live region implementation
         live_regions_html = """
-        <div id="status-messages" 
-             aria-live="polite" 
+        <div id="status-messages"
+             aria-live="polite"
              aria-atomic="false"
              class="sr-only">
             <!-- Status messages appear here -->
         </div>
-        
-        <div id="error-messages" 
-             role="alert" 
+
+        <div id="error-messages"
+             role="alert"
              aria-live="assertive"
              aria-atomic="true"
              class="sr-only">
             <!-- Error messages appear here -->
         </div>
-        
-        <div id="loading-indicator" 
+
+        <div id="loading-indicator"
              aria-live="polite"
              aria-busy="false"
              aria-describedby="loading-text">
             <div id="loading-text" class="sr-only">Loading content...</div>
         </div>
-        
+
         <form>
             <div class="form-group">
                 <label for="username">Username:</label>
-                <input type="text" 
-                       id="username" 
+                <input type="text"
+                       id="username"
                        name="username"
                        aria-describedby="username-validation"
                        aria-invalid="false">
-                <div id="username-validation" 
-                     role="status" 
+                <div id="username-validation"
+                     role="status"
                      aria-live="polite">
                     <!-- Validation messages appear here -->
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="search">Search:</label>
-                <input type="search" 
-                       id="search" 
+                <input type="search"
+                       id="search"
                        name="search"
                        aria-describedby="search-results-count"
                        autocomplete="off">
-                <div id="search-results-count" 
-                     role="status" 
+                <div id="search-results-count"
+                     role="status"
                      aria-live="polite">
                     <!-- Result count appears here -->
                 </div>
             </div>
         </form>
-        
-        <div id="chat-log" 
-             role="log" 
+
+        <div id="chat-log"
+             role="log"
              aria-live="polite"
              aria-label="Chat conversation">
             <!-- Chat messages appear here -->
         </div>
-        
+
         <script>
         // Example of updating live regions
         function showStatusMessage(message) {
             const statusDiv = document.getElementById('status-messages');
             statusDiv.textContent = message;
         }
-        
+
         function showErrorMessage(message) {
             const errorDiv = document.getElementById('error-messages');
             errorDiv.textContent = message;
         }
-        
+
         function updateLoadingState(isLoading) {
             const loadingDiv = document.getElementById('loading-indicator');
             loadingDiv.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-            
+
             if (isLoading) {
                 loadingDiv.querySelector('#loading-text').textContent = 'Loading content...';
             } else {
                 loadingDiv.querySelector('#loading-text').textContent = 'Content loaded';
             }
         }
-        
+
         function validateUsername(username) {
             const validationDiv = document.getElementById('username-validation');
             const usernameInput = document.getElementById('username');
-            
+
             if (username.length < 3) {
                 validationDiv.textContent = 'Username must be at least 3 characters';
                 usernameInput.setAttribute('aria-invalid', 'true');
@@ -544,22 +533,26 @@ class TestScreenReaderCompliance:
                 usernameInput.setAttribute('aria-invalid', 'false');
             }
         }
-        
+
         function updateSearchResults(count) {
             const countDiv = document.getElementById('search-results-count');
             countDiv.textContent = `Found ${count} results`;
         }
         </script>
         """
-        
+
         # Check live region features
-        assert 'aria-live="polite"' in live_regions_html, "Should have polite live regions"
-        assert 'aria-live="assertive"' in live_regions_html, "Should have assertive live regions"
+        assert 'aria-live="polite"' in live_regions_html, (
+            "Should have polite live regions"
+        )
+        assert 'aria-live="assertive"' in live_regions_html, (
+            "Should have assertive live regions"
+        )
         assert 'role="alert"' in live_regions_html, "Should have alert role"
         assert 'role="status"' in live_regions_html, "Should have status role"
         assert 'role="log"' in live_regions_html, "Should have log role"
-        assert 'aria-atomic' in live_regions_html, "Should specify atomic updates"
-        assert 'aria-busy' in live_regions_html, "Should indicate busy state"
+        assert "aria-atomic" in live_regions_html, "Should specify atomic updates"
+        assert "aria-busy" in live_regions_html, "Should indicate busy state"
 
     def test_landmark_navigation_for_screen_readers(self, screen_reader_validator):
         """Test landmark navigation for screen readers."""
@@ -572,7 +565,7 @@ class TestScreenReaderCompliance:
         </head>
         <body>
             <a href="#main-content" class="skip-link">Skip to main content</a>
-            
+
             <header role="banner">
                 <h1>Site Title</h1>
                 <nav role="navigation" aria-label="Main navigation">
@@ -584,7 +577,7 @@ class TestScreenReaderCompliance:
                     </ul>
                 </nav>
             </header>
-            
+
             <nav role="navigation" aria-label="Breadcrumb navigation">
                 <ol>
                     <li><a href="/">Home</a></li>
@@ -592,19 +585,19 @@ class TestScreenReaderCompliance:
                     <li aria-current="page">Web Development</li>
                 </ol>
             </nav>
-            
+
             <main role="main" id="main-content">
                 <article>
                     <header>
                         <h1>Web Development Services</h1>
                         <p>Last updated: <time datetime="2024-01-01">January 1, 2024</time></p>
                     </header>
-                    
+
                     <section>
                         <h2>Our Approach</h2>
                         <p>We focus on accessibility and user experience.</p>
                     </section>
-                    
+
                     <section>
                         <h2>Technologies</h2>
                         <ul>
@@ -614,7 +607,7 @@ class TestScreenReaderCompliance:
                         </ul>
                     </section>
                 </article>
-                
+
                 <aside role="complementary" aria-label="Related services">
                     <h2>Related Services</h2>
                     <ul>
@@ -624,7 +617,7 @@ class TestScreenReaderCompliance:
                     </ul>
                 </aside>
             </main>
-            
+
             <section role="region" aria-labelledby="testimonials-heading">
                 <h2 id="testimonials-heading">Client Testimonials</h2>
                 <blockquote>
@@ -632,7 +625,7 @@ class TestScreenReaderCompliance:
                     <cite>— Happy Client</cite>
                 </blockquote>
             </section>
-            
+
             <footer role="contentinfo">
                 <div role="region" aria-label="Contact information">
                     <h2>Contact Us</h2>
@@ -643,7 +636,7 @@ class TestScreenReaderCompliance:
                         <a href="tel:+1234567890">+1 (234) 567-890</a>
                     </address>
                 </div>
-                
+
                 <nav role="navigation" aria-label="Footer navigation">
                     <ul>
                         <li><a href="/privacy">Privacy Policy</a></li>
@@ -651,21 +644,25 @@ class TestScreenReaderCompliance:
                         <li><a href="/sitemap">Sitemap</a></li>
                     </ul>
                 </nav>
-                
+
                 <p>&copy; 2024 Company Name. All rights reserved.</p>
             </footer>
         </body>
         </html>
         """
-        
+
         # Test landmark structure
         result = screen_reader_validator.validate_semantic_structure(landmark_html)
-        assert result["compliant"], f"Landmark HTML should be compliant: {result['issues']}"
-        
+        assert result["compliant"], (
+            f"Landmark HTML should be compliant: {result['issues']}"
+        )
+
         # Check for multiple navigation landmarks with labels
-        nav_count = landmark_html.count('role="navigation"') + landmark_html.count('<nav')
+        nav_count = landmark_html.count('role="navigation"') + landmark_html.count(
+            "<nav"
+        )
         assert nav_count >= 3, "Should have multiple navigation landmarks"
-        
+
         # Check landmark labeling
         assert 'aria-label="Main navigation"' in landmark_html
         assert 'aria-label="Breadcrumb navigation"' in landmark_html
@@ -676,17 +673,17 @@ class TestScreenReaderCompliance:
         # Complex content that needs screen reader optimization
         complex_content_html = """
         <div class="product-card">
-            <img src="laptop.jpg" 
+            <img src="laptop.jpg"
                  alt="Silver MacBook Pro 16-inch laptop showing colorful desktop wallpaper">
-            
+
             <div class="product-info">
                 <h3>MacBook Pro 16-inch</h3>
-                
+
                 <div class="rating" aria-label="4.5 out of 5 stars">
                     <span aria-hidden="true">★★★★☆</span>
                     <span class="sr-only">Rated 4.5 out of 5 stars</span>
                 </div>
-                
+
                 <div class="price">
                     <span class="sr-only">Price:</span>
                     <span class="current-price">$2,499</span>
@@ -699,16 +696,16 @@ class TestScreenReaderCompliance:
                         $300
                     </span>
                 </div>
-                
+
                 <div class="availability">
-                    <span class="stock-status" 
+                    <span class="stock-status"
                           aria-label="In stock, 5 units available">
                         <span aria-hidden="true">✓</span>
                         <span class="sr-only">In stock</span>
                         5 available
                     </span>
                 </div>
-                
+
                 <div class="shipping">
                     <span class="sr-only">Shipping information:</span>
                     <span aria-label="Free shipping on orders over $50">
@@ -716,21 +713,21 @@ class TestScreenReaderCompliance:
                         Free shipping
                     </span>
                 </div>
-                
-                <button type="button" 
+
+                <button type="button"
                         aria-describedby="product-description"
                         onclick="addToCart('macbook-pro-16')">
                     Add to Cart
                 </button>
-                
+
                 <div id="product-description" class="sr-only">
-                    MacBook Pro 16-inch laptop with M2 Pro chip, 16GB RAM, 
-                    512GB SSD storage. Includes 1-year warranty and 
+                    MacBook Pro 16-inch laptop with M2 Pro chip, 16GB RAM,
+                    512GB SSD storage. Includes 1-year warranty and
                     30-day return policy.
                 </div>
             </div>
         </div>
-        
+
         <style>
         .sr-only {
             position: absolute;
@@ -745,50 +742,61 @@ class TestScreenReaderCompliance:
         }
         </style>
         """
-        
+
         # Check screen reader optimizations
-        assert 'class="sr-only"' in complex_content_html, "Should have screen reader only text"
-        assert 'aria-hidden="true"' in complex_content_html, "Should hide decorative elements"
-        assert 'aria-label=' in complex_content_html, "Should provide accessible labels"
-        assert 'aria-describedby=' in complex_content_html, "Should provide descriptions"
-        
+        assert 'class="sr-only"' in complex_content_html, (
+            "Should have screen reader only text"
+        )
+        assert 'aria-hidden="true"' in complex_content_html, (
+            "Should hide decorative elements"
+        )
+        assert "aria-label=" in complex_content_html, "Should provide accessible labels"
+        assert "aria-describedby=" in complex_content_html, (
+            "Should provide descriptions"
+        )
+
         # Count screen reader enhancements
         sr_only_count = complex_content_html.count('class="sr-only"')
         aria_hidden_count = complex_content_html.count('aria-hidden="true"')
-        aria_label_count = complex_content_html.count('aria-label=')
-        
+        aria_label_count = complex_content_html.count("aria-label=")
+
         assert sr_only_count >= 5, "Should have multiple screen reader only elements"
         assert aria_hidden_count >= 2, "Should hide decorative content"
         assert aria_label_count >= 3, "Should provide accessible labels"
 
-    @pytest.mark.parametrize("role,expected_behavior", [
-        ("button", "should be focusable and activatable"),
-        ("link", "should navigate on activation"),
-        ("checkbox", "should toggle state"),
-        ("radio", "should select single option"),
-        ("tab", "should activate tab panel"),
-        ("menuitem", "should activate menu action"),
-        ("option", "should be selectable in listbox"),
-        ("treeitem", "should expand/collapse tree node"),
-    ])
+    @pytest.mark.parametrize(
+        "role,expected_behavior",
+        [
+            ("button", "should be focusable and activatable"),
+            ("link", "should navigate on activation"),
+            ("checkbox", "should toggle state"),
+            ("radio", "should select single option"),
+            ("tab", "should activate tab panel"),
+            ("menuitem", "should activate menu action"),
+            ("option", "should be selectable in listbox"),
+            ("treeitem", "should expand/collapse tree node"),
+        ],
+    )
     def test_widget_roles_screen_reader_behavior(self, role, expected_behavior):
         """Test ARIA widget roles for screen reader behavior."""
         # This test documents expected screen reader behavior for different roles
         widget_examples = {
-            "button": '''<div role="button" tabindex="0" aria-pressed="false">Toggle</div>''',
-            "link": '''<span role="link" tabindex="0">Navigate</span>''',
-            "checkbox": '''<div role="checkbox" tabindex="0" aria-checked="false">Option</div>''',
-            "radio": '''<div role="radio" tabindex="0" aria-checked="false">Choice</div>''',
-            "tab": '''<div role="tab" tabindex="0" aria-selected="false" aria-controls="panel1">Tab 1</div>''',
-            "menuitem": '''<div role="menuitem" tabindex="-1">Menu Item</div>''',
-            "option": '''<div role="option" aria-selected="false">List Option</div>''',
-            "treeitem": '''<div role="treeitem" tabindex="0" aria-expanded="false">Tree Node</div>''',
+            "button": """<div role="button" tabindex="0" aria-pressed="false">Toggle</div>""",
+            "link": """<span role="link" tabindex="0">Navigate</span>""",
+            "checkbox": """<div role="checkbox" tabindex="0" aria-checked="false">Option</div>""",
+            "radio": """<div role="radio" tabindex="0" aria-checked="false">Choice</div>""",
+            "tab": """<div role="tab" tabindex="0" aria-selected="false" aria-controls="panel1">Tab 1</div>""",
+            "menuitem": """<div role="menuitem" tabindex="-1">Menu Item</div>""",
+            "option": """<div role="option" aria-selected="false">List Option</div>""",
+            "treeitem": """<div role="treeitem" tabindex="0" aria-expanded="false">Tree Node</div>""",
         }
-        
+
         if role in widget_examples:
             html = widget_examples[role]
             assert f'role="{role}"' in html, f"Should have {role} role"
-            assert "tabindex=" in html or role == "option", f"Should be focusable unless option"
+            assert "tabindex=" in html or role == "option", (
+                "Should be focusable unless option"
+            )
 
     def test_screen_reader_compatibility_report(self, screen_reader_validator):
         """Test generation of screen reader compatibility reports."""
@@ -808,14 +816,14 @@ class TestScreenReaderCompliance:
                     </ul>
                 </nav>
             </header>
-            
+
             <main>
                 <article>
                     <h1>Article Title</h1>
                     <p>Article content with <a href="/link">embedded link</a>.</p>
-                    
+
                     <img src="chart.png" alt="Sales increased 25% this quarter">
-                    
+
                     <table>
                         <caption>Sales Data</caption>
                         <thead>
@@ -831,14 +839,14 @@ class TestScreenReaderCompliance:
                             </tr>
                         </tbody>
                     </table>
-                    
+
                     <form>
                         <fieldset>
                             <legend>Contact Form</legend>
-                            
+
                             <label for="name">Name:</label>
                             <input type="text" id="name" required>
-                            
+
                             <button type="submit">Submit</button>
                         </fieldset>
                     </form>
@@ -847,14 +855,18 @@ class TestScreenReaderCompliance:
         </body>
         </html>
         """
-        
+
         # Generate comprehensive screen reader report
-        semantic_result = screen_reader_validator.validate_semantic_structure(test_page_html)
-        form_result = screen_reader_validator.validate_form_accessibility(test_page_html)
-        
+        semantic_result = screen_reader_validator.validate_semantic_structure(
+            test_page_html
+        )
+        form_result = screen_reader_validator.validate_form_accessibility(
+            test_page_html
+        )
+
         report = {
             "timestamp": "2024-01-01T00:00:00Z",
-            "page_url": "http://test.example.com", 
+            "page_url": "http://test.example.com",
             "screen_reader_compatibility": {
                 "semantic_structure": semantic_result,
                 "form_accessibility": form_result,
@@ -866,48 +878,54 @@ class TestScreenReaderCompliance:
             "recommendations": [],
             "assistive_technology_support": {
                 "nvda": "compatible",
-                "jaws": "compatible", 
+                "jaws": "compatible",
                 "voiceover": "compatible",
                 "talkback": "compatible",
                 "dragon": "compatible",
-            }
+            },
         }
-        
+
         # Calculate overall score
         compliant_tests = 0
         total_tests = 0
-        
+
         if semantic_result["compliant"]:
             compliant_tests += 1
         total_tests += 1
-        
+
         if form_result["compliant"]:
             compliant_tests += 1
         total_tests += 1
-        
+
         report["overall_score"] = compliant_tests / total_tests
-        
+
         # Add recommendations
         if not semantic_result["compliant"]:
-            report["recommendations"].append("Improve semantic HTML structure and landmarks")
-        
+            report["recommendations"].append(
+                "Improve semantic HTML structure and landmarks"
+            )
+
         if not form_result["compliant"]:
-            report["recommendations"].append("Add proper labels and descriptions to form elements")
-        
-        report["recommendations"].extend([
-            "Test with actual screen reader software",
-            "Verify reading order and navigation flow",
-            "Ensure all content is accessible via keyboard",
-            "Validate ARIA implementation with screen reader users"
-        ])
-        
+            report["recommendations"].append(
+                "Add proper labels and descriptions to form elements"
+            )
+
+        report["recommendations"].extend(
+            [
+                "Test with actual screen reader software",
+                "Verify reading order and navigation flow",
+                "Ensure all content is accessible via keyboard",
+                "Validate ARIA implementation with screen reader users",
+            ]
+        )
+
         # Verify report structure
         assert "timestamp" in report
         assert "screen_reader_compatibility" in report
         assert 0.0 <= report["overall_score"] <= 1.0
         assert len(report["recommendations"]) > 0
         assert "assistive_technology_support" in report
-        
+
         # Verify assistive technology coverage
         at_support = report["assistive_technology_support"]
         assert "nvda" in at_support, "Should test NVDA compatibility"
