@@ -203,6 +203,7 @@ dev-debug.log
 .taskmaster/.cache/
 .taskmaster/reports/
 .taskmaster/state.json
+.taskmaster/templates/example_prd.txt
 
 # Task Master AI - Legacy Structure (pre-v0.16.0)
 .taskmasterconfig
@@ -214,3 +215,5 @@ dev-debug.log
 .roo/
 .roomodes
 .windsurfrules
+.clinerules
+.github/instructions
