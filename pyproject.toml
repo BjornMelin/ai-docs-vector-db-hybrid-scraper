@@ -204,17 +204,25 @@ link-mode = "copy"  # Better for Docker builds
 upgrade-package = ["pip", "setuptools", "wheel"]  # Keep core tools updated
 resolution = "highest"  # Prefer latest compatible versions
 
-# ===== Simplified Ruff Configuration =====
+# ===== Optimized Ruff Configuration =====
 [tool.ruff]
 line-length = 88
 target-version = "py312"
 src = ["src", "tests", "examples"]
 exclude = ["scripts"]
 # Performance optimization
-fix = true  # Auto-fix issues
 show-fixes = true  # Show what was fixed
 cache-dir = ".ruff_cache"  # Enable caching
 respect-gitignore = true  # Skip ignored files
+
+# Dedicated formatting configuration
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 72
 
 [tool.ruff.lint]
 # Comprehensive rule selection for 2025 best practices
@@ -239,52 +247,49 @@ select = [
 ]
 
 ignore = [
+    # Formatter conflicts (universal ignores)
+    "COM812", "COM819",  # Comma rules
+    "D206", "D300",      # Docstring formatting
+    "E111", "E114", "E117",  # Indentation
+    "Q000", "Q001", "Q002", "Q003",  # Quote rules
+    "W191",              # Tab indentation
+    
+    # Documentation rules (common production ignores)
     "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
+    "D200", "D205", "D212", "D400", "D401", "D415",  # Docstring formatting
+    
+    # Complexity rules (existing)
     "PLR0911", # Too many return statements
     "PLR0912", # Too many branches
     "PLR0913", # Too many arguments
     "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison
+    
+    # Practical ignores
     "E501",    # Line too long (handled by formatter)
     "S101",    # Use of assert (needed for tests)
     "TRY003",  # Avoid long messages in exceptions
     "PERF203", # try-except in loop (sometimes necessary)
+    "TD002", "TD003", "FIX002",  # TODO formatting
+    "UP006", "UP007",  # Type annotation modernization
 ]
+
+# Prevent auto-fixing these rules for safety
+unfixable = ["F401", "F841"]  # Don't auto-remove unused imports/variables
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["D", "ANN", "S101", "PLR"]
 "examples/**/*" = ["D", "ANN", "T201", "F841"]
 
 [tool.ruff.lint.isort]
-force-single-line = true
 combine-as-imports = true
 order-by-type = true
 known-first-party = ["src", "tests"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+lines-after-imports = 2  # Standard spacing after imports
 
-# ===== Black Configuration =====
-[tool.black]
-line-length = 88
-target-version = ['py311', 'py312']
-# Modern formatting options
-skip-string-normalization = false
-include = '\.pyi?$'
-extend-exclude = '''
-^/(
-  (
-      \.eggs
-    | \.git
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-  )/
-)
-'''
+# ===== Black Configuration Removed =====
+# Using ruff formatter exclusively to avoid conflicts
 
 # ===== Pytest Configuration =====
 [tool.pytest.ini_options]
