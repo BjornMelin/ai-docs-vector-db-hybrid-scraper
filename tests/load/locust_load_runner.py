@@ -1,4 +1,3 @@
-import typing
 
 """Locust-based load testing runner for AI Documentation Vector DB.
 
@@ -491,7 +490,7 @@ class LoadTestMetricsCollector:
         name: str,
         response_time: float,
         content_length: int,
-        exception: typing.Optional[Exception],
+        exception: Exception | None,
     ):
         """Add request metric."""
         self.request_metrics.append(
@@ -662,7 +661,7 @@ def on_request(
     response_length: int,
     response: Any,
     context: dict[str, Any],
-    exception: typing.Optional[Exception],
+    exception: Exception | None,
     **kwargs,
 ):
     """Handle request completion event."""
@@ -706,7 +705,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
 
 def create_load_test_environment(
     host: str = "http://localhost:8000",
-    user_classes: typing.Optional[List] = None,
+    user_classes: List | None = None,
     **kwargs,
 ) -> Environment:
     """Create a Locust environment for programmatic testing.

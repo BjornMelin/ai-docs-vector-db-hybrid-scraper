@@ -1,4 +1,3 @@
-import typing
 
 """Result clustering service for semantic grouping of search results.
 

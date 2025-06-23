@@ -1,4 +1,3 @@
-import typing
 
 """Disaster recovery tests for chaos engineering.
 
@@ -78,7 +77,7 @@ class TestDisasterRecovery:
                 return backup
 
             async def restore_from_backup(
-                self, backup_id: typing.Optional[str] = None
+                self, backup_id: str | None = None
             ) -> dict[str, Any]:
                 if not self.backups:
                     raise Exception("No backups available")

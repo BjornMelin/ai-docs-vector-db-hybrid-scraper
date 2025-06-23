@@ -1,4 +1,3 @@
-import typing
 
 """Constants and configuration values for the AI Documentation Vector DB system.
 

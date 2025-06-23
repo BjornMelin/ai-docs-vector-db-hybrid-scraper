@@ -1,4 +1,3 @@
-import typing
 
 """Central metrics registry and monitoring decorators for application observability.
 

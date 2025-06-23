@@ -1,4 +1,3 @@
-import typing
 
 """Core search utilities for MCP tools."""
 

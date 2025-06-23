@@ -1,4 +1,3 @@
-import typing
 
 """Search orchestrator with essential features.
 

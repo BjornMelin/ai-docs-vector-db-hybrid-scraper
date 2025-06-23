@@ -1,4 +1,3 @@
-import typing
 
 """Shared infrastructure components to avoid circular imports.
 

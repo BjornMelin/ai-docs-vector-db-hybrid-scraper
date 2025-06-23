@@ -1,4 +1,3 @@
-import typing
 
 """Endurance testing scenarios for long-duration performance validation.
 
@@ -178,7 +177,7 @@ class TestEnduranceLoad:
                 self.ttl_seconds = ttl_seconds
                 self.metrics_history = []
 
-            def get(self, key: str) -> typing.Optional[str]:
+            def get(self, key: str) -> str | None:
                 """Get value from cache."""
                 current_time = time.time()
 

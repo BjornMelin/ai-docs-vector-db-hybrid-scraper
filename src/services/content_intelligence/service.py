@@ -1,4 +1,3 @@
-import typing
 
 """Main Content Intelligence Service for AI-powered adaptive extraction.
 

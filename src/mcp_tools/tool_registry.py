@@ -1,4 +1,3 @@
-import typing
 
 """Dynamic tool registration system for FastMCP server.
 

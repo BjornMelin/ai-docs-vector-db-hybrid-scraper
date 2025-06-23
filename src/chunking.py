@@ -1,4 +1,3 @@
-import typing
 
 """chunking.py - Enhanced Chunking with Code Awareness.
 

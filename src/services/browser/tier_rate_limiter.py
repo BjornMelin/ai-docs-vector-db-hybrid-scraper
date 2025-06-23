@@ -1,4 +1,3 @@
-import typing
 
 """Rate limiting for browser automation tiers.
 

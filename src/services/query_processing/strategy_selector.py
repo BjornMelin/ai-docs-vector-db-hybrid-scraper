@@ -1,4 +1,3 @@
-import typing
 
 """Intelligent Search Strategy Selection.
 

@@ -1,4 +1,3 @@
-import typing
 
 """Data encryption and protection testing.
 
@@ -70,7 +69,7 @@ class TestDataProtection:
                 )
 
             def hash_password(
-                self, password: str, salt: typing.Optional[bytes] = None
+                self, password: str, salt: bytes | None = None
             ) -> dict[str, bytes]:
                 """Hash password with salt."""
                 if salt is None:
@@ -161,8 +160,8 @@ class TestDataProtection:
                 return self.generate_key(key_id)
 
             def get_key(
-                self, key_id: str, version: typing.Optional[int] = None
-            ) -> typing.Optional[dict[str, Any]]:
+                self, key_id: str, version: int | None = None
+            ) -> dict[str, Any] | None:
                 """Get encryption key by ID and version."""
                 if version is None:
                     version = self.key_versions.get(key_id, 0)

@@ -1,4 +1,3 @@
-import typing
 
 """Lightweight HTTP scraper for static content using httpx + BeautifulSoup.
 

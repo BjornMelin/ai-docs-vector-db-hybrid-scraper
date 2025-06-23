@@ -1,4 +1,3 @@
-import typing
 
 """Function-based embedding service with FastAPI dependency injection.
 
@@ -25,9 +24,9 @@ logger = logging.getLogger(__name__)
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def generate_embeddings(
     texts: list[str],
-    quality_tier: typing.Optional[QualityTier] = None,
-    provider_name: typing.Optional[str] = None,
-    max_cost: typing.Optional[float] = None,
+    quality_tier: QualityTier | None = None,
+    provider_name: str | None = None,
+    max_cost: float | None = None,
     speed_priority: bool = False,
     auto_select: bool = True,
     generate_sparse: bool = False,
@@ -162,7 +161,7 @@ async def analyze_text_characteristics(
 
 async def estimate_embedding_cost(
     texts: list[str],
-    provider_name: typing.Optional[str] = None,
+    provider_name: str | None = None,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> dict[str, Dict[str, float]]:
     """Estimate embedding generation cost.
@@ -230,8 +229,8 @@ async def get_provider_info(
 
 async def get_smart_recommendation(
     texts: list[str],
-    quality_tier: typing.Optional[QualityTier] = None,
-    max_cost: typing.Optional[float] = None,
+    quality_tier: QualityTier | None = None,
+    max_cost: float | None = None,
     speed_priority: bool = False,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> dict[str, Any]:
@@ -324,7 +323,7 @@ async def get_usage_report(
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def batch_generate_embeddings(
     text_batches: list[List[str]],
-    quality_tier: typing.Optional[QualityTier] = None,
+    quality_tier: QualityTier | None = None,
     max_parallel: int = 3,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
 ) -> list[dict[str, Any]]:

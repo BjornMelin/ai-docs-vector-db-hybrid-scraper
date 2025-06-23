@@ -1,4 +1,3 @@
-import typing
 
 """Core dependency injection components for FastAPI production deployment.
 

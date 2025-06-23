@@ -1,4 +1,3 @@
-import typing
 
 #!/usr/bin/env python3
 """Security test runner and reporting.
@@ -43,7 +42,7 @@ class SecurityTestRunner:
         self.logger = logging.getLogger(__name__)
 
     def run_all_security_tests(
-        self, test_categories: typing.Optional[list[str]] = None
+        self, test_categories: list[str] | None = None
     ) -> dict[str, Any]:
         """Run all security tests and generate comprehensive report.
 

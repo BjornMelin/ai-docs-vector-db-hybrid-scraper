@@ -1,4 +1,3 @@
-import typing
 
 #!/usr/bin/env python3
 """Comprehensive load test runner for AI Documentation Vector DB.
@@ -73,7 +72,7 @@ class LoadTestRunner:
     def run_locust_test(
         self,
         config: Dict,
-        profile: typing.Optional[str] = None,
+        profile: str | None = None,
         headless: bool = True,
         web_port: int = 8089,
     ) -> Dict:
@@ -312,7 +311,7 @@ class LoadTestRunner:
             }
 
     def _generate_test_report(
-        self, env: Environment, config: Dict, profile: typing.Optional[str]
+        self, env: Environment, config: Dict, profile: str | None
     ) -> Dict:
         """Generate comprehensive test report."""
         stats = env.stats

@@ -1,4 +1,3 @@
-import typing
 
 """Simplified production FastMCP server with essential middleware only.
 

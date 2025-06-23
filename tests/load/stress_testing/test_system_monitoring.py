@@ -1,4 +1,3 @@
-import typing
 
 """System monitoring and metrics collection during stress testing.
 
@@ -44,7 +43,7 @@ class SystemMetrics:
     open_files: int
     tcp_connections: int
     process_count: int
-    load_average: typing.Optional[tuple[float, float, float]] = None
+    load_average: tuple[float, float, float] | None = None
 
 
 @dataclass
@@ -162,8 +161,8 @@ class SystemMonitor:
 
     def _collect_system_metrics(
         self,
-        last_disk_io: typing.Optional[tuple[float, float]],
-        last_network_io: typing.Optional[tuple[float, float]],
+        last_disk_io: tuple[float, float] | None,
+        last_network_io: tuple[float, float] | None,
     ) -> SystemMetrics:
         """Collect system-level metrics."""
         # CPU and memory

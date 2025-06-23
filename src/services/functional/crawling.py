@@ -1,4 +1,3 @@
-import typing
 
 """Function-based crawling service with FastAPI dependency injection.
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def crawl_url(
     url: str,
-    preferred_provider: typing.Optional[str] = None,
+    preferred_provider: str | None = None,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> dict[str, Any]:
     """Scrape URL with intelligent 5-tier AutomationRouter selection.
@@ -77,7 +76,7 @@ async def crawl_url(
 async def crawl_site(
     url: str,
     max_pages: int = 50,
-    preferred_provider: typing.Optional[str] = None,
+    preferred_provider: str | None = None,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL using AutomationRouter.
@@ -264,7 +263,7 @@ async def get_tier_metrics(
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def batch_crawl_urls(
     urls: list[str],
-    preferred_provider: typing.Optional[str] = None,
+    preferred_provider: str | None = None,
     max_parallel: int = 5,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> list[dict[str, Any]]:

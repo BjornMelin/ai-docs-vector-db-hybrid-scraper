@@ -1,4 +1,3 @@
-import typing
 
 """Simplified middleware manager for FastAPI with essential middleware only.
 

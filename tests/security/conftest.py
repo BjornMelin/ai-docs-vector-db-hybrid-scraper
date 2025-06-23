@@ -1,4 +1,3 @@
-import typing
 
 """Security testing fixtures and configuration.
 
@@ -182,7 +181,7 @@ def mock_encryption_service():
     service = MagicMock()
 
     async def mock_encrypt(
-        data: str, key: typing.Optional[str] = None
+        data: str, key: str | None = None
     ) -> dict[str, str]:
         """Mock encryption."""
         # Simple base64-like mock encryption for testing
@@ -194,7 +193,7 @@ def mock_encryption_service():
         }
 
     async def mock_decrypt(
-        encrypted_data: str, key: typing.Optional[str] = None
+        encrypted_data: str, key: str | None = None
     ) -> str:
         """Mock decryption."""
         # Simple hex decode mock decryption for testing

@@ -1,4 +1,3 @@
-import typing
 
 """Performance profiler for detailed system resource monitoring.
 

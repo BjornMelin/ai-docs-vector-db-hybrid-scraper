@@ -1,4 +1,3 @@
-import typing
 
 """Content quality assessment with multi-metric scoring system.
 

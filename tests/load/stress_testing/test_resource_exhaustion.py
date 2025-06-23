@@ -1,4 +1,3 @@
-import typing
 
 """Resource exhaustion stress tests for AI Documentation Vector DB.
 
@@ -33,12 +32,12 @@ logger = logging.getLogger(__name__)
 class ResourceConstraints:
     """Define resource constraints for testing."""
 
-    max_memory_mb: typing.Optional[int] = None
-    max_cpu_percent: typing.Optional[float] = None
-    max_connections: typing.Optional[int] = None
-    max_file_descriptors: typing.Optional[int] = None
-    max_network_bandwidth_mbps: typing.Optional[float] = None
-    timeout_seconds: typing.Optional[int] = None
+    max_memory_mb: int | None = None
+    max_cpu_percent: float | None = None
+    max_connections: int | None = None
+    max_file_descriptors: int | None = None
+    max_network_bandwidth_mbps: float | None = None
+    timeout_seconds: int | None = None
 
 
 @dataclass

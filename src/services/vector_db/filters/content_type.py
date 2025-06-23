@@ -1,4 +1,3 @@
-import typing
 
 """Content type filtering for document classification and semantic filtering.
 

@@ -1,4 +1,3 @@
-import typing
 
 """Enhanced Crawl4AI provider with Memory-Adaptive Dispatcher for intelligent concurrency control."""
 

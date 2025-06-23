@@ -1,4 +1,3 @@
-import typing
 
 """Project management tools for MCP server."""
 

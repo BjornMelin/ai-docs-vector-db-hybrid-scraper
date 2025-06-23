@@ -1,4 +1,3 @@
-import typing
 
 """Deployment Tier Configuration System.
 

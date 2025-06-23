@@ -1,4 +1,3 @@
-import typing
 
 """HyDE configuration models with Pydantic v2."""
 

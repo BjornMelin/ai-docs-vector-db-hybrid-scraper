@@ -1,4 +1,3 @@
-import typing
 
 """Enhanced automation router with performance tracking and intelligent routing.
 

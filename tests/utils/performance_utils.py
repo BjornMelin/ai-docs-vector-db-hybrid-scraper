@@ -1,4 +1,3 @@
-import typing
 
 """Performance measurement and monitoring utilities for testing.
 
@@ -103,7 +102,7 @@ class PerformanceTracker:
             self.measurements.append(metrics)
 
     def get_statistics(
-        self, operation_name: typing.Optional[str] = None
+        self, operation_name: str | None = None
     ) -> dict[str, Any]:
         """Get performance statistics for all or specific operations.
 
@@ -182,7 +181,7 @@ class PerformanceTracker:
 
 
 def measure_execution_time(
-    func: typing.Optional[Callable] = None, *, name: typing.Optional[str] = None
+    func: Callable | None = None, *, name: str | None = None
 ):
     """Decorator to measure function execution time.
 
@@ -252,7 +251,7 @@ def measure_execution_time(
         return decorator(func)
 
 
-def memory_profiler(func: typing.Optional[Callable] = None, *, detailed: bool = False):
+def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
     """Decorator to profile memory usage of a function.
 
     Args:
@@ -373,7 +372,7 @@ class BenchmarkSuite:
     def benchmark_function(
         self,
         func: Callable,
-        name: typing.Optional[str] = None,
+        name: str | None = None,
         iterations: int = 100,
         *args,
         **kwargs,
@@ -443,7 +442,7 @@ class BenchmarkSuite:
     def compare_functions(
         self,
         functions: list[Callable],
-        names: typing.Optional[list[str]] = None,
+        names: list[str] | None = None,
         iterations: int = 100,
         *args,
         **kwargs,

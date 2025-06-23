@@ -1,4 +1,3 @@
-import typing
 
 """Advanced filtering tools for MCP server.
 

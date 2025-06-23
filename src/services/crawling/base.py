@@ -1,4 +1,3 @@
-import typing
 
 """Base crawl provider interface."""
 

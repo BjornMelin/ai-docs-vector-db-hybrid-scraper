@@ -1,4 +1,3 @@
-import typing
 
 """Component-level benchmarks for individual ML components.
 

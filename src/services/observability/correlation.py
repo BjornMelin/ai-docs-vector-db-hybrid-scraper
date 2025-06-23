@@ -1,4 +1,3 @@
-import typing
 
 """Trace correlation and context propagation for distributed observability.
 
@@ -40,10 +39,10 @@ class TraceCorrelationManager:
 
     def set_request_context(
         self,
-        request_id: typing.Optional[str] = None,
-        user_id: typing.Optional[str] = None,
-        session_id: typing.Optional[str] = None,
-        tenant_id: typing.Optional[str] = None,
+        request_id: str | None = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        tenant_id: str | None = None,
     ) -> str:
         """Set request-level context in baggage and span attributes.
 
@@ -86,11 +85,11 @@ class TraceCorrelationManager:
     def set_business_context(
         self,
         operation_type: str,
-        query_type: typing.Optional[str] = None,
-        search_method: typing.Optional[str] = None,
-        ai_provider: typing.Optional[str] = None,
-        model_name: typing.Optional[str] = None,
-        cache_strategy: typing.Optional[str] = None,
+        query_type: str | None = None,
+        search_method: str | None = None,
+        ai_provider: str | None = None,
+        model_name: str | None = None,
+        cache_strategy: str | None = None,
     ) -> None:
         """Set business-specific context for operation tracking.
 
@@ -134,9 +133,9 @@ class TraceCorrelationManager:
     def set_performance_context(
         self,
         priority: str = "normal",
-        timeout_ms: typing.Optional[int] = None,
+        timeout_ms: int | None = None,
         retry_count: int = 0,
-        circuit_breaker_state: typing.Optional[str] = None,
+        circuit_breaker_state: str | None = None,
     ) -> None:
         """Set performance-related context for monitoring.
 
@@ -216,7 +215,7 @@ class TraceCorrelationManager:
     def correlated_operation(
         self,
         operation_name: str,
-        correlation_id: typing.Optional[str] = None,
+        correlation_id: str | None = None,
         **additional_context,
     ):
         """Context manager for correlated operations.
@@ -348,7 +347,7 @@ class ErrorCorrelationTracker:
         error_type: str = "application_error",
         severity: str = "error",
         user_impact: str = "medium",
-        recovery_action: typing.Optional[str] = None,
+        recovery_action: str | None = None,
     ) -> str:
         """Record an error with correlation context.
 
@@ -418,7 +417,7 @@ class ErrorCorrelationTracker:
         self,
         error_name: str,
         error_details: dict[str, Any],
-        parent_correlation_id: typing.Optional[str] = None,
+        parent_correlation_id: str | None = None,
     ):
         """Create a dedicated span for error analysis.
 
@@ -458,8 +457,8 @@ class ErrorCorrelationTracker:
 
 
 # Global instances
-_correlation_manager: typing.Optional[TraceCorrelationManager] = None
-_error_tracker: typing.Optional[ErrorCorrelationTracker] = None
+_correlation_manager: TraceCorrelationManager | None = None
+_error_tracker: ErrorCorrelationTracker | None = None
 
 
 def get_correlation_manager() -> TraceCorrelationManager:
@@ -489,10 +488,10 @@ def get_error_tracker() -> ErrorCorrelationTracker:
 
 # Convenience functions
 def set_request_context(
-    request_id: typing.Optional[str] = None,
-    user_id: typing.Optional[str] = None,
-    session_id: typing.Optional[str] = None,
-    tenant_id: typing.Optional[str] = None,
+    request_id: str | None = None,
+    user_id: str | None = None,
+    session_id: str | None = None,
+    tenant_id: str | None = None,
 ) -> str:
     """Set request context using global correlation manager."""
     manager = get_correlation_manager()
@@ -501,11 +500,11 @@ def set_request_context(
 
 def set_business_context(
     operation_type: str,
-    query_type: typing.Optional[str] = None,
-    search_method: typing.Optional[str] = None,
-    ai_provider: typing.Optional[str] = None,
-    model_name: typing.Optional[str] = None,
-    cache_strategy: typing.Optional[str] = None,
+    query_type: str | None = None,
+    search_method: str | None = None,
+    ai_provider: str | None = None,
+    model_name: str | None = None,
+    cache_strategy: str | None = None,
 ) -> None:
     """Set business context using global correlation manager."""
     manager = get_correlation_manager()
@@ -521,7 +520,7 @@ def set_business_context(
 
 def correlated_operation(
     operation_name: str,
-    correlation_id: typing.Optional[str] = None,
+    correlation_id: str | None = None,
     **additional_context,
 ):
     """Create correlated operation using global correlation manager."""
@@ -536,7 +535,7 @@ def record_error(
     error_type: str = "application_error",
     severity: str = "error",
     user_impact: str = "medium",
-    recovery_action: typing.Optional[str] = None,
+    recovery_action: str | None = None,
 ) -> str:
     """Record error using global error tracker."""
     tracker = get_error_tracker()

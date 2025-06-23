@@ -1,4 +1,3 @@
-import typing
 
 """Standardized assertion helpers for consistent test patterns.
 
@@ -10,12 +9,9 @@ consistent error messages and validation logic throughout the test suite.
 import asyncio
 import json
 import time
-import typing
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from typing import Dict
-from typing import List
 from typing import TypeVar
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -27,7 +23,7 @@ T = TypeVar("T")
 
 def assert_valid_response(
     response: dict[str, Any],
-    expected_keys: typing.Optional[list[str]] = None,
+    expected_keys: list[str] | None = None,
     status_key: str = "status",
     expected_status: str = "success",
 ) -> None:
@@ -57,7 +53,7 @@ def assert_valid_response(
 
 def assert_error_response(
     response: dict[str, Any],
-    expected_error_type: typing.Optional[str] = None,
+    expected_error_type: str | None = None,
     error_key: str = "error",
     message_key: str = "message",
 ) -> None:
@@ -280,7 +276,7 @@ class AssertionHelpers:
 def assert_successful_response(
     response: dict[str, Any],
     expected_data: Any = None,
-    required_fields: typing.Optional[list[str]] = None,
+    required_fields: list[str] | None = None,
 ) -> None:
     """Assert that response indicates success with optional data validation.
 
@@ -312,8 +308,8 @@ def assert_successful_response(
 
 def assert_error_response_standardized(
     response: dict[str, Any],
-    expected_error_code: typing.Optional[str] = None,
-    expected_message_fragment: typing.Optional[str] = None,
+    expected_error_code: str | None = None,
+    expected_message_fragment: str | None = None,
     should_have_details: bool = False,
 ) -> None:
     """Assert that response indicates an error with specific characteristics.
@@ -351,7 +347,7 @@ def assert_error_response_standardized(
 
 
 def assert_valid_document_chunk(
-    chunk: dict[str, Any], required_fields: typing.Optional[list[str]] = None
+    chunk: dict[str, Any], required_fields: list[str] | None = None
 ) -> None:
     """Assert that document chunk has all required fields and valid values.
 
@@ -381,8 +377,8 @@ def assert_valid_document_chunk(
 
 def assert_valid_vector_point(
     point: dict[str, Any],
-    expected_vector_dim: typing.Optional[int] = None,
-    required_payload_fields: typing.Optional[list[str]] = None,
+    expected_vector_dim: int | None = None,
+    required_payload_fields: list[str] | None = None,
 ) -> None:
     """Assert that vector point has valid structure and content.
 
@@ -536,7 +532,7 @@ async def assert_async_operation_completes(
 
 
 def assert_collection_has_size(
-    collection: List | Dict | str,
+    collection: list | dict | str,
     expected_size: int,
     collection_name: str = "Collection",
 ) -> None:
@@ -578,7 +574,7 @@ def assert_all_items_have_type(
 
 
 def assert_security_headers_present(
-    headers: dict[str, str], required_headers: typing.Optional[list[str]] = None
+    headers: dict[str, str], required_headers: list[str] | None = None
 ) -> None:
     """Assert that security headers are present in HTTP response.
 

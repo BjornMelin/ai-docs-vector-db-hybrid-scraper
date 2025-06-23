@@ -1,4 +1,3 @@
-import typing
 
 """Example integration of simplified ML security with FastAPI.
 

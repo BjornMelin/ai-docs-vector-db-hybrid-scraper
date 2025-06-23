@@ -1,4 +1,3 @@
-import typing
 
 """Chaos engineering test runner and orchestrator.
 
@@ -52,10 +51,10 @@ class ExperimentExecution:
 
     experiment: ChaosExperiment
     status: ExperimentStatus = ExperimentStatus.PENDING
-    start_time: typing.Optional[float] = None
-    end_time: typing.Optional[float] = None
-    result: typing.Optional[ExperimentResult] = None
-    error: typing.Optional[str] = None
+    start_time: float | None = None
+    end_time: float | None = None
+    result: ExperimentResult | None = None
+    error: str | None = None
     retry_count: int = 0
     max_retries: int = 2
 
@@ -83,7 +82,7 @@ class ChaosTestRunner:
         self,
         experiment: ChaosExperiment,
         target_system: Any = None,
-        monitoring_callback: typing.Optional[Callable] = None,
+        monitoring_callback: Callable | None = None,
     ) -> ExperimentExecution:
         """Execute a single chaos experiment."""
         execution = ExperimentExecution(experiment=experiment)
@@ -247,7 +246,7 @@ class ChaosTestRunner:
         self,
         experiment: ChaosExperiment,
         target_system: Any,
-        monitoring_callback: typing.Optional[Callable],
+        monitoring_callback: Callable | None,
     ) -> ExperimentResult:
         """Run the actual experiment implementation."""
         start_time = time.time()
@@ -462,7 +461,7 @@ class ChaosTestRunner:
         await asyncio.sleep(0.1)
 
     def generate_report(
-        self, suite_name: typing.Optional[str] = None
+        self, suite_name: str | None = None
     ) -> dict[str, Any]:
         """Generate comprehensive chaos engineering report."""
         if suite_name:

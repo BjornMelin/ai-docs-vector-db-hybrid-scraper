@@ -1,4 +1,3 @@
-import typing
 
 """RAG service models and configuration."""
 

@@ -1,4 +1,3 @@
-import typing
 
 """Chaos engineering fixtures and configuration.
 
@@ -565,7 +564,7 @@ def chaos_experiment_runner():
             self,
             experiment: ChaosExperiment,
             target_system: Any,
-            monitoring_func: typing.Optional[Callable] = None,
+            monitoring_func: Callable | None = None,
         ) -> ExperimentResult:
             """Run a chaos experiment."""
             start_time = time.time()

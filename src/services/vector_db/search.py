@@ -1,4 +1,3 @@
-import typing
 
 """Focused QdrantSearch module for vector search operations.
 

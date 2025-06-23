@@ -1,4 +1,3 @@
-import typing
 
 """SPLADE provider for sparse vector generation.
 

@@ -1,4 +1,3 @@
-import typing
 
 """Batch operations with Rich progress tracking and confirmations.
 

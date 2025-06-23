@@ -1,4 +1,3 @@
-import typing
 
 """OpenTelemetry metrics bridge with existing Prometheus monitoring system.
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 class OpenTelemetryMetricsBridge:
     """Bridge between OpenTelemetry metrics and existing Prometheus metrics."""
 
-    def __init__(self, prometheus_registry: typing.Optional[MetricsRegistry] = None):
+    def __init__(self, prometheus_registry: MetricsRegistry | None = None):
         """Initialize metrics bridge.
 
         Args:
@@ -139,8 +138,8 @@ class OpenTelemetryMetricsBridge:
         provider: str,
         model: str,
         duration_ms: float,
-        tokens_used: typing.Optional[int] = None,
-        cost_usd: typing.Optional[float] = None,
+        tokens_used: int | None = None,
+        cost_usd: float | None = None,
         success: bool = True,
     ) -> None:
         """Record AI/ML operation metrics.
@@ -184,7 +183,7 @@ class OpenTelemetryMetricsBridge:
         query_type: str,
         duration_ms: float,
         results_count: int,
-        top_score: typing.Optional[float] = None,
+        top_score: float | None = None,
         success: bool = True,
     ) -> None:
         """Record vector search operation metrics.
@@ -266,8 +265,8 @@ class OpenTelemetryMetricsBridge:
         endpoint: str,
         status_code: int,
         duration_ms: float,
-        request_size_bytes: typing.Optional[int] = None,
-        response_size_bytes: typing.Optional[int] = None,
+        request_size_bytes: int | None = None,
+        response_size_bytes: int | None = None,
     ) -> None:
         """Record HTTP request metrics.
 
@@ -428,7 +427,7 @@ class OpenTelemetryMetricsBridge:
         name: str,
         description: str,
         unit: str = "",
-        boundaries: typing.Optional[list] = None,
+        boundaries: list | None = None,
     ) -> Histogram:
         """Create a custom histogram instrument.
 
@@ -451,7 +450,7 @@ class OpenTelemetryMetricsBridge:
         self._instruments[name] = histogram
         return histogram
 
-    def get_instrument(self, name: str) -> typing.Optional[Any]:
+    def get_instrument(self, name: str) -> Any | None:
         """Get metric instrument by name.
 
         Args:
@@ -464,11 +463,11 @@ class OpenTelemetryMetricsBridge:
 
 
 # Global metrics bridge instance
-_metrics_bridge: typing.Optional[OpenTelemetryMetricsBridge] = None
+_metrics_bridge: OpenTelemetryMetricsBridge | None = None
 
 
 def initialize_metrics_bridge(
-    prometheus_registry: typing.Optional[MetricsRegistry] = None,
+    prometheus_registry: MetricsRegistry | None = None,
 ) -> OpenTelemetryMetricsBridge:
     """Initialize global metrics bridge.
 

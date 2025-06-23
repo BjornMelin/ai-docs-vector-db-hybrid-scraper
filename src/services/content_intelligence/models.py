@@ -1,4 +1,3 @@
-import typing
 
 """Pydantic models for Content Intelligence Service.
 

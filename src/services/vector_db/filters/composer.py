@@ -1,4 +1,3 @@
-import typing
 
 """Filter composition for combining multiple filters with boolean logic.
 

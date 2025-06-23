@@ -1,4 +1,3 @@
-import typing
 
 """User journey testing fixtures and configuration.
 
@@ -23,8 +22,8 @@ class JourneyStep:
     name: str
     action: str
     params: dict[str, Any]
-    expected_result: typing.Optional[dict[str, Any]] = None
-    validation_func: typing.Optional[callable] = None
+    expected_result: dict[str, Any] | None = None
+    validation_func: callable | None = None
     timeout_seconds: float = 30.0
     retry_count: int = 0
     dependencies: list[str] = None
@@ -41,8 +40,8 @@ class UserJourney:
     name: str
     description: str
     steps: list[JourneyStep]
-    setup_func: typing.Optional[callable] = None
-    teardown_func: typing.Optional[callable] = None
+    setup_func: callable | None = None
+    teardown_func: callable | None = None
     success_criteria: dict[str, Any] = None
 
     def __post_init__(self):
@@ -119,7 +118,7 @@ def journey_executor():
             self.artifacts = {}
 
         async def execute_journey(
-            self, journey: UserJourney, context: typing.Optional[dict[str, Any]] = None
+            self, journey: UserJourney, context: dict[str, Any] | None = None
         ) -> JourneyResult:
             """Execute a complete user journey."""
             journey_id = f"{journey.name}_{time.time()}"

@@ -1,4 +1,3 @@
-import typing
 
 """Performance testing fixtures and configuration.
 
@@ -130,7 +129,7 @@ def system_monitor():
             """Set baseline metrics for comparison."""
             self.baseline_metrics = self.get_current_metrics()
 
-        def get_metrics_delta(self) -> typing.Optional[PerformanceMetrics]:
+        def get_metrics_delta(self) -> PerformanceMetrics | None:
             """Get metrics delta from baseline."""
             if not self.baseline_metrics:
                 return None
@@ -159,7 +158,7 @@ def system_monitor():
             metrics = self.get_current_metrics()
             self.metrics_history.append(metrics)
 
-        def get_average_metrics(self) -> typing.Optional[PerformanceMetrics]:
+        def get_average_metrics(self) -> PerformanceMetrics | None:
             """Get average metrics from history."""
             if not self.metrics_history:
                 return None
@@ -225,7 +224,7 @@ def memory_profiler():
             """Set baseline memory snapshot."""
             self.baseline = self.take_snapshot()
 
-        def get_memory_growth(self) -> typing.Optional[float]:
+        def get_memory_growth(self) -> float | None:
             """Get memory growth since baseline in MB."""
             if not self.baseline or not self.snapshots:
                 return None
@@ -251,7 +250,7 @@ def memory_profiler():
 
             return False
 
-        def get_peak_memory(self) -> typing.Optional[float]:
+        def get_peak_memory(self) -> float | None:
             """Get peak memory usage in MB."""
             if not self.snapshots:
                 return None
@@ -343,7 +342,7 @@ def throughput_calculator():
                 self.operation_counts[operation] = 0
             self.operation_counts[operation] += count
 
-        def calculate_throughput(self, operation: str) -> typing.Optional[float]:
+        def calculate_throughput(self, operation: str) -> float | None:
             """Calculate operations per second."""
             if (
                 operation not in self.start_times

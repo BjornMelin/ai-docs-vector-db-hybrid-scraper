@@ -1,4 +1,3 @@
-import typing
 
 """Model selector for dynamic embedding model selection.
 

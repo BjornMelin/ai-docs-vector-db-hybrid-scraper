@@ -1,4 +1,3 @@
-import typing
 
 """Cross-platform utilities for handling platform-specific differences.
 

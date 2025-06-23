@@ -1,4 +1,3 @@
-import typing
 
 """Pydantic models for browser automation action validation."""
 

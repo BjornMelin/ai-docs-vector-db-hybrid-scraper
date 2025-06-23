@@ -1,4 +1,3 @@
-import typing
 
 """Canary Deployment Service for Progressive Rollouts.
 

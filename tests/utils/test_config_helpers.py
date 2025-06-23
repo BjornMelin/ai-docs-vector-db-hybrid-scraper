@@ -1,4 +1,3 @@
-import typing
 
 """Test configuration and environment management utilities.
 
@@ -41,7 +40,7 @@ class EnvironmentConfig:
 class ConfigManager:
     """Manage test configurations and environments."""
 
-    def __init__(self, config_dir: typing.Optional[Path] = None):
+    def __init__(self, config_dir: Path | None = None):
         """Initialize the configuration manager.
 
         Args:
@@ -275,7 +274,7 @@ class ConfigManager:
 _config_manager = ConfigManager()
 
 
-def get_test_environment(name: typing.Optional[str] = None) -> EnvironmentConfig:
+def get_test_environment(name: str | None = None) -> EnvironmentConfig:
     """Get test environment configuration.
 
     Args:
@@ -385,7 +384,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
 
 
 def create_test_config(
-    name: str, overrides: typing.Optional[dict[str, Any]] = None
+    name: str, overrides: dict[str, Any] | None = None
 ) -> EnvironmentConfig:
     """Create a custom test configuration.
 
@@ -430,7 +429,7 @@ def get_test_data_dir() -> Path:
 
 
 def create_test_file(
-    filename: str, content: str, subdirectory: typing.Optional[str] = None
+    filename: str, content: str, subdirectory: str | None = None
 ) -> Path:
     """Create a test file with specified content.
 

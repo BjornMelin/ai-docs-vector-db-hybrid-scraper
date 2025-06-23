@@ -1,4 +1,3 @@
-import typing
 
 """Base filter architecture for advanced vector database filtering.
 

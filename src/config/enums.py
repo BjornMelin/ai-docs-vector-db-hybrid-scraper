@@ -1,4 +1,3 @@
-import typing
 
 """Configuration enums consolidated from original enums.py.
 

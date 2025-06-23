@@ -1,4 +1,3 @@
-import typing
 
 """FastAPI middleware for Prometheus metrics integration.
 

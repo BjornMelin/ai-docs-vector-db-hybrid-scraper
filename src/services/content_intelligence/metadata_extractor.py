@@ -1,4 +1,3 @@
-import typing
 
 """Metadata extraction and enrichment for content intelligence.
 

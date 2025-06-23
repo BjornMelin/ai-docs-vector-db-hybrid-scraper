@@ -1,4 +1,3 @@
-import typing
 
 """Content type classification using local models and semantic analysis.
 

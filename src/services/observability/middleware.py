@@ -1,4 +1,3 @@
-import typing
 
 """FastAPI middleware for OpenTelemetry observability integration.
 

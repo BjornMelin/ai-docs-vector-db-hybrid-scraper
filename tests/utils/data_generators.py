@@ -1,4 +1,3 @@
-import typing
 
 """Data generators for testing using Hypothesis and custom patterns.
 
@@ -254,7 +253,7 @@ class HypothesisStrategies:
 class TestDataGenerator:
     """High-level test data generator with preset patterns."""
 
-    def __init__(self, seed: typing.Optional[int] = None):
+    def __init__(self, seed: int | None = None):
         """Initialize the data generator.
 
         Args:
@@ -394,7 +393,7 @@ class TestDataGenerator:
         self,
         success: bool = True,
         include_pagination: bool = False,
-        items_count: typing.Optional[int] = None,
+        items_count: int | None = None,
     ) -> dict[str, Any]:
         """Generate a mock API response.
 

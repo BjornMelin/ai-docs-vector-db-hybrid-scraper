@@ -1,4 +1,3 @@
-import typing
 
 """FastAPI dependencies for OpenTelemetry observability integration.
 

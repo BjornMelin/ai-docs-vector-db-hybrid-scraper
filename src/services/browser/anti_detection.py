@@ -1,4 +1,3 @@
-import typing
 
 """Enhanced Anti-Detection System for browser automation.
 

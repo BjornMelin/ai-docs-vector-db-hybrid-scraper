@@ -1,4 +1,3 @@
-import typing
 
 """Focused QdrantDocuments module for document/point operations.
 

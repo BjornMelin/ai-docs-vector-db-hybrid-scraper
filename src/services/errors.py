@@ -1,4 +1,3 @@
-import typing
 
 """Consolidated error classes for all services and MCP server.
 

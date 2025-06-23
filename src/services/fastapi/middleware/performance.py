@@ -1,4 +1,3 @@
-import typing
 
 """Performance monitoring middleware for production metrics and observability.
 

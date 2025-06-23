@@ -1,4 +1,3 @@
-import typing
 
 """Unified browser automation manager providing single interface to all 5 tiers.
 

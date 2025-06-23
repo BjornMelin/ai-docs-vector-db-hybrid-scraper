@@ -1,4 +1,3 @@
-import typing
 
 """Focused QdrantIndexing module for payload indexing operations.
 

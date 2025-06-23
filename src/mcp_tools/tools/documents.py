@@ -1,4 +1,3 @@
-import typing
 
 """Document management tools for MCP server."""
 

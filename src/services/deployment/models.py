@@ -1,4 +1,3 @@
-import typing
 
 """Core deployment models and data structures.
 

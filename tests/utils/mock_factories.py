@@ -1,4 +1,3 @@
-import typing
 
 """Mock factories for creating test doubles and stubs.
 
@@ -22,7 +21,7 @@ from .data_generators import TestDataGenerator
 class MockFactory:
     """Factory for creating various types of mock objects."""
 
-    def __init__(self, seed: typing.Optional[int] = None):
+    def __init__(self, seed: int | None = None):
         """Initialize the mock factory.
 
         Args:
@@ -36,8 +35,8 @@ class MockFactory:
     def create_mock_response(
         self,
         status_code: int = 200,
-        json_data: typing.Optional[dict[str, Any]] = None,
-        headers: typing.Optional[dict[str, str]] = None,
+        json_data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         delay: float = 0.0,
     ) -> Mock:
         """Create a mock HTTP response object.
@@ -347,7 +346,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
     cache_storage = {}
     access_times = {}
 
-    def mock_get(key: str) -> typing.Optional[Any]:
+    def mock_get(key: str) -> Any | None:
         """Mock cache get."""
         # Simulate cache misses
         if random.random() > hit_rate:
@@ -358,7 +357,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
             return cache_storage[key]
         return None
 
-    def mock_set(key: str, value: Any, ttl: typing.Optional[int] = None) -> bool:
+    def mock_set(key: str, value: Any, ttl: int | None = None) -> bool:
         """Mock cache set."""
         # Simulate storage limit by evicting oldest items
         if len(cache_storage) >= storage_limit:
@@ -432,9 +431,9 @@ def create_mock_api_client(
     async def mock_request(
         method: str,
         endpoint: str,
-        params: typing.Optional[Dict] = None,
-        json_data: typing.Optional[Dict] = None,
-        headers: typing.Optional[Dict] = None,
+        params: Dict | None = None,
+        json_data: Dict | None = None,
+        headers: Dict | None = None,
     ) -> dict[str, Any]:
         """Mock API request."""
         nonlocal request_count, last_reset

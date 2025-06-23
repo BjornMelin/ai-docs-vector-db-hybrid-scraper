@@ -1,4 +1,3 @@
-import typing
 
 """Response compression middleware for production optimization.
 

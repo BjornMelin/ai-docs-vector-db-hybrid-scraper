@@ -1,4 +1,3 @@
-import typing
 
 """Personalized ranking service for adaptive search result ranking.
 

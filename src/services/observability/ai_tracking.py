@@ -1,4 +1,3 @@
-import typing
 
 """AI/ML operation tracking with cost attribution and performance monitoring.
 
@@ -31,13 +30,13 @@ class AIOperationMetrics:
     provider: str
     model: str
     duration_ms: float
-    tokens_used: typing.Optional[int] = None
-    cost_usd: typing.Optional[float] = None
+    tokens_used: int | None = None
+    cost_usd: float | None = None
     success: bool = True
-    error_message: typing.Optional[str] = None
-    input_size: typing.Optional[int] = None
-    output_size: typing.Optional[int] = None
-    quality_score: typing.Optional[float] = None
+    error_message: str | None = None
+    input_size: int | None = None
+    output_size: int | None = None
+    quality_score: float | None = None
 
 
 class AIOperationTracker:
@@ -111,7 +110,7 @@ class AIOperationTracker:
         provider: str,
         model: str,
         input_texts: list[str] | str,
-        expected_dimensions: typing.Optional[int] = None,
+        expected_dimensions: int | None = None,
     ):
         """Context manager for tracking embedding generation operations.
 
@@ -220,7 +219,7 @@ class AIOperationTracker:
         provider: str,
         model: str,
         operation: str = "completion",
-        expected_max_tokens: typing.Optional[int] = None,
+        expected_max_tokens: int | None = None,
     ):
         """Context manager for tracking LLM API calls.
 
@@ -329,7 +328,7 @@ class AIOperationTracker:
         self,
         collection_name: str,
         query_type: str = "semantic",
-        top_k: typing.Optional[int] = None,
+        top_k: int | None = None,
     ):
         """Context manager for tracking vector search operations.
 
@@ -561,7 +560,7 @@ class AIOperationTracker:
         operation_type: str,
         success_rate: float,
         avg_latency_ms: float,
-        cost_per_operation: typing.Optional[float] = None,
+        cost_per_operation: float | None = None,
     ) -> None:
         """Record aggregated model performance metrics.
 
@@ -588,7 +587,7 @@ class AIOperationTracker:
 
 
 # Global AI operation tracker instance
-_ai_tracker: typing.Optional[AIOperationTracker] = None
+_ai_tracker: AIOperationTracker | None = None
 
 
 def get_ai_tracker() -> AIOperationTracker:
@@ -607,7 +606,7 @@ def track_embedding_generation(
     provider: str,
     model: str,
     input_texts: list[str] | str,
-    expected_dimensions: typing.Optional[int] = None,
+    expected_dimensions: int | None = None,
 ):
     """Convenience function for tracking embedding generation.
 
@@ -630,7 +629,7 @@ def track_llm_call(
     provider: str,
     model: str,
     operation: str = "completion",
-    expected_max_tokens: typing.Optional[int] = None,
+    expected_max_tokens: int | None = None,
 ):
     """Convenience function for tracking LLM calls.
 
@@ -650,7 +649,7 @@ def track_llm_call(
 def track_vector_search(
     collection_name: str,
     query_type: str = "semantic",
-    top_k: typing.Optional[int] = None,
+    top_k: int | None = None,
 ):
     """Convenience function for tracking vector search.
 

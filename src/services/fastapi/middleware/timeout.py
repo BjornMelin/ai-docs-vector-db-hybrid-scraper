@@ -1,4 +1,3 @@
-import typing
 
 """Timeout and circuit breaker middleware for production resilience.
 

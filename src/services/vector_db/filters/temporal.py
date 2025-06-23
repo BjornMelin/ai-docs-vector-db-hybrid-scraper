@@ -1,4 +1,3 @@
-import typing
 
 """Temporal filtering for date-based filtering and content freshness analysis.
 

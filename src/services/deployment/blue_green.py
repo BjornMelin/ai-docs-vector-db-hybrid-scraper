@@ -1,4 +1,3 @@
-import typing
 
 """Blue-Green Deployment Service for Zero-Downtime Releases.
 

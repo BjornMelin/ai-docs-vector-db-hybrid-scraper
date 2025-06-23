@@ -1,4 +1,3 @@
-import typing
 
 #!/usr/bin/env python3
 """Vector Database Management Utility

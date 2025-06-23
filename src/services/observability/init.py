@@ -1,4 +1,3 @@
-import typing
 
 """OpenTelemetry initialization and setup for the AI documentation system.
 

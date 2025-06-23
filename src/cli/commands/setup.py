@@ -1,4 +1,3 @@
-import typing
 
 """Interactive configuration wizard for initial setup.
 

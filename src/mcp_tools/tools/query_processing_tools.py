@@ -1,4 +1,3 @@
-import typing
 
 """Advanced query processing tools for MCP server.
 

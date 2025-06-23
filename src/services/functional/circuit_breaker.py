@@ -1,4 +1,3 @@
-import typing
 
 """Circuit breaker implementation for resilient service patterns.
 

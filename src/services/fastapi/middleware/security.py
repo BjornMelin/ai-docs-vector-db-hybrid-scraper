@@ -1,4 +1,3 @@
-import typing
 
 """Security middleware for production-grade security headers and protection.
 

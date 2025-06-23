@@ -1,4 +1,3 @@
-import typing
 
 """Federated search service for cross-collection search orchestration.
 

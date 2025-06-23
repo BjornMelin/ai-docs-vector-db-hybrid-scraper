@@ -1,4 +1,3 @@
-import typing
 
 """OpenTelemetry tracking utilities for AI/ML operations and cost monitoring.
 

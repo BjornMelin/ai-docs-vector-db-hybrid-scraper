@@ -1,4 +1,3 @@
-import typing
 
 """Distributed system resilience integration tests.
 
@@ -363,7 +362,7 @@ class TestNetworkPartitionTolerance:
             def has_quorum(self) -> bool:
                 return len(self.active_nodes) >= self.quorum_size
 
-            def get_leader(self) -> typing.Optional[str]:
+            def get_leader(self) -> str | None:
                 if self.has_quorum():
                     # Simple leader election - return node with lowest ID
                     return min(self.active_nodes) if self.active_nodes else None

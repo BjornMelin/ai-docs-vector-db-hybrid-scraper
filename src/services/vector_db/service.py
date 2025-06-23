@@ -1,4 +1,3 @@
-import typing
 
 """Unified QdrantService facade that delegates to focused modules.
 

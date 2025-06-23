@@ -1,4 +1,3 @@
-import typing
 
 """Monitoring system initialization for FastMCP applications.
 

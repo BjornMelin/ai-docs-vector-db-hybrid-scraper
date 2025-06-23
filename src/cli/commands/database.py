@@ -1,4 +1,3 @@
-import typing
 
 """Enhanced vector database management commands with Rich styling.
 

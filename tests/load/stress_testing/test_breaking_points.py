@@ -1,4 +1,3 @@
-import typing
 
 """Breaking point identification tests for AI Documentation Vector DB.
 
@@ -28,11 +27,11 @@ logger = logging.getLogger(__name__)
 class BreakingPointMetrics:
     """Metrics for breaking point analysis."""
 
-    breaking_point_users: typing.Optional[int] = None
-    breaking_point_rps: typing.Optional[float] = None
-    degradation_start_users: typing.Optional[int] = None
-    recovery_time_seconds: typing.Optional[float] = None
-    max_stable_users: typing.Optional[int] = None
+    breaking_point_users: int | None = None
+    breaking_point_rps: float | None = None
+    degradation_start_users: int | None = None
+    recovery_time_seconds: float | None = None
+    max_stable_users: int | None = None
     performance_curve: list[dict[str, float]] = field(default_factory=list)
     failure_cascade_detected: bool = False
     graceful_degradation: bool = False

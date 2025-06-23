@@ -1,4 +1,3 @@
-import typing
 
 """Deployment testing configuration and fixtures.
 
@@ -299,7 +298,7 @@ class DeploymentRollbackManager:
 
     def __init__(self):
         self.deployment_history: list[dict[str, Any]] = []
-        self.current_deployment: typing.Optional[dict[str, Any]] = None
+        self.current_deployment: dict[str, Any] | None = None
 
     def record_deployment(self, deployment_info: dict[str, Any]) -> None:
         """Record a deployment for rollback capability."""
@@ -309,7 +308,7 @@ class DeploymentRollbackManager:
         self.deployment_history.append(deployment_info)
         self.current_deployment = deployment_info
 
-    def get_rollback_target(self) -> typing.Optional[dict[str, Any]]:
+    def get_rollback_target(self) -> dict[str, Any] | None:
         """Get the target deployment for rollback."""
         if len(self.deployment_history) < 2:
             return None

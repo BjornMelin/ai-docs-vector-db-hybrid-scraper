@@ -1,4 +1,3 @@
-import typing
 
 """Real-time validation for configuration wizard.
 
@@ -29,7 +28,7 @@ class WizardValidator:
 
     def validate_api_key(
         self, provider: str, api_key: str
-    ) -> tuple[bool, typing.Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate API key format for specific providers.
 
         Args:
@@ -74,7 +73,7 @@ class WizardValidator:
 
     def validate_url(
         self, url: str, allow_localhost: bool = True
-    ) -> tuple[bool, typing.Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate URL format.
 
         Args:
@@ -98,7 +97,7 @@ class WizardValidator:
 
         return True, None
 
-    def validate_port(self, port: str | int) -> tuple[bool, typing.Optional[str]]:
+    def validate_port(self, port: str | int) -> tuple[bool, str | None]:
         """Validate port number.
 
         Args:
@@ -122,7 +121,7 @@ class WizardValidator:
 
     def validate_path(
         self, path: str, must_exist: bool = False, must_be_dir: bool = False
-    ) -> tuple[bool, typing.Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate file/directory path.
 
         Args:
@@ -274,7 +273,7 @@ class WizardValidator:
 
     def validate_file_path(
         self, path: str, must_exist: bool = False
-    ) -> tuple[bool, typing.Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate file path.
 
         Args:
@@ -288,7 +287,7 @@ class WizardValidator:
 
     def validate_directory_path(
         self, path: str, must_exist: bool = False
-    ) -> tuple[bool, typing.Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate directory path.
 
         Args:
@@ -302,7 +301,7 @@ class WizardValidator:
 
     def validate_json_string(
         self, json_str: str
-    ) -> tuple[bool, typing.Optional[str], typing.Optional[Dict]]:
+    ) -> tuple[bool, str | None, Dict | None]:
         """Validate JSON string.
 
         Args:

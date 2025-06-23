@@ -1,4 +1,3 @@
-import typing
 
 """Content Intelligence tools for MCP server.
 

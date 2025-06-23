@@ -1,4 +1,3 @@
-import typing
 
 """Site-specific adaptation patterns and optimization strategies.
 

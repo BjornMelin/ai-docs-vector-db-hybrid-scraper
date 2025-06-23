@@ -1,4 +1,3 @@
-import typing
 
 """Stress testing fixtures and configuration.
 
@@ -35,7 +34,7 @@ class StressTestProfile:
     target_rps: float
     duration_seconds: int
     failure_injection_rate: float = 0.0
-    resource_constraints: typing.Optional[dict[str, Any]] = None
+    resource_constraints: dict[str, Any] | None = None
     chaos_scenarios: list[str] = field(default_factory=list)
     recovery_validation: bool = True
 

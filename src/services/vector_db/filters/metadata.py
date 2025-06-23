@@ -1,4 +1,3 @@
-import typing
 
 """Metadata filtering with advanced boolean logic and nested expressions.
 

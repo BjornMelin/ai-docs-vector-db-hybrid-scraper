@@ -1,4 +1,3 @@
-import typing
 
 """Base load testing framework using Locust for AI Documentation Vector DB.
 
@@ -306,7 +305,7 @@ def on_request(
     response_length: int,
     response: Any,
     context: dict[str, Any],
-    exception: typing.Optional[Exception],
+    exception: Exception | None,
     start_time: float,
     url: str,
     **kwargs,

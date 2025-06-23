@@ -1,4 +1,3 @@
-import typing
 
 """Validation helpers for query processing MCP tools."""
 

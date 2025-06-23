@@ -1,4 +1,3 @@
-import typing
 
 """RAG (Retrieval-Augmented Generation) service for answer generation.
 

@@ -1,4 +1,3 @@
-import typing
 
 """Profile management for configuration wizard.
 
@@ -22,7 +21,7 @@ console = Console()
 class ProfileManager:
     """Manages configuration profiles for different environments."""
 
-    def __init__(self, config_dir: typing.Optional[Path] = None):
+    def __init__(self, config_dir: Path | None = None):
         """Initialize profile manager.
 
         Args:
@@ -146,7 +145,7 @@ class ProfileManager:
     def create_profile_config(
         self,
         profile_name: str,
-        output_path: typing.Optional[Path] = None,
+        output_path: Path | None = None,
         customizations: dict | None = None,
     ) -> Path:
         """Create configuration file for a specific profile.

@@ -1,4 +1,3 @@
-import typing
 
 """Configuration audit and change logging for wizard operations.
 

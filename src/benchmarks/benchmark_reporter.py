@@ -1,4 +1,3 @@
-import typing
 
 """Benchmark reporting and visualization tools.
 

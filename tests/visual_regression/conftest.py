@@ -1,4 +1,3 @@
-import typing
 
 """Visual regression testing fixtures and configuration.
 
@@ -29,7 +28,7 @@ class VisualTestConfig:
     url: str
     viewport_width: int = 1280
     viewport_height: int = 720
-    wait_for_selector: typing.Optional[str] = None
+    wait_for_selector: str | None = None
     wait_time: float = 1.0
     hide_selectors: list[str] = field(default_factory=list)
     mask_selectors: list[str] = field(default_factory=list)
@@ -72,7 +71,7 @@ class VisualComparisonResult:
     difference_percentage: float
     threshold: float
     passed: bool
-    diff_image_data: typing.Optional[bytes] = None
+    diff_image_data: bytes | None = None
     regions_changed: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -227,7 +226,7 @@ def screenshot_manager():
             self,
             screenshot: Screenshot,
             directory: Path,
-            filename: typing.Optional[str] = None,
+            filename: str | None = None,
         ) -> Path:
             """Save screenshot to disk."""
             if not filename:
@@ -253,7 +252,7 @@ def screenshot_manager():
 
         def load_screenshot(
             self, name: str, directory: Path
-        ) -> typing.Optional[Screenshot]:
+        ) -> Screenshot | None:
             """Load screenshot from disk."""
             file_path = directory / f"{name}.png"
             metadata_path = directory / f"{name}_metadata.json"
@@ -283,7 +282,7 @@ def screenshot_manager():
 
         def get_baseline_screenshot(
             self, test_name: str
-        ) -> typing.Optional[Screenshot]:
+        ) -> Screenshot | None:
             """Get baseline screenshot for comparison."""
             return self.load_screenshot(test_name, self.baseline_dir)
 

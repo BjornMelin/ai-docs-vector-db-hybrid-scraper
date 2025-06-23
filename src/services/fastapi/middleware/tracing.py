@@ -1,4 +1,3 @@
-import typing
 
 """Request tracing and correlation middleware for production observability.
 

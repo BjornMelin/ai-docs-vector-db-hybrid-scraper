@@ -1,4 +1,3 @@
-import typing
 
 """HyDE caching implementation using DragonflyDB."""
 

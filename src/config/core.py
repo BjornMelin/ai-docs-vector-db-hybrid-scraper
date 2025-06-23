@@ -1,4 +1,3 @@
-import typing
 
 """Core configuration using Pydantic Settings.
 

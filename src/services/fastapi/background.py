@@ -1,4 +1,3 @@
-import typing
 
 """Background task management for FastAPI production deployment.
 

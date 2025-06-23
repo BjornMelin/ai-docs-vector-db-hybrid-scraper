@@ -1,4 +1,3 @@
-import typing
 
 """Query classifier for adaptive hybrid search optimization.
 

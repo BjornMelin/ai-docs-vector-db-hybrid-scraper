@@ -1,4 +1,3 @@
-import typing
 
 """HNSW parameter optimization and adaptive ef_retrieve implementation."""
 

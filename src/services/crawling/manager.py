@@ -1,4 +1,3 @@
-import typing
 
 """Crawl manager with 5-tier browser automation via UnifiedBrowserManager."""
 

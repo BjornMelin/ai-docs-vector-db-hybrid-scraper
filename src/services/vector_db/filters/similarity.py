@@ -1,4 +1,3 @@
-import typing
 
 """Similarity threshold management for adaptive threshold controls.
 

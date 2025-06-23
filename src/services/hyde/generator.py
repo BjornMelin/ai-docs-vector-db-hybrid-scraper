@@ -1,4 +1,3 @@
-import typing
 
 """Hypothetical document generator for HyDE."""
 

@@ -1,4 +1,3 @@
-import typing
 
 """Function-based cache service with FastAPI dependency injection.
 
@@ -69,7 +68,7 @@ async def cache_set(
     key: str,
     value: Any,
     cache_type: CacheType = CacheType.CRAWL,
-    ttl: typing.Optional[int] = None,
+    ttl: int | None = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Set value in both cache layers.
@@ -151,7 +150,7 @@ async def cache_delete(
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_clear(
-    cache_type: typing.Optional[CacheType] = None,
+    cache_type: CacheType | None = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Clear cache layers.
@@ -297,7 +296,7 @@ async def get_cached_embedding(
     content_hash: str,
     model: str,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
-) -> typing.Optional[list[float]]:
+) -> list[float] | None:
     """Get cached embedding vector.
 
     Specialized function for embedding cache retrieval.
@@ -333,7 +332,7 @@ async def cache_search_results(
     query_hash: str,
     collection: str,
     results: list[dict[str, Any]],
-    ttl: typing.Optional[int] = None,
+    ttl: int | None = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Cache search results.
@@ -373,7 +372,7 @@ async def get_cached_search_results(
     query_hash: str,
     collection: str,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
-) -> typing.Optional[list[dict[str, Any]]]:
+) -> list[dict[str, Any]] | None:
     """Get cached search results.
 
     Specialized function for search result cache retrieval.

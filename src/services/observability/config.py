@@ -1,4 +1,3 @@
-import typing
 
 """OpenTelemetry observability configuration integrated with unified config system.
 

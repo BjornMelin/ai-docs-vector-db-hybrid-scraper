@@ -1,4 +1,3 @@
-import typing
 
 """Load testing framework for Advanced Hybrid Search system.
 

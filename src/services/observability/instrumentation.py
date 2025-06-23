@@ -1,4 +1,3 @@
-import typing
 
 """Advanced OpenTelemetry instrumentation for AI/ML operations and custom business logic.
 

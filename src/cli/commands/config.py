@@ -1,4 +1,3 @@
-import typing
 
 """Simplified configuration management commands with Rich styling.
 

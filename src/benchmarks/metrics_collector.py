@@ -1,4 +1,3 @@
-import typing
 
 """Metrics collection and aggregation for benchmarking.
 

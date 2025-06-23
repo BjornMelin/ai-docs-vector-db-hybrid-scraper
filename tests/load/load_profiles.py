@@ -1,4 +1,3 @@
-import typing
 
 """Load test profiles and scenarios for different testing patterns.
 
@@ -256,7 +255,7 @@ LOAD_PROFILES = {
 }
 
 
-def get_load_profile(profile_name: str) -> typing.Optional[BaseLoadProfile]:
+def get_load_profile(profile_name: str) -> BaseLoadProfile | None:
     """Get a predefined load profile by name.
 
     Args:

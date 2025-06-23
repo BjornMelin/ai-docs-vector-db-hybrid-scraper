@@ -1,4 +1,3 @@
-import typing
 
 """HyDE Query Engine with Query API integration."""
 

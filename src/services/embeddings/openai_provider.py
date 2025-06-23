@@ -1,4 +1,3 @@
-import typing
 
 """OpenAI embedding provider with batch support."""
 

@@ -1,4 +1,3 @@
-import typing
 
 """Centralized health check utilities for external service connections.
 

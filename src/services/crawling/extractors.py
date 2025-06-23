@@ -1,4 +1,3 @@
-import typing
 
 """Shared extraction utilities for web crawling providers.
 

@@ -1,4 +1,3 @@
-import typing
 
 """Contract test runner and reporting utilities.
 
@@ -60,8 +59,8 @@ class ContractTestRunner:
     def __init__(self):
         """Initialize contract test runner."""
         self.results: list[ContractValidationResult] = []
-        self.start_time: typing.Optional[datetime] = None
-        self.end_time: typing.Optional[datetime] = None
+        self.start_time: datetime | None = None
+        self.end_time: datetime | None = None
 
     def start_test_session(self):
         """Start a contract testing session."""

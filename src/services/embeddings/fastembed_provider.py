@@ -1,4 +1,3 @@
-import typing
 
 """FastEmbed provider for local embedding generation."""
 

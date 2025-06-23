@@ -1,4 +1,3 @@
-import typing
 
 """Advanced hybrid search service - backward compatibility wrapper.
 

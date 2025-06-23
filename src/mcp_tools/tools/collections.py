@@ -1,4 +1,3 @@
-import typing
 
 """Collection management tools for MCP server."""
 

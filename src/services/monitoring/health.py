@@ -1,4 +1,3 @@
-import typing
 
 """Health check system for monitoring service dependencies and application health.
 

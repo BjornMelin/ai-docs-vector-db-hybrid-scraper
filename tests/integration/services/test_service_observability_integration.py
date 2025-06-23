@@ -1,4 +1,3 @@
-import typing
 
 """Service observability integration tests.
 
@@ -33,11 +32,11 @@ class TraceSpan:
 
     trace_id: str
     span_id: str
-    parent_span_id: typing.Optional[str]
+    parent_span_id: str | None
     service_name: str
     operation_name: str
     start_time: float
-    end_time: typing.Optional[float] = None
+    end_time: float | None = None
     tags: dict[str, Any] = None
     logs: list[Dict] = None
 
@@ -96,7 +95,7 @@ class TestDistributedTracing:
                 self,
                 service_name: str,
                 operation_name: str,
-                parent_span_id: typing.Optional[str] = None,
+                parent_span_id: str | None = None,
             ) -> TraceSpan:
                 """Start a new span in the trace."""
                 span_id = str(uuid.uuid4())
@@ -263,7 +262,7 @@ class TestDistributedTracing:
 
             def extract_context(
                 self, headers: dict[str, str]
-            ) -> typing.Optional[dict[str, str]]:
+            ) -> dict[str, str] | None:
                 """Extract trace context from HTTP headers."""
                 if "X-Trace-Id" not in headers:
                     return None

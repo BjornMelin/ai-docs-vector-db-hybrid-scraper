@@ -1,4 +1,3 @@
-import typing
 
 """Base embedding provider interface."""
 

@@ -1,4 +1,3 @@
-import typing
 
 """Query expansion service for synonym and related term discovery.
 

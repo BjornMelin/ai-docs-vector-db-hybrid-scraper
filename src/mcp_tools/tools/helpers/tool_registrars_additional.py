@@ -1,4 +1,3 @@
-import typing
 
 """Additional tool registration functions for query processing MCP tools."""
 

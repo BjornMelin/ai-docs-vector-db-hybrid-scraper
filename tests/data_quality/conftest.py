@@ -1,4 +1,3 @@
-import typing
 
 """Data quality testing fixtures and configuration.
 
@@ -31,10 +30,10 @@ class DataQualityRule:
         str  # "completeness", "validity", "consistency", "accuracy", "uniqueness"
     )
     severity: str  # "critical", "high", "medium", "low"
-    field_name: typing.Optional[str] = None
-    threshold: typing.Optional[float] = None
-    pattern: typing.Optional[str] = None
-    reference_data: typing.Optional[dict[str, Any]] = None
+    field_name: str | None = None
+    threshold: float | None = None
+    pattern: str | None = None
+    reference_data: dict[str, Any] | None = None
 
 
 @dataclass

@@ -1,4 +1,3 @@
-import typing
 
 """FastAPI dependency injection functions for service layer.
 

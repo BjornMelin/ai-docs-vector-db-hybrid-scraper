@@ -1,4 +1,3 @@
-import typing
 
 """Standardized test data factories following 2025 patterns.
 
@@ -24,9 +23,9 @@ class DocumentFactory:
         url: str = "https://example.com/doc",
         title: str = "Test Document",
         content: str = "This is test content for the document.",
-        metadata: typing.Optional[dict[str, Any]] = None,
-        doc_id: typing.Optional[str] = None,
-        timestamp: typing.Optional[str] = None,
+        metadata: dict[str, Any] | None = None,
+        doc_id: str | None = None,
+        timestamp: str | None = None,
     ) -> dict[str, Any]:
         """Create a test document with specified or default values.
 
@@ -116,7 +115,7 @@ class VectorFactory:
     def create_point(
         point_id: int | str,
         vector_dim: int = 1536,
-        payload: typing.Optional[dict[str, Any]] = None,
+        payload: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create a vector point for testing.
 
@@ -145,7 +144,7 @@ class VectorFactory:
         point_id: int | str,
         score: float = 0.95,
         vector_dim: int = 1536,
-        payload: typing.Optional[dict[str, Any]] = None,
+        payload: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create a search result for testing.
 
@@ -180,7 +179,7 @@ class ResponseFactory:
     def create_success_response(
         data: Any = None,
         message: str = "Operation completed successfully",
-        metadata: typing.Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create a successful API response.
 
@@ -205,7 +204,7 @@ class ResponseFactory:
     def create_error_response(
         error_code: str = "GENERAL_ERROR",
         message: str = "An error occurred",
-        details: typing.Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         status_code: int = 400,
     ) -> dict[str, Any]:
         """Create an error API response.
@@ -236,7 +235,7 @@ class ResponseFactory:
         items: list[Any],
         page: int = 1,
         per_page: int = 10,
-        total: typing.Optional[int] = None,
+        total: int | None = None,
     ) -> dict[str, Any]:
         """Create a paginated API response.
 
@@ -279,8 +278,8 @@ class ChunkFactory:
         chunk_index: int = 0,
         total_chunks: int = 1,
         start_pos: int = 0,
-        end_pos: typing.Optional[int] = None,
-        metadata: typing.Optional[dict[str, Any]] = None,
+        end_pos: int | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create a document chunk for testing.
 
@@ -389,7 +388,7 @@ class TestDataBuilder:
         self._data["timestamp"] = timestamp
         return self
 
-    def with_error(self, error: typing.Optional[str] = None) -> "TestDataBuilder":
+    def with_error(self, error: str | None = None) -> "TestDataBuilder":
         """Add error to test data."""
         self._data["error"] = error
         return self
