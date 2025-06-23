@@ -173,6 +173,9 @@ benchmark_results/
 .benchmark/
 benchmarks/results/
 
+# Mutation testing cache
+.mutmut-cache
+
 # Backup files
 *.bak
 *.backup
