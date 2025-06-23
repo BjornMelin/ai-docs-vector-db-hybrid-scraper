@@ -127,7 +127,7 @@ class CompositeFilterRequest(BaseModel):
 def create_orchestrator() -> AdvancedSearchOrchestrator:
     """Create and configure the search orchestrator."""
     return AdvancedSearchOrchestrator(
-        enable_all_features=True, enable_performance_optimization=True
+        cache_size=1000, enable_performance_optimization=True
     )
 
 
@@ -178,7 +178,7 @@ async def temporal_filter_tool(
 
         await ctx.info(
             f"Temporal search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -234,7 +234,7 @@ async def content_type_filter_tool(
 
         await ctx.info(
             f"Content type search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -291,7 +291,7 @@ async def metadata_filter_tool(
 
         await ctx.info(
             f"Metadata search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -349,7 +349,7 @@ async def similarity_filter_tool(
 
         await ctx.info(
             f"Similarity search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -416,7 +416,7 @@ async def composite_filter_tool(
 
         await ctx.info(
             f"Composite search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results

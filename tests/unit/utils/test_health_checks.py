@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from src.utils.health_checks import ServiceHealthChecker
 
-from ..config import Config
+from src.config import Config
 
 
 @pytest.fixture

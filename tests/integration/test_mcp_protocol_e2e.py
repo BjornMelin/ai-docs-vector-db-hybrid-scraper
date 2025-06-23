@@ -38,7 +38,9 @@ class TestMCPProtocolE2E:
         config.crawling = MagicMock()
         config.crawling.providers = ["crawl4ai"]
 
-        config.get_active_providers.return_value = ["openai", "fastembed"]
+        # Mock provider configuration
+        config.embedding_provider = "openai"
+        config.active_providers = ["openai", "fastembed"]
         return config
 
     @pytest.fixture

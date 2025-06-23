@@ -11,7 +11,7 @@ from src.config.enums import CrawlProvider
 from src.config.enums import EmbeddingProvider
 from src.utils.health_checks import ServiceHealthChecker
 
-from ..config import Config
+from src.config import Config
 
 
 class TestQdrantHealthCheck:

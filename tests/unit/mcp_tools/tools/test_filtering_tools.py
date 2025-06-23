@@ -61,17 +61,9 @@ class TestFilteringTools:
                 }
             ],
             total_results=1,
-            search_mode=SearchMode.ENHANCED,
-            pipeline=SearchPipeline.BALANCED,
             query_processed="test query",
-            stage_results=[],
-            total_processing_time_ms=100.0,
-            quality_score=0.9,
-            diversity_score=0.1,
-            relevance_score=0.9,
+            processing_time_ms=100.0,
             features_used=["temporal_filter", "content_type_filter"],
-            optimizations_applied=["caching", "preprocessing"],
-            cache_hit=False,
         )
         return orchestrator
 
@@ -185,7 +177,6 @@ class TestFilteringTools:
         orchestrator = create_orchestrator()
 
         assert orchestrator is not None
-        assert orchestrator.enable_all_features is True
         assert orchestrator.enable_performance_optimization is True
 
     async def test_temporal_filter_error_handling(self, mock_context):
@@ -326,16 +317,9 @@ class TestFilteringTools:
                 },
             ],
             total_results=2,
-            search_mode=SearchMode.ENHANCED,
-            pipeline=SearchPipeline.BALANCED,
             query_processed="test query",
-            stage_results=[],
-            total_processing_time_ms=120.0,
-            quality_score=0.9,
-            diversity_score=0.2,
-            relevance_score=0.9,
+            processing_time_ms=120.0,
             features_used=["temporal_filter", "content_type_filter"],
-            optimizations_applied=["caching", "preprocessing"],
             cache_hit=False,
         )
 
