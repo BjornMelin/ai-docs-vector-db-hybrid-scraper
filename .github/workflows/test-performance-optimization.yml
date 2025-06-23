@@ -1,0 +1,443 @@
+name: Test Performance Optimization
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run performance analysis daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_CACHE_DIR: ~/.cache/uv
+
+jobs:
+  fast-tests:
+    name: Fast Test Suite (< 2 min)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python and uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+    
+    - name: Cache test fixtures
+      uses: actions/cache@v4
+      with:
+        path: |
+          .pytest_cache
+          tests/fixtures/cache
+        key: test-fixtures-${{ runner.os }}-${{ hashFiles('tests/**/*.py') }}
+        restore-keys: |
+          test-fixtures-${{ runner.os }}-
+    
+    - name: Run fast unit tests
+      run: |
+        uv run python scripts/run_fast_tests.py --profile unit --timeout 60
+    
+    - name: Run fast integration tests  
+      run: |
+        uv run python scripts/run_fast_tests.py --profile fast --timeout 120
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fast-test-results
+        path: |
+          .pytest_cache/
+          htmlcov/
+        retention-days: 7
+
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: fast-tests
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python and uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+    
+    - name: Profile test performance
+      run: |
+        uv run python scripts/test_performance_profiler.py \
+          --pattern "unit" \
+          --output performance_report.txt \
+          --json performance_data.json
+    
+    - name: Check performance targets
+      run: |
+        uv run python -c "
+        import json
+        
+        with open('performance_data.json') as f:
+            data = json.load(f)
+        
+        analysis = data['analysis']['summary']
+        
+        # Performance targets
+        targets = {
+            'total_time': 300,  # 5 minutes max
+            'average_time': 0.5,  # 500ms average
+            'slow_test_ratio': 0.1  # Max 10% slow tests
+        }
+        
+        total_time = analysis['total_time']
+        avg_time = analysis['average_time']  
+        slow_ratio = analysis['slow_tests'] / analysis['total_tests']
+        
+        failed = []
+        if total_time > targets['total_time']:
+            failed.append(f'Total time {total_time:.1f}s > {targets[\"total_time\"]}s')
+        if avg_time > targets['average_time']:
+            failed.append(f'Average time {avg_time:.3f}s > {targets[\"average_time\"]}s')
+        if slow_ratio > targets['slow_test_ratio']:
+            failed.append(f'Slow test ratio {slow_ratio:.1%} > {targets[\"slow_test_ratio\"]:.1%}')
+        
+        if failed:
+            print('❌ Performance targets failed:')
+            for failure in failed:
+                print(f'  - {failure}')
+            exit(1)
+        else:
+            print('✅ All performance targets met')
+        "
+    
+    - name: Upload performance report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-analysis
+        path: |
+          performance_report.txt
+          performance_data.json
+        retention-days: 30
+    
+    - name: Comment performance results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('performance_report.txt', 'utf8');
+          
+          const comment = `## 🚀 Test Performance Analysis
+          
+          <details>
+          <summary>View Performance Report</summary>
+          
+          \`\`\`
+          ${report}
+          \`\`\`
+          
+          </details>
+          
+          Performance data available in [workflow artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  parallel-optimization:
+    name: Parallel Execution Optimization
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        workers: [1, 2, 4, 8, "auto"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python and uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+    
+    - name: Test parallel execution
+      run: |
+        echo "Testing with ${{ matrix.workers }} workers"
+        time uv run pytest tests/unit/ \
+          -n ${{ matrix.workers }} \
+          --dist=worksteal \
+          --maxfail=5 \
+          --tb=no \
+          --quiet \
+          --durations=5 > parallel_${{ matrix.workers }}.log 2>&1
+    
+    - name: Upload parallel test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: parallel-results-${{ matrix.workers }}
+        path: parallel_${{ matrix.workers }}.log
+        retention-days: 7
+
+  memory-optimization:
+    name: Memory Usage Optimization
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python and uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+    
+    - name: Install memory profiling tools
+      run: |
+        uv add --dev memory-profiler psutil
+    
+    - name: Profile memory usage
+      run: |
+        uv run python -c "
+        import subprocess
+        import psutil
+        import json
+        import time
+        
+        def get_memory_usage():
+            process = psutil.Process()
+            return process.memory_info().rss / 1024 / 1024  # MB
+        
+        # Baseline memory
+        baseline = get_memory_usage()
+        
+        # Run tests and monitor memory
+        start_time = time.time()
+        
+        process = subprocess.Popen([
+            'uv', 'run', 'pytest', 'tests/unit/',
+            '-x', '--tb=no', '--quiet'
+        ])
+        
+        max_memory = baseline
+        while process.poll() is None:
+            current_memory = get_memory_usage()
+            max_memory = max(max_memory, current_memory)
+            time.sleep(0.5)
+        
+        end_time = time.time()
+        final_memory = get_memory_usage()
+        
+        results = {
+            'baseline_mb': round(baseline, 2),
+            'peak_mb': round(max_memory, 2),
+            'final_mb': round(final_memory, 2),
+            'memory_growth_mb': round(max_memory - baseline, 2),
+            'duration_seconds': round(end_time - start_time, 2)
+        }
+        
+        print('Memory Usage Analysis:')
+        print(f'  Baseline: {results[\"baseline_mb\"]} MB')
+        print(f'  Peak: {results[\"peak_mb\"]} MB')
+        print(f'  Growth: {results[\"memory_growth_mb\"]} MB')
+        print(f'  Duration: {results[\"duration_seconds\"]}s')
+        
+        # Save results
+        with open('memory_profile.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        # Check memory targets
+        if results['memory_growth_mb'] > 500:  # 500MB limit
+            print(f'❌ Memory growth {results[\"memory_growth_mb\"]}MB exceeds 500MB limit')
+            exit(1)
+        else:
+            print('✅ Memory usage within limits')
+        "
+    
+    - name: Upload memory profile
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: memory-profile
+        path: memory_profile.json
+        retention-days: 30
+
+  test-selection-optimization:
+    name: Test Selection Optimization
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python and uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+    
+    - name: Test smart test selection
+      run: |
+        echo "=== Fast Unit Tests (< 1min) ==="
+        time uv run pytest \
+          -m "unit and fast" \
+          --maxfail=1 \
+          --tb=line \
+          --durations=5
+        
+        echo "=== Medium Integration Tests (< 3min) ==="
+        time uv run pytest \
+          -m "integration and not slow" \
+          --maxfail=3 \
+          --tb=line \
+          --durations=10
+        
+        echo "=== Performance Benchmarks (< 2min) ==="
+        time uv run pytest \
+          -m "benchmark" \
+          --benchmark-skip \
+          --tb=line \
+          --durations=5
+    
+    - name: Generate test execution matrix
+      run: |
+        uv run python -c "
+        import subprocess
+        import json
+        
+        # Collect test information
+        result = subprocess.run([
+            'uv', 'run', 'pytest', '--collect-only', '--quiet'
+        ], capture_output=True, text=True)
+        
+        lines = result.stdout.split('\n')
+        tests = [line for line in lines if '::' in line and 'test_' in line]
+        
+        # Categorize tests
+        categories = {
+            'unit': [t for t in tests if '/unit/' in t],
+            'integration': [t for t in tests if '/integration/' in t],
+            'performance': [t for t in tests if '/performance/' in t],
+            'security': [t for t in tests if '/security/' in t],
+            'load': [t for t in tests if '/load/' in t],
+        }
+        
+        matrix = {
+            'total_tests': len(tests),
+            'categories': {k: len(v) for k, v in categories.items()},
+            'estimated_times': {
+                'unit': len(categories['unit']) * 0.05,  # 50ms per unit test
+                'integration': len(categories['integration']) * 1.0,  # 1s per integration test
+                'performance': len(categories['performance']) * 5.0,  # 5s per perf test
+            }
+        }
+        
+        print('Test Execution Matrix:')
+        print(json.dumps(matrix, indent=2))
+        
+        with open('test_matrix.json', 'w') as f:
+            json.dump(matrix, f, indent=2)
+        "
+    
+    - name: Upload test matrix
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-execution-matrix
+        path: test_matrix.json
+        retention-days: 30
+
+  performance-summary:
+    name: Performance Optimization Summary
+    runs-on: ubuntu-latest
+    needs: [fast-tests, performance-analysis, parallel-optimization, memory-optimization, test-selection-optimization]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+    
+    - name: Generate performance summary
+      run: |
+        echo "# 🚀 Test Performance Optimization Summary" > summary.md
+        echo "" >> summary.md
+        echo "Generated: $(date)" >> summary.md
+        echo "" >> summary.md
+        
+        if [ -f "artifacts/performance-analysis/performance_data.json" ]; then
+          echo "## 📊 Performance Analysis" >> summary.md
+          echo '```json' >> summary.md
+          cat artifacts/performance-analysis/performance_data.json | head -20 >> summary.md
+          echo '```' >> summary.md
+          echo "" >> summary.md
+        fi
+        
+        if [ -f "artifacts/memory-profile/memory_profile.json" ]; then
+          echo "## 💾 Memory Usage" >> summary.md
+          echo '```json' >> summary.md
+          cat artifacts/memory-profile/memory_profile.json >> summary.md
+          echo '```' >> summary.md
+          echo "" >> summary.md
+        fi
+        
+        if [ -f "artifacts/test-execution-matrix/test_matrix.json" ]; then
+          echo "## 🎯 Test Selection Matrix" >> summary.md
+          echo '```json' >> summary.md
+          cat artifacts/test-execution-matrix/test_matrix.json >> summary.md
+          echo '```' >> summary.md
+          echo "" >> summary.md
+        fi
+        
+        echo "## 🔗 Artifacts" >> summary.md
+        echo "- Performance Analysis: Available in workflow artifacts" >> summary.md
+        echo "- Memory Profile: Available in workflow artifacts" >> summary.md
+        echo "- Parallel Test Results: Available in workflow artifacts" >> summary.md
+        echo "- Test Execution Matrix: Available in workflow artifacts" >> summary.md
+    
+    - name: Upload performance summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-optimization-summary
+        path: summary.md
+        retention-days: 90
