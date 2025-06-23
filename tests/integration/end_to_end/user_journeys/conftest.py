@@ -1,3 +1,4 @@
+import typing
 """User journey testing fixtures and configuration.
 
 This module provides comprehensive fixtures for testing complete user workflows
@@ -10,7 +11,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -18,16 +18,16 @@ import pytest
 @dataclass
 class JourneyStep:
     """Represents a single step in a user journey."""
-    
+
     name: str
     action: str
     params: dict[str, Any]
-    expected_result: Optional[dict[str, Any]] = None
-    validation_func: Optional[callable] = None
+    expected_result: typing.Optional[dict[str, Any]] = None
+    validation_func: typing.Optional[callable] = None
     timeout_seconds: float = 30.0
     retry_count: int = 0
     dependencies: list[str] = None
-    
+
     def __post_init__(self):
         if self.dependencies is None:
             self.dependencies = []
@@ -36,14 +36,14 @@ class JourneyStep:
 @dataclass
 class UserJourney:
     """Represents a complete user journey with multiple steps."""
-    
+
     name: str
     description: str
     steps: list[JourneyStep]
-    setup_func: Optional[callable] = None
-    teardown_func: Optional[callable] = None
+    setup_func: typing.Optional[callable] = None
+    teardown_func: typing.Optional[callable] = None
     success_criteria: dict[str, Any] = None
-    
+
     def __post_init__(self):
         if self.success_criteria is None:
             self.success_criteria = {}
@@ -52,7 +52,7 @@ class UserJourney:
 @dataclass
 class JourneyResult:
     """Result of executing a user journey."""
-    
+
     journey_name: str
     success: bool
     duration_seconds: float
@@ -93,13 +93,13 @@ def journey_test_config():
             ],
             "sample_queries": [
                 "machine learning tutorial",
-                "python programming guide", 
+                "python programming guide",
                 "API documentation best practices",
                 "database optimization techniques",
             ],
             "collections": [
                 "test-docs",
-                "ml-tutorials", 
+                "ml-tutorials",
                 "api-guides",
                 "performance-tips",
             ],
@@ -110,77 +110,79 @@ def journey_test_config():
 @pytest.fixture
 def journey_executor():
     """Execute user journeys with comprehensive validation."""
-    
+
     class JourneyExecutor:
         def __init__(self):
             self.active_journeys = {}
             self.journey_history = []
             self.artifacts = {}
-        
+
         async def execute_journey(
-            self, 
-            journey: UserJourney,
-            context: Optional[dict[str, Any]] = None
+            self, journey: UserJourney, context: typing.Optional[dict[str, Any]] = None
         ) -> JourneyResult:
             """Execute a complete user journey."""
             journey_id = f"{journey.name}_{time.time()}"
             start_time = time.perf_counter()
-            
+
             context = context or {}
             step_results = []
             errors = []
             steps_completed = 0
-            
+
             self.active_journeys[journey_id] = {
                 "journey": journey,
                 "start_time": start_time,
                 "context": context,
             }
-            
+
             try:
                 # Setup
                 if journey.setup_func:
                     await journey.setup_func(context)
-                
+
                 # Execute steps in order
                 for i, step in enumerate(journey.steps):
                     try:
                         step_result = await self._execute_step(step, context)
-                        step_results.append({
-                            "step_name": step.name,
-                            "success": True,
-                            "result": step_result,
-                            "duration_ms": step_result.get("duration_ms", 0),
-                        })
+                        step_results.append(
+                            {
+                                "step_name": step.name,
+                                "success": True,
+                                "result": step_result,
+                                "duration_ms": step_result.get("duration_ms", 0),
+                            }
+                        )
                         steps_completed += 1
-                        
+
                         # Update context with step results
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
-                    
+
                     except Exception as e:
-                        error_msg = f"Step '{step.name}' failed: {str(e)}"
+                        error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
-                        step_results.append({
-                            "step_name": step.name,
-                            "success": False,
-                            "error": error_msg,
-                            "duration_ms": 0,
-                        })
-                        
+                        step_results.append(
+                            {
+                                "step_name": step.name,
+                                "success": False,
+                                "error": error_msg,
+                                "duration_ms": 0,
+                            }
+                        )
+
                         # Decide whether to continue or stop
                         if not self._should_continue_after_failure(step, journey, i):
                             break
-                
+
                 # Teardown
                 if journey.teardown_func:
                     await journey.teardown_func(context)
-                
+
                 # Calculate final results
                 end_time = time.perf_counter()
                 duration = end_time - start_time
                 success = self._evaluate_journey_success(journey, step_results, errors)
-                
+
                 result = JourneyResult(
                     journey_name=journey.name,
                     success=success,
@@ -189,55 +191,56 @@ def journey_executor():
                     steps_failed=len(journey.steps) - steps_completed,
                     step_results=step_results,
                     errors=errors,
-                    performance_metrics=self._calculate_performance_metrics(step_results),
+                    performance_metrics=self._calculate_performance_metrics(
+                        step_results
+                    ),
                     artifacts=self.artifacts.get(journey_id, {}),
                 )
-                
+
                 self.journey_history.append(result)
                 return result
-            
+
             finally:
                 if journey_id in self.active_journeys:
                     del self.active_journeys[journey_id]
-        
+
         async def _execute_step(
-            self, 
-            step: JourneyStep, 
-            context: dict[str, Any]
+            self, step: JourneyStep, context: dict[str, Any]
         ) -> dict[str, Any]:
             """Execute a single journey step."""
             start_time = time.perf_counter()
-            
+
             # Check dependencies
             for dep in step.dependencies:
                 if dep not in context:
                     raise ValueError(f"Missing dependency: {dep}")
-            
+
             # Execute the step with retries
             for attempt in range(step.retry_count + 1):
                 try:
                     # Perform the action based on step type
                     result = await self._perform_action(
-                        step.action, 
-                        step.params, 
-                        context,
-                        step.timeout_seconds
+                        step.action, step.params, context, step.timeout_seconds
                     )
-                    
+
                     # Validate result if validator provided
                     if step.validation_func:
                         validation_result = await step.validation_func(result, context)
                         if not validation_result:
                             raise ValueError(f"Step validation failed: {step.name}")
-                    
+
                     # Check against expected result
                     if step.expected_result:
-                        if not self._validate_expected_result(result, step.expected_result):
-                            raise ValueError(f"Result doesn't match expected: {step.name}")
-                    
+                        if not self._validate_expected_result(
+                            result, step.expected_result
+                        ):
+                            raise ValueError(
+                                f"Result doesn't match expected: {step.name}"
+                            )
+
                     end_time = time.perf_counter()
                     duration_ms = (end_time - start_time) * 1000
-                    
+
                     return {
                         "success": True,
                         "result": result,
@@ -245,25 +248,25 @@ def journey_executor():
                         "attempt": attempt + 1,
                         "context_updates": self._extract_context_updates(result),
                     }
-                
-                except Exception as e:
+
+                except Exception:
                     if attempt < step.retry_count:
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
                     else:
-                        raise e
-        
+                        raise
+
         async def _perform_action(
-            self, 
-            action: str, 
-            params: dict[str, Any], 
+            self,
+            action: str,
+            params: dict[str, Any],
             context: dict[str, Any],
-            timeout: float
+            timeout: float,
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
             resolved_params = self._resolve_context_variables(params, context)
-            
+
             # Route to appropriate action handler
             action_handlers = {
                 "crawl_url": self._action_crawl_url,
@@ -280,21 +283,22 @@ def journey_executor():
                 "browser_interact": self._action_browser_interact,
                 "validate_search_results": self._action_validate_search_results,
             }
-            
+
             handler = action_handlers.get(action)
             if not handler:
                 raise ValueError(f"Unknown action: {action}")
-            
+
             # Execute with timeout
             try:
                 return await asyncio.wait_for(
-                    handler(resolved_params, context), 
-                    timeout=timeout
+                    handler(resolved_params, context), timeout=timeout
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 raise TimeoutError(f"Action '{action}' timed out after {timeout}s")
-        
-        async def _action_crawl_url(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_crawl_url(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock URL crawling action."""
             url = params["url"]
             await asyncio.sleep(0.1)  # Simulate processing time
@@ -305,8 +309,10 @@ def journey_executor():
                 "metadata": {"word_count": 150, "language": "en"},
                 "success": True,
             }
-        
-        async def _action_process_document(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_process_document(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock document processing action."""
             content = params.get("content", "")
             await asyncio.sleep(0.2)  # Simulate processing
@@ -316,8 +322,10 @@ def journey_executor():
                 "chunk_count": 3,
                 "processing_time_ms": 200,
             }
-        
-        async def _action_generate_embeddings(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_generate_embeddings(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock embedding generation action."""
             chunks = params.get("chunks", [])
             await asyncio.sleep(0.3)  # Simulate embedding generation
@@ -326,8 +334,10 @@ def journey_executor():
                 "embedding_model": "text-embedding-ada-002",
                 "total_tokens": len(chunks) * 100,
             }
-        
-        async def _action_store_vectors(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_store_vectors(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock vector storage action."""
             embeddings = params.get("embeddings", [])
             collection = params.get("collection", "default")
@@ -337,8 +347,10 @@ def journey_executor():
                 "collection": collection,
                 "vector_ids": [f"vec_{i}" for i in range(len(embeddings))],
             }
-        
-        async def _action_search_documents(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_search_documents(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock document search action."""
             query = params.get("query", "")
             limit = params.get("limit", 10)
@@ -357,8 +369,10 @@ def journey_executor():
                 "total_found": min(limit, 5),
                 "search_time_ms": 150,
             }
-        
-        async def _action_create_project(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_create_project(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock project creation action."""
             project_name = params.get("name", "test-project")
             await asyncio.sleep(0.05)
@@ -368,8 +382,10 @@ def journey_executor():
                 "status": "created",
                 "collections": [],
             }
-        
-        async def _action_add_to_collection(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_add_to_collection(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock collection addition action."""
             collection = params.get("collection", "default")
             document_id = params.get("document_id", "doc_1")
@@ -379,8 +395,10 @@ def journey_executor():
                 "document_id": document_id,
                 "added": True,
             }
-        
-        async def _action_validate_api(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_validate_api(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock API validation action."""
             endpoint = params.get("endpoint", "/health")
             await asyncio.sleep(0.02)
@@ -390,8 +408,10 @@ def journey_executor():
                 "response_time_ms": 20,
                 "valid": True,
             }
-        
-        async def _action_check_health(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_check_health(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock health check action."""
             await asyncio.sleep(0.01)
             return {
@@ -399,8 +419,10 @@ def journey_executor():
                 "services": {"api": "up", "database": "up", "vector_db": "up"},
                 "uptime_seconds": 3600,
             }
-        
-        async def _action_wait_processing(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_wait_processing(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock wait for processing action."""
             duration = params.get("duration_seconds", 1.0)
             await asyncio.sleep(duration)
@@ -408,8 +430,10 @@ def journey_executor():
                 "waited_seconds": duration,
                 "processing_complete": True,
             }
-        
-        async def _action_browser_navigate(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_browser_navigate(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock browser navigation action."""
             url = params.get("url", "")
             await asyncio.sleep(0.5)  # Simulate page load
@@ -419,8 +443,10 @@ def journey_executor():
                 "loaded": True,
                 "load_time_ms": 500,
             }
-        
-        async def _action_browser_interact(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_browser_interact(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock browser interaction action."""
             action_type = params.get("type", "click")
             selector = params.get("selector", "")
@@ -431,13 +457,15 @@ def journey_executor():
                 "success": True,
                 "interaction_time_ms": 100,
             }
-        
-        async def _action_validate_search_results(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        async def _action_validate_search_results(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Mock search results validation."""
             results = params.get("results", [])
             min_score = params.get("min_score", 0.5)
             await asyncio.sleep(0.01)
-            
+
             valid_results = [r for r in results if r.get("score", 0) >= min_score]
             return {
                 "total_results": len(results),
@@ -445,8 +473,10 @@ def journey_executor():
                 "validation_passed": len(valid_results) > 0,
                 "min_score_threshold": min_score,
             }
-        
-        def _resolve_context_variables(self, params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+
+        def _resolve_context_variables(
+            self, params: dict[str, Any], context: dict[str, Any]
+        ) -> dict[str, Any]:
             """Replace context variables in parameters."""
             resolved = {}
             for key, value in params.items():
@@ -457,12 +487,12 @@ def journey_executor():
                 else:
                     resolved[key] = value
             return resolved
-        
+
         def _extract_context_updates(self, result: dict[str, Any]) -> dict[str, Any]:
             """Extract context updates from step result."""
             # Common patterns for context updates
             updates = {}
-            
+
             if "project_id" in result:
                 updates["current_project_id"] = result["project_id"]
             if "document_id" in result:
@@ -473,10 +503,12 @@ def journey_executor():
                 updates["latest_vector_ids"] = result["vector_ids"]
             if "results" in result:
                 updates["latest_search_results"] = result["results"]
-            
+
             return updates
-        
-        def _validate_expected_result(self, actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+
+        def _validate_expected_result(
+            self, actual: dict[str, Any], expected: dict[str, Any]
+        ) -> bool:
             """Validate actual result against expected result."""
             for key, expected_value in expected.items():
                 if key not in actual:
@@ -484,44 +516,56 @@ def journey_executor():
                 if actual[key] != expected_value:
                     return False
             return True
-        
-        def _should_continue_after_failure(self, step: JourneyStep, journey: UserJourney, step_index: int) -> bool:
+
+        def _should_continue_after_failure(
+            self, step: JourneyStep, journey: UserJourney, step_index: int
+        ) -> bool:
             """Determine if journey should continue after step failure."""
             # Critical steps should stop the journey
-            critical_actions = ["create_project", "store_vectors", "check_system_health"]
+            critical_actions = [
+                "create_project",
+                "store_vectors",
+                "check_system_health",
+            ]
             if step.action in critical_actions:
                 return False
-            
+
             # If more than 50% of steps have failed, stop
-            if step_index > len(journey.steps) * 0.5:
-                return False
-            
-            return True
-        
-        def _evaluate_journey_success(self, journey: UserJourney, step_results: list[dict[str, Any]], errors: list[str]) -> bool:
+            return not step_index > len(journey.steps) * 0.5
+
+        def _evaluate_journey_success(
+            self,
+            journey: UserJourney,
+            step_results: list[dict[str, Any]],
+            errors: list[str],
+        ) -> bool:
             """Evaluate overall journey success."""
             if not step_results:
                 return False
-            
+
             successful_steps = sum(1 for step in step_results if step["success"])
             success_rate = successful_steps / len(step_results)
-            
+
             # Check against journey success criteria
             min_success_rate = journey.success_criteria.get("min_success_rate", 0.8)
             max_errors = journey.success_criteria.get("max_errors", 2)
-            
+
             return success_rate >= min_success_rate and len(errors) <= max_errors
-        
-        def _calculate_performance_metrics(self, step_results: list[dict[str, Any]]) -> dict[str, Any]:
+
+        def _calculate_performance_metrics(
+            self, step_results: list[dict[str, Any]]
+        ) -> dict[str, Any]:
             """Calculate performance metrics from step results."""
             if not step_results:
                 return {}
-            
-            durations = [step.get("duration_ms", 0) for step in step_results if step["success"]]
-            
+
+            durations = [
+                step.get("duration_ms", 0) for step in step_results if step["success"]
+            ]
+
             if not durations:
                 return {"avg_step_duration_ms": 0, "total_duration_ms": 0}
-            
+
             return {
                 "avg_step_duration_ms": sum(durations) / len(durations),
                 "max_step_duration_ms": max(durations),
@@ -529,14 +573,14 @@ def journey_executor():
                 "total_duration_ms": sum(durations),
                 "successful_steps": len(durations),
             }
-    
+
     return JourneyExecutor()
 
 
 @pytest.fixture
 def sample_user_journeys(journey_test_config):
     """Predefined user journey scenarios."""
-    
+
     # Document Processing Journey
     document_processing_journey = UserJourney(
         name="document_processing_complete",
@@ -584,7 +628,7 @@ def sample_user_journeys(journey_test_config):
         ],
         success_criteria={"min_success_rate": 1.0, "max_errors": 0},
     )
-    
+
     # Search and Discovery Journey
     search_discovery_journey = UserJourney(
         name="search_and_discovery",
@@ -627,7 +671,7 @@ def sample_user_journeys(journey_test_config):
         ],
         success_criteria={"min_success_rate": 0.9, "max_errors": 1},
     )
-    
+
     # Project Management Journey
     project_management_journey = UserJourney(
         name="project_management_workflow",
@@ -680,7 +724,7 @@ def sample_user_journeys(journey_test_config):
         ],
         success_criteria={"min_success_rate": 0.85, "max_errors": 1},
     )
-    
+
     # API Client Journey
     api_client_journey = UserJourney(
         name="api_client_workflow",
@@ -719,7 +763,7 @@ def sample_user_journeys(journey_test_config):
         ],
         success_criteria={"min_success_rate": 1.0, "max_errors": 0},
     )
-    
+
     # Administrative Journey
     admin_journey = UserJourney(
         name="administrative_monitoring",
@@ -758,7 +802,7 @@ def sample_user_journeys(journey_test_config):
         ],
         success_criteria={"min_success_rate": 1.0, "max_errors": 0},
     )
-    
+
     return {
         "document_processing": document_processing_journey,
         "search_discovery": search_discovery_journey,
@@ -771,31 +815,31 @@ def sample_user_journeys(journey_test_config):
 @pytest.fixture
 def journey_data_manager():
     """Manage test data and state across journey executions."""
-    
+
     class JourneyDataManager:
         def __init__(self):
             self.test_artifacts = {}
             self.cleanup_tasks = []
             self.temp_dirs = []
-        
+
         def create_temp_workspace(self) -> Path:
             """Create a temporary workspace for journey testing."""
             temp_dir = Path(tempfile.mkdtemp(prefix="journey_test_"))
             self.temp_dirs.append(temp_dir)
             return temp_dir
-        
+
         def store_artifact(self, key: str, data: Any) -> None:
             """Store test artifact for later retrieval."""
             self.test_artifacts[key] = data
-        
+
         def get_artifact(self, key: str) -> Any:
             """Retrieve stored test artifact."""
             return self.test_artifacts.get(key)
-        
+
         def register_cleanup(self, cleanup_func: callable) -> None:
             """Register cleanup function to run after tests."""
             self.cleanup_tasks.append(cleanup_func)
-        
+
         async def cleanup_all(self) -> None:
             """Clean up all test data and artifacts."""
             # Run cleanup tasks
@@ -807,20 +851,21 @@ def journey_data_manager():
                         cleanup_func()
                 except Exception as e:
                     print(f"Cleanup error: {e}")
-            
+
             # Remove temp directories
             import shutil
+
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
                 except Exception as e:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
-            
+
             # Clear artifacts
             self.test_artifacts.clear()
             self.cleanup_tasks.clear()
             self.temp_dirs.clear()
-    
+
     return JourneyDataManager()
 
 

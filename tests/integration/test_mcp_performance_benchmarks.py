@@ -22,8 +22,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.infrastructure.client_manager import ClientManager
 
+from src.infrastructure.client_manager import ClientManager
 from tests.mocks.mock_tools import MockMCPServer
 from tests.mocks.mock_tools import register_mock_tools
 

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.services.dependencies import RAGRequest
 from src.services.dependencies import RAGResponse
 from src.services.dependencies import clear_rag_cache
@@ -221,12 +222,14 @@ class TestRAGIntegration:
         # Create request
         request = RAGRequest(
             query="Test query",
-            search_results=[{
-                "id": "test",
-                "title": "Test Doc",
-                "content": "Test content",
-                "score": 0.9,
-            }],
+            search_results=[
+                {
+                    "id": "test",
+                    "title": "Test Doc",
+                    "content": "Test content",
+                    "score": 0.9,
+                }
+            ],
         )
 
         # Generate response
@@ -285,12 +288,12 @@ class TestRAGIntegration:
         config = get_config()
 
         # Verify RAG config is available
-        assert hasattr(config, 'rag')
-        assert hasattr(config.rag, 'enable_rag')
-        assert hasattr(config.rag, 'model')
-        assert hasattr(config.rag, 'temperature')
-        assert hasattr(config.rag, 'max_tokens')
-        assert hasattr(config.rag, 'max_context_length')
+        assert hasattr(config, "rag")
+        assert hasattr(config.rag, "enable_rag")
+        assert hasattr(config.rag, "model")
+        assert hasattr(config.rag, "temperature")
+        assert hasattr(config.rag, "max_tokens")
+        assert hasattr(config.rag, "max_context_length")
 
         # Verify defaults
         assert isinstance(config.rag.enable_rag, bool)

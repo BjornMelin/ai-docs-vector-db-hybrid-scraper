@@ -7,8 +7,8 @@ system behavior across multiple components and scenarios.
 
 import asyncio
 import time
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 
@@ -16,6 +16,7 @@ import pytest
 @dataclass
 class WorkflowComponent:
     """Represents a system component in workflow testing."""
+
     name: str
     service_type: str
     dependencies: list[str]
@@ -26,6 +27,7 @@ class WorkflowComponent:
 @dataclass
 class WorkflowResult:
     """Results from workflow execution."""
+
     workflow_name: str
     success: bool
     duration_seconds: float
@@ -39,7 +41,7 @@ class WorkflowResult:
 
 class WorkflowOrchestrator:
     """Orchestrates complex multi-component workflows for testing."""
-    
+
     def __init__(self):
         self.components = {}
         self.workflow_history = []
@@ -54,7 +56,7 @@ class WorkflowOrchestrator:
         workflow_name: str,
         components: list[str],
         workflow_steps: list[dict[str, Any]],
-        success_criteria: dict[str, Any] = None,
+        success_criteria: dict[str, Any] | None = None,
     ) -> WorkflowResult:
         """Execute a complete workflow with multiple components and steps."""
         start_time = time.perf_counter()
@@ -62,10 +64,10 @@ class WorkflowOrchestrator:
         warnings = []
         components_healthy = len(components)  # Mock - all healthy
         data_flow_validated = True  # Mock - always valid
-        
+
         # Simulate workflow execution
         await asyncio.sleep(0.1)
-        
+
         # Mock performance metrics
         performance_metrics = {
             "total_steps": len(workflow_steps),
@@ -73,10 +75,10 @@ class WorkflowOrchestrator:
             "failed_steps": 0,
             "avg_step_duration_s": 0.05,
         }
-        
+
         duration = time.perf_counter() - start_time
         success = len(errors) == 0
-        
+
         result = WorkflowResult(
             workflow_name=workflow_name,
             success=success,
@@ -88,7 +90,7 @@ class WorkflowOrchestrator:
             errors=errors,
             warnings=warnings,
         )
-        
+
         self.workflow_history.append(result)
         return result
 
@@ -130,13 +132,14 @@ def system_components():
 @pytest.fixture
 def journey_data_manager():
     """Mock journey data manager for storing test artifacts."""
+
     class MockJourneyDataManager:
         def __init__(self):
             self.artifacts = {}
-        
+
         def store_artifact(self, name: str, data: Any):
             self.artifacts[name] = data
-    
+
     return MockJourneyDataManager()
 
 
@@ -149,24 +152,28 @@ async def test_complete_document_ingestion_workflow(
     # Register components
     for component in system_components:
         workflow_orchestrator.register_component(component)
-    
+
     # Define workflow steps
     workflow_steps = [
-        {"name": "crawl_docs", "type": "data_ingestion", "params": {"document_count": 10}},
+        {
+            "name": "crawl_docs",
+            "type": "data_ingestion",
+            "params": {"document_count": 10},
+        },
         {"name": "generate_embeddings", "type": "embedding_generation", "params": {}},
         {"name": "store_vectors", "type": "vector_storage", "params": {}},
     ]
-    
+
     # Execute workflow
     result = await workflow_orchestrator.execute_workflow(
         workflow_name="document_ingestion_complete",
         components=["web_crawler", "embedding_service", "vector_database"],
         workflow_steps=workflow_steps,
     )
-    
+
     # Store results
     journey_data_manager.store_artifact("document_ingestion_workflow", result)
-    
+
     # Validate workflow
     assert result.success, f"Document ingestion workflow failed: {result.errors}"
     assert result.components_healthy >= 2, "At least 2 components should be healthy"

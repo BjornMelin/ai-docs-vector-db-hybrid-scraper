@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+
 from src.config import Config
 from src.config import FirecrawlConfig
 from src.config import OpenAIConfig
@@ -26,7 +27,6 @@ from src.mcp_tools.models.requests import SearchRequest
 from src.mcp_tools.models.responses import CollectionInfo
 from src.mcp_tools.models.responses import OperationStatus
 from src.mcp_tools.models.responses import SearchResult
-
 from tests.mocks.mock_tools import MockMCPServer
 from tests.mocks.mock_tools import register_mock_tools
 

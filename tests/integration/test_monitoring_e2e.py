@@ -1,6 +1,7 @@
 """Simple monitoring integration tests."""
 
 import pytest
+
 from src.config import MonitoringConfig
 
 

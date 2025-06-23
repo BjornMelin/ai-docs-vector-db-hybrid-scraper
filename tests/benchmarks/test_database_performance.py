@@ -13,6 +13,7 @@ import asyncio
 
 import pytest
 from sqlalchemy import text
+
 from src.config.core import Config
 from src.infrastructure.database import DatabaseManager
 from src.infrastructure.database import LoadMonitor

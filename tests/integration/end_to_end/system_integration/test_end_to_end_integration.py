@@ -16,7 +16,7 @@ import pytest
 
 class IntegrationTestManager:
     """Manager for coordinating complex integration tests."""
-    
+
     def __init__(self):
         self.test_state = {}
         self.performance_data = []
@@ -25,9 +25,7 @@ class IntegrationTestManager:
         self.error_recovery_logs = []
 
     async def execute_integration_scenario(
-        self,
-        scenario_name: str,
-        scenario_config: dict[str, Any]
+        self, scenario_name: str, scenario_config: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a complete integration test scenario."""
         start_time = time.perf_counter()
@@ -41,28 +39,31 @@ class IntegrationTestManager:
             "errors": [],
             "warnings": [],
         }
-        
+
         try:
             # Simulate integration scenario execution
             await asyncio.sleep(0.5)  # Simulate processing time
-            
+
             # Mark all phases as completed for this mock
             scenario_result["phases_completed"] = [
-                "initialization", "data_ingestion", "search_validation", "final_validation"
+                "initialization",
+                "data_ingestion",
+                "search_validation",
+                "final_validation",
             ]
-            
+
             # Calculate results
             total_duration = time.perf_counter() - start_time
             scenario_result["total_duration_s"] = total_duration
             scenario_result["success_rate"] = 1.0
             scenario_result["overall_success"] = True
-            
+
             return scenario_result
-            
+
         except Exception as e:
             scenario_result["total_duration_s"] = time.perf_counter() - start_time
             scenario_result["overall_success"] = False
-            scenario_result["errors"].append(f"Scenario execution failed: {str(e)}")
+            scenario_result["errors"].append(f"Scenario execution failed: {e!s}")
             return scenario_result
 
     def get_test_summary(self) -> dict[str, Any]:
@@ -85,13 +86,14 @@ def integration_test_manager():
 @pytest.fixture
 def journey_data_manager():
     """Mock journey data manager for storing test artifacts."""
+
     class MockJourneyDataManager:
         def __init__(self):
             self.artifacts = {}
-        
+
         def store_artifact(self, name: str, data: Any):
             self.artifacts[name] = data
-    
+
     return MockJourneyDataManager()
 
 
@@ -112,20 +114,25 @@ async def test_complete_system_integration_scenario(
             "API reference documentation",
         ],
     }
-    
+
     # Execute complete integration scenario
     result = await integration_test_manager.execute_integration_scenario(
-        "complete_system_integration",
-        scenario_config
+        "complete_system_integration", scenario_config
     )
-    
+
     # Store comprehensive results
     journey_data_manager.store_artifact("complete_system_integration", result)
-    
+
     # Validate integration scenario
-    assert result["overall_success"], f"Complete system integration failed: {result['errors']}"
-    assert result["success_rate"] >= 0.8, f"Success rate too low: {result['success_rate']:.2%}"
-    assert result["total_duration_s"] < 120, f"Integration test took too long: {result['total_duration_s']:.2f}s"
+    assert result["overall_success"], (
+        f"Complete system integration failed: {result['errors']}"
+    )
+    assert result["success_rate"] >= 0.8, (
+        f"Success rate too low: {result['success_rate']:.2%}"
+    )
+    assert result["total_duration_s"] < 120, (
+        f"Integration test took too long: {result['total_duration_s']:.2f}s"
+    )
 
 
 async def test_integration_test_summary(
@@ -135,16 +142,22 @@ async def test_integration_test_summary(
     """Generate and validate integration test summary."""
     # Get test summary
     test_summary = integration_test_manager.get_test_summary()
-    
+
     # Store summary
     journey_data_manager.store_artifact("integration_test_summary", test_summary)
-    
+
     # Validate that integration testing was comprehensive
-    assert test_summary["total_performance_data_points"] >= 0, "Performance data should be collected"
-    assert test_summary["system_health_checks"] >= 0, "Health checks should be performed"
-    assert test_summary["data_artifacts_created"] >= 0, "Data artifacts should be created"
+    assert test_summary["total_performance_data_points"] >= 0, (
+        "Performance data should be collected"
+    )
+    assert test_summary["system_health_checks"] >= 0, (
+        "Health checks should be performed"
+    )
+    assert test_summary["data_artifacts_created"] >= 0, (
+        "Data artifacts should be created"
+    )
     assert test_summary["error_recovery_events"] >= 0, "Error recovery should be tested"
-    
+
     # The summary provides visibility into test execution breadth and depth
     assert isinstance(test_summary, dict), "Test summary should be structured data"
     assert len(test_summary) > 0, "Test summary should contain metrics"
