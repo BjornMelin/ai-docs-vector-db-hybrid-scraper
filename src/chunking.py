@@ -208,7 +208,7 @@ class EnhancedChunker:
 
         # Choose chunking strategy
         if (
-            self.config.strategy == ChunkingStrategy.AST
+            self.config.strategy == ChunkingStrategy.AST_AWARE
             and TREE_SITTER_AVAILABLE
             and language in self.parsers
         ):

@@ -46,6 +46,7 @@ from .core import get_config_dependency as get_config
 from .core import get_container
 from .core import get_correlation_id_dependency
 from .core import get_embedding_manager_legacy
+from .core import get_embedding_manager
 from .core import get_fastapi_config
 from .core import get_health_checker
 from .core import get_request_context
@@ -95,6 +96,7 @@ __all__ = [
     "get_container",
     "get_correlation_id_dependency",
     "get_embedding_manager_legacy",
+    "get_embedding_manager",
     "get_fastapi_config",
     "get_health_checker",
     "get_request_context",

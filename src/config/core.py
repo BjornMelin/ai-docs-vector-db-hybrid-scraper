@@ -116,6 +116,11 @@ class ChunkingConfig(BaseModel):
     strategy: ChunkingStrategy = Field(default=ChunkingStrategy.ENHANCED)
     min_chunk_size: int = Field(default=100, gt=0)
     max_chunk_size: int = Field(default=3000, gt=0)
+    enable_ast_chunking: bool = Field(default=True)
+    preserve_code_blocks: bool = Field(default=True)
+    detect_language: bool = Field(default=True)
+    max_function_chunk_size: int = Field(default=2000, gt=0)
+    supported_languages: list[str] = Field(default_factory=lambda: ["python", "javascript", "typescript", "markdown"])
 
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> "ChunkingConfig":
