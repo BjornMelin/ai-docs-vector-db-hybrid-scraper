@@ -1,4 +1,3 @@
-
 """Core deployment models and data structures.
 
 This module defines the fundamental data models used across all deployment services,

@@ -1,4 +1,3 @@
-
 """chunking.py - Enhanced Chunking with Code Awareness.
 
 Implements research-backed chunking strategies for optimal RAG performance.

@@ -1,4 +1,3 @@
-
 """Real-time validation for configuration wizard.
 
 Provides immediate validation feedback during wizard interaction
@@ -26,9 +25,7 @@ class WizardValidator:
         """Initialize validator."""
         self.validation_cache: dict[str, bool] = {}
 
-    def validate_api_key(
-        self, provider: str, api_key: str
-    ) -> tuple[bool, str | None]:
+    def validate_api_key(self, provider: str, api_key: str) -> tuple[bool, str | None]:
         """Validate API key format for specific providers.
 
         Args:

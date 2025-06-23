@@ -1,4 +1,3 @@
-
 """Qdrant alias manager for zero-downtime collection updates."""
 
 import logging

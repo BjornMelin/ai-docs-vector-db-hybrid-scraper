@@ -1,4 +1,3 @@
-
 """Core configuration using Pydantic Settings.
 
 Consolidated configuration system following KISS principles and Pydantic best practices.

@@ -1,4 +1,3 @@
-
 """Simplified production FastMCP server with essential middleware only.
 
 This module provides a basic production wrapper around FastMCP server,

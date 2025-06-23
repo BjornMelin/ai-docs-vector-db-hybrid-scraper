@@ -1,4 +1,3 @@
-
 """Advanced filtering tools for MCP server.
 
 This module exposes advanced filtering capabilities through the Model Context Protocol,

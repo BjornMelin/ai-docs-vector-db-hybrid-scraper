@@ -1,4 +1,3 @@
-
 """Advanced query processing tools for MCP server.
 
 This module exposes advanced query processing capabilities through the Model Context Protocol,

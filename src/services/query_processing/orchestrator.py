@@ -1,4 +1,3 @@
-
 """Search orchestrator with essential features.
 
 This module provides a streamlined search orchestrator that maintains core functionality

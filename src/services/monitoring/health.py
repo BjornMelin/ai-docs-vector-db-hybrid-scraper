@@ -1,4 +1,3 @@
-
 """Health check system for monitoring service dependencies and application health.
 
 This module provides comprehensive health checking for all system dependencies

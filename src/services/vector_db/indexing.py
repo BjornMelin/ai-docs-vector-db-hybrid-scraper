@@ -1,4 +1,3 @@
-
 """Focused QdrantIndexing module for payload indexing operations.
 
 This module provides a clean, focused implementation of indexing functionality

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Vector Database Management Utility
 Modern Python 3.13 implementation with async patterns for Qdrant operations

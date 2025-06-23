@@ -1,4 +1,3 @@
-
 """Function-based crawling service with FastAPI dependency injection.
 
 Transforms the CrawlManager class into pure functions with dependency injection.

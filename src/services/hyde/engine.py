@@ -1,4 +1,3 @@
-
 """HyDE Query Engine with Query API integration."""
 
 import asyncio

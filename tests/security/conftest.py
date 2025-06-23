@@ -1,4 +1,3 @@
-
 """Security testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive security testing including
@@ -180,9 +179,7 @@ def mock_encryption_service():
     """Mock encryption service for testing."""
     service = MagicMock()
 
-    async def mock_encrypt(
-        data: str, key: str | None = None
-    ) -> dict[str, str]:
+    async def mock_encrypt(data: str, key: str | None = None) -> dict[str, str]:
         """Mock encryption."""
         # Simple base64-like mock encryption for testing
         encrypted = data.encode().hex()
@@ -192,9 +189,7 @@ def mock_encryption_service():
             "key_id": key or "test_key_001",
         }
 
-    async def mock_decrypt(
-        encrypted_data: str, key: str | None = None
-    ) -> str:
+    async def mock_decrypt(encrypted_data: str, key: str | None = None) -> str:
         """Mock decryption."""
         # Simple hex decode mock decryption for testing
         try:

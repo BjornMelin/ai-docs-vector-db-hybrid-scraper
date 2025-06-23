@@ -1,4 +1,3 @@
-
 """Correlation ID utilities for request tracking.
 
 This module provides utilities for managing correlation IDs across requests

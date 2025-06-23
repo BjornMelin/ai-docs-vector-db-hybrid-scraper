@@ -1,4 +1,3 @@
-
 """Shared extraction utilities for web crawling providers.
 
 This module provides reusable components for JavaScript execution and

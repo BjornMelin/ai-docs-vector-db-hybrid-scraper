@@ -1,4 +1,3 @@
-
 """Advanced Query Processing Pipeline.
 
 This module provides the main unified interface for the advanced query

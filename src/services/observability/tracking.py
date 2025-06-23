@@ -1,4 +1,3 @@
-
 """OpenTelemetry tracking utilities for AI/ML operations and cost monitoring.
 
 Provides decorators and utilities for tracking AI operations, costs, and

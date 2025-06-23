@@ -1,4 +1,3 @@
-
 """Content Intelligence tools for MCP server.
 
 This module provides MCP tools for AI-powered content analysis, quality assessment,

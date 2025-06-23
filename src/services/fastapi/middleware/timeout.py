@@ -1,4 +1,3 @@
-
 """Timeout and circuit breaker middleware for production resilience.
 
 This middleware provides request timeouts and circuit breaker patterns

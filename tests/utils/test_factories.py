@@ -1,4 +1,3 @@
-
 """Standardized test data factories following 2025 patterns.
 
 This module provides factory classes and functions for generating consistent

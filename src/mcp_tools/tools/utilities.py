@@ -1,4 +1,3 @@
-
 """Utility tools for MCP server."""
 
 import logging

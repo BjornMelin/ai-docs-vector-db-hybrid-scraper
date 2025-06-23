@@ -1,4 +1,3 @@
-
 """Advanced OpenTelemetry instrumentation for AI/ML operations and custom business logic.
 
 This module provides comprehensive auto-instrumentation that builds upon OpenTelemetry's

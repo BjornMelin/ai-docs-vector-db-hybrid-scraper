@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Unified MCP Server for AI Documentation Vector DB.
 

@@ -1,4 +1,3 @@
-
 """Dynamic tool registration system for FastMCP server.
 
 This module provides a clean, modular way to register all MCP tools

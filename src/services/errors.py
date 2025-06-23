@@ -1,4 +1,3 @@
-
 """Consolidated error classes for all services and MCP server.
 
 This module provides a comprehensive error hierarchy for the AI Documentation Vector DB project,

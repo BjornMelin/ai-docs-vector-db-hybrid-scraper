@@ -1,4 +1,3 @@
-
 """FastAPI middleware for Prometheus metrics integration.
 
 This module provides middleware components for automatic HTTP request monitoring,

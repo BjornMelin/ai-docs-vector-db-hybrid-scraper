@@ -1,4 +1,3 @@
-
 """Enhanced automation router with performance tracking and intelligent routing.
 
 This module extends the basic AutomationRouter with:

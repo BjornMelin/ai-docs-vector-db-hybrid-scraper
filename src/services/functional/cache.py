@@ -1,4 +1,3 @@
-
 """Function-based cache service with FastAPI dependency injection.
 
 Transforms the CacheManager class into pure functions with dependency injection.

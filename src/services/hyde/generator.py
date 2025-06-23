@@ -1,4 +1,3 @@
-
 """Hypothetical document generator for HyDE."""
 
 import asyncio

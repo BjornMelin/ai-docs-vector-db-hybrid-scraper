@@ -1,4 +1,3 @@
-
 """Focused QdrantDocuments module for document/point operations.
 
 This module provides a clean, focused implementation of document operations

@@ -1,4 +1,3 @@
-
 """Metadata filtering with advanced boolean logic and nested expressions.
 
 This module provides sophisticated metadata filtering capabilities including

@@ -1,4 +1,3 @@
-
 """Template management for configuration wizard.
 
 Handles loading, validating, and managing configuration templates

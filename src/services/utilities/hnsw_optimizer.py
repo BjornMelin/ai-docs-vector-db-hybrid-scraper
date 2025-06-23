@@ -1,4 +1,3 @@
-
 """HNSW parameter optimization and adaptive ef_retrieve implementation."""
 
 import logging

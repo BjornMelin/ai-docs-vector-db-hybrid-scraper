@@ -1,4 +1,3 @@
-
 """ARQ task definitions for background processing."""
 
 import asyncio

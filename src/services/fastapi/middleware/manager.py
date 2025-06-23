@@ -1,4 +1,3 @@
-
 """Simplified middleware manager for FastAPI with essential middleware only.
 
 This module provides basic middleware management following KISS principles.

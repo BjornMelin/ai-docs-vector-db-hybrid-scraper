@@ -1,4 +1,3 @@
-
 """Query expansion service for synonym and related term discovery.
 
 This module provides advanced query expansion capabilities including synonym generation,

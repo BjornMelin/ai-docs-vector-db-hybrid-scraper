@@ -1,4 +1,3 @@
-
 """Distributed system resilience integration tests.
 
 This module tests the resilience of the distributed system under various failure scenarios,

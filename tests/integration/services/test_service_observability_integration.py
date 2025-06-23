@@ -1,4 +1,3 @@
-
 """Service observability integration tests.
 
 This module tests the integration of observability components across services,
@@ -260,9 +259,7 @@ class TestDistributedTracing:
                     "X-Sampled": "1" if sampler.is_sampled(trace_id) else "0",
                 }
 
-            def extract_context(
-                self, headers: dict[str, str]
-            ) -> dict[str, str] | None:
+            def extract_context(self, headers: dict[str, str]) -> dict[str, str] | None:
                 """Extract trace context from HTTP headers."""
                 if "X-Trace-Id" not in headers:
                     return None

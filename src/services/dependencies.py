@@ -1,4 +1,3 @@
-
 """FastAPI dependency injection functions replacing Manager classes.
 
 This module provides function-based dependency injection for services,

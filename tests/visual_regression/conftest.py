@@ -1,4 +1,3 @@
-
 """Visual regression testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive visual regression testing including
@@ -250,9 +249,7 @@ def screenshot_manager():
 
             return file_path
 
-        def load_screenshot(
-            self, name: str, directory: Path
-        ) -> Screenshot | None:
+        def load_screenshot(self, name: str, directory: Path) -> Screenshot | None:
             """Load screenshot from disk."""
             file_path = directory / f"{name}.png"
             metadata_path = directory / f"{name}_metadata.json"
@@ -280,9 +277,7 @@ def screenshot_manager():
                 metadata=metadata.get("metadata", {}),
             )
 
-        def get_baseline_screenshot(
-            self, test_name: str
-        ) -> Screenshot | None:
+        def get_baseline_screenshot(self, test_name: str) -> Screenshot | None:
             """Get baseline screenshot for comparison."""
             return self.load_screenshot(test_name, self.baseline_dir)
 

@@ -1,4 +1,3 @@
-
 """Load testing framework for Advanced Hybrid Search system.
 
 This module provides comprehensive load testing capabilities with

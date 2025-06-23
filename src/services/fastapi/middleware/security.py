@@ -1,4 +1,3 @@
-
 """Security middleware for production-grade security headers and protection.
 
 This middleware adds essential security headers and provides basic protection

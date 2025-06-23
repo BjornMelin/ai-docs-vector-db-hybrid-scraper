@@ -1,4 +1,3 @@
-
 """Circuit breaker implementation for resilient service patterns.
 
 Provides configurable circuit breaker patterns with simple/enterprise modes.

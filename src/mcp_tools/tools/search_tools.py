@@ -1,4 +1,3 @@
-
 """Advanced search tools for MCP server."""
 
 import logging

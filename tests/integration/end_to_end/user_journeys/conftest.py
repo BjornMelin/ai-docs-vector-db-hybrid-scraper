@@ -1,4 +1,3 @@
-
 """User journey testing fixtures and configuration.
 
 This module provides comprehensive fixtures for testing complete user workflows

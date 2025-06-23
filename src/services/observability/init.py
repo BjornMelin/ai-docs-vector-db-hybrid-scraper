@@ -1,4 +1,3 @@
-
 """OpenTelemetry initialization and setup for the AI documentation system.
 
 Provides clean initialization patterns that integrate with the existing

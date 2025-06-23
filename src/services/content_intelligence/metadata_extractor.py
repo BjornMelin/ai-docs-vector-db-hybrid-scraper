@@ -1,4 +1,3 @@
-
 """Metadata extraction and enrichment for content intelligence.
 
 This module provides automatic metadata enrichment by extracting structured

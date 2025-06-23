@@ -1,4 +1,3 @@
-
 """Chaos engineering fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive chaos engineering testing including

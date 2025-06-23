@@ -1,4 +1,3 @@
-
 """Interactive configuration wizard for initial setup.
 
 This module provides a step-by-step configuration wizard that guides

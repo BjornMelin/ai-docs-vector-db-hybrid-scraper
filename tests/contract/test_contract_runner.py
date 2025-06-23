@@ -1,4 +1,3 @@
-
 """Contract test runner and reporting utilities.
 
 This module provides utilities for running contract tests, generating reports,

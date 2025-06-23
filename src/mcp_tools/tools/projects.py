@@ -1,4 +1,3 @@
-
 """Project management tools for MCP server."""
 
 import contextlib

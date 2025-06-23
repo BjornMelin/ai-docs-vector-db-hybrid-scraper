@@ -1,4 +1,3 @@
-
 """Lightweight HTTP scraper for static content using httpx + BeautifulSoup.
 
 This module implements Tier 0 of the 5-tier browser automation system,

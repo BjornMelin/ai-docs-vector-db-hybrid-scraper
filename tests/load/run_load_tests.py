@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Comprehensive load test runner for AI Documentation Vector DB.
 

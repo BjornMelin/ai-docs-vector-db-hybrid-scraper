@@ -1,4 +1,3 @@
-
 """Firecrawl provider using direct SDK."""
 
 import logging

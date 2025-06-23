@@ -1,4 +1,3 @@
-
 """Unified browser automation manager providing single interface to all 5 tiers.
 
 This module provides a clean, unified interface for browser automation that

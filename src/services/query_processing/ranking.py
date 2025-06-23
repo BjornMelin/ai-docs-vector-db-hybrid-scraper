@@ -1,4 +1,3 @@
-
 """Personalized ranking service for adaptive search result ranking.
 
 This module provides sophisticated personalized ranking capabilities that learn from

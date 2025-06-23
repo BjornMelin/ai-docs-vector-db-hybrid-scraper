@@ -1,4 +1,3 @@
-
 """Collection management tools for MCP server."""
 
 import logging

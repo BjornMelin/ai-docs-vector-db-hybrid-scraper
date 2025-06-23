@@ -1,4 +1,3 @@
-
 """Deployment Tier Configuration System.
 
 This module defines three configuration tiers for the application:

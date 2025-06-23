@@ -1,4 +1,3 @@
-
 """FastAPI middleware for OpenTelemetry observability integration.
 
 Provides middleware that enhances the existing tracing middleware with

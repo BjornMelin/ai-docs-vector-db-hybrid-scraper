@@ -1,4 +1,3 @@
-
 """Shared utility functions for the AI documentation vector database system."""
 
 import asyncio

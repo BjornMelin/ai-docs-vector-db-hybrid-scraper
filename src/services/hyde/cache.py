@@ -1,4 +1,3 @@
-
 """HyDE caching implementation using DragonflyDB."""
 
 import asyncio

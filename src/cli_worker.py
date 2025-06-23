@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """CLI script to run the ARQ task queue worker."""
 

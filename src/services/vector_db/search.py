@@ -1,4 +1,3 @@
-
 """Focused QdrantSearch module for vector search operations.
 
 This module provides a clean, focused implementation of search functionality

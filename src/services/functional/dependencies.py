@@ -1,4 +1,3 @@
-
 """FastAPI dependency injection functions for service layer.
 
 Provides centralized dependency management with resource lifecycle handling.

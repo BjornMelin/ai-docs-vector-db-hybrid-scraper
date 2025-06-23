@@ -1,4 +1,3 @@
-
 """Batch operations with Rich progress tracking and confirmations.
 
 This module provides comprehensive batch processing capabilities with

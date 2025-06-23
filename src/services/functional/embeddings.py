@@ -1,4 +1,3 @@
-
 """Function-based embedding service with FastAPI dependency injection.
 
 Transforms the complex EmbeddingManager class into pure functions with
@@ -6,17 +5,14 @@ dependency injection. Maintains all functionality while improving testability.
 """
 
 import logging
-from typing import Annotated
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import Depends
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 
-from ..embeddings.manager import QualityTier
-from ..embeddings.manager import TextAnalysis
-from .circuit_breaker import CircuitBreakerConfig
-from .circuit_breaker import circuit_breaker
+from ..embeddings.manager import QualityTier, TextAnalysis
+from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_embedding_client
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-
 """Shared utilities for Qdrant vector database operations."""
 
 from typing import Any

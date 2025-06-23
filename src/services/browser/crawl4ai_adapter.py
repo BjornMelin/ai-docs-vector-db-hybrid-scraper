@@ -1,4 +1,3 @@
-
 """Crawl4AI adapter for browser automation router."""
 
 import asyncio

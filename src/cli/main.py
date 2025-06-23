@@ -1,4 +1,3 @@
-
 """Main unified CLI entry point for AI Documentation Scraper.
 
 This module provides a comprehensive CLI interface that integrates all

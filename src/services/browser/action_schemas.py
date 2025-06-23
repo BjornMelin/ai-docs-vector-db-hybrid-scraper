@@ -1,4 +1,3 @@
-
 """Pydantic models for browser automation action validation."""
 
 from typing import Any

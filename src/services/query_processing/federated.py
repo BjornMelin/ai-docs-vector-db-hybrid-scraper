@@ -1,4 +1,3 @@
-
 """Federated search service for cross-collection search orchestration.
 
 This module provides sophisticated federated search capabilities enabling unified

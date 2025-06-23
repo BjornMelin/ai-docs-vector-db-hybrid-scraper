@@ -1,4 +1,3 @@
-
 """Shared infrastructure components to avoid circular imports.
 
 This module contains classes that are used by multiple infrastructure components

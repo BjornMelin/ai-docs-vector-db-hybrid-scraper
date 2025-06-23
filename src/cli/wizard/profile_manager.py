@@ -1,4 +1,3 @@
-
 """Profile management for configuration wizard.
 
 Handles profile-specific configuration operations, including

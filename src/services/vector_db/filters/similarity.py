@@ -1,4 +1,3 @@
-
 """Similarity threshold management for adaptive threshold controls.
 
 This module provides sophisticated similarity threshold management including

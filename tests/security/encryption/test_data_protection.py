@@ -1,4 +1,3 @@
-
 """Data encryption and protection testing.
 
 This module tests encryption implementations, key management,

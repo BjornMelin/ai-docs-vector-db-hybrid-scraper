@@ -1,4 +1,3 @@
-
 """Payload indexing management tools for MCP server."""
 
 import logging

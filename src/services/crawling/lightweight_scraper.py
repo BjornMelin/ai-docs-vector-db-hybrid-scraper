@@ -1,4 +1,3 @@
-
 """Lightweight HTTP scraper using httpx and BeautifulSoup for simple static pages."""
 
 import logging

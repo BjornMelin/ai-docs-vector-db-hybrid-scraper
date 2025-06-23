@@ -1,4 +1,3 @@
-
 """Performance measurement and monitoring utilities for testing.
 
 This module provides tools for measuring execution time, memory usage, and other
@@ -101,9 +100,7 @@ class PerformanceTracker:
 
             self.measurements.append(metrics)
 
-    def get_statistics(
-        self, operation_name: str | None = None
-    ) -> dict[str, Any]:
+    def get_statistics(self, operation_name: str | None = None) -> dict[str, Any]:
         """Get performance statistics for all or specific operations.
 
         Args:
@@ -180,9 +177,7 @@ class PerformanceTracker:
         ]
 
 
-def measure_execution_time(
-    func: Callable | None = None, *, name: str | None = None
-):
+def measure_execution_time(func: Callable | None = None, *, name: str | None = None):
     """Decorator to measure function execution time.
 
     Args:

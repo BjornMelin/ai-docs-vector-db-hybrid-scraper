@@ -1,4 +1,3 @@
-
 """Breaking point identification tests for AI Documentation Vector DB.
 
 This module implements tests to identify system breaking points through

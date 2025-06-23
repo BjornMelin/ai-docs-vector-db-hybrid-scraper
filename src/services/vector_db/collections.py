@@ -1,4 +1,3 @@
-
 """Qdrant collection management service."""
 
 import logging

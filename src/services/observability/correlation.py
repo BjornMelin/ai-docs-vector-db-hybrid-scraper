@@ -1,4 +1,3 @@
-
 """Trace correlation and context propagation for distributed observability.
 
 This module provides advanced correlation capabilities including request ID propagation,

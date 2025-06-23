@@ -1,4 +1,3 @@
-
 """Cross-platform utilities for handling platform-specific differences.
 
 This module provides utilities for consistent behavior across Windows, macOS, and Linux

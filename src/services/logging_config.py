@@ -1,4 +1,3 @@
-
 """Logging configuration for service layer."""
 
 import logging

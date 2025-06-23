@@ -1,4 +1,3 @@
-
 """FastEmbed provider for local embedding generation."""
 
 import logging

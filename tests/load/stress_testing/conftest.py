@@ -1,4 +1,3 @@
-
 """Stress testing fixtures and configuration.
 
 This module provides specialized fixtures and configuration for stress testing,

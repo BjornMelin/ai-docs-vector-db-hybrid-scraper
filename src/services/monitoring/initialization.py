@@ -1,4 +1,3 @@
-
 """Monitoring system initialization for FastMCP applications.
 
 This module provides utilities to initialize and configure monitoring

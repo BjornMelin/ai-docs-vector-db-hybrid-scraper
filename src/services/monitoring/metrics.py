@@ -1,4 +1,3 @@
-
 """Central metrics registry and monitoring decorators for application observability.
 
 This module provides a comprehensive metrics collection system using Prometheus

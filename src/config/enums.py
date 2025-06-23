@@ -1,4 +1,3 @@
-
 """Configuration enums consolidated from original enums.py.
 
 All enumeration types used in configuration in one place.

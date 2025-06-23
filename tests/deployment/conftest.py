@@ -1,4 +1,3 @@
-
 """Deployment testing configuration and fixtures.
 
 This module provides shared configuration and fixtures for deployment testing,
