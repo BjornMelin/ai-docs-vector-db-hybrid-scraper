@@ -1,4 +1,5 @@
 import typing
+
 """Browser automation services with intelligent routing."""
 
 from .automation_router import AutomationRouter

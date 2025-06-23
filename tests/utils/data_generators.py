@@ -1,4 +1,5 @@
 import typing
+
 """Data generators for testing using Hypothesis and custom patterns.
 
 This module provides comprehensive data generation utilities for creating test data

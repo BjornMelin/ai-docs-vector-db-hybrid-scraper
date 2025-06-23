@@ -1,4 +1,5 @@
 import typing
+
 """SPLADE provider for sparse vector generation.
 
 This module implements SPLADE (Sparse Lexical And Expansion model for Passage retrieval)

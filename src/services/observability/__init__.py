@@ -1,4 +1,5 @@
 import typing
+
 """Comprehensive OpenTelemetry observability for AI/ML documentation system.
 
 This module provides enterprise-grade observability with advanced instrumentation,

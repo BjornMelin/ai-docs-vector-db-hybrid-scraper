@@ -1,4 +1,5 @@
 import typing
+
 """Load test profiles and scenarios for different testing patterns.
 
 This module defines various load profiles including steady, ramp-up, spike,

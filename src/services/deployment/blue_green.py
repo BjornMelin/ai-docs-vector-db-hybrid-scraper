@@ -1,4 +1,5 @@
 import typing
+
 """Blue-Green Deployment Service for Zero-Downtime Releases.
 
 This module provides enterprise-grade blue-green deployment capabilities including:

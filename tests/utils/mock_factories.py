@@ -1,4 +1,5 @@
 import typing
+
 """Mock factories for creating test doubles and stubs.
 
 This module provides factory functions and classes for creating consistent,

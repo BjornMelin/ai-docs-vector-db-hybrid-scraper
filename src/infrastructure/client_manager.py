@@ -1,4 +1,5 @@
 import typing
+
 """Centralized API client management with singleton pattern and health checks."""
 
 import asyncio

@@ -1,4 +1,5 @@
 import typing
+
 """RAG (Retrieval-Augmented Generation) API endpoints.
 
 This module provides FastAPI endpoints for generating contextual answers

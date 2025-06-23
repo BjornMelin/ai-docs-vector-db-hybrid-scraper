@@ -1,4 +1,5 @@
 import typing
+
 """Query Processing Pipeline Factory for MCP server."""
 
 import logging

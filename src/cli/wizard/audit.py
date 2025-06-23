@@ -1,4 +1,5 @@
 import typing
+
 """Configuration audit and change logging for wizard operations.
 
 Provides audit logging for configuration changes, validation history,

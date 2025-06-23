@@ -1,4 +1,5 @@
 import typing
+
 """Simplified configuration management commands with Rich styling.
 
 Core configuration management functionality for V1 release.

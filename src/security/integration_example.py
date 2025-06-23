@@ -1,4 +1,5 @@
 import typing
+
 """Example integration of simplified ML security with FastAPI.
 
 This shows how to integrate the minimal security features into existing endpoints.

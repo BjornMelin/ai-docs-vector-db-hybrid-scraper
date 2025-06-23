@@ -1,4 +1,5 @@
 import typing
+
 """Component-level benchmarks for individual ML components.
 
 This module provides isolated performance testing for each component

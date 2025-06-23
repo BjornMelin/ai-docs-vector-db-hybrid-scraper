@@ -1,4 +1,5 @@
 import typing
+
 """Advanced hybrid search service - backward compatibility wrapper.
 
 This module provides a backward compatibility wrapper around the new AdvancedSearchOrchestrator.

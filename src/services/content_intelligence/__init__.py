@@ -1,4 +1,5 @@
 import typing
+
 """Content Intelligence Service for AI-powered adaptive extraction.
 
 This module provides intelligent content analysis, quality assessment,

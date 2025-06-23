@@ -1,4 +1,5 @@
 import typing
+
 """Qdrant alias manager for zero-downtime collection updates."""
 
 import logging

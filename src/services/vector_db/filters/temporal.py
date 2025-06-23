@@ -1,4 +1,5 @@
 import typing
+
 """Temporal filtering for date-based filtering and content freshness analysis.
 
 This module provides sophisticated temporal filtering capabilities including

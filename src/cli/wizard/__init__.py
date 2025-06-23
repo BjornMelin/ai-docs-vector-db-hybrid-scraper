@@ -1,4 +1,5 @@
 import typing
+
 """Modern CLI wizard infrastructure for configuration management.
 
 This package provides a template-driven, interactive configuration wizard

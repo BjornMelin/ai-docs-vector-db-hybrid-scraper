@@ -1,4 +1,5 @@
 import typing
+
 """Lightweight HTTP scraping tool for MCP server."""
 
 import logging

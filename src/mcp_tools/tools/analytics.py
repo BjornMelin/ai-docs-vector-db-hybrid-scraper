@@ -1,4 +1,5 @@
 import typing
+
 """Analytics and monitoring tools for MCP server."""
 
 import logging

@@ -1,4 +1,5 @@
 import typing
+
 """HyDE configuration models with Pydantic v2."""
 
 from typing import TYPE_CHECKING

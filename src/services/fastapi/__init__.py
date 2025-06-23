@@ -1,4 +1,5 @@
 import typing
+
 """FastAPI production service package.
 
 This package provides production-ready FastAPI enhancements for the

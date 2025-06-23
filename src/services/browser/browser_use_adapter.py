@@ -1,4 +1,5 @@
 import typing
+
 """Browser-use adapter for AI-powered browser automation."""
 
 import asyncio

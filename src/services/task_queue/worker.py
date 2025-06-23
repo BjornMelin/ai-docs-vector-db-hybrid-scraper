@@ -1,4 +1,5 @@
 import typing
+
 """ARQ worker for processing background tasks."""
 
 import logging

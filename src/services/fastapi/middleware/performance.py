@@ -1,4 +1,5 @@
 import typing
+
 """Performance monitoring middleware for production metrics and observability.
 
 This middleware provides comprehensive performance monitoring including response times,

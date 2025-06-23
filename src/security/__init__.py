@@ -1,4 +1,5 @@
 import typing
+
 """Security module for ML applications.
 
 This module provides essential ML security features following KISS principles:

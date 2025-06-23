@@ -1,4 +1,5 @@
 import typing
+
 """Utility services and helpers."""
 
 from src.config import SearchAccuracy

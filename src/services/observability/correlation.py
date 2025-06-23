@@ -1,4 +1,5 @@
 import typing
+
 """Trace correlation and context propagation for distributed observability.
 
 This module provides advanced correlation capabilities including request ID propagation,
@@ -519,7 +520,9 @@ def set_business_context(
 
 
 def correlated_operation(
-    operation_name: str, correlation_id: typing.Optional[str] = None, **additional_context
+    operation_name: str,
+    correlation_id: typing.Optional[str] = None,
+    **additional_context,
 ):
     """Create correlated operation using global correlation manager."""
     manager = get_correlation_manager()

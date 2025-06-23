@@ -1,4 +1,5 @@
 import typing
+
 """OpenTelemetry metrics bridge with existing Prometheus monitoring system.
 
 This module provides a bridge between OpenTelemetry metrics and the existing

@@ -1,4 +1,5 @@
 import typing
+
 """OpenAI embedding provider with batch support."""
 
 import contextlib

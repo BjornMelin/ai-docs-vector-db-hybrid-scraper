@@ -1,4 +1,5 @@
 import typing
+
 """Embedding manager with smart provider selection."""
 
 import logging

@@ -1,4 +1,5 @@
 import typing
+
 """Playwright adapter for maximum control browser automation."""
 
 import asyncio

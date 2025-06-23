@@ -1,4 +1,5 @@
 import typing
+
 """FastAPI dependency injection components for production environments."""
 
 # Import existing core dependencies

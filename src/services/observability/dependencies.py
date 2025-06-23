@@ -1,4 +1,5 @@
 import typing
+
 """FastAPI dependencies for OpenTelemetry observability integration.
 
 Provides dependency injection functions that integrate OpenTelemetry

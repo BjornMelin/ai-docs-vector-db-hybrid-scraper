@@ -1,4 +1,5 @@
 import typing
+
 """Chaos engineering test runner and orchestrator.
 
 This module implements a comprehensive chaos engineering test runner that
@@ -460,7 +461,9 @@ class ChaosTestRunner:
         # Mock cleanup operations
         await asyncio.sleep(0.1)
 
-    def generate_report(self, suite_name: typing.Optional[str] = None) -> dict[str, Any]:
+    def generate_report(
+        self, suite_name: typing.Optional[str] = None
+    ) -> dict[str, Any]:
         """Generate comprehensive chaos engineering report."""
         if suite_name:
             # Report for specific suite

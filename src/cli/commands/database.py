@@ -1,4 +1,5 @@
 import typing
+
 """Enhanced vector database management commands with Rich styling.
 
 This module provides advanced database operations with Rich progress

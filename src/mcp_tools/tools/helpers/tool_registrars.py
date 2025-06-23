@@ -1,4 +1,5 @@
 import typing
+
 """Tool registration functions for query processing MCP tools."""
 
 import logging

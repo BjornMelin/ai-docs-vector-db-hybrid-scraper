@@ -1,4 +1,5 @@
 import typing
+
 """FastAPI production middleware package.
 
 This package provides a comprehensive set of production-ready middleware

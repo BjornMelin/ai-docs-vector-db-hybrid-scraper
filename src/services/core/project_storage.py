@@ -1,4 +1,5 @@
 import typing
+
 """Project storage service for persistent project management."""
 
 import asyncio

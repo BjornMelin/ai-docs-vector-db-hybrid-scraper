@@ -1,4 +1,5 @@
 import typing
+
 """Core utilities package for the AI Documentation Vector DB system.
 
 This package provides shared utilities, constants, and common patterns

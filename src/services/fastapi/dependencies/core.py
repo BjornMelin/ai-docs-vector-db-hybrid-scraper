@@ -1,4 +1,5 @@
 import typing
+
 """Core dependency injection components for FastAPI production deployment.
 
 This module provides essential dependencies for database sessions,

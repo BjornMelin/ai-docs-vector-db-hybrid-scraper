@@ -1,4 +1,5 @@
 import typing
+
 """Locust-based load testing runner for AI Documentation Vector DB.
 
 This module provides a comprehensive Locust-based load testing framework
@@ -704,7 +705,9 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
 
 
 def create_load_test_environment(
-    host: str = "http://localhost:8000", user_classes: typing.Optional[List] = None, **kwargs
+    host: str = "http://localhost:8000",
+    user_classes: typing.Optional[List] = None,
+    **kwargs,
 ) -> Environment:
     """Create a Locust environment for programmatic testing.
 

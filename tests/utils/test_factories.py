@@ -1,4 +1,5 @@
 import typing
+
 """Standardized test data factories following 2025 patterns.
 
 This module provides factory classes and functions for generating consistent
@@ -232,7 +233,10 @@ class ResponseFactory:
 
     @staticmethod
     def create_paginated_response(
-        items: list[Any], page: int = 1, per_page: int = 10, total: typing.Optional[int] = None
+        items: list[Any],
+        page: int = 1,
+        per_page: int = 10,
+        total: typing.Optional[int] = None,
     ) -> dict[str, Any]:
         """Create a paginated API response.
 

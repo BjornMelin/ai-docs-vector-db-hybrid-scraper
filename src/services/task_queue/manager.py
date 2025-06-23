@@ -1,4 +1,5 @@
 import typing
+
 """Task queue manager for ARQ integration."""
 
 import logging

@@ -1,4 +1,5 @@
 import typing
+
 #!/usr/bin/env python3
 """Security test runner and reporting.
 

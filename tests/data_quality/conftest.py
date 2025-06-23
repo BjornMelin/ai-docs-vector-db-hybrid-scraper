@@ -1,4 +1,5 @@
 import typing
+
 """Data quality testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive data quality testing including

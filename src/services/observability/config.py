@@ -1,4 +1,5 @@
 import typing
+
 """OpenTelemetry observability configuration integrated with unified config system.
 
 Provides configuration for OpenTelemetry distributed tracing, AI/ML monitoring,

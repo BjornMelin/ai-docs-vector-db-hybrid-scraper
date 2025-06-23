@@ -1,4 +1,5 @@
 import typing
+
 """Request tracing and correlation middleware for production observability.
 
 This middleware provides request correlation IDs, distributed tracing support,

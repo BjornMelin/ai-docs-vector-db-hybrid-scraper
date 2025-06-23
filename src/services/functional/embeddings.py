@@ -1,4 +1,5 @@
 import typing
+
 """Function-based embedding service with FastAPI dependency injection.
 
 Transforms the complex EmbeddingManager class into pure functions with

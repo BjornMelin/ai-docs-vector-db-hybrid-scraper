@@ -1,4 +1,5 @@
 import typing
+
 """Qdrant collection management service."""
 
 import logging

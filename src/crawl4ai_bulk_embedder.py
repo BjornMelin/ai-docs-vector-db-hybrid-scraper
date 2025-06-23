@@ -1,4 +1,5 @@
 import typing
+
 #!/usr/bin/env python3
 """Crawl4AI Bulk Embedder - High-performance bulk web scraping and embedding pipeline.
 

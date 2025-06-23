@@ -1,4 +1,5 @@
 import typing
+
 """Advanced Query Intent Classification.
 
 This module provides comprehensive query intent classification using both

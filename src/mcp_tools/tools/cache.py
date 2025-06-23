@@ -1,4 +1,5 @@
 import typing
+
 """Cache management tools for MCP server."""
 
 import logging

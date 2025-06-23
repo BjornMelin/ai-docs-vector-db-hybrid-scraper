@@ -1,4 +1,5 @@
 import typing
+
 """Base load testing framework using Locust for AI Documentation Vector DB.
 
 This module provides the foundational load testing infrastructure using Locust,

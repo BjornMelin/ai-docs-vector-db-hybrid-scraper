@@ -1,4 +1,5 @@
 import typing
+
 """Task queue module for persistent background tasks."""
 
 from .manager import TaskQueueManager

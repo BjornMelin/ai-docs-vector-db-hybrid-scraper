@@ -1,4 +1,5 @@
 import typing
+
 """Main Content Intelligence Service for AI-powered adaptive extraction.
 
 This module provides the main ContentIntelligenceService class that orchestrates

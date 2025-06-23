@@ -1,4 +1,5 @@
 import typing
+
 """Enterprise database connection manager with ML-driven optimization.
 
 Clean 2025 implementation of enterprise features:

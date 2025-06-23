@@ -1,4 +1,5 @@
 import typing
+
 """Rate limiting for browser automation tiers.
 
 This module provides tier-specific rate limiting to prevent overloading

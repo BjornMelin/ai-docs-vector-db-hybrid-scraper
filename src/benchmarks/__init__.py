@@ -1,4 +1,5 @@
 import typing
+
 """Benchmarking module for Advanced Hybrid Search system.
 
 This module provides comprehensive performance benchmarking and optimization

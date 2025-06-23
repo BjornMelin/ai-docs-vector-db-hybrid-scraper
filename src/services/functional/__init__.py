@@ -1,4 +1,5 @@
 import typing
+
 """Function-based service layer with FastAPI dependency injection.
 
 This module provides modern, function-based alternatives to the legacy Manager classes.

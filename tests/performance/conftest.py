@@ -1,4 +1,5 @@
 import typing
+
 """Performance testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive performance testing including

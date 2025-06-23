@@ -1,4 +1,5 @@
 import typing
+
 """Import resolution utilities for handling module vs script execution contexts."""
 
 import sys

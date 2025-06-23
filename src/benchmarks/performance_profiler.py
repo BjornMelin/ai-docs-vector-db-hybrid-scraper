@@ -1,4 +1,5 @@
 import typing
+
 """Performance profiler for detailed system resource monitoring.
 
 This module provides comprehensive performance profiling capabilities

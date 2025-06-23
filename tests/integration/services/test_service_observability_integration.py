@@ -1,4 +1,5 @@
 import typing
+
 """Service observability integration tests.
 
 This module tests the integration of observability components across services,

@@ -1,4 +1,5 @@
 import typing
+
 """Real-time validation for configuration wizard.
 
 Provides immediate validation feedback during wizard interaction

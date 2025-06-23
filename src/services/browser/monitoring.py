@@ -1,4 +1,5 @@
 import typing
+
 """Monitoring and alerting for 5-tier browser automation system.
 
 This module provides comprehensive monitoring capabilities including:

@@ -1,4 +1,5 @@
 import typing
+
 """RAG (Retrieval-Augmented Generation) MCP tools.
 
 This module provides MCP tools for generating contextual answers from search results

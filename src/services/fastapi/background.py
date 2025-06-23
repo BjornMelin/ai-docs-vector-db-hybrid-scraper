@@ -1,4 +1,5 @@
 import typing
+
 """Background task management for FastAPI production deployment.
 
 This module provides comprehensive background task management including

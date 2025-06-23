@@ -1,4 +1,5 @@
 import typing
+
 """Firecrawl provider using direct SDK."""
 
 import logging

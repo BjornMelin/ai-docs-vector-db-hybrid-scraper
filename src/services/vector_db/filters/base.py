@@ -1,4 +1,5 @@
 import typing
+
 """Base filter architecture for advanced vector database filtering.
 
 This module provides the abstract base class and common interfaces for all

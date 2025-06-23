@@ -1,4 +1,5 @@
 import typing
+
 """Result clustering service for semantic grouping of search results.
 
 This module provides advanced result clustering capabilities using various algorithms

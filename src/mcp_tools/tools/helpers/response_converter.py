@@ -1,4 +1,5 @@
 import typing
+
 """Response converters for query processing MCP tools."""
 
 from uuid import uuid4

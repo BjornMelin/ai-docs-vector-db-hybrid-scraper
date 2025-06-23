@@ -1,4 +1,5 @@
 import typing
+
 """Helper modules for query processing MCP tools."""
 
 from .pipeline_factory import QueryProcessingPipelineFactory

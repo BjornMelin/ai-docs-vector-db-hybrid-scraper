@@ -1,4 +1,5 @@
 import typing
+
 """Enhanced Anti-Detection System for browser automation.
 
 This module provides sophisticated anti-detection capabilities for browser automation,

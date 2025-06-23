@@ -1,4 +1,5 @@
 import typing
+
 """Core search utilities for MCP tools."""
 
 import logging

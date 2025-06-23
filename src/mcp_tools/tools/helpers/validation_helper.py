@@ -1,4 +1,5 @@
 import typing
+
 """Validation helpers for query processing MCP tools."""
 
 from typing import TYPE_CHECKING

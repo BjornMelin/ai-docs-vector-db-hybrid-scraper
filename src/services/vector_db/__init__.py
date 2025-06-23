@@ -1,4 +1,5 @@
 import typing
+
 """Vector database services with modular Qdrant implementation.
 
 This module provides a clean, modular architecture for Qdrant operations:

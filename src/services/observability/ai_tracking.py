@@ -1,4 +1,5 @@
 import typing
+
 """AI/ML operation tracking with cost attribution and performance monitoring.
 
 This module provides specialized instrumentation for AI/ML operations including
@@ -647,7 +648,9 @@ def track_llm_call(
 
 
 def track_vector_search(
-    collection_name: str, query_type: str = "semantic", top_k: typing.Optional[int] = None
+    collection_name: str,
+    query_type: str = "semantic",
+    top_k: typing.Optional[int] = None,
 ):
     """Convenience function for tracking vector search.
 

@@ -1,4 +1,5 @@
 import typing
+
 """Pydantic models for Content Intelligence Service.
 
 This module defines all data models used by the Content Intelligence Service

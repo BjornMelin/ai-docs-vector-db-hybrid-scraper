@@ -1,4 +1,5 @@
 import typing
+
 """Embedding management tools for MCP server."""
 
 import logging

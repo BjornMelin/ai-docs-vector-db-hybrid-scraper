@@ -1,4 +1,5 @@
 import typing
+
 """Response compression middleware for production optimization.
 
 This middleware provides gzip compression for responses to reduce bandwidth
