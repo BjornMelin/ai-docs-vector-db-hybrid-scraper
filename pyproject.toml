@@ -81,6 +81,8 @@ dependencies = [
     # Utility libraries
     "tomli-w>=1.0.0,<2.0.0",
     "jsonschema2md>=1.5.2,<2.0.0",
+    "opentelemetry-api>=1.34.1",
+    "opentelemetry-sdk>=1.34.1",
 ]
 
 [project.optional-dependencies]
@@ -97,6 +99,27 @@ dev = [
     "fakeredis>=2.29.0,<3.0.0",
     "ruff>=0.11.12,<0.12.0",
     "black>=25.1.0,<26.0.0",
+]
+
+# Contract testing tools
+contract = [
+    "schemathesis>=3.21.0,<4.1.0",        # OpenAPI property-based testing
+    "openapi-spec-validator>=0.7.0,<0.9.0", # OpenAPI spec validation
+    "jsonschema>=4.23.0,<5.0.0",         # JSON schema validation
+    # "pact-python>=2.3.1,<3.0.0",         # Pact consumer-driven contracts - temporarily disabled due to psutil conflict
+    "responses>=0.25.0,<0.26.0",          # HTTP request mocking
+    "httpx>=0.28.1,<0.29.0",              # HTTP client for testing
+    "factory-boy>=3.3.1,<4.0.0",         # Test data generation
+    "faker>=36.1.0,<37.0.0",              # Fake data generation
+]
+
+# Accessibility testing tools
+accessibility = [
+    "axe-core-python>=0.1.0,<1.0.0",  # Python bindings for axe-core (using available version)
+    "selenium>=4.25.0,<5.0.0",        # For browser automation
+    "playwright>=1.52.0,<2.0.0",      # Alternative browser automation
+    "beautifulsoup4>=4.12.3,<5.0.0",  # HTML parsing for static analysis
+    "lxml>=5.3.0,<6.0.0",             # XML/HTML parser
 ]
 
 # Browser automation (optional heavy dependencies)
@@ -143,7 +166,7 @@ docs = [
 
 # All optional dependencies combined
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,browser,llm,observability,parsing,docs]",
+    "ai-docs-vector-db-hybrid-scraper[dev,accessibility,browser,llm,observability,parsing,docs]",
 ]
 
 [project.urls]
@@ -249,6 +272,50 @@ markers = [
     "asyncio: marks tests as async tests",
     "benchmark: marks tests as benchmark tests",
     "hypothesis: marks tests as property-based tests using Hypothesis",
+    # Security testing markers
+    "security: mark test as security test",
+    "vulnerability_scan: mark test as vulnerability scan test",
+    "penetration_test: mark test as penetration test",
+    "owasp: mark test as OWASP compliance test",
+    "input_validation: mark test as input validation test",
+    "authentication: mark test as authentication test",
+    "authorization: mark test as authorization test",
+    "compliance: mark test as compliance test",
+    # Performance testing markers
+    "memory_test: mark test as memory test",
+    "cpu_test: mark test as CPU test",
+    "throughput: mark test as throughput test",
+    "latency: mark test as latency test",
+    "scalability: mark test as scalability test",
+    # Accessibility testing markers
+    "accessibility: mark test as accessibility test",
+    "a11y: mark test as general accessibility test",
+    "wcag: mark test as WCAG compliance test",
+    "screen_reader: mark test as screen reader test",
+    "keyboard_navigation: mark test as keyboard navigation test",
+    "color_contrast: mark test as color contrast test",
+    "aria: mark test as ARIA attributes test",
+    # Contract testing markers
+    "contract: mark test as contract test",
+    "api_contract: mark test as API contract test",
+    "schema_validation: mark test as schema validation test",
+    "pact: mark test as Pact contract test",
+    "openapi: mark test as OpenAPI contract test",
+    "consumer_driven: mark test as consumer-driven contract test",
+    # Chaos engineering markers
+    "chaos: mark test as chaos engineering test",
+    "fault_injection: mark test as fault injection test",
+    "resilience: mark test as resilience test",
+    "failure_scenarios: mark test as failure scenario test",
+    "network_chaos: mark test as network chaos test",
+    "resource_exhaustion: mark test as resource exhaustion test",
+    "dependency_failure: mark test as dependency failure test",
+    # Load testing markers
+    "load: mark test as load test",
+    "stress: mark test as stress test",
+    "spike: mark test as spike test",
+    "endurance: mark test as endurance test",
+    "volume: mark test as volume test",
 ]
 
 # Logging configuration for tests
