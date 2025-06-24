@@ -611,7 +611,7 @@ def data_integrity_checker():
         def run_all_checks(
             self,
             data: list[dict[str, Any]],
-            reference_datasets: dict[str, list[Dict[str, Any]]] | None = None,
+            reference_datasets: dict[str, list[dict[str, Any]]] | None = None,
         ) -> list[dict[str, Any]]:
             """Run all registered integrity checks."""
             results = []

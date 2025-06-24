@@ -36,11 +36,11 @@ classifiers = [
 dependencies = [
     # Core web framework & API
     "fastapi[standard]>=0.115.12,<0.120.0", # Latest stable with performance improvements
-    "starlette>=0.41.0,<0.45.0",            # Liberal constraint for better compatibility
+    "starlette>=0.41.0,<0.45.0", # Liberal constraint for better compatibility
     "uvicorn[standard]>=0.34.0,<0.40.0",
-    "python-multipart>=0.0.12,<0.1.0",      # For FastAPI file uploads
+    "python-multipart>=0.0.12,<0.1.0", # For FastAPI file uploads
     # Data validation & configuration
-    "pydantic>=2.11.5,<3.0.0",         # browser-use 0.2.6 compatibility
+    "pydantic>=2.11.5,<3.0.0", # browser-use 0.2.6 compatibility
     "pydantic-settings>=2.8.0,<3.0.0",
     "python-dotenv>=1.1.0,<2.0.0",
     "pyyaml>=6.0.2,<7.0.0",
@@ -50,14 +50,14 @@ dependencies = [
     # Vector database & embeddings
     "qdrant-client[fastembed]>=1.14.2,<2.0.0",
     "openai>=1.56.0,<2.0.0",
-    "fastembed>=0.7.0,<0.8.0",                 # Python 3.13 compatible as of v0.7.0 (June 2025)
+    "fastembed>=0.7.0,<0.8.0", # Python 3.13 compatible as of v0.7.0 (June 2025)
     "FlagEmbedding>=1.3.5,<2.0.0",
     # Data processing & ML (Python 3.13 compatible)
-    "numpy>=1.26.0,<3.0.0",     # Allow NumPy 2.x for better Python 3.13 performance
-    "scipy>=1.15.3,<2.0.0",     # Python 3.13 support from 1.13+
+    "numpy>=1.26.0,<3.0.0", # Allow NumPy 2.x for better Python 3.13 performance
+    "scipy>=1.15.3,<2.0.0", # Python 3.13 support from 1.13+
     "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
     # HTTP & async (optimized for performance)
-    "aiohttp>=3.12.4,<4.0.0",         # Kept for superior async performance
+    "aiohttp>=3.12.4,<4.0.0", # Kept for superior async performance
     "asyncio-throttle>=1.0.2,<2.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     # Circuit breaker & retry patterns
@@ -77,7 +77,7 @@ dependencies = [
     # Monitoring & observability
     "prometheus-client>=0.21.1,<0.23.0",
     "prometheus-fastapi-instrumentator>=7.0.0,<8.0.0",
-    "psutil>=7.0.0,<8.0.0",                            # Updated for browser-use 0.2.6+ compatibility
+    "psutil>=7.0.0,<8.0.0", # Updated for browser-use 0.2.6+ compatibility
     # Database & ORM
     "sqlalchemy>=2.0.0,<3.0.0",
     # Utility libraries
@@ -85,6 +85,7 @@ dependencies = [
     "jsonschema2md>=1.5.2,<2.0.0",
     "opentelemetry-api>=1.34.1,<2.0.0",
     "opentelemetry-sdk>=1.34.1,<2.0.0",
+    "respx>=0.22.0",
 ]
 
 [project.optional-dependencies]

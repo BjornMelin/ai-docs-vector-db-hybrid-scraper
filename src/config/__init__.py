@@ -26,6 +26,7 @@ from .core import (
     SQLAlchemyConfig,
     TaskQueueConfig,
     get_config,
+    get_config_with_auto_detection,
     reset_config,
     set_config,
 )
@@ -110,6 +111,7 @@ __all__: list[str] = [
     "VectorType",
     "default_tier_manager",
     "get_config",
+    "get_config_with_auto_detection",
     "get_current_tier_config",
     "is_feature_enabled",
     "reset_config",

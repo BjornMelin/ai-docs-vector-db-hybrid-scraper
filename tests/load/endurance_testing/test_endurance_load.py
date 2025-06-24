@@ -7,6 +7,7 @@ performance degradation over time, and system stability issues.
 import asyncio
 import logging
 import time
+from typing import Dict
 
 import pytest
 

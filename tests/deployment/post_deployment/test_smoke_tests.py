@@ -590,7 +590,7 @@ class ConfigurationSmokeTestRunner:
 
     def test_service_configurations(
         self, environment: DeploymentEnvironment
-    ) -> dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Test service configurations."""
         services = {
             "database": {

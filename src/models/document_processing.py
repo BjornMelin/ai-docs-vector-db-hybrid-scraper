@@ -1,4 +1,3 @@
-import typing
 """Document processing models for content ingestion and chunking.
 
 This module contains all models related to document processing, chunking,

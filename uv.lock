@@ -69,6 +69,7 @@ dependencies = [
     { name = "qdrant-client", extra = ["fastembed"] },
     { name = "questionary" },
     { name = "redis", extra = ["hiredis"] },
+    { name = "respx" },
     { name = "rich" },
     { name = "scipy" },
     { name = "sqlalchemy" },
@@ -252,7 +253,7 @@ requires-dist = [
     { name = "playwright", marker = "extra == 'accessibility'", specifier = ">=1.52.0,<2.0.0" },
     { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.52.0,<2.0.0" },
     { name = "polars", marker = "extra == 'dataframe'", specifier = ">=1.17.0,<2.0.0" },
-    { name = "prometheus-client", specifier = ">=0.21.1,<0.22.0" },
+    { name = "prometheus-client", specifier = ">=0.21.1,<0.23.0" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.0.0,<8.0.0" },
     { name = "psutil", specifier = ">=7.0.0,<8.0.0" },
     { name = "pyarrow", marker = "extra == 'dataframe'", specifier = ">=18.1.0,<19.0.0" },
@@ -271,6 +272,7 @@ requires-dist = [
     { name = "questionary", specifier = ">=2.1.0,<3.0.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.2.0,<7.0.0" },
     { name = "responses", marker = "extra == 'contract'", specifier = ">=0.25.0,<0.26.0" },
+    { name = "respx", specifier = ">=0.22.0" },
     { name = "rich", specifier = ">=14.0.0,<15.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.0,<0.13.0" },
     { name = "schemathesis", marker = "extra == 'contract'", specifier = ">=3.21.0,<4.1.0" },
@@ -4779,6 +4781,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/81/7e/2345ac3299bd62bd7163216702bbc88976c099cfceba5b889f2a457727a1/responses-0.25.7.tar.gz", hash = "sha256:8ebae11405d7a5df79ab6fd54277f6f2bc29b2d002d0dd2d5c632594d1ddcedb", size = 79203, upload-time = "2025-03-11T15:36:16.624Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/fc/1d20b64fa90e81e4fa0a34c9b0240a6cfb1326b7e06d18a5432a9917c316/responses-0.25.7-py3-none-any.whl", hash = "sha256:92ca17416c90fe6b35921f52179bff29332076bb32694c0df02dcac2c6bc043c", size = 34732, upload-time = "2025-03-11T15:36:14.589Z" },
+]
+
+[[package]]
+name = "respx"
+version = "0.22.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/7c/96bd0bc759cf009675ad1ee1f96535edcb11e9666b985717eb8c87192a95/respx-0.22.0.tar.gz", hash = "sha256:3c8924caa2a50bd71aefc07aa812f2466ff489f1848c96e954a5362d17095d91", size = 28439, upload-time = "2024-12-19T22:33:59.374Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/67/afbb0978d5399bc9ea200f1d4489a23c9a1dad4eee6376242b8182389c79/respx-0.22.0-py2.py3-none-any.whl", hash = "sha256:631128d4c9aba15e56903fb5f66fb1eff412ce28dd387ca3a81339e52dbd3ad0", size = 25127, upload-time = "2024-12-19T22:33:57.837Z" },
 ]
 
 [[package]]

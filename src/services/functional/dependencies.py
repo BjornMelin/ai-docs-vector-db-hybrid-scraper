@@ -30,7 +30,7 @@ async def get_config() -> Config:
 # Client manager dependency with resource lifecycle
 async def get_client_manager(
     config: Annotated[Config, Depends(get_config)],
-) -> AsyncGenerator[ClientManager, None]:
+) -> AsyncGenerator[ClientManager]:
     """Get ClientManager instance with proper lifecycle management.
 
     Args:
@@ -50,7 +50,7 @@ async def get_client_manager(
 # Cache client dependency
 async def get_cache_client(
     config: Annotated[Config, Depends(get_config)],
-) -> AsyncGenerator[object, None]:
+) -> AsyncGenerator[object]:
     """Get cache client with lifecycle management.
 
     Args:
@@ -81,7 +81,7 @@ async def get_cache_client(
 async def get_embedding_client(
     config: Annotated[Config, Depends(get_config)],
     client_manager: Annotated[ClientManager, Depends(get_client_manager)],
-) -> AsyncGenerator[object, None]:
+) -> AsyncGenerator[object]:
     """Get embedding client with lifecycle management.
 
     Args:
@@ -110,7 +110,7 @@ async def get_embedding_client(
 # Vector database client dependency
 async def get_vector_db_client(
     config: Annotated[Config, Depends(get_config)],
-) -> AsyncGenerator[object, None]:
+) -> AsyncGenerator[object]:
     """Get vector database client with lifecycle management.
 
     Args:
@@ -151,7 +151,7 @@ async def get_rate_limiter(
 async def get_crawling_client(
     config: Annotated[Config, Depends(get_config)],
     rate_limiter: Annotated[object | None, Depends(get_rate_limiter)],
-) -> AsyncGenerator[object, None]:
+) -> AsyncGenerator[object]:
     """Get crawling client with lifecycle management.
 
     Args:

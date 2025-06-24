@@ -235,7 +235,7 @@ def create_mock_embedding_service(
         await asyncio.sleep(processing_delay)
         return generator._generate_normalized_vector(dimension)
 
-    async def mock_embed_batch(texts: list[str]) -> list[List[float]]:
+    async def mock_embed_batch(texts: list[str]) -> list[list[float]]:
         """Mock batch text embedding."""
         await asyncio.sleep(processing_delay * len(texts) * 0.1)  # Batch efficiency
         return [generator._generate_normalized_vector(dimension) for _ in texts]

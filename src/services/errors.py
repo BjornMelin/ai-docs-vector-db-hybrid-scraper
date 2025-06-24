@@ -802,7 +802,7 @@ def tenacity_circuit_breaker(
     return decorator
 
 
-def handle_mcp_errors(func: F) -> F:
+def handle_mcp_errors[F: Callable[..., Any]](func: F) -> F:
     """Decorator to handle MCP tool errors safely.
 
     Following FastMCP patterns where ToolError and ResourceError

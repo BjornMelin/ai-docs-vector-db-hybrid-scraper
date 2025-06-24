@@ -42,7 +42,7 @@ def async_to_sync_click(cli_group: click.Group) -> None:
     cli_group._commands_wrapped = True
 
 
-def async_command(func: F) -> F:
+def async_command[F: Callable[..., Any]](func: F) -> F:
     """Decorator to automatically convert async Click commands to sync.
 
     This can be used as an alternative to the async_to_sync_click function

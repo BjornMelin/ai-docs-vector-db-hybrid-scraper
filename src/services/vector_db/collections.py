@@ -6,7 +6,7 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from src.config import Config
+from src.config.core import Config
 
 from ..base import BaseService
 from ..errors import QdrantServiceError
