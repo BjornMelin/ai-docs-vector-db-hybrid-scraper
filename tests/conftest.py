@@ -268,7 +268,7 @@ def test_urls() -> dict[str, str]:
 
 
 @pytest.fixture()
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir() -> Generator[Path]:
     """Create a temporary directory for test files.
 
     Yields:
@@ -279,7 +279,7 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture()
-def mock_env_vars() -> Generator[None, None, None]:
+def mock_env_vars() -> Generator[None]:
     """Mock environment variables for testing.
 
     Sets up test environment variables and restores original values on cleanup.

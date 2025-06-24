@@ -270,6 +270,7 @@ End text.
         config = ChunkingConfig(
             chunk_size=50,
             chunk_overlap=10,
+            min_chunk_size=20,  # Ensure min_chunk_size <= chunk_size
             strategy=ChunkingStrategy.BASIC,
         )
         chunker = EnhancedChunker(config)

@@ -933,7 +933,7 @@ class ConnectivityTester:
     """Tester for service connectivity."""
 
     async def test_connectivity(
-        self, services: dict[str, Dict[str, Any]], expected_connections: list[tuple]
+        self, services: dict[str, dict[str, Any]], expected_connections: list[tuple]
     ) -> dict[str, Any]:
         """Test connectivity between services."""
         successful_connections = []

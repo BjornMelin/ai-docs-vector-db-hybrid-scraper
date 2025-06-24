@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .auto_detect import AutoDetectedServices, AutoDetectionConfig
 from .enums import (
     ChunkingStrategy,
     CrawlProvider,
@@ -471,6 +472,7 @@ class Config(BaseSettings):
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
     task_queue: TaskQueueConfig = Field(default_factory=TaskQueueConfig)
+    auto_detection: AutoDetectionConfig = Field(default_factory=AutoDetectionConfig)
 
     # Documentation sites
     documentation_sites: list[DocumentationSite] = Field(default_factory=list)
@@ -513,6 +515,126 @@ class Config(BaseSettings):
             dir_path.mkdir(parents=True, exist_ok=True)
         return self
 
+    def apply_auto_detected_services(
+        self, auto_detected: AutoDetectedServices
+    ) -> "Config":
+        """Apply auto-detected services with configuration precedence.
+
+        Configuration precedence (highest to lowest):
+        1. Environment variables (already loaded by Pydantic Settings)
+        2. Auto-detected values (applied here)
+        3. Default values (already set)
+
+        Args:
+            auto_detected: Auto-detected services and environment info
+
+        Returns:
+            Updated Config instance
+        """
+        import os
+        from copy import deepcopy
+
+        # Create a copy to avoid mutating the original
+        updated_config = deepcopy(self)
+
+        # Apply Redis auto-detection if available and not overridden by env vars
+        redis_service = auto_detected.redis_service
+        if redis_service and not os.getenv("AI_DOCS_CACHE__DRAGONFLY_URL"):
+            # Update cache config with auto-detected Redis
+            updated_config.cache.dragonfly_url = redis_service.connection_string
+            updated_config.cache.enable_dragonfly_cache = True
+
+            # Update task queue config with auto-detected Redis
+            if not os.getenv("AI_DOCS_TASK_QUEUE__REDIS_URL"):
+                updated_config.task_queue.redis_url = redis_service.connection_string
+
+        # Apply Qdrant auto-detection if available and not overridden by env vars
+        qdrant_service = auto_detected.qdrant_service
+        if qdrant_service and not os.getenv("AI_DOCS_QDRANT__URL"):
+            updated_config.qdrant.url = qdrant_service.connection_string
+            if qdrant_service.metadata.get("grpc_available"):
+                updated_config.qdrant.prefer_grpc = True
+                grpc_port = qdrant_service.metadata.get("grpc_port", 6334)
+                updated_config.qdrant.grpc_port = grpc_port
+
+        # Apply PostgreSQL auto-detection if available and not overridden by env vars
+        postgresql_service = auto_detected.postgresql_service
+        if postgresql_service and not os.getenv("AI_DOCS_DATABASE__DATABASE_URL"):
+            # Note: Would need actual database credentials in real implementation
+            # For now, just log that PostgreSQL was detected
+            pass
+
+        # Update environment based on auto-detection
+        if not os.getenv("AI_DOCS_ENVIRONMENT"):
+            updated_config.environment = auto_detected.environment.environment_type
+
+        # Enable monitoring if running in cloud/production environment
+        if auto_detected.environment.cloud_provider and not os.getenv(
+            "AI_DOCS_MONITORING__ENABLED"
+        ):
+            updated_config.monitoring.enabled = True
+            updated_config.observability.enabled = True
+
+        return updated_config
+
+    async def auto_detect_and_apply_services(self) -> "Config":
+        """Perform auto-detection and apply discovered services to configuration.
+
+        Returns:
+            Updated Config instance with auto-detected services applied
+        """
+        if not self.auto_detection.enabled:
+            return self
+
+        from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
+
+        try:
+            # Detect environment
+            env_detector = EnvironmentDetector(self.auto_detection)
+            detected_env = await env_detector.detect()
+
+            # Discover services
+            service_discovery = ServiceDiscovery(self.auto_detection)
+            discovery_result = await service_discovery.discover_all_services()
+
+            # Create auto-detected services container
+            auto_detected = AutoDetectedServices(
+                environment=detected_env,
+                services=discovery_result.services,
+                errors=discovery_result.errors,
+            )
+            auto_detected.mark_completed()
+
+            # Apply auto-detected services with precedence
+            updated_config = self.apply_auto_detected_services(auto_detected)
+
+            # Store auto-detection results for inspection
+            updated_config._auto_detected_services = auto_detected
+
+            return updated_config
+
+        except Exception as e:
+            # Log error but don't fail configuration loading
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Auto-detection failed, using manual configuration: {e}")
+            return self
+
+    def get_auto_detected_services(self) -> AutoDetectedServices | None:
+        """Get auto-detected services if available."""
+        return getattr(self, "_auto_detected_services", None)
+
+    def is_service_auto_detected(self, service_type: str) -> bool:
+        """Check if a service was auto-detected."""
+        auto_detected = self.get_auto_detected_services()
+        if not auto_detected:
+            return False
+
+        return any(
+            service.service_type == service_type for service in auto_detected.services
+        )
+
     @classmethod
     def load_from_file(cls, config_path: Path | str) -> "Config":
         """Load configuration from a specific file."""
@@ -551,6 +673,22 @@ def get_config() -> Config:
     return _config
 
 
+async def get_config_with_auto_detection() -> Config:
+    """Get the global configuration instance with auto-detection applied.
+
+    This async version performs service auto-detection and applies discovered
+    services to the configuration with proper precedence handling.
+
+    Returns:
+        Config instance with auto-detected services applied
+    """
+    global _config  # noqa: PLW0603
+    if _config is None:
+        base_config = Config()
+        _config = await base_config.auto_detect_and_apply_services()
+    return _config
+
+
 def set_config(config: Config) -> None:
     """Set the global configuration instance."""
     global _config  # noqa: PLW0603
@@ -561,3 +699,23 @@ def reset_config() -> None:
     """Reset the global configuration instance."""
     global _config  # noqa: PLW0603
     _config = None
+
+
+async def load_config_with_auto_detection(
+    config_path: Path | str | None = None, enable_auto_detection: bool = True
+) -> Config:
+    """Load configuration from file with optional auto-detection.
+
+    Args:
+        config_path: Optional path to configuration file
+        enable_auto_detection: Whether to perform auto-detection
+
+    Returns:
+        Loaded and potentially auto-detected configuration
+    """
+    config = Config.load_from_file(config_path) if config_path else Config()
+
+    if enable_auto_detection and config.auto_detection.enabled:
+        config = await config.auto_detect_and_apply_services()
+
+    return config

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import get_config
 
+
 # Get configuration
 config = get_config()
 
@@ -36,17 +37,14 @@ async def root():
     return {
         "message": "AI Docs Vector DB Hybrid Scraper API",
         "version": "0.1.0",
-        "status": "running"
+        "status": "running",
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "timestamp": "2025-06-23T23:55:00Z"
-    }
+    return {"status": "healthy", "timestamp": "2025-06-23T23:55:00Z"}
 
 
 @app.get("/info")
@@ -57,14 +55,14 @@ async def info():
         "version": "0.1.0",
         "description": "Hybrid AI documentation scraping system with vector database integration",
         "python_version": "3.13+",
-        "framework": "FastAPI"
+        "framework": "FastAPI",
     }
 
 
 # Additional router imports can be added here as the API grows
 # from .routers import search, documents, collections
 # app.include_router(search.router, prefix="/api/v1")
-# app.include_router(documents.router, prefix="/api/v1")  
+# app.include_router(documents.router, prefix="/api/v1")
 # app.include_router(collections.router, prefix="/api/v1")
 
 __all__ = ["app"]

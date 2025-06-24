@@ -64,6 +64,20 @@ class ClientManager:
         return cls(unified_config)
 
     @classmethod
+    async def from_unified_config_with_auto_detection(cls) -> "ClientManager":
+        """Create ClientManager from unified configuration with auto-detection.
+
+        This async factory method loads configuration with service auto-detection
+        and creates a properly configured ClientManager instance with discovered services.
+        """
+
+        # Load configuration with auto-detection applied
+        from src.config import get_config_with_auto_detection
+
+        unified_config = await get_config_with_auto_detection()
+        return cls(unified_config)
+
+    @classmethod
     def reset_singleton(cls) -> None:
         """Reset singleton instance for testing purposes.
 
@@ -106,6 +120,9 @@ class ClientManager:
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._initialized = False
         self._health_check_task: asyncio.Task | None = None
+
+        # Auto-detection integration
+        self._auto_detected_services = config.get_auto_detected_services()
 
         # Service instances (lazy-initialized)
         self._qdrant_service: Any = None
@@ -307,7 +324,7 @@ class ClientManager:
         return self._embedding_manager
 
     async def get_cache_manager(self):
-        """Get or create CacheManager instance."""
+        """Get or create CacheManager instance with auto-detected Redis when available."""
         if self._cache_manager is None:
             if "cache_manager" not in self._service_locks:
                 self._service_locks["cache_manager"] = asyncio.Lock()
@@ -316,10 +333,25 @@ class ClientManager:
                 if self._cache_manager is None:
                     from src.services.cache.manager import CacheManager
 
+                    # Check for auto-detected Redis service
+                    auto_detected_redis = self._get_auto_detected_service("redis")
+
+                    if auto_detected_redis:
+                        logger.info(
+                            f"Using auto-detected Redis for cache: {auto_detected_redis.connection_string}"
+                        )
+                        dragonfly_url = auto_detected_redis.connection_string
+                        enable_distributed_cache = True
+                    else:
+                        dragonfly_url = self.config.cache.dragonfly_url
+                        enable_distributed_cache = (
+                            self.config.cache.enable_dragonfly_cache
+                        )
+
                     self._cache_manager = CacheManager(
-                        dragonfly_url=self.config.cache.dragonfly_url,
+                        dragonfly_url=dragonfly_url,
                         enable_local_cache=self.config.cache.enable_local_cache,
-                        enable_distributed_cache=self.config.cache.enable_dragonfly_cache,
+                        enable_distributed_cache=enable_distributed_cache,
                         local_max_size=self.config.cache.local_max_size,
                         local_max_memory_mb=self.config.cache.local_max_memory_mb,
                         distributed_ttl_seconds=self.config.cache.cache_ttl_seconds,
@@ -437,7 +469,7 @@ class ClientManager:
         return self._browser_automation_router
 
     async def get_task_queue_manager(self):
-        """Get or create TaskQueueManager instance."""
+        """Get or create TaskQueueManager instance with auto-detected Redis when available."""
         if self._task_queue_manager is None:
             if "task_queue_manager" not in self._service_locks:
                 self._service_locks["task_queue_manager"] = asyncio.Lock()
@@ -446,8 +478,25 @@ class ClientManager:
                 if self._task_queue_manager is None:
                     from src.services.task_queue.manager import TaskQueueManager
 
+                    # Check for auto-detected Redis service
+                    auto_detected_redis = self._get_auto_detected_service("redis")
+
+                    if auto_detected_redis:
+                        logger.info(
+                            f"Using auto-detected Redis for task queue: {auto_detected_redis.connection_string}"
+                        )
+                        # Create modified config with auto-detected Redis
+                        from copy import deepcopy
+
+                        config = deepcopy(self.config)
+                        config.task_queue.redis_url = (
+                            auto_detected_redis.connection_string
+                        )
+                    else:
+                        config = self.config
+
                     self._task_queue_manager = TaskQueueManager(
-                        config=self.config,
+                        config=config,
                     )
                     await self._task_queue_manager.initialize()
                     logger.info("Initialized TaskQueueManager")
@@ -753,14 +802,79 @@ class ClientManager:
 
         return self._clients[name]
 
-    async def _create_qdrant_client(self) -> AsyncQdrantClient:
-        """Create Qdrant client instance."""
-        client = AsyncQdrantClient(
-            url=self.config.qdrant.url,
-            api_key=self.config.qdrant.api_key,
-            timeout=self.config.qdrant.timeout,
-            prefer_grpc=self.config.qdrant.prefer_grpc,
+    def _get_auto_detected_service(self, service_type: str) -> Any:
+        """Get auto-detected service configuration if available.
+
+        Args:
+            service_type: Type of service (redis, qdrant, postgresql)
+
+        Returns:
+            Auto-detected service config or None
+        """
+        if not self._auto_detected_services:
+            return None
+
+        return next(
+            (
+                service
+                for service in self._auto_detected_services.services
+                if service.service_type == service_type and service.is_available
+            ),
+            None,
         )
+
+    def _is_service_auto_detected(self, service_type: str) -> bool:
+        """Check if a service was auto-detected and is available."""
+        return self._get_auto_detected_service(service_type) is not None
+
+    def _log_auto_detection_usage(
+        self, service_type: str, auto_detected_service: Any
+    ) -> None:
+        """Log when using auto-detected service configuration."""
+        logger.info(
+            f"Using auto-detected {service_type} service: "
+            f"{auto_detected_service.host}:{auto_detected_service.port} "
+            f"(detection time: {auto_detected_service.detection_time_ms:.1f}ms)"
+        )
+
+    async def _create_qdrant_client(self) -> AsyncQdrantClient:
+        """Create Qdrant client instance using auto-detected service when available."""
+
+        # Check for auto-detected Qdrant service
+        auto_detected = self._get_auto_detected_service("qdrant")
+
+        if auto_detected:
+            self._log_auto_detection_usage("qdrant", auto_detected)
+
+            # Use auto-detected configuration with gRPC preference
+            prefer_grpc = auto_detected.metadata.get("grpc_available", False)
+            grpc_port = auto_detected.metadata.get("grpc_port", 6334)
+
+            if prefer_grpc:
+                client = AsyncQdrantClient(
+                    host=auto_detected.host,
+                    port=grpc_port,
+                    prefer_grpc=True,
+                    timeout=self.config.qdrant.timeout,
+                    api_key=self.config.qdrant.api_key,
+                )
+            else:
+                client = AsyncQdrantClient(
+                    host=auto_detected.host,
+                    port=auto_detected.port,
+                    prefer_grpc=False,
+                    timeout=self.config.qdrant.timeout,
+                    api_key=self.config.qdrant.api_key,
+                )
+        else:
+            # Fall back to manual configuration
+            logger.info("Using manual Qdrant configuration (no auto-detection)")
+            client = AsyncQdrantClient(
+                url=self.config.qdrant.url,
+                api_key=self.config.qdrant.api_key,
+                timeout=self.config.qdrant.timeout,
+                prefer_grpc=self.config.qdrant.prefer_grpc,
+            )
 
         # Validate connection
         await client.get_collections()
@@ -782,12 +896,37 @@ class ClientManager:
         )
 
     async def _create_redis_client(self) -> redis.Redis:
-        """Create Redis client with connection pooling."""
-        return redis.from_url(
-            self.config.cache.dragonfly_url,
-            max_connections=self.config.cache.redis_pool_size,
-            decode_responses=True,  # From cache config
-        )
+        """Create Redis client with connection pooling using auto-detected service when available."""
+
+        # Check for auto-detected Redis service
+        auto_detected = self._get_auto_detected_service("redis")
+
+        if auto_detected:
+            self._log_auto_detection_usage("redis", auto_detected)
+
+            # Use auto-detected Redis configuration
+            redis_url = auto_detected.connection_string
+            pool_config = auto_detected.pool_config
+
+            return redis.from_url(
+                redis_url,
+                max_connections=pool_config.get("max_connections", 20),
+                decode_responses=pool_config.get("decode_responses", True),
+                retry_on_timeout=pool_config.get("retry_on_timeout", True),
+                socket_keepalive=pool_config.get("socket_keepalive", True),
+                socket_keepalive_options=pool_config.get(
+                    "socket_keepalive_options", {}
+                ),
+                protocol=pool_config.get("protocol", 3),  # Redis 8.2 RESP3
+            )
+        else:
+            # Fall back to manual configuration
+            logger.info("Using manual Redis configuration (no auto-detection)")
+            return redis.from_url(
+                self.config.cache.dragonfly_url,
+                max_connections=getattr(self.config.cache, "redis_pool_size", 20),
+                decode_responses=True,  # From cache config
+            )
 
     async def _check_qdrant_health(self) -> bool:
         """Check Qdrant client health."""

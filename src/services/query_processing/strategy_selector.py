@@ -270,8 +270,9 @@ class SearchStrategySelector:
             fast_strategies = [SearchStrategy.SEMANTIC, SearchStrategy.FILTERED]
             if adjusted["primary"] not in fast_strategies:
                 # Move current primary to fallback and use semantic
-                adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][
-                    :1
+                adjusted["fallbacks"] = [
+                    adjusted["primary"],
+                    *adjusted["fallbacks"][:1],
                 ]
                 adjusted["primary"] = SearchStrategy.SEMANTIC
                 adjusted["reasoning"] += " (optimized for speed)"
@@ -283,8 +284,9 @@ class SearchStrategySelector:
             and SearchStrategy.RERANKED not in adjusted["fallbacks"]
         ):
             # Add reranking as primary or fallback
-            adjusted["fallbacks"] = [SearchStrategy.RERANKED] + adjusted["fallbacks"][
-                :2
+            adjusted["fallbacks"] = [
+                SearchStrategy.RERANKED,
+                *adjusted["fallbacks"][:2],
             ]
 
         # Limit fallback strategies based on complexity
@@ -317,9 +319,10 @@ class SearchStrategySelector:
                 if fast_strategies:
                     # Choose the fastest strategy with best quality
                     best_strategy = max(fast_strategies, key=lambda x: x[1]["quality"])
-                    adjusted["fallbacks"] = [adjusted["primary"]] + adjusted[
-                        "fallbacks"
-                    ][:1]
+                    adjusted["fallbacks"] = [
+                        adjusted["primary"],
+                        *adjusted["fallbacks"][:1],
+                    ]
                     adjusted["primary"] = best_strategy[0]
                     adjusted["reasoning"] += (
                         f" (optimized for <{max_latency}ms latency)"
@@ -342,9 +345,10 @@ class SearchStrategySelector:
                     best_strategy = min(
                         quality_strategies, key=lambda x: x[1]["latency"]
                     )
-                    adjusted["fallbacks"] = [adjusted["primary"]] + adjusted[
-                        "fallbacks"
-                    ][:1]
+                    adjusted["fallbacks"] = [
+                        adjusted["primary"],
+                        *adjusted["fallbacks"][:1],
+                    ]
                     adjusted["primary"] = best_strategy[0]
                     adjusted["reasoning"] += f" (optimized for >{min_quality} quality)"
 
@@ -367,8 +371,9 @@ class SearchStrategySelector:
             not in [adjusted["primary"]] + adjusted["fallbacks"]
         ):
             # These languages have rich documentation, semantic search works well
-            adjusted["fallbacks"] = [SearchStrategy.SEMANTIC] + adjusted["fallbacks"][
-                :2
+            adjusted["fallbacks"] = [
+                SearchStrategy.SEMANTIC,
+                *adjusted["fallbacks"][:2],
             ]
 
         # Framework context
@@ -379,14 +384,15 @@ class SearchStrategySelector:
             not in [adjusted["primary"]] + adjusted["fallbacks"]
         ):
             # Framework-specific queries often benefit from filtered search
-            adjusted["fallbacks"] = [SearchStrategy.FILTERED] + adjusted["fallbacks"][
-                :2
+            adjusted["fallbacks"] = [
+                SearchStrategy.FILTERED,
+                *adjusted["fallbacks"][:2],
             ]
 
         # Error code context
         if "error_code" in context and adjusted["primary"] != SearchStrategy.FILTERED:
             # Error codes benefit from precise filtering
-            adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][:1]
+            adjusted["fallbacks"] = [adjusted["primary"], *adjusted["fallbacks"][:1]]
             adjusted["primary"] = SearchStrategy.FILTERED
             adjusted["reasoning"] += " (optimized for error code lookup)"
 
@@ -397,7 +403,7 @@ class SearchStrategySelector:
             not in [adjusted["primary"]] + adjusted["fallbacks"]
         ):
             # Version-specific queries often need precise matching
-            adjusted["fallbacks"] = [SearchStrategy.HYBRID] + adjusted["fallbacks"][:2]
+            adjusted["fallbacks"] = [SearchStrategy.HYBRID, *adjusted["fallbacks"][:2]]
 
         # Urgency context
         urgency = context.get("urgency")
@@ -405,8 +411,9 @@ class SearchStrategySelector:
             # High urgency prefers faster strategies
             fast_strategies = [SearchStrategy.SEMANTIC, SearchStrategy.FILTERED]
             if adjusted["primary"] not in fast_strategies:
-                adjusted["fallbacks"] = [adjusted["primary"]] + adjusted["fallbacks"][
-                    :1
+                adjusted["fallbacks"] = [
+                    adjusted["primary"],
+                    *adjusted["fallbacks"][:1],
                 ]
                 adjusted["primary"] = SearchStrategy.SEMANTIC
                 adjusted["reasoning"] += " (prioritized for urgency)"

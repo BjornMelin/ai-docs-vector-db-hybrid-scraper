@@ -159,14 +159,14 @@ def deployment_environment(
 
 
 @pytest.fixture
-def temp_deployment_dir() -> Generator[Path, None, None]:
+def temp_deployment_dir() -> Generator[Path]:
     """Temporary directory for deployment testing."""
     with tempfile.TemporaryDirectory(prefix="deployment-test-") as temp_dir:
         yield Path(temp_dir)
 
 
 @pytest.fixture
-def mock_docker_registry() -> Generator[str, None, None]:
+def mock_docker_registry() -> Generator[str]:
     """Mock Docker registry for testing."""
     # In real scenarios, this would point to a test registry
     registry_url = "localhost:5000"
@@ -202,9 +202,7 @@ def mock_infrastructure_config(temp_deployment_dir: Path) -> dict[str, Any]:
 
 
 @pytest_asyncio.fixture
-async def deployment_health_checker() -> AsyncGenerator[
-    "DeploymentHealthChecker", None
-]:
+async def deployment_health_checker() -> AsyncGenerator["DeploymentHealthChecker"]:
     """Health checker for deployment validation."""
     checker = DeploymentHealthChecker()
     await checker.initialize()
@@ -264,7 +262,7 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, Dict[str, Any]]:
+    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:

@@ -486,7 +486,7 @@ def process_document_sync(document: dict[str, Any]) -> list[dict[str, Any]]:
     return [ChunkFactory.create_chunk(content=document["content"])]
 
 
-async def batch_process_vectors(vectors: list[List[float]]) -> dict[str, Any]:
+async def batch_process_vectors(vectors: list[list[float]]) -> dict[str, Any]:
     """Example batch vector processing function."""
     return quick_success_response()
 

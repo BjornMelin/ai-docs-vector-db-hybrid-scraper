@@ -5,10 +5,10 @@
 # Priority: medium
 # Description: Elevate error handling to production-grade standards using modern FastAPI patterns for 2025. Replace legacy custom exceptions with structured FastAPI HTTPException-based responses, provide actionable context and fix suggestions, and ensure observability and resilience. Integrate global error handlers, structured logging, and advanced monitoring to deliver robust, user-friendly, and traceable error management across the application.
 # Details:
-1. Replace custom exception hierarchy with FastAPI HTTPException, using structured detail objects for all errors[2][5].
+1. Replace custom exception hierarchy with FastAPI HTTPException, using structured detail objects for all errors.
 2. Implement an APIError class extending HTTPException, including context, timestamp, and request_id for traceability.
-3. Add global exception handlers for HTTPException, RequestValidationError, and generic Exception to ensure consistent error responses and logging[1][2][4].
-4. Provide structured error responses with actionable user guidance and field-level feedback for validation errors[1][5].
+3. Add global exception handlers for HTTPException, RequestValidationError, and generic Exception to ensure consistent error responses and logging.
+4. Provide structured error responses with actionable user guidance and field-level feedback for validation errors.
 5. Integrate error handling with OpenTelemetry for distributed tracing and correlation IDs.
 6. Implement error rate monitoring and automated alerting via observability stack (e.g., ELK, Prometheus).
 7. Apply Google SRE and FastAPI best practices for error recovery, circuit breaker integration, and graceful degradation.
@@ -45,7 +45,7 @@ Implement or extend middleware to log all incoming requests and errors in a stru
 ### Dependencies: 3.3
 ### Description: Configure error rate monitoring, automated alerting, and circuit breaker patterns for resilience. Apply Google SRE and FastAPI best practices for graceful degradation and error recovery.
 ### Details:
-Integrate monitoring tools to track error rates and trigger alerts on anomalies. Implement circuit breakers and fallback mechanisms to maintain uptime and degrade gracefully under failure.
+Integrate monitoring tools to track error rates and trigger alerts on anomalies. Implement circuit breakers and fallback mechanisms to maintain uptime and degrade gracefully under failure. Focus on error rate monitoring and metrics collection for tracking system health, automated alerting mechanisms that trigger on error anomalies and threshold breaches, circuit breaker implementation for graceful degradation during error conditions, and fallback mechanisms to maintain system uptime when errors occur.
 
 ## 5. Validate Production Readiness and Optimize for Performance [pending]
 ### Dependencies: 3.4

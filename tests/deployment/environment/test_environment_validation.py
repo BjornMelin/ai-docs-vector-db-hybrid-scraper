@@ -414,7 +414,7 @@ class ConfigurationDriftDetector:
 
     def categorize_drift(
         self, drift: list[dict[str, Any]]
-    ) -> dict[str, list[Dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """Categorize drift as acceptable or problematic."""
         acceptable_patterns = [
             "debug",
@@ -530,7 +530,7 @@ class EnvironmentVariableValidator:
         return missing_vars
 
     def validate_variable_values(
-        self, var_definitions: dict[str, Dict[str, Any]]
+        self, var_definitions: dict[str, dict[str, Any]]
     ) -> dict[str, list[str]]:
         """Validate environment variable values against requirements."""
         validation_errors = {}

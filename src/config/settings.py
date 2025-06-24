@@ -5,13 +5,14 @@ This module provides a simplified interface to the main configuration system.
 
 from .core import Config, get_config
 
+
 # Global configuration instance
 _config: Config | None = None
 
 
 def get_settings() -> Config:
     """Get the global configuration instance.
-    
+
     Returns:
         Config: The global configuration instance.
     """
@@ -46,10 +47,10 @@ def get_performance_config():
 settings = get_settings()
 
 __all__ = [
-    "get_settings",
-    "get_qdrant_config", 
-    "get_embedding_config",
     "get_cache_config",
+    "get_embedding_config",
     "get_performance_config",
+    "get_qdrant_config",
+    "get_settings",
     "settings",
 ]
