@@ -550,7 +550,9 @@
         "status": "in-progress",
         "dependencies": [
           1,
-          2
+          2,
+          "38",
+          "42"
         ],
         "priority": "medium",
         "details": "1. Audit and update existing documentation to align with recent codebase changes and standardize Python version to 3.13+\n2. Review and enhance existing deployment guides in docs/operators/ with production examples (Docker, Kubernetes, major cloud providers)\n3. Validate and update setup scripts for cross-platform compatibility (Linux, macOS, Windows)\n4. Update MCP configuration to support dynamic path resolution\n5. Refine existing MkDocs configuration to strengthen documentation-as-code workflows with automated generation pipelines\n6. Update API documentation to ensure it reflects current implementation, leveraging FastAPI's automatic OpenAPI 3.1 generation and interactive Swagger UI (/docs) [1][2][3][5]\n7. Review and enhance interactive examples and tutorials throughout documentation\n8. Update security, compliance, and migration guides to reflect recent changes (including breaking changes)\n9. Review and enhance production readiness checklist and operations runbook\n10. Update troubleshooting guides and FAQ sections based on recent user feedback\n11. Version bump to v1.0.0 with semantic versioning\n12. Generate a CHANGELOG using the conventional commits format\n13. Ensure all documentation and guides meet quality standards: 95%+ user satisfaction, <5% configuration failures, comprehensive troubleshooting coverage",
@@ -2437,7 +2439,6 @@
         "testStrategy": "1. Unit testing for instrumentation:\n   - Test OpenTelemetry span creation and attribute setting\n   - Verify custom metrics are properly incremented and labeled\n   - Test middleware integration without breaking existing functionality\n   - Validate metric endpoint returns properly formatted Prometheus data\n\n2. Integration testing:\n   - Test complete request tracing from FastAPI endpoint through background workers\n   - Verify distributed tracing context propagation across service boundaries\n   - Test metric collection during actual document processing workflows\n   - Validate health check endpoints respond correctly under load\n\n3. Performance validation:\n   - Measure instrumentation overhead (should be <5% impact on response times)\n   - Load test /metrics endpoint to ensure it doesn't impact application performance\n   - Verify memory usage doesn't increase significantly with tracing enabled\n\n4. Monitoring validation:\n   - Set up test Prometheus instance to scrape metrics\n   - Verify trace data appears in Jaeger or OTLP collector\n   - Test alert rules can be created based on exposed metrics\n   - Validate log correlation with trace IDs works correctly",
         "status": "pending",
         "dependencies": [
-          20,
           22,
           23
         ],
@@ -2508,7 +2509,8 @@
         "status": "pending",
         "dependencies": [
           1,
-          "24"
+          "24",
+          "43"
         ],
         "priority": "medium",
         "subtasks": [

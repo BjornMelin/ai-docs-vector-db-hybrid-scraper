@@ -1,7 +1,7 @@
 # Task ID: 32
 # Title: Observability & monitoring setup - Instrument FastAPI & background workers with OpenTelemetry and expose Prometheus metrics
 # Status: pending
-# Dependencies: 20, 22, 23
+# Dependencies: 22, 23
 # Priority: low
 # Description: Implement comprehensive OpenTelemetry instrumentation for FastAPI endpoints and background workers with Prometheus metrics exposure for production monitoring and alerting.
 # Details:

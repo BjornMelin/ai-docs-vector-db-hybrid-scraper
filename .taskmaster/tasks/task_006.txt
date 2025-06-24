@@ -1,7 +1,7 @@
 # Task ID: 6
 # Title: Update Documentation and Prepare for Release
 # Status: in-progress
-# Dependencies: 1, 2
+# Dependencies: 1, 2, 38, 42
 # Priority: medium
 # Description: Update existing documentation infrastructure to align with recent codebase changes and prepare for a modern, production-ready v1.0.0 release. Leverage the comprehensive docs/ directory structure while ensuring all content reflects current implementation and Python 3.13+ requirements.
 # Details:
