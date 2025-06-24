@@ -2707,11 +2707,510 @@
             "testStrategy": "Conduct regular review sessions; ensure documentation is current and actionable insights are generated."
           }
         ]
+      },
+      {
+        "id": 36,
+        "title": "Dependency & Environment Setup for browser-use v0.3.2",
+        "description": "Add/upgrade all required libraries, verify Python 3.11-3.13 compatibility, and bootstrap local dev/CI environments.",
+        "details": "1. Update pyproject.toml:\n   - browser-use==0.3.2\n   - redis>=5.2.0,<7.0.0\n   - aiofiles>=24.1.0\n   - opentelemetry-sdk~=1.25.0\n   - pytest~=8.2.2, pytest-asyncio~=0.23.5, hypothesis~=6.100.0\n   - uv~=0.1.38 (for lockfile management)\n2. Execute:\n   ```bash\n   uv pip install -r pyproject.toml\n   uv pip compile --upgrade\n   uv venv .venv && source .venv/bin/activate\n   ```\n3. Add Playwright install step (headless chromium):\n   `python -m playwright install chromium`\n4. Verify imports with Python 3.11 & 3.13 using tox matrix.\n5. Pin Docker image: `python:3.12-slim-bullseye` + system deps `libgbm-dev libnss3 libatk1.0-0`.\n6. Add pre-commit hooks for isort, black, ruff, mypy.\n7. Update CI (GitHub Actions) to cache Playwright browsers and run tox.\n8. Document changes in CLAUDE.md.",
+        "testStrategy": "• Run `pytest -q` – ensure tests discover environment.\n• `tox -e py311,py313` passes.\n• CI workflow completes <6 min.\n• Validate import graph with `python - <<'PY' ; import browser_use, redis, aiofiles ; PY`.",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Update and Pin Project Dependencies",
+            "description": "Update pyproject.toml to specify browser-use v0.3.2 and required library versions, ensuring all dependencies are compatible with Python 3.11–3.13.",
+            "dependencies": [],
+            "details": "Edit pyproject.toml to include browser-use==0.3.2, redis>=5.2.0,<7.0.0, aiofiles>=24.1.0, opentelemetry-sdk~=1.25.0, pytest~=8.2.2, pytest-asyncio~=0.23.5, hypothesis~=6.100.0, and uv~=0.1.38. Use 'uv pip install' and 'uv pip compile --upgrade' to install and lock dependencies.",
+            "status": "pending",
+            "testStrategy": "Verify successful installation and lockfile generation; check for dependency conflicts or errors."
+          },
+          {
+            "id": 2,
+            "title": "Bootstrap Local Development and CI Environments",
+            "description": "Set up local virtual environment, install Playwright Chromium, and configure Docker image and system dependencies for consistent development and CI.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create and activate a virtual environment using 'uv venv .venv'. Install Playwright Chromium with 'python -m playwright install chromium'. Pin Docker image to python:3.12-slim-bullseye and add system dependencies (libgbm-dev, libnss3, libatk1.0-0).",
+            "status": "pending",
+            "testStrategy": "Confirm Playwright and all system dependencies are installed and functional in both local and CI environments."
+          },
+          {
+            "id": 3,
+            "title": "Verify Python 3.11–3.13 Compatibility and Add Pre-commit Hooks",
+            "description": "Test the project across Python 3.11, 3.12, and 3.13 using tox, and set up pre-commit hooks for code quality tools.",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure tox to run tests in a matrix for Python 3.11, 3.12, and 3.13. Add pre-commit hooks for isort, black, ruff, and mypy to enforce code style and static analysis.",
+            "status": "pending",
+            "testStrategy": "Run tox to ensure all tests pass in each Python version; verify pre-commit hooks trigger and pass on staged changes."
+          },
+          {
+            "id": 4,
+            "title": "Update CI Pipeline and Documentation",
+            "description": "Enhance GitHub Actions to cache Playwright browsers, run tox, and document all setup and changes in CLAUDE.md.",
+            "dependencies": [
+              3
+            ],
+            "details": "Modify CI workflows to cache Playwright browsers and execute tox for all supported Python versions. Update CLAUDE.md with dependency, environment, and CI changes.",
+            "status": "pending",
+            "testStrategy": "Check CI runs for successful caching, test execution, and verify documentation is clear and complete."
+          }
+        ]
+      },
+      {
+        "id": 37,
+        "title": "Consolidate & Extend Configuration System",
+        "description": "Merge browser-use settings into 3-file SmartConfig (core.py, profiles.py, auto_detect.py) with backward compatibility.",
+        "details": "1. In `src/config/core.py` extend `BrowserUseConfig` (Pydantic v2):\n   ```py\n   class BrowserUseConfig(BaseModel):\n       enabled: bool = Field(True)\n       stealth_mode: bool = True\n       stealth_domains: list[str] = Field(default_factory=list)\n       min_agents: int = 2\n       max_agents: int = 10\n       session_persistence_enabled: bool = True\n       redis_url: AnyUrl = env(\"REDIS_URL\", default=\"redis://localhost:6379/0\")\n       filesystem_enabled: bool = True\n       storage_root: Path = Path(\"/data/browser_use\")\n       memory_enabled: bool = False\n       cost_optimization_enabled: bool = True\n   ```\n2. Add `load_browser_use_config()` in `profiles.py` using existing pattern.\n3. Auto-detect Redis & storage in `auto_detect.py`.\n4. Provide environment variable mapping in `.env.example`.\n5. Expose `@lru_cache` provider:\n   ```py\n   @lru_cache\n   def get_browser_use_settings() -> BrowserUseConfig: ...\n   ```\n6. Ensure FastAPI dependency injection uses provider.\n7. Migrate legacy keys → raise deprecation warnings, fallback to new fields.",
+        "testStrategy": "• Unit test validation/aliases.\n• Hypothesis generates random config objects to assert JSON round-trip.\n• Run interactive wizard – config completes in <5 mins.\n• Backward compatibility: load old .env, assert no ValidationError.",
+        "priority": "high",
+        "dependencies": [
+          36,
+          "2"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Integrate BrowserUseConfig into SmartConfig and Implement Backward Compatibility",
+            "description": "Extend and refactor the BrowserUseConfig in core.py, ensuring all browser-use settings are consolidated and compatible with legacy keys. Implement deprecation warnings and fallback logic for old configuration fields.",
+            "dependencies": [],
+            "details": "Update core.py to include all required browser-use settings in BrowserUseConfig (Pydantic v2). Ensure backward compatibility by mapping legacy keys to new fields and raising deprecation warnings when old keys are used. Validate that all settings are properly typed and have sensible defaults.",
+            "status": "pending",
+            "testStrategy": "Write unit tests to verify that both new and legacy configuration keys are loaded correctly, deprecation warnings are raised for legacy keys, and all fields are validated as expected."
+          },
+          {
+            "id": 2,
+            "title": "Implement Configuration Loading, Auto-Detection, and Environment Mapping",
+            "description": "Add load_browser_use_config() in profiles.py, implement Redis and storage auto-detection in auto_detect.py, and provide environment variable mappings in .env.example.",
+            "dependencies": [
+              1
+            ],
+            "details": "Follow the existing loading pattern in profiles.py to add load_browser_use_config(). In auto_detect.py, implement logic to auto-detect Redis and storage settings. Update .env.example to include all relevant environment variable mappings for browser-use settings.",
+            "status": "pending",
+            "testStrategy": "Test that configuration loading works from environment variables and .env files, auto-detection logic correctly identifies Redis and storage settings, and .env.example provides accurate mappings."
+          },
+          {
+            "id": 3,
+            "title": "Expose Cached Provider and Integrate with FastAPI Dependency Injection",
+            "description": "Expose a cached provider for BrowserUseConfig using @lru_cache and ensure it is used as a FastAPI dependency.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement get_browser_use_settings() as an @lru_cache provider. Update FastAPI dependency injection to use this provider for configuration access throughout the application.",
+            "status": "pending",
+            "testStrategy": "Write integration tests to confirm that FastAPI endpoints receive the correct configuration via dependency injection and that the provider is properly cached."
+          }
+        ]
+      },
+      {
+        "id": 38,
+        "title": "FastAPI & MCP Integration of browser-use APIs",
+        "description": "Embed browser-use endpoints and MCP tools into existing FastAPI app without creating a new service.",
+        "details": "1. Add router file `src/api/browser.py`:\n   ```py\n   router = APIRouter(prefix=\"/api/v1/browser\")\n   @router.post(\"/scrape\")\n   async def scrape(request: ScrapeRequest, cfg=Depends(get_browser_use_settings), session=Depends(get_multi_agent_session)): ...\n   ```\n2. In `main.py`: `app.include_router(browser_router, prefix=\"/api/v1/browser\")`.\n3. Hook middleware stack: CORS, auth, rate-limit stay unchanged.\n4. Migrate v0.2.x calls →\n   ```py\n   session = BrowserSession(browser_profile=profile)\n   await session.start()\n   try:\n       ...\n   finally:\n       await session.close()\n   ```\n5. Add MCP tools in `mcp/server.py`:\n   ```py\n   @mcp.tool()\n   async def browser_multi_agent_scrape(...): ...\n   ```\n6. Re-generate OpenAPI docs; ensure endpoints appear.\n7. Use dependency override in tests for mocking.\n8. Keep feature flag `BROWSER_USE_ENABLED` for graceful fallback.",
+        "testStrategy": "• FastAPI `TestClient` integration tests hit `/api/v1/browser/scrape` → 200.\n• Swagger UI shows new paths.\n• MCP registry lists 2 new tools.\n• Load test (locust) with 50 RPS → no regressions.",
+        "priority": "high",
+        "dependencies": [
+          36,
+          37,
+          "4"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add Browser API Router to FastAPI App",
+            "description": "Create and integrate the `src/api/browser.py` router file with browser-use endpoints, such as `/scrape`, and include it in the main FastAPI application.",
+            "dependencies": [],
+            "details": "Define the router with the appropriate prefix and endpoints. In `main.py`, use `app.include_router(browser_router, prefix=\"/api/v1/browser\")` to register the router.",
+            "status": "pending",
+            "testStrategy": "Verify that the `/api/v1/browser/scrape` endpoint is accessible and responds as expected."
+          },
+          {
+            "id": 2,
+            "title": "Preserve and Configure Middleware Stack",
+            "description": "Ensure that the existing middleware stack (CORS, authentication, rate limiting) remains unchanged and is compatible with the new browser-use endpoints.",
+            "dependencies": [
+              1
+            ],
+            "details": "Review middleware configuration in `main.py` and confirm that new endpoints are protected and accessible as intended.",
+            "status": "pending",
+            "testStrategy": "Test endpoint access with and without proper authentication and verify CORS and rate limiting behavior."
+          },
+          {
+            "id": 3,
+            "title": "Migrate Legacy v0.2.x Browser Session Calls",
+            "description": "Update all legacy browser session calls to use the new session management pattern with proper async context handling.",
+            "dependencies": [
+              1
+            ],
+            "details": "Replace old session usage with the pattern: `session = BrowserSession(browser_profile=profile); await session.start(); try: ... finally: await session.close()`.",
+            "status": "pending",
+            "testStrategy": "Run integration tests to ensure browser sessions are started and closed correctly, and no resource leaks occur."
+          },
+          {
+            "id": 4,
+            "title": "Integrate MCP Tools into FastAPI App",
+            "description": "Add MCP tool definitions (e.g., `browser_multi_agent_scrape`) in `mcp/server.py` and mount the MCP server within the FastAPI app.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define MCP tools using `@mcp.tool()` decorators and ensure MCP routes are mounted using `mcp.mount()` and `mcp.setup_server()` as per fastapi-mcp integration guides.",
+            "status": "pending",
+            "testStrategy": "Verify that MCP endpoints are available under `/mcp` and that tools can be invoked via MCP-compatible clients."
+          },
+          {
+            "id": 5,
+            "title": "Update OpenAPI Documentation and Testing Strategy",
+            "description": "Regenerate OpenAPI documentation to include new endpoints and implement dependency overrides for mocking in tests.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Ensure all browser-use and MCP endpoints appear in the OpenAPI docs. Use FastAPI's dependency override mechanism to mock dependencies in automated tests.",
+            "status": "pending",
+            "testStrategy": "Check OpenAPI docs for completeness and run unit tests with mocked dependencies to validate endpoint behavior."
+          },
+          {
+            "id": 6,
+            "title": "Implement and Validate Feature Flag for Browser-Use",
+            "description": "Maintain and test the `BROWSER_USE_ENABLED` feature flag to allow graceful fallback if browser-use features are disabled.",
+            "dependencies": [
+              1,
+              3,
+              4
+            ],
+            "details": "Ensure all browser-use logic checks the feature flag and provides fallback behavior when disabled.",
+            "status": "pending",
+            "testStrategy": "Toggle the feature flag in different environments and verify that endpoints and MCP tools behave as expected, including fallback scenarios."
+          }
+        ]
+      },
+      {
+        "id": 39,
+        "title": "Function-Based Multi-Agent Core",
+        "description": "Implement lightweight async multi-agent orchestration using semaphores & @lru_cache pools (2-10 agents).",
+        "details": "1. Core file `src/browser_use/agents.py`:\n   ```py\n   _AGENT_LIMIT = Semaphore(cfg.max_agents)\n   @lru_cache\n   def _profile_template():\n       return BrowserProfile(...)\n   async def get_agent() -> AsyncIterator[BrowserSession]:\n       async with _AGENT_LIMIT:\n           session = BrowserSession(browser_profile=_profile_template())\n           await session.start();\n           try:  yield session\n           finally: await session.close()\n   ```\n2. Add adaptive scaler: if queue length > agents*0.8 increase max_agents (≤cfg.max_agents).\n3. Health probe: `agent_health()` returns JSON of active_count, failures.\n4. Resource tracking via `tracemalloc` snapshots every 60s.\n5. Align error propagation with task 41.\n6. Avoid class hierarchies; keep pure functions.",
+        "testStrategy": "• Async pytest: spin 10 concurrent `get_agent()` calls – all succeed <2s.\n• Stress test with 1k URLs – measure 3× throughput over single agent.\n• Memory baseline vs peak ≤1.5×.\n• Race-condition test: ensure semaphore never exceeds limit.",
+        "priority": "high",
+        "dependencies": [
+          38
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Async Multi-Agent Orchestration Core",
+            "description": "Develop the core async orchestration logic for managing 2-10 lightweight agents using semaphores and @lru_cache pools, ensuring pure function design and no class hierarchies.",
+            "dependencies": [],
+            "details": "Create or refactor `src/browser_use/agents.py` to use a semaphore for agent concurrency limits and an @lru_cache for browser profile pooling. Ensure each agent session is managed asynchronously and resources are properly acquired and released.",
+            "status": "pending",
+            "testStrategy": "Write unit tests to verify correct agent acquisition, release, and concurrency limits. Simulate multiple concurrent agent requests and ensure no more than the allowed number run in parallel."
+          },
+          {
+            "id": 2,
+            "title": "Add Adaptive Agent Scaler",
+            "description": "Implement logic to dynamically adjust the maximum number of concurrent agents based on queue length, scaling up when demand exceeds 80% of current capacity, but never exceeding cfg.max_agents.",
+            "dependencies": [
+              1
+            ],
+            "details": "Monitor the agent request queue and increase the semaphore limit if the queue length surpasses 0.8 times the current agent count, up to the configured maximum. Ensure thread-safe updates and integration with the core orchestration logic.",
+            "status": "pending",
+            "testStrategy": "Simulate varying queue loads and verify that the agent limit increases appropriately and never exceeds cfg.max_agents. Test edge cases where demand fluctuates rapidly."
+          },
+          {
+            "id": 3,
+            "title": "Implement Agent Health Probe and Resource Tracking",
+            "description": "Create a health probe function returning JSON with active agent count and failure statistics, and integrate periodic resource tracking using tracemalloc snapshots every 60 seconds.",
+            "dependencies": [
+              1
+            ],
+            "details": "Expose an async function `agent_health()` that reports the number of active agents and recent failures. Set up a background task to capture and log tracemalloc memory snapshots at regular intervals for monitoring.",
+            "status": "pending",
+            "testStrategy": "Test the health probe under normal and failure conditions. Verify that tracemalloc snapshots are taken and logged every 60 seconds without impacting agent performance."
+          },
+          {
+            "id": 4,
+            "title": "Align Error Propagation with Task 41",
+            "description": "Ensure all error handling and propagation in the orchestration core matches the conventions and requirements defined in Task 41.",
+            "dependencies": [
+              1
+            ],
+            "details": "Review error handling in agent acquisition, scaling, and health probe logic. Refactor as needed to align with Task 41's error propagation strategy, ensuring consistent and predictable error reporting.",
+            "status": "pending",
+            "testStrategy": "Inject faults and verify that errors are propagated and reported according to Task 41's specifications. Confirm that no unhandled exceptions leak from the orchestration layer."
+          }
+        ]
+      },
+      {
+        "id": 40,
+        "title": "Redis-Backed Session Persistence Functions",
+        "description": "Persist / restore browser sessions via existing Redis cluster to reach ≥80 % reuse.",
+        "details": "1. Module `src/browser_use/session_store.py`:\n   ```py\n   from redis.asyncio import Redis\n   r = Redis.from_url(cfg.redis_url, decode_responses=False)\n   KEY_TMPL = \"browser:session:{fingerprint}\"\n   async def save(session: BrowserSession):\n       await r.set(KEY_TMPL.format(...), session.export(), ex=86400)\n   async def restore(fingerprint:str)->BrowserSession|None:\n       data = await r.get(KEY_TMPL.format(...));\n       if data: return BrowserSession.import_(data)\n   ```\n2. Hook into agent lifecycle: on close → save(); before start → attempt restore.\n3. Use `orjson` for serialization.\n4. Implement affinity map `browser:affinity:{agent_id}`.\n5. TTL cleanup job via Redis keyspace notifications.\n6. Expose Prometheus counters: `session_reused_total`, `session_miss_total`.",
+        "testStrategy": "• Unit tests with `fakeredis` mock.\n• Benchmark: 100 session cycles – `reuse_rate >=0.8`.\n• Chaos test: kill Redis → agents fall back gracefully.\n• Redis MONITOR ensures only ≥1 command per session reuse.",
+        "priority": "medium",
+        "dependencies": [
+          38
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Redis-Backed Session Save and Restore Functions",
+            "description": "Develop asynchronous functions to persist and restore browser sessions using the existing Redis cluster, ensuring serialization with orjson and correct key templating.",
+            "dependencies": [],
+            "details": "Create or update functions in `src/browser_use/session_store.py` to save sessions on close and restore them before agent start. Use orjson for serialization and ensure sessions are stored with a TTL of 86400 seconds. Handle missing or corrupted data gracefully.",
+            "status": "pending",
+            "testStrategy": "Unit test save and restore functions with various session objects, including edge cases (missing, expired, or corrupted data). Verify correct serialization/deserialization and TTL enforcement."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Session Persistence into Agent Lifecycle and Affinity Mapping",
+            "description": "Hook session save/restore into the agent lifecycle and implement the affinity map to associate agents with session fingerprints.",
+            "dependencies": [
+              1
+            ],
+            "details": "Modify agent lifecycle hooks to call save on close and attempt restore before start. Implement and maintain the `browser:affinity:{agent_id}` mapping in Redis to track agent-session associations.",
+            "status": "pending",
+            "testStrategy": "Integration test agent startup and shutdown flows, verifying session reuse rate and correct affinity mapping. Simulate multiple agents and check mapping consistency."
+          },
+          {
+            "id": 3,
+            "title": "Implement TTL Cleanup, Monitoring, and Metrics Exposure",
+            "description": "Set up Redis keyspace notifications for TTL cleanup and expose Prometheus counters for session reuse and misses.",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure Redis to emit keyspace notifications for session expiration. Implement a cleanup job if needed. Add Prometheus metrics `session_reused_total` and `session_miss_total` to monitor session persistence effectiveness.",
+            "status": "pending",
+            "testStrategy": "Functional test TTL expiration and cleanup, and verify Prometheus metrics increment correctly under various session reuse/miss scenarios."
+          }
+        ]
+      },
+      {
+        "id": 41,
+        "title": "Unified Error Handling & Circuit Breakers",
+        "description": "Adopt FastAPI HTTPException patterns and shared circuit-breaker library for browser-use external calls.",
+        "details": "1. Add `src/common/errors.py` mapping codes → messages.\n2. Wrap external operations:\n   ```py\n   breaker = SharedCircuitBreaker(name=\"browser_use\", fail_max=5, reset_timeout=60)\n   @breaker\n   async def navigate(session, url): ...\n   ```\n3. On breaker open → raise `HTTPException(status_code=503, detail=\"Upstream unavailable\")`.\n4. Add middleware to translate `BrowserUseError` to HTTPException.\n5. Push breaker metrics to OTEL: state, failures, resets.\n6. Default thresholds same as main app via `settings.circuit_breaker`.",
+        "testStrategy": "• Unit tests: mock failures → breaker opens after 5 errors.\n• Integration test: breaker open → endpoint returns 503 within 10 ms.\n• OTEL collector receives breaker state change span.\n• Load test: 1k failures → no memory leaks.",
+        "priority": "high",
+        "dependencies": [
+          38,
+          "3",
+          "5"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Centralized Error Code Mapping",
+            "description": "Create a module (e.g., src/common/errors.py) that maps internal error codes to human-readable messages for consistent error responses.",
+            "dependencies": [],
+            "details": "Define a dictionary or similar structure mapping error codes to messages. Ensure this mapping is accessible throughout the application for use in exception handling.",
+            "status": "pending",
+            "testStrategy": "Unit test the mapping to verify correct message retrieval for each code and ensure coverage for all expected error codes."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Shared Circuit Breaker for External Browser Calls",
+            "description": "Wrap all browser-use external operations with a shared circuit breaker instance to manage failures and prevent cascading errors.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use a shared circuit breaker (e.g., SharedCircuitBreaker) with defined thresholds (fail_max, reset_timeout) and ensure all relevant external calls are decorated or wrapped accordingly.",
+            "status": "pending",
+            "testStrategy": "Simulate repeated failures and verify the circuit breaker transitions between closed, open, and half-open states as expected."
+          },
+          {
+            "id": 3,
+            "title": "Raise HTTPException on Circuit Breaker Open State",
+            "description": "Ensure that when the circuit breaker is open, the application raises a FastAPI HTTPException with status code 503 and a standardized error message.",
+            "dependencies": [
+              2
+            ],
+            "details": "Modify the external call wrappers to detect the open state and raise HTTPException(status_code=503, detail='Upstream unavailable') as per FastAPI patterns.",
+            "status": "pending",
+            "testStrategy": "Trigger the circuit breaker open state and confirm that HTTP 503 responses are returned with the correct detail message."
+          },
+          {
+            "id": 4,
+            "title": "Add Middleware to Translate BrowserUseError to HTTPException",
+            "description": "Implement FastAPI middleware or exception handlers to catch BrowserUseError exceptions and translate them into appropriate HTTPException responses.",
+            "dependencies": [
+              1
+            ],
+            "details": "Register a global exception handler or middleware that intercepts BrowserUseError and raises HTTPException with mapped error codes and messages.",
+            "status": "pending",
+            "testStrategy": "Raise BrowserUseError in test endpoints and verify that the correct HTTPException is returned with the expected status code and message."
+          },
+          {
+            "id": 5,
+            "title": "Push Circuit Breaker Metrics to OpenTelemetry",
+            "description": "Instrument the circuit breaker to export metrics such as state, failure count, and reset events to OpenTelemetry for observability.",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate with OpenTelemetry to push relevant circuit breaker metrics, ensuring they are tagged and structured for monitoring and alerting.",
+            "status": "pending",
+            "testStrategy": "Simulate circuit breaker state changes and verify that metrics are correctly emitted and visible in the observability backend."
+          }
+        ]
+      },
+      {
+        "id": 42,
+        "title": "Observability & Metrics Integration",
+        "description": "Expose browser-use traces & custom Prometheus metrics within existing OpenTelemetry → Prometheus → Grafana pipeline.",
+        "details": "1. Instrument code with `@tracer.start_as_current_span` for major steps (agent_acquire, page_fetch, session_restore).\n2. Create metrics module:\n   ```py\n   from prometheus_client import Counter, Gauge\n   active_agents = Gauge(\"browser_active_agents\", \"Running browser sessions\")\n   session_reuse = Counter(\"browser_session_reuse_total\", ...)\n   ```\n3. FastAPI startup event registers collectors.\n4. Update Grafana dashboard JSON with new panels.\n5. Health endpoint `/health/browser` returns current agent stats + Redis ping time.\n6. Confirm <5 % CPU overhead via `otel_batch_span_processor(max_queue_size=4096)`.",
+        "testStrategy": "• `promtool` rules test passes.\n• Curl `/metrics` – new metrics present.\n• Grafana dashboard loads with data.\n• Benchmark shows <5 % overhead toggling instrumentation.",
+        "priority": "medium",
+        "dependencies": [
+          39,
+          40,
+          41,
+          "20"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instrument Browser Code with OpenTelemetry Tracing",
+            "description": "Add OpenTelemetry tracing to major browser-use steps (agent_acquire, page_fetch, session_restore) using @tracer.start_as_current_span.",
+            "dependencies": [],
+            "details": "Ensure all critical browser operations are wrapped with trace spans to capture detailed execution flow for observability.",
+            "status": "pending",
+            "testStrategy": "Verify traces appear in the OpenTelemetry collector and are exported to Prometheus; check span names and attributes in Grafana."
+          },
+          {
+            "id": 2,
+            "title": "Implement Custom Prometheus Metrics Module",
+            "description": "Create a metrics module using prometheus_client to expose custom metrics such as active_agents (Gauge) and session_reuse (Counter).",
+            "dependencies": [
+              1
+            ],
+            "details": "Define and register all required metrics, ensuring they are updated appropriately during browser session lifecycle events.",
+            "status": "pending",
+            "testStrategy": "Query Prometheus for new metrics and confirm correct values during simulated browser activity."
+          },
+          {
+            "id": 3,
+            "title": "Register Metrics Collectors on FastAPI Startup",
+            "description": "Integrate the metrics module with FastAPI by registering collectors during the application startup event.",
+            "dependencies": [
+              2
+            ],
+            "details": "Ensure all metrics are initialized and available before handling requests; confirm /metrics endpoint exposes new metrics.",
+            "status": "pending",
+            "testStrategy": "Start the FastAPI app and confirm /metrics endpoint lists all custom metrics without errors."
+          },
+          {
+            "id": 4,
+            "title": "Update Grafana Dashboard with New Panels",
+            "description": "Modify the existing Grafana dashboard JSON to add panels visualizing the new browser-use traces and custom metrics.",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure Grafana to use Prometheus as a data source and create panels for active_agents, session_reuse, and trace visualizations.",
+            "status": "pending",
+            "testStrategy": "Load the updated dashboard and verify new panels display real-time data from Prometheus and OpenTelemetry traces."
+          },
+          {
+            "id": 5,
+            "title": "Implement and Test Browser Health Endpoint",
+            "description": "Develop the /health/browser endpoint to return current agent stats and Redis ping time for health monitoring.",
+            "dependencies": [
+              3
+            ],
+            "details": "Expose a FastAPI endpoint that aggregates agent metrics and Redis latency, returning a structured health report.",
+            "status": "pending",
+            "testStrategy": "Call the endpoint and validate the response structure and accuracy under normal and degraded conditions."
+          },
+          {
+            "id": 6,
+            "title": "Validate Performance Overhead and Optimize Batch Processing",
+            "description": "Measure and confirm that OpenTelemetry tracing and metrics integration add less than 5% CPU overhead, tuning otel_batch_span_processor as needed.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Benchmark application CPU usage before and after observability integration; adjust max_queue_size and batch settings for optimal performance.",
+            "status": "pending",
+            "testStrategy": "Run load tests and compare CPU metrics; ensure overhead remains below threshold and no data loss occurs."
+          }
+        ]
+      },
+      {
+        "id": 43,
+        "title": "Comprehensive Test Suite & CI Integration",
+        "description": "Reach ≥95 % coverage for browser-use modules and integrate with existing pipeline.",
+        "details": "1. Structure tests:\n   - `tests/unit/` – pure logic (config, utils).\n   - `tests/async/` – async functions with pytest-asyncio.\n   - `tests/integration/` – FastAPI testclient + play-wright.\n   - `tests/property/` – Hypothesis strategies.\n   - `tests/perf/` – locust scripts measuring throughput.\n2. Use `pytest-cov --cov=browser_use --cov-fail-under=95`.\n3. Parallelize with `pytest-xdist -n auto`.\n4. Add GitHub Action step `playwright install --with-deps`.\n5. Upload coverage XML to Codecov.\n6. Introduce contract tests for OpenAPI schema stability (`schemathesis`).\n7. Generate test data via `faker` to avoid external IO.",
+        "testStrategy": "• CI run passes on PR.\n• Coverage report shows ≥95 %.\n• Failing property-based case auto-shrinks.\n• Perf test: 5 agents scrape 40 pages/min in CI perf job.\n• End-to-end docker-compose up → make e2e passes in <90 s.",
+        "priority": "high",
+        "dependencies": [
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Structure and Organize Tests",
+            "description": "Organize tests into unit, async, integration, property, and performance categories.",
+            "dependencies": [],
+            "details": "Create directories for each test type: `tests/unit/`, `tests/async/`, `tests/integration/`, `tests/property/`, and `tests/perf/`.",
+            "status": "pending",
+            "testStrategy": "Pytest"
+          },
+          {
+            "id": 2,
+            "title": "Implement Test Coverage and Parallelization",
+            "description": "Achieve ≥95% coverage for browser-use modules and parallelize tests.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use `pytest-cov --cov=browser_use --cov-fail-under=95` and parallelize with `pytest-xdist -n auto`.",
+            "status": "pending",
+            "testStrategy": "Pytest-Cov"
+          },
+          {
+            "id": 3,
+            "title": "Integrate with CI/CD Pipeline",
+            "description": "Integrate tests with GitHub Actions and upload coverage reports.",
+            "dependencies": [
+              2
+            ],
+            "details": "Add GitHub Action step `playwright install --with-deps` and upload coverage XML to Codecov.",
+            "status": "pending",
+            "testStrategy": "GitHub Actions"
+          },
+          {
+            "id": 4,
+            "title": "Enhance Test Suite with Contract and Data Generation",
+            "description": "Introduce contract tests and generate test data.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use `schemathesis` for OpenAPI schema stability and generate test data via `faker`.",
+            "status": "pending",
+            "testStrategy": "Schemathesis and Faker"
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-06-21T19:30:53.185Z",
-      "updated": "2025-06-24T00:30:32.117Z",
+      "updated": "2025-06-24T04:01:24.113Z",
       "description": "Tasks for master context"
     }
   }
