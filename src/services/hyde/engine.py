@@ -9,14 +9,12 @@ import numpy as np
 
 from ..base import BaseService
 from ..embeddings.manager import EmbeddingManager
-from ..errors import EmbeddingServiceError
-from ..errors import QdrantServiceError
+from ..errors import EmbeddingServiceError, QdrantServiceError
 from ..vector_db.service import QdrantService
 from .cache import HyDECache
-from .config import HyDEConfig
-from .config import HyDEMetricsConfig
-from .config import HyDEPromptConfig
+from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from .generator import HypotheticalDocumentGenerator
+
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +311,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.error(f"Query API search failed: {e}")
+            logger.exception(f"Query API search failed: {e}")
             raise QdrantServiceError(f"HyDE search execution failed: {e}") from e
 
     async def _apply_reranking(
@@ -363,7 +361,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.error(f"Fallback search failed: {e}")
+            logger.exception(f"Fallback search failed: {e}")
             raise EmbeddingServiceError(
                 f"Both HyDE and fallback search failed: {e}"
             ) from e

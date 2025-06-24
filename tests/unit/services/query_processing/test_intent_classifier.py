@@ -3,10 +3,13 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from src.services.query_processing.intent_classifier import QueryIntentClassifier
-from src.services.query_processing.models import QueryComplexity
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import QueryIntentClassification
+from src.services.query_processing.models import (
+    QueryComplexity,
+    QueryIntent,
+    QueryIntentClassification,
+)
 
 
 @pytest.fixture
@@ -309,7 +312,7 @@ class TestQueryIntentClassifier:
         result = await initialized_classifier.classify_query_advanced(query)
 
         # All confidence scores should be between 0 and 1
-        for _intent, score in result.confidence_scores.items():
+        for score in result.confidence_scores.values():
             assert 0.0 <= score <= 1.0
 
     async def test_classification_reasoning_content(self, initialized_classifier):

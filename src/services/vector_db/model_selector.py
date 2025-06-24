@@ -7,14 +7,17 @@ characteristics, performance history, and cost optimization.
 import logging
 from typing import Any
 
-from ...config import UnifiedConfig
-from ...config.enums import EmbeddingModel
-from ...config.enums import ModelType
-from ...config.enums import OptimizationStrategy
-from ...config.enums import QueryComplexity
-from ...config.enums import QueryType
-from ...models.vector_search import ModelSelectionStrategy
-from ...models.vector_search import QueryClassification
+from src.config import (
+    Config,
+    EmbeddingModel,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+)
+
+from ...models.vector_search import ModelSelectionStrategy, QueryClassification
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,7 @@ logger = logging.getLogger(__name__)
 class ModelSelector:
     """Intelligent model selector for optimal embedding model selection."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize model selector.
 
         Args:

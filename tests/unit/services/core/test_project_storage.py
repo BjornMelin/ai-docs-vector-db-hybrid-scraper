@@ -5,12 +5,11 @@ import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from src.services.core.project_storage import ProjectStorage
-from src.services.core.project_storage import ProjectStorageError
+
+from src.services.core.project_storage import ProjectStorage, ProjectStorageError
 
 
 class TestProjectStorageError:

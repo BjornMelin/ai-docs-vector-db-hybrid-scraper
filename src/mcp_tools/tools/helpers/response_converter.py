@@ -2,11 +2,13 @@
 
 from uuid import uuid4
 
-from ...models.responses import AdvancedQueryProcessingResponse
-from ...models.responses import QueryIntentResult
-from ...models.responses import QueryPreprocessingResult
-from ...models.responses import SearchResult
-from ...models.responses import SearchStrategyResult
+from ...models.responses import (
+    AdvancedQueryProcessingResponse,
+    QueryIntentResult,
+    QueryPreprocessingResult,
+    SearchResult,
+    SearchStrategyResult,
+)
 
 
 class ResponseConverter:

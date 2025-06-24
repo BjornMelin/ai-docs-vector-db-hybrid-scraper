@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -19,6 +20,7 @@ else:
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import SearchRequest
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -135,5 +137,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Similar search failed: {e}")
-            logger.error(f"Similar search failed: {e}")
+            logger.exception(f"Similar search failed: {e}")
             raise

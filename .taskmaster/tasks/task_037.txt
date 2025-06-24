@@ -1,0 +1,58 @@
+# Task ID: 37
+# Title: Consolidate & Extend Configuration System
+# Status: pending
+# Dependencies: 36, 2
+# Priority: high
+# Description: Merge browser-use settings into 3-file SmartConfig (core.py, profiles.py, auto_detect.py) with backward compatibility.
+# Details:
+1. In `src/config/core.py` extend `BrowserUseConfig` (Pydantic v2):
+   ```py
+   class BrowserUseConfig(BaseModel):
+       enabled: bool = Field(True)
+       stealth_mode: bool = True
+       stealth_domains: list[str] = Field(default_factory=list)
+       min_agents: int = 2
+       max_agents: int = 10
+       session_persistence_enabled: bool = True
+       redis_url: AnyUrl = env("REDIS_URL", default="redis://localhost:6379/0")
+       filesystem_enabled: bool = True
+       storage_root: Path = Path("/data/browser_use")
+       memory_enabled: bool = False
+       cost_optimization_enabled: bool = True
+   ```
+2. Add `load_browser_use_config()` in `profiles.py` using existing pattern.
+3. Auto-detect Redis & storage in `auto_detect.py`.
+4. Provide environment variable mapping in `.env.example`.
+5. Expose `@lru_cache` provider:
+   ```py
+   @lru_cache
+   def get_browser_use_settings() -> BrowserUseConfig: ...
+   ```
+6. Ensure FastAPI dependency injection uses provider.
+7. Migrate legacy keys → raise deprecation warnings, fallback to new fields.
+
+# Test Strategy:
+• Unit test validation/aliases.
+• Hypothesis generates random config objects to assert JSON round-trip.
+• Run interactive wizard – config completes in <5 mins.
+• Backward compatibility: load old .env, assert no ValidationError.
+
+# Subtasks:
+## 1. Integrate BrowserUseConfig into SmartConfig and Implement Backward Compatibility [pending]
+### Dependencies: None
+### Description: Extend and refactor the BrowserUseConfig in core.py, ensuring all browser-use settings are consolidated and compatible with legacy keys. Implement deprecation warnings and fallback logic for old configuration fields.
+### Details:
+Update core.py to include all required browser-use settings in BrowserUseConfig (Pydantic v2). Ensure backward compatibility by mapping legacy keys to new fields and raising deprecation warnings when old keys are used. Validate that all settings are properly typed and have sensible defaults.
+
+## 2. Implement Configuration Loading, Auto-Detection, and Environment Mapping [pending]
+### Dependencies: 37.1
+### Description: Add load_browser_use_config() in profiles.py, implement Redis and storage auto-detection in auto_detect.py, and provide environment variable mappings in .env.example.
+### Details:
+Follow the existing loading pattern in profiles.py to add load_browser_use_config(). In auto_detect.py, implement logic to auto-detect Redis and storage settings. Update .env.example to include all relevant environment variable mappings for browser-use settings.
+
+## 3. Expose Cached Provider and Integrate with FastAPI Dependency Injection [pending]
+### Dependencies: 37.2
+### Description: Expose a cached provider for BrowserUseConfig using @lru_cache and ensure it is used as a FastAPI dependency.
+### Details:
+Implement get_browser_use_settings() as an @lru_cache provider. Update FastAPI dependency injection to use this provider for configuration access throughout the application.
+

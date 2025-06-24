@@ -1,19 +1,15 @@
 """Tests for HyDE query processing engine."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.errors import EmbeddingServiceError
-from src.services.errors import QdrantServiceError
+from src.services.errors import EmbeddingServiceError, QdrantServiceError
 from src.services.hyde.cache import HyDECache
-from src.services.hyde.config import HyDEConfig
-from src.services.hyde.config import HyDEMetricsConfig
-from src.services.hyde.config import HyDEPromptConfig
+from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from src.services.hyde.engine import HyDEQueryEngine
-from src.services.hyde.generator import GenerationResult
-from src.services.hyde.generator import HypotheticalDocumentGenerator
+from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 from src.services.vector_db.service import QdrantService
 
 

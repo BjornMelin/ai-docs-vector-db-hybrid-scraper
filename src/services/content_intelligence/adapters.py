@@ -8,8 +8,8 @@ import logging
 from typing import Any
 from urllib.parse import urlparse
 
-from .models import AdaptationRecommendation
-from .models import AdaptationStrategy
+from .models import AdaptationRecommendation, AdaptationStrategy
+
 
 logger = logging.getLogger(__name__)
 

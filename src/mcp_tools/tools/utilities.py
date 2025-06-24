@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,14 +19,14 @@ else:
 
 from ...infrastructure.client_manager import ClientManager
 
+
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register utility tools with the MCP server."""
 
-    from ..models.responses import ConfigValidationResponse
-    from ..models.responses import GenericDictResponse
+    from ..models.responses import ConfigValidationResponse, GenericDictResponse
 
     @mcp.tool()
     async def estimate_costs(
@@ -90,7 +91,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to estimate costs: {e}")
-            logger.error(f"Failed to estimate costs: {e}")
+            logger.exception(f"Failed to estimate costs: {e}")
             raise
 
     @mcp.tool()
@@ -168,5 +169,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to validate configuration: {e}")
-            logger.error(f"Failed to validate configuration: {e}")
+            logger.exception(f"Failed to validate configuration: {e}")
             raise

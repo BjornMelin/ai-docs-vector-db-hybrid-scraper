@@ -1,22 +1,24 @@
 """Tests for the lightweight HTTP scraper."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 from bs4 import BeautifulSoup
-from src.config.models import LightweightScraperConfig
-from src.services.crawling.lightweight_scraper import LightweightScraper
-from src.services.crawling.lightweight_scraper import TierRecommendation
+
+# LightweightScraperConfig not in simplified config, use Config instead
+from src.config import Config
+from src.services.crawling.lightweight_scraper import (
+    LightweightScraper,
+    TierRecommendation,
+)
 from src.services.errors import CrawlServiceError
 
 
 @pytest.fixture
 def config():
     """Create test configuration."""
-    return LightweightScraperConfig(
+    return Config(
         enable_lightweight_tier=True,
         use_head_analysis=True,
         content_threshold=100,

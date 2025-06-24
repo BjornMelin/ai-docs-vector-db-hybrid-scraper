@@ -10,18 +10,18 @@ Comprehensive testing of:
 """
 
 import asyncio
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import ValidationError
-from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import DocumentRequest
-from src.mcp_tools.models.requests import EmbeddingRequest
-from src.mcp_tools.models.requests import SearchRequest
 
-from tests.mocks.mock_tools import MockMCPServer
-from tests.mocks.mock_tools import register_mock_tools
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import (
+    DocumentRequest,
+    EmbeddingRequest,
+    SearchRequest,
+)
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 class TestMCPEdgeCases:

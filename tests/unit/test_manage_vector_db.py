@@ -1,26 +1,27 @@
 """Tests for manage_vector_db.py with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-from src.config import UnifiedConfig
-from src.manage_vector_db import CollectionInfo
-from src.manage_vector_db import DatabaseStats
-from src.manage_vector_db import VectorDBManager
-from src.manage_vector_db import _create_manager_from_context
-from src.manage_vector_db import cli
-from src.manage_vector_db import create_embeddings
-from src.manage_vector_db import main
-from src.manage_vector_db import setup_logging
+
+from src.config import Config
+from src.manage_vector_db import (
+    CollectionInfo,
+    DatabaseStats,
+    VectorDBManager,
+    _create_manager_from_context,
+    cli,
+    create_embeddings,
+    main,
+    setup_logging,
+)
 
 
 @pytest.fixture
 def mock_config():
     """Create mock unified config."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
     config.qdrant = MagicMock()
     config.qdrant.url = "http://localhost:6333"
     return config
@@ -909,7 +910,7 @@ class TestUtilityFunctions:
     @patch("src.manage_vector_db.ClientManager")
     def test_create_manager_from_context(self, mock_cm_class, mock_get_config):
         """Test _create_manager_from_context function."""
-        mock_config = MagicMock(spec=UnifiedConfig)
+        mock_config = MagicMock(spec=Config)
         mock_config.qdrant = MagicMock()
         mock_get_config.return_value = mock_config
         mock_client_manager = AsyncMock()
@@ -929,7 +930,7 @@ class TestUtilityFunctions:
     @patch("src.manage_vector_db.ClientManager")
     def test_create_manager_from_context_no_url(self, mock_cm_class, mock_get_config):
         """Test _create_manager_from_context without URL override."""
-        mock_config = MagicMock(spec=UnifiedConfig)
+        mock_config = MagicMock(spec=Config)
         mock_get_config.return_value = mock_config
         mock_client_manager = AsyncMock()
         mock_cm_class.return_value = mock_client_manager

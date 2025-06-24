@@ -1,7 +1,6 @@
 """Tests for crawling extractors module."""
 
-from src.services.crawling.extractors import DocumentationExtractor
-from src.services.crawling.extractors import JavaScriptExecutor
+from src.services.crawling.extractors import DocumentationExtractor, JavaScriptExecutor
 
 
 class TestJavaScriptExecutor:
@@ -16,7 +15,7 @@ class TestJavaScriptExecutor:
         assert "click_show_more" in executor.common_patterns
 
         # Verify patterns are non-empty strings
-        for _pattern_name, pattern_code in executor.common_patterns.items():
+        for pattern_code in executor.common_patterns.values():
             assert isinstance(pattern_code, str)
             assert len(pattern_code.strip()) > 0
 

@@ -12,14 +12,13 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -417,7 +416,7 @@ class BrowserAutomationMonitor:
             try:
                 handler(alert)
             except Exception as e:
-                logger.error(f"Alert handler failed: {e}")
+                logger.exception(f"Alert handler failed: {e}")
 
         logger.warning(f"Alert raised: {alert.message}")
 
@@ -437,7 +436,7 @@ class BrowserAutomationMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring loop error: {e}")
+                logger.exception(f"Monitoring loop error: {e}")
                 await asyncio.sleep(5)  # Brief pause before retry
 
     async def _cleanup_old_data(self):

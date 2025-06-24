@@ -2,11 +2,11 @@
 
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
-    from ...config.models import HyDEConfig as UnifiedHyDEConfig
+    from src.config import HyDEConfig as UnifiedHyDEConfig
 
 
 class HyDEConfig(BaseModel):

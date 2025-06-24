@@ -1,523 +1,218 @@
-"""Adaptive fusion weight tuner for hybrid search optimization.
+"""Adaptive fusion tuner for optimizing hybrid search weight combinations.
 
-This module implements ML-based adaptive fusion weight tuning using effectiveness
-scoring and online learning algorithms like multi-armed bandits.
+This module implements machine learning-based tuning of fusion weights for hybrid search,
+optimizing the combination of dense and sparse vector search results.
 """
 
 import logging
-import math
-import random
 import time
 from typing import Any
 
-import numpy as np
-
-from ...config import UnifiedConfig
-from ...models.vector_search import AdaptiveFusionWeights
-from ...models.vector_search import EffectivenessScore
+from ...config import Config
 from ...models.vector_search import QueryClassification
+
 
 logger = logging.getLogger(__name__)
 
 
 class AdaptiveFusionTuner:
-    """Adaptive fusion weight tuner using effectiveness scoring and online learning."""
+    """ML-based adaptive fusion tuner for hybrid search optimization."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize adaptive fusion tuner.
 
         Args:
             config: Unified configuration
         """
         self.config = config
-        self.effectiveness_history: dict[str, list[EffectivenessScore]] = {}
-        self.weight_history: dict[str, list[AdaptiveFusionWeights]] = {}
+        self.performance_history: dict[str, dict[str, float]] = {}
+        self.total_queries = 0
+        self.successful_optimizations = 0
 
-        # Multi-armed bandit parameters
-        self.epsilon = 0.1  # Exploration rate for ε-greedy
-        self.learning_rate = 0.01
-        self.confidence_multiplier = 2.0  # For UCB algorithm
-
-        # Weight adjustment parameters
-        self.min_weight = 0.1  # Minimum weight to maintain diversity
-        self.max_weight = 0.9  # Maximum weight to maintain balance
-        self.adaptation_threshold = 0.05  # Minimum change threshold
-
-        # Performance tracking
-        self.query_count = 0
-        self.total_reward = 0.0
-        self.arm_counts = {"dense": 0, "sparse": 0, "balanced": 0}
-        self.arm_rewards = {"dense": 0.0, "sparse": 0.0, "balanced": 0.0}
+        # Default weights for different query types
+        self.default_weights = {
+            "code": {"dense": 0.7, "sparse": 0.3},
+            "documentation": {"dense": 0.6, "sparse": 0.4},
+            "api_reference": {"dense": 0.5, "sparse": 0.5},
+            "conceptual": {"dense": 0.8, "sparse": 0.2},
+            "troubleshooting": {"dense": 0.6, "sparse": 0.4},
+            "multimodal": {"dense": 0.7, "sparse": 0.3},
+            "default": {"dense": 0.7, "sparse": 0.3},
+        }
 
     async def compute_adaptive_weights(
         self,
         query_classification: QueryClassification,
-        query_id: str,
-        dense_results: list[dict[str, Any]] | None = None,
-        sparse_results: list[dict[str, Any]] | None = None,
-        user_feedback: dict[str, Any] | None = None,
-    ) -> AdaptiveFusionWeights:
-        """Compute adaptive fusion weights based on query characteristics and effectiveness.
+        historical_performance: dict[str, float] | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, float]:
+        """Compute adaptive weights for hybrid search fusion.
 
         Args:
             query_classification: Classification results for the query
-            query_id: Unique identifier for the query
-            dense_results: Results from dense vector search (for effectiveness scoring)
-            sparse_results: Results from sparse vector search (for effectiveness scoring)
-            user_feedback: Optional user feedback for effectiveness evaluation
+            historical_performance: Historical performance data for similar queries
+            context: Additional context for weight computation
 
         Returns:
-            AdaptiveFusionWeights with optimized weights and metadata
+            Dictionary with 'dense' and 'sparse' weights that sum to 1.0
         """
         try:
-            # Get effectiveness scores if results are provided
-            effectiveness_score = None
-            if dense_results is not None and sparse_results is not None:
-                effectiveness_score = await self._calculate_effectiveness_scores(
-                    query_id, dense_results, sparse_results, user_feedback
+            self.total_queries += 1
+            start_time = time.time()
+
+            # Get base weights for query type
+            query_type = query_classification.query_type.lower()
+            base_weights = self.default_weights.get(
+                query_type, self.default_weights["default"]
+            ).copy()
+
+            # Adjust based on query complexity
+            complexity_adjustment = self._compute_complexity_adjustment(
+                query_classification
+            )
+
+            # Apply complexity adjustment
+            dense_weight = base_weights["dense"] + complexity_adjustment
+            sparse_weight = 1.0 - dense_weight
+
+            # Ensure weights are within valid range
+            dense_weight = max(0.1, min(0.9, dense_weight))
+            sparse_weight = 1.0 - dense_weight
+
+            # Apply historical performance adjustments if available
+            if historical_performance:
+                performance_adjustment = self._compute_performance_adjustment(
+                    historical_performance, query_classification
                 )
+                dense_weight = max(0.1, min(0.9, dense_weight + performance_adjustment))
+                sparse_weight = 1.0 - dense_weight
 
-            # Get historical performance for this query type
-            query_type_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
-            historical_weights = self._get_historical_weights(query_type_key)
+            # Record successful optimization
+            self.successful_optimizations += 1
 
-            # Compute adaptive weights using multiple strategies
-            weights = await self._compute_weights_from_multiple_strategies(
-                query_classification, effectiveness_score, historical_weights
+            # Update performance history
+            self._update_performance_history(
+                query_classification, dense_weight, time.time() - start_time
             )
 
-            # Apply multi-armed bandit for continuous optimization
-            optimized_weights = self._apply_bandit_optimization(
-                weights, query_classification, effectiveness_score
-            )
+            weights = {"dense": dense_weight, "sparse": sparse_weight}
 
-            # Create adaptive fusion weights object
-            adaptive_weights = AdaptiveFusionWeights(
-                dense_weight=optimized_weights["dense"],
-                sparse_weight=optimized_weights["sparse"],
-                hybrid_weight=1.0,
-                confidence=optimized_weights["confidence"],
-                learning_rate=self.learning_rate,
-                query_classification=query_classification,
-                effectiveness_score=effectiveness_score,
-            )
+            logger.debug(f"Computed adaptive weights for {query_type}: {weights}")
 
-            # Store for future learning
-            await self._store_weights_for_learning(query_type_key, adaptive_weights)
-
-            return adaptive_weights
+            return weights
 
         except Exception as e:
-            logger.error(f"Adaptive weight computation failed: {e}", exc_info=True)
-            # Return balanced fallback weights
-            return self._get_fallback_weights(query_classification)
+            logger.error(f"Failed to compute adaptive weights: {e}", exc_info=True)
+            # Return default balanced weights on error
+            return {"dense": 0.7, "sparse": 0.3}
 
-    async def _calculate_effectiveness_scores(
+    def _compute_complexity_adjustment(
+        self, query_classification: QueryClassification
+    ) -> float:
+        """Compute weight adjustment based on query complexity."""
+        complexity = query_classification.complexity_level.lower()
+
+        # More complex queries benefit from sparse search (keyword matching)
+        # Simpler queries benefit from dense search (semantic understanding)
+        if complexity in ["complex", "high"]:
+            return -0.1  # Favor sparse for complex queries
+        elif complexity in ["simple", "low"]:
+            return 0.1  # Favor dense for simple queries
+        else:
+            return 0.0  # No adjustment for moderate complexity
+
+    def _compute_performance_adjustment(
         self,
-        query_id: str,
-        dense_results: list[dict[str, Any]],
-        sparse_results: list[dict[str, Any]],
-        user_feedback: dict[str, Any] | None = None,
-    ) -> EffectivenessScore:
-        """Calculate effectiveness scores for dense and sparse retrieval."""
-        timestamp = time.time()
+        historical_performance: dict[str, float],
+        query_classification: QueryClassification,
+    ) -> float:
+        """Compute adjustment based on historical performance."""
+        try:
+            # Simple heuristic: if dense performed better historically, favor it
+            dense_score = historical_performance.get("dense_score", 0.5)
+            sparse_score = historical_performance.get("sparse_score", 0.5)
 
-        # Evaluate top-1 result quality (DAT approach)
-        dense_effectiveness = self._evaluate_top_result_quality(dense_results)
-        sparse_effectiveness = self._evaluate_top_result_quality(sparse_results)
+            score_diff = dense_score - sparse_score
 
-        # Incorporate user feedback if available
-        if user_feedback:
-            dense_effectiveness = self._adjust_with_user_feedback(
-                dense_effectiveness, user_feedback, "dense"
-            )
-            sparse_effectiveness = self._adjust_with_user_feedback(
-                sparse_effectiveness, user_feedback, "sparse"
-            )
+            # Scale the adjustment (max ±0.15)
+            adjustment = max(-0.15, min(0.15, score_diff * 0.3))
 
-        # Calculate hybrid effectiveness (weighted combination)
-        hybrid_effectiveness = 0.6 * dense_effectiveness + 0.4 * sparse_effectiveness
+            return adjustment
 
-        return EffectivenessScore(
-            dense_effectiveness=dense_effectiveness,
-            sparse_effectiveness=sparse_effectiveness,
-            hybrid_effectiveness=hybrid_effectiveness,
-            query_id=query_id,
-            timestamp=timestamp,
-            evaluation_method="top_result_with_feedback",
-        )
-
-    def _evaluate_top_result_quality(self, results: list[dict[str, Any]]) -> float:
-        """Evaluate the quality of the top result."""
-        if not results:
+        except Exception as e:
+            logger.debug(f"Failed to compute performance adjustment: {e}")
             return 0.0
 
-        top_result = results[0]
-        score = top_result.get("score", 0.0)
-
-        # Normalize score to 0-1 range (assuming scores are typically 0-1)
-        # Add some heuristics for quality assessment
-        quality_score = min(score, 1.0)
-
-        # Bonus for higher scores
-        if score > 0.8:
-            quality_score *= 1.1
-        elif score < 0.3:
-            quality_score *= 0.8
-
-        return min(quality_score, 1.0)
-
-    def _adjust_with_user_feedback(
-        self, effectiveness: float, feedback: dict[str, Any], search_type: str
-    ) -> float:
-        """Adjust effectiveness score based on user feedback."""
-        feedback_score = feedback.get(f"{search_type}_satisfaction", 0.5)
-        click_through = feedback.get(f"{search_type}_clicked", False)
-        dwell_time = feedback.get("dwell_time", 0)
-
-        # Incorporate different feedback signals
-        adjustment = 0.0
-
-        # Click-through adjustment
-        if click_through:
-            adjustment += 0.1
-        else:
-            adjustment -= 0.05
-
-        # Satisfaction score adjustment
-        adjustment += (feedback_score - 0.5) * 0.2
-
-        # Dwell time adjustment (longer dwell time = better result)
-        if dwell_time > 30:  # 30 seconds threshold
-            adjustment += 0.05
-        elif dwell_time < 5:
-            adjustment -= 0.05
-
-        return max(0.0, min(1.0, effectiveness + adjustment))
-
-    def _get_historical_weights(self, query_type_key: str) -> dict[str, float]:
-        """Get historical weight performance for a query type."""
-        if query_type_key not in self.weight_history:
-            return {"dense": 0.7, "sparse": 0.3, "confidence": 0.5}
-
-        # Calculate average weights from recent history
-        recent_weights = self.weight_history[query_type_key][-10:]  # Last 10 queries
-        if not recent_weights:
-            return {"dense": 0.7, "sparse": 0.3, "confidence": 0.5}
-
-        avg_dense = np.mean([w.dense_weight for w in recent_weights])
-        avg_sparse = np.mean([w.sparse_weight for w in recent_weights])
-        avg_confidence = np.mean([w.confidence for w in recent_weights])
-
-        return {
-            "dense": float(avg_dense),
-            "sparse": float(avg_sparse),
-            "confidence": float(avg_confidence),
-        }
-
-    async def _compute_weights_from_multiple_strategies(
+    def _update_performance_history(
         self,
         query_classification: QueryClassification,
-        effectiveness_score: EffectivenessScore | None,
-        historical_weights: dict[str, float],
-    ) -> dict[str, float]:
-        """Compute weights using multiple strategies and combine them."""
-        strategies = []
-
-        # Strategy 1: Rule-based weights based on query type
-        rule_based = self._compute_rule_based_weights(query_classification)
-        strategies.append({"weights": rule_based, "confidence": 0.6})
-
-        # Strategy 2: Effectiveness-based weights (DAT approach)
-        if effectiveness_score:
-            effectiveness_based = self._compute_effectiveness_based_weights(
-                effectiveness_score
-            )
-            strategies.append({"weights": effectiveness_based, "confidence": 0.8})
-
-        # Strategy 3: Historical performance weights
-        strategies.append({"weights": historical_weights, "confidence": 0.7})
-
-        # Combine strategies using weighted average
-        return self._combine_strategies(strategies)
-
-    def _compute_rule_based_weights(
-        self, query_classification: QueryClassification
-    ) -> dict[str, float]:
-        """Compute weights based on query classification rules."""
-        # Default balanced weights
-        dense_weight = 0.7
-        sparse_weight = 0.3
-
-        # Adjust based on query type
-        if query_classification.query_type.value == "code":
-            # Code queries often benefit from exact keyword matching
-            dense_weight = 0.6
-            sparse_weight = 0.4
-        elif query_classification.query_type.value == "conceptual":
-            # Conceptual queries benefit more from semantic understanding
-            dense_weight = 0.8
-            sparse_weight = 0.2
-        elif query_classification.query_type.value == "api_reference":
-            # API queries need precise keyword matching
-            dense_weight = 0.5
-            sparse_weight = 0.5
-
-        # Adjust based on complexity
-        if query_classification.complexity_level.value == "complex":
-            # Complex queries might benefit from more semantic understanding
-            dense_weight += 0.1
-            sparse_weight -= 0.1
-        elif query_classification.complexity_level.value == "simple":
-            # Simple queries might benefit from keyword matching
-            dense_weight -= 0.1
-            sparse_weight += 0.1
-
-        # Ensure weights are within bounds and sum to 1
-        dense_weight = max(self.min_weight, min(self.max_weight, dense_weight))
-        sparse_weight = 1.0 - dense_weight
-
-        return {"dense": dense_weight, "sparse": sparse_weight, "confidence": 0.7}
-
-    def _compute_effectiveness_based_weights(
-        self, effectiveness_score: EffectivenessScore
-    ) -> dict[str, float]:
-        """Compute weights based on effectiveness scores (DAT approach)."""
-        total_effectiveness = (
-            effectiveness_score.dense_effectiveness
-            + effectiveness_score.sparse_effectiveness
-        )
-
-        if total_effectiveness == 0:
-            return {"dense": 0.5, "sparse": 0.5, "confidence": 0.3}
-
-        # Normalize effectiveness scores to weights
-        dense_weight = effectiveness_score.dense_effectiveness / total_effectiveness
-        sparse_weight = effectiveness_score.sparse_effectiveness / total_effectiveness
-
-        # Apply smoothing to prevent extreme weights
-        smoothing_factor = 0.1
-        dense_weight = (1 - smoothing_factor) * dense_weight + smoothing_factor * 0.7
-        sparse_weight = 1.0 - dense_weight
-
-        # Confidence based on the difference in effectiveness
-        effectiveness_diff = abs(
-            effectiveness_score.dense_effectiveness
-            - effectiveness_score.sparse_effectiveness
-        )
-        confidence = min(0.9, 0.5 + effectiveness_diff)
-
-        return {
-            "dense": dense_weight,
-            "sparse": sparse_weight,
-            "confidence": confidence,
-        }
-
-    def _combine_strategies(self, strategies: list[dict[str, Any]]) -> dict[str, float]:
-        """Combine multiple weight strategies using confidence-weighted averaging."""
-        total_confidence = sum(s["confidence"] for s in strategies)
-
-        if total_confidence == 0:
-            return {"dense": 0.7, "sparse": 0.3, "confidence": 0.5}
-
-        # Weighted average of dense weights
-        dense_weight = (
-            sum(s["weights"]["dense"] * s["confidence"] for s in strategies)
-            / total_confidence
-        )
-
-        # Sparse weight is complementary
-        sparse_weight = 1.0 - dense_weight
-
-        # Average confidence
-        avg_confidence = total_confidence / len(strategies)
-
-        return {
-            "dense": dense_weight,
-            "sparse": sparse_weight,
-            "confidence": avg_confidence,
-        }
-
-    def _apply_bandit_optimization(
-        self,
-        base_weights: dict[str, float],
-        query_classification: QueryClassification,
-        effectiveness_score: EffectivenessScore | None,
-    ) -> dict[str, float]:
-        """Apply multi-armed bandit optimization for continuous learning."""
-        self.query_count += 1
-
-        # Define arms (weight configurations)
-        arms = {
-            "dense": {"dense": 0.8, "sparse": 0.2},
-            "sparse": {"dense": 0.3, "sparse": 0.7},
-            "balanced": {"dense": 0.6, "sparse": 0.4},
-        }
-
-        # ε-greedy arm selection
-        if random.random() < self.epsilon:
-            # Exploration: random arm
-            selected_arm = random.choice(list(arms.keys()))
-        else:
-            # Exploitation: best performing arm
-            selected_arm = self._select_best_arm()
-
-        selected_weights = arms[selected_arm]
-
-        # Combine bandit selection with base weights
-        adaptation_rate = 0.3
-        final_dense = (1 - adaptation_rate) * base_weights[
-            "dense"
-        ] + adaptation_rate * selected_weights["dense"]
-        final_sparse = 1.0 - final_dense
-
-        # Update bandit statistics if we have effectiveness feedback
-        if effectiveness_score:
-            reward = effectiveness_score.hybrid_effectiveness
-            self._update_bandit_statistics(selected_arm, reward)
-
-        return {
-            "dense": final_dense,
-            "sparse": final_sparse,
-            "confidence": base_weights["confidence"]
-            * 0.9,  # Slight confidence reduction for exploration
-        }
-
-    def _select_best_arm(self) -> str:
-        """Select the best performing arm using UCB (Upper Confidence Bound)."""
-        if self.query_count <= len(self.arm_counts):
-            # Not enough data, return balanced
-            return "balanced"
-
-        ucb_values = {}
-        for arm in self.arm_counts:
-            if self.arm_counts[arm] == 0:
-                ucb_values[arm] = float("inf")
-            else:
-                avg_reward = self.arm_rewards[arm] / self.arm_counts[arm]
-                confidence_bonus = math.sqrt(
-                    (self.confidence_multiplier * math.log(self.query_count))
-                    / self.arm_counts[arm]
-                )
-                ucb_values[arm] = avg_reward + confidence_bonus
-
-        return max(ucb_values, key=ucb_values.get)
-
-    def _update_bandit_statistics(self, arm: str, reward: float) -> None:
-        """Update bandit statistics with new reward."""
-        self.arm_counts[arm] += 1
-        self.arm_rewards[arm] += reward
-        self.total_reward += reward
-
-        # Decay old statistics to adapt to changing conditions
-        decay_factor = 0.995
-        for arm_name in self.arm_counts:
-            self.arm_counts[arm_name] = int(self.arm_counts[arm_name] * decay_factor)
-            self.arm_rewards[arm_name] *= decay_factor
-
-    async def _store_weights_for_learning(
-        self, query_type_key: str, weights: AdaptiveFusionWeights
+        weight: float,
+        computation_time: float,
     ) -> None:
-        """Store weights for future learning and adaptation."""
-        if query_type_key not in self.weight_history:
-            self.weight_history[query_type_key] = []
-
-        self.weight_history[query_type_key].append(weights)
-
-        # Keep only recent history to prevent memory bloat
-        if len(self.weight_history[query_type_key]) > 100:
-            self.weight_history[query_type_key] = self.weight_history[query_type_key][
-                -50:
-            ]
-
-    def _get_fallback_weights(
-        self, query_classification: QueryClassification
-    ) -> AdaptiveFusionWeights:
-        """Get fallback weights when adaptive computation fails."""
-        return AdaptiveFusionWeights(
-            dense_weight=0.7,
-            sparse_weight=0.3,
-            hybrid_weight=1.0,
-            confidence=0.5,
-            learning_rate=self.learning_rate,
-            query_classification=query_classification,
-            effectiveness_score=None,
-        )
-
-    async def update_with_feedback(
-        self,
-        query_id: str,
-        user_feedback: dict[str, Any],
-        weights_used: AdaptiveFusionWeights,
-    ) -> None:
-        """Update the tuner with user feedback for continuous learning."""
+        """Update performance history for future optimizations."""
         try:
-            # Extract reward signal from feedback
-            reward = self._extract_reward_from_feedback(user_feedback)
+            query_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
 
-            # Update effectiveness history
-            if query_id not in self.effectiveness_history:
-                self.effectiveness_history[query_id] = []
+            if query_key not in self.performance_history:
+                self.performance_history[query_key] = {}
 
-            # Create updated effectiveness score
-            if weights_used.effectiveness_score:
-                updated_score = EffectivenessScore(
-                    dense_effectiveness=weights_used.effectiveness_score.dense_effectiveness
-                    * (1 + reward * 0.1),
-                    sparse_effectiveness=weights_used.effectiveness_score.sparse_effectiveness
-                    * (1 + reward * 0.1),
-                    hybrid_effectiveness=weights_used.effectiveness_score.hybrid_effectiveness
-                    * (1 + reward * 0.1),
-                    query_id=query_id,
-                    timestamp=time.time(),
-                    evaluation_method="user_feedback_adjusted",
-                )
-                self.effectiveness_history[query_id].append(updated_score)
-
-            logger.debug(
-                f"Updated tuner with feedback for query {query_id}: reward={reward}"
+            # Store weight and computation time
+            self.performance_history[query_key]["last_weight"] = weight
+            self.performance_history[query_key]["last_computation_time"] = (
+                computation_time
+            )
+            self.performance_history[query_key]["usage_count"] = (
+                self.performance_history[query_key].get("usage_count", 0) + 1
             )
 
         except Exception as e:
-            logger.error(f"Failed to update with feedback: {e}", exc_info=True)
-
-    def _extract_reward_from_feedback(self, feedback: dict[str, Any]) -> float:
-        """Extract reward signal from user feedback."""
-        # Default reward
-        reward = 0.0
-
-        # Click-through reward
-        if feedback.get("clicked", False):
-            reward += 0.3
-
-        # Satisfaction score
-        satisfaction = feedback.get("satisfaction", 0.5)
-        reward += (satisfaction - 0.5) * 0.4
-
-        # Dwell time reward
-        dwell_time = feedback.get("dwell_time", 0)
-        if dwell_time > 30:
-            reward += 0.2
-        elif dwell_time < 5:
-            reward -= 0.1
-
-        # Relevance rating
-        relevance = feedback.get("relevance", 0.5)
-        reward += (relevance - 0.5) * 0.3
-
-        return max(-1.0, min(1.0, reward))  # Clamp between -1 and 1
+            logger.debug(f"Failed to update performance history: {e}")
 
     def get_performance_stats(self) -> dict[str, Any]:
-        """Get performance statistics for monitoring."""
-        return {
-            "total_queries": self.query_count,
-            "total_reward": self.total_reward,
-            "average_reward": self.total_reward / max(self.query_count, 1),
-            "arm_counts": dict(self.arm_counts),
-            "arm_average_rewards": {
-                arm: self.arm_rewards[arm] / max(self.arm_counts[arm], 1)
-                for arm in self.arm_counts
-            },
-            "exploration_rate": self.epsilon,
-            "learning_rate": self.learning_rate,
-        }
+        """Get performance statistics for monitoring and debugging."""
+        try:
+            avg_computation_time = 0.0
+            if self.performance_history:
+                computation_times = [
+                    data.get("last_computation_time", 0.0)
+                    for data in self.performance_history.values()
+                    if "last_computation_time" in data
+                ]
+                if computation_times:
+                    avg_computation_time = sum(computation_times) / len(
+                        computation_times
+                    )
+
+            return {
+                "total_queries": self.total_queries,
+                "successful_optimizations": self.successful_optimizations,
+                "optimization_success_rate": (
+                    self.successful_optimizations / max(self.total_queries, 1)
+                ),
+                "avg_computation_time_ms": avg_computation_time * 1000,
+                "query_types_seen": len(self.performance_history),
+                "performance_history_size": len(self.performance_history),
+            }
+        except Exception as e:
+            logger.error(f"Failed to get performance stats: {e}", exc_info=True)
+            return {
+                "total_queries": self.total_queries,
+                "successful_optimizations": self.successful_optimizations,
+                "optimization_success_rate": 0.0,
+                "avg_computation_time_ms": 0.0,
+                "query_types_seen": 0,
+                "performance_history_size": 0,
+            }
+
+    def reset_performance_history(self) -> None:
+        """Reset performance history (useful for testing or retraining)."""
+        self.performance_history.clear()
+        self.total_queries = 0
+        self.successful_optimizations = 0
+        logger.info("Adaptive fusion tuner performance history reset")
+
+    def get_weight_recommendations(self, query_type: str) -> dict[str, float]:
+        """Get weight recommendations for a specific query type."""
+        return self.default_weights.get(
+            query_type.lower(), self.default_weights["default"]
+        ).copy()

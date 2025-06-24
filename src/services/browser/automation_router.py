@@ -4,13 +4,14 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlparse
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class AutomationRouter(BaseService):
     4. Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize automation router with configuration.
 
         Args:
@@ -99,7 +100,7 @@ class AutomationRouter(BaseService):
                 logger.warning(f"Routing rules file not found: {config_file}")
 
         except Exception as e:
-            logger.error(f"Failed to load routing rules: {e}")
+            logger.exception(f"Failed to load routing rules: {e}")
 
         # Fallback to default rules if loading fails
         return self._get_default_routing_rules()
@@ -211,7 +212,7 @@ class AutomationRouter(BaseService):
                 await adapter.cleanup()
                 self.logger.info(f"Cleaned up {name} adapter")
             except Exception as e:
-                self.logger.error(f"Error cleaning up {name} adapter: {e}")
+                self.logger.exception(f"Error cleaning up {name} adapter: {e}")
 
         self._adapters.clear()
         self._initialized = False
@@ -289,7 +290,7 @@ class AutomationRouter(BaseService):
             return result
 
         except Exception as e:
-            self.logger.error(f"{tool} failed for {url}: {e}")
+            self.logger.exception(f"{tool} failed for {url}: {e}")
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
@@ -537,7 +538,7 @@ class AutomationRouter(BaseService):
                 return result
 
             except Exception as e:
-                self.logger.error(f"Fallback {fallback_tool} also failed: {e}")
+                self.logger.exception(f"Fallback {fallback_tool} also failed: {e}")
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue

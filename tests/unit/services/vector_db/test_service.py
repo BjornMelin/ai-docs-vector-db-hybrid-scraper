@@ -1,10 +1,10 @@
 """Tests for QdrantService with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from src.config import UnifiedConfig
+
+from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService
 
@@ -12,7 +12,7 @@ from src.services.vector_db.service import QdrantService
 @pytest.fixture
 def mock_config():
     """Create mock unified config."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
     config.qdrant = MagicMock()
     config.qdrant.url = "http://localhost:6333"
     config.qdrant.timeout = 30

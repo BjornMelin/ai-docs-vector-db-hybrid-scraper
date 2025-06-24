@@ -2,12 +2,11 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from src.config import UnifiedConfig
+
+from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.utilities.hnsw_optimizer import HNSWOptimizer
 
@@ -18,7 +17,7 @@ class TestHNSWOptimizer:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         return config
 
     @pytest.fixture

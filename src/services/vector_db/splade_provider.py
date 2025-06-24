@@ -10,8 +10,10 @@ from typing import Any
 
 import numpy as np
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ...models.vector_search import SPLADEConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +21,7 @@ logger = logging.getLogger(__name__)
 class SPLADEProvider:
     """SPLADE provider for generating sparse vectors with semantic expansion."""
 
-    def __init__(
-        self, config: UnifiedConfig, splade_config: SPLADEConfig | None = None
-    ):
+    def __init__(self, config: Config, splade_config: SPLADEConfig | None = None):
         """Initialize SPLADE provider.
 
         Args:
@@ -70,7 +70,7 @@ class SPLADEProvider:
                 "Transformers library not available, using fallback sparse generation"
             )
         except Exception as e:
-            logger.error(f"Failed to load SPLADE model: {e}")
+            logger.exception(f"Failed to load SPLADE model: {e}")
             raise
 
     async def generate_sparse_vector(

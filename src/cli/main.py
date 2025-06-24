@@ -12,14 +12,17 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from src.config.loader import ConfigLoader
 
-from .commands import batch as batch_commands
+from src.config import Config, get_config
 
 # Import command groups
-from .commands import config as config_commands
-from .commands import database as db_commands
-from .commands import setup as setup_commands
+from .commands import (
+    batch as batch_commands,
+    config as config_commands,
+    database as db_commands,
+    setup as setup_commands,
+)
+
 
 console = Console()
 
@@ -97,9 +100,10 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
     # Load configuration
     try:
         if config:
-            ctx.obj["config"] = ConfigLoader.from_file(config)
+            # Load from specific file - with new config this would be:
+            ctx.obj["config"] = Config.load_from_file(config)
         else:
-            ctx.obj["config"] = ConfigLoader.load_config()
+            ctx.obj["config"] = get_config()
     except Exception as e:
         rich_cli.show_error("Failed to load configuration", details=str(e))
         sys.exit(1)
@@ -207,6 +211,7 @@ def completion(shell: str):
 def status(ctx: click.Context):
     """Show system status and health check."""
     from rich.table import Table
+
     from src.utils.health_checks import ServiceHealthChecker
 
     rich_cli = ctx.obj["rich_cli"]

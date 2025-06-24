@@ -7,14 +7,16 @@ including model selection, performance tracking, and cost optimization.
 from unittest.mock import MagicMock
 
 import pytest
-from src.config import UnifiedConfig
-from src.config.enums import EmbeddingModel
-from src.config.enums import ModelType
-from src.config.enums import OptimizationStrategy
-from src.config.enums import QueryComplexity
-from src.config.enums import QueryType
-from src.models.vector_search import ModelSelectionStrategy
-from src.models.vector_search import QueryClassification
+
+from src.config import Config
+from src.config.enums import (
+    EmbeddingModel,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+)
+from src.models.vector_search import ModelSelectionStrategy, QueryClassification
 from src.services.vector_db.model_selector import ModelSelector
 
 
@@ -24,7 +26,7 @@ class TestModelSelector:
     @pytest.fixture
     def mock_config(self):
         """Mock unified configuration."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.embedding_cost_budget = 1000.0
         return config
 
@@ -55,7 +57,7 @@ class TestModelSelector:
 
     async def test_model_registry_structure(self, selector):
         """Test model registry structure and required fields."""
-        for _model_id, model_info in selector.model_registry.items():
+        for model_info in selector.model_registry.values():
             # Check required fields
             assert "type" in model_info
             assert "dimensions" in model_info

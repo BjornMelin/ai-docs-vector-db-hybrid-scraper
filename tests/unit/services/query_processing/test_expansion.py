@@ -1,16 +1,18 @@
 """Tests for query expansion service."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from src.services.query_processing.expansion import ExpandedTerm
-from src.services.query_processing.expansion import ExpansionScope
-from src.services.query_processing.expansion import ExpansionStrategy
-from src.services.query_processing.expansion import QueryExpansionRequest
-from src.services.query_processing.expansion import QueryExpansionResult
-from src.services.query_processing.expansion import QueryExpansionService
-from src.services.query_processing.expansion import TermRelationType
+
+from src.services.query_processing.expansion import (
+    ExpandedTerm,
+    ExpansionScope,
+    ExpansionStrategy,
+    QueryExpansionRequest,
+    QueryExpansionResult,
+    QueryExpansionService,
+    TermRelationType,
+)
 
 
 class TestExpansionStrategy:

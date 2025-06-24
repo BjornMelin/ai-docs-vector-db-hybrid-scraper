@@ -19,21 +19,17 @@ from urllib.parse import urlparse
 import click
 import httpx
 from defusedxml import ElementTree
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from rich.console import Console
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TextColumn
-from rich.progress import TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from .chunking import EnhancedChunker
-from .config import UnifiedConfig
-from .config.loader import ConfigLoader
+from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
+
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -57,7 +53,7 @@ class BulkEmbedder:
 
     def __init__(
         self,
-        config: UnifiedConfig,
+        config: Config,
         client_manager: ClientManager,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
@@ -294,7 +290,7 @@ class BulkEmbedder:
 
         except Exception as e:
             result["error"] = str(e)
-            logger.error(f"Failed to process {url}: {e}")
+            logger.exception(f"Failed to process {url}: {e}")
 
         return result
 
@@ -514,10 +510,7 @@ def main(
     )
 
     # Load configuration
-    if config_path:
-        config = ConfigLoader.load_config(config_path)
-    else:
-        config = ConfigLoader.load_config()
+    config = get_config()
 
     # Validate inputs
     if not any([urls, file, sitemap]):
@@ -545,7 +538,7 @@ async def _async_main(
     sitemap: str | None,
     collection: str,
     concurrent: int,
-    config: UnifiedConfig,
+    config: Config,
     state_file: Path,
     resume: bool,
 ) -> None:

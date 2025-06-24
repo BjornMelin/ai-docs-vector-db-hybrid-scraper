@@ -6,23 +6,27 @@
 - Modern pytest patterns
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import ContentIntelligenceAnalysisRequest
-from src.mcp_tools.models.requests import ContentIntelligenceClassificationRequest
-from src.mcp_tools.models.requests import ContentIntelligenceMetadataRequest
-from src.mcp_tools.models.requests import ContentIntelligenceQualityRequest
+from src.mcp_tools.models.requests import (
+    ContentIntelligenceAnalysisRequest,
+    ContentIntelligenceClassificationRequest,
+    ContentIntelligenceMetadataRequest,
+    ContentIntelligenceQualityRequest,
+)
 from src.mcp_tools.models.responses import ContentIntelligenceResult
 from src.mcp_tools.tools.content_intelligence import register_tools
-from src.services.content_intelligence.models import ContentAnalysisResponse
-from src.services.content_intelligence.models import ContentClassification
-from src.services.content_intelligence.models import ContentMetadata
-from src.services.content_intelligence.models import ContentType
-from src.services.content_intelligence.models import EnrichedContent
-from src.services.content_intelligence.models import QualityScore
+from src.services.content_intelligence.models import (
+    ContentAnalysisResponse,
+    ContentClassification,
+    ContentMetadata,
+    ContentType,
+    EnrichedContent,
+    QualityScore,
+)
 
 
 class MockContext:

@@ -3,8 +3,10 @@
 import logging
 from typing import Any
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..errors import CrawlServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ class CrawlManager:
     and provides consistent response formatting across all tiers.
     """
 
-    def __init__(self, config: UnifiedConfig, rate_limiter: object = None):
+    def __init__(self, config: Config, rate_limiter: object = None):
         """Initialize crawl manager.
 
         Args:
@@ -55,7 +57,7 @@ class CrawlManager:
             logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
 
         except Exception as e:
-            logger.error(f"Failed to initialize UnifiedBrowserManager: {e}")
+            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
             raise CrawlServiceError(f"Failed to initialize crawl manager: {e}") from e
 
     async def cleanup(self) -> None:
@@ -65,7 +67,7 @@ class CrawlManager:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
             except Exception as e:
-                logger.error(f"Error cleaning up UnifiedBrowserManager: {e}")
+                logger.exception(f"Error cleaning up UnifiedBrowserManager: {e}")
 
             self._unified_browser_manager = None
 
@@ -134,7 +136,7 @@ class CrawlManager:
             }
 
         except Exception as e:
-            logger.error(f"UnifiedBrowserManager failed for {url}: {e}")
+            logger.exception(f"UnifiedBrowserManager failed for {url}: {e}")
             return {
                 "success": False,
                 "error": f"UnifiedBrowserManager error: {e!s}",
@@ -266,7 +268,7 @@ class CrawlManager:
             }
 
         except Exception as e:
-            logger.error(f"Site crawl failed for {url}: {e}")
+            logger.exception(f"Site crawl failed for {url}: {e}")
             return {
                 "success": False,
                 "error": f"Site crawl error: {e!s}",

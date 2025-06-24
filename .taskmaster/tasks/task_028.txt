@@ -1,0 +1,85 @@
+# Task ID: 28
+# Title: Optimise aiohttp HTTP client configuration for 75% throughput improvement
+# Status: pending
+# Dependencies: 21, 22
+# Priority: medium
+# Description: Tune aiohttp global connector settings, timeout configurations, and connection pooling parameters to achieve 75% throughput gains while eliminating resource leak warnings in HTTP client operations.
+# Details:
+1. Analyse current aiohttp usage patterns and identify performance bottlenecks:
+   - Audit existing ClientSession configurations in src/services/ modules
+   - Identify default timeout values and connector settings causing resource warnings
+   - Benchmark current HTTP client performance to establish baseline metrics
+
+2. Configure optimised TCPConnector settings:
+   - Set connector_limit to appropriate value based on expected concurrent connections (default: 100)
+   - Configure connector_limit_per_host for better load distribution (recommended: 30)
+   - Enable connection reuse with keepalive_timeout (recommended: 30 seconds)
+   - Set appropriate ttl_dns_cache value (recommended: 300 seconds)
+
+3. Optimise timeout configurations:
+   - Configure ClientTimeout with appropriate total, connect, and read timeouts
+   - Set sock_connect and sock_read timeouts for fine-grained control
+   - Implement retry logic with exponential backoff for transient failures
+
+4. Implement connection pooling best practices:
+   - Use single ClientSession instance per application lifecycle
+   - Implement proper session cleanup with async context managers
+   - Configure trace logging for connection debugging
+   - Add connection pool monitoring and metrics collection
+
+5. Address resource warning elimination:
+   - Ensure proper session.close() calls in all code paths
+   - Implement ResourceWarning suppression for expected unclosed connections
+   - Add connection leak detection and monitoring
+   - Configure proper SSL context and certificate validation
+
+# Test Strategy:
+1. Performance benchmarking validation:
+   - Create comprehensive HTTP client benchmark suite measuring requests/second, latency percentiles, and concurrent connection handling
+   - Execute before/after performance tests to verify ≥75% throughput improvement
+   - Test with various payload sizes (1KB, 100KB, 1MB) and concurrent connection counts (10, 50, 100)
+   - Monitor memory usage and connection pool utilisation during load testing
+
+2. Resource leak verification:
+   - Run application with ResourceWarning enabled and verify no warnings for normal operations
+   - Execute stress tests with connection monitoring to detect leaks
+   - Validate proper cleanup in error scenarios and edge cases
+   - Test session lifecycle management in long-running processes
+
+3. Integration testing:
+   - Verify all HTTP client operations continue working with new configurations
+   - Test timeout handling and retry mechanisms under various network conditions
+   - Validate SSL/TLS connections work correctly with optimised settings
+   - Execute full test suite to ensure no regressions in HTTP-dependent functionality
+
+# Subtasks:
+## 1. Audit Current aiohttp Usage and Benchmark Performance [pending]
+### Dependencies: None
+### Description: Analyze existing aiohttp ClientSession configurations, timeout values, and connector settings in the codebase. Identify performance bottlenecks and resource warning sources. Establish baseline throughput and latency metrics through benchmarking.
+### Details:
+Review all HTTP client usage in src/services/ modules. Document current settings and measure throughput, latency, and frequency of resource warnings under representative load.
+
+## 2. Tune TCPConnector and Connection Pool Settings [pending]
+### Dependencies: 28.1
+### Description: Configure aiohttp TCPConnector parameters such as limit, limit_per_host, keepalive_timeout, and ttl_dns_cache to optimize connection reuse and concurrency for the target throughput improvement.
+### Details:
+Set connector_limit and connector_limit_per_host based on expected concurrency. Adjust keepalive_timeout and ttl_dns_cache for efficient connection reuse and DNS caching. Validate settings against load test results.
+
+## 3. Optimize Timeout and Retry Configurations [pending]
+### Dependencies: 28.2
+### Description: Set appropriate ClientTimeout values for total, connect, sock_connect, and sock_read timeouts. Implement retry logic with exponential backoff for transient failures to maximize reliability and throughput.
+### Details:
+Configure timeouts to balance responsiveness and reliability. Add retry logic for failed requests, ensuring it does not cause resource leaks or excessive retries.
+
+## 4. Implement Connection Pooling and Resource Management Best Practices [pending]
+### Dependencies: 28.3
+### Description: Refactor code to use a single ClientSession per application lifecycle, ensure proper session cleanup with async context managers, and add connection pool monitoring and trace logging.
+### Details:
+Update code to avoid creating unnecessary sessions. Use async context managers for session lifecycle. Add logging and metrics for connection pool usage and debugging.
+
+## 5. Eliminate Resource Warnings and Enhance Leak Detection [pending]
+### Dependencies: 28.4
+### Description: Ensure all ClientSession and connector resources are properly closed in all code paths. Implement leak detection, monitoring, and, where appropriate, suppression of expected ResourceWarnings. Configure SSL context and certificate validation.
+### Details:
+Audit all code paths for proper session closure. Add leak detection and monitoring tools. Suppress ResourceWarnings only when justified. Ensure SSL context is correctly configured for secure connections.
+

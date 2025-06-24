@@ -1,3 +1,4 @@
+import typing
 """Advanced caching patterns for high-performance data access."""
 
 import asyncio

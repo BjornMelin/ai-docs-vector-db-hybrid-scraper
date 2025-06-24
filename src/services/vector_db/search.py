@@ -8,16 +8,15 @@ import logging
 from typing import Any
 
 import numpy as np
-from qdrant_client import AsyncQdrantClient
-from qdrant_client import models
+from qdrant_client import AsyncQdrantClient, models
 
-from ...config import UnifiedConfig
-from ...config.enums import SearchAccuracy
-from ...config.enums import VectorType
+from src.config import Config, SearchAccuracy, VectorType
+
 from ...models.vector_search import PrefetchConfig
 from ..errors import QdrantServiceError
 from ..monitoring.metrics import get_metrics_registry
 from .utils import build_filter
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 class QdrantSearch:
     """Focused search operations for Qdrant with advanced Query API support."""
 
-    def __init__(self, client: AsyncQdrantClient, config: UnifiedConfig):
+    def __init__(self, client: AsyncQdrantClient, config: Config):
         """Initialize search service.
 
         Args:

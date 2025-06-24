@@ -8,20 +8,15 @@ import logging
 import time
 from collections.abc import Callable
 
-from fastapi import FastAPI
-from fastapi import Request
-from fastapi import Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
-from prometheus_client import CONTENT_TYPE_LATEST
-from prometheus_client import generate_latest
-from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_fastapi_instrumentator import metrics
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .health import HealthCheckManager
-from .health import HealthStatus
-from .metrics import MetricsRegistry
-from .metrics import get_metrics_registry
+from .health import HealthCheckManager, HealthStatus
+from .metrics import MetricsRegistry, get_metrics_registry
+
 
 logger = logging.getLogger(__name__)
 

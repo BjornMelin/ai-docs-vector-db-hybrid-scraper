@@ -3,12 +3,12 @@
 import contextlib
 import json
 import logging
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import yaml
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -23,10 +23,12 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...config.enums import SearchStrategy
+from src.config import SearchStrategy
+
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import ProjectRequest
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
-    from ..models.responses import OperationStatus
-    from ..models.responses import ProjectInfo
+    from ..models.responses import OperationStatus, ProjectInfo
 
     @mcp.tool()
     async def create_project(
@@ -87,11 +88,11 @@ def register_tools(mcp, client_manager: ClientManager):
                     sparse_vector_name="sparse" if enable_hybrid else None,
                     enable_quantization=request.quality_tier != "premium",
                 )
-            except Exception as e:
+            except Exception:
                 # Clean up the project if collection creation fails
                 with contextlib.suppress(Exception):
                     await project_storage.delete_project(project_id)
-                raise e
+                raise
 
             # Add initial URLs if provided
             if request.urls:
@@ -143,7 +144,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to create project {request.name}: {e}")
-            logger.error(f"Failed to create project: {e}")
+            logger.exception(f"Failed to create project: {e}")
             raise
 
     @mcp.tool()
@@ -195,7 +196,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list projects: {e}")
-            logger.error(f"Failed to list projects: {e}")
+            logger.exception(f"Failed to list projects: {e}")
             raise
 
     @mcp.tool()
@@ -285,7 +286,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to search project {project_id}: {e}")
-            logger.error(f"Failed to search project: {e}")
+            logger.exception(f"Failed to search project: {e}")
             raise
 
     @mcp.tool()
@@ -336,7 +337,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to update project {project_id}: {e}")
-            logger.error(f"Failed to update project: {e}")
+            logger.exception(f"Failed to update project: {e}")
             raise
 
     @mcp.tool()
@@ -402,7 +403,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to delete project {project_id}: {e}")
-            logger.error(f"Failed to delete project: {e}")
+            logger.exception(f"Failed to delete project: {e}")
             raise
 
     @mcp.tool()
@@ -471,7 +472,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to export project {project_id}: {e}")
-            logger.error(f"Failed to export project: {e}")
+            logger.exception(f"Failed to export project: {e}")
             raise
 
     @mcp.tool()
@@ -555,7 +556,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to add URLs to project {project_id}: {e}")
-            logger.error(f"Failed to add URLs to project: {e}")
+            logger.exception(f"Failed to add URLs to project: {e}")
             raise
 
     @mcp.tool()
@@ -617,5 +618,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to get project details for {project_id}: {e}")
-            logger.error(f"Failed to get project details: {e}")
+            logger.exception(f"Failed to get project details: {e}")
             raise

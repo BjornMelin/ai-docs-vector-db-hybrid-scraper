@@ -10,14 +10,13 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
 
 from fastapi import BackgroundTasks
+
 
 logger = logging.getLogger(__name__)
 
@@ -343,7 +342,7 @@ class BackgroundTaskManager:
                     break
                 continue
             except Exception as e:
-                logger.error(f"Worker {worker_name} error: {e}")
+                logger.exception(f"Worker {worker_name} error: {e}")
 
         logger.debug(f"Worker {worker_name} stopped")
 
@@ -419,7 +418,7 @@ class BackgroundTaskManager:
             result.error = str(e)
             result.end_time = datetime.utcnow()
 
-            logger.error(f"Task {task_id} failed: {e}")
+            logger.exception(f"Task {task_id} failed: {e}")
             await self._handle_task_retry(task, result)
 
     async def _handle_task_retry(
@@ -472,7 +471,7 @@ class BackgroundTaskManager:
             try:
                 await self._task_queue.put(task_id)
             except asyncio.QueueFull:
-                logger.error(f"Failed to retry task {task_id}: queue is full")
+                logger.exception(f"Failed to retry task {task_id}: queue is full")
 
     def get_statistics(self) -> dict[str, Any]:
         """Get task manager statistics.

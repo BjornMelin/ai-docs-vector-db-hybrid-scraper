@@ -1,14 +1,13 @@
 """FastEmbed provider for local embedding generation."""
 
 import logging
-from typing import Any
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 
+
 try:
-    from fastembed import SparseTextEmbedding
-    from fastembed import TextEmbedding
+    from fastembed import SparseTextEmbedding, TextEmbedding
 except ImportError:
     TextEmbedding = None
     SparseTextEmbedding = None
@@ -16,6 +15,7 @@ except ImportError:
 from ..errors import EmbeddingServiceError
 from ..monitoring.metrics import get_metrics_registry
 from .base import EmbeddingProvider
+
 
 logger = logging.getLogger(__name__)
 

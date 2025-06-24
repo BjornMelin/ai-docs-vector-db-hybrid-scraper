@@ -1,3 +1,6 @@
+import typing
+
+
 """Centralized API client management with singleton pattern and health checks."""
 
 import asyncio
@@ -8,25 +11,24 @@ import time
 from contextlib import asynccontextmanager
 
 # Import for type hints (avoid circular import by using TYPE_CHECKING)
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Optional
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
-from src.config import UnifiedConfig
-from src.infrastructure.shared import CircuitBreaker
-from src.infrastructure.shared import ClientHealth
-from src.infrastructure.shared import ClientState
+
+from src.config import Config
+from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
+
 
 if TYPE_CHECKING:
     pass
 
 # Import for actual usage
-from src.infrastructure.database.connection_manager import AsyncConnectionManager
+from .database import DatabaseManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +36,11 @@ logger = logging.getLogger(__name__)
 class ClientManager:
     """Centralized API client management with singleton pattern and health checks."""
 
-    _instance: Optional["ClientManager"] = None
+    _instance: typing.Optional["ClientManager"] = None
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()  # Thread-safe lock for singleton creation
 
-    def __new__(cls, config: UnifiedConfig | None = None):
+    def __new__(cls, config: Config | None = None):
         """Ensure singleton instance with thread safety."""
         if cls._instance is None:
             with cls._init_lock:
@@ -54,10 +56,11 @@ class ClientManager:
         This factory method loads configuration from environment variables
         and creates a properly configured ClientManager instance.
         """
-        from src.config.loader import ConfigLoader
 
         # Load the unified configuration
-        unified_config = ConfigLoader.load_config()
+        from src.config import get_config
+
+        unified_config = get_config()
         return cls(unified_config)
 
     @classmethod
@@ -76,7 +79,7 @@ class ClientManager:
                 cls._instance._health_check_task.cancel()
             cls._instance = None
 
-    def __init__(self, config: UnifiedConfig | None = None):
+    def __init__(self, config: Config | None = None):
         """Initialize client manager.
 
         Args:
@@ -111,14 +114,17 @@ class ClientManager:
         self._crawl_manager: Any = None
         self._hyde_engine: Any = None
         self._project_storage: Any = None
-        self._blue_green_deployment: Any = None
+        # Enterprise deployment infrastructure components
+        self._feature_flag_manager: Any = None
         self._ab_testing_manager: Any = None
+        self._blue_green_deployment: Any = None
         self._canary_deployment: Any = None
         self._browser_automation_router: Any = None
         self._task_queue_manager: Any = None
         self._content_intelligence_service: Any = None
-        self._database_manager: AsyncConnectionManager | None = None
+        self._database_manager: DatabaseManager | None = None
         self._advanced_search_orchestrator: Any = None
+        self._rag_generator: Any = None
         self._service_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self) -> None:
@@ -147,10 +153,11 @@ class ClientManager:
             "_crawl_manager",
             "_hyde_engine",
             "_project_storage",
-            "_alias_manager",
-            "_blue_green",
-            "_ab_testing",
-            "_canary",
+            "_rag_generator",
+            "_feature_flag_manager",
+            "_ab_testing_manager",
+            "_blue_green_deployment",
+            "_canary_deployment",
             "_content_intelligence_service",
             "_database_manager",
         ]
@@ -162,7 +169,7 @@ class ClientManager:
                         await service.cleanup()
                         logger.info(f"Cleaned up {service_name}")
                     except Exception as e:
-                        logger.error(f"Error cleaning up {service_name}: {e}")
+                        logger.exception(f"Error cleaning up {service_name}: {e}")
                 setattr(self, service_name, None)
 
         # Close all clients
@@ -174,7 +181,7 @@ class ClientManager:
                     await client.aclose()
                 logger.info(f"Closed {name} client")
             except Exception as e:
-                logger.error(f"Error closing {name} client: {e}")
+                logger.exception(f"Error closing {name} client: {e}")
 
         self._clients.clear()
         self._health.clear()
@@ -186,9 +193,7 @@ class ClientManager:
         self._cache_manager = None
         self._crawl_manager = None
         self._hyde_engine = None
-        self._blue_green_deployment = None
-        self._ab_testing_manager = None
-        self._canary_deployment = None
+        # Removed deployment infrastructure cleanup
         self._browser_automation_router = None
         self._content_intelligence_service = None
         self._database_manager = None
@@ -317,10 +322,7 @@ class ClientManager:
                         enable_distributed_cache=self.config.cache.enable_dragonfly_cache,
                         local_max_size=self.config.cache.local_max_size,
                         local_max_memory_mb=self.config.cache.local_max_memory_mb,
-                        distributed_ttl_seconds={
-                            cache_type.value: ttl
-                            for cache_type, ttl in self.config.cache.cache_ttl_seconds.items()
-                        },
+                        distributed_ttl_seconds=self.config.cache.cache_ttl_seconds,
                     )
                     await self._cache_manager.initialize()
                     logger.info("Initialized CacheManager")
@@ -355,9 +357,11 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    from src.services.hyde.config import HyDEConfig
-                    from src.services.hyde.config import HyDEMetricsConfig
-                    from src.services.hyde.config import HyDEPromptConfig
+                    from src.services.hyde.config import (
+                        HyDEConfig,
+                        HyDEMetricsConfig,
+                        HyDEPromptConfig,
+                    )
                     from src.services.hyde.engine import HyDEQueryEngine
 
                     # Get dependencies
@@ -403,81 +407,12 @@ class ClientManager:
 
         return self._project_storage
 
-    async def get_blue_green_deployment(self):
-        """Get or create BlueGreenDeployment instance."""
-        if self._blue_green_deployment is None:
-            if "blue_green_deployment" not in self._service_locks:
-                self._service_locks["blue_green_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["blue_green_deployment"]:
-                if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import BlueGreenDeployment
-
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-
-                    self._blue_green_deployment = BlueGreenDeployment(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                    )
-                    logger.info("Initialized BlueGreenDeployment")
-
-        return self._blue_green_deployment
-
-    async def get_ab_testing_manager(self):
-        """Get or create ABTestingManager instance."""
-        if self._ab_testing_manager is None:
-            if "ab_testing_manager" not in self._service_locks:
-                self._service_locks["ab_testing_manager"] = asyncio.Lock()
-
-            async with self._service_locks["ab_testing_manager"]:
-                if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import ABTestingManager
-
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-
-                    self._ab_testing_manager = ABTestingManager(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                    )
-                    logger.info("Initialized ABTestingManager")
-
-        return self._ab_testing_manager
-
-    async def get_canary_deployment(self):
-        """Get or create CanaryDeployment instance."""
-        if self._canary_deployment is None:
-            if "canary_deployment" not in self._service_locks:
-                self._service_locks["canary_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["canary_deployment"]:
-                if self._canary_deployment is None:
-                    from src.services.core.qdrant_alias_manager import (
-                        QdrantAliasManager,
-                    )
-                    from src.services.deployment.canary import CanaryDeployment
-
-                    qdrant_service = await self.get_qdrant_service()
-
-                    # Initialize alias manager
-                    alias_manager = QdrantAliasManager(self.config, qdrant_service)
-                    await alias_manager.initialize()
-
-                    # Get task queue manager (required for canary deployments)
-                    task_queue_manager = await self.get_task_queue_manager()
-
-                    self._canary_deployment = CanaryDeployment(
-                        config=self.config,
-                        alias_manager=alias_manager,
-                        task_queue_manager=task_queue_manager,
-                        qdrant_service=qdrant_service,
-                        client_manager=self,
-                    )
-                    await self._canary_deployment.initialize()
-                    logger.info("Initialized CanaryDeployment")
-
-        return self._canary_deployment
+    # Enterprise deployment infrastructure methods restored with feature flag control:
+    # - get_feature_flag_manager() - Feature flag management with Flagsmith integration
+    # - get_ab_testing_manager() - A/B testing with statistical analysis
+    # - get_blue_green_deployment() - Zero-downtime blue-green deployments
+    # - get_canary_deployment() - Progressive canary rollouts with automated monitoring
+    # These provide enterprise-grade deployment capabilities while maintaining simplicity for personal use
 
     async def get_browser_automation_router(self):
         """Get or create BrowserAutomationRouter instance."""
@@ -487,7 +422,7 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.enhanced_router import (
+                    from src.services.browser.browser_router import (
                         EnhancedAutomationRouter,
                     )
 
@@ -545,59 +480,56 @@ class ClientManager:
 
         return self._content_intelligence_service
 
-    async def get_database_manager(self) -> "AsyncConnectionManager":
-        """Get or create AsyncConnectionManager instance."""
+    async def get_rag_generator(self):
+        """Get or create RAGGenerator instance."""
+        if self._rag_generator is None:
+            if "rag_generator" not in self._service_locks:
+                self._service_locks["rag_generator"] = asyncio.Lock()
+
+            async with self._service_locks["rag_generator"]:
+                if self._rag_generator is None:
+                    from src.services.rag import RAGGenerator
+
+                    self._rag_generator = RAGGenerator(
+                        config=self.config.rag,
+                        client_manager=self,
+                    )
+                    await self._rag_generator.initialize()
+                    logger.info("Initialized RAGGenerator")
+
+        return self._rag_generator
+
+    async def get_database_manager(self) -> DatabaseManager:
+        """Get or create enterprise DatabaseManager instance."""
         if self._database_manager is None:
             if "database_manager" not in self._service_locks:
                 self._service_locks["database_manager"] = asyncio.Lock()
 
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
-                    from src.infrastructure.database.load_monitor import LoadMonitor
-                    from src.infrastructure.database.load_monitor import (
-                        LoadMonitorConfig,
-                    )
-                    from src.infrastructure.database.query_monitor import QueryMonitor
-                    from src.infrastructure.database.query_monitor import (
-                        QueryMonitorConfig,
-                    )
+                    # Create enterprise monitoring components
+                    from .database.monitoring import LoadMonitor, QueryMonitor
 
-                    # Create monitoring components
-                    load_monitor = LoadMonitor(LoadMonitorConfig())
-                    query_monitor = QueryMonitor(
-                        QueryMonitorConfig(
-                            enabled=self.config.database.enable_query_monitoring,
-                            slow_query_threshold_ms=self.config.database.slow_query_threshold_ms,
-                        )
-                    )
+                    load_monitor = LoadMonitor()
+                    query_monitor = QueryMonitor()
 
-                    # Create circuit breaker for database
+                    # Create circuit breaker for enterprise resilience
                     circuit_breaker = CircuitBreaker(
-                        failure_threshold=getattr(
-                            self.config.performance,
-                            "circuit_breaker_failure_threshold",
-                            5,
-                        ),
-                        recovery_timeout=getattr(
-                            self.config.performance,
-                            "circuit_breaker_recovery_timeout",
-                            60.0,
-                        ),
-                        half_open_requests=getattr(
-                            self.config.performance,
-                            "circuit_breaker_half_open_requests",
-                            1,
-                        ),
+                        failure_threshold=5,
+                        recovery_timeout=60.0,
+                        half_open_requests=1,
                     )
 
-                    self._database_manager = AsyncConnectionManager(
-                        config=self.config.database,
+                    self._database_manager = DatabaseManager(
+                        config=self.config,
                         load_monitor=load_monitor,
                         query_monitor=query_monitor,
                         circuit_breaker=circuit_breaker,
                     )
                     await self._database_manager.initialize()
-                    logger.info("Initialized AsyncConnectionManager")
+                    logger.info(
+                        "Initialized enterprise DatabaseManager with ML monitoring"
+                    )
 
         return self._database_manager
 
@@ -617,6 +549,119 @@ class ClientManager:
                     logger.info("Initialized AdvancedSearchOrchestrator")
 
         return self._advanced_search_orchestrator
+
+    # Enterprise Deployment Services
+
+    async def get_feature_flag_manager(self):
+        """Get or create FeatureFlagManager instance."""
+        if self._feature_flag_manager is None:
+            if "feature_flag_manager" not in self._service_locks:
+                self._service_locks["feature_flag_manager"] = asyncio.Lock()
+
+            async with self._service_locks["feature_flag_manager"]:
+                if self._feature_flag_manager is None:
+                    from src.services.deployment.feature_flags import (
+                        FeatureFlagConfig,
+                        FeatureFlagManager,
+                    )
+
+                    # Create feature flag config from deployment config
+                    flag_config = FeatureFlagConfig(
+                        enabled=self.config.deployment.enable_feature_flags,
+                        api_key=self.config.deployment.flagsmith_api_key,
+                        environment_key=self.config.deployment.flagsmith_environment_key,
+                        api_url=self.config.deployment.flagsmith_api_url,
+                    )
+
+                    self._feature_flag_manager = FeatureFlagManager(flag_config)
+                    await self._feature_flag_manager.initialize()
+                    logger.info("Initialized FeatureFlagManager")
+
+        return self._feature_flag_manager
+
+    async def get_ab_testing_manager(self):
+        """Get or create ABTestingManager instance."""
+        if not self.config.deployment.enable_ab_testing:
+            return None
+
+        if self._ab_testing_manager is None:
+            if "ab_testing_manager" not in self._service_locks:
+                self._service_locks["ab_testing_manager"] = asyncio.Lock()
+
+            async with self._service_locks["ab_testing_manager"]:
+                if self._ab_testing_manager is None:
+                    from src.services.deployment.ab_testing import ABTestingManager
+
+                    # Get dependencies
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+                    feature_flag_manager = await self.get_feature_flag_manager()
+
+                    self._ab_testing_manager = ABTestingManager(
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                        feature_flag_manager=feature_flag_manager,
+                    )
+                    await self._ab_testing_manager.initialize()
+                    logger.info("Initialized ABTestingManager")
+
+        return self._ab_testing_manager
+
+    async def get_blue_green_deployment(self):
+        """Get or create BlueGreenDeployment instance."""
+        if not self.config.deployment.enable_blue_green:
+            return None
+
+        if self._blue_green_deployment is None:
+            if "blue_green_deployment" not in self._service_locks:
+                self._service_locks["blue_green_deployment"] = asyncio.Lock()
+
+            async with self._service_locks["blue_green_deployment"]:
+                if self._blue_green_deployment is None:
+                    from src.services.deployment.blue_green import BlueGreenDeployment
+
+                    # Get dependencies
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+                    feature_flag_manager = await self.get_feature_flag_manager()
+
+                    self._blue_green_deployment = BlueGreenDeployment(
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                        feature_flag_manager=feature_flag_manager,
+                    )
+                    await self._blue_green_deployment.initialize()
+                    logger.info("Initialized BlueGreenDeployment")
+
+        return self._blue_green_deployment
+
+    async def get_canary_deployment(self):
+        """Get or create CanaryDeployment instance."""
+        if not self.config.deployment.enable_canary:
+            return None
+
+        if self._canary_deployment is None:
+            if "canary_deployment" not in self._service_locks:
+                self._service_locks["canary_deployment"] = asyncio.Lock()
+
+            async with self._service_locks["canary_deployment"]:
+                if self._canary_deployment is None:
+                    from src.services.deployment.canary import CanaryDeployment
+
+                    # Get dependencies
+                    qdrant_service = await self.get_qdrant_service()
+                    cache_manager = await self.get_cache_manager()
+                    feature_flag_manager = await self.get_feature_flag_manager()
+
+                    self._canary_deployment = CanaryDeployment(
+                        qdrant_service=qdrant_service,
+                        cache_manager=cache_manager,
+                        feature_flag_manager=feature_flag_manager,
+                    )
+                    await self._canary_deployment.initialize()
+                    logger.info("Initialized CanaryDeployment")
+
+        return self._canary_deployment
 
     async def _get_or_create_client(
         self,
@@ -691,7 +736,7 @@ class ClientManager:
                         logger.info(f"Created {name} client")
 
                     except Exception as e:
-                        logger.error(f"Failed to create {name} client: {e}")
+                        logger.exception(f"Failed to create {name} client: {e}")
                         raise APIError(f"Failed to create {name} client: {e}") from e
 
         # Check health status
@@ -857,10 +902,10 @@ class ClientManager:
                 health.last_error = "Health check returned false"
 
         except TimeoutError:
-            logger.error(f"{name} health check timed out")
+            logger.exception(f"{name} health check timed out")
             self._update_health_failure(name, "Health check timeout")
         except Exception as e:
-            logger.error(f"{name} health check error: {e}")
+            logger.exception(f"{name} health check error: {e}")
             self._update_health_failure(name, str(e))
 
     async def _recreate_client_if_needed(self, name: str) -> None:
@@ -933,7 +978,7 @@ class ClientManager:
                 logger.info("Health check loop cancelled")
                 break
             except Exception as e:
-                logger.error(f"Error in health check loop: {e}")
+                logger.exception(f"Error in health check loop: {e}")
                 await asyncio.sleep(10)  # Brief pause before retry
 
     def _update_health_failure(self, name: str, error: str) -> None:
@@ -964,7 +1009,7 @@ class ClientManager:
         """Context manager for automatic client lifecycle management.
 
         Args:
-            client_type: Type of client ("qdrant", "openai", "firecrawl", "redis", "database")
+            client_type: Type of client ("qdrant", "openai", "firecrawl", "redis", "database", "rag", "feature_flags", "ab_testing", "blue_green", "canary")
 
         Yields:
             Client instance
@@ -983,6 +1028,12 @@ class ClientManager:
             "firecrawl": self.get_firecrawl_client,
             "redis": self.get_redis_client,
             "database": self.get_database_manager,
+            "rag": self.get_rag_generator,
+            # Deployment services
+            "feature_flags": self.get_feature_flag_manager,
+            "ab_testing": self.get_ab_testing_manager,
+            "blue_green": self.get_blue_green_deployment,
+            "canary": self.get_canary_deployment,
         }
 
         if client_type not in client_getters:
@@ -992,7 +1043,7 @@ class ClientManager:
             client = await client_getters[client_type]()
             yield client
         except Exception as e:
-            logger.error(f"Error using {client_type} client: {e}")
+            logger.exception(f"Error using {client_type} client: {e}")
             raise
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:

@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import click
 import pytest
-from src.utils import async_command
-from src.utils import async_to_sync_click
+
+from src.utils import async_command, async_to_sync_click
 
 
 class TestAsyncToSyncClick:

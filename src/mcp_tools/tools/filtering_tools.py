@@ -6,9 +6,9 @@ composition with boolean logic.
 """
 
 import logging
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -22,15 +22,17 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import AdvancedSearchOrchestrator
-from ...services.query_processing import AdvancedSearchRequest
-from ...services.query_processing import SearchMode
-from ...services.query_processing import SearchPipeline
+from ...services.query_processing import (
+    AdvancedSearchOrchestrator,
+    AdvancedSearchRequest,
+    SearchMode,
+    SearchPipeline,
+)
 from ..models.responses import SearchResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,7 @@ class CompositeFilterRequest(BaseModel):
 def create_orchestrator() -> AdvancedSearchOrchestrator:
     """Create and configure the search orchestrator."""
     return AdvancedSearchOrchestrator(
-        enable_all_features=True, enable_performance_optimization=True
+        cache_size=1000, enable_performance_optimization=True
     )
 
 
@@ -178,7 +180,7 @@ async def temporal_filter_tool(
 
         await ctx.info(
             f"Temporal search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -234,7 +236,7 @@ async def content_type_filter_tool(
 
         await ctx.info(
             f"Content type search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -291,7 +293,7 @@ async def metadata_filter_tool(
 
         await ctx.info(
             f"Metadata search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -349,7 +351,7 @@ async def similarity_filter_tool(
 
         await ctx.info(
             f"Similarity search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results
@@ -416,7 +418,7 @@ async def composite_filter_tool(
 
         await ctx.info(
             f"Composite search completed: {len(converted_results)} results "
-            f"(quality: {result.quality_score:.2f})"
+            f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
         return converted_results

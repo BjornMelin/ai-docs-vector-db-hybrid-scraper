@@ -8,17 +8,17 @@ import gc
 import logging
 import threading
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Callable
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 import psutil
-from src.config.fastapi import PerformanceConfig
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+
+from src.config import PerformanceConfig
+
 
 logger = logging.getLogger(__name__)
 

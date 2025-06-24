@@ -1,11 +1,11 @@
 """Tests for EmbeddingManager benchmark loading functionality."""
 
 import json
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from src.config import UnifiedConfig
+
+from src.config import Config
 from src.services.embeddings.manager import EmbeddingManager
 
 
@@ -15,7 +15,7 @@ class TestEmbeddingManagerBenchmarks:
     @pytest.fixture
     def mock_config(self):
         """Create a mock configuration."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         # Mock cache config
         mock_cache = MagicMock()

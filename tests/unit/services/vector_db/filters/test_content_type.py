@@ -3,15 +3,17 @@
 from unittest.mock import patch
 
 import pytest
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.content_type import ContentCategory
-from src.services.vector_db.filters.content_type import ContentClassification
-from src.services.vector_db.filters.content_type import ContentIntent
-from src.services.vector_db.filters.content_type import ContentTypeCriteria
-from src.services.vector_db.filters.content_type import ContentTypeFilter
-from src.services.vector_db.filters.content_type import DocumentType
-from src.services.vector_db.filters.content_type import QualityLevel
+
+from src.services.vector_db.filters.base import FilterError, FilterResult
+from src.services.vector_db.filters.content_type import (
+    ContentCategory,
+    ContentClassification,
+    ContentIntent,
+    ContentTypeCriteria,
+    ContentTypeFilter,
+    DocumentType,
+    QualityLevel,
+)
 
 
 class TestDocumentType:

@@ -11,9 +11,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
+
 
 logger = logging.getLogger(__name__)
 
@@ -486,7 +485,9 @@ class FederatedSearchService:
             self._logger.info(f"Registered collection: {collection_name}")
 
         except Exception as e:
-            self._logger.error(f"Failed to register collection {collection_name}: {e}")
+            self._logger.exception(
+                f"Failed to register collection {collection_name}: {e}"
+            )
             raise
 
     async def unregister_collection(self, collection_name: str) -> None:
@@ -504,7 +505,7 @@ class FederatedSearchService:
             self._logger.info(f"Unregistered collection: {collection_name}")
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Failed to unregister collection {collection_name}: {e}"
             )
 
@@ -715,7 +716,7 @@ class FederatedSearchService:
                     self._create_error_result("Collection timeout", collection_name)
                 )
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Search failed for collection {collection_name}: {e}"
                 )
                 results.append(self._create_error_result(str(e), collection_name))

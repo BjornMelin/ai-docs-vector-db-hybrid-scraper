@@ -9,14 +9,11 @@ import logging
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
-from .base import BaseFilter
-from .base import FilterError
-from .base import FilterResult
+from .base import BaseFilter, FilterError, FilterResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -339,14 +336,14 @@ class FilterComposer(BaseFilter):
                         result = await task
                         results[name] = result
                     except Exception as e:
-                        self._logger.error(f"Filter {name} failed: {e}")
+                        self._logger.exception(f"Filter {name} failed: {e}")
                         if criteria.fail_fast:
                             raise
                 else:
                     self._logger.warning(f"Filter {name} timed out")
 
         except TimeoutError as e:
-            self._logger.error("Filter composition timed out")
+            self._logger.exception("Filter composition timed out")
             raise FilterError("Filter composition execution timed out") from e
 
         return results
@@ -376,7 +373,7 @@ class FilterComposer(BaseFilter):
                     )
 
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Filter {filter_ref.filter_instance.name} failed: {e}"
                 )
                 if criteria.fail_fast and filter_ref.required:
@@ -443,7 +440,7 @@ class FilterComposer(BaseFilter):
             return await filter_ref.filter_instance.apply(filter_ref.criteria, context)
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Filter {filter_ref.filter_instance.name} execution failed: {e}"
             )
             raise FilterError(

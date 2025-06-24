@@ -8,9 +8,11 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from ...config.models import LightweightScraperConfig
+from src.config import Config  # LightweightScraperConfig not in simplified config
+
 from ..errors import CrawlServiceError
 from .base import CrawlProvider
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ class LightweightScraper(CrawlProvider):
 
     def __init__(
         self,
-        config: LightweightScraperConfig,
+        config: Config,
         rate_limiter: object | None = None,
     ):
         """Initialize lightweight scraper.
@@ -243,7 +245,7 @@ class LightweightScraper(CrawlProvider):
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
         except Exception as e:
-            logger.error(f"Error scraping {url} with lightweight tier: {e}")
+            logger.exception(f"Error scraping {url} with lightweight tier: {e}")
             return {
                 "success": False,
                 "error": str(e),

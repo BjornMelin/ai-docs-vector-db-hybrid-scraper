@@ -1,13 +1,13 @@
 """Base service class for all services."""
 
 import logging
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 
-from src.config import UnifiedConfig
+from src.config import Config
 
 from .errors import APIError
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class BaseService(ABC):
     """Abstract base class for all services."""
 
-    def __init__(self, config: UnifiedConfig | None = None):
+    def __init__(self, config: Config | None = None):
         """Initialize base service.
 
         Args:

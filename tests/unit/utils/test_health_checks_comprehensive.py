@@ -4,12 +4,10 @@ This test suite provides complete coverage for the ServiceHealthChecker
 class and all its health check methods.
 """
 
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from src.config.enums import CrawlProvider
-from src.config.enums import EmbeddingProvider
-from src.config.models import UnifiedConfig
+from src.config import Config
+from src.config.enums import CrawlProvider, EmbeddingProvider
 from src.utils.health_checks import ServiceHealthChecker
 
 
@@ -18,7 +16,7 @@ class TestQdrantHealthCheck:
 
     def test_qdrant_connection_success(self):
         """Test successful Qdrant connection."""
-        config = UnifiedConfig()
+        config = Config()
         config.qdrant.url = "http://localhost:6333"
         config.qdrant.api_key = "test-key"
 
@@ -45,7 +43,7 @@ class TestQdrantHealthCheck:
 
     def test_qdrant_authentication_error(self):
         """Test Qdrant authentication failure."""
-        config = UnifiedConfig()
+        config = Config()
 
         from qdrant_client.http.exceptions import UnexpectedResponse
 
@@ -62,7 +60,7 @@ class TestQdrantHealthCheck:
 
     def test_qdrant_http_error(self):
         """Test Qdrant HTTP error responses."""
-        config = UnifiedConfig()
+        config = Config()
 
         from qdrant_client.http.exceptions import UnexpectedResponse
 
@@ -82,7 +80,7 @@ class TestQdrantHealthCheck:
 
     def test_qdrant_generic_error(self):
         """Test Qdrant generic connection error."""
-        config = UnifiedConfig()
+        config = Config()
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = ConnectionError("Connection failed")
@@ -99,7 +97,7 @@ class TestDragonflyHealthCheck:
 
     def test_dragonfly_connection_success(self):
         """Test successful DragonflyDB connection."""
-        config = UnifiedConfig()
+        config = Config()
         config.cache.enable_dragonfly_cache = True
         config.cache.dragonfly_url = "redis://localhost:6379"
 
@@ -121,7 +119,7 @@ class TestDragonflyHealthCheck:
 
     def test_dragonfly_disabled(self):
         """Test when DragonflyDB cache is disabled."""
-        config = UnifiedConfig()
+        config = Config()
         config.cache.enable_dragonfly_cache = False
 
         result = ServiceHealthChecker.check_dragonfly_connection(config)
@@ -132,7 +130,7 @@ class TestDragonflyHealthCheck:
 
     def test_dragonfly_connection_error(self):
         """Test DragonflyDB connection error."""
-        config = UnifiedConfig()
+        config = Config()
         config.cache.enable_dragonfly_cache = True
 
         import redis
@@ -148,7 +146,7 @@ class TestDragonflyHealthCheck:
 
     def test_dragonfly_generic_error(self):
         """Test DragonflyDB generic error."""
-        config = UnifiedConfig()
+        config = Config()
         config.cache.enable_dragonfly_cache = True
 
         with patch("redis.from_url") as mock_redis:
@@ -166,7 +164,7 @@ class TestOpenAIHealthCheck:
 
     def test_openai_connection_success(self):
         """Test successful OpenAI API connection."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.OPENAI
         config.openai.api_key = "sk-test-key"
         config.openai.model = "text-embedding-3-small"
@@ -193,7 +191,7 @@ class TestOpenAIHealthCheck:
 
     def test_openai_not_configured(self):
         """Test when OpenAI is not configured as embedding provider."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.FASTEMBED
 
         result = ServiceHealthChecker.check_openai_connection(config)
@@ -204,7 +202,7 @@ class TestOpenAIHealthCheck:
 
     def test_openai_missing_api_key(self):
         """Test when OpenAI API key is missing."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.OPENAI
         config.openai.api_key = None
 
@@ -216,7 +214,7 @@ class TestOpenAIHealthCheck:
 
     def test_openai_api_error(self):
         """Test OpenAI API error."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.OPENAI
         config.openai.api_key = "sk-invalid-key"
 
@@ -235,7 +233,7 @@ class TestFirecrawlHealthCheck:
 
     def test_firecrawl_connection_success(self):
         """Test successful Firecrawl API connection."""
-        config = UnifiedConfig()
+        config = Config()
         config.crawl_provider = CrawlProvider.FIRECRAWL
         config.firecrawl.api_key = "fc-test-key"
         config.firecrawl.api_url = "https://api.firecrawl.dev"
@@ -261,7 +259,7 @@ class TestFirecrawlHealthCheck:
 
     def test_firecrawl_not_configured(self):
         """Test when Firecrawl is not configured as crawl provider."""
-        config = UnifiedConfig()
+        config = Config()
         config.crawl_provider = CrawlProvider.CRAWL4AI
 
         result = ServiceHealthChecker.check_firecrawl_connection(config)
@@ -272,7 +270,7 @@ class TestFirecrawlHealthCheck:
 
     def test_firecrawl_missing_api_key(self):
         """Test when Firecrawl API key is missing."""
-        config = UnifiedConfig()
+        config = Config()
         config.crawl_provider = CrawlProvider.FIRECRAWL
         config.firecrawl.api_key = None
 
@@ -284,7 +282,7 @@ class TestFirecrawlHealthCheck:
 
     def test_firecrawl_api_error_status(self):
         """Test Firecrawl API error status response."""
-        config = UnifiedConfig()
+        config = Config()
         config.crawl_provider = CrawlProvider.FIRECRAWL
         config.firecrawl.api_key = "fc-invalid-key"
 
@@ -301,7 +299,7 @@ class TestFirecrawlHealthCheck:
 
     def test_firecrawl_request_exception(self):
         """Test Firecrawl request exception."""
-        config = UnifiedConfig()
+        config = Config()
         config.crawl_provider = CrawlProvider.FIRECRAWL
         config.firecrawl.api_key = "fc-test-key"
 
@@ -320,7 +318,7 @@ class TestAllHealthChecks:
 
     def test_perform_all_health_checks_all_services(self):
         """Test performing health checks for all configured services."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.OPENAI
         config.crawl_provider = CrawlProvider.FIRECRAWL
         config.cache.enable_dragonfly_cache = True
@@ -362,7 +360,7 @@ class TestAllHealthChecks:
 
     def test_perform_all_health_checks_minimal_config(self):
         """Test health checks with minimal configuration (only Qdrant)."""
-        config = UnifiedConfig()
+        config = Config()
         config.embedding_provider = EmbeddingProvider.FASTEMBED
         config.crawl_provider = CrawlProvider.CRAWL4AI
         config.cache.enable_dragonfly_cache = False
@@ -384,7 +382,7 @@ class TestAllHealthChecks:
 
     def test_get_connection_summary_all_healthy(self):
         """Test connection summary when all services are healthy."""
-        config = UnifiedConfig()
+        config = Config()
 
         with patch.object(
             ServiceHealthChecker, "perform_all_health_checks"
@@ -411,7 +409,7 @@ class TestAllHealthChecks:
 
     def test_get_connection_summary_some_failed(self):
         """Test connection summary when some services fail."""
-        config = UnifiedConfig()
+        config = Config()
 
         with patch.object(
             ServiceHealthChecker, "perform_all_health_checks"
@@ -433,7 +431,7 @@ class TestAllHealthChecks:
 
     def test_get_connection_summary_all_failed(self):
         """Test connection summary when all services fail."""
-        config = UnifiedConfig()
+        config = Config()
 
         with patch.object(
             ServiceHealthChecker, "perform_all_health_checks"

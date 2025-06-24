@@ -1,16 +1,13 @@
 """Tests for MCP project management tools."""
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 # Import the actual enums before any mocking happens
-from src.config.enums import QualityTier
-from src.config.enums import SearchStrategy
+from src.config.enums import QualityTier, SearchStrategy
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -240,6 +237,7 @@ async def test_create_project_invalid_quality_tier(mock_client_manager, mock_con
 
     # Test with invalid quality tier
     from pydantic import ValidationError
+
     from src.mcp_tools.models.requests import ProjectRequest
 
     with pytest.raises(ValidationError):

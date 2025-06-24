@@ -1,13 +1,10 @@
 """Tests for MCP utility tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import PropertyMock
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock
 
 import pytest
-from src.mcp_tools.models.responses import ConfigValidationResponse
-from src.mcp_tools.models.responses import GenericDictResponse
+
+from src.mcp_tools.models.responses import ConfigValidationResponse, GenericDictResponse
 
 
 @pytest.fixture

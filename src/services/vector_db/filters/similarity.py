@@ -7,21 +7,17 @@ and context-aware threshold selection for optimal search results.
 
 import logging
 import statistics
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
 
 import numpy as np
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
 
-from .base import BaseFilter
-from .base import FilterError
-from .base import FilterResult
+from .base import BaseFilter, FilterError, FilterResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -676,7 +672,7 @@ class SimilarityThresholdManager(BaseFilter):
             )
 
         except Exception as e:
-            self._logger.error(f"Clustering analysis failed: {e}")
+            self._logger.exception(f"Clustering analysis failed: {e}")
             return None
 
     def _get_recent_data(

@@ -1,3 +1,6 @@
+import typing
+
+
 """Advanced Query Processing Services.
 
 This module provides a centralized query processing pipeline with advanced
@@ -5,54 +8,66 @@ intent classification, strategy selection, coordinated search orchestration,
 query expansion, and result clustering capabilities.
 """
 
-from .clustering import ClusterGroup
-from .clustering import ClusteringMethod
-from .clustering import ClusteringScope
-from .clustering import OutlierResult
-from .clustering import ResultClusteringRequest
-from .clustering import ResultClusteringResult
-from .clustering import ResultClusteringService
-from .clustering import SearchResult
-from .clustering import SimilarityMetric
-from .expansion import ExpandedTerm
-from .expansion import ExpansionScope
-from .expansion import ExpansionStrategy
-from .expansion import QueryExpansionRequest
-from .expansion import QueryExpansionResult
-from .expansion import QueryExpansionService
-from .expansion import TermRelationType
-from .federated import CollectionMetadata
-from .federated import CollectionSearchResult
-from .federated import CollectionSelectionStrategy
-from .federated import FederatedSearchRequest
-from .federated import FederatedSearchResult
-from .federated import FederatedSearchScope
-from .federated import FederatedSearchService
-from .federated import ResultMergingStrategy
-from .federated import SearchMode as FederatedSearchMode
+from .clustering import (
+    ClusterGroup,
+    ClusteringMethod,
+    ClusteringScope,
+    OutlierResult,
+    ResultClusteringRequest,
+    ResultClusteringResult,
+    ResultClusteringService,
+    SearchResult,
+    SimilarityMetric,
+)
+from .expansion import (
+    ExpandedTerm,
+    ExpansionScope,
+    ExpansionStrategy,
+    QueryExpansionRequest,
+    QueryExpansionResult,
+    QueryExpansionService,
+    TermRelationType,
+)
+from .federated import (
+    CollectionMetadata,
+    CollectionSearchResult,
+    CollectionSelectionStrategy,
+    FederatedSearchRequest,
+    FederatedSearchResult,
+    FederatedSearchScope,
+    FederatedSearchService,
+    ResultMergingStrategy,
+    SearchMode as FederatedSearchMode,
+)
 from .intent_classifier import QueryIntentClassifier
-from .models import QueryIntent
-from .models import QueryProcessingRequest
-from .models import QueryProcessingResponse
-from .orchestrator import AdvancedSearchOrchestrator
-from .orchestrator import AdvancedSearchRequest
-from .orchestrator import AdvancedSearchResult
-from .orchestrator import ProcessingStage
-from .orchestrator import SearchMode
-from .orchestrator import SearchPipeline
-from .orchestrator import StageResult
+from .models import QueryIntent, QueryProcessingRequest, QueryProcessingResponse
+
+# ProcessingStage removed as it's not implemented in simplified orchestrator
+from .orchestrator import (
+    SearchMode,
+    SearchOrchestrator,
+    SearchOrchestrator as AdvancedSearchOrchestrator,
+    SearchPipeline,
+    SearchRequest,
+    SearchRequest as AdvancedSearchRequest,
+    SearchResult as AdvancedSearchResult,
+    SearchResult as OrchestratorSearchResult,
+)
 from .pipeline import QueryProcessingPipeline
 from .preprocessor import QueryPreprocessor
-from .ranking import InteractionEvent
-from .ranking import InteractionType
-from .ranking import PersonalizedRankingRequest
-from .ranking import PersonalizedRankingResult
-from .ranking import PersonalizedRankingService
-from .ranking import RankedResult
-from .ranking import RankingStrategy
-from .ranking import UserPreference
-from .ranking import UserProfile
+from .ranking import (
+    InteractionEvent,
+    InteractionType,
+    PersonalizedRankingRequest,
+    PersonalizedRankingResult,
+    PersonalizedRankingService,
+    RankedResult,
+    RankingStrategy,
+    UserPreference,
+    UserProfile,
+)
 from .strategy_selector import SearchStrategySelector
+
 
 __all__ = [
     # Advanced search orchestrator
@@ -80,6 +95,7 @@ __all__ = [
     # Interaction handling
     "InteractionEvent",
     "InteractionType",
+    "OrchestratorSearchResult",
     # Outlier detection
     "OutlierResult",
     # Personalized ranking
@@ -87,7 +103,7 @@ __all__ = [
     "PersonalizedRankingResult",
     "PersonalizedRankingService",
     # Pipeline stages
-    "ProcessingStage",
+    # "ProcessingStage",  # Removed from simplified orchestrator
     # Core query processing
     "QueryExpansionRequest",
     "QueryExpansionResult",
@@ -108,12 +124,14 @@ __all__ = [
     "ResultMergingStrategy",
     # Search configuration
     "SearchMode",
+    # Search orchestrator
+    "SearchOrchestrator",
     "SearchPipeline",
+    "SearchRequest",
     "SearchResult",
     "SearchStrategySelector",
     # Similarity metrics
     "SimilarityMetric",
-    "StageResult",
     # Term relationships
     "TermRelationType",
     # User profile

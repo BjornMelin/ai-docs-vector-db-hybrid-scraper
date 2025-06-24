@@ -7,11 +7,10 @@ including feature extraction, query type classification, and complexity assessme
 from unittest.mock import MagicMock
 
 import pytest
-from src.config import UnifiedConfig
-from src.config.enums import QueryComplexity
-from src.config.enums import QueryType
-from src.models.vector_search import QueryClassification
-from src.models.vector_search import QueryFeatures
+
+from src.config import Config
+from src.config.enums import QueryComplexity, QueryType
+from src.models.vector_search import QueryClassification, QueryFeatures
 from src.services.vector_db.query_classifier import QueryClassifier
 
 
@@ -21,7 +20,7 @@ class TestQueryClassifier:
     @pytest.fixture
     def mock_config(self):
         """Mock unified configuration."""
-        return MagicMock(spec=UnifiedConfig)
+        return MagicMock(spec=Config)
 
     @pytest.fixture
     def classifier(self, mock_config):

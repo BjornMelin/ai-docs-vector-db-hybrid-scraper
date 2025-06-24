@@ -5,10 +5,12 @@ import logging
 import time
 from typing import Any
 
-from ...config.models import Crawl4AIConfig
+from src.config import Crawl4AIConfig
+
 from ..base import BaseService
 from ..crawling.crawl4ai_provider import Crawl4AIProvider
 from ..errors import CrawlServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ class Crawl4AIAdapter(BaseService):
                 await self._provider.cleanup()
                 self.logger.info("Crawl4AI adapter cleaned up")
             except Exception as e:
-                self.logger.error(f"Error cleaning up Crawl4AI adapter: {e}")
+                self.logger.exception(f"Error cleaning up Crawl4AI adapter: {e}")
             finally:
                 self._initialized = False
 
@@ -122,7 +124,7 @@ class Crawl4AIAdapter(BaseService):
                 }
 
         except Exception as e:
-            self.logger.error(f"Crawl4AI adapter error for {url}: {e}")
+            self.logger.exception(f"Crawl4AI adapter error for {url}: {e}")
             return {
                 "success": False,
                 "url": url,

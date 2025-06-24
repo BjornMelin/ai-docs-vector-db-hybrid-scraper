@@ -11,11 +11,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
-from src.config.fastapi import TimeoutConfig
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,18 @@ class CircuitState(Enum):
     CLOSED = "closed"  # Normal operation
     OPEN = "open"  # Failing, reject requests
     HALF_OPEN = "half_open"  # Testing recovery
+
+
+@dataclass
+class TimeoutConfig:
+    """Timeout middleware configuration."""
+
+    enabled: bool = True
+    request_timeout: float = 30.0
+    enable_circuit_breaker: bool = True
+    failure_threshold: int = 5
+    recovery_timeout: float = 60.0
+    half_open_max_calls: int = 3
 
 
 @dataclass

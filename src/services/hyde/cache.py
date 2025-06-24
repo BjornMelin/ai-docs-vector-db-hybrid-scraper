@@ -14,6 +14,7 @@ from ..errors import EmbeddingServiceError
 from .config import HyDEConfig
 from .generator import GenerationResult
 
+
 logger = logging.getLogger(__name__)
 
 

@@ -10,9 +10,8 @@ import re
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import BaseModel, Field, field_validator
+
 
 logger = logging.getLogger(__name__)
 
@@ -749,7 +748,7 @@ class QueryExpansionService:
         synonyms = []
 
         # Check custom domain vocabularies
-        for _domain, vocab in self.domain_vocabularies.items():
+        for vocab in self.domain_vocabularies.values():
             if term in vocab:
                 synonyms.extend(vocab[term])
 

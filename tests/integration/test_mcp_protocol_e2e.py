@@ -7,16 +7,13 @@ protocol compliance following JSON-RPC 2.0 specifications.
 import asyncio
 import json
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from src.config.models import UnifiedConfig
-from src.infrastructure.client_manager import ClientManager
 
-from tests.mocks.mock_tools import MockMCPServer
-from tests.mocks.mock_tools import register_mock_tools
+from src.config import Config
+from src.infrastructure.client_manager import ClientManager
+from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
 class TestMCPProtocolE2E:
@@ -25,7 +22,7 @@ class TestMCPProtocolE2E:
     @pytest.fixture
     async def mock_config(self):
         """Mock configuration for E2E testing."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         # Mock nested config objects
         config.qdrant = MagicMock()
@@ -38,7 +35,9 @@ class TestMCPProtocolE2E:
         config.crawling = MagicMock()
         config.crawling.providers = ["crawl4ai"]
 
-        config.get_active_providers.return_value = ["openai", "fastembed"]
+        # Mock provider configuration
+        config.embedding_provider = "openai"
+        config.active_providers = ["openai", "fastembed"]
         return config
 
     @pytest.fixture

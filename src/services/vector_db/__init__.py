@@ -1,3 +1,6 @@
+import typing
+
+
 """Vector database services with modular Qdrant implementation.
 
 This module provides a clean, modular architecture for Qdrant operations:
@@ -13,6 +16,7 @@ from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
 from .service import QdrantService
+
 
 __all__ = [
     "QdrantCollections",

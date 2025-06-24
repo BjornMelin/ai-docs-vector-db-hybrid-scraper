@@ -1,0 +1,56 @@
+# Task ID: 41
+# Title: Unified Error Handling & Circuit Breakers
+# Status: pending
+# Dependencies: 38, 3, 5
+# Priority: high
+# Description: Adopt FastAPI HTTPException patterns and shared circuit-breaker library for browser-use external calls.
+# Details:
+1. Add `src/common/errors.py` mapping codes → messages.
+2. Wrap external operations:
+   ```py
+   breaker = SharedCircuitBreaker(name="browser_use", fail_max=5, reset_timeout=60)
+   @breaker
+   async def navigate(session, url): ...
+   ```
+3. On breaker open → raise `HTTPException(status_code=503, detail="Upstream unavailable")`.
+4. Add middleware to translate `BrowserUseError` to HTTPException.
+5. Push breaker metrics to OTEL: state, failures, resets.
+6. Default thresholds same as main app via `settings.circuit_breaker`.
+
+# Test Strategy:
+• Unit tests: mock failures → breaker opens after 5 errors.
+• Integration test: breaker open → endpoint returns 503 within 10 ms.
+• OTEL collector receives breaker state change span.
+• Load test: 1k failures → no memory leaks.
+
+# Subtasks:
+## 1. Implement Centralized Error Code Mapping [pending]
+### Dependencies: None
+### Description: Create a module (e.g., src/common/errors.py) that maps internal error codes to human-readable messages for consistent error responses.
+### Details:
+Define a dictionary or similar structure mapping error codes to messages. Ensure this mapping is accessible throughout the application for use in exception handling.
+
+## 2. Integrate Shared Circuit Breaker for External Browser Calls [pending]
+### Dependencies: 41.1
+### Description: Wrap all browser-use external operations with a shared circuit breaker instance to manage failures and prevent cascading errors.
+### Details:
+Use a shared circuit breaker (e.g., SharedCircuitBreaker) with defined thresholds (fail_max, reset_timeout) and ensure all relevant external calls are decorated or wrapped accordingly.
+
+## 3. Raise HTTPException on Circuit Breaker Open State [pending]
+### Dependencies: 41.2
+### Description: Ensure that when the circuit breaker is open, the application raises a FastAPI HTTPException with status code 503 and a standardized error message.
+### Details:
+Modify the external call wrappers to detect the open state and raise HTTPException(status_code=503, detail='Upstream unavailable') as per FastAPI patterns.
+
+## 4. Add Middleware to Translate BrowserUseError to HTTPException [pending]
+### Dependencies: 41.1
+### Description: Implement FastAPI middleware or exception handlers to catch BrowserUseError exceptions and translate them into appropriate HTTPException responses.
+### Details:
+Register a global exception handler or middleware that intercepts BrowserUseError and raises HTTPException with mapped error codes and messages.
+
+## 5. Push Circuit Breaker Metrics to OpenTelemetry [pending]
+### Dependencies: 41.2
+### Description: Instrument the circuit breaker to export metrics such as state, failure count, and reset events to OpenTelemetry for observability.
+### Details:
+Integrate with OpenTelemetry to push relevant circuit breaker metrics, ensuring they are tagged and structured for monitoring and alerting.
+

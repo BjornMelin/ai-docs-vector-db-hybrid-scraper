@@ -1,3 +1,4 @@
+import typing
 """MCP Server Models - Request and response models for all tools."""
 
 from .requests import AnalyticsRequest

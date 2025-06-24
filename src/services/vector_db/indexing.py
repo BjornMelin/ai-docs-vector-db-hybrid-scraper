@@ -8,11 +8,12 @@ import logging
 import time
 from typing import Any
 
-from qdrant_client import AsyncQdrantClient
-from qdrant_client import models
+from qdrant_client import AsyncQdrantClient, models
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..errors import QdrantServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class QdrantIndexing:
     """Focused payload indexing operations for Qdrant with performance optimization."""
 
-    def __init__(self, client: AsyncQdrantClient, config: UnifiedConfig):
+    def __init__(self, client: AsyncQdrantClient, config: Config):
         """Initialize indexing service.
 
         Args:

@@ -1,10 +1,13 @@
+import typing
+
+
 """Utilities package for the AI documentation vector database system."""
 
 # Re-export functions from parent utils.py and local imports module
 from pathlib import Path
 
-from .imports import resolve_imports
-from .imports import setup_import_paths
+from .imports import resolve_imports, setup_import_paths
+
 
 # Get parent directory and import directly from utils.py
 parent_dir = Path(__file__).parent.parent

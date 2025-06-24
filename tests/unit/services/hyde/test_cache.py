@@ -1,11 +1,11 @@
 """Tests for HyDE caching implementation."""
 
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
+
 from src.services.errors import EmbeddingServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig

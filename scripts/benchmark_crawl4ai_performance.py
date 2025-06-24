@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
-from src.config.loader import ConfigLoader
+from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider

@@ -1,12 +1,11 @@
 """Tests for crawling manager module."""
 
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from src.config.models import UnifiedConfig
+
+from src.config import Config
 from src.services.crawling.base import CrawlProvider
 from src.services.crawling.manager import CrawlManager
 from src.services.errors import CrawlServiceError
@@ -75,7 +74,7 @@ class TestCrawlManager:
 
     def test_init(self):
         """Test CrawlManager initialization."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         assert manager.config == config
@@ -85,7 +84,7 @@ class TestCrawlManager:
 
     def test_init_with_rate_limiter(self):
         """Test CrawlManager initialization with rate limiter."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         rate_limiter = MagicMock()
         manager = CrawlManager(config, rate_limiter)
 
@@ -94,7 +93,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_initialize_success(self):
         """Test successful initialization with UnifiedBrowserManager."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         with patch(
             "src.services.browser.unified_manager.UnifiedBrowserManager"
@@ -113,7 +112,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_initialize_crawl4ai_only(self):
         """Test initialization always uses UnifiedBrowserManager."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         with patch(
             "src.services.browser.unified_manager.UnifiedBrowserManager"
@@ -131,7 +130,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_initialize_failure_both_providers(self):
         """Test initialization failure when UnifiedBrowserManager fails."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_key"
@@ -151,7 +150,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_initialize_idempotent(self):
         """Test that multiple initialization calls are safe."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl4ai = MagicMock()  # Add Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = None
@@ -174,7 +173,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_cleanup(self):
         """Test cleanup functionality."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         # Add mock UnifiedBrowserManager
@@ -191,7 +190,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_cleanup_with_error(self):
         """Test cleanup with UnifiedBrowserManager error."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         # UnifiedBrowserManager that fails cleanup
@@ -211,7 +210,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_not_initialized(self):
         """Test scrape_url when manager not initialized."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         with pytest.raises(CrawlServiceError, match="Manager not initialized"):
@@ -220,7 +219,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_success(self):
         """Test successful URL scraping with UnifiedBrowserManager."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         # Mock UnifiedBrowserManager
@@ -259,7 +258,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_with_preferred_provider(self):
         """Test scraping with preferred provider."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -283,7 +282,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_fallback(self):
         """Test provider fallback on failure."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -308,7 +307,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_all_providers_fail(self):
         """Test when all providers fail."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -329,7 +328,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_scrape_url_with_formats(self):
         """Test scraping with specific formats."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -345,7 +344,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_crawl_site_not_initialized(self):
         """Test crawl_site when manager not initialized."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         with pytest.raises(CrawlServiceError, match="Manager not initialized"):
@@ -357,7 +356,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_crawl_site_success(self):
         """Test successful site crawling."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -379,7 +378,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_crawl_site_prefers_crawl4ai(self):
         """Test that site crawling prefers Crawl4AI when available."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "firecrawl"  # Config prefers firecrawl
 
         manager = CrawlManager(config)
@@ -401,7 +400,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_crawl_site_with_fallback(self):
         """Test site crawling with fallback on provider failure."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -435,7 +434,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_crawl_site_all_fail(self):
         """Test site crawling when all providers fail."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)
@@ -455,7 +454,7 @@ class TestCrawlManager:
     )
     def test_get_provider_info(self):
         """Test getting provider information."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_key"
@@ -476,7 +475,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_map_url_not_initialized(self):
         """Test map_url when manager not initialized."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         with pytest.raises(CrawlServiceError, match="Manager not initialized"):
@@ -488,7 +487,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_map_url_no_firecrawl(self):
         """Test map_url when Firecrawl provider not available."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
         provider = MockCrawlProvider("crawl4ai")
         manager.providers = {"crawl4ai": provider}
@@ -507,7 +506,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_map_url_with_firecrawl(self):
         """Test map_url with Firecrawl provider."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         manager = CrawlManager(config)
 
         # Mock Firecrawl provider with map_url method
@@ -530,7 +529,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_unified_browser_manager_initialization_config(self):
         """Test UnifiedBrowserManager initialization with correct configuration."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl4ai = MagicMock()  # Mock Crawl4AI config
         config.firecrawl = MagicMock()
         config.firecrawl.api_key = "test_api_key"
@@ -556,7 +555,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_provider_order_logic(self):
         """Test provider selection order logic."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "firecrawl"
 
         manager = CrawlManager(config)
@@ -585,7 +584,7 @@ class TestCrawlManager:
     @pytest.mark.asyncio
     async def test_invalid_preferred_provider(self):
         """Test handling of invalid preferred provider."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         config.crawl_provider = "crawl4ai"
 
         manager = CrawlManager(config)

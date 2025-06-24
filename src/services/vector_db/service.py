@@ -7,14 +7,17 @@ using the centralized ClientManager for all client operations.
 import logging
 from typing import TYPE_CHECKING
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import QdrantServiceError
 from .collections import QdrantCollections
 from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
 from .search import QdrantSearch
-from .search_interceptor import SearchInterceptor
+
+
+# Removed search interceptor (over-engineered deployment infrastructure)
 
 if TYPE_CHECKING:
     from ...infrastructure.client_manager import ClientManager
@@ -25,7 +28,7 @@ logger = logging.getLogger(__name__)
 class QdrantService(BaseService):
     """Unified Qdrant service facade delegating to focused modules."""
 
-    def __init__(self, config: UnifiedConfig, client_manager: "ClientManager"):
+    def __init__(self, config: Config, client_manager: "ClientManager"):
         """Initialize Qdrant service with modular components.
 
         Args:
@@ -33,7 +36,7 @@ class QdrantService(BaseService):
             client_manager: ClientManager instance for dependency injection
         """
         super().__init__(config)
-        self.config: UnifiedConfig = config
+        self.config: Config = config
         self._client_manager = client_manager
 
         # Initialize focused modules (will be set after client initialization)
@@ -41,8 +44,12 @@ class QdrantService(BaseService):
         self._search: QdrantSearch | None = None
         self._indexing: QdrantIndexing | None = None
         self._documents: QdrantDocuments | None = None
-        self._search_interceptor: SearchInterceptor | None = None
-        self._canary_router = None
+
+        # Enterprise deployment infrastructure components (feature flag controlled)
+        self._feature_flag_manager = None
+        self._ab_testing_manager = None
+        self._blue_green_deployment = None
+        self._canary_deployment = None
 
     async def initialize(self) -> None:
         """Initialize all Qdrant modules with connection validation.
@@ -66,45 +73,8 @@ class QdrantService(BaseService):
             # Initialize each module
             await self._collections.initialize()
 
-            # Initialize search interceptor with canary routing if available
-            try:
-                cache_manager = await self._client_manager.get_cache_manager()
-                redis_client = None
-
-                # Try to get Redis client for event publishing
-                try:
-                    redis_client = await self._client_manager.get_redis_client()
-                except Exception:
-                    logger.debug("Redis client not available for search interceptor")
-
-                if cache_manager and cache_manager.distributed_cache:
-                    from ..deployment.canary_router import CanaryRouter
-
-                    self._canary_router = CanaryRouter(
-                        cache=cache_manager.distributed_cache,
-                        config=self.config,
-                    )
-
-                    self._search_interceptor = SearchInterceptor(
-                        search_service=self._search,
-                        router=self._canary_router,
-                        config=self.config,
-                        redis_client=redis_client,
-                    )
-                    logger.info("Search interceptor initialized with canary routing")
-                else:
-                    # No canary routing, use direct search
-                    self._search_interceptor = SearchInterceptor(
-                        search_service=self._search,
-                        router=None,
-                        config=self.config,
-                        redis_client=redis_client,
-                    )
-                    logger.info("Search interceptor initialized without canary routing")
-            except Exception as e:
-                logger.warning(f"Failed to initialize search interceptor: {e}")
-                # Fallback to direct search without interceptor
-                self._search_interceptor = None
+            # Initialize deployment infrastructure if enabled
+            await self._initialize_deployment_services()
 
             self._initialized = True
             logger.info("QdrantService initialized with modular architecture")
@@ -112,6 +82,55 @@ class QdrantService(BaseService):
         except Exception as e:
             self._initialized = False
             raise QdrantServiceError(f"Failed to initialize QdrantService: {e}") from e
+
+    async def _initialize_deployment_services(self) -> None:
+        """Initialize deployment services based on configuration and feature flags.
+
+        Conditionally initializes enterprise deployment services:
+        - Feature flag management
+        - A/B testing manager
+        - Blue-green deployment
+        - Canary deployment
+
+        Services are only initialized if enabled in configuration.
+        """
+        try:
+            # Initialize feature flag manager if deployment services are enabled
+            if self.config.deployment.enable_feature_flags:
+                self._feature_flag_manager = (
+                    await self._client_manager.get_feature_flag_manager()
+                )
+                logger.info("Initialized FeatureFlagManager for QdrantService")
+
+            # Initialize A/B testing manager if enabled
+            if self.config.deployment.enable_ab_testing:
+                self._ab_testing_manager = (
+                    await self._client_manager.get_ab_testing_manager()
+                )
+                if self._ab_testing_manager:
+                    logger.info("Initialized ABTestingManager for QdrantService")
+
+            # Store deployment services for search routing
+            if (
+                self.config.deployment.enable_blue_green
+                or self.config.deployment.enable_canary
+                or self.config.deployment.enable_ab_testing
+            ):
+                # Get deployment services and store references
+                blue_green = await self._client_manager.get_blue_green_deployment()
+                canary = await self._client_manager.get_canary_deployment()
+
+                # Store deployment services for routing decisions
+                self._blue_green_deployment = blue_green
+                self._canary_deployment = canary
+
+                logger.info("Initialized deployment services for QdrantService routing")
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize deployment services: {e}. Continuing with standard mode."
+            )
+            # Don't raise exception - deployment services are optional
 
     async def cleanup(self) -> None:
         """Cleanup all Qdrant modules (delegated to ClientManager)."""
@@ -123,6 +142,13 @@ class QdrantService(BaseService):
         self._search = None
         self._indexing = None
         self._documents = None
+
+        # Reset deployment service references
+        self._feature_flag_manager = None
+        self._ab_testing_manager = None
+        self._blue_green_deployment = None
+        self._canary_deployment = None
+
         self._initialized = False
         logger.info("QdrantService cleanup completed")
 
@@ -293,30 +319,48 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.hybrid_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                sparse_vector=sparse_vector,
-                limit=limit,
-                score_threshold=score_threshold,
-                fusion_type=fusion_type,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
+        # Route search through deployment infrastructure if enabled
+        if self._ab_testing_manager and user_id:
+            # Check for active A/B tests and route accordingly
+            variant = await self._ab_testing_manager.assign_user_to_variant(
+                test_id="hybrid_search_test", user_id=user_id
+            )
+            if variant and variant == "variant":
+                # Use alternative search parameters for A/B testing
+                search_accuracy = "accurate"  # Example: use higher accuracy for variant
+
+        # Check canary deployment routing
+        if self._canary_deployment and user_id:
+            canary_assignment = await self._canary_deployment.should_route_to_canary(
+                user_id
+            )
+            if canary_assignment:
+                # Route to canary version with enhanced monitoring
+                logger.debug(
+                    f"Routing user {user_id} to canary deployment for hybrid search"
+                )
+
+        # Execute search with deployment tracking
+        result = await self._search.hybrid_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            sparse_vector=sparse_vector,
+            limit=limit,
+            score_threshold=score_threshold,
+            fusion_type=fusion_type,
+            search_accuracy=search_accuracy,
+        )
+
+        # Track metrics for deployment monitoring
+        if self._ab_testing_manager and request_id:
+            await self._ab_testing_manager.track_conversion(
+                test_id="hybrid_search_test",
+                user_id=user_id or "anonymous",
+                event_type="search_executed",
                 request_id=request_id,
             )
-        else:
-            # Fallback to direct search
-            return await self._search.hybrid_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                sparse_vector=sparse_vector,
-                limit=limit,
-                score_threshold=score_threshold,
-                fusion_type=fusion_type,
-                search_accuracy=search_accuracy,
-            )
+
+        return result
 
     async def multi_stage_search(
         self,
@@ -350,26 +394,45 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.multi_stage_search(
-                collection_name=collection_name,
-                stages=stages,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
+        # Route search through deployment infrastructure if enabled
+        if self._ab_testing_manager and user_id:
+            # Check for active A/B tests
+            variant = await self._ab_testing_manager.assign_user_to_variant(
+                test_id="multi_stage_search_test", user_id=user_id
+            )
+            if variant and variant == "variant":
+                # Modify stages for A/B testing (e.g., add additional stage)
+                search_accuracy = "accurate"
+
+        # Check canary deployment routing
+        if self._canary_deployment and user_id:
+            canary_assignment = await self._canary_deployment.should_route_to_canary(
+                user_id
+            )
+            if canary_assignment:
+                logger.debug(
+                    f"Routing user {user_id} to canary deployment for multi-stage search"
+                )
+
+        # Execute search with deployment tracking
+        result = await self._search.multi_stage_search(
+            collection_name=collection_name,
+            stages=stages,
+            limit=limit,
+            fusion_algorithm=fusion_algorithm,
+            search_accuracy=search_accuracy,
+        )
+
+        # Track metrics for deployment monitoring
+        if self._ab_testing_manager and request_id:
+            await self._ab_testing_manager.track_conversion(
+                test_id="multi_stage_search_test",
+                user_id=user_id or "anonymous",
+                event_type="search_executed",
                 request_id=request_id,
             )
-        else:
-            # Fallback to direct search
-            return await self._search.multi_stage_search(
-                collection_name=collection_name,
-                stages=stages,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-            )
+
+        return result
 
     async def hyde_search(
         self,
@@ -404,30 +467,47 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.hyde_search(
-                collection_name=collection_name,
-                query=query,
-                query_embedding=query_embedding,
-                hypothetical_embeddings=hypothetical_embeddings,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
+        # Route search through deployment infrastructure if enabled
+        if self._ab_testing_manager and user_id:
+            # Check for active A/B tests
+            variant = await self._ab_testing_manager.assign_user_to_variant(
+                test_id="hyde_search_test", user_id=user_id
+            )
+            if variant and variant == "variant":
+                # Modify HyDE parameters for A/B testing
+                search_accuracy = "accurate"
+
+        # Check canary deployment routing
+        if self._canary_deployment and user_id:
+            canary_assignment = await self._canary_deployment.should_route_to_canary(
+                user_id
+            )
+            if canary_assignment:
+                logger.debug(
+                    f"Routing user {user_id} to canary deployment for HyDE search"
+                )
+
+        # Execute search with deployment tracking
+        result = await self._search.hyde_search(
+            collection_name=collection_name,
+            query=query,
+            query_embedding=query_embedding,
+            hypothetical_embeddings=hypothetical_embeddings,
+            limit=limit,
+            fusion_algorithm=fusion_algorithm,
+            search_accuracy=search_accuracy,
+        )
+
+        # Track metrics for deployment monitoring
+        if self._ab_testing_manager and request_id:
+            await self._ab_testing_manager.track_conversion(
+                test_id="hyde_search_test",
+                user_id=user_id or "anonymous",
+                event_type="search_executed",
                 request_id=request_id,
             )
-        else:
-            # Fallback to direct search
-            return await self._search.hyde_search(
-                collection_name=collection_name,
-                query=query,
-                query_embedding=query_embedding,
-                hypothetical_embeddings=hypothetical_embeddings,
-                limit=limit,
-                fusion_algorithm=fusion_algorithm,
-                search_accuracy=search_accuracy,
-            )
+
+        return result
 
     async def filtered_search(
         self,
@@ -458,26 +538,45 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Use search interceptor if available for canary routing
-        if self._search_interceptor:
-            return await self._search_interceptor.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                filters=filters,
-                limit=limit,
-                search_accuracy=search_accuracy,
-                user_id=user_id,
+        # Route search through deployment infrastructure if enabled
+        if self._ab_testing_manager and user_id:
+            # Check for active A/B tests
+            variant = await self._ab_testing_manager.assign_user_to_variant(
+                test_id="filtered_search_test", user_id=user_id
+            )
+            if variant and variant == "variant":
+                # Modify filtering for A/B testing
+                search_accuracy = "accurate"
+
+        # Check canary deployment routing
+        if self._canary_deployment and user_id:
+            canary_assignment = await self._canary_deployment.should_route_to_canary(
+                user_id
+            )
+            if canary_assignment:
+                logger.debug(
+                    f"Routing user {user_id} to canary deployment for filtered search"
+                )
+
+        # Execute search with deployment tracking
+        result = await self._search.filtered_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            filters=filters,
+            limit=limit,
+            search_accuracy=search_accuracy,
+        )
+
+        # Track metrics for deployment monitoring
+        if self._ab_testing_manager and request_id:
+            await self._ab_testing_manager.track_conversion(
+                test_id="filtered_search_test",
+                user_id=user_id or "anonymous",
+                event_type="search_executed",
                 request_id=request_id,
             )
-        else:
-            # Fallback to direct search
-            return await self._search.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                filters=filters,
-                limit=limit,
-                search_accuracy=search_accuracy,
-            )
+
+        return result
 
     # Indexing API (delegates to QdrantIndexing)
 

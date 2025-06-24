@@ -1,18 +1,19 @@
 """Tests for the similarity threshold filter implementation."""
 
 import asyncio
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
-from src.services.vector_db.filters.base import FilterError
-from src.services.vector_db.filters.base import FilterResult
-from src.services.vector_db.filters.similarity import ClusteringAnalysis
-from src.services.vector_db.filters.similarity import QueryContext
-from src.services.vector_db.filters.similarity import SimilarityThresholdCriteria
-from src.services.vector_db.filters.similarity import SimilarityThresholdManager
-from src.services.vector_db.filters.similarity import ThresholdMetrics
-from src.services.vector_db.filters.similarity import ThresholdStrategy
+
+from src.services.vector_db.filters.base import FilterError, FilterResult
+from src.services.vector_db.filters.similarity import (
+    ClusteringAnalysis,
+    QueryContext,
+    SimilarityThresholdCriteria,
+    SimilarityThresholdManager,
+    ThresholdMetrics,
+    ThresholdStrategy,
+)
 
 
 class TestThresholdStrategy:

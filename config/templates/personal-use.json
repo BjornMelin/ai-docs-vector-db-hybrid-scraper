@@ -1,5 +1,5 @@
 {
-  "environment": "personal-use",
+  "environment": "development",
   "description": "Personal development configuration optimized for individual developers and small projects",
 
   "cache": {

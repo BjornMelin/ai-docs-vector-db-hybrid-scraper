@@ -1,20 +1,25 @@
 """Comprehensive tests for refactored query processing MCP tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import AdvancedQueryProcessingRequest
-from src.mcp_tools.models.requests import QueryAnalysisRequest
-from src.mcp_tools.models.responses import AdvancedQueryProcessingResponse
-from src.mcp_tools.models.responses import QueryAnalysisResponse
+from src.mcp_tools.models.requests import (
+    AdvancedQueryProcessingRequest,
+    QueryAnalysisRequest,
+)
+from src.mcp_tools.models.responses import (
+    AdvancedQueryProcessingResponse,
+    QueryAnalysisResponse,
+)
 from src.mcp_tools.tools.query_processing import register_tools
-from src.services.query_processing.models import MatryoshkaDimension
-from src.services.query_processing.models import QueryComplexity
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import SearchStrategy
+from src.services.query_processing.models import (
+    MatryoshkaDimension,
+    QueryComplexity,
+    QueryIntent,
+    SearchStrategy,
+)
 
 
 class MockMCP:
@@ -230,7 +235,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -303,7 +308,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -340,7 +345,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks
@@ -375,7 +380,7 @@ class TestAdvancedQueryProcessingTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks to raise an exception
@@ -472,7 +477,7 @@ class TestQueryAnalysisTool:
                 "src.mcp_tools.tools.helpers.pipeline_factory.QueryProcessingPipelineFactory.create_pipeline"
             ) as mock_create_pipeline,
             patch(
-                "src.security.SecurityValidator.from_unified_config"
+                "src.security.MLSecurityValidator.from_unified_config"
             ) as mock_security,
         ):
             # Setup mocks

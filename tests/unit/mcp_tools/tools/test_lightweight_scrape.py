@@ -1,9 +1,9 @@
 """Tests for lightweight scraping MCP tool."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from src.services.errors import CrawlServiceError
 
 

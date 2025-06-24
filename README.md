@@ -1,6 +1,6 @@
 # Intelligent Vector RAG Knowledge Base with Multi-Tier Web Crawling
 
-[![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.11--3.12-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0+-green.svg)](https://fastapi.tiangolo.com)
 [![Qdrant](https://img.shields.io/badge/Qdrant-1.12+-red.svg)](https://qdrant.tech)
 [![Pydantic](https://img.shields.io/badge/Pydantic-2.0+-purple.svg)](https://pydantic-docs.helpmanual.io)
@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-1.0+-yellow.svg)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-500%2B-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-33%25-yellow.svg)](tests/)
 
 A production-grade vector RAG system implementing research-backed best practices for intelligent
 document processing, multi-tier web crawling, and hybrid search with reranking. Built with modern
@@ -56,25 +56,25 @@ strategies to achieve superior performance compared to existing solutions.
 - **Memory-Adaptive Processing**: Dynamic concurrency control based on system resources
 - **Vector Quantization**: Storage optimization with minimal accuracy loss
 - **Collection Aliases**: Zero-downtime deployments with blue-green switching
-- **MCP Protocol Integration**: Unified server for Claude Desktop/Code integration
+- **MCP Protocol Integration**: Unified server with 24 tools for Claude Desktop/Code integration
 - **Comprehensive Caching**: DragonflyDB + in-memory LRU with intelligent warming
 
 ### Technology Stack
 
-| Component | Technology | Version |
-|-----------|------------|---------|
-| **Web Crawling** | Crawl4AI | 0.4.0+ |
-| **Browser Automation** | Playwright + browser-use | Latest |
-| **Vector Database** | Qdrant | 1.12+ |
-| **Cache Layer** | DragonflyDB | Latest |
-| **Database Connection Pool** | SQLAlchemy Async + ML Monitoring | Latest |
-| **Machine Learning** | scikit-learn + psutil | Latest |
-| **Embeddings** | OpenAI + FastEmbed | Latest |
-| **Reranking** | BGE-reranker-v2-m3 | 1.0+ |
-| **Web Framework** | FastAPI | 0.115.0+ |
-| **Configuration** | Pydantic | 2.0+ |
-| **Package Manager** | uv | Latest |
-| **Task Queue** | ARQ | Latest |
+| Component                    | Technology                       | Version  |
+| ---------------------------- | -------------------------------- | -------- |
+| **Web Crawling**             | Crawl4AI                         | 0.4.0+   |
+| **Browser Automation**       | Playwright + browser-use         | Latest   |
+| **Vector Database**          | Qdrant                           | 1.12+    |
+| **Cache Layer**              | DragonflyDB                      | Latest   |
+| **Database Connection Pool** | SQLAlchemy Async + ML Monitoring | Latest   |
+| **Machine Learning**         | scikit-learn + psutil            | Latest   |
+| **Embeddings**               | OpenAI + FastEmbed               | Latest   |
+| **Reranking**                | BGE-reranker-v2-m3               | 1.0+     |
+| **Web Framework**            | FastAPI                          | 0.115.0+ |
+| **Configuration**            | Pydantic                         | 2.0+     |
+| **Package Manager**          | uv                               | Latest   |
+| **Task Queue**               | ARQ                              | Latest   |
 
 ## Technical Architecture
 
@@ -183,42 +183,42 @@ flowchart TB
 
 ### Crawling Performance vs. Alternatives
 
-| Metric | This System | Firecrawl | Beautiful Soup | Improvement |
-|--------|-------------|-----------|----------------|-------------|
-| **Average Latency** | 0.4s | 2.5s | 1.8s | **6.25x faster** |
-| **Success Rate** | 97% | 92% | 85% | **5.4% better** |
-| **Memory Usage** | 120MB | 200MB | 150MB | **40% less** |
-| **JS Rendering** | ✅ | ✅ | ❌ | **Feature parity** |
-| **Cost** | $0 | $0.005/page | $0 | **Zero cost** |
+| Metric              | This System | Firecrawl   | Beautiful Soup | Improvement        |
+| ------------------- | ----------- | ----------- | -------------- | ------------------ |
+| **Average Latency** | 0.4s        | 2.5s        | 1.8s           | **6.25x faster**   |
+| **Success Rate**    | 97%         | 92%         | 85%            | **5.4% better**    |
+| **Memory Usage**    | 120MB       | 200MB       | 150MB          | **40% less**       |
+| **JS Rendering**    | ✅          | ✅          | ❌             | **Feature parity** |
+| **Cost**            | $0          | $0.005/page | $0             | **Zero cost**      |
 
 ### Embedding Model Performance Comparison
 
-| Model | MTEB Score | Cost (per 1M tokens) | Dimensions | Use Case |
-|-------|------------|----------------------|------------|----------|
-| **text-embedding-3-small** | 62.3 | $0.02 | 1536 | **Recommended** |
-| text-embedding-3-large | 64.6 | $0.13 | 3072 | High accuracy |
-| text-embedding-ada-002 | 61.0 | $0.10 | 1536 | Legacy compatibility |
-| BGE-M3 (local) | 64.1 | Free | 1024 | Local deployment |
+| Model                      | MTEB Score | Cost (per 1M tokens) | Dimensions | Use Case             |
+| -------------------------- | ---------- | -------------------- | ---------- | -------------------- |
+| **text-embedding-3-small** | 62.3       | $0.02                | 1536       | **Recommended**      |
+| text-embedding-3-large     | 64.6       | $0.13                | 3072       | High accuracy        |
+| text-embedding-ada-002     | 61.0       | $0.10                | 1536       | Legacy compatibility |
+| BGE-M3 (local)             | 64.1       | Free                 | 1024       | Local deployment     |
 
 ### Search Strategy Performance
 
-| Strategy | Accuracy | P95 Latency | Storage Overhead | Complexity |
-|----------|----------|-------------|------------------|------------|
-| Dense Only | Baseline | 45ms | 1x | Low |
-| Sparse Only | -15% | 40ms | 1.5x | Low |
-| **Hybrid + Reranking** | **+30%** | 65ms | 1.2x | **Optimal** |
+| Strategy               | Accuracy | P95 Latency | Storage Overhead | Complexity  |
+| ---------------------- | -------- | ----------- | ---------------- | ----------- |
+| Dense Only             | Baseline | 45ms        | 1x               | Low         |
+| Sparse Only            | -15%     | 40ms        | 1.5x             | Low         |
+| **Hybrid + Reranking** | **+30%** | 65ms        | 1.2x             | **Optimal** |
 
 ### Enhanced Database Connection Pool Performance
 
-| Metric | Baseline System | Enhanced System | Improvement |
-|--------|-----------------|-----------------|-------------|
-| **P95 Latency** | 820ms | 402ms | **50.9% reduction** |
-| **P50 Latency** | 450ms | 198ms | **56.0% reduction** |
-| **P99 Latency** | 1200ms | 612ms | **49.0% reduction** |
-| **Throughput** | 85 ops/sec | 839 ops/sec | **887.9% increase** |
-| **Connection Utilization** | 65% | 92% | **41.5% improvement** |
-| **Failure Recovery Time** | 12s | 3.2s | **73.3% faster** |
-| **Memory Usage** | 180MB | 165MB | **8.3% reduction** |
+| Metric                     | Baseline System | Enhanced System | Improvement           |
+| -------------------------- | --------------- | --------------- | --------------------- |
+| **P95 Latency**            | 820ms           | 402ms           | **50.9% reduction**   |
+| **P50 Latency**            | 450ms           | 198ms           | **56.0% reduction**   |
+| **P99 Latency**            | 1200ms          | 612ms           | **49.0% reduction**   |
+| **Throughput**             | 85 ops/sec      | 839 ops/sec     | **887.9% increase**   |
+| **Connection Utilization** | 65%             | 92%             | **41.5% improvement** |
+| **Failure Recovery Time**  | 12s             | 3.2s            | **73.3% faster**      |
+| **Memory Usage**           | 180MB           | 165MB           | **8.3% reduction**    |
 
 #### Key Features Delivered
 
@@ -248,7 +248,7 @@ Production Benchmarks (1000-document corpus):
 
 ### Prerequisites
 
-- Python 3.13+ (recommended for optimal performance)
+- Python 3.11 or 3.12 (3.13 not yet supported due to dependency constraints)
 - Docker Desktop with WSL2 integration (Windows) or Docker Engine (Linux/macOS)
 - OpenAI API key
 - 4GB+ RAM (8GB+ recommended for production)
@@ -260,9 +260,11 @@ Production Benchmarks (1000-document corpus):
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
 
-# Automated setup with dependency validation
-chmod +x setup.sh
-./setup.sh
+# Install with uv (recommended)
+uv sync --dev
+
+# Alternative: pip installation
+pip install -e ".[dev]"
 
 # Verify installation
 uv run python -c "import src; print('Installation successful')"
@@ -355,7 +357,7 @@ embedding_config = EmbeddingConfig(
 
 ### Configuration Templates
 
-Five optimized templates are available for different deployment scenarios:
+Multiple optimized templates are available for different deployment scenarios:
 
 ```bash
 # Development environment
@@ -364,14 +366,20 @@ uv run python -m src.cli.main config template apply development
 # Production with security hardening
 uv run python -m src.cli.main config template apply production
 
-# High-performance for maximum throughput
-uv run python -m src.cli.main config template apply high_performance
+# Minimal configuration
+uv run python -m src.cli.main config template apply minimal
 
-# Memory-optimized for resource-constrained environments
-uv run python -m src.cli.main config template apply memory_optimized
+# Personal use configuration
+uv run python -m src.cli.main config template apply personal-use
 
-# Distributed multi-node deployment
-uv run python -m src.cli.main config template apply distributed
+# Testing configuration
+uv run python -m src.cli.main config template apply testing
+
+# Local-only configuration (no external services)
+uv run python -m src.cli.main config template apply local-only
+
+# Custom benchmarks configuration
+uv run python -m src.cli.main config template apply custom-benchmarks
 ```
 
 ### Crawling Configuration
@@ -676,7 +684,6 @@ uv sync --dev
 # Pre-commit validation
 ruff check . --fix && ruff format .
 uv run pytest --cov=src -x
-mypy src/
 
 # Commit with conventional commits
 git commit -m "feat: add enhancement description"
@@ -808,16 +815,16 @@ Our documentation is organized by user role for efficient navigation and focused
 
 ### 🎯 Quick Navigation by Task
 
-| What you want to do | Go to |
-|---------------------|-------|
-| **Set up the system** | [Quick Start Guide](docs/users/quick-start.md) |
-| **Integrate with your app** | [Integration Guide](docs/developers/integration-guide.md) |
-| **Deploy to production** | [Deployment Guide](docs/operators/deployment.md) |
-| **Monitor performance** | [Monitoring Guide](docs/operators/monitoring.md) |
-| **Understand the API** | [API Reference](docs/developers/api-reference.md) |
-| **Configure the system** | [Configuration Reference](docs/developers/configuration.md) |
-| **Secure your deployment** | [Security Guide](docs/operators/security.md) |
-| **Troubleshoot issues** | [Operations Manual](docs/operators/operations.md) |
+| What you want to do         | Go to                                                       |
+| --------------------------- | ----------------------------------------------------------- |
+| **Set up the system**       | [Quick Start Guide](docs/users/quick-start.md)              |
+| **Integrate with your app** | [Integration Guide](docs/developers/integration-guide.md)   |
+| **Deploy to production**    | [Deployment Guide](docs/operators/deployment.md)            |
+| **Monitor performance**     | [Monitoring Guide](docs/operators/monitoring.md)            |
+| **Understand the API**      | [API Reference](docs/developers/api-reference.md)           |
+| **Configure the system**    | [Configuration Reference](docs/developers/configuration.md) |
+| **Secure your deployment**  | [Security Guide](docs/operators/security.md)                |
+| **Troubleshoot issues**     | [Operations Manual](docs/operators/operations.md)           |
 
 ## Contributing
 

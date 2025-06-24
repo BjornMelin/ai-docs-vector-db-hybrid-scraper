@@ -4,9 +4,11 @@ import logging
 import time
 from typing import Any
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import QdrantServiceError
+
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 class HNSWOptimizer(BaseService):
     """Intelligent HNSW parameter optimization for Qdrant collections."""
 
-    def __init__(self, config: UnifiedConfig, qdrant_service: Any):
+    def __init__(self, config: Config, qdrant_service: Any):
         """Initialize HNSW optimizer.
 
         Args:

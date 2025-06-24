@@ -4,12 +4,11 @@ This module tests the main CLI entry point, RichCLI class, and core commands
 including version, completion, and status functionality.
 """
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from rich.console import Console
-from src.cli.main import RichCLI
-from src.cli.main import main
+
+from src.cli.main import RichCLI, main
 
 
 class TestRichCLI:

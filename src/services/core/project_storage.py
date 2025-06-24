@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+
 try:
     import aiofiles
 except ImportError:
@@ -14,6 +15,7 @@ except ImportError:
     aiofiles = None
 
 from src.services.errors import BaseError
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ class ProjectStorage:
                 self._projects_cache = {}
                 return {}
             except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON in project storage: {e}")
+                logger.exception(f"Invalid JSON in project storage: {e}")
                 # Backup corrupted file
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():

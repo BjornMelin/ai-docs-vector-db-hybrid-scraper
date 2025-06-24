@@ -1,19 +1,21 @@
 """Tests for the result clustering service implementation."""
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from src.services.query_processing.clustering import ClusterGroup
-from src.services.query_processing.clustering import ClusteringMethod
-from src.services.query_processing.clustering import ClusteringScope
-from src.services.query_processing.clustering import OutlierResult
-from src.services.query_processing.clustering import ResultClusteringRequest
-from src.services.query_processing.clustering import ResultClusteringResult
-from src.services.query_processing.clustering import ResultClusteringService
-from src.services.query_processing.clustering import SearchResult
-from src.services.query_processing.clustering import SimilarityMetric
+
+from src.services.query_processing.clustering import (
+    ClusterGroup,
+    ClusteringMethod,
+    ClusteringScope,
+    OutlierResult,
+    ResultClusteringRequest,
+    ResultClusteringResult,
+    ResultClusteringService,
+    SearchResult,
+    SimilarityMetric,
+)
 
 
 class TestClusteringMethod:

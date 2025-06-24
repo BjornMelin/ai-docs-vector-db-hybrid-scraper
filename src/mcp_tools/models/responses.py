@@ -1,3 +1,4 @@
+import typing
 """Response models for MCP server tools."""
 
 from datetime import datetime

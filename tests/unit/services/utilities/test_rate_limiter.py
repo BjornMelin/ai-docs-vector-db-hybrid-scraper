@@ -5,11 +5,14 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from src.config.models import UnifiedConfig
+
+from src.config import Config
 from src.services.errors import APIError
-from src.services.utilities.rate_limiter import AdaptiveRateLimiter
-from src.services.utilities.rate_limiter import RateLimiter
-from src.services.utilities.rate_limiter import RateLimitManager
+from src.services.utilities.rate_limiter import (
+    AdaptiveRateLimiter,
+    RateLimiter,
+    RateLimitManager,
+)
 
 
 class TestRateLimiter:
@@ -172,7 +175,7 @@ class TestRateLimitManager:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
         mock_performance = MagicMock()
         mock_performance.default_rate_limits = {
             "openai": {"max_calls": 60, "time_window": 60},

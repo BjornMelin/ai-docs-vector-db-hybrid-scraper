@@ -7,12 +7,15 @@ complexity, and characteristics to optimize search performance and quality.
 import logging
 from typing import Any
 
-from .models import MatryoshkaDimension
-from .models import QueryComplexity
-from .models import QueryIntent
-from .models import QueryIntentClassification
-from .models import SearchStrategy
-from .models import SearchStrategySelection
+from .models import (
+    MatryoshkaDimension,
+    QueryComplexity,
+    QueryIntent,
+    QueryIntentClassification,
+    SearchStrategy,
+    SearchStrategySelection,
+)
+
 
 logger = logging.getLogger(__name__)
 

@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from .models import ContentMetadata
 
+
 logger = logging.getLogger(__name__)
 
 # Metadata extraction constants

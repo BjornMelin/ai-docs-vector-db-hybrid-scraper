@@ -9,17 +9,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import HTTPException
-from fastapi import Request
-from src.config.fastapi import FastAPIProductionConfig
-from src.config.fastapi import get_fastapi_config
-from src.config.models import UnifiedConfig
-from src.infrastructure.client_manager import ClientManager
-from src.services.cache.manager import CacheManager
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.fastapi.middleware.tracing import get_correlation_id
-from src.services.vector_db.service import QdrantService
+from fastapi import HTTPException, Request
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
+
+from src.config import Config, get_config
+from src.infrastructure.client_manager import ClientManager
+
+# Import new function-based dependencies
+from src.services.dependencies import get_cache_manager, get_embedding_manager
+from src.services.fastapi.middleware.correlation import get_correlation_id
+from src.services.vector_db.service import QdrantService
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,14 @@ class DependencyContainer:
 
     def __init__(self):
         """Initialize dependency container."""
-        self._config: UnifiedConfig | None = None
-        self._fastapi_config: FastAPIProductionConfig | None = None
+        self._config: Config | None = None
+        self._client_manager: ClientManager | None = None
         self._vector_service: QdrantService | None = None
-        self._embedding_manager: EmbeddingManager | None = None
-        self._cache_manager: CacheManager | None = None
+        self._embedding_manager: Any | None = None
+        self._cache_manager: Any | None = None
         self._initialized = False
 
-    async def initialize(self, config: UnifiedConfig | None = None) -> None:
+    async def initialize(self, config: Config | None = None) -> None:
         """Initialize all dependencies.
 
         Args:
@@ -48,48 +48,41 @@ class DependencyContainer:
         try:
             # Load configurations
             if config is None:
-                from src.config.loader import load_config
-
-                config = load_config()
+                config = get_config()
 
             self._config = config
-            self._fastapi_config = get_fastapi_config()
 
-            # Initialize core services
-            client_manager = ClientManager(config)
-            self._vector_service = QdrantService(config, client_manager)
+            # Initialize core services using function-based approach
+            self._client_manager = ClientManager.from_unified_config()
+            self._vector_service = QdrantService(config, self._client_manager)
             await self._vector_service.initialize()
 
-            self._embedding_manager = EmbeddingManager(config.embeddings)
-            await self._embedding_manager.initialize()
-
-            self._cache_manager = CacheManager(config.cache)
-            await self._cache_manager.initialize()
+            # Use function-based managers through client manager
+            self._embedding_manager = await get_embedding_manager(self._client_manager)
+            self._cache_manager = await get_cache_manager(self._client_manager)
 
             self._initialized = True
             logger.info("Dependency container initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize dependency container: {e}")
+            logger.exception(f"Failed to initialize dependency container: {e}")
             raise
 
     async def cleanup(self) -> None:
         """Clean up all dependencies."""
         try:
-            if self._cache_manager:
-                await self._cache_manager.cleanup()
-
-            if self._embedding_manager:
-                await self._embedding_manager.cleanup()
-
+            # Function-based managers are cleaned up through client manager
             if self._vector_service:
                 await self._vector_service.cleanup()
+
+            if self._client_manager:
+                await self._client_manager.cleanup()
 
             self._initialized = False
             logger.info("Dependency container cleaned up")
 
         except Exception as e:
-            logger.error(f"Error during dependency cleanup: {e}")
+            logger.exception(f"Error during dependency cleanup: {e}")
 
     @property
     def is_initialized(self) -> bool:
@@ -97,18 +90,11 @@ class DependencyContainer:
         return self._initialized
 
     @property
-    def config(self) -> UnifiedConfig:
-        """Get unified configuration."""
+    def config(self) -> Config:
+        """Get configuration."""
         if not self._config:
             raise RuntimeError("Dependency container not initialized")
         return self._config
-
-    @property
-    def fastapi_config(self) -> FastAPIProductionConfig:
-        """Get FastAPI configuration."""
-        if not self._fastapi_config:
-            raise RuntimeError("Dependency container not initialized")
-        return self._fastapi_config
 
     @property
     def vector_service(self) -> QdrantService:
@@ -118,18 +104,25 @@ class DependencyContainer:
         return self._vector_service
 
     @property
-    def embedding_manager(self) -> EmbeddingManager:
+    def embedding_manager(self) -> Any:
         """Get embedding manager."""
         if not self._embedding_manager:
             raise RuntimeError("Embedding manager not initialized")
         return self._embedding_manager
 
     @property
-    def cache_manager(self) -> CacheManager:
+    def cache_manager(self) -> Any:
         """Get cache manager."""
         if not self._cache_manager:
             raise RuntimeError("Cache manager not initialized")
         return self._cache_manager
+
+    @property
+    def client_manager(self) -> ClientManager:
+        """Get client manager."""
+        if not self._client_manager:
+            raise RuntimeError("Client manager not initialized")
+        return self._client_manager
 
 
 # Global dependency container instance
@@ -152,7 +145,7 @@ def get_container() -> DependencyContainer:
     return _container
 
 
-async def initialize_dependencies(config: UnifiedConfig | None = None) -> None:
+async def initialize_dependencies(config: Config | None = None) -> None:
     """Initialize the global dependency container.
 
     Args:
@@ -175,13 +168,22 @@ async def cleanup_dependencies() -> None:
 # FastAPI dependency functions
 
 
-def get_config() -> UnifiedConfig:
-    """FastAPI dependency for unified configuration.
+def get_config_dependency() -> Config:
+    """FastAPI dependency for configuration.
 
     Returns:
-        Unified configuration instance
+        Configuration instance
     """
     return get_container().config
+
+
+def get_fastapi_config() -> Config:
+    """Alias for get_config_dependency for backward compatibility.
+
+    Returns:
+        Configuration instance
+    """
+    return get_config_dependency()
 
 
 async def get_vector_service() -> QdrantService:
@@ -202,18 +204,18 @@ async def get_vector_service() -> QdrantService:
             )
         return container.vector_service
     except Exception as e:
-        logger.error(f"Failed to get vector service: {e}")
+        logger.exception(f"Failed to get vector service: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
         ) from e
 
 
-async def get_embedding_manager() -> EmbeddingManager:
-    """FastAPI dependency for embedding manager.
+async def get_embedding_manager_legacy() -> Any:
+    """FastAPI dependency for embedding manager (legacy container approach).
 
     Returns:
-        Embedding manager instance
+        Embedding manager instance via legacy container
 
     Raises:
         HTTPException: If service is not available
@@ -227,18 +229,18 @@ async def get_embedding_manager() -> EmbeddingManager:
             )
         return container.embedding_manager
     except Exception as e:
-        logger.error(f"Failed to get embedding manager: {e}")
+        logger.exception(f"Failed to get embedding manager: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
         ) from e
 
 
-async def get_cache_manager() -> CacheManager:
-    """FastAPI dependency for cache manager.
+async def get_cache_manager_legacy() -> Any:
+    """FastAPI dependency for cache manager (legacy container approach).
 
     Returns:
-        Cache manager instance
+        Cache manager instance via legacy container
 
     Raises:
         HTTPException: If service is not available
@@ -252,10 +254,35 @@ async def get_cache_manager() -> CacheManager:
             )
         return container.cache_manager
     except Exception as e:
-        logger.error(f"Failed to get cache manager: {e}")
+        logger.exception(f"Failed to get cache manager: {e}")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
+        ) from e
+
+
+def get_client_manager() -> ClientManager:
+    """FastAPI dependency for client manager.
+
+    Returns:
+        Client manager instance
+
+    Raises:
+        HTTPException: If service is not available
+    """
+    try:
+        container = get_container()
+        if not container.is_initialized:
+            raise HTTPException(
+                status_code=HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Client manager not available",
+            )
+        return container.client_manager
+    except Exception as e:
+        logger.exception(f"Failed to get client manager: {e}")
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Client manager not available",
         ) from e
 
 
@@ -275,15 +302,16 @@ def get_correlation_id_dependency(request: Request) -> str:
 async def database_session() -> AsyncGenerator[Any]:
     """Async context manager for database sessions.
 
-    This is a placeholder for when database sessions are needed.
-    Currently returns None as we're using Qdrant which doesn't
-    require traditional database sessions.
+    Provides SQLAlchemy async sessions through the DatabaseManager.
 
     Yields:
-        Database session (currently None)
+        AsyncSession: SQLAlchemy async database session
     """
-    # Placeholder for future database session implementation
-    yield None
+    client_manager = get_client_manager()
+    db_manager = await client_manager.get_database_manager()
+
+    async with db_manager.session() as session:
+        yield session
 
 
 def get_request_context(request: Request) -> dict[str, Any]:
@@ -336,7 +364,7 @@ class ServiceHealthChecker:
         # Check vector service
         try:
             # Attempt a simple health check operation
-            await self.container.vector_service.health_check()
+            await self.container.vector_service.list_collections()
             health["services"]["vector_db"] = {"status": "healthy"}
         except Exception as e:
             health["status"] = "degraded"
@@ -377,7 +405,8 @@ __all__ = [
     "cleanup_dependencies",
     "database_session",
     "get_cache_manager",
-    "get_config",
+    "get_client_manager",
+    "get_config_dependency",
     "get_container",
     "get_correlation_id_dependency",
     "get_embedding_manager",

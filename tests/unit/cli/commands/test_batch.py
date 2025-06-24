@@ -7,8 +7,8 @@ progress tracking, confirmations, and Rich console output.
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.cli.commands.batch import batch
-from src.cli.commands.batch import complete_collection_name
+from src.cli.commands.batch import batch, complete_collection_name
+
 
 # Mock data for testing
 MOCK_COLLECTIONS = ["batch_collection", "test_batch", "other_collection"]
@@ -142,9 +142,7 @@ class TestProgressTracking:
 
     def test_progress_imports_available(self):
         """Test that progress tracking modules can be imported."""
-        from rich.progress import Progress
-        from rich.progress import SpinnerColumn
-        from rich.progress import TextColumn
+        from rich.progress import Progress, SpinnerColumn, TextColumn
 
         assert Progress is not None
         assert SpinnerColumn is not None
@@ -193,8 +191,7 @@ class TestBatchIntegration:
 
     def test_batch_imports(self):
         """Test that batch module can be imported."""
-        from src.cli.commands.batch import batch
-        from src.cli.commands.batch import complete_collection_name
+        from src.cli.commands.batch import batch, complete_collection_name
 
         assert batch is not None
         assert complete_collection_name is not None

@@ -1,79 +1,117 @@
-"""Unified configuration system for AI Documentation Vector DB.
+"""Simplified configuration system for AI Documentation Vector DB.
 
-This module provides a comprehensive configuration system that consolidates all
-settings across the application into a single, well-structured configuration model.
+Consolidated from 14 files (6,797 lines) to 3 files (~400 lines) following KISS principles.
+Provides all essential configuration without over-engineering.
 """
 
-# Core configuration models
-# Configuration loading and management
-# Configuration enums
-# Benchmark configuration models
-from .benchmark_models import BenchmarkConfiguration
-from .benchmark_models import EmbeddingBenchmarkSet
-from .enums import ChunkingStrategy
-from .enums import CrawlProvider
-from .enums import EmbeddingProvider
-from .enums import Environment
-from .enums import LogLevel
-from .loader import ConfigLoader
+# Core configuration
+from .core import (
+    BrowserUseConfig,
+    CacheConfig,
+    ChunkingConfig,
+    Config,
+    Crawl4AIConfig,
+    DeploymentConfig,
+    DocumentationSite,
+    EmbeddingConfig,
+    FastEmbedConfig,
+    FirecrawlConfig,
+    HyDEConfig,
+    MonitoringConfig,
+    OpenAIConfig,
+    PerformanceConfig,
+    PlaywrightConfig,
+    QdrantConfig,
+    SecurityConfig,
+    SQLAlchemyConfig,
+    TaskQueueConfig,
+    get_config,
+    reset_config,
+    set_config,
+)
 
-# Configuration models
-from .models import CacheConfig
-from .models import ChunkingConfig
-from .models import CollectionHNSWConfigs
-from .models import Crawl4AIConfig
-from .models import DocumentationSite
-from .models import EmbeddingConfig
-from .models import FastEmbedConfig
-from .models import FirecrawlConfig
-from .models import HNSWConfig
-from .models import HyDEConfig
-from .models import ModelBenchmark
-from .models import OpenAIConfig
-from .models import PerformanceConfig
-from .models import QdrantConfig
-from .models import SecurityConfig
-from .models import SmartSelectionConfig
-from .models import UnifiedConfig
-from .models import get_config
-from .models import reset_config
-from .models import set_config
+# Deployment tier configuration
+from .deployment_tiers import (
+    DeploymentTier,
+    TierCapability,
+    TierConfiguration,
+    TierManager,
+    default_tier_manager,
+    get_current_tier_config,
+    is_feature_enabled,
+)
 
-# Schema generation
-from .schema import ConfigSchemaGenerator
+# Enums
+from .enums import (
+    ABTestVariant,
+    CacheType,
+    ChunkingStrategy,
+    CrawlProvider,
+    DocumentStatus,
+    EmbeddingModel,
+    EmbeddingProvider,
+    Environment,
+    FusionAlgorithm,
+    LogLevel,
+    ModelType,
+    OptimizationStrategy,
+    QueryComplexity,
+    QueryType,
+    SearchAccuracy,
+    SearchStrategy,
+    VectorType,
+)
 
-# Configuration validation
-from .validators import ConfigValidator
 
-__all__ = [
-    "BenchmarkConfiguration",
+# Legacy aliases for backward compatibility
+UnifiedConfig = Config
+
+__all__: list[str] = [
+    "ABTestVariant",
+    "BrowserUseConfig",
     "CacheConfig",
+    "CacheType",
     "ChunkingConfig",
     "ChunkingStrategy",
-    "CollectionHNSWConfigs",
-    "ConfigLoader",
-    "ConfigSchemaGenerator",
-    "ConfigValidator",
+    "Config",
     "Crawl4AIConfig",
     "CrawlProvider",
+    "DeploymentConfig",
+    "DeploymentTier",
+    "DocumentStatus",
     "DocumentationSite",
-    "EmbeddingBenchmarkSet",
     "EmbeddingConfig",
+    "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
     "FastEmbedConfig",
     "FirecrawlConfig",
-    "HNSWConfig",
+    "FusionAlgorithm",
     "HyDEConfig",
     "LogLevel",
-    "ModelBenchmark",
+    "ModelType",
+    "MonitoringConfig",
     "OpenAIConfig",
+    "OptimizationStrategy",
     "PerformanceConfig",
+    "PlaywrightConfig",
     "QdrantConfig",
+    "QueryComplexity",
+    "QueryType",
+    "SQLAlchemyConfig",
+    "SearchAccuracy",
+    "SearchStrategy",
     "SecurityConfig",
-    "SmartSelectionConfig",
+    "TaskQueueConfig",
+    "TierCapability",
+    "TierConfiguration",
+    "TierManager",
     "UnifiedConfig",
+    "VectorType",
+    "default_tier_manager",
     "get_config",
+    "get_current_tier_config",
+    "is_feature_enabled",
     "reset_config",
     "set_config",
 ]

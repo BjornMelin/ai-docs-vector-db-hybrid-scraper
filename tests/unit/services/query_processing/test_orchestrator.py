@@ -3,16 +3,21 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from src.services.query_processing.models import MatryoshkaDimension
-from src.services.query_processing.models import QueryIntent
-from src.services.query_processing.models import QueryProcessingRequest
-from src.services.query_processing.models import QueryProcessingResponse
-from src.services.query_processing.models import SearchStrategy
-from src.services.query_processing.orchestrator import AdvancedSearchOrchestrator
-from src.services.query_processing.orchestrator import AdvancedSearchRequest
-from src.services.query_processing.orchestrator import AdvancedSearchResult
-from src.services.query_processing.orchestrator import SearchMode
-from src.services.query_processing.orchestrator import SearchPipeline
+
+from src.services.query_processing.models import (
+    MatryoshkaDimension,
+    QueryIntent,
+    QueryProcessingRequest,
+    QueryProcessingResponse,
+    SearchStrategy,
+)
+from src.services.query_processing.orchestrator import (
+    SearchMode,
+    SearchOrchestrator as AdvancedSearchOrchestrator,
+    SearchPipeline,
+    SearchRequest as AdvancedSearchRequest,
+    SearchResult as AdvancedSearchResult,
+)
 
 
 @pytest.fixture

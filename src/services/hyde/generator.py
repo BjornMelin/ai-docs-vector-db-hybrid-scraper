@@ -6,6 +6,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     pass  # Used only for external API compatibility
 
@@ -14,8 +15,8 @@ from pydantic import BaseModel
 from ...infrastructure.client_manager import ClientManager
 from ..base import BaseService
 from ..errors import EmbeddingServiceError
-from .config import HyDEConfig
-from .config import HyDEPromptConfig
+from .config import HyDEConfig, HyDEPromptConfig
+
 
 logger = logging.getLogger(__name__)
 

@@ -8,11 +8,10 @@ import logging
 import re
 from typing import Any
 
-from ...config import UnifiedConfig
-from ...config.enums import QueryComplexity
-from ...config.enums import QueryType
-from ...models.vector_search import QueryClassification
-from ...models.vector_search import QueryFeatures
+from src.config import Config, QueryComplexity, QueryType
+
+from ...models.vector_search import QueryClassification, QueryFeatures
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 class QueryClassifier:
     """ML-based query classifier for adaptive search optimization."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize query classifier.
 
         Args:

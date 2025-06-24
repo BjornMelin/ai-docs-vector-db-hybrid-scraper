@@ -4,13 +4,12 @@ This test suite ensures ≥90% coverage of the Memory-Adaptive Dispatcher functi
 including configuration, initialization, streaming, performance monitoring, and fallback.
 """
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
-from src.config.models import Crawl4AIConfig
+
+from src.config import Crawl4AIConfig
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.errors import CrawlServiceError
 

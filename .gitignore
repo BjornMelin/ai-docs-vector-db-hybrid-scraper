@@ -165,6 +165,17 @@ __pypackages__/
 .cursorignore
 .cursorindexingignore
 
+# Benchmark artifacts
+.benchmarks/
+benchmark_results/
+*_benchmark*.log
+*_benchmark*.json
+.benchmark/
+benchmarks/results/
+
+# Mutation testing cache
+.mutmut-cache
+
 # Backup files
 *.bak
 *.backup
@@ -179,3 +190,32 @@ __pypackages__/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Task Master AI - API Keys and Sensitive Config
+.cursor/mcp.json*
+.codeium/windsurf/mcp_config.json*
+
+# Task Master AI - Debug and Temporary Files
+*.debug
+init-debug.log
+dev-debug.log
+.taskmaster/temp/
+.taskmaster/.cache/
+.taskmaster/reports/
+.taskmaster/state.json
+.taskmaster/templates/example_prd.txt
+
+# Task Master AI - Legacy Structure (pre-v0.16.0)
+.taskmasterconfig
+/scripts/prd.txt
+/scripts/task-complexity-report.json
+
+# Cursor/AI Tools (may contain sensitive data)
+.cursor/
+.roo/
+.roomodes
+.windsurfrules
+.clinerules
+.github/instructions
+.trae
+.windsurf

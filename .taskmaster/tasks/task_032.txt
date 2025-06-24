@@ -1,0 +1,91 @@
+# Task ID: 32
+# Title: Observability & monitoring setup - Instrument FastAPI & background workers with OpenTelemetry and expose Prometheus metrics
+# Status: pending
+# Dependencies: 22, 23
+# Priority: low
+# Description: Implement comprehensive OpenTelemetry instrumentation for FastAPI endpoints and background workers with Prometheus metrics exposure for production monitoring and alerting.
+# Details:
+1. Configure OpenTelemetry SDK and instrumentation for FastAPI:
+   - Install opentelemetry-instrumentation-fastapi and opentelemetry-exporter-prometheus packages
+   - Set up automatic FastAPI instrumentation with request/response tracing
+   - Configure span attributes for HTTP method, status code, endpoint, and user context
+   - Implement custom middleware for additional context propagation
+
+2. Instrument background workers and async tasks:
+   - Add OpenTelemetry tracing to crawling, embedding, and indexing operations
+   - Implement custom spans for document processing pipeline stages
+   - Track task queue metrics (pending, processing, completed, failed)
+   - Add timing metrics for each processing stage
+
+3. Set up Prometheus metrics collection:
+   - Configure Prometheus exporter with appropriate metric types (counters, histograms, gauges)
+   - Expose custom business metrics: documents processed, embedding generation time, search latency
+   - Implement health check and readiness probe endpoints
+   - Set up metric labels for service identification and filtering
+
+4. Configure observability endpoints:
+   - Add /metrics endpoint for Prometheus scraping
+   - Implement /health and /ready endpoints for container orchestration
+   - Set up trace export to OTLP collector or Jaeger
+   - Configure sampling strategies for production workloads
+
+5. Add structured logging integration:
+   - Correlate logs with trace IDs for distributed debugging
+   - Implement log level configuration via environment variables
+   - Add request correlation IDs for end-to-end tracing
+
+# Test Strategy:
+1. Unit testing for instrumentation:
+   - Test OpenTelemetry span creation and attribute setting
+   - Verify custom metrics are properly incremented and labeled
+   - Test middleware integration without breaking existing functionality
+   - Validate metric endpoint returns properly formatted Prometheus data
+
+2. Integration testing:
+   - Test complete request tracing from FastAPI endpoint through background workers
+   - Verify distributed tracing context propagation across service boundaries
+   - Test metric collection during actual document processing workflows
+   - Validate health check endpoints respond correctly under load
+
+3. Performance validation:
+   - Measure instrumentation overhead (should be <5% impact on response times)
+   - Load test /metrics endpoint to ensure it doesn't impact application performance
+   - Verify memory usage doesn't increase significantly with tracing enabled
+
+4. Monitoring validation:
+   - Set up test Prometheus instance to scrape metrics
+   - Verify trace data appears in Jaeger or OTLP collector
+   - Test alert rules can be created based on exposed metrics
+   - Validate log correlation with trace IDs works correctly
+
+# Subtasks:
+## 1. Configure OpenTelemetry SDK and Instrument FastAPI [pending]
+### Dependencies: None
+### Description: Install and configure the OpenTelemetry SDK and FastAPI instrumentation packages. Set up automatic instrumentation for FastAPI endpoints, including request/response tracing and span attributes for HTTP method, status code, endpoint, and user context. Implement custom middleware for additional context propagation.
+### Details:
+Install opentelemetry-instrumentation-fastapi and related packages. Use FastAPIInstrumentor to instrument the app. Configure span attributes and add middleware for context propagation.
+
+## 2. Instrument Background Workers and Async Tasks [pending]
+### Dependencies: 32.1
+### Description: Add OpenTelemetry tracing to background workers and async tasks, including crawling, embedding, and indexing operations. Implement custom spans for each stage of the document processing pipeline and track task queue metrics such as pending, processing, completed, and failed tasks. Add timing metrics for each processing stage.
+### Details:
+Integrate OpenTelemetry tracing into background worker code. Define custom spans for each processing stage and collect relevant metrics.
+
+## 3. Set Up Prometheus Metrics Collection [pending]
+### Dependencies: 32.1, 32.2
+### Description: Configure the Prometheus exporter with appropriate metric types (counters, histograms, gauges). Expose custom business metrics such as documents processed, embedding generation time, and search latency. Implement health check and readiness probe endpoints, and set up metric labels for service identification and filtering.
+### Details:
+Install and configure opentelemetry-exporter-prometheus. Define and expose custom metrics. Add /health and /ready endpoints.
+
+## 4. Configure Observability Endpoints and Trace Export [pending]
+### Dependencies: 32.3
+### Description: Add /metrics endpoint for Prometheus scraping, and implement /health and /ready endpoints for container orchestration. Set up trace export to an OTLP collector or Jaeger, and configure sampling strategies for production workloads.
+### Details:
+Expose observability endpoints and configure trace exporters and sampling policies.
+
+## 5. Integrate Structured Logging with Trace Correlation [pending]
+### Dependencies: 32.4
+### Description: Add structured logging integration to correlate logs with trace IDs for distributed debugging. Implement log level configuration via environment variables and add request correlation IDs for end-to-end tracing.
+### Details:
+Configure logging to include trace and correlation IDs. Allow log level to be set via environment variables.
+

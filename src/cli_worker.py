@@ -11,6 +11,7 @@ from arq import run_worker
 from config.loader import load_config
 from services.task_queue.worker import WorkerSettings
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -65,5 +66,5 @@ if __name__ == "__main__":
         logger.info("Worker stopped by user")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"Worker failed: {e}")
+        logger.exception(f"Worker failed: {e}")
         sys.exit(1)

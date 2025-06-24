@@ -1,23 +1,23 @@
 """Tests for UnifiedBrowserManager with browser caching integration."""
 
 import time
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from src.config import UnifiedConfig
-from src.services.browser.unified_manager import UnifiedBrowserManager
-from src.services.browser.unified_manager import UnifiedScrapingRequest
-from src.services.cache.browser_cache import BrowserCache
-from src.services.cache.browser_cache import BrowserCacheEntry
+
+from src.config import Config
+from src.services.browser.unified_manager import (
+    UnifiedBrowserManager,
+    UnifiedScrapingRequest,
+)
+from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
 from src.services.errors import CrawlServiceError
 
 
 @pytest.fixture
 def mock_config():
     """Create mock configuration with caching enabled."""
-    config = Mock(spec=UnifiedConfig)
+    config = Mock(spec=Config)
     config.performance = Mock()
     config.cache = Mock()
     config.cache.enable_browser_cache = True

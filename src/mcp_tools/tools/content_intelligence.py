@@ -7,6 +7,7 @@ and adaptive extraction recommendations using the Content Intelligence Service.
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -21,15 +22,20 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ...services.content_intelligence.models import ContentAnalysisRequest
-from ...services.content_intelligence.models import ContentClassification
-from ...services.content_intelligence.models import ContentMetadata
-from ...services.content_intelligence.models import QualityScore
-from ..models.requests import ContentIntelligenceAnalysisRequest
-from ..models.requests import ContentIntelligenceClassificationRequest
-from ..models.requests import ContentIntelligenceMetadataRequest
-from ..models.requests import ContentIntelligenceQualityRequest
+from ...services.content_intelligence.models import (
+    ContentAnalysisRequest,
+    ContentClassification,
+    ContentMetadata,
+    QualityScore,
+)
+from ..models.requests import (
+    ContentIntelligenceAnalysisRequest,
+    ContentIntelligenceClassificationRequest,
+    ContentIntelligenceMetadataRequest,
+    ContentIntelligenceQualityRequest,
+)
 from ..models.responses import ContentIntelligenceResult
+
 
 logger = logging.getLogger(__name__)
 

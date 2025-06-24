@@ -122,7 +122,7 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
         browser: Browser name (chromium, chrome, firefox)
 
     Returns:
-        Optional[Path]: Path to browser executable if found
+        typing.Optional[Path]: Path to browser executable if found
     """
     browser_paths = {
         "chromium": {

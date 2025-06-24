@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,14 +19,14 @@ else:
 
 from ...infrastructure.client_manager import ClientManager
 
+
 logger = logging.getLogger(__name__)
 
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register collection management tools with the MCP server."""
 
-    from ..models.responses import CollectionInfo
-    from ..models.responses import CollectionOperationResponse
+    from ..models.responses import CollectionInfo, CollectionOperationResponse
 
     @mcp.tool()
     async def list_collections(ctx: Context = None) -> list[CollectionInfo]:
@@ -64,7 +65,7 @@ def register_tools(mcp, client_manager: ClientManager):
                             f"Retrieved info for collection {collection_name}: {info.vectors_count} vectors"
                         )
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         f"Failed to get info for collection {collection_name}: {e}"
                     )
                     if ctx:
@@ -83,7 +84,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list collections: {e}")
-            logger.error(f"Failed to list collections: {e}")
+            logger.exception(f"Failed to list collections: {e}")
             raise
 
     @mcp.tool()
@@ -122,7 +123,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to delete collection {collection_name}: {e}")
-            logger.error(f"Failed to delete collection {collection_name}: {e}")
+            logger.exception(f"Failed to delete collection {collection_name}: {e}")
             return CollectionOperationResponse(status="error", message=str(e))
 
     @mcp.tool()
@@ -164,5 +165,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to optimize collection {collection_name}: {e}")
-            logger.error(f"Failed to optimize collection {collection_name}: {e}")
+            logger.exception(f"Failed to optimize collection {collection_name}: {e}")
             return CollectionOperationResponse(status="error", message=str(e))

@@ -1,3 +1,4 @@
+import typing
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
 import hashlib

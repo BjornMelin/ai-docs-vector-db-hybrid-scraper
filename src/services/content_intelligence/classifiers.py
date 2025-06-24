@@ -9,8 +9,8 @@ import logging
 import re
 from typing import Any
 
-from .models import ContentClassification
-from .models import ContentType
+from .models import ContentClassification, ContentType
+
 
 logger = logging.getLogger(__name__)
 
@@ -646,7 +646,7 @@ class ContentClassifier:
             return scores
 
         except Exception as e:
-            logger.error(f"Semantic classification failed: {e}")
+            logger.exception(f"Semantic classification failed: {e}")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

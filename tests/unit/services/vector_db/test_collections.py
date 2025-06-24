@@ -1,13 +1,12 @@
 """Tests for QdrantCollections service."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException
-from src.config import UnifiedConfig
+
+from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.collections import QdrantCollections
 
@@ -18,7 +17,7 @@ class TestQdrantCollections:
     @pytest.fixture
     def mock_config(self):
         """Create mock configuration."""
-        config = MagicMock(spec=UnifiedConfig)
+        config = MagicMock(spec=Config)
 
         # Mock HNSW configuration
         hnsw_config = MagicMock()

@@ -7,6 +7,7 @@ common patterns for embedding provider lifecycle and configuration.
 from abc import ABCMeta
 
 import pytest
+
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.errors import EmbeddingServiceError
 

@@ -6,17 +6,17 @@ import os
 import time
 from typing import Any
 
-from ...config.models import BrowserUseConfig
+from src.config import BrowserUseConfig
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
+
 
 logger = logging.getLogger(__name__)
 
 # Try to import browser-use and langchain, handle gracefully if not available
 try:
-    from browser_use import Agent
-    from browser_use import Browser
-    from browser_use import BrowserConfig
+    from browser_use import Agent, Browser, BrowserConfig
     from langchain_anthropic import ChatAnthropic
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_openai import ChatOpenAI
@@ -133,16 +133,23 @@ class BrowserUseAdapter(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup browser-use resources."""
-        if self._browser:
+        if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
             except Exception as e:
-                self.logger.error(f"Error cleaning up browser-use: {e}")
+                self.logger.exception(f"Error cleaning up browser-use: {e}")
             finally:
                 # Always reset state even if close() fails
                 self._browser = None
                 self._initialized = False
                 self.logger.info("BrowserUse adapter cleaned up")
+        else:
+            # Ensure cleanup state is consistent even when not initialized
+            if hasattr(self, "_browser"):
+                self._browser = None
+            if hasattr(self, "_initialized"):
+                self._initialized = False
+            self.logger.info("BrowserUse adapter cleaned up (was not initialized)")
 
     async def scrape(
         self,

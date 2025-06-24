@@ -5,8 +5,7 @@ including both normal and fallback scenarios.
 """
 
 import sys
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -52,8 +51,7 @@ class TestUtilsPackageInit:
     def test_imports_from_local_modules(self):
         """Test that imports from local modules work correctly."""
         import src.utils as utils_package
-        from src.utils.imports import resolve_imports
-        from src.utils.imports import setup_import_paths
+        from src.utils.imports import resolve_imports, setup_import_paths
 
         # Verify these are the same functions
         assert utils_package.resolve_imports is resolve_imports

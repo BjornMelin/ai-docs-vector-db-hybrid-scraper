@@ -5,30 +5,34 @@ import logging
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
-from crawl4ai import AsyncWebCrawler
-from crawl4ai import BrowserConfig
-from crawl4ai import CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.async_configs import LLMConfig
-from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
-from crawl4ai.extraction_strategy import LLMExtractionStrategy
+from crawl4ai.extraction_strategy import (
+    JsonCssExtractionStrategy,
+    LLMExtractionStrategy,
+)
+
 
 try:
-    from crawl4ai import CrawlerMonitor
-    from crawl4ai import LXMLWebScrapingStrategy
-    from crawl4ai import MemoryAdaptiveDispatcher
-    from crawl4ai import RateLimiter as Crawl4AIRateLimiter
+    from crawl4ai import (
+        CrawlerMonitor,
+        LXMLWebScrapingStrategy,
+        MemoryAdaptiveDispatcher,
+        RateLimiter as Crawl4AIRateLimiter,
+    )
 
     MEMORY_ADAPTIVE_AVAILABLE = True
 except ImportError:
     MEMORY_ADAPTIVE_AVAILABLE = False
 
-from ...config.models import Crawl4AIConfig
+from src.config import Crawl4AIConfig
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
-from .extractors import DocumentationExtractor
-from .extractors import JavaScriptExecutor
+from .extractors import DocumentationExtractor, JavaScriptExecutor
+
 
 logger = logging.getLogger(__name__)
 
@@ -183,14 +187,16 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 await self.dispatcher.cleanup()
                 self.logger.info("MemoryAdaptiveDispatcher cleaned up")
             except Exception as e:
-                self.logger.error(f"Error cleaning up MemoryAdaptiveDispatcher: {e}")
+                self.logger.exception(
+                    f"Error cleaning up MemoryAdaptiveDispatcher: {e}"
+                )
 
         # Cleanup crawler
         if self._crawler:
             try:
                 await self._crawler.close()
             except Exception as e:
-                self.logger.error(f"Error closing crawler: {e}")
+                self.logger.exception(f"Error closing crawler: {e}")
             finally:
                 # Always reset state even if close() fails
                 self._crawler = None
@@ -518,7 +524,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 return self._build_error_result(url, error_msg, extraction_type)
 
         except Exception as e:
-            self.logger.error(f"Streaming crawl failed for {url}: {e}")
+            self.logger.exception(f"Streaming crawl failed for {url}: {e}")
             return self._build_error_result(url, e, extraction_type)
 
     def _get_dispatcher_stats(self) -> dict[str, object]:
@@ -723,7 +729,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "max_pages_target": max_pages,
             }
 
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to crawl site {url}: {e} | Context: {error_context}"
             )
             return {

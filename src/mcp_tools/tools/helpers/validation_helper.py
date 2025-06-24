@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -15,9 +16,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ....security import SecurityValidator
-from ....services.query_processing.models import MatryoshkaDimension
-from ....services.query_processing.models import SearchStrategy
+from ....security import MLSecurityValidator as SecurityValidator
+from ....services.query_processing.models import MatryoshkaDimension, SearchStrategy
 
 
 class QueryValidationHelper:

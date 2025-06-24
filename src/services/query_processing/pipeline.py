@@ -8,9 +8,9 @@ import logging
 from typing import Any
 
 from ..base import BaseService
-from .models import QueryProcessingRequest
-from .models import QueryProcessingResponse
-from .orchestrator import AdvancedSearchOrchestrator
+from .models import QueryProcessingRequest, QueryProcessingResponse
+from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class QueryProcessingPipeline(BaseService):
             logger.info("QueryProcessingPipeline initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize QueryProcessingPipeline: {e}")
+            logger.exception(f"Failed to initialize QueryProcessingPipeline: {e}")
             raise
 
     async def process(
@@ -143,7 +143,9 @@ class QueryProcessingPipeline(BaseService):
                 try:
                     return await self.process(request)
                 except Exception as e:
-                    logger.error(f"Batch processing failed for query '{request}': {e}")
+                    logger.exception(
+                        f"Batch processing failed for query '{request}': {e}"
+                    )
                     return QueryProcessingResponse(
                         success=False, results=[], total_results=0, error=str(e)
                     )
@@ -286,7 +288,7 @@ class QueryProcessingPipeline(BaseService):
                     health_status["status"] = "degraded"
 
             except Exception as e:
-                logger.error(f"Health check failed: {e}")
+                logger.exception(f"Health check failed: {e}")
                 health_status["status"] = "unhealthy"
                 health_status["components"] = {
                     "orchestrator": {"status": "unhealthy", "message": str(e)},

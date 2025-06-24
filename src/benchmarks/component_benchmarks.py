@@ -9,12 +9,12 @@ import logging
 import statistics
 import time
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from ..config import UnifiedConfig
+from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class ComponentBenchmarkResult(BaseModel):
 class ComponentBenchmarks:
     """Individual component benchmark runner."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize component benchmarks.
 
         Args:

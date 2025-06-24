@@ -1,11 +1,10 @@
 """Payload indexing management tools for MCP server."""
 
 import logging
-from datetime import UTC
-from datetime import datetime
-from typing import TYPE_CHECKING
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -21,8 +20,9 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ...security import SecurityValidator
+from ...security import MLSecurityValidator as SecurityValidator
 from ..models.responses import GenericDictResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.error(
                 f"Failed to create payload indexes for {collection_name}: {e}"
             )
-            logger.error(f"Failed to create payload indexes: {e}")
+            logger.exception(f"Failed to create payload indexes: {e}")
             raise
 
     @mcp.tool()
@@ -119,7 +119,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.error(
                 f"Failed to list payload indexes for {collection_name}: {e}"
             )
-            logger.error(f"Failed to list payload indexes: {e}")
+            logger.exception(f"Failed to list payload indexes: {e}")
             raise
 
     from ..models.responses import ReindexCollectionResponse
@@ -177,7 +177,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Failed to reindex collection {collection_name}: {e}")
-            logger.error(f"Failed to reindex collection: {e}")
+            logger.exception(f"Failed to reindex collection: {e}")
             raise
 
     @mcp.tool()
@@ -261,5 +261,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to benchmark filtered search: {e}")
-            logger.error(f"Failed to benchmark filtered search: {e}")
+            logger.exception(f"Failed to benchmark filtered search: {e}")
             raise

@@ -2,11 +2,13 @@
 
 from datetime import datetime
 
-from src.services.content_intelligence.models import AdaptationStrategy
-from src.services.content_intelligence.models import ContentClassification
-from src.services.content_intelligence.models import ContentMetadata
-from src.services.content_intelligence.models import ContentType
-from src.services.content_intelligence.models import QualityScore
+from src.services.content_intelligence.models import (
+    AdaptationStrategy,
+    ContentClassification,
+    ContentMetadata,
+    ContentType,
+    QualityScore,
+)
 
 
 class TestContentIntelligenceModels:

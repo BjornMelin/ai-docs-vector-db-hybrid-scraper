@@ -1,51 +1,61 @@
-"""Unit tests for chunking module."""
+"""Unit tests for chunking module following 2025 standardized patterns.
+
+This module tests the enhanced chunking functionality with proper type annotations,
+standardized assertions, and modern test patterns.
+"""
 
 from src.chunking import EnhancedChunker
+from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
-from src.config.models import ChunkingConfig
-from src.models.document_processing import Chunk
-from src.models.document_processing import CodeBlock
+from src.models.document_processing import Chunk, CodeBlock
 
 
 class TestChunkingConfig:
-    """Test ChunkingConfig model."""
+    """Test ChunkingConfig model with standardized patterns."""
 
-    def test_default_config(self):
-        """Test default configuration values."""
+    def test_default_config(self) -> None:
+        """Test default configuration values.
+
+        Verifies that ChunkingConfig initializes with expected default values
+        for all configuration parameters.
+        """
         config = ChunkingConfig()
         assert config.chunk_size == 1600
         assert config.chunk_overlap == 320
         assert config.strategy == ChunkingStrategy.ENHANCED
-        assert config.enable_ast_chunking is True
-        assert config.preserve_function_boundaries is True
-        assert config.preserve_code_blocks is True
-        assert config.max_function_chunk_size == 3200
-        assert config.detect_language is True
-        assert config.fallback_to_text_chunking is True
+        assert config.min_chunk_size == 100
+        assert config.max_chunk_size == 3000
 
-    def test_custom_config(self):
-        """Test custom configuration."""
+    def test_custom_config(self) -> None:
+        """Test custom configuration values.
+
+        Verifies that ChunkingConfig properly accepts and stores custom
+        configuration values provided during initialization.
+        """
         config = ChunkingConfig(
             chunk_size=2000,
             chunk_overlap=400,
             strategy=ChunkingStrategy.BASIC,
-            enable_ast_chunking=False,
-            preserve_function_boundaries=False,
-            supported_languages=["python"],
+            min_chunk_size=200,
+            max_chunk_size=4000,
         )
         assert config.chunk_size == 2000
         assert config.chunk_overlap == 400
         assert config.strategy == ChunkingStrategy.BASIC
-        assert config.enable_ast_chunking is False
-        assert config.supported_languages == ["python"]
+        assert config.min_chunk_size == 200
+        assert config.max_chunk_size == 4000
 
-    def test_supported_languages_default(self):
-        """Test default supported languages."""
+    def test_configuration_validation(self) -> None:
+        """Test configuration validation.
+
+        Verifies that ChunkingConfig properly validates configuration
+        constraints and relationships between parameters.
+        """
         config = ChunkingConfig()
-        assert "python" in config.supported_languages
-        assert "javascript" in config.supported_languages
-        assert "typescript" in config.supported_languages
-        assert "markdown" in config.supported_languages
+        # Verify constraint relationships
+        assert config.min_chunk_size <= config.chunk_size
+        assert config.chunk_size <= config.max_chunk_size
+        assert config.chunk_overlap < config.chunk_size
 
 
 class TestCodeBlock:

@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -18,6 +19,7 @@ else:
 
 from ....infrastructure.client_manager import ClientManager
 from ....services.query_processing.pipeline import QueryProcessingPipeline
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,5 +72,5 @@ class QueryProcessingPipelineFactory:
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to initialize query processing pipeline: {e}")
-            logger.error(f"Pipeline initialization failed: {e}")
+            logger.exception(f"Pipeline initialization failed: {e}")
             raise

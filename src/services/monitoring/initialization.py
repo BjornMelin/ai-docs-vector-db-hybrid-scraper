@@ -7,13 +7,11 @@ for FastMCP-based applications.
 import asyncio
 import logging
 
-from src.config.models import MonitoringConfig
-from src.config.models import UnifiedConfig
+from src.config import Config, MonitoringConfig
 
 from .health import HealthCheckManager
-from .metrics import MetricsConfig
-from .metrics import MetricsRegistry
-from .metrics import initialize_metrics
+from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
+
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +139,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
 
 def initialize_monitoring_system(
-    config: UnifiedConfig, qdrant_client=None, redis_url: str | None = None
+    config: Config, qdrant_client=None, redis_url: str | None = None
 ) -> tuple[MetricsRegistry, HealthCheckManager]:
     """Initialize the complete monitoring system.
 
@@ -220,7 +218,7 @@ def initialize_monitoring_system(
                 f"Prometheus metrics server started on port {metrics_config.export_port}"
             )
         except Exception as e:
-            logger.error(f"Failed to start metrics server: {e}")
+            logger.exception(f"Failed to start metrics server: {e}")
 
     logger.info("Monitoring system initialization complete")
     return metrics_registry, health_manager
@@ -228,7 +226,7 @@ def initialize_monitoring_system(
 
 def setup_fastmcp_monitoring(
     mcp_app,
-    config: UnifiedConfig,
+    config: Config,
     metrics_registry: MetricsRegistry,
     health_manager: HealthCheckManager,
 ) -> None:
@@ -364,7 +362,7 @@ def setup_fastmcp_monitoring(
             )
 
     except Exception as e:
-        logger.error(f"Failed to set up FastMCP monitoring: {e}")
+        logger.exception(f"Failed to set up FastMCP monitoring: {e}")
 
 
 async def run_periodic_health_checks(
@@ -386,7 +384,7 @@ async def run_periodic_health_checks(
             await health_manager.check_all()
             logger.debug("Completed periodic health check")
         except Exception as e:
-            logger.error(f"Error in periodic health check: {e}")
+            logger.exception(f"Error in periodic health check: {e}")
 
         await asyncio.sleep(interval_seconds)
 
@@ -412,7 +410,7 @@ async def update_system_metrics_periodically(
             metrics_registry.update_system_metrics()
             logger.debug("Updated system metrics")
         except Exception as e:
-            logger.error(f"Error updating system metrics: {e}")
+            logger.exception(f"Error updating system metrics: {e}")
 
         await asyncio.sleep(interval_seconds)
 
@@ -439,6 +437,6 @@ async def update_cache_metrics_periodically(
             metrics_registry.update_cache_stats(cache_manager)
             logger.debug("Updated cache metrics")
         except Exception as e:
-            logger.error(f"Error updating cache metrics: {e}")
+            logger.exception(f"Error updating cache metrics: {e}")
 
         await asyncio.sleep(interval_seconds)

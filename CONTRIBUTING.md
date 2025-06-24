@@ -540,7 +540,7 @@ Our community has achieved remarkable database optimization results:
 
    ```bash
    # Run comprehensive benchmarks
-   uv run python scripts/run_advanced_hybrid_search_benchmark.py
+   uv run python scripts/run_hybrid_search_benchmark.py
    
    # Generate performance reports
    uv run python scripts/benchmark_lightweight_tier.py --output-report

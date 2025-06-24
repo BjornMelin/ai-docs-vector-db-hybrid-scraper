@@ -1,3 +1,4 @@
+import typing
 """Shared validators and custom types for Pydantic models.
 
 This module contains reusable validators, custom field types, and validation

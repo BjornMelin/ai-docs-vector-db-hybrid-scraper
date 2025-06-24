@@ -3,10 +3,10 @@
 import asyncio
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import click
+
 
 F = TypeVar("F", bound=Callable[..., Any])
 

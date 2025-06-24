@@ -8,20 +8,19 @@ from urllib.parse import urlparse
 
 from pydantic import ValidationError
 
-from ...config.models import PlaywrightConfig
+from src.config import PlaywrightConfig
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
-from .enhanced_anti_detection import EnhancedAntiDetection
+from .anti_detection import EnhancedAntiDetection
+
 
 logger = logging.getLogger(__name__)
 
 # Try to import Playwright, handle gracefully if not available
 try:
-    from playwright.async_api import Browser
-    from playwright.async_api import BrowserContext
-    from playwright.async_api import Page
-    from playwright.async_api import async_playwright
+    from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
@@ -129,7 +128,7 @@ class PlaywrightAdapter(BaseService):
             self.logger.info("Playwright adapter cleaned up")
 
         except Exception as e:
-            self.logger.error(f"Error cleaning up Playwright: {e}")
+            self.logger.exception(f"Error cleaning up Playwright: {e}")
 
     async def scrape(
         self,

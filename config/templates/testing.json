@@ -1,5 +1,5 @@
 {
-  "environment": "testing",
+  "environment": "staging",
   "debug": true,
   "log_level": "DEBUG",
   "embedding_provider": "fastembed",

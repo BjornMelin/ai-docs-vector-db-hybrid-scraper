@@ -1,6 +1,7 @@
 """Tests for query preprocessor."""
 
 import pytest
+
 from src.services.query_processing.models import QueryPreprocessingResult
 from src.services.query_processing.preprocessor import QueryPreprocessor
 

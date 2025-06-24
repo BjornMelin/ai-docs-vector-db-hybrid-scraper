@@ -1,9 +1,9 @@
 """Comprehensive test suite for MCP embeddings tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from src.mcp_tools.models.requests import EmbeddingRequest
 from src.mcp_tools.models.responses import EmbeddingGenerationResponse
 

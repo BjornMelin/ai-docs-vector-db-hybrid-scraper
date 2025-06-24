@@ -1,14 +1,19 @@
-"""Pytest configuration and shared fixtures."""
+"""Pytest configuration and shared fixtures.
+
+This module provides the core testing infrastructure with standardized fixtures,
+configuration, and utilities that follow 2025 testing best practices.
+"""
 
 import os
 import sys
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 
 # Add src to path for all tests - eliminates need for import path manipulation
 src_path = str(Path(__file__).parent.parent / "src")
@@ -46,12 +51,14 @@ if _test_env_path.exists():
 
 # Import cross-platform utilities
 try:
-    from src.utils.cross_platform import get_playwright_browser_path
-    from src.utils.cross_platform import is_ci_environment
-    from src.utils.cross_platform import is_linux
-    from src.utils.cross_platform import is_macos
-    from src.utils.cross_platform import is_windows
-    from src.utils.cross_platform import set_platform_environment_defaults
+    from src.utils.cross_platform import (
+        get_playwright_browser_path,
+        is_ci_environment,
+        is_linux,
+        is_macos,
+        is_windows,
+        set_platform_environment_defaults,
+    )
 except ImportError:
     # Fallback implementations for when utils aren't available
     def is_windows():
@@ -140,8 +147,12 @@ def setup_browser_environment():
 
 # Platform-specific fixtures
 @pytest.fixture(scope="session")
-def platform_info():
-    """Provide platform information for tests."""
+def platform_info() -> dict[str, bool | str]:
+    """Provide platform information for tests.
+
+    Returns:
+        Dict containing platform detection flags and system information
+    """
     return {
         "is_windows": is_windows(),
         "is_macos": is_macos(),
@@ -152,46 +163,66 @@ def platform_info():
 
 
 @pytest.fixture(scope="session")
-def skip_if_windows():
-    """Skip test if running on Windows."""
+def skip_if_windows() -> None:
+    """Skip test if running on Windows.
+
+    Raises:
+        pytest.skip: If running on Windows platform
+    """
     if is_windows():
         pytest.skip("Test not supported on Windows")
 
 
 @pytest.fixture(scope="session")
-def skip_if_macos():
-    """Skip test if running on macOS."""
+def skip_if_macos() -> None:
+    """Skip test if running on macOS.
+
+    Raises:
+        pytest.skip: If running on macOS platform
+    """
     if is_macos():
         pytest.skip("Test not supported on macOS")
 
 
 @pytest.fixture(scope="session")
-def skip_if_linux():
-    """Skip test if running on Linux."""
+def skip_if_linux() -> None:
+    """Skip test if running on Linux.
+
+    Raises:
+        pytest.skip: If running on Linux platform
+    """
     if is_linux():
         pytest.skip("Test not supported on Linux")
 
 
 @pytest.fixture(scope="session")
-def skip_if_ci():
-    """Skip test if running in CI environment."""
+def skip_if_ci() -> None:
+    """Skip test if running in CI environment.
+
+    Raises:
+        pytest.skip: If running in CI environment
+    """
     if is_ci_environment():
         pytest.skip("Test not supported in CI environment")
 
 
 @pytest.fixture(scope="session")
-def require_ci():
-    """Require test to run in CI environment."""
+def require_ci() -> None:
+    """Require test to run in CI environment.
+
+    Raises:
+        pytest.skip: If not running in CI environment
+    """
     if not is_ci_environment():
         pytest.skip("Test requires CI environment")
 
 
 @pytest.fixture
-def mock_browser_config():
+def mock_browser_config() -> dict[str, Any]:
     """Provide a platform-aware mock browser configuration for testing.
 
     Returns:
-        dict: Browser configuration suitable for testing on current platform
+        Browser configuration suitable for testing on current platform
     """
     # Base configuration
     config = {
@@ -217,11 +248,11 @@ def mock_browser_config():
 
 
 @pytest.fixture
-def test_urls():
+def test_urls() -> dict[str, str]:
     """Provide test URLs for browser automation testing.
 
     Returns:
-        dict: Collection of test URLs for different scenarios
+        Collection of test URLs for different scenarios
     """
     return {
         "simple": "https://httpbin.org/html",
@@ -237,15 +268,25 @@ def test_urls():
 
 
 @pytest.fixture()
-def temp_dir() -> Generator[Path]:
-    """Create a temporary directory for test files."""
+def temp_dir() -> Generator[Path, None, None]:
+    """Create a temporary directory for test files.
+
+    Yields:
+        Path to temporary directory that is automatically cleaned up
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
 
 
 @pytest.fixture()
-def mock_env_vars() -> Generator[None]:
-    """Mock environment variables for testing."""
+def mock_env_vars() -> Generator[None, None, None]:
+    """Mock environment variables for testing.
+
+    Sets up test environment variables and restores original values on cleanup.
+
+    Yields:
+        None
+    """
     # Save current values
     saved_vars = {
         "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
@@ -268,7 +309,11 @@ def mock_env_vars() -> Generator[None]:
 
 @pytest.fixture()
 def mock_qdrant_client() -> MagicMock:
-    """Mock Qdrant client for testing."""
+    """Mock Qdrant client for testing.
+
+    Returns:
+        Configured MagicMock simulating Qdrant client behavior
+    """
     client = MagicMock()
     client.create_collection = AsyncMock()
     client.delete_collection = AsyncMock()
@@ -282,7 +327,11 @@ def mock_qdrant_client() -> MagicMock:
 
 @pytest.fixture()
 def mock_openai_client() -> MagicMock:
-    """Mock OpenAI client for testing."""
+    """Mock OpenAI client for testing.
+
+    Returns:
+        Configured MagicMock simulating OpenAI client behavior
+    """
     client = MagicMock()
     client.embeddings.create = AsyncMock(
         return_value=MagicMock(
@@ -294,7 +343,11 @@ def mock_openai_client() -> MagicMock:
 
 @pytest.fixture()
 def mock_crawl4ai() -> MagicMock:
-    """Mock Crawl4AI AsyncWebCrawler for testing."""
+    """Mock Crawl4AI AsyncWebCrawler for testing.
+
+    Returns:
+        Configured MagicMock simulating Crawl4AI AsyncWebCrawler behavior
+    """
     crawler = MagicMock()
     crawler.__aenter__ = AsyncMock(return_value=crawler)
     crawler.__aexit__ = AsyncMock(return_value=None)
@@ -311,8 +364,12 @@ def mock_crawl4ai() -> MagicMock:
 
 
 @pytest.fixture()
-def sample_documentation_site() -> dict:
-    """Sample documentation site configuration."""
+def sample_documentation_site() -> dict[str, Any]:
+    """Sample documentation site configuration.
+
+    Returns:
+        Sample configuration dictionary for documentation site testing
+    """
     return {
         "name": "test-docs",
         "url": "https://test.example.com",
@@ -322,8 +379,12 @@ def sample_documentation_site() -> dict:
 
 
 @pytest.fixture()
-def sample_crawl_result() -> dict:
-    """Sample crawl result data."""
+def sample_crawl_result() -> dict[str, Any]:
+    """Sample crawl result data.
+
+    Returns:
+        Sample crawl result dictionary for testing
+    """
     return {
         "url": "https://test.example.com/docs/page1",
         "title": "Test Page",
@@ -342,7 +403,11 @@ def sample_crawl_result() -> dict:
 
 @pytest.fixture()
 def sample_vector_points() -> list[PointStruct]:
-    """Sample vector points for testing."""
+    """Sample vector points for testing.
+
+    Returns:
+        List of sample PointStruct objects for testing vector operations
+    """
     return [
         PointStruct(
             id=1,
@@ -426,7 +491,7 @@ def _check_browser_availability() -> bool:
 @pytest.fixture()
 def enhanced_db_config():
     """Enhanced SQLAlchemy configuration for testing."""
-    from src.config.models import SQLAlchemyConfig
+    from src.config import SQLAlchemyConfig
 
     return SQLAlchemyConfig(
         database_url="sqlite+aiosqlite:///:memory:",
@@ -446,158 +511,48 @@ def enhanced_db_config():
 
 
 @pytest.fixture()
-def mock_predictive_load_monitor():
-    """Mock PredictiveLoadMonitor for testing."""
-    import time
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
-
-    from src.infrastructure.database.load_monitor import LoadMetrics
-    from src.infrastructure.database.predictive_monitor import LoadPrediction
-    from src.infrastructure.database.predictive_monitor import PredictiveLoadMonitor
-
-    # Create a mock that inherits from PredictiveLoadMonitor to pass isinstance checks
-    class MockPredictiveLoadMonitor(PredictiveLoadMonitor):
-        def __init__(self):
-            # Don't call super().__init__ to avoid real initialization
-            pass
-
-    monitor = MockPredictiveLoadMonitor()
-
-    # Configure standard LoadMonitor behavior
-    monitor.start = AsyncMock()
-    monitor.stop = AsyncMock()
-    monitor.record_request_start = AsyncMock()
-    monitor.record_request_end = AsyncMock()
-    monitor.record_connection_error = AsyncMock()
-
-    # Create realistic load metrics
-    mock_load_metrics = LoadMetrics(
-        concurrent_requests=3,
-        memory_usage_percent=45.0,
-        cpu_usage_percent=30.0,
-        avg_response_time_ms=100.0,
-        connection_errors=0,
-        timestamp=time.time(),
-    )
-    monitor.get_current_load = AsyncMock(return_value=mock_load_metrics)
-    monitor.calculate_load_factor = Mock(return_value=0.5)
-
-    # Configure predictive behavior with realistic response
-    prediction = LoadPrediction(
-        predicted_load=0.6,
-        confidence_score=0.8,
-        recommendation="Monitor - moderate load predicted",
-        time_horizon_minutes=15,
-        feature_importance={"avg_requests": 0.3, "memory_trend": 0.2},
-        trend_direction="stable",
-    )
-    monitor.predict_future_load = AsyncMock(return_value=prediction)
-    monitor.train_prediction_model = AsyncMock(return_value=True)
-    monitor.get_prediction_metrics = AsyncMock(
-        return_value={
-            "model_trained": True,
-            "training_samples": 100,
-            "prediction_accuracy_avg": 0.85,
-        }
-    )
-    monitor.get_summary_stats = AsyncMock(
-        return_value={
-            "total_queries": 100,
-            "avg_execution_time_ms": 150.0,
-            "slow_queries": 5,
-        }
-    )
-
-    return monitor
-
-
-@pytest.fixture()
 def mock_multi_level_circuit_breaker():
-    """Mock MultiLevelCircuitBreaker for testing."""
+    """Mock simple CircuitBreaker for testing (renamed for compatibility)."""
     import asyncio
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
-    from src.infrastructure.database.enhanced_circuit_breaker import CircuitState
-    from src.infrastructure.database.enhanced_circuit_breaker import FailureMetrics
-    from src.infrastructure.database.enhanced_circuit_breaker import (
-        MultiLevelCircuitBreaker,
-    )
+    from src.infrastructure.shared import CircuitBreaker, ClientState
 
     # Create a properly spec'd mock with all expected attributes
-    breaker = Mock(spec=MultiLevelCircuitBreaker)
+    breaker = Mock(spec=CircuitBreaker)
 
     # Set core attributes
-    breaker.state = CircuitState.CLOSED
-    breaker.metrics = Mock(spec=FailureMetrics)
-    breaker.metrics.get_total_failures = Mock(return_value=0)
-    breaker.metrics.get_success_rate = Mock(return_value=1.0)
+    breaker.state = ClientState.HEALTHY
+    breaker._failure_count = 0
 
     # Add the expected _failure_count property that connection_manager looks for
     # This is a compatibility shim for what appears to be incorrect usage in the real code
     breaker._failure_count = 0
 
     # Configure async methods with realistic behavior
-    async def mock_execute(func, failure_type=None, timeout=None, *args, **kwargs):
-        """Mock execute that actually calls the function when reasonable."""
-        if callable(func):
-            if asyncio.iscoroutinefunction(func):
-                return (
-                    await func()
-                )  # Don't pass args/kwargs as they may not be expected
-            return func()
-        # If func is not callable, return a reasonable default
-        return Mock()
-
     async def mock_call(func, *args, **kwargs):
-        """Mock call method for legacy circuit breaker interface."""
+        """Mock call method for simple circuit breaker."""
         if callable(func):
             if asyncio.iscoroutinefunction(func):
                 return await func()
             return func()
         return Mock()
 
-    breaker.execute = AsyncMock(side_effect=mock_execute)
-    breaker.call = AsyncMock(side_effect=mock_call)  # Add legacy call method
+    # Simple circuit breaker only has call method, not execute
+    breaker.call = AsyncMock(side_effect=mock_call)
 
-    # Health status with realistic structure
+    # For compatibility with tests expecting execute
+    breaker.execute = breaker.call
+
+    # Health status - simple circuit breaker doesn't have this method
     breaker.get_health_status = Mock(
         return_value={
-            "state": "closed",
-            "failure_metrics": {
-                "total_failures": 0,
-                "connection_failures": 0,
-                "query_failures": 0,
-                "timeout_failures": 0,
-                "transaction_failures": 0,
-                "resource_failures": 0,
-            },
-            "request_metrics": {
-                "success_rate": 1.0,
-                "total_requests": 0,
-                "successful_requests": 0,
-            },
+            "state": "healthy",
+            "failure_count": 0,
         }
     )
 
-    # Configuration methods
-    breaker.register_partial_failure_handler = Mock()
-    breaker.register_fallback_handler = Mock()
-
-    # Control methods
-    breaker.force_open = AsyncMock()
-    breaker.force_close = AsyncMock()
-
-    # Analysis methods with realistic responses
-    breaker.get_failure_analysis = AsyncMock(
-        return_value={
-            "status": "healthy",
-            "failure_patterns": [],
-            "recommendations": ["System is operating normally"],
-            "risk_assessment": "low",
-        }
-    )
+    # Simple circuit breaker doesn't have force_close or get_failure_analysis methods
 
     return breaker
 
@@ -605,8 +560,7 @@ def mock_multi_level_circuit_breaker():
 @pytest.fixture()
 def mock_connection_affinity_manager():
     """Mock ConnectionAffinityManager for testing."""
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
     from src.infrastructure.database.connection_affinity import (
         ConnectionAffinityManager,
@@ -677,11 +631,12 @@ def mock_connection_affinity_manager():
 @pytest.fixture()
 def mock_adaptive_config_manager():
     """Mock AdaptiveConfigManager for testing."""
-    from unittest.mock import AsyncMock
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
-    from src.infrastructure.database.adaptive_config import AdaptationStrategy
-    from src.infrastructure.database.adaptive_config import AdaptiveConfigManager
+    from src.infrastructure.database.adaptive_config import (
+        AdaptationStrategy,
+        AdaptiveConfigManager,
+    )
 
     # Create a properly spec'd mock
     manager = Mock(spec=AdaptiveConfigManager)

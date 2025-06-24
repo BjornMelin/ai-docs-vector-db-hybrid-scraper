@@ -1,21 +1,18 @@
 """Tests for EmbeddingManager with ClientManager integration."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from src.config import UnifiedConfig
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.embeddings.manager import QualityTier
-from src.services.embeddings.manager import TextAnalysis
+
+from src.config import Config
+from src.services.embeddings.manager import EmbeddingManager, QualityTier, TextAnalysis
 from src.services.errors import EmbeddingServiceError
 
 
 @pytest.fixture
 def mock_config():
     """Create mock unified config."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
     config.openai = MagicMock()
     config.openai.api_key = "test-key"
     config.openai.model = "text-embedding-3-small"

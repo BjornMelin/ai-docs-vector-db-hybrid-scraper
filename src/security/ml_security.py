@@ -17,9 +17,10 @@ import subprocess
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
+
 from src.config import get_config
+
 
 # Import SecurityValidator from the file module
 spec = importlib.util.spec_from_file_location("security_module", "src/security.py")
@@ -60,6 +61,11 @@ class MLSecurityValidator:
         self.config = get_config()
         self.base_validator = BaseSecurityValidator.from_unified_config()
         self.checks_performed = []
+
+    @classmethod
+    def from_unified_config(cls) -> "MLSecurityValidator":
+        """Create MLSecurityValidator from unified config."""
+        return cls()
 
     def validate_input(
         self, data: dict[str, Any], expected_schema: dict[str, type] | None = None
@@ -135,7 +141,7 @@ class MLSecurityValidator:
             return result
 
         except Exception as e:
-            logger.error(f"Input validation error: {e}")
+            logger.exception(f"Input validation error: {e}")
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=False,
@@ -215,7 +221,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
         except Exception as e:
-            logger.error(f"Dependency check error: {e}")
+            logger.exception(f"Dependency check error: {e}")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,
@@ -301,6 +307,28 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
+
+    def validate_collection_name(self, name: str) -> str:
+        """Validate collection name using base validator.
+
+        Args:
+            name: Collection name to validate
+
+        Returns:
+            Validated collection name
+        """
+        return self.base_validator.validate_collection_name(name)
+
+    def validate_query_string(self, query: str) -> str:
+        """Validate query string using base validator.
+
+        Args:
+            query: Query string to validate
+
+        Returns:
+            Validated query string
+        """
+        return self.base_validator.validate_query_string(query)
 
     def log_security_event(
         self, event_type: str, details: dict[str, Any], severity: str = "info"

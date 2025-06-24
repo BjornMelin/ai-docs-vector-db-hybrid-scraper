@@ -1,23 +1,25 @@
 """Tests for filtering tools."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from src.mcp_tools.tools.filtering_tools import CompositeFilterRequest
-from src.mcp_tools.tools.filtering_tools import ContentTypeFilterRequest
-from src.mcp_tools.tools.filtering_tools import MetadataFilterRequest
-from src.mcp_tools.tools.filtering_tools import SimilarityFilterRequest
-from src.mcp_tools.tools.filtering_tools import TemporalFilterRequest
-from src.mcp_tools.tools.filtering_tools import composite_filter_tool
-from src.mcp_tools.tools.filtering_tools import content_type_filter_tool
-from src.mcp_tools.tools.filtering_tools import create_orchestrator
-from src.mcp_tools.tools.filtering_tools import metadata_filter_tool
-from src.mcp_tools.tools.filtering_tools import similarity_filter_tool
-from src.mcp_tools.tools.filtering_tools import temporal_filter_tool
-from src.services.query_processing.orchestrator import AdvancedSearchResult
-from src.services.query_processing.orchestrator import SearchMode
-from src.services.query_processing.orchestrator import SearchPipeline
+
+from src.mcp_tools.tools.filtering_tools import (
+    CompositeFilterRequest,
+    ContentTypeFilterRequest,
+    MetadataFilterRequest,
+    SimilarityFilterRequest,
+    TemporalFilterRequest,
+    composite_filter_tool,
+    content_type_filter_tool,
+    create_orchestrator,
+    metadata_filter_tool,
+    similarity_filter_tool,
+    temporal_filter_tool,
+)
+from src.services.query_processing.orchestrator import (
+    SearchResult as AdvancedSearchResult,
+)
 
 
 class MockContext:
@@ -59,17 +61,9 @@ class TestFilteringTools:
                 }
             ],
             total_results=1,
-            search_mode=SearchMode.ENHANCED,
-            pipeline=SearchPipeline.BALANCED,
             query_processed="test query",
-            stage_results=[],
-            total_processing_time_ms=100.0,
-            quality_score=0.9,
-            diversity_score=0.1,
-            relevance_score=0.9,
+            processing_time_ms=100.0,
             features_used=["temporal_filter", "content_type_filter"],
-            optimizations_applied=["caching", "preprocessing"],
-            cache_hit=False,
         )
         return orchestrator
 
@@ -183,7 +177,6 @@ class TestFilteringTools:
         orchestrator = create_orchestrator()
 
         assert orchestrator is not None
-        assert orchestrator.enable_all_features is True
         assert orchestrator.enable_performance_optimization is True
 
     async def test_temporal_filter_error_handling(self, mock_context):
@@ -324,16 +317,9 @@ class TestFilteringTools:
                 },
             ],
             total_results=2,
-            search_mode=SearchMode.ENHANCED,
-            pipeline=SearchPipeline.BALANCED,
             query_processed="test query",
-            stage_results=[],
-            total_processing_time_ms=120.0,
-            quality_score=0.9,
-            diversity_score=0.2,
-            relevance_score=0.9,
+            processing_time_ms=120.0,
             features_used=["temporal_filter", "content_type_filter"],
-            optimizations_applied=["caching", "preprocessing"],
             cache_hit=False,
         )
 

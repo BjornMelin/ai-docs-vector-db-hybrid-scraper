@@ -8,14 +8,13 @@ import json
 import logging
 import statistics
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from ..config import UnifiedConfig
+from ..config import Config
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class MetricSummary(BaseModel):
 class MetricsCollector:
     """Advanced metrics collection and aggregation system."""
 
-    def __init__(self, config: UnifiedConfig, max_points: int = 10000):
+    def __init__(self, config: Config, max_points: int = 10000):
         """Initialize metrics collector.
 
         Args:
@@ -419,7 +418,7 @@ class MetricsCollector:
         current_time = time.time()
 
         # Add to all windows
-        for _window_name, window_deque in self.real_time_windows.items():
+        for window_deque in self.real_time_windows.values():
             window_deque.append(point)
 
         # Clean old points from windows

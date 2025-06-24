@@ -11,12 +11,12 @@ import statistics
 import time
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from ..config import UnifiedConfig
+from ..config import Config
 from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.advanced_hybrid_search import AdvancedHybridSearchService
+from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ class LoadTestUser:
                 await asyncio.sleep(think_time)
 
             except Exception as e:
-                logger.error(f"User {self.user_id} session error: {e}")
+                logger.exception(f"User {self.user_id} session error: {e}")
                 self.failures += 1
                 break
 
@@ -229,7 +229,7 @@ class LoadTestUser:
 class LoadTestRunner:
     """Main load testing orchestrator."""
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize load test runner.
 
         Args:
@@ -474,7 +474,7 @@ class LoadTestRunner:
                     break
 
             except Exception as e:
-                logger.error(f"Stress test failed at {user_count} users: {e}")
+                logger.exception(f"Stress test failed at {user_count} users: {e}")
                 break
 
         return stress_results

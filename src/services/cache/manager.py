@@ -1,3 +1,4 @@
+import typing
 """Simplified cache manager using DragonflyDB with specialized cache layers."""
 
 import asyncio

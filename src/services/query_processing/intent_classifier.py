@@ -11,9 +11,8 @@ from typing import Any
 
 import numpy as np
 
-from .models import QueryComplexity
-from .models import QueryIntent
-from .models import QueryIntentClassification
+from .models import QueryComplexity, QueryIntent, QueryIntentClassification
+
 
 logger = logging.getLogger(__name__)
 
@@ -701,7 +700,7 @@ class QueryIntentClassifier:
             return scores
 
         except Exception as e:
-            logger.error(f"Semantic intent classification failed: {e}")
+            logger.exception(f"Semantic intent classification failed: {e}")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

@@ -5,11 +5,13 @@ from typing import Any
 
 from firecrawl import FirecrawlApp
 
-from ...config.models import FirecrawlConfig
+from src.config import FirecrawlConfig
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from ..utilities.rate_limiter import RateLimitManager
 from .base import CrawlProvider
+
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 logger.warning(f"Firecrawl rate limit hit for {url}")
                 error_detail = "Rate limit exceeded. Please try again later."
             elif "invalid api key" in error_msg or "unauthorized" in error_msg:
-                logger.error("Invalid Firecrawl API key")
+                logger.exception("Invalid Firecrawl API key")
                 error_detail = (
                     "Invalid API key. Please check your Firecrawl configuration."
                 )
@@ -202,7 +204,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             }
 
         except Exception as e:
-            logger.error(f"Failed to crawl {url}: {e}")
+            logger.exception(f"Failed to crawl {url}: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -226,7 +228,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             result = self._client.cancel_crawl(crawl_id)
             return result.get("success", False)
         except Exception as e:
-            logger.error(f"Failed to cancel crawl {crawl_id}: {e}")
+            logger.exception(f"Failed to cancel crawl {crawl_id}: {e}")
             return False
 
     async def map_url(
@@ -265,7 +267,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 }
 
         except Exception as e:
-            logger.error(f"Failed to map {url}: {e}")
+            logger.exception(f"Failed to map {url}: {e}")
             return {
                 "success": False,
                 "error": str(e),

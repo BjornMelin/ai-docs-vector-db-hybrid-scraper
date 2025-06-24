@@ -8,17 +8,12 @@ and integration with custom metadata schemas.
 import logging
 from enum import Enum
 from typing import Any
-from typing import Union
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
-from pydantic import model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from qdrant_client import models
 
-from .base import BaseFilter
-from .base import FilterError
-from .base import FilterResult
+from .base import BaseFilter, FilterError, FilterResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +102,7 @@ class BooleanExpressionModel(BaseModel):
     """Boolean expression for combining multiple conditions."""
 
     operator: BooleanOperator = Field(..., description="Boolean operator")
-    conditions: list[Union["BooleanExpressionModel", FieldConditionModel]] = Field(
+    conditions: list["BooleanExpressionModel" | FieldConditionModel] = Field(
         default_factory=list, description="List of sub-conditions"
     )
 
@@ -491,7 +486,9 @@ class MetadataFilter(BaseFilter):
                 return None
 
         except Exception as e:
-            self._logger.error(f"Failed to build condition for field '{field}': {e}")
+            self._logger.exception(
+                f"Failed to build condition for field '{field}': {e}"
+            )
             return None
 
     def _build_boolean_expression(

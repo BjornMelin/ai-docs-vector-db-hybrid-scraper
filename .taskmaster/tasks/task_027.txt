@@ -1,0 +1,91 @@
+# Task ID: 27
+# Title: Polars data-processing migration - Replace residual pandas usage with Polars
+# Status: pending
+# Dependencies: 21, 22, 24
+# Priority: medium
+# Description: Replace remaining pandas usage with Polars to achieve ≥5× speedup on batch document operations and improve memory efficiency across the data processing pipeline.
+# Details:
+1. Audit codebase for residual pandas usage in document processing, chunking, and batch operations:
+   - Search for 'import pandas', 'pd.DataFrame', 'pd.read_*', and other pandas patterns
+   - Identify performance-critical operations that would benefit most from Polars migration
+   - Document current pandas usage patterns and performance baselines
+
+2. Replace pandas operations with Polars equivalents:
+   - Convert DataFrame creation and manipulation to use pl.DataFrame
+   - Replace pandas aggregation, filtering, and transformation operations with Polars lazy evaluation
+   - Update CSV/JSON reading operations to use pl.read_csv(), pl.read_json()
+   - Migrate groupby operations to Polars' optimized group_by() syntax
+
+3. Optimize batch document processing pipeline:
+   - Implement lazy evaluation strategies for large document collections
+   - Use Polars' columnar operations for text chunking and metadata extraction
+   - Leverage Polars' memory-efficient streaming for large file processing
+   - Replace pandas-based batch embedding operations with Polars vectorized operations
+
+4. Update data serialization and export operations:
+   - Convert pandas to_json(), to_csv() calls to Polars equivalents
+   - Ensure compatibility with existing data formats and schemas
+   - Maintain backward compatibility for API responses that expect pandas-like structures
+
+5. Performance optimization and validation:
+   - Add benchmark tests to measure before/after performance improvements
+   - Implement memory usage monitoring to verify efficiency gains
+   - Configure Polars threading and memory settings for optimal performance
+
+# Test Strategy:
+1. Create comprehensive benchmark suite comparing pandas vs Polars performance:
+   - Measure processing time for batch document operations with datasets of 1K, 10K, and 100K documents
+   - Verify ≥5× speedup target is achieved across different operation types
+   - Monitor memory usage reduction during large batch processing
+
+2. Unit test data processing functionality:
+   - Test DataFrame creation, manipulation, and aggregation operations
+   - Verify data integrity and consistency between pandas and Polars implementations
+   - Test edge cases with empty datasets, null values, and malformed data
+
+3. Integration testing for document processing pipeline:
+   - Run end-to-end tests with real document collections
+   - Verify embedding generation and vector operations work correctly with Polars DataFrames
+   - Test API endpoints that consume processed data maintain expected response formats
+
+4. Performance regression testing:
+   - Establish baseline performance metrics before migration
+   - Run automated benchmarks in CI to prevent performance regressions
+   - Validate memory usage stays within acceptable limits for production workloads
+
+5. Compatibility verification:
+   - Test data export formats (JSON, CSV) match existing schemas
+   - Verify integration with vector database operations
+   - Confirm no breaking changes in public API interfaces
+
+# Subtasks:
+## 1. Audit and Document Residual Pandas Usage [pending]
+### Dependencies: None
+### Description: Systematically search the codebase for all remaining pandas usage in document processing, chunking, and batch operations. Identify performance-critical areas and document current pandas usage patterns and performance baselines.
+### Details:
+Look for 'import pandas', 'pd.DataFrame', 'pd.read_*', and other pandas-specific patterns. Record where pandas is used and note which operations are most performance-sensitive.
+
+## 2. Migrate Pandas Operations to Polars Equivalents [pending]
+### Dependencies: 27.1
+### Description: Replace identified pandas operations with their Polars equivalents, including DataFrame creation, aggregation, filtering, transformation, and file I/O.
+### Details:
+Convert DataFrame manipulations to use pl.DataFrame, update CSV/JSON reading to pl.read_csv()/pl.read_json(), and migrate groupby and transformation logic to Polars syntax.
+
+## 3. Optimize Batch Document Processing Pipeline with Polars [pending]
+### Dependencies: 27.2
+### Description: Refactor the batch document processing pipeline to leverage Polars' lazy evaluation, columnar operations, and memory-efficient streaming for large-scale document handling.
+### Details:
+Implement lazy evaluation for large collections, use Polars for text chunking and metadata extraction, and replace pandas-based batch embedding with Polars vectorized operations.
+
+## 4. Update Data Serialization and Export Logic [pending]
+### Dependencies: 27.3
+### Description: Convert all pandas-based data export and serialization (to_json, to_csv) to Polars equivalents, ensuring compatibility with existing data formats and backward compatibility for API responses.
+### Details:
+Replace pandas serialization calls with Polars methods, verify output schemas, and maintain compatibility with downstream consumers expecting pandas-like structures.
+
+## 5. Benchmark, Optimize, and Validate Performance Gains [pending]
+### Dependencies: 27.4
+### Description: Add and run benchmark tests to measure performance and memory improvements, configure Polars settings for optimal threading and memory usage, and validate that the migration achieves the targeted speedup and efficiency.
+### Details:
+Implement automated benchmarks, monitor memory usage, and tune Polars configuration. Compare results to documented baselines to confirm ≥5× speedup and improved memory efficiency.
+

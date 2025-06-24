@@ -7,17 +7,17 @@ complexity, requirements, and performance characteristics.
 
 import logging
 import time
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from ...config import UnifiedConfig
+from src.config import Config
+
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
+
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class UnifiedBrowserManager(BaseService):
     - Tier 4: Playwright + Firecrawl - Maximum control + API fallback
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize unified browser manager.
 
         Args:
@@ -194,7 +194,7 @@ class UnifiedBrowserManager(BaseService):
             logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
         except Exception as e:
-            logger.error(f"Failed to initialize UnifiedBrowserManager: {e}")
+            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
             raise CrawlServiceError(
                 f"Failed to initialize unified browser manager: {e}"
             ) from e
@@ -423,7 +423,7 @@ class UnifiedBrowserManager(BaseService):
                         f"Failed to record error monitoring metrics: {monitor_error}"
                     )
 
-            logger.error(f"Unified scraping failed for {request.url}: {e}")
+            logger.exception(f"Unified scraping failed for {request.url}: {e}")
 
             return UnifiedScrapingResponse(
                 success=False,
@@ -472,7 +472,7 @@ class UnifiedBrowserManager(BaseService):
             return analysis
 
         except Exception as e:
-            logger.error(f"URL analysis failed for {url}: {e}")
+            logger.exception(f"URL analysis failed for {url}: {e}")
             return {
                 "url": url,
                 "error": str(e),

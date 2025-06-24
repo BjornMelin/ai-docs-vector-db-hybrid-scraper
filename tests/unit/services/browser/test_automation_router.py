@@ -1,16 +1,11 @@
 """Comprehensive tests for AutomationRouter with Pydantic configuration."""
 
 import json
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import mock_open
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
-from src.config.models import BrowserUseConfig
-from src.config.models import Crawl4AIConfig
-from src.config.models import PlaywrightConfig
-from src.config.models import UnifiedConfig
+
+from src.config import BrowserUseConfig, Config, Crawl4AIConfig, PlaywrightConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 
@@ -18,7 +13,7 @@ from src.services.errors import CrawlServiceError
 @pytest.fixture
 def mock_unified_config():
     """Create mock unified configuration with all browser configs."""
-    config = MagicMock(spec=UnifiedConfig)
+    config = MagicMock(spec=Config)
 
     # Mock browser configurations
     config.crawl4ai = MagicMock(spec=Crawl4AIConfig)

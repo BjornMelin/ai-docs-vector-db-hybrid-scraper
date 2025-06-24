@@ -1,74 +1,68 @@
-"""Compression middleware for production-grade response compression.
+"""Response compression middleware for production optimization.
 
-This middleware provides intelligent response compression with configurable
-thresholds and compression levels for optimal performance.
+This middleware provides gzip compression for responses to reduce bandwidth
+and improve performance in production environments.
 """
 
 import gzip
 import logging
 from collections.abc import Callable
-from typing import ClassVar
 
-from src.config.fastapi import CompressionConfig
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
+
 
 logger = logging.getLogger(__name__)
 
 
 class CompressionMiddleware(BaseHTTPMiddleware):
-    """Intelligent compression middleware with content-type awareness.
+    """Response compression middleware with configurable compression levels.
 
     Features:
-    - Configurable compression levels and thresholds
-    - Content-type filtering for appropriate compression
-    - Memory-efficient streaming compression
-    - Automatic compression negotiation
+    - Gzip compression for supported content types
+    - Configurable compression levels
+    - Content-length aware compression
+    - Client accept-encoding header checking
     """
 
-    # Content types that benefit from compression
-    COMPRESSIBLE_TYPES: ClassVar[set[str]] = {
-        "text/",
-        "application/json",
-        "application/javascript",
-        "application/xml",
-        "application/xhtml+xml",
-        "application/rss+xml",
-        "application/atom+xml",
-        "image/svg+xml",
-    }
-
-    # Content types to never compress
-    INCOMPRESSIBLE_TYPES: ClassVar[set[str]] = {
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "video/",
-        "audio/",
-        "application/zip",
-        "application/gzip",
-        "application/pdf",
-    }
-
-    def __init__(self, app: Callable, config: CompressionConfig):
+    def __init__(
+        self,
+        app: Callable,
+        minimum_size: int = 500,
+        compression_level: int = 6,
+        compressible_types: list[str] | None = None,
+    ):
         """Initialize compression middleware.
 
         Args:
             app: ASGI application
-            config: Compression configuration
+            minimum_size: Minimum response size to compress (bytes)
+            compression_level: Gzip compression level (1-9)
+            compressible_types: List of content types to compress
         """
         super().__init__(app)
-        self.config = config
+        self.minimum_size = minimum_size
+        self.compression_level = max(1, min(9, compression_level))
+
+        # Default compressible content types
+        self.compressible_types = compressible_types or [
+            "text/html",
+            "text/plain",
+            "text/css",
+            "text/javascript",
+            "application/javascript",
+            "application/json",
+            "application/xml",
+            "text/xml",
+            "application/rss+xml",
+            "application/atom+xml",
+            "image/svg+xml",
+        ]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request with intelligent compression."""
-        if not self.config.enabled:
-            return await call_next(request)
-
-        # Check if client accepts gzip compression
+        """Process request with response compression."""
+        # Check if client accepts gzip
         accept_encoding = request.headers.get("accept-encoding", "")
         if "gzip" not in accept_encoding.lower():
             return await call_next(request)
@@ -76,7 +70,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         # Process the request
         response = await call_next(request)
 
-        # Determine if response should be compressed
+        # Check if response should be compressed
         if not self._should_compress(response):
             return response
 
@@ -84,7 +78,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         return await self._compress_response(response)
 
     def _should_compress(self, response: Response) -> bool:
-        """Determine if response should be compressed.
+        """Check if response should be compressed.
 
         Args:
             response: HTTP response
@@ -93,169 +87,229 @@ class CompressionMiddleware(BaseHTTPMiddleware):
             True if response should be compressed
         """
         # Don't compress if already compressed
-        if "content-encoding" in response.headers:
+        if response.headers.get("content-encoding"):
             return False
 
         # Check content type
         content_type = response.headers.get("content-type", "")
-        if not content_type:
-            return False
-
-        # Check if content type is incompressible
-        for incompressible in self.INCOMPRESSIBLE_TYPES:
-            if content_type.startswith(incompressible):
-                return False
-
-        # Check if content type is compressible
-        is_compressible = any(
-            content_type.startswith(compressible)
-            for compressible in self.COMPRESSIBLE_TYPES
-        )
-
-        if not is_compressible:
+        if not any(ct in content_type for ct in self.compressible_types):
             return False
 
         # Check content length
         content_length = response.headers.get("content-length")
-        if content_length:
-            try:
-                length = int(content_length)
-                if length < self.config.minimum_size:
-                    return False
-            except ValueError:
-                pass
+        if content_length and int(content_length) < self.minimum_size:
+            return False
 
-        return True
+        # Don't compress streaming responses (would need chunked compression)
+        return not isinstance(response, StreamingResponse)
 
     async def _compress_response(self, response: Response) -> Response:
-        """Compress response content.
+        """Compress response body with gzip.
 
         Args:
-            response: Original response
+            response: HTTP response to compress
 
         Returns:
             Compressed response
         """
         try:
-            # Handle streaming responses
-            if isinstance(response, StreamingResponse):
-                return await self._compress_streaming_response(response)
-
-            # Handle regular responses
-            return await self._compress_regular_response(response)
-
-        except Exception as e:
-            logger.warning(f"Compression failed: {e}, serving uncompressed")
-            return response
-
-    async def _compress_regular_response(self, response: Response) -> Response:
-        """Compress regular response content.
-
-        Args:
-            response: Original response
-
-        Returns:
-            Compressed response
-        """
-        # Get response body
-        if hasattr(response, "body"):
+            # Get response body
             body = response.body
-        else:
-            # For responses without body attribute, we need to render it
-            body = b""
-            async for chunk in response.body_iterator:
-                body += chunk
 
-        # Skip compression if body is too small
-        if len(body) < self.config.minimum_size:
-            return response
+            # Skip if body is too small
+            if len(body) < self.minimum_size:
+                return response
 
-        # Compress the body
-        compressed_body = gzip.compress(
-            body, compresslevel=self.config.compression_level
-        )
+            # Compress the body
+            compressed_body = gzip.compress(body, compresslevel=self.compression_level)
 
-        # Check if compression is beneficial
-        compression_ratio = len(compressed_body) / len(body)
-        if compression_ratio > 0.9:  # Less than 10% reduction
-            return response
-
-        # Create new response with compressed content
-        compressed_response = Response(
-            content=compressed_body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type,
-        )
-
-        # Update headers for compression
-        compressed_response.headers["content-encoding"] = "gzip"
-        compressed_response.headers["content-length"] = str(len(compressed_body))
-        compressed_response.headers["vary"] = "Accept-Encoding"
-
-        # Log compression stats
-        logger.debug(
-            "Response compressed",
-            extra={
-                "original_size": len(body),
-                "compressed_size": len(compressed_body),
-                "compression_ratio": f"{compression_ratio:.2f}",
-                "compression_level": self.config.compression_level,
-            },
-        )
-
-        return compressed_response
-
-    async def _compress_streaming_response(
-        self, response: StreamingResponse
-    ) -> StreamingResponse:
-        """Compress streaming response content.
-
-        Args:
-            response: Original streaming response
-
-        Returns:
-            Compressed streaming response
-        """
-
-        async def compress_stream():
-            compressor = gzip.GzipFile(
-                mode="wb", compresslevel=self.config.compression_level
+            # Create new response with compressed body
+            compressed_response = Response(
+                content=compressed_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
             )
 
-            try:
-                async for chunk in response.body_iterator:
-                    if chunk:
-                        compressed_chunk = compressor.compress(chunk)
-                        if compressed_chunk:
-                            yield compressed_chunk
+            # Update headers
+            compressed_response.headers["content-encoding"] = "gzip"
+            compressed_response.headers["content-length"] = str(len(compressed_body))
 
-                # Finalize compression
-                final_chunk = compressor.flush()
-                if final_chunk:
-                    yield final_chunk
+            # Add Vary header to indicate compression varies by encoding
+            vary_header = response.headers.get("vary", "")
+            if "accept-encoding" not in vary_header.lower():
+                if vary_header:
+                    vary_header += ", Accept-Encoding"
+                else:
+                    vary_header = "Accept-Encoding"
+                compressed_response.headers["vary"] = vary_header
 
-            finally:
-                compressor.close()
+            # Calculate compression ratio for logging
+            compression_ratio = len(body) / len(compressed_body)
+            logger.debug(
+                f"Compressed response: {len(body)} -> {len(compressed_body)} bytes "
+                f"(ratio: {compression_ratio:.2f}x)"
+            )
 
-        # Create compressed streaming response
-        compressed_response = StreamingResponse(
-            compress_stream(),
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type,
-        )
+            return compressed_response
 
-        # Update headers for compression
-        compressed_response.headers["content-encoding"] = "gzip"
-        compressed_response.headers["vary"] = "Accept-Encoding"
-
-        # Remove content-length as it's not accurate for streaming compression
-        if "content-length" in compressed_response.headers:
-            del compressed_response.headers["content-length"]
-
-        return compressed_response
+        except Exception as e:
+            logger.warning(f"Failed to compress response: {e}")
+            return response
 
 
-# Export middleware class
-__all__ = ["CompressionMiddleware"]
+class BrotliCompressionMiddleware(BaseHTTPMiddleware):
+    """Brotli compression middleware for even better compression ratios.
+
+    Note: Requires brotli library to be installed.
+    Falls back to gzip if brotli is not available.
+    """
+
+    def __init__(
+        self,
+        app: Callable,
+        minimum_size: int = 500,
+        quality: int = 4,
+        compressible_types: list[str] | None = None,
+    ):
+        """Initialize Brotli compression middleware.
+
+        Args:
+            app: ASGI application
+            minimum_size: Minimum response size to compress (bytes)
+            quality: Brotli compression quality (0-11)
+            compressible_types: List of content types to compress
+        """
+        super().__init__(app)
+        self.minimum_size = minimum_size
+        self.quality = max(0, min(11, quality))
+
+        # Check if brotli is available
+        try:
+            import brotli
+
+            self.brotli = brotli
+            self.brotli_available = True
+        except ImportError:
+            self.brotli = None
+            self.brotli_available = False
+            logger.warning("Brotli compression not available, falling back to gzip")
+
+        # Default compressible content types
+        self.compressible_types = compressible_types or [
+            "text/html",
+            "text/plain",
+            "text/css",
+            "text/javascript",
+            "application/javascript",
+            "application/json",
+            "application/xml",
+            "text/xml",
+            "application/rss+xml",
+            "application/atom+xml",
+            "image/svg+xml",
+        ]
+
+        # Fallback to gzip compression
+        if not self.brotli_available:
+            self.gzip_middleware = CompressionMiddleware(
+                app, minimum_size, 6, compressible_types
+            )
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Process request with Brotli compression."""
+        if not self.brotli_available:
+            return await self.gzip_middleware.dispatch(request, call_next)
+
+        # Check if client accepts brotli
+        accept_encoding = request.headers.get("accept-encoding", "")
+        if "br" not in accept_encoding.lower():
+            # Fall back to gzip if available
+            if "gzip" in accept_encoding.lower():
+                return await CompressionMiddleware(
+                    lambda req: call_next(req),
+                    self.minimum_size,
+                    6,
+                    self.compressible_types,
+                ).dispatch(request, call_next)
+            return await call_next(request)
+
+        # Process the request
+        response = await call_next(request)
+
+        # Check if response should be compressed
+        if not self._should_compress(response):
+            return response
+
+        # Compress the response
+        return await self._compress_response(response)
+
+    def _should_compress(self, response: Response) -> bool:
+        """Check if response should be compressed."""
+        # Don't compress if already compressed
+        if response.headers.get("content-encoding"):
+            return False
+
+        # Check content type
+        content_type = response.headers.get("content-type", "")
+        if not any(ct in content_type for ct in self.compressible_types):
+            return False
+
+        # Check content length
+        content_length = response.headers.get("content-length")
+        if content_length and int(content_length) < self.minimum_size:
+            return False
+
+        # Don't compress streaming responses
+        return not isinstance(response, StreamingResponse)
+
+    async def _compress_response(self, response: Response) -> Response:
+        """Compress response body with Brotli."""
+        try:
+            # Get response body
+            body = response.body
+
+            # Skip if body is too small
+            if len(body) < self.minimum_size:
+                return response
+
+            # Compress the body
+            compressed_body = self.brotli.compress(body, quality=self.quality)
+
+            # Create new response with compressed body
+            compressed_response = Response(
+                content=compressed_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
+
+            # Update headers
+            compressed_response.headers["content-encoding"] = "br"
+            compressed_response.headers["content-length"] = str(len(compressed_body))
+
+            # Add Vary header
+            vary_header = response.headers.get("vary", "")
+            if "accept-encoding" not in vary_header.lower():
+                if vary_header:
+                    vary_header += ", Accept-Encoding"
+                else:
+                    vary_header = "Accept-Encoding"
+                compressed_response.headers["vary"] = vary_header
+
+            # Calculate compression ratio for logging
+            compression_ratio = len(body) / len(compressed_body)
+            logger.debug(
+                f"Brotli compressed response: {len(body)} -> {len(compressed_body)} bytes "
+                f"(ratio: {compression_ratio:.2f}x)"
+            )
+
+            return compressed_response
+
+        except Exception as e:
+            logger.warning(f"Failed to compress response with Brotli: {e}")
+            return response
+
+
+# Export middleware classes
+__all__ = ["BrotliCompressionMiddleware", "CompressionMiddleware"]

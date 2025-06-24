@@ -9,16 +9,16 @@ import logging
 import re
 import time
 from typing import Any
-from urllib.parse import urljoin
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from ...config.models import UnifiedConfig
+from src.config import Config
+
 from ..base import BaseService
+
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class LightweightScraper(BaseService):
     over browser-based scraping for static documentation and simple pages.
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: Config):
         """Initialize lightweight scraper.
 
         Args:

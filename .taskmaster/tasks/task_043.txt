@@ -1,0 +1,52 @@
+# Task ID: 43
+# Title: Comprehensive Test Suite & CI Integration
+# Status: pending
+# Dependencies: 36, 37, 38, 39, 40, 41, 42
+# Priority: high
+# Description: Reach ≥95 % coverage for browser-use modules and integrate with existing pipeline.
+# Details:
+1. Structure tests:
+   - `tests/unit/` – pure logic (config, utils).
+   - `tests/async/` – async functions with pytest-asyncio.
+   - `tests/integration/` – FastAPI testclient + play-wright.
+   - `tests/property/` – Hypothesis strategies.
+   - `tests/perf/` – locust scripts measuring throughput.
+2. Use `pytest-cov --cov=browser_use --cov-fail-under=95`.
+3. Parallelize with `pytest-xdist -n auto`.
+4. Add GitHub Action step `playwright install --with-deps`.
+5. Upload coverage XML to Codecov.
+6. Introduce contract tests for OpenAPI schema stability (`schemathesis`).
+7. Generate test data via `faker` to avoid external IO.
+
+# Test Strategy:
+• CI run passes on PR.
+• Coverage report shows ≥95 %.
+• Failing property-based case auto-shrinks.
+• Perf test: 5 agents scrape 40 pages/min in CI perf job.
+• End-to-end docker-compose up → make e2e passes in <90 s.
+
+# Subtasks:
+## 1. Structure and Organize Tests [pending]
+### Dependencies: None
+### Description: Organize tests into unit, async, integration, property, and performance categories.
+### Details:
+Create directories for each test type: `tests/unit/`, `tests/async/`, `tests/integration/`, `tests/property/`, and `tests/perf/`.
+
+## 2. Implement Test Coverage and Parallelization [pending]
+### Dependencies: 43.1
+### Description: Achieve ≥95% coverage for browser-use modules and parallelize tests.
+### Details:
+Use `pytest-cov --cov=browser_use --cov-fail-under=95` and parallelize with `pytest-xdist -n auto`.
+
+## 3. Integrate with CI/CD Pipeline [pending]
+### Dependencies: 43.2
+### Description: Integrate tests with GitHub Actions and upload coverage reports.
+### Details:
+Add GitHub Action step `playwright install --with-deps` and upload coverage XML to Codecov.
+
+## 4. Enhance Test Suite with Contract and Data Generation [pending]
+### Dependencies: 43.3
+### Description: Introduce contract tests and generate test data.
+### Details:
+Use `schemathesis` for OpenAPI schema stability and generate test data via `faker`.
+
