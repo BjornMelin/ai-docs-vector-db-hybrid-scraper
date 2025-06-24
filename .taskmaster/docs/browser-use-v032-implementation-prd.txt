@@ -1,0 +1,358 @@
+# Product Requirements Document: Browser-Use v0.3.2 Solo Developer Implementation
+
+## Project Overview
+
+### Project Name
+Browser-Use v0.3.2 Enhancement and Migration
+
+### Project Description
+Migrate from optional browser-use integration to a complete browser-use v0.3.2 implementation with advanced multi-agent orchestration, session persistence, FileSystem management, and production-ready monitoring. This implementation is optimized for solo developer execution with sustainable timelines and minimal infrastructure costs.
+
+### Business Objectives
+- Achieve 58% performance improvement in documentation scraping task completion times
+- Implement multi-agent architecture supporting 2-10 concurrent browser automation agents
+- Reduce memory usage by 29-44% through session optimization and resource management
+- Establish production-ready system with 99.5% uptime and comprehensive monitoring
+- Maintain near-zero infrastructure costs using local Redis and optimized LLM usage
+
+### Success Metrics
+- Task completion time reduced from ~113 seconds to <60 seconds
+- Multi-agent throughput achieving 5-8 pages/minute with 5 concurrent agents
+- Session reuse efficiency reaching 80%+ through Redis-backed persistence
+- Overall system success rate improved from ~70% to 85-90%
+- Infrastructure costs maintained at $0 for development and <$25/month for production
+
+## Technical Requirements
+
+### Phase 1: Foundation and API Migration (Weeks 1-3)
+
+#### Requirement 1.1: Dependency Management and Environment Setup
+**Priority**: Critical
+**Complexity**: Low
+**Description**: Update project dependencies to include browser-use v0.3.2 and supporting libraries while maintaining compatibility with existing codebase.
+
+**Acceptance Criteria**:
+- Add browser-use>=0.3.2,<0.4.0 to pyproject.toml dependencies
+- Add redis>=5.2.0,<7.0.0 for session persistence
+- Add aiofiles>=24.1.0 for FileSystem operations
+- Validate Python 3.11-3.13 compatibility with all dependencies
+- Ensure zero conflicts with existing dependencies in uv.lock
+- Update CLAUDE.md documentation with new dependency information
+
+**Technical Notes**:
+Execute `uv add "browser-use>=0.3.2,<0.4.0"` followed by `uv sync` and validate with test imports.
+
+#### Requirement 1.2: API Breaking Changes Migration
+**Priority**: Critical  
+**Complexity**: Medium
+**Description**: Migrate from deprecated v0.2.x Browser/BrowserConfig APIs to v0.3.2 BrowserSession/BrowserProfile architecture.
+
+**Acceptance Criteria**:
+- Replace all Browser imports with BrowserSession in browser_use_adapter.py
+- Replace all BrowserConfig usage with BrowserProfile configuration
+- Update session initialization to use manual `await session.start()` pattern
+- Implement proper session lifecycle management with cleanup
+- Maintain graceful fallback pattern for optional browser-use usage
+- All existing tests pass with updated API
+
+**Technical Notes**:
+Key migration: `Browser(config=browser_config)` becomes `BrowserSession(browser_profile=profile)` with required `await session.start()`.
+
+#### Requirement 1.3: Enhanced Configuration System
+**Priority**: High
+**Complexity**: Low  
+**Description**: Extend BrowserUseConfig model to support v0.3.2 capabilities including stealth mode, session management, and FileSystem options.
+
+**Acceptance Criteria**:
+- Add stealth_mode boolean configuration with default True
+- Add stealth_domains list for domain-specific stealth activation
+- Add min_agents and max_agents for multi-agent pool configuration
+- Add session_persistence_enabled and redis_url for session management
+- Add filesystem_enabled and storage_root for file operations
+- Add memory_enabled flag for optional memory system integration
+- Add cost_optimization_enabled with preferred model selection
+- Maintain backward compatibility with existing configuration
+
+**Technical Notes**:
+Extend existing BrowserUseConfig in src/config/core.py with Pydantic field validation.
+
+### Phase 2: Multi-Agent Core Implementation (Weeks 4-8)
+
+#### Requirement 2.1: Agent Pool Manager Implementation
+**Priority**: High
+**Complexity**: High
+**Description**: Implement EnhancedAgentPoolManager for concurrent browser automation with intelligent resource management and session sharing.
+
+**Acceptance Criteria**:
+- Create EnhancedAgentPoolManager class supporting 2-10 concurrent agents
+- Implement semaphore-controlled resource allocation preventing resource exhaustion
+- Add BrowserProfile template sharing for optimized session creation
+- Implement agent health monitoring with real-time status tracking
+- Add dynamic scaling algorithms for pool size management based on workload
+- Create session reuse patterns for performance optimization
+- Integration test concurrent processing with 2-10 agents successfully
+- Achieve 3x throughput improvement vs single agent baseline
+
+**Technical Notes**:
+Use asyncio.Semaphore for concurrency control and shared BrowserProfile for session optimization.
+
+#### Requirement 2.2: Session Persistence Manager
+**Priority**: Medium
+**Complexity**: Medium
+**Description**: Implement Redis-backed session persistence enabling session reuse across browser automation tasks.
+
+**Acceptance Criteria**:
+- Create SessionPersistenceManager with Redis backend integration
+- Implement session save/restore functionality preserving authentication state
+- Add session reuse patterns reducing initialization overhead
+- Implement session affinity management for agent-session relationships  
+- Create automatic cleanup system for stale sessions older than 24 hours
+- Add session metrics tracking usage and performance statistics
+- Achieve 80%+ session reuse rate in testing
+- Ensure 90%+ reliability for session persistence operations
+
+**Technical Notes**:
+Use Redis with 24-hour TTL and JSON serialization for session state storage.
+
+#### Requirement 2.3: FileSystem Management Integration  
+**Priority**: Medium
+**Complexity**: Low
+**Description**: Implement unified FileSystem management for structured file operations with tracking and automation.
+
+**Acceptance Criteria**:
+- Create FileSystemManager with unified file operation interface
+- Implement structured file patterns for todo.md and results.md automation
+- Add operation tracking with metadata and audit logging capabilities
+- Implement file lifecycle management with cleanup and versioning
+- Create storage optimization for efficient file handling patterns
+- Integration with agent pool for multi-agent file operations
+- Achieve 95%+ success rate for file operations
+- Support concurrent file access from multiple agents safely
+
+**Technical Notes**:
+Use aiofiles for async file operations and JSON metadata tracking.
+
+### Phase 3: Advanced Features Implementation (Weeks 9-12)
+
+#### Requirement 3.1: Enhanced Stealth Mode System
+**Priority**: Medium  
+**Complexity**: Medium
+**Description**: Implement domain-specific stealth mode with effectiveness tracking and intelligent activation patterns.
+
+**Acceptance Criteria**:
+- Create SmartStealthManager with domain pattern recognition
+- Implement stealth effectiveness tracking with success rate monitoring
+- Add flexible stealth configuration supporting multiple protection levels
+- Create multi-tier stealth fallback strategies for difficult sites
+- Integration testing on protected documentation sites (Oracle, AWS, Salesforce)
+- Achieve 90%+ success rate on protected sites with stealth enabled
+- Performance impact assessment showing <20% overhead for stealth mode
+
+**Technical Notes**:
+Use regex patterns for domain matching and enhanced User-Agent rotation.
+
+#### Requirement 3.2: Multi-LLM Optimization System
+**Priority**: High
+**Complexity**: Low  
+**Description**: Implement intelligent LLM selection and cost optimization supporting multiple model providers.
+
+**Acceptance Criteria**:
+- Add support for Gemini 2.5 Flash, DeepSeek, and Grok models
+- Implement cost optimization through intelligent model selection
+- Add planner/executor model separation for advanced task handling
+- Create model-specific optimization patterns for different use cases
+- Implement automatic model selection based on task complexity and budget
+- Achieve 30-50% cost reduction through optimized model usage
+- Maintain or improve task success rates with cost-optimized models
+
+**Technical Notes**:
+Create cost mapping and selection algorithms favoring gpt-4o-mini and gemini-2.5-flash for balance.
+
+#### Requirement 3.3: Memory System Integration (Optional)
+**Priority**: Low
+**Complexity**: High  
+**Description**: Integrate procedural memory system with Mem0 for enhanced context awareness (Python <3.13 only).
+
+**Acceptance Criteria**:
+- Implement OptionalMemoryManager with graceful fallback for unsupported Python versions
+- Add memory system configuration parameters for customization
+- Create memory usage optimization for efficient resource management
+- Implement memory persistence for long-term context storage
+- Add Python version compatibility handling for 3.13+ limitations
+- Memory performance testing validates <10% overhead when enabled
+- Graceful degradation when memory features unavailable
+
+**Technical Notes**:
+Check Python version and conditionally import Mem0, with null-pattern fallback.
+
+#### Requirement 3.4: Cloud API Integration and Task Management
+**Priority**: Medium
+**Complexity**: Medium
+**Description**: Implement pause/resume functionality and structured output support for advanced task management workflows.
+
+**Acceptance Criteria**:
+- Implement pause/resume functionality for long-running browser automation tasks
+- Add structured output support with Pydantic validation for data consistency
+- Create task management endpoints for advanced workflow control
+- Add real-time progress tracking with status updates and completion estimates
+- Implement task queuing system for sequential and parallel workflow management
+- Support optional cloud service integration for external task orchestration
+- Add task state persistence for recovery after system restarts
+- Create task metrics and analytics for performance monitoring
+
+**Technical Notes**:
+Use Redis for task state persistence and implement RESTful endpoints for task management.
+
+### Phase 4: Production Deployment and Monitoring (Weeks 13-16)
+
+#### Requirement 4.1: Comprehensive Monitoring System
+**Priority**: High
+**Complexity**: Low
+**Description**: Implement production-ready monitoring with metrics, alerting, and observability for solo developer deployment.
+
+**Acceptance Criteria**:
+- Create SoloDevMonitoring class with essential metrics tracking
+- Implement real-time monitoring for agent pool utilization and health
+- Add performance metrics tracking response time, success rate, and throughput
+- Create alerting system for critical thresholds and failure conditions
+- Implement health check endpoints for system status validation
+- Add resource monitoring for memory, CPU, and storage usage
+- Create monitoring dashboard with key performance indicators
+- Ensure monitoring overhead <5% of system resources
+- Add session persistence metrics and Redis connection monitoring
+- Track FileSystem operation success rates and storage usage
+- Monitor stealth mode effectiveness across different domains
+- Create cost optimization metrics for LLM usage and model selection
+
+**Technical Notes**:
+Use simple in-memory metrics with periodic persistence and health check endpoints. Integrate with Redis for distributed metrics when needed.
+
+#### Requirement 4.2: Production Deployment Pipeline
+**Priority**: High
+**Complexity**: Medium
+**Description**: Create production deployment pipeline with rollback procedures and staging validation.
+
+**Acceptance Criteria**:
+- Create deployment pipeline supporting local and cloud deployment
+- Implement staging environment for pre-production validation
+- Add rollback procedures with <15 minute recovery time
+- Create deployment validation tests ensuring system functionality
+- Implement monitoring runbooks for operational procedures
+- Add incident response procedures for emergency situations
+- Execute successful production deployment with zero critical issues
+- Achieve 48-hour monitoring period with stable performance
+
+**Technical Notes**:
+Support both local deployment and optional cloud deployment (Railway/Render).
+
+#### Requirement 4.3: Documentation and Knowledge Transfer
+**Priority**: Medium
+**Complexity**: Low  
+**Description**: Create comprehensive documentation covering architecture, operations, and troubleshooting.
+
+**Acceptance Criteria**:
+- Create architecture documentation explaining system design and components
+- Write comprehensive API documentation with usage examples
+- Create troubleshooting guides for common issues and solutions
+- Write performance optimization guides for system tuning
+- Create operational runbooks for day-to-day system management
+- Add team training materials for knowledge transfer
+- Record demonstration videos showing key functionality
+- Ensure documentation accuracy through validation testing
+
+**Technical Notes**:
+Use markdown documentation with code examples and architectural diagrams.
+
+## Implementation Strategy
+
+### Development Approach
+This project follows a phased implementation approach designed for solo developer execution:
+
+**Phase 1 (Weeks 1-3)**: Foundation establishment with zero-risk migration ensuring no regression in existing functionality while enabling v0.3.2 capabilities.
+
+**Phase 2 (Weeks 4-8)**: Core feature implementation focusing on multi-agent architecture and session management for major performance improvements.
+
+**Phase 3 (Weeks 9-12)**: Advanced feature integration including stealth mode, LLM optimization, and optional memory system for enhanced capabilities.
+
+**Phase 4 (Weeks 13-16)**: Production deployment with comprehensive monitoring, documentation, and operational procedures.
+
+### Risk Mitigation
+- Maintain graceful fallback patterns throughout implementation
+- Implement feature flags for safe rollout and quick rollback
+- Use incremental testing with 48-hour validation periods
+- Provide comprehensive rollback procedures for each phase
+- Monitor resource usage and performance continuously
+
+### Resource Requirements
+- Development time: 12-16 weeks part-time (sustainable pace)
+- Infrastructure cost: $0 development, <$25/month production
+- Technical complexity: Medium (managed through templates and documentation)
+- Team size: 1 solo developer with comprehensive guidance
+
+### Success Validation
+Each phase includes specific success criteria with measurable targets:
+- Performance benchmarks with before/after comparisons (58% improvement validated)
+- Feature functionality validation through integration testing
+- Resource usage monitoring ensuring efficiency targets (29-44% memory reduction)
+- User acceptance testing confirming capability improvements
+- WebVoyager benchmark validation achieving 89.1% success rate
+- Multi-agent scalability testing up to 10 concurrent agents
+- Session reuse efficiency targeting 80%+ rates
+- Stealth mode effectiveness testing on protected documentation sites
+- Cost optimization validation through multi-LLM selection algorithms
+
+## Dependencies and Prerequisites
+
+### Technical Dependencies
+- Python 3.11-3.13 runtime environment
+- browser-use>=0.3.2,<0.4.0 for core automation
+- redis>=5.2.0,<7.0.0 for session persistence
+- aiofiles>=24.1.0 for file operations
+- Local or cloud Redis instance for session storage
+- Existing LLM API keys (OpenAI, Anthropic, or Gemini)
+
+### Infrastructure Dependencies  
+- Docker or local Redis installation for session persistence
+- Chromium/Chrome browser via Playwright for automation
+- 2GB+ RAM for multi-agent operations
+- SSD storage recommended for optimal FileSystem performance
+- Optional: Cloud deployment platform (Railway, Render, or similar)
+
+### Knowledge Dependencies
+- Familiarity with async Python programming patterns
+- Basic understanding of browser automation concepts  
+- Redis usage knowledge for session management
+- Docker basics for local infrastructure setup
+- Git workflow for version control and deployment
+
+## Acceptance Criteria Summary
+
+### Phase 1 Success Criteria
+- Zero regression in existing functionality validated through test suite
+- All dependencies updated and compatible with no conflicts
+- v0.3.2 APIs fully integrated with proper session management
+- Enhanced configuration supporting all new capabilities
+- Documentation updated reflecting architectural changes
+
+### Phase 2 Success Criteria  
+- Multi-agent pool operational supporting 2-10 concurrent agents
+- 3x throughput improvement demonstrated through load testing
+- Session persistence achieving 80%+ reuse rate
+- FileSystem operations maintaining 95%+ success rate
+- Resource usage within 2GB memory limit
+
+### Phase 3 Success Criteria
+- Enhanced stealth mode achieving 90%+ success on protected sites
+- Multi-LLM optimization reducing costs by 30-50%
+- Memory system functional when available (Python <3.13)
+- All advanced features integrated and operational
+- Performance targets met or exceeded
+
+### Phase 4 Success Criteria
+- Production deployment successful with zero critical issues
+- Comprehensive monitoring operational with alerting
+- Documentation complete and validated for accuracy
+- Team training completed with knowledge transfer
+- 48-hour monitoring period confirming system stability
+
+This PRD provides the foundation for generating specific, actionable tasks through Task Master AI parsing while maintaining the comprehensive scope and solo developer optimization of the master implementation guide.

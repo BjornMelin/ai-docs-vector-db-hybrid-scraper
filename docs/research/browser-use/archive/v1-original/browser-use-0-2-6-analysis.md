@@ -136,13 +136,13 @@ agent = Agent(browser=session)
 
 ### Quantified Benefits
 
-| Metric | 0.2.5 | 0.2.6 | Improvement |
-|--------|-------|-------|-------------|
-| Markdown extraction (avg) | 3.2s | 1.9s | 40% faster |
-| Multi-agent stability | 78% | 96% | 18% increase |
-| Memory usage (10 agents) | 2.8GB | 1.9GB | 32% reduction |
-| Parallel LLM calls | 450ms | 180ms | 60% faster |
-| Event loop errors | 12% | <0.1% | 99% reduction |
+| Metric                    | 0.2.5 | 0.2.6 | Improvement   |
+| ------------------------- | ----- | ----- | ------------- |
+| Markdown extraction (avg) | 3.2s  | 1.9s  | 40% faster    |
+| Multi-agent stability     | 78%   | 96%   | 18% increase  |
+| Memory usage (10 agents)  | 2.8GB | 1.9GB | 32% reduction |
+| Parallel LLM calls        | 450ms | 180ms | 60% faster    |
+| Event loop errors         | 12%   | <0.1% | 99% reduction |
 
 ### Optimization Opportunities
 
@@ -152,10 +152,10 @@ agent = Agent(browser=session)
    async def process_docs_parallel(urls: list[str]):
        sessions = [BrowserSession(stealth=True) for _ in urls]
        agents = []
-       
+
        # Start all sessions in parallel
        await asyncio.gather(*[s.start() for s in sessions])
-       
+
        # Create agents
        for url, session in zip(urls, sessions):
            agent = Agent(
@@ -163,7 +163,7 @@ agent = Agent(browser=session)
                browser=session
            )
            agents.append(agent)
-       
+
        # Process in parallel
        results = await asyncio.gather(*[a.run() for a in agents])
        return results
@@ -176,7 +176,7 @@ agent = Agent(browser=session)
        def __init__(self, size: int = 5):
            self.sessions = {}
            self.size = size
-       
+
        async def get_session(self) -> BrowserSession:
            if len(self.sessions) < self.size:
                session = BrowserSession(stealth=True)
@@ -190,11 +190,13 @@ agent = Agent(browser=session)
 ### New Security Features
 
 1. **Improved Process Isolation**
+
    - Each browser session runs in isolated process space
    - Better protection against memory access vulnerabilities
    - Automatic cleanup of zombie processes
 
 2. **Enhanced Cookie Management**
+
    - Auto-application of storage_state.json to existing browsers
    - Better session persistence across restarts
    - Secure storage of authentication tokens
@@ -238,17 +240,17 @@ class EnhancedBrowserUseAdapter(BrowserUseAdapter):
     async def initialize(self) -> None:
         """Initialize with 0.2.6 features."""
         await super().initialize()
-        
+
         # Enable stealth mode for protected sites
         browser_config = BrowserConfig(
             headless=self.config.headless,
             disable_security=self.config.disable_security,
             stealth=self.should_use_stealth(self.config.target_url)
         )
-        
+
         self._browser = Browser(config=browser_config)
         self._session_id = self._browser.id  # Track with UUID
-        
+
     def should_use_stealth(self, url: str) -> bool:
         """Determine if stealth mode needed."""
         protected_domains = [
@@ -267,7 +269,7 @@ class MultiAgentDocCrawler:
     def __init__(self, max_agents: int = 5):
         self.max_agents = max_agents
         self.session_pool = []
-        
+
     async def crawl_documentation(self, base_url: str, paths: list[str]):
         """Crawl multiple documentation pages in parallel."""
         # Create session pool
@@ -275,7 +277,7 @@ class MultiAgentDocCrawler:
             session = BrowserSession(stealth=True)
             await session.start()
             self.session_pool.append(session)
-        
+
         # Distribute work across agents
         tasks = []
         for i, path in enumerate(paths):
@@ -286,7 +288,7 @@ class MultiAgentDocCrawler:
                 llm=self.llm_config
             )
             tasks.append(agent.run())
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return self.process_results(results)
 ```
@@ -297,26 +299,26 @@ class MultiAgentDocCrawler:
 class PersistentSessionManager:
     def __init__(self, db_connection):
         self.db = db_connection
-        
+
     async def create_session(self, profile: dict) -> BrowserSession:
         """Create and persist a browser session."""
         session = BrowserSession(**profile, stealth=True)
         await session.start()
-        
+
         # Store session metadata with UUID
         await self.db.execute(
             "INSERT INTO browser_sessions (uuid, profile, created_at) VALUES (?, ?, ?)",
             (session.id, json.dumps(profile), datetime.now())
         )
-        
+
         return session
-    
+
     async def restore_session(self, uuid: str) -> BrowserSession:
         """Restore a session by UUID."""
         data = await self.db.fetch_one(
             "SELECT * FROM browser_sessions WHERE uuid = ?", (uuid,)
         )
-        
+
         if data:
             profile = json.loads(data['profile'])
             session = BrowserSession(**profile, stealth=True)
