@@ -1,0 +1,84 @@
+# Task ID: 23
+# Title: Modernise CI/CD pipeline for Python 3.13 compatibility
+# Status: pending
+# Dependencies: 21, 22
+# Priority: high
+# Description: Update GitHub Actions workflows to build, test, lint, and package with UV and Python 3.13, including matrix testing across Python 3.11-3.13 versions.
+# Details:
+1. Update .github/workflows/ YAML files to use Python 3.13 as the primary version and UV as the package manager:
+   - Replace pip/poetry commands with UV equivalents (uv sync, uv run, uv build)
+   - Update setup-python action to include Python 3.13.x
+   - Configure UV installation and caching for faster builds
+
+2. Implement matrix testing strategy:
+   - Create test matrix for Python versions 3.11, 3.12, and 3.13
+   - Ensure all combinations pass with UV dependency resolution
+   - Configure fail-fast: false for comprehensive testing
+
+3. Modernize linting and formatting workflows:
+   - Update ruff commands to use 'uv run ruff check . --fix && uv run ruff format .'
+   - Integrate with existing monitoring/observability from Task 20
+   - Add pre-commit hooks validation
+
+4. Update packaging and release workflows:
+   - Configure UV for package building and publishing
+   - Update version tagging and changelog generation
+   - Ensure compatibility with existing documentation deployment (Task 6)
+
+5. Add performance benchmarking in CI:
+   - Integrate pytest-benchmark with UV
+   - Compare performance across Python versions
+   - Generate performance reports for monitoring
+
+# Test Strategy:
+1. Verify CI/CD pipeline functionality:
+   - Test all workflows trigger correctly on push/PR events
+   - Validate matrix builds complete successfully for Python 3.11-3.13
+   - Confirm UV commands execute properly in GitHub Actions environment
+
+2. Integration testing:
+   - Run full test suite with UV across all Python versions
+   - Verify linting, formatting, and type checking pass
+   - Test package building and artifact generation
+
+3. Performance validation:
+   - Compare CI/CD execution times before and after UV migration
+   - Verify benchmark tests run and report correctly
+   - Test caching effectiveness for UV dependencies
+
+4. Release workflow testing:
+   - Test package publishing to test PyPI
+   - Verify version tagging and changelog generation
+   - Confirm documentation deployment integration works correctly
+
+# Subtasks:
+## 1. Update GitHub Actions Workflows for Python 3.13 and UV [pending]
+### Dependencies: None
+### Description: Modify all relevant .github/workflows/ YAML files to use Python 3.13 as the primary version and replace pip/poetry commands with UV equivalents. Ensure setup-python action includes Python 3.13.x and configure UV installation and caching.
+### Details:
+Update the setup-python action to support Python 3.13, replace pip/poetry with 'uv sync', 'uv run', and 'uv build' commands, and add steps for UV installation and caching for faster builds.
+
+## 2. Implement Matrix Testing Across Python 3.11–3.13 with UV [pending]
+### Dependencies: 23.1
+### Description: Configure a test matrix in GitHub Actions to run builds and tests across Python 3.11, 3.12, and 3.13, ensuring all combinations pass using UV for dependency resolution. Set fail-fast to false for comprehensive coverage.
+### Details:
+Define a matrix strategy in the workflow YAML for the specified Python versions, use UV for dependency management in each job, and ensure fail-fast is set to false.
+
+## 3. Modernize Linting and Formatting Workflows with UV and Ruff [pending]
+### Dependencies: 23.1
+### Description: Update linting and formatting steps to use 'uv run ruff check . --fix' and 'uv run ruff format .', integrate with monitoring/observability, and add pre-commit hooks validation.
+### Details:
+Replace existing linting commands with UV-based Ruff invocations, ensure integration with monitoring from Task 20, and add steps to validate pre-commit hooks in CI.
+
+## 4. Update Packaging and Release Workflows for UV and Python 3.13 [pending]
+### Dependencies: 23.2, 23.3
+### Description: Configure UV for building and publishing packages, update version tagging and changelog generation, and ensure compatibility with documentation deployment.
+### Details:
+Modify packaging steps to use UV, update release automation for versioning and changelogs, and verify that documentation deployment (from Task 6) remains functional.
+
+## 5. Integrate Performance Benchmarking in CI with UV [pending]
+### Dependencies: 23.2
+### Description: Add performance benchmarking using pytest-benchmark with UV, compare results across Python versions, and generate performance reports for monitoring.
+### Details:
+Install and configure pytest-benchmark in the CI workflow, run benchmarks for each Python version in the matrix, and output performance reports for analysis.
+

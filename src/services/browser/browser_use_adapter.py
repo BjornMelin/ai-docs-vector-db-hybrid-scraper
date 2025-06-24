@@ -133,7 +133,7 @@ class BrowserUseAdapter(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup browser-use resources."""
-        if self._browser:
+        if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
             except Exception as e:
@@ -143,6 +143,13 @@ class BrowserUseAdapter(BaseService):
                 self._browser = None
                 self._initialized = False
                 self.logger.info("BrowserUse adapter cleaned up")
+        else:
+            # Ensure cleanup state is consistent even when not initialized
+            if hasattr(self, "_browser"):
+                self._browser = None
+            if hasattr(self, "_initialized"):
+                self._initialized = False
+            self.logger.info("BrowserUse adapter cleaned up (was not initialized)")
 
     async def scrape(
         self,

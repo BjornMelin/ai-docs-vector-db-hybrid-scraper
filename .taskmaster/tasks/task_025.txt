@@ -1,0 +1,86 @@
+# Task ID: 25
+# Title: Automate security scanning with Bandit & Safety CI integration
+# Status: pending
+# Dependencies: 23, 24
+# Priority: medium
+# Description: Integrate Bandit for static security analysis and Safety for dependency vulnerability scanning into CI/CD pipeline with fail-on-high severity configuration and weekly scheduled runs.
+# Details:
+1. Configure Bandit static security analysis:
+   - Add bandit to development dependencies in pyproject.toml
+   - Create .bandit configuration file to exclude false positives and configure severity levels
+   - Set up bandit to scan src/ directory with high severity fail threshold
+   - Configure output formats (JSON, SARIF) for CI integration
+
+2. Integrate Safety dependency vulnerability scanning:
+   - Add safety to development dependencies
+   - Configure safety to check against vulnerability databases
+   - Set fail threshold for high/critical vulnerabilities
+   - Generate reports in JSON format for CI consumption
+
+3. Update GitHub Actions CI/CD pipeline:
+   - Add security scanning job to existing workflow in .github/workflows/
+   - Configure job to run bandit and safety checks on every PR and push
+   - Set up fail conditions for high/critical severity findings
+   - Add artifact collection for security reports
+
+4. Implement weekly scheduled security scans:
+   - Create separate GitHub Actions workflow for scheduled runs
+   - Configure cron schedule for weekly execution
+   - Set up notifications for security findings via GitHub issues or alerts
+   - Generate comprehensive security reports with trending analysis
+
+5. Security baseline and exemption management:
+   - Document baseline security findings and create exemption process
+   - Implement security finding suppression for accepted risks
+   - Create security policy documentation for development team
+
+# Test Strategy:
+1. Verify security tool integration:
+   - Test bandit execution with intentionally vulnerable code samples
+   - Validate safety correctly identifies known vulnerable dependencies
+   - Confirm CI pipeline fails appropriately on high severity findings
+   - Test exemption and suppression mechanisms work correctly
+
+2. CI/CD pipeline validation:
+   - Execute full CI pipeline with security checks enabled
+   - Verify security reports are generated and artifacts collected
+   - Test that PRs are blocked when high severity issues are found
+   - Validate weekly scheduled runs execute and generate reports
+
+3. Security coverage testing:
+   - Run comprehensive scan on entire codebase to establish baseline
+   - Test scanning performance impact on CI build times
+   - Verify security findings are actionable and not excessive false positives
+   - Confirm integration with existing UV and Python 3.13 environment
+
+# Subtasks:
+## 1. Configure Bandit for Static Security Analysis [pending]
+### Dependencies: None
+### Description: Set up Bandit as a development dependency, create a .bandit configuration file to exclude false positives and set severity thresholds, and configure Bandit to scan the src/ directory with output in JSON and SARIF formats.
+### Details:
+Add Bandit to pyproject.toml, create and tune .bandit config, ensure scan targets src/, and verify output formats for CI integration.
+
+## 2. Integrate Safety for Dependency Vulnerability Scanning [pending]
+### Dependencies: None
+### Description: Add Safety as a development dependency, configure it to check against vulnerability databases, set fail thresholds for high/critical vulnerabilities, and generate JSON reports.
+### Details:
+Install Safety, configure database checks, set up fail-on-high/critical, and ensure JSON report generation.
+
+## 3. Update CI/CD Pipeline for Security Scanning [pending]
+### Dependencies: 25.1, 25.2
+### Description: Modify the GitHub Actions workflow to add a security scanning job that runs Bandit and Safety on every PR and push, sets fail conditions for high/critical findings, and collects security report artifacts.
+### Details:
+Edit .github/workflows/ to include security jobs, configure triggers, fail logic, and artifact uploads.
+
+## 4. Implement Weekly Scheduled Security Scans [pending]
+### Dependencies: 25.3
+### Description: Create a separate GitHub Actions workflow with a cron schedule for weekly security scans, set up notifications for findings, and generate comprehensive security reports with trending analysis.
+### Details:
+Configure scheduled workflow, notification mechanism (e.g., GitHub issues/alerts), and reporting enhancements.
+
+## 5. Establish Security Baseline and Exemption Management [pending]
+### Dependencies: 25.4
+### Description: Document baseline security findings, create an exemption process for accepted risks, implement suppression in tools, and draft security policy documentation for the development team.
+### Details:
+Record initial findings, define and document exemption workflow, configure suppression in Bandit/Safety, and write policy docs.
+

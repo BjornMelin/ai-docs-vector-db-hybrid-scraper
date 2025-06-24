@@ -1,7 +1,7 @@
 # Task ID: 5
 # Title: Implement Circuit Breaker Pattern
 # Status: pending
-# Dependencies: 1, 20
+# Dependencies: 1, 4
 # Priority: high
 # Description: Implement enterprise-grade, production-resilient circuit breaker patterns for all external dependencies to maximize system reliability and minimize failure propagation.
 # Details:
@@ -48,7 +48,7 @@ Develop reusable, function-based circuit breaker components with service-specifi
 Use real-world data and best practices to configure thresholds. Implement health check endpoints and background recovery tasks that automatically reset circuit states based on dependency health.
 
 ## 4. Integrate Observability, Monitoring, and Alerting [pending]
-### Dependencies: 5.3, 5.20
+### Dependencies: 5.3
 ### Description: Instrument circuit breaker components with OpenTelemetry for detailed metrics collection. Export metrics to Prometheus and visualize circuit breaker states and events in Grafana dashboards.
 ### Details:
 Ensure all circuit breaker state changes, failures, and recoveries are logged and exported. Configure real-time alerts for critical circuit breaker events. Provide dashboards for operational visibility and SLA tracking.
@@ -60,7 +60,7 @@ Ensure all circuit breaker state changes, failures, and recoveries are logged an
 Simulate real-world failure scenarios and high-load conditions. Validate that the system meets 99.9% uptime, reduces failure propagation by 40%, and improves recovery times by 60%. Review deployment, security, and maintainability against enterprise standards.
 
 ## 6. Parallel Integration with Service Layer [pending]
-### Dependencies: 5.1, 5.20
+### Dependencies: 5.1
 ### Description: Ensure circuit breaker implementation can proceed in parallel with service layer refactoring by establishing clear integration points and interfaces.
 ### Details:
 Define stable interfaces and integration points that allow circuit breaker development to proceed independently of service layer changes. Document how circuit breakers will be integrated into both existing and refactored service components.

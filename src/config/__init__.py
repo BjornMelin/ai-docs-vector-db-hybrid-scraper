@@ -1,6 +1,3 @@
-import typing
-
-
 """Simplified configuration system for AI Documentation Vector DB.
 
 Consolidated from 14 files (6,797 lines) to 3 files (~400 lines) following KISS principles.
@@ -69,7 +66,7 @@ from .enums import (
 # Legacy aliases for backward compatibility
 UnifiedConfig = Config
 
-__all__ = [
+__all__: list[str] = [
     "ABTestVariant",
     "BrowserUseConfig",
     "CacheConfig",

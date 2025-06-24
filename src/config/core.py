@@ -177,6 +177,10 @@ class BrowserUseConfig(BaseModel):
     model: str = Field(default="gpt-4o-mini")
     headless: bool = Field(default=True)
     timeout: int = Field(default=30000, gt=0)
+    max_retries: int = Field(default=3, ge=1, le=10)
+    max_steps: int = Field(default=20, ge=1, le=100)
+    disable_security: bool = Field(default=False)
+    generate_gif: bool = Field(default=False)
 
 
 class HyDEConfig(BaseModel):
