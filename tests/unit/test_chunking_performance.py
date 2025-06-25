@@ -19,7 +19,7 @@ Consolidates functionality from:
 import sys
 from unittest.mock import Mock, patch
 
-from src.chunking import EnhancedChunker
+from src.chunking import DocumentChunker
 from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
 from src.models.document_processing import Chunk
@@ -31,7 +31,7 @@ class TestChunkingEdgeCases:
     def test_empty_content(self):
         """Test chunking empty content."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         chunks = chunker.chunk_content("", "Test Title", "http://test.com")
         assert len(chunks) == 0
@@ -39,7 +39,7 @@ class TestChunkingEdgeCases:
     def test_whitespace_only_content(self):
         """Test chunking whitespace-only content."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         chunks = chunker.chunk_content(
             "   \n\n   \t   ", "Test Title", "http://test.com"
@@ -50,7 +50,7 @@ class TestChunkingEdgeCases:
     def test_very_long_single_line(self):
         """Test chunking content with extremely long single line."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create a very long line that exceeds chunk size
         long_line = "word " * 100  # 500 characters
@@ -62,7 +62,7 @@ class TestChunkingEdgeCases:
     def test_many_small_paragraphs(self):
         """Test chunking with many small paragraphs."""
         config = ChunkingConfig(chunk_size=200, chunk_overlap=50)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create content with many small paragraphs
         paragraphs = [f"Paragraph {i} content." for i in range(20)]
@@ -87,7 +87,7 @@ class TestASTParserLoading:
             supported_languages=["python"],
         )
 
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Should have Python parser if tree-sitter-python is installed
         if "python" in chunker.parsers:
@@ -103,7 +103,7 @@ class TestASTParserLoading:
             supported_languages=["fictional_language"],
         )
 
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
         # Should gracefully handle unavailable language
         assert "fictional_language" not in chunker.parsers
 
@@ -115,7 +115,7 @@ class TestASTParserLoading:
             fallback_to_text_chunking=True,
         )
 
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Test with content that would need a parser not available
         cpp_code = """
@@ -138,7 +138,7 @@ class TestTreeSitterImports:
         config = ChunkingConfig(enable_ast_chunking=True)
 
         with patch("src.chunking.TREE_SITTER_AVAILABLE", False):
-            chunker = EnhancedChunker(config)
+            chunker = DocumentChunker(config)
             assert chunker.parsers == {}
 
     def test_initialization_with_unavailable_parsers(self):
@@ -157,7 +157,7 @@ class TestTreeSitterImports:
             patch("src.chunking.JAVASCRIPT_AVAILABLE", False),
             patch("src.chunking.TYPESCRIPT_AVAILABLE", False),
         ):
-            chunker = EnhancedChunker(config)
+            chunker = DocumentChunker(config)
 
             # Should handle unavailable parsers gracefully
             # The exact behavior depends on implementation
@@ -174,7 +174,7 @@ class TestTreeSitterImports:
         ):
             # Create chunker - should work without tree-sitter
             config = ChunkingConfig(strategy=ChunkingStrategy.AST)
-            chunker = EnhancedChunker(config)
+            chunker = DocumentChunker(config)
 
             # AST chunking should fallback to basic chunking
             content = "def test_function():\n    return 'hello'"
@@ -211,10 +211,10 @@ class TestTreeSitterImportErrors:
         try:
             with patch("builtins.__import__", side_effect=mock_import):
                 # This should trigger the import and handle the error
-                from src.chunking import EnhancedChunker
+                from src.chunking import DocumentChunker
 
                 config = ChunkingConfig()
-                chunker = EnhancedChunker(config)
+                chunker = DocumentChunker(config)
                 assert chunker.parsers == {}
         except Exception:
             # If we can't test the import error due to module caching,
@@ -237,7 +237,7 @@ class TestTreeSitterImportErrors:
             patch("src.chunking.Node", Mock()),
             patch("builtins.__import__", side_effect=mock_import),
         ):
-            chunker = EnhancedChunker(config)
+            chunker = DocumentChunker(config)
             # Should handle the import error gracefully
             assert isinstance(chunker.parsers, dict)
 
@@ -248,7 +248,7 @@ class TestChunkLargeCodeBlock:
     def test_chunk_large_code_block_basic(self):
         """Test basic line-based code chunking."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create content that exceeds chunk size
         code_content = "\n".join([f"line_{i} = {i}" for i in range(20)])
@@ -262,7 +262,7 @@ class TestChunkLargeCodeBlock:
     def test_chunk_large_code_block_with_overlap(self):
         """Test code chunking with structured content."""
         config = ChunkingConfig(chunk_size=150, chunk_overlap=50)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create structured code content
         code_lines = [
@@ -290,7 +290,7 @@ class TestChunkLargeCodeBlock:
     def test_chunk_large_code_block_preserves_indentation(self):
         """Test that code chunking handles indented content."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create indented code content
         code_content = """
@@ -324,7 +324,7 @@ class TestASTChunkingSpecialCases:
             enable_ast_chunking=True,
             fallback_to_text_chunking=True,
         )
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Python code with syntax error
         invalid_python = """
@@ -346,7 +346,7 @@ class TestASTChunkingSpecialCases:
             enable_ast_chunking=True,
             preserve_function_boundaries=True,
         )
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create a simple function
         function_code = """
@@ -367,7 +367,7 @@ def test_function():
             enable_ast_chunking=True,
             preserve_code_blocks=True,
         )
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         mixed_content = """
 # Documentation Header
@@ -411,7 +411,7 @@ class TestChunkingPerformanceEdgeCases:
     def test_extremely_large_content(self):
         """Test chunking with very large content."""
         config = ChunkingConfig(chunk_size=1000, chunk_overlap=100)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create very large content (100KB)
         large_content = "This is a test sentence. " * 4000  # ~100KB
@@ -427,7 +427,7 @@ class TestChunkingPerformanceEdgeCases:
     def test_many_small_chunks(self):
         """Test performance with content that creates many small chunks."""
         config = ChunkingConfig(chunk_size=50, chunk_overlap=10)  # Very small chunks
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create content that will result in many small chunks
         content = "\n\n".join([f"Short paragraph {i}." for i in range(100)])

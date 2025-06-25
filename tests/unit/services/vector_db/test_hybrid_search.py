@@ -19,19 +19,19 @@ from src.config.enums import (
 )
 from src.models.vector_search import (
     ABTestConfig,
-    AdvancedHybridSearchRequest,
-    AdvancedSearchResponse,
     FusionConfig,
+    HybridSearchRequest,
+    HybridSearchResponse,
     QueryClassification,
     SearchAccuracy,
     SearchParams,
 )
 from src.services.errors import QdrantServiceError
-from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.services.vector_db.hybrid_search import HybridSearchService
 
 
 class TestAdvancedHybridSearchService:
-    """Test suite for AdvancedHybridSearchService."""
+    """Test suite for HybridSearchService."""
 
     @pytest.fixture
     def mock_client(self):
@@ -61,13 +61,13 @@ class TestAdvancedHybridSearchService:
 
     @pytest.fixture
     def service(self, mock_client, mock_config, mock_qdrant_search):
-        """Create AdvancedHybridSearchService instance."""
-        return AdvancedHybridSearchService(mock_client, mock_config, mock_qdrant_search)
+        """Create HybridSearchService instance."""
+        return HybridSearchService(mock_client, mock_config, mock_qdrant_search)
 
     @pytest.fixture
     def sample_request(self):
         """Create sample advanced hybrid search request."""
-        return AdvancedHybridSearchRequest(
+        return HybridSearchRequest(
             query="How to implement async functions in Python?",
             collection_name="test_collection",
             limit=5,
@@ -115,7 +115,7 @@ class TestAdvancedHybridSearchService:
             await service.initialize()
             mock_init.assert_called_once()
 
-    async def test_basic_advanced_hybrid_search(self, service, sample_request):
+    async def test_basic_hybrid_search(self, service, sample_request):
         """Test basic advanced hybrid search functionality."""
         from src.services.query_processing.orchestrator import AdvancedSearchResult
 
@@ -209,9 +209,9 @@ class TestAdvancedHybridSearchService:
                 success=True,
             )
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert len(response.results) > 0
             assert response.query_classification is not None
             assert response.model_selection is not None
@@ -225,9 +225,9 @@ class TestAdvancedHybridSearchService:
         """Test search with query classification disabled."""
         sample_request.enable_query_classification = False
 
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
-        assert isinstance(response, AdvancedSearchResponse)
+        assert isinstance(response, HybridSearchResponse)
         assert response.query_classification is None
         assert len(response.results) > 0
 
@@ -235,27 +235,27 @@ class TestAdvancedHybridSearchService:
         """Test search with model selection disabled."""
         sample_request.enable_model_selection = False
 
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
-        assert isinstance(response, AdvancedSearchResponse)
+        assert isinstance(response, HybridSearchResponse)
         assert response.model_selection is None
 
     async def test_search_with_splade_disabled(self, service, sample_request):
         """Test search with SPLADE disabled."""
         sample_request.enable_splade = False
 
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
-        assert isinstance(response, AdvancedSearchResponse)
+        assert isinstance(response, HybridSearchResponse)
         assert len(response.results) > 0
 
     async def test_search_with_adaptive_fusion_disabled(self, service, sample_request):
         """Test search with adaptive fusion disabled."""
         sample_request.enable_adaptive_fusion = False
 
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
-        assert isinstance(response, AdvancedSearchResponse)
+        assert isinstance(response, HybridSearchResponse)
         assert response.fusion_weights is None
         # Other optimizations (query classification, model selection) may still be applied
         # so optimization_applied can be True even when adaptive fusion is disabled
@@ -268,7 +268,7 @@ class TestAdvancedHybridSearchService:
             traffic_allocation={"control": 0.5, "rrf_optimized": 0.5},
         )
 
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
         assert response.ab_test_variant in [
             ABTestVariant.CONTROL,
@@ -286,7 +286,7 @@ class TestAdvancedHybridSearchService:
         # Run multiple times with same user ID
         variants = []
         for _ in range(5):
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
             variants.append(response.ab_test_variant)
 
         # All variants should be the same for consistent user experience
@@ -298,9 +298,9 @@ class TestAdvancedHybridSearchService:
             # Simulate timeout
             mock_classify.side_effect = TimeoutError()
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert response.query_classification is None
             assert len(response.results) > 0  # Should fallback gracefully
 
@@ -313,9 +313,9 @@ class TestAdvancedHybridSearchService:
             mock_classify.return_value = MagicMock()
             mock_model.side_effect = TimeoutError()
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert response.model_selection is None
             assert len(response.results) > 0
 
@@ -326,9 +326,9 @@ class TestAdvancedHybridSearchService:
         ) as mock_splade:
             mock_splade.side_effect = TimeoutError()
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert len(response.results) > 0
 
     async def test_adaptive_fusion_error_handling(self, service, sample_request):
@@ -342,9 +342,9 @@ class TestAdvancedHybridSearchService:
             mock_classify.return_value = MagicMock()
             mock_fusion.side_effect = Exception("Fusion error")
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert response.fusion_weights is None
             assert response.effectiveness_score is None
             assert len(response.results) > 0
@@ -354,9 +354,9 @@ class TestAdvancedHybridSearchService:
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
             mock_orchestrator.side_effect = Exception("Orchestrator error")
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert response.fallback_reason is not None
             # Fallback reason should mention failure/error
             assert any(
@@ -376,11 +376,11 @@ class TestAdvancedHybridSearchService:
             with pytest.raises(
                 QdrantServiceError, match="Advanced hybrid search failed"
             ):
-                await service.advanced_hybrid_search(sample_request)
+                await service.hybrid_search(sample_request)
 
     async def test_search_metrics_calculation(self, service, sample_request):
         """Test search metrics calculation."""
-        response = await service.advanced_hybrid_search(sample_request)
+        response = await service.hybrid_search(sample_request)
 
         assert response.retrieval_metrics is not None
         assert response.retrieval_metrics.total_time_ms > 0
@@ -431,7 +431,7 @@ class TestAdvancedHybridSearchService:
     async def test_search_for_learning_storage(self, service, sample_request):
         """Test storage of search results for learning."""
         query_id = str(uuid.uuid4())
-        response = AdvancedSearchResponse(
+        response = HybridSearchResponse(
             results=[],
             retrieval_metrics={
                 "total_time_ms": 100.0,
@@ -495,9 +495,9 @@ class TestAdvancedHybridSearchService:
                 success=True,
             )
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert len(response.results) == 0
             assert response.retrieval_metrics.results_count == 0
 
@@ -538,9 +538,9 @@ class TestAdvancedHybridSearchService:
                 success=True,
             )
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert (
                 len(response.results) == sample_request.limit
             )  # Should be limited to request limit
@@ -569,9 +569,9 @@ class TestAdvancedHybridSearchService:
                 features={},
             )
 
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)
             assert response.query_classification.query_type == query_type
 
     @pytest.mark.parametrize(
@@ -591,6 +591,6 @@ class TestAdvancedHybridSearchService:
             mock_model.return_value = MagicMock()
 
             # This would require extending the request model, but tests the concept
-            response = await service.advanced_hybrid_search(sample_request)
+            response = await service.hybrid_search(sample_request)
 
-            assert isinstance(response, AdvancedSearchResponse)
+            assert isinstance(response, HybridSearchResponse)

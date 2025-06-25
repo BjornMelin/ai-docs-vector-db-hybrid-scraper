@@ -366,7 +366,7 @@ https://example.com/page2,Page 2
             ),
         ]
 
-        with patch("src.crawl4ai_bulk_embedder.EnhancedChunker") as mock_chunker_class:
+        with patch("src.crawl4ai_bulk_embedder.DocumentChunker") as mock_chunker_class:
             mock_chunker = MagicMock()
             mock_chunker.chunk_text.return_value = mock_chunk_result
             mock_chunker_class.return_value = mock_chunker

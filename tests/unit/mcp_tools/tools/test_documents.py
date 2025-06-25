@@ -167,7 +167,7 @@ class TestAddDocument:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
             patch("src.mcp_tools.tools.documents.uuid4") as mock_uuid,
         ):
             # Setup mocks
@@ -314,7 +314,7 @@ class TestAddDocument:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
         ):
             mock_security_instance = mock_security.from_unified_config.return_value
             mock_security_instance.validate_url.return_value = (
@@ -351,7 +351,7 @@ class TestAddDocument:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
         ):
             mock_security_instance = mock_security.from_unified_config.return_value
             mock_security_instance.validate_url.return_value = (
@@ -394,7 +394,7 @@ class TestAddDocumentBatch:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
         ):
             # Setup mocks for successful processing
             mock_security_instance = mock_security.from_unified_config.return_value
@@ -489,7 +489,7 @@ class TestAddDocumentBatch:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
         ):
             # Setup mocks for successful processing
             mock_security_instance = mock_security.from_unified_config.return_value
@@ -554,7 +554,7 @@ class TestDocumentIntegration:
 
         with (
             patch("src.mcp_tools.tools.documents.SecurityValidator") as mock_security,
-            patch("src.mcp_tools.tools.documents.EnhancedChunker") as mock_chunker,
+            patch("src.mcp_tools.tools.documents.DocumentChunker") as mock_chunker,
         ):
             mock_security_instance = mock_security.from_unified_config.return_value
             mock_security_instance.validate_url.return_value = (
