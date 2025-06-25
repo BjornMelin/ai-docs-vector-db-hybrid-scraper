@@ -158,36 +158,38 @@ async def persist_cache(
 
 async def config_drift_snapshot(ctx: dict[str, Any]) -> dict[str, Any]:
     """Take configuration snapshots for drift detection.
-    
+
     Args:
         ctx: ARQ context (provided by worker)
-        
+
     Returns:
         Task result with snapshot status
     """
     start_time = time.time()
     logger.info("Starting configuration drift snapshot task")
-    
+
     try:
         # Import here to avoid circular imports
         from ..config_drift_service import get_drift_service
-        
+
         service = get_drift_service()
         result = await service.take_configuration_snapshot()
-        
+
         logger.info(
             f"Configuration snapshot completed - "
             f"snapshots taken: {result['snapshots_taken']}, "
             f"errors: {len(result['errors'])}"
         )
-        
-        result.update({
-            "status": "success",
-            "task_duration": time.time() - start_time,
-        })
-        
+
+        result.update(
+            {
+                "status": "success",
+                "task_duration": time.time() - start_time,
+            }
+        )
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Configuration snapshot task failed: {e}")
         return {
@@ -199,37 +201,39 @@ async def config_drift_snapshot(ctx: dict[str, Any]) -> dict[str, Any]:
 
 async def config_drift_comparison(ctx: dict[str, Any]) -> dict[str, Any]:
     """Compare configurations to detect drift.
-    
+
     Args:
         ctx: ARQ context (provided by worker)
-        
+
     Returns:
         Task result with comparison status
     """
     start_time = time.time()
     logger.info("Starting configuration drift comparison task")
-    
+
     try:
         # Import here to avoid circular imports
         from ..config_drift_service import get_drift_service
-        
+
         service = get_drift_service()
         result = await service.compare_configurations()
-        
+
         logger.info(
             f"Configuration comparison completed - "
             f"sources compared: {result['sources_compared']}, "
             f"drift events: {len(result['drift_events'])}, "
             f"alerts sent: {result['alerts_sent']}"
         )
-        
-        result.update({
-            "status": "success",
-            "task_duration": time.time() - start_time,
-        })
-        
+
+        result.update(
+            {
+                "status": "success",
+                "task_duration": time.time() - start_time,
+            }
+        )
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Configuration comparison task failed: {e}")
         return {
@@ -247,38 +251,38 @@ async def config_drift_remediation(
     suggestion: str,
 ) -> dict[str, Any]:
     """Execute configuration drift auto-remediation.
-    
+
     Args:
         ctx: ARQ context (provided by worker)
         event_id: Drift event ID
         source: Configuration source
         drift_type: Type of drift detected
         suggestion: Remediation suggestion
-        
+
     Returns:
         Task result with remediation status
     """
     start_time = time.time()
     logger.info(f"Starting configuration drift remediation for event {event_id}")
-    
+
     try:
         # Log the remediation attempt (actual implementation would apply changes)
         logger.info(
             f"Remediating drift event {event_id} in {source}: "
             f"Type: {drift_type}, Suggestion: {suggestion}"
         )
-        
+
         # For now, this is a placeholder for actual remediation logic
         # In a real implementation, this would:
         # 1. Validate the remediation is still safe
         # 2. Apply the suggested changes
         # 3. Verify the changes were successful
         # 4. Take a new snapshot to confirm drift is resolved
-        
+
         await asyncio.sleep(0.1)  # Simulate remediation work
-        
+
         logger.info(f"Configuration drift remediation completed for event {event_id}")
-        
+
         return {
             "status": "success",
             "event_id": event_id,
@@ -287,9 +291,11 @@ async def config_drift_remediation(
             "remediation_applied": False,  # Would be True when actually implemented
             "task_duration": time.time() - start_time,
         }
-        
+
     except Exception as e:
-        logger.exception(f"Configuration drift remediation failed for event {event_id}: {e}")
+        logger.exception(
+            f"Configuration drift remediation failed for event {event_id}: {e}"
+        )
         return {
             "status": "failed",
             "event_id": event_id,

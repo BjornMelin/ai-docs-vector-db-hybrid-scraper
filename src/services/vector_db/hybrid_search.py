@@ -15,8 +15,8 @@ from qdrant_client import AsyncQdrantClient
 from src.config import ABTestVariant, Config, OptimizationStrategy
 
 from ...models.vector_search import (
-    AdvancedHybridSearchRequest,
-    AdvancedSearchResponse,
+    HybridSearchRequest,
+    HybridSearchResponse,
     RetrievalMetrics,
     SearchResult,
 )
@@ -37,10 +37,10 @@ from .splade_provider import SPLADEProvider
 logger = logging.getLogger(__name__)
 
 
-class AdvancedHybridSearchService:
-    """Backward compatibility wrapper for advanced hybrid search.
+class HybridSearchService:
+    """Backward compatibility wrapper for hybrid search.
 
-    This class provides the same interface as the old AdvancedHybridSearchService
+    This class provides the same interface as the old HybridSearchService
     but delegates to the new AdvancedSearchOrchestrator for actual search operations.
     """
 
@@ -92,16 +92,14 @@ class AdvancedHybridSearchService:
             if not self.enable_fallback:
                 raise
 
-    async def advanced_hybrid_search(
-        self, request: AdvancedHybridSearchRequest
-    ) -> AdvancedSearchResponse:
-        """Perform advanced hybrid search with ML optimization.
+    async def hybrid_search(self, request: HybridSearchRequest) -> HybridSearchResponse:
+        """Perform hybrid search with ML optimization.
 
         Args:
-            request: Advanced hybrid search request
+            request: Hybrid search request
 
         Returns:
-            AdvancedSearchResponse with results and optimization metadata
+            HybridSearchResponse with results and optimization metadata
         """
         start_time = time.time()
         query_id = str(uuid.uuid4())
@@ -171,7 +169,7 @@ class AdvancedHybridSearchService:
             orchestrator_result = await self.orchestrator.search(advanced_request)
 
             # Map orchestrator result to old response format
-            response = AdvancedSearchResponse(
+            response = HybridSearchResponse(
                 results=self._format_search_results(orchestrator_result.results),
                 retrieval_metrics=RetrievalMetrics(
                     query_vector_time_ms=orchestrator_result.search_metadata.get(
@@ -226,9 +224,7 @@ class AdvancedHybridSearchService:
             else:
                 raise QdrantServiceError(f"Advanced hybrid search failed: {e}") from e
 
-    def _determine_search_mode(
-        self, request: AdvancedHybridSearchRequest
-    ) -> SearchMode:
+    def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
         if request.enable_adaptive_fusion and request.enable_query_classification:
             return SearchMode.INTELLIGENT
@@ -239,9 +235,7 @@ class AdvancedHybridSearchService:
         else:
             return SearchMode.SIMPLE
 
-    def _determine_pipeline(
-        self, request: AdvancedHybridSearchRequest
-    ) -> SearchPipeline:
+    def _determine_pipeline(self, request: HybridSearchRequest) -> SearchPipeline:
         """Determine the appropriate pipeline based on request configuration."""
         if request.enable_adaptive_fusion:
             return SearchPipeline.COMPREHENSIVE
@@ -271,7 +265,7 @@ class AdvancedHybridSearchService:
             return None
 
     async def _select_model_with_timeout(
-        self, query_classification: Any, request: AdvancedHybridSearchRequest
+        self, query_classification: Any, request: HybridSearchRequest
     ) -> Any:
         """Select model with timeout protection."""
         try:
@@ -304,9 +298,7 @@ class AdvancedHybridSearchService:
             logger.warning(f"SPLADE generation failed: {e}")
             return None
 
-    def _assign_ab_test_variant(
-        self, request: AdvancedHybridSearchRequest
-    ) -> ABTestVariant:
+    def _assign_ab_test_variant(self, request: HybridSearchRequest) -> ABTestVariant:
         """Assign A/B test variant for the request."""
         if not request.ab_test_config or not request.user_id:
             return ABTestVariant.CONTROL
@@ -329,8 +321,8 @@ class AdvancedHybridSearchService:
         return ABTestVariant.CONTROL
 
     async def _perform_fallback_search(
-        self, request: AdvancedHybridSearchRequest, start_time: float, error_msg: str
-    ) -> AdvancedSearchResponse:
+        self, request: HybridSearchRequest, start_time: float, error_msg: str
+    ) -> HybridSearchResponse:
         """Perform fallback search when advanced features fail."""
         try:
             # Use simple search through orchestrator
@@ -347,7 +339,7 @@ class AdvancedHybridSearchService:
             result = await self.orchestrator.search(fallback_request)
 
             end_time = time.time()
-            return AdvancedSearchResponse(
+            return HybridSearchResponse(
                 results=self._format_search_results(result.results),
                 retrieval_metrics=RetrievalMetrics(
                     total_time_ms=(end_time - start_time) * 1000,
@@ -359,7 +351,7 @@ class AdvancedHybridSearchService:
 
         except Exception as e:
             logger.error(f"Fallback search also failed: {e}", exc_info=True)
-            return AdvancedSearchResponse(
+            return HybridSearchResponse(
                 results=[],
                 retrieval_metrics=RetrievalMetrics(
                     total_time_ms=(time.time() - start_time) * 1000,
@@ -387,8 +379,8 @@ class AdvancedHybridSearchService:
     async def _store_search_for_learning(
         self,
         query_id: str,
-        request: AdvancedHybridSearchRequest,
-        response: AdvancedSearchResponse,
+        request: HybridSearchRequest,
+        response: HybridSearchResponse,
     ) -> None:
         """Store search results for continuous learning."""
         try:

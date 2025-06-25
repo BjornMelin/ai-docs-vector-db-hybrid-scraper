@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import get_config
 from src.config.lifecycle import setup_configuration_lifecycle
 
+from .routers import config_router
+
 
 # Get configuration
 config = get_config()
@@ -64,8 +66,6 @@ async def info():
 lifecycle_manager = setup_configuration_lifecycle(app)
 
 # Include API routers
-from .routers import config_router
-
 app.include_router(config_router, prefix="/api/v1")
 
 # Additional router imports can be added here as the API grows

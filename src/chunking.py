@@ -1,7 +1,7 @@
-"""chunking.py - Enhanced Chunking with Code Awareness.
+"""chunking.py - Document Chunking with Code Awareness.
 
 Implements research-backed chunking strategies for optimal RAG performance.
-Supports enhanced boundary detection, code-aware chunking, and Tree-sitter AST parsing.
+Supports semantic boundary detection, code-aware chunking, and Tree-sitter AST parsing.
 """
 
 import logging
@@ -55,8 +55,8 @@ except ImportError:
     tstypescript = None  # type: ignore
 
 
-class EnhancedChunker:
-    """Enhanced Chunking Implementation"""
+class DocumentChunker:
+    """Document Chunking Implementation"""
 
     # Regex patterns for code detection
     CODE_FENCE_PATTERN = re.compile(
@@ -185,7 +185,7 @@ class EnhancedChunker:
             except Exception as e:
                 self.logger.warning(
                     f"Failed to initialize parser for '{lang}': {e}. "
-                    f"Will fall back to enhanced chunking for this language."
+                    f"Will fall back to semantic chunking for this language."
                 )
 
     def chunk_content(
@@ -208,7 +208,7 @@ class EnhancedChunker:
         ):
             chunks = self._ast_based_chunking(content, language)
         elif self.config.strategy == ChunkingStrategy.ENHANCED:
-            chunks = self._enhanced_chunking(content, language)
+            chunks = self._semantic_chunking(content, language)
         else:
             chunks = self._basic_chunking(content)
 
@@ -299,10 +299,10 @@ class EnhancedChunker:
             )
         return blocks
 
-    def _enhanced_chunking(
+    def _semantic_chunking(
         self, content: str, language: str | None = None
     ) -> list[Chunk]:
-        """Enhanced chunking with code awareness but without AST parsing.
+        """Semantic chunking with code awareness but without AST parsing.
 
         Args:
             content: The text content to chunk.
@@ -424,8 +424,8 @@ class EnhancedChunker:
                 )
             )
 
-    def _find_enhanced_boundary(self, content: str, start: int, target_end: int) -> int:
-        """Find an enhanced boundary considering code structures"""
+    def _find_semantic_boundary(self, content: str, start: int, target_end: int) -> int:
+        """Find a semantic boundary considering code structures"""
         search_window = 200
         search_start = max(target_end - search_window, start)
 
@@ -665,7 +665,7 @@ class EnhancedChunker:
             List of Chunk objects with AST-based boundaries
         """
         if not TREE_SITTER_AVAILABLE or language not in self.parsers:
-            return self._enhanced_chunking(content, language)
+            return self._semantic_chunking(content, language)
 
         try:
             parser = self.parsers[language]
@@ -676,8 +676,8 @@ class EnhancedChunker:
             code_units = self._extract_code_units(root_node, content, language)
 
             if not code_units:
-                # No significant code structures found, use enhanced chunking
-                return self._enhanced_chunking(content, language)
+                # No significant code structures found, use semantic chunking
+                return self._semantic_chunking(content, language)
 
             # Sort by position in file
             code_units.sort(key=lambda unit: unit["start_pos"])
@@ -747,8 +747,8 @@ class EnhancedChunker:
             return chunks
 
         except Exception:
-            # Fall back to enhanced chunking on error
-            return self._enhanced_chunking(content, language)
+            # Fall back to semantic chunking on error
+            return self._semantic_chunking(content, language)
 
     def _extract_code_units(
         self, node: Any, content: str, language: str
@@ -1017,7 +1017,7 @@ class EnhancedChunker:
                     f"AST-based splitting failed: {e}, falling back to line-based"
                 )
 
-        # Fallback to line-based splitting with enhanced overlap
+        # Fallback to line-based splitting with semantic overlap
         return self._chunk_large_code_block(content, global_start, language)
 
     def _extract_class_methods(
