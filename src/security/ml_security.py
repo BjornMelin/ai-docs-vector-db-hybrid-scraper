@@ -79,8 +79,11 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-        # Check if ML input validation is enabled
-        if not self.config.security.enable_ml_input_validation:
+        # Check if ML input validation is enabled (use default if not configured)
+        enable_validation = getattr(
+            self.config.security, "enable_ml_input_validation", True
+        )
+        if not enable_validation:
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=True,
@@ -92,7 +95,8 @@ class MLSecurityValidator:
         try:
             # Check data size (prevent DoS)
             data_str = str(data)
-            if len(data_str) > self.config.security.max_ml_input_size:
+            max_input_size = getattr(self.config.security, "max_ml_input_size", 1000000)
+            if len(data_str) > max_input_size:
                 result = SecurityCheckResult(
                     check_type="input_validation",
                     passed=False,
@@ -116,10 +120,10 @@ class MLSecurityValidator:
                         return result
 
             # Check for suspicious patterns from config
-            suspicious_patterns = (
-                self.config.security.suspicious_patterns
-                if hasattr(self.config.security, "suspicious_patterns")
-                else ["<script", "DROP TABLE", "__import__", "eval("]
+            suspicious_patterns = getattr(
+                self.config.security,
+                "suspicious_patterns",
+                ["<script", "DROP TABLE", "__import__", "eval("],
             )
             for pattern in suspicious_patterns:
                 if pattern in data_str:
@@ -157,8 +161,11 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-        # Check if dependency scanning is enabled
-        if not self.config.security.enable_dependency_scanning:
+        # Check if dependency scanning is enabled (use default if not configured)
+        enable_scanning = getattr(
+            self.config.security, "enable_dependency_scanning", True
+        )
+        if not enable_scanning:
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,
@@ -329,6 +336,17 @@ class MLSecurityValidator:
             Validated query string
         """
         return self.base_validator.validate_query_string(query)
+
+    def sanitize_filename(self, filename: str) -> str:
+        """Sanitize filename using base validator.
+
+        Args:
+            filename: Filename to sanitize
+
+        Returns:
+            Sanitized filename
+        """
+        return self.base_validator.sanitize_filename(filename)
 
     def log_security_event(
         self, event_type: str, details: dict[str, Any], severity: str = "info"
