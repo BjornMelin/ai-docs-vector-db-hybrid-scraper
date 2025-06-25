@@ -14,7 +14,7 @@ from typing import Any
 import psutil
 from pydantic import BaseModel, Field
 
-from ..models.vector_search import AdvancedHybridSearchRequest
+from ..models.vector_search import HybridSearchRequest
 from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
@@ -100,7 +100,7 @@ class PerformanceProfiler:
     async def profile_search_service(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, Any]:
         """Profile search service performance during query execution.
 
@@ -155,7 +155,7 @@ class PerformanceProfiler:
     async def _execute_profiled_queries(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> None:
         """Execute queries while profiling is active."""
         # Execute a subset of queries for profiling
@@ -166,13 +166,11 @@ class PerformanceProfiler:
                 # Add some variety to the load
                 if i % 3 == 0:
                     # Concurrent execution for some queries
-                    tasks = [
-                        search_service.advanced_hybrid_search(query) for _ in range(2)
-                    ]
+                    tasks = [search_service.hybrid_search(query) for _ in range(2)]
                     await asyncio.gather(*tasks, return_exceptions=True)
                 else:
                     # Sequential execution
-                    await search_service.advanced_hybrid_search(query)
+                    await search_service.hybrid_search(query)
 
                 # Small delay between queries
                 await asyncio.sleep(0.1)

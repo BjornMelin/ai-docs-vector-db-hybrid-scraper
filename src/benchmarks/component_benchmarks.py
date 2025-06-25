@@ -12,7 +12,7 @@ import time
 from pydantic import BaseModel, Field
 
 from ..config import Config
-from ..models.vector_search import AdvancedHybridSearchRequest
+from ..models.vector_search import HybridSearchRequest
 from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
@@ -60,7 +60,7 @@ class ComponentBenchmarks:
     async def run_all_component_benchmarks(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Run benchmarks for all components.
 
@@ -108,7 +108,7 @@ class ComponentBenchmarks:
         return results
 
     async def benchmark_query_classifier(
-        self, query_classifier, test_queries: list[AdvancedHybridSearchRequest]
+        self, query_classifier, test_queries: list[HybridSearchRequest]
     ) -> ComponentBenchmarkResult:
         """Benchmark query classifier performance."""
         latencies = []
@@ -153,7 +153,7 @@ class ComponentBenchmarks:
         self,
         model_selector,
         query_classifier,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark model selector performance."""
         latencies = []
@@ -201,7 +201,7 @@ class ComponentBenchmarks:
         self,
         fusion_tuner,
         query_classifier,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark adaptive fusion tuner performance."""
         latencies = []
@@ -248,7 +248,7 @@ class ComponentBenchmarks:
         )
 
     async def benchmark_splade_provider(
-        self, splade_provider, test_queries: list[AdvancedHybridSearchRequest]
+        self, splade_provider, test_queries: list[HybridSearchRequest]
     ) -> ComponentBenchmarkResult:
         """Benchmark SPLADE provider performance."""
         latencies = []
@@ -292,7 +292,7 @@ class ComponentBenchmarks:
     async def benchmark_end_to_end_search(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark end-to-end search performance."""
         latencies = []
@@ -304,7 +304,7 @@ class ComponentBenchmarks:
         for query in test_queries[:10]:  # Use small subset for full end-to-end
             try:
                 start = time.perf_counter()
-                await search_service.advanced_hybrid_search(query)
+                await search_service.hybrid_search(query)
                 end = time.perf_counter()
 
                 latency_ms = (end - start) * 1000
@@ -346,7 +346,7 @@ class ComponentBenchmarks:
     async def benchmark_cache_performance(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, float]:
         """Benchmark cache performance specifically."""
         cache_metrics = {}
@@ -394,7 +394,7 @@ class ComponentBenchmarks:
     async def benchmark_concurrent_component_access(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Benchmark components under concurrent access."""
         concurrent_results = {}

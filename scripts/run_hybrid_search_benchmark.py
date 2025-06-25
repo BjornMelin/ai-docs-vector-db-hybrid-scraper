@@ -14,11 +14,11 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from benchmarks import AdvancedHybridSearchBenchmark
+from benchmarks import HybridSearchBenchmark
 from benchmarks import BenchmarkConfig
 from benchmarks import BenchmarkResults
 from ..config import Config
-from services.vector_db.hybrid_search import AdvancedHybridSearchService
+from services.vector_db.hybrid_search import HybridSearchService
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -30,8 +30,8 @@ def setup_logging(log_level: str = "INFO") -> None:
     )
 
 
-async def initialize_search_service(config_path: str) -> AdvancedHybridSearchService:
-    """Initialize the Advanced Hybrid Search service.
+async def initialize_search_service(config_path: str) -> HybridSearchService:
+    """Initialize the Hybrid Search service.
 
     Args:
         config_path: Path to configuration file
@@ -43,7 +43,7 @@ async def initialize_search_service(config_path: str) -> AdvancedHybridSearchSer
     config = UnifiedConfig.load_from_file(config_path)
 
     # Initialize search service
-    search_service = AdvancedHybridSearchService(config)
+    search_service = HybridSearchService(config)
     await search_service.initialize()
 
     return search_service
@@ -77,7 +77,7 @@ def create_benchmark_config(args) -> BenchmarkConfig:
 
 
 async def run_benchmark_suite(
-    search_service: AdvancedHybridSearchService,
+    search_service: HybridSearchService,
     benchmark_config: BenchmarkConfig,
     output_dir: Path,
 ) -> BenchmarkResults:
@@ -95,7 +95,7 @@ async def run_benchmark_suite(
 
     # Create benchmark orchestrator
     config = search_service.config
-    benchmark = AdvancedHybridSearchBenchmark(config, search_service, benchmark_config)
+    benchmark = HybridSearchBenchmark(config, search_service, benchmark_config)
 
     logger.info(f"Starting benchmark suite: {benchmark_config.name}")
     logger.info(f"Configuration: {benchmark_config.model_dump()}")
@@ -184,7 +184,7 @@ def parse_args():
     parser.add_argument(
         "--benchmark-name",
         "-n",
-        default="advanced_hybrid_search_benchmark",
+        default="hybrid_search_benchmark",
         help="Name of the benchmark",
     )
 

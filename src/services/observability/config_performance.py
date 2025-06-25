@@ -31,8 +31,8 @@ class ConfigOperationMetrics:
     end_time: float
     duration_ms: float
     success: bool
-    error_type: Optional[str] = None
-    error_message: Optional[str] = None
+    error_type: str | None = None
+    error_message: str | None = None
 
     # Configuration-specific metrics
     config_size_bytes: int = 0
@@ -50,9 +50,9 @@ class ConfigOperationMetrics:
     memory_usage_mb: float = 0.0
 
     # Context
-    environment: Optional[str] = None
-    deployment_tier: Optional[str] = None
-    correlation_id: Optional[str] = None
+    environment: str | None = None
+    deployment_tier: str | None = None
+    correlation_id: str | None = None
 
 
 @dataclass
@@ -88,8 +88,8 @@ class ConfigPerformanceStats:
     avg_detection_confidence: float = 0.0
 
     # Time period
-    period_start: Optional[datetime] = None
-    period_end: Optional[datetime] = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
 
 
 class ConfigPerformanceMonitor:
@@ -260,7 +260,7 @@ class ConfigPerformanceMonitor:
 
     def get_operation_stats(
         self,
-        operation_type: Optional[str] = None,
+        operation_type: str | None = None,
         time_window_hours: int = 24,
     ) -> ConfigPerformanceStats:
         """Get performance statistics for configuration operations.
@@ -498,7 +498,7 @@ class ConfigPerformanceMonitor:
 
 
 # Global configuration performance monitor instance
-_config_performance_monitor: Optional[ConfigPerformanceMonitor] = None
+_config_performance_monitor: ConfigPerformanceMonitor | None = None
 
 
 def get_config_performance_monitor() -> ConfigPerformanceMonitor:
@@ -540,7 +540,7 @@ def record_config_operation(
 
 
 def get_config_performance_stats(
-    operation_type: Optional[str] = None,
+    operation_type: str | None = None,
     time_window_hours: int = 24,
 ) -> ConfigPerformanceStats:
     """Get configuration performance statistics.
