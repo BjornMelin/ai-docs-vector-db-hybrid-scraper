@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ValidationError:
     """Represents a configuration validation error"""
-    
+
     path: str
     message: str
     severity: str = "error"
@@ -27,20 +27,20 @@ class ValidationError:
 
 class ConfigurationValidator:
     """Validator for configuration schemas and deployment readiness."""
-    
+
     def __init__(self):
         self.errors: list[ValidationError] = []
         self.warnings: list[ValidationError] = []
-    
+
     def validate_config_schema(
         self, config: dict[str, Any], environment: str = "development"
     ) -> bool:
         """Validate configuration schema.
-        
+
         Args:
             config: Configuration dictionary to validate
             environment: Target environment
-        
+
         Returns:
             bool: True if validation passes, False otherwise
         """

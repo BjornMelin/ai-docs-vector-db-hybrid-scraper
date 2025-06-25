@@ -21,11 +21,25 @@ import os
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import pytest
 
+# NOTE: The optimized module no longer exists
+# These functions need to be reimplemented or tests updated
+# from src.config.optimized import (
+#     FastConfig,
+#     ConfigFactory,
+#     get_development_config,
+#     get_production_config,
+#     benchmark_config_performance,
+#     benchmark_async_config_performance,
+# )
+# Placeholder implementations for missing optimized module
+# These allow the tests to run but should be properly implemented
+from src.config import Config
 from src.config.cache_optimization import (
     AsyncConfigLoader,
     ConfigCache,
@@ -38,33 +52,15 @@ from src.config.cache_optimization import (
 )
 
 
-# NOTE: The optimized module no longer exists
-# These functions need to be reimplemented or tests updated
-# from src.config.optimized import (
-#     FastConfig,
-#     ConfigFactory,
-#     get_development_config,
-#     get_production_config,
-#     benchmark_config_performance,
-#     benchmark_async_config_performance,
-# )
-
-# Placeholder implementations for missing optimized module
-# These allow the tests to run but should be properly implemented
-from src.config import Config
-from functools import lru_cache
-import time
-from typing import Dict, Any
-
 class FastConfig(Config):
     """Placeholder for FastConfig from optimized module."""
-    
+
     @classmethod
     @lru_cache(maxsize=128)
     def create_fast(cls, **kwargs):
         """Create a cached config instance."""
         return cls(**kwargs)
-    
+
     @classmethod
     async def load_async(cls, path=None, **kwargs):
         """Async config loading."""
@@ -72,60 +68,56 @@ class FastConfig(Config):
             # Simulate file loading
             await asyncio.sleep(0.001)
         return cls.create_fast(**kwargs)
-    
-    @classmethod 
+
+    @classmethod
     def load_sync(cls, path):
         """Sync config loading."""
         # Simulate file loading
         time.sleep(0.001)
         return cls.create_fast(app_name="cache-test-0")
 
+
 class ConfigFactory:
     """Placeholder for ConfigFactory from optimized module."""
-    
+
     _cache: Dict[str, Any] = {}
-    
+
     @classmethod
     def create_config(cls, env_type: str, **kwargs):
         """Create config for environment."""
-        cache_key = f"{env_type}:{str(kwargs)}"
+        cache_key = f"{env_type}:{kwargs!s}"
         if cache_key not in cls._cache:
             cls._cache[cache_key] = FastConfig(**kwargs, environment=env_type)
         return cls._cache[cache_key]
-    
+
     @classmethod
     def clear_cache(cls):
         """Clear factory cache."""
         cls._cache.clear()
-    
+
     @classmethod
     def cache_stats(cls):
         """Get cache statistics."""
         return {"size": len(cls._cache)}
 
+
 @lru_cache(maxsize=1)
 def get_development_config():
     """Get singleton development config."""
-    return FastConfig(
-        app_name="ai-docs-dev",
-        environment="development", 
-        debug=True
-    )
+    return FastConfig(app_name="ai-docs-dev", environment="development", debug=True)
+
 
 @lru_cache(maxsize=1)
 def get_production_config():
     """Get singleton production config."""
-    return FastConfig(
-        app_name="ai-docs-prod",
-        environment="production",
-        debug=False
-    )
+    return FastConfig(app_name="ai-docs-prod", environment="production", debug=False)
+
 
 def benchmark_config_performance(iterations: int = 100):
     """Benchmark config performance."""
     times = []
     cache_hits = 0
-    
+
     for i in range(iterations):
         start = time.time()
         config = FastConfig.create_fast(app_name=f"bench-{i % 10}")
@@ -133,7 +125,7 @@ def benchmark_config_performance(iterations: int = 100):
         times.append(duration)
         if i >= 10:  # After initial configs created
             cache_hits += 1
-    
+
     times_ms = [t * 1000 for t in times]
     return {
         "avg_time_ms": sum(times_ms) / len(times_ms),
@@ -145,6 +137,7 @@ def benchmark_config_performance(iterations: int = 100):
         "meets_100ms_target": sorted(times_ms)[int(len(times_ms) * 0.95)] < 100,
         "meets_50ms_target": sum(times_ms) / len(times_ms) < 50,
     }
+
 
 async def benchmark_async_config_performance(iterations: int = 100):
     """Benchmark async config performance."""
