@@ -614,7 +614,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
     try:
         # Check for config_path or file path arguments
         for arg in args:
-            if isinstance(arg, (str, Path)):
+            if isinstance(arg, str | Path):
                 config_path = Path(arg)
                 if config_path.exists():
                     span.set_attribute(ConfigAttributes.SOURCE_PATH, str(config_path))
@@ -628,7 +628,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
 
         # Check keyword arguments for config paths
         for key, value in kwargs.items():
-            if "path" in key.lower() and isinstance(value, (str, Path)):
+            if "path" in key.lower() and isinstance(value, str | Path):
                 config_path = Path(value)
                 if config_path.exists():
                     span.set_attribute(ConfigAttributes.SOURCE_PATH, str(config_path))

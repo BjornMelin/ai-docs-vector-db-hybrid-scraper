@@ -98,14 +98,13 @@ class TestAccessControl:
                     return False
 
                 # Check if role can access the resource
-                if resource:
-                    if (
+                return not (
+                    resource
+                    and (
                         "all" not in role_data["resources"]
                         and resource not in role_data["resources"]
-                    ):
-                        return False
-
-                return True
+                    )
+                )
 
             def get_user_permissions(self, user_role: str) -> list[str]:
                 """Get all permissions for a user role."""

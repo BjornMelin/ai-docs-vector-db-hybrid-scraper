@@ -14,6 +14,7 @@ Run with: pytest tests/benchmarks/ -k caching --benchmark-only
 """
 
 import asyncio
+import contextlib
 import gc
 import json
 import os
@@ -83,10 +84,8 @@ def temp_config_files():
 
     # Cleanup
     for config_path in configs:
-        try:
+        with contextlib.suppress(FileNotFoundError):
             config_path.unlink()
-        except FileNotFoundError:
-            pass
 
 
 class TestCacheHitPerformance:
@@ -323,7 +322,7 @@ class TestMemoryEfficiency:
             for _ in range(100):
                 configs.append(base_config)
 
-            return len(configs), len(set(id(config) for config in configs))
+            return len(configs), len({id(config) for config in configs})
 
         result = benchmark(create_frozen_configs)
         count, unique_ids = result

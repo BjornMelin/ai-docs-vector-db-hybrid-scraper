@@ -104,7 +104,7 @@ class ConfigurationLifecycleManager:
                     # This is a placeholder for actual database reconfiguration
                 return True
             except Exception as e:
-                logger.error(f"Failed to update database configuration: {e}")
+                logger.exception(f"Failed to update database configuration: {e}")
                 return False
 
         # Cache configuration callback
@@ -117,7 +117,7 @@ class ConfigurationLifecycleManager:
                     # In a real implementation, this would update cache connections
                 return True
             except Exception as e:
-                logger.error(f"Failed to update cache configuration: {e}")
+                logger.exception(f"Failed to update cache configuration: {e}")
                 return False
 
         # Observability configuration callback
@@ -146,7 +146,7 @@ class ConfigurationLifecycleManager:
 
                 return True
             except Exception as e:
-                logger.error(f"Failed to update observability configuration: {e}")
+                logger.exception(f"Failed to update observability configuration: {e}")
                 return False
 
         # Performance configuration callback
@@ -159,7 +159,7 @@ class ConfigurationLifecycleManager:
                     # This could update request limits, timeouts, etc.
                 return True
             except Exception as e:
-                logger.error(f"Failed to update performance configuration: {e}")
+                logger.exception(f"Failed to update performance configuration: {e}")
                 return False
 
         # Security configuration callback
@@ -172,7 +172,7 @@ class ConfigurationLifecycleManager:
                     # This could update API keys, rate limits, etc.
                 return True
             except Exception as e:
-                logger.error(f"Failed to update security configuration: {e}")
+                logger.exception(f"Failed to update security configuration: {e}")
                 return False
 
         # Global configuration update callback
@@ -184,7 +184,7 @@ class ConfigurationLifecycleManager:
                 logger.info("Global configuration updated")
                 return True
             except Exception as e:
-                logger.error(f"Failed to update global configuration: {e}")
+                logger.exception(f"Failed to update global configuration: {e}")
                 return False
 
         # Register all callbacks

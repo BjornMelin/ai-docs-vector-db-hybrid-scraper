@@ -5,6 +5,7 @@ drift monitoring and alerting using the application's task queue system.
 """
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime, timedelta
 from typing import Any
@@ -63,7 +64,7 @@ class ConfigDriftService:
             logger.info("Configuration drift detector initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize drift detector: {e}")
+            logger.exception(f"Failed to initialize drift detector: {e}")
             self.drift_detector = None
 
     async def start(self) -> None:
@@ -89,7 +90,7 @@ class ConfigDriftService:
             logger.info("Configuration drift monitoring service started successfully")
 
         except Exception as e:
-            logger.error(f"Failed to start drift monitoring service: {e}")
+            logger.exception(f"Failed to start drift monitoring service: {e}")
             self.is_running = False
             raise
 
@@ -115,7 +116,7 @@ class ConfigDriftService:
             logger.debug("Scheduled next configuration snapshot task")
 
         except Exception as e:
-            logger.error(f"Failed to schedule snapshot task: {e}")
+            logger.exception(f"Failed to schedule snapshot task: {e}")
 
     async def _schedule_comparison_task(self) -> None:
         """Schedule the next configuration comparison task."""
@@ -134,7 +135,7 @@ class ConfigDriftService:
             logger.debug("Scheduled next configuration comparison task")
 
         except Exception as e:
-            logger.error(f"Failed to schedule comparison task: {e}")
+            logger.exception(f"Failed to schedule comparison task: {e}")
 
     async def take_configuration_snapshot(self) -> dict[str, Any]:
         """Take snapshots of all monitored configuration sources.
@@ -146,10 +147,8 @@ class ConfigDriftService:
             raise RuntimeError("Drift detector not initialized")
 
         performance_monitor = None
-        try:
+        with contextlib.suppress(Exception):
             performance_monitor = get_performance_monitor()
-        except Exception:
-            pass
 
         snapshot_results = {
             "timestamp": datetime.now().isoformat(),
@@ -205,7 +204,7 @@ class ConfigDriftService:
         except Exception as e:
             error_msg = f"Snapshot batch operation failed: {e}"
             snapshot_results["errors"].append(error_msg)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise
 
         # Schedule next snapshot task
@@ -223,10 +222,8 @@ class ConfigDriftService:
             raise RuntimeError("Drift detector not initialized")
 
         performance_monitor = None
-        try:
+        with contextlib.suppress(Exception):
             performance_monitor = get_performance_monitor()
-        except Exception:
-            pass
 
         comparison_results = {
             "timestamp": datetime.now().isoformat(),
@@ -309,7 +306,7 @@ class ConfigDriftService:
         except Exception as e:
             error_msg = f"Comparison batch operation failed: {e}"
             comparison_results["errors"].append(error_msg)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise
 
         # Schedule next comparison task
@@ -349,7 +346,7 @@ class ConfigDriftService:
             return True
 
         except Exception as e:
-            logger.error(f"Auto-remediation failed for event {event.id}: {e}")
+            logger.exception(f"Auto-remediation failed for event {event.id}: {e}")
             return False
 
     async def get_service_status(self) -> dict[str, Any]:
@@ -409,7 +406,7 @@ class ConfigDriftService:
             }
 
         except Exception as e:
-            logger.error(f"Manual detection failed: {e}")
+            logger.exception(f"Manual detection failed: {e}")
             raise
 
 

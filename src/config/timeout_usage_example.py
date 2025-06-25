@@ -7,7 +7,7 @@ timeout configuration system.
 
 import asyncio
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from .timeouts import get_timeout_config, get_timeout_settings
 
@@ -95,10 +95,8 @@ async def operation_timeout(operation_name: str):
         yield timeout_config
     finally:
         timeout_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await timeout_task
-        except asyncio.CancelledError:
-            pass
 
 
 # Example 4: Using all timeout settings in a service

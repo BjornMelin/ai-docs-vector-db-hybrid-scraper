@@ -641,10 +641,9 @@ class TestBreakingPoints:
                 phase_config["name"] == "recovery"
                 and error_rate < 5.0
                 and avg_response_time < 500
-            ):
-                if recovery_complete_time is None:
-                    recovery_complete_time = time.time()
-                    logger.info("System recovery completed")
+            ) and recovery_complete_time is None:
+                recovery_complete_time = time.time()
+                logger.info("System recovery completed")
 
             logger.info(
                 f"Phase {phase_config['name']}: {error_rate:.2f}% errors, "

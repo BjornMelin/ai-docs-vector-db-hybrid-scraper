@@ -87,17 +87,19 @@ class TestObservabilityInitialization:
             "opentelemetry.exporter.otlp.proto.grpc.metric_exporter"
         ].OTLPMetricExporter = MagicMock()
 
-        with patch.dict("sys.modules", mock_modules):
-            with patch(
+        with (
+            patch.dict("sys.modules", mock_modules),
+            patch(
                 "src.services.observability.init._setup_auto_instrumentation"
-            ) as mock_auto_instrumentation:
-                result = initialize_observability(config)
+            ) as mock_auto_instrumentation,
+        ):
+            result = initialize_observability(config)
 
-                assert result is True
-                assert is_observability_enabled() is True
+            assert result is True
+            assert is_observability_enabled() is True
 
-                # Verify auto-instrumentation setup was called
-                mock_auto_instrumentation.assert_called_once_with(config)
+            # Verify auto-instrumentation setup was called
+            mock_auto_instrumentation.assert_called_once_with(config)
 
     def test_initialize_observability_with_console_exporter(self):
         """Test initialization with console exporter enabled."""

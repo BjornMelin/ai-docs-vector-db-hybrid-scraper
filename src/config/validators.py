@@ -163,7 +163,7 @@ class ConfigurationValidator:
         # Validate memory settings
         max_memory = cache_config.get("local_max_memory_mb")
         if max_memory is not None:
-            if not isinstance(max_memory, (int, float)) or max_memory <= 0:
+            if not isinstance(max_memory, int | float) or max_memory <= 0:
                 self.errors.append(
                     ValidationError(
                         path="cache.local_max_memory_mb",
@@ -294,7 +294,7 @@ class ConfigurationValidator:
         # Validate budget settings
         budget_limit = openai_config.get("budget_limit")
         if budget_limit is not None:
-            if not isinstance(budget_limit, (int, float)) or budget_limit < 0:
+            if not isinstance(budget_limit, int | float) or budget_limit < 0:
                 self.errors.append(
                     ValidationError(
                         path="openai.budget_limit",
@@ -330,7 +330,7 @@ class ConfigurationValidator:
         for setting in timeout_settings:
             value = performance_config.get(setting)
             if value is not None:
-                if not isinstance(value, (int, float)) or value <= 0:
+                if not isinstance(value, int | float) or value <= 0:
                     self.errors.append(
                         ValidationError(
                             path=f"performance.{setting}",
@@ -352,7 +352,7 @@ class ConfigurationValidator:
         # Validate memory settings
         max_memory = performance_config.get("max_memory_usage_mb")
         if max_memory is not None:
-            if not isinstance(max_memory, (int, float)) or max_memory <= 0:
+            if not isinstance(max_memory, int | float) or max_memory <= 0:
                 self.errors.append(
                     ValidationError(
                         path="performance.max_memory_usage_mb",
@@ -444,7 +444,7 @@ class ConfigurationValidator:
 
         page_timeout = crawl4ai_config.get("page_timeout")
         if page_timeout is not None:
-            if not isinstance(page_timeout, (int, float)) or page_timeout <= 0:
+            if not isinstance(page_timeout, int | float) or page_timeout <= 0:
                 self.errors.append(
                     ValidationError(
                         path="crawl4ai.page_timeout",
@@ -635,7 +635,7 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
                     logger.warning(f"  {warning['path']}: {warning['message']}")
 
         except Exception as e:
-            logger.error(f"Failed to validate {config_file}: {e}")
+            logger.exception(f"Failed to validate {config_file}: {e}")
             all_valid = False
 
     return all_valid

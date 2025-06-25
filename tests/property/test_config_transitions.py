@@ -439,7 +439,7 @@ class TestConfigurationTransitionProperties:
         """Test random valid configuration transitions."""
         config = Config()
 
-        for i in range(num_transitions):
+        for _i in range(num_transitions):
             # Choose random aspect to modify
             aspect = data.draw(
                 st.sampled_from(

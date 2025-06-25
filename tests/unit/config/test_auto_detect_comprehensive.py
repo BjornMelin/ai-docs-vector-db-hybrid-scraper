@@ -10,7 +10,7 @@ import json
 import os
 import tempfile
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -266,7 +266,7 @@ class TestDetectedEnvironment:
     @given(
         confidence=valid_confidence,
         detection_time=st.floats(min_value=0.0, max_value=5000.0, allow_nan=False),
-        env_type=st.sampled_from([env for env in Environment]),
+        env_type=st.sampled_from(list(Environment)),
     )
     def test_environment_creation_with_property_testing(
         self, confidence, detection_time, env_type
@@ -1083,10 +1083,8 @@ class TestHealthChecker:
             # Cancel the task
             monitoring_task.cancel()
 
-            try:
+            with suppress(asyncio.CancelledError):
                 await monitoring_task
-            except asyncio.CancelledError:
-                pass
 
             # Should have attempted health checks
             assert mock_check.call_count >= 0

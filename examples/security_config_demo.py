@@ -447,7 +447,7 @@ def main():
         logger.info("✓ Real-time security event correlation")
 
     except Exception as e:
-        logger.error(f"Demo failed with error: {e}")
+        logger.exception(f"Demo failed with error: {e}")
         raise
 
 
