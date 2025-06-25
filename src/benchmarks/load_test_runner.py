@@ -14,8 +14,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from ..config import Config
-from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from ..models.vector_search import HybridSearchRequest
+from ..services.vector_db.hybrid_search import HybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,8 @@ class LoadTestUser:
     def __init__(
         self,
         user_id: int,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         config: LoadTestConfig,
     ):
         """Initialize load test user.
@@ -154,7 +154,7 @@ class LoadTestUser:
 
                 try:
                     await asyncio.wait_for(
-                        self.search_service.advanced_hybrid_search(query),
+                        self.search_service.hybrid_search(query),
                         timeout=self.config.request_timeout_seconds,
                     )
                     end_time = time.perf_counter()
@@ -186,7 +186,7 @@ class LoadTestUser:
                             start_time = time.perf_counter()
 
                             await asyncio.wait_for(
-                                self.search_service.advanced_hybrid_search(query),
+                                self.search_service.hybrid_search(query),
                                 timeout=self.config.request_timeout_seconds,
                             )
                             end_time = time.perf_counter()
@@ -239,8 +239,8 @@ class LoadTestRunner:
 
     async def run_load_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         load_config: LoadTestConfig,
     ) -> LoadTestMetrics:
         """Run comprehensive load test.
@@ -430,8 +430,8 @@ class LoadTestRunner:
 
     async def run_stress_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         max_users: int = 1000,
         step_size: int = 50,
         step_duration: int = 30,
@@ -481,8 +481,8 @@ class LoadTestRunner:
 
     async def run_endurance_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         duration_hours: float = 1.0,
         concurrent_users: int = 50,
     ) -> LoadTestMetrics:

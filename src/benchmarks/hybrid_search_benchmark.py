@@ -1,7 +1,7 @@
-"""Main benchmark orchestrator for Advanced Hybrid Search system.
+"""Main benchmark orchestrator for Hybrid Search system.
 
 This module provides the primary benchmarking interface for comprehensive
-performance testing of the advanced hybrid search implementation.
+performance testing of the hybrid search implementation.
 """
 
 import json
@@ -15,11 +15,11 @@ from pydantic import BaseModel, Field
 
 from ..config import Config
 from ..models.vector_search import (
-    AdvancedHybridSearchRequest,
     FusionConfig,
+    HybridSearchRequest,
     SearchParams,
 )
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from ..services.vector_db.hybrid_search import HybridSearchService
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
 from .load_test_runner import LoadTestConfig, LoadTestRunner
@@ -116,20 +116,20 @@ class BenchmarkResults(BaseModel):
     )
 
 
-class AdvancedHybridSearchBenchmark:
-    """Main orchestrator for comprehensive Advanced Hybrid Search benchmarks."""
+class HybridSearchBenchmark:
+    """Main orchestrator for comprehensive Hybrid Search benchmarks."""
 
     def __init__(
         self,
         config: Config,
-        search_service: AdvancedHybridSearchService,
+        search_service: HybridSearchService,
         benchmark_config: BenchmarkConfig,
     ):
         """Initialize the benchmark orchestrator.
 
         Args:
             config: Unified configuration
-            search_service: Advanced hybrid search service to benchmark
+            search_service: Hybrid search service to benchmark
             benchmark_config: Benchmark configuration
         """
         self.config = config
@@ -146,7 +146,7 @@ class AdvancedHybridSearchBenchmark:
         # Test data
         self.test_queries = self._generate_test_queries()
 
-    def _generate_test_queries(self) -> list[AdvancedHybridSearchRequest]:
+    def _generate_test_queries(self) -> list[HybridSearchRequest]:
         """Generate realistic test queries for benchmarking."""
         test_data = [
             # Code queries
@@ -196,7 +196,7 @@ class AdvancedHybridSearchBenchmark:
 
         queries = []
         for query_text, _query_category in test_data:
-            request = AdvancedHybridSearchRequest(
+            request = HybridSearchRequest(
                 query=query_text,
                 collection_name="benchmark_collection",
                 limit=10,
