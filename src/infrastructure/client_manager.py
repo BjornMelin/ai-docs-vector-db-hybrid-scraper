@@ -122,7 +122,8 @@ class ClientManager:
         self._health_check_task: asyncio.Task | None = None
 
         # Auto-detection integration
-        self._auto_detected_services = config.get_auto_detected_services()
+        # Auto-detected services are now handled by functional services
+        self._auto_detected_services = None
 
         # Service instances (lazy-initialized)
         self._qdrant_service: Any = None
@@ -602,115 +603,92 @@ class ClientManager:
     # Enterprise Deployment Services
 
     async def get_feature_flag_manager(self):
-        """Get or create FeatureFlagManager instance."""
-        if self._feature_flag_manager is None:
-            if "feature_flag_manager" not in self._service_locks:
-                self._service_locks["feature_flag_manager"] = asyncio.Lock()
-
-            async with self._service_locks["feature_flag_manager"]:
-                if self._feature_flag_manager is None:
-                    from src.services.deployment.feature_flags import (
-                        FeatureFlagConfig,
-                        FeatureFlagManager,
-                    )
-
-                    # Create feature flag config from deployment config
-                    flag_config = FeatureFlagConfig(
-                        enabled=self.config.deployment.enable_feature_flags,
-                        api_key=self.config.deployment.flagsmith_api_key,
-                        environment_key=self.config.deployment.flagsmith_environment_key,
-                        api_url=self.config.deployment.flagsmith_api_url,
-                    )
-
-                    self._feature_flag_manager = FeatureFlagManager(flag_config)
-                    await self._feature_flag_manager.initialize()
-                    logger.info("Initialized FeatureFlagManager")
-
-        return self._feature_flag_manager
+        """Get feature flag functionality using functional services."""
+        # Feature flags are now provided through functional services
+        # Return a simple wrapper for backward compatibility
+        from src.services.functional.deployment import get_feature_flag, set_feature_flag
+        
+        class FeatureFlagWrapper:
+            """Backward compatibility wrapper for feature flag functions."""
+            
+            async def get_flag(self, flag_name: str, user_id: str = None, default: bool = False):
+                return await get_feature_flag(flag_name, user_id, default)
+            
+            async def set_flag(self, flag_name: str, enabled: bool = True, 
+                             rollout_percentage: int = 100, target_users: list = None):
+                return await set_feature_flag(flag_name, enabled, rollout_percentage, target_users)
+        
+        logger.info("Using functional feature flag services")
+        return FeatureFlagWrapper()
 
     async def get_ab_testing_manager(self):
-        """Get or create ABTestingManager instance."""
-        if not self.config.deployment.enable_ab_testing:
+        """Get A/B testing functionality using functional services."""
+        # Check if deployment config exists and A/B testing is enabled
+        if not (hasattr(self.config, 'deployment') and 
+                hasattr(self.config.deployment, 'enable_ab_testing') and 
+                self.config.deployment.enable_ab_testing):
             return None
 
-        if self._ab_testing_manager is None:
-            if "ab_testing_manager" not in self._service_locks:
-                self._service_locks["ab_testing_manager"] = asyncio.Lock()
-
-            async with self._service_locks["ab_testing_manager"]:
-                if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import ABTestingManager
-
-                    # Get dependencies
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-                    feature_flag_manager = await self.get_feature_flag_manager()
-
-                    self._ab_testing_manager = ABTestingManager(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                        feature_flag_manager=feature_flag_manager,
-                    )
-                    await self._ab_testing_manager.initialize()
-                    logger.info("Initialized ABTestingManager")
-
-        return self._ab_testing_manager
+        # A/B testing is now provided through functional services
+        from src.services.functional.deployment import get_ab_test_variant, create_ab_test
+        
+        class ABTestingWrapper:
+            """Backward compatibility wrapper for A/B testing functions."""
+            
+            async def get_variant(self, test_name: str, user_id: str):
+                return await get_ab_test_variant(test_name, user_id)
+            
+            async def create_test(self, test_name: str, variants: dict, enabled: bool = True):
+                return await create_ab_test(test_name, variants, enabled)
+        
+        logger.info("Using functional A/B testing services")
+        return ABTestingWrapper()
 
     async def get_blue_green_deployment(self):
-        """Get or create BlueGreenDeployment instance."""
-        if not self.config.deployment.enable_blue_green:
+        """Get blue/green deployment functionality using functional services."""
+        # Check if deployment config exists and blue/green is enabled
+        if not (hasattr(self.config, 'deployment') and 
+                hasattr(self.config.deployment, 'enable_blue_green') and 
+                self.config.deployment.enable_blue_green):
             return None
 
-        if self._blue_green_deployment is None:
-            if "blue_green_deployment" not in self._service_locks:
-                self._service_locks["blue_green_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["blue_green_deployment"]:
-                if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import BlueGreenDeployment
-
-                    # Get dependencies
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-                    feature_flag_manager = await self.get_feature_flag_manager()
-
-                    self._blue_green_deployment = BlueGreenDeployment(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                        feature_flag_manager=feature_flag_manager,
-                    )
-                    await self._blue_green_deployment.initialize()
-                    logger.info("Initialized BlueGreenDeployment")
-
-        return self._blue_green_deployment
+        # Blue/green deployment is now provided through functional services
+        from src.services.functional.deployment import perform_blue_green_switch, get_deployment_status, rollback_deployment
+        
+        class BlueGreenWrapper:
+            """Backward compatibility wrapper for blue/green deployment functions."""
+            
+            async def switch(self, service_name: str, from_env: str, to_env: str):
+                return await perform_blue_green_switch(service_name, from_env, to_env)
+            
+            async def get_status(self, service_name: str):
+                return await get_deployment_status(service_name)
+            
+            async def rollback(self, service_name: str, target_version: str = None):
+                return await rollback_deployment(service_name, target_version)
+        
+        logger.info("Using functional blue/green deployment services")
+        return BlueGreenWrapper()
 
     async def get_canary_deployment(self):
-        """Get or create CanaryDeployment instance."""
-        if not self.config.deployment.enable_canary:
+        """Get canary deployment functionality using functional services."""
+        # Check if deployment config exists and canary is enabled
+        if not (hasattr(self.config, 'deployment') and 
+                hasattr(self.config.deployment, 'enable_canary') and 
+                self.config.deployment.enable_canary):
             return None
 
-        if self._canary_deployment is None:
-            if "canary_deployment" not in self._service_locks:
-                self._service_locks["canary_deployment"] = asyncio.Lock()
-
-            async with self._service_locks["canary_deployment"]:
-                if self._canary_deployment is None:
-                    from src.services.deployment.canary import CanaryDeployment
-
-                    # Get dependencies
-                    qdrant_service = await self.get_qdrant_service()
-                    cache_manager = await self.get_cache_manager()
-                    feature_flag_manager = await self.get_feature_flag_manager()
-
-                    self._canary_deployment = CanaryDeployment(
-                        qdrant_service=qdrant_service,
-                        cache_manager=cache_manager,
-                        feature_flag_manager=feature_flag_manager,
-                    )
-                    await self._canary_deployment.initialize()
-                    logger.info("Initialized CanaryDeployment")
-
-        return self._canary_deployment
+        # Canary deployment is now provided through functional services
+        from src.services.functional.deployment import check_canary_readiness
+        
+        class CanaryWrapper:
+            """Backward compatibility wrapper for canary deployment functions."""
+            
+            async def check_readiness(self, service_name: str, version: str, health_threshold: float = 0.95):
+                return await check_canary_readiness(service_name, version, health_threshold)
+        
+        logger.info("Using functional canary deployment services")
+        return CanaryWrapper()
 
     async def _get_or_create_client(
         self,

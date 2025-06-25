@@ -6,7 +6,7 @@ Uses yield dependencies for proper cleanup and circuit breaker patterns.
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
 
@@ -173,3 +173,43 @@ async def get_crawling_client(
         yield crawl_manager
     finally:
         await crawl_manager.cleanup()
+
+
+# Monitoring dependency (optional)
+async def get_monitoring_client(
+    config: Annotated[Config, Depends(get_config)],
+) -> dict[str, Any]:
+    """Get monitoring client configuration.
+
+    Args:
+        config: Application configuration
+
+    Returns:
+        Monitoring configuration dict
+    """
+    return {
+        "enabled": True,
+        "metrics_enabled": True,
+        "health_checks_enabled": True,
+        "performance_tracking": True,
+    }
+
+
+# Auto-detection dependency (optional)
+async def get_auto_detection_client(
+    config: Annotated[Config, Depends(get_config)],
+) -> dict[str, Any]:
+    """Get auto-detection client configuration.
+
+    Args:
+        config: Application configuration
+
+    Returns:
+        Auto-detection configuration dict
+    """
+    return {
+        "environment_detection": True,
+        "service_discovery": True,
+        "health_monitoring": True,
+        "connection_pooling": True,
+    }

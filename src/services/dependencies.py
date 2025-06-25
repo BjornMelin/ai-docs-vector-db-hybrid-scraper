@@ -167,16 +167,20 @@ async def get_auto_detection_health_checker(
     Provides health monitoring for auto-detected services.
     Protected by circuit breaker for service health check failures.
     """
-    from src.services.auto_detection import HealthChecker
-
-    health_checker = HealthChecker(config.auto_detection)
-
-    # Initialize with auto-detected services if available
-    auto_detected = config.get_auto_detected_services()
-    if auto_detected and auto_detected.services:
-        await health_checker.start_monitoring(auto_detected.services)
-
-    return health_checker
+    from src.services.functional.auto_detection import check_service_availability
+    from src.services.functional.monitoring import check_service_health
+    
+    # Use functional health checking services
+    class HealthCheckerWrapper:
+        """Wrapper for functional health checking services."""
+        
+        async def check_health(self, service_name: str):
+            return await check_service_health(service_name)
+        
+        async def check_availability(self, host: str, port: int):
+            return await check_service_availability(host, port)
+    
+    return HealthCheckerWrapper()
 
 
 AutoDetectionHealthDep = Annotated[Any, Depends(get_auto_detection_health_checker)]
@@ -195,16 +199,16 @@ async def get_auto_detection_connection_pools(
     Provides optimized connection pools for discovered services.
     Protected by circuit breaker for connection pool initialization failures.
     """
-    from src.services.auto_detection import ConnectionPoolManager
-
-    pool_manager = ConnectionPoolManager(config.auto_detection)
-
-    # Initialize pools with auto-detected services if available
-    auto_detected = config.get_auto_detected_services()
-    if auto_detected and auto_detected.services:
-        await pool_manager.initialize_pools(auto_detected.services)
-
-    return pool_manager
+    from src.services.functional.auto_detection import get_connection_info
+    
+    # Use functional connection info services
+    class ConnectionPoolWrapper:
+        """Wrapper for functional connection info services."""
+        
+        async def get_connection_info(self, service_name: str):
+            return await get_connection_info(service_name)
+    
+    return ConnectionPoolWrapper()
 
 
 AutoDetectionPoolsDep = Annotated[Any, Depends(get_auto_detection_connection_pools)]
@@ -250,22 +254,15 @@ async def perform_auto_detection(
         import time
 
         from src.config.auto_detect import AutoDetectedServices
-        from src.services.auto_detection import EnvironmentDetector, ServiceDiscovery
+        from src.services.functional.auto_detection import detect_environment, discover_services
 
         start_time = time.time()
 
-        # Override config if request specifies timeout
-        detection_config = config.auto_detection
-        if request.timeout_seconds:
-            detection_config.timeout_seconds = request.timeout_seconds
+        # Perform environment detection using functional services
+        detected_env = await detect_environment()
 
-        # Perform environment detection
-        env_detector = EnvironmentDetector(detection_config)
-        detected_env = await env_detector.detect()
-
-        # Perform service discovery
-        service_discovery = ServiceDiscovery(detection_config)
-        discovery_result = await service_discovery.discover_all_services()
+        # Perform service discovery using functional services
+        discovery_result = await discover_services()
 
         # Filter services if requested
         services = discovery_result.services

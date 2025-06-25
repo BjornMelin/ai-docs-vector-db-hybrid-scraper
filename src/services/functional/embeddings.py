@@ -5,7 +5,7 @@ dependency injection. Maintains all functionality while improving testability.
 """
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated, Any, List
 
 from fastapi import Depends, HTTPException
 
@@ -159,7 +159,7 @@ async def estimate_embedding_cost(
     texts: list[str],
     provider_name: str | None = None,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
-) -> dict[str, Dict[str, float]]:
+) -> dict[str, dict[str, float]]:
     """Estimate embedding generation cost.
 
     Pure function replacement for EmbeddingManager.estimate_cost().
@@ -193,7 +193,7 @@ async def estimate_embedding_cost(
 
 async def get_provider_info(
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
-) -> dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers.
 
     Pure function replacement for EmbeddingManager.get_provider_info().
