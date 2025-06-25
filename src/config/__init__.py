@@ -50,6 +50,7 @@ from .core import (
 #     load_instrumented_config_from_file,
 #     load_instrumented_config_from_file_async,
 # )
+
 # Deployment tier configuration
 from .deployment_tiers import (
     DeploymentTier,
@@ -148,11 +149,11 @@ __all__: list[str] = [
     "QueryType",
     "RAGConfig",
     "RetryableConfigOperation",
-    "SQLAlchemyConfig",
     "SafeConfigLoader",
     "SearchAccuracy",
     "SearchStrategy",
     "SecurityConfig",
+    "SQLAlchemyConfig",
     "TaskQueueConfig",
     "TierCapability",
     "TierConfiguration",

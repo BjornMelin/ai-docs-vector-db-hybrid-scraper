@@ -1,8 +1,7 @@
 """Property-based testing fixtures and configuration."""
 
 import pytest
-from hypothesis import Verbosity, settings
-
+from hypothesis import settings, Verbosity
 
 # Configure Hypothesis settings for property-based tests
 @pytest.fixture(autouse=True)

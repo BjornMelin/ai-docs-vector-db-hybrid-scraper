@@ -294,6 +294,7 @@ class ConfigPerformanceReporter:
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("TEST_SETTING=value1\n")
+            f.flush()
             test_file = f.name
 
         results = {
@@ -407,6 +408,7 @@ class ConfigPerformanceReporter:
                 mode="w", suffix=".env", delete=False
             ) as f:
                 f.write(f"SETTING_{i}=value_{i}\n")
+                f.flush()
                 test_files.append(Path(f.name))
 
         try:

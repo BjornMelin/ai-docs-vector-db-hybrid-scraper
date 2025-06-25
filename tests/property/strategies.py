@@ -76,6 +76,7 @@ def redis_urls(draw) -> str:
         )
     )
 
+
     if password:
         return f"redis://:{password}@{host}:{port}"
     return f"redis://{host}:{port}"
@@ -111,6 +112,7 @@ def http_urls(draw, schemes: List[str] | None = None) -> str:
         )
     )
 
+
     url = f"{scheme}://{host}"
     if port:
         url += f":{port}"
@@ -135,6 +137,7 @@ def file_paths(draw, relative: bool = False) -> Path:
             max_size=3,  # Reduce nesting to avoid deep paths
         )
     )
+
 
     if relative:
         return Path(*components)
@@ -232,6 +235,7 @@ def database_urls(draw) -> str:
         password = draw(
             st.text(alphabet=st.characters(printable=True), min_size=8, max_size=32)
         )
+
 
         return f"{scheme}://{username}:{password}@{host}:{port}/{database}"
 
@@ -464,6 +468,7 @@ def complete_configurations(draw) -> Dict[str, Any]:
         "logs_dir": draw(file_paths()),
     }
 
+
     # Add provider-specific configurations
     if crawl_provider == CrawlProvider.FIRECRAWL:
         config["firecrawl"] = {
@@ -471,6 +476,7 @@ def complete_configurations(draw) -> Dict[str, Any]:
             "api_url": "https://api.firecrawl.dev",
             "timeout": 30.0,
         }
+
 
     return config
 

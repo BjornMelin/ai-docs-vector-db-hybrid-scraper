@@ -117,7 +117,43 @@ jobs:
 
       - name: Update status dashboard file
         run: |
-          cat > .github/STATUS.md << 'EOF'
+          # Get status values safely
+          CI_STATUS="${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].status }}"
+          SEC_STATUS="${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].status }}"
+          DOC_STATUS="${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].status }}"
+          
+          CI_URL="${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].url }}"
+          SEC_URL="${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].url }}"
+          DOC_URL="${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].url }}"
+          
+          CI_CREATED="${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].created_at }}"
+          SEC_CREATED="${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].created_at }}"
+          DOC_CREATED="${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].created_at }}"
+          
+          # Get badge colors safely
+          get_badge_color() {
+            case $1 in
+              "success") echo "brightgreen" ;;
+              "failure") echo "red" ;;
+              "cancelled") echo "yellow" ;;
+              "in_progress") echo "blue" ;;
+              "queued") echo "lightgrey" ;;
+              *) echo "lightgrey" ;;
+            esac
+          }
+          
+          CI_COLOR=$(get_badge_color "$CI_STATUS")
+          SEC_COLOR=$(get_badge_color "$SEC_STATUS")
+          DOC_COLOR=$(get_badge_color "$DOC_STATUS")
+          
+          # Get repository info safely
+          REPO_INFO=$(curl -s "https://api.github.com/repos/${{ github.repository }}")
+          TOTAL_ISSUES=$(echo "$REPO_INFO" | jq -r '.open_issues_count // "N/A"')
+          DEFAULT_BRANCH=$(echo "$REPO_INFO" | jq -r '.default_branch // "main"')
+          LAST_ACTIVITY=$(echo "$REPO_INFO" | jq -r '.updated_at // "N/A"')
+          
+          # Create dashboard file
+          cat > .github/STATUS.md << EOF
           # 🚦 Project Status Dashboard
           
           Last updated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
@@ -126,9 +162,9 @@ jobs:
           
           | Pipeline | Status | Last Run |
           |----------|--------|----------|
-          | Continuous Integration | [![CI](https://img.shields.io/badge/CI-${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].status }}-$(case "${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].status }}" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].url }}) | ${{ fromJson(steps.workflows.outputs.result)['Continuous Integration'].created_at }} |
-          | Security Pipeline | [![Security](https://img.shields.io/badge/Security-${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].status }}-$(case "${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].status }}" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].url }}) | ${{ fromJson(steps.workflows.outputs.result)['Security Pipeline'].created_at }} |
-          | Documentation Pipeline | [![Docs](https://img.shields.io/badge/Docs-${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].status }}-$(case "${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].status }}" in "success") echo "brightgreen" ;; "failure") echo "red" ;; *) echo "lightgrey" ;; esac))](${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].url }}) | ${{ fromJson(steps.workflows.outputs.result)['Documentation Pipeline'].created_at }} |
+          | Continuous Integration | [![CI](https://img.shields.io/badge/CI-${CI_STATUS}-${CI_COLOR})](${CI_URL}) | ${CI_CREATED} |
+          | Security Pipeline | [![Security](https://img.shields.io/badge/Security-${SEC_STATUS}-${SEC_COLOR})](${SEC_URL}) | ${SEC_CREATED} |
+          | Documentation Pipeline | [![Docs](https://img.shields.io/badge/Docs-${DOC_STATUS}-${DOC_COLOR})](${DOC_URL}) | ${DOC_CREATED} |
           
           ## Quick Links
           
@@ -139,9 +175,9 @@ jobs:
           
           ## Repository Health
           
-          - **Total Issues**: $(curl -s "https://api.github.com/repos/${{ github.repository }}" | jq -r '.open_issues_count // "N/A"')
-          - **Default Branch**: $(curl -s "https://api.github.com/repos/${{ github.repository }}" | jq -r '.default_branch // "main"')
-          - **Last Activity**: $(curl -s "https://api.github.com/repos/${{ github.repository }}" | jq -r '.updated_at // "N/A"')
+          - **Total Issues**: ${TOTAL_ISSUES}
+          - **Default Branch**: ${DEFAULT_BRANCH}
+          - **Last Activity**: ${LAST_ACTIVITY}
           
           ---
           

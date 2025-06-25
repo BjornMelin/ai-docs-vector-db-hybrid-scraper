@@ -19,34 +19,28 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ValidationError:
     """Represents a configuration validation error"""
-
+    
     path: str
     message: str
-    severity: str = "error"  # error, warning, info
+    severity: str = "error"
 
 
 class ConfigurationValidator:
-    """
-    Comprehensive configuration validator for GitOps deployments
-
-    Validates configuration schemas, environment-specific requirements,
-    security compliance, and deployment readiness.
-    """
-
+    """Validator for configuration schemas and deployment readiness."""
+    
     def __init__(self):
-        self.errors: List[ValidationError] = []
-        self.warnings: List[ValidationError] = []
-
+        self.errors: list[ValidationError] = []
+        self.warnings: list[ValidationError] = []
+    
     def validate_config_schema(
-        self, config: Dict[str, Any], environment: str = "development"
+        self, config: dict[str, Any], environment: str = "development"
     ) -> bool:
-        """
-        Validate configuration schema and environment-specific requirements
-
+        """Validate configuration schema.
+        
         Args:
             config: Configuration dictionary to validate
-            environment: Target environment (development, staging, production)
-
+            environment: Target environment
+        
         Returns:
             bool: True if validation passes, False otherwise
         """

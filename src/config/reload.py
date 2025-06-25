@@ -632,6 +632,25 @@ class ConfigReloader:
             "current_config_hash": self._config_hash,
         }
 
+    def get_config_backups(self) -> list[dict[str, Any]]:
+        """Get available configuration backups.
+
+        Returns:
+            List of backup information including hash, creation time, and environment
+        """
+        backups = []
+        for backup_hash, backup_config in self._config_backups:
+            backup_info = {
+                "hash": backup_hash,
+                "created_at": backup_config.model_dump().get("created_at", "unknown"),
+            }
+            if hasattr(backup_config, "environment"):
+                backup_info["environment"] = str(backup_config.environment)
+            else:
+                backup_info["environment"] = "unknown"
+            backups.append(backup_info)
+        return backups
+
     async def enable_file_watching(self, poll_interval: float = 1.0) -> None:
         """Enable automatic file watching for configuration changes."""
         if self._file_watcher and not self._file_watcher.done():

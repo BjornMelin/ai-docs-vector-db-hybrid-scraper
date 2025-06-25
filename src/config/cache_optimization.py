@@ -78,7 +78,7 @@ class ConfigCache:
             self._timestamps.pop(lru_key, None)
             self._access_times.pop(lru_key, None)
 
-    def get(self, model_class: Type[T], data: Dict[str, Any]) -> T | None:
+    def get(self, model_class: Type[T], data: Dict[str, Any]) -> Optional[T]:
         """Get cached config model instance."""
         self._evict_expired()
 
@@ -126,7 +126,7 @@ class ConfigCache:
 _config_cache = ConfigCache()
 
 
-def cached_model(cache: ConfigCache | None = None, ttl: float | None = None):
+def cached_model(cache: Optional[ConfigCache] = None, ttl: Optional[float] = None):
     """Decorator to add caching to Pydantic model creation.
 
     Args:
@@ -183,7 +183,7 @@ class AsyncConfigLoader:
     async def load_config_async(
         self,
         config_class: Type[T],
-        config_path: Union[str, Path] | None = None,
+        config_path: Optional[Union[str, Path]] = None,
         **kwargs,
     ) -> T:
         """Load configuration asynchronously with caching.
@@ -219,7 +219,7 @@ class AsyncConfigLoader:
             self._load_cache.pop(cache_key, None)
 
     async def _do_load_config(
-        self, config_class: Type[T], config_path: Union[str, Path] | None, **kwargs
+        self, config_class: Type[T], config_path: Optional[Union[str, Path]], **kwargs
     ) -> T:
         """Internal method to perform config loading."""
         async with self._semaphore:
@@ -233,7 +233,7 @@ class AsyncConfigLoader:
 
                 if config_path.exists():
                     if config_path.suffix == ".json":
-                        with open(config_path) as f:
+                        with open(config_path, "r", encoding="utf-8") as f:
                             file_data = json.load(f)
                         kwargs.update(file_data)
 
@@ -245,19 +245,21 @@ class AsyncConfigLoader:
 _async_loader = AsyncConfigLoader()
 
 
-class CachedConfigMixin:
-    """Mixin to add caching optimizations to config classes."""
+class OptimizedConfigMixin:
+    """Mixin to add performance optimizations to config classes."""
 
     @classmethod
     @lru_cache(maxsize=128)
-    def create_cached(cls, **kwargs) -> "CachedConfigMixin":
+    def create_optimized(cls, **kwargs) -> "OptimizedConfigMixin":
         """Create config with LRU caching."""
         return cls(**kwargs)
 
     @classmethod
     async def load_async(
-        cls, config_path: Union[str, Path] | None = None, **kwargs
-    ) -> "CachedConfigMixin":
+        cls,
+        config_path: Optional[Union[str, Path]] = None,
+        **kwargs,
+    ) -> "OptimizedConfigMixin":
         """Load config asynchronously."""
         return await _async_loader.load_config_async(cls, config_path, **kwargs)
 
@@ -273,7 +275,7 @@ class CachedConfigMixin:
             delattr(self, "_cached_dump")
 
 
-class PerformanceConfig(BaseSettings, CachedConfigMixin):
+class PerformanceConfig(BaseSettings, OptimizedConfigMixin):
     """High-performance configuration class with built-in optimizations."""
 
     model_config = {
@@ -355,7 +357,7 @@ class ConfigValidationCache:
 
     def get_validation_result(
         self, data: Dict[str, Any]
-    ) -> tuple[bool, str | None] | None:
+    ) -> Optional[tuple[bool, Optional[str]]]:
         """Get cached validation result."""
         key = self._hash_data(data)
         if key in self._validation_cache:
@@ -365,7 +367,7 @@ class ConfigValidationCache:
         return None
 
     def cache_validation_result(
-        self, data: Dict[str, Any], is_valid: bool, error: str | None = None
+        self, data: Dict[str, Any], is_valid: bool, error: Optional[str] = None
     ):
         """Cache validation result."""
         if len(self._validation_cache) >= self.max_size:

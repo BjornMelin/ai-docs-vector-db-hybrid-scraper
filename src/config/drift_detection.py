@@ -147,43 +147,21 @@ class ConfigDriftDetector:
         # Async lock for async operations (if needed in future)
         self._async_lock = asyncio.Lock()
 
-        # Initialize integrations with existing infrastructure
-        self._setup_integrations()
-
-    def _setup_integrations(self) -> None:
-        """Set up integrations with existing monitoring infrastructure."""
+        # Initialize metrics bridge and performance monitor
         try:
-            # Integrate with performance monitoring from Task 20
-            if self.config.use_performance_monitoring:
-                self.performance_monitor = get_performance_monitor()
-                logger.info("Integrated with existing performance monitoring system")
-            else:
-                self.performance_monitor = None
-        except Exception as e:
-            logger.warning(f"Failed to initialize performance monitor: {e}")
-            self.performance_monitor = None
-
-        try:
-            # Integrate with metrics bridge for alerting
             self.metrics_bridge = get_metrics_bridge()
-
-            # Create custom metrics for drift detection
-            self._setup_custom_metrics()
-            logger.info("Integrated with existing metrics bridge system")
-        except Exception as e:
-            logger.warning(f"Failed to initialize metrics bridge: {e}")
+            self.performance_monitor = get_performance_monitor()
+        except Exception:
             self.metrics_bridge = None
+            self.performance_monitor = None
+            logger.warning("Unable to initialize metrics bridge or performance monitor")
 
-    def _setup_custom_metrics(self) -> None:
-        """Set up custom metrics for configuration drift detection."""
-        if not self.metrics_bridge:
-            return
-
-        # Create drift detection metrics
-        self.drift_counter = self.metrics_bridge.create_custom_counter(
-            "config_drift_events_total",
-            "Total number of configuration drift events detected",
-        )
+        # Initialize metrics
+        if self.metrics_bridge:
+            self.drift_counter = self.metrics_bridge.create_custom_counter(
+                "config_drift_detected_total",
+                "Total configuration drift events detected",
+            )
 
         self.drift_severity_gauge = self.metrics_bridge.create_custom_gauge(
             "config_drift_severity_current",

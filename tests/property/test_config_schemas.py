@@ -95,6 +95,7 @@ class TestCacheConfigProperties:
         # Verify dragonfly URL format
         assert config.dragonfly_url.startswith("redis://")
 
+
         # Verify cache TTL structure
         assert isinstance(config.cache_ttl_seconds, dict)
         for key, value in config.cache_ttl_seconds.items():
@@ -153,16 +154,16 @@ class TestQdrantConfigProperties:
     def test_qdrant_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid Qdrant configurations create valid objects."""
         config = QdrantConfig(**config_data)
-
+        
         # Verify constraints
         assert config.timeout > 0
         assert config.batch_size > 0
         assert config.batch_size <= 1000
         assert 1 <= config.grpc_port <= 65535
-
+        
         # Verify URL format
         assert config.url.startswith(("http://", "https://"))
-
+        
         # Verify collection name is valid
         assert len(config.collection_name) > 0
 
@@ -184,7 +185,7 @@ class TestQdrantConfigProperties:
         config_data["api_key"] = None
         config = QdrantConfig(**config_data)
         assert config.api_key is None
-
+        
         # With API key
         config_data["api_key"] = "test-api-key"
         config = QdrantConfig(**config_data)
@@ -198,7 +199,7 @@ class TestOpenAIConfigProperties:
     def test_openai_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid OpenAI configurations create valid objects."""
         config = OpenAIConfig(**config_data)
-
+        
         # Verify constraints
         assert config.dimensions > 0
         assert config.dimensions <= 3072
@@ -216,13 +217,9 @@ class TestOpenAIConfigProperties:
     @given(invalid_api_keys())
     def test_openai_api_key_validation_failure(self, invalid_key: str):
         """Test that invalid OpenAI API keys are rejected."""
-        assume(
-            not invalid_key.startswith("sk-") and len(invalid_key) > 0
-        )  # Empty strings pass validation
-
-        with pytest.raises(
-            ValidationError, match="OpenAI API key must start with 'sk-'"
-        ):
+        assume(not invalid_key.startswith("sk-") and len(invalid_key) > 0)  # Empty strings pass validation
+        
+        with pytest.raises(ValidationError, match="OpenAI API key must start with 'sk-'"):
             OpenAIConfig(api_key=invalid_key)
 
     @given(st.integers().filter(lambda x: x <= 0 or x > 3072))
@@ -250,13 +247,9 @@ class TestFirecrawlConfigProperties:
     @given(invalid_api_keys())
     def test_firecrawl_api_key_validation_failure(self, invalid_key: str):
         """Test that invalid Firecrawl API keys are rejected."""
-        assume(
-            not invalid_key.startswith("fc-") and len(invalid_key) > 0
-        )  # Empty strings pass validation
-
-        with pytest.raises(
-            ValidationError, match="Firecrawl API key must start with 'fc-'"
-        ):
+        assume(not invalid_key.startswith("fc-") and len(invalid_key) > 0)  # Empty strings pass validation
+        
+        with pytest.raises(ValidationError, match="Firecrawl API key must start with 'fc-'"):
             FirecrawlConfig(api_key=invalid_key)
 
     @given(http_urls())
@@ -279,19 +272,19 @@ class TestChunkingConfigProperties:
     def test_chunking_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid chunking configurations create valid objects."""
         config = ChunkingConfig(**config_data)
-
+        
         # Verify constraint relationships
         assert config.chunk_overlap < config.chunk_size
         assert config.min_chunk_size <= config.chunk_size
         assert config.max_chunk_size >= config.chunk_size
         assert config.max_function_chunk_size >= config.chunk_size
-
+        
         # Verify positive values
         assert config.chunk_size > 0
         assert config.chunk_overlap >= 0
         assert config.min_chunk_size > 0
         assert config.max_chunk_size > 0
-
+        
         # Verify supported languages
         assert len(config.supported_languages) > 0
         for lang in config.supported_languages:
@@ -299,9 +292,7 @@ class TestChunkingConfigProperties:
             assert len(lang) > 0
 
     @given(invalid_chunk_configurations())
-    def test_chunking_config_constraint_violations(
-        self, invalid_config: Dict[str, Any]
-    ):
+    def test_chunking_config_constraint_violations(self, invalid_config: Dict[str, Any]):
         """Test that configurations violating constraints are rejected."""
         with pytest.raises(ValidationError):
             ChunkingConfig(**invalid_config)
@@ -396,11 +387,11 @@ class TestDeploymentConfigProperties:
     def test_deployment_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid deployment configurations create valid objects."""
         config = DeploymentConfig(**config_data)
-
+        
         # Verify tier validation
         assert config.tier in ["personal", "professional", "enterprise"]
         assert config.deployment_tier == config.tier  # Legacy field matches
-
+        
         # Verify boolean flags
         assert isinstance(config.enable_feature_flags, bool)
         assert isinstance(config.enable_deployment_services, bool)
@@ -409,15 +400,11 @@ class TestDeploymentConfigProperties:
         assert isinstance(config.enable_canary, bool)
         assert isinstance(config.enable_monitoring, bool)
 
-    @given(
-        st.text().filter(
-            lambda x: x.lower() not in ["personal", "professional", "enterprise"]
-        )
-    )
+    @given(st.text().filter(lambda x: x.lower() not in ["personal", "professional", "enterprise"]))
     def test_deployment_tier_validation_failure(self, invalid_tier: str):
         """Test that invalid tiers are rejected."""
         assume(len(invalid_tier) > 0)  # Non-empty strings only
-
+        
         with pytest.raises(ValidationError):
             DeploymentConfig(tier=invalid_tier)
 
@@ -430,13 +417,9 @@ class TestDeploymentConfigProperties:
     @given(invalid_api_keys())
     def test_flagsmith_api_key_validation_failure(self, invalid_key: str):
         """Test that invalid Flagsmith API keys are rejected."""
-        assume(
-            not invalid_key.startswith(("fs_", "env_")) and len(invalid_key) > 0
-        )  # Empty strings pass validation
-
-        with pytest.raises(
-            ValidationError, match="Flagsmith API key must start with 'fs_' or 'env_'"
-        ):
+        assume(not invalid_key.startswith(("fs_", "env_")) and len(invalid_key) > 0)  # Empty strings pass validation
+        
+        with pytest.raises(ValidationError, match="Flagsmith API key must start with 'fs_' or 'env_'"):
             DeploymentConfig(flagsmith_api_key=invalid_key)
 
 
@@ -447,35 +430,33 @@ class TestRAGConfigProperties:
     def test_rag_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid RAG configurations create valid objects."""
         config = RAGConfig(**config_data)
-
+        
         # Verify temperature bounds
         assert 0.0 <= config.temperature <= 2.0
-
+        
         # Verify token limits
         assert 100 <= config.max_tokens <= 4000
         assert 1000 <= config.max_context_length <= 8000
-
+        
         # Verify result limits
         assert 1 <= config.max_results_for_context <= 20
-
+        
         # Verify confidence threshold
         assert 0.0 <= config.min_confidence_threshold <= 1.0
-
+        
         # Verify timeout
         assert config.timeout_seconds > 0
-
+        
         # Verify cache TTL
         assert config.cache_ttl_seconds > 0
 
-    @given(
-        st.one_of(
-            st.floats(max_value=-0.1),  # Below minimum
-            st.floats(min_value=2.1),  # Above maximum
-            st.just(float("inf")),  # Infinity
-            st.just(float("-inf")),  # Negative infinity
-            st.just(float("nan")),  # NaN
-        )
-    )
+    @given(st.one_of(
+        st.floats(max_value=-0.1),  # Below minimum
+        st.floats(min_value=2.1),   # Above maximum
+        st.just(float('inf')),      # Infinity
+        st.just(float('-inf')),     # Negative infinity
+        st.just(float('nan'))       # NaN
+    ))
     def test_rag_temperature_bounds(self, invalid_temperature: float):
         """Test that temperature bounds are enforced."""
         with pytest.raises(ValidationError):
@@ -495,15 +476,15 @@ class TestDocumentationSiteProperties:
     def test_documentation_site_valid_properties(self, site_data: Dict[str, Any]):
         """Test that valid documentation sites create valid objects."""
         site = DocumentationSite(**site_data)
-
+        
         # Verify required fields
         assert len(site.name) > 0
         assert str(site.url).startswith(("http://", "https://"))
-
+        
         # Verify positive constraints
         assert site.max_pages > 0
         assert site.max_depth > 0
-
+        
         # Verify priority
         assert site.priority in ["low", "medium", "high"]
 
@@ -523,14 +504,10 @@ class TestDocumentationSiteProperties:
     def test_documentation_site_invalid_limits_rejected(self, invalid_limit: int):
         """Test that invalid page/depth limits are rejected."""
         with pytest.raises(ValidationError):
-            DocumentationSite(
-                name="Test", url="https://example.com", max_pages=invalid_limit
-            )
-
+            DocumentationSite(name="Test", url="https://example.com", max_pages=invalid_limit)
+        
         with pytest.raises(ValidationError):
-            DocumentationSite(
-                name="Test", url="https://example.com", max_depth=invalid_limit
-            )
+            DocumentationSite(name="Test", url="https://example.com", max_depth=invalid_limit)
 
 
 class TestCompleteConfigProperties:
@@ -539,14 +516,12 @@ class TestCompleteConfigProperties:
     @given(complete_configurations())
     def test_complete_config_valid_properties(self, config_data: Dict[str, Any]):
         """Test that valid complete configurations create valid objects."""
-        note(
-            f"Testing configuration with providers: {config_data.get('embedding_provider')}, {config_data.get('crawl_provider')}"
-        )
-
+        note(f"Testing configuration with providers: {config_data.get('embedding_provider')}, {config_data.get('crawl_provider')}")
+        
         # Ensure API keys are provided for providers that require them
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key-for-property-testing"
-
+        
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
             if "firecrawl" not in config_data:
                 config_data["firecrawl"] = {}
@@ -560,11 +535,11 @@ class TestCompleteConfigProperties:
         assert isinstance(config.log_level, LogLevel)
         assert len(config.app_name) > 0
         assert len(config.version) > 0
-
+        
         # Verify provider types
         assert isinstance(config.embedding_provider, EmbeddingProvider)
         assert isinstance(config.crawl_provider, CrawlProvider)
-
+        
         # Verify nested configurations
         assert isinstance(config.cache, CacheConfig)
         assert isinstance(config.qdrant, QdrantConfig)
@@ -573,25 +548,27 @@ class TestCompleteConfigProperties:
         assert isinstance(config.circuit_breaker, CircuitBreakerConfig)
         assert isinstance(config.deployment, DeploymentConfig)
         assert isinstance(config.rag, RAGConfig)
-
+        
         # Verify documentation sites
         assert isinstance(config.documentation_sites, list)
         for site in config.documentation_sites:
             assert isinstance(site, DocumentationSite)
 
     @given(st.sampled_from(list(EmbeddingProvider)))
-    def test_config_provider_key_validation_embedding(
-        self, provider: EmbeddingProvider
-    ):
+    def test_config_provider_key_validation_embedding(self, provider: EmbeddingProvider):
         """Test provider key validation for embedding providers."""
         if provider == EmbeddingProvider.OPENAI:
             # Should fail without API key
             with pytest.raises(ValidationError, match="OpenAI API key required"):
-                Config(embedding_provider=provider, openai=OpenAIConfig(api_key=None))
-
+                Config(
+                    embedding_provider=provider,
+                    openai=OpenAIConfig(api_key=None)
+                )
+            
             # Should succeed with API key
             config = Config(
-                embedding_provider=provider, openai=OpenAIConfig(api_key="sk-test-key")
+                embedding_provider=provider,
+                openai=OpenAIConfig(api_key="sk-test-key")
             )
             assert config.embedding_provider == provider
         else:
@@ -605,12 +582,15 @@ class TestCompleteConfigProperties:
         if provider == CrawlProvider.FIRECRAWL:
             # Should fail without API key
             with pytest.raises(ValidationError, match="Firecrawl API key required"):
-                Config(crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None))
-
+                Config(
+                    crawl_provider=provider,
+                    firecrawl=FirecrawlConfig(api_key=None)
+                )
+            
             # Should succeed with API key
             config = Config(
                 crawl_provider=provider,
-                firecrawl=FirecrawlConfig(api_key="fc-test-key"),
+                firecrawl=FirecrawlConfig(api_key="fc-test-key")
             )
             assert config.crawl_provider == provider
         else:
@@ -624,7 +604,7 @@ class TestCompleteConfigProperties:
         # Ensure required API keys are present
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key"
-
+        
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
             if "firecrawl" not in config_data:
                 config_data["firecrawl"] = {}
@@ -649,14 +629,18 @@ class TestCompleteConfigProperties:
             data_dir = temp_path / "test_data"
             cache_dir = temp_path / "test_cache"
             logs_dir = temp_path / "test_logs"
-
-            config = Config(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
-
+            
+            config = Config(
+                data_dir=data_dir,
+                cache_dir=cache_dir,
+                logs_dir=logs_dir
+            )
+            
             # Directories should be created
             assert data_dir.exists()
             assert cache_dir.exists()
             assert logs_dir.exists()
-
+            
             # Config should store correct paths
             assert config.data_dir == data_dir
             assert config.cache_dir == cache_dir
@@ -683,17 +667,17 @@ class TestConfigPropertyInvariants:
         assert config.cache.local_max_size > 0
         assert config.cache.local_max_memory_mb > 0
         assert config.cache.ttl_seconds > 0
-
+        
         # Qdrant values
         assert config.qdrant.timeout > 0
         assert config.qdrant.batch_size > 0
-
+        
         # OpenAI values
         assert config.openai.dimensions > 0
         assert config.openai.batch_size > 0
         assert config.openai.max_requests_per_minute > 0
         assert config.openai.cost_per_million_tokens > 0
-
+        
         # Chunking values
         assert config.chunking.chunk_size > 0
         assert config.chunking.min_chunk_size > 0
@@ -727,13 +711,13 @@ class TestConfigPropertyInvariants:
             if "firecrawl" not in config_data:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
-
+        
         config = Config(**config_data)
-
+        
         # URL formats
         assert config.qdrant.url.startswith(("http://", "https://"))
         assert config.cache.dragonfly_url.startswith("redis://")
-
+        
         # Documentation site URLs
         for site in config.documentation_sites:
             assert str(site.url).startswith(("http://", "https://"))
@@ -748,16 +732,16 @@ class TestConfigPropertyInvariants:
             if "firecrawl" not in config_data:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
-
+        
         config = Config(**config_data)
-
+        
         # API key formats
         if config.openai.api_key:
             assert config.openai.api_key.startswith("sk-")
-
-        if hasattr(config, "firecrawl") and config.firecrawl.api_key:
+        
+        if hasattr(config, 'firecrawl') and config.firecrawl.api_key:
             assert config.firecrawl.api_key.startswith("fc-")
-
+        
         if config.deployment.flagsmith_api_key:
             assert config.deployment.flagsmith_api_key.startswith(("fs_", "env_"))
 
@@ -777,41 +761,35 @@ class TestConfigMutationTesting:
             "cache": {
                 "enable_caching": True,
                 "local_max_size": 1000,
-                "ttl_seconds": 3600,
+                "ttl_seconds": 3600
             },
             "chunking": {
                 "chunk_size": 1600,
                 "chunk_overlap": 320,
                 "min_chunk_size": 100,
-                "max_chunk_size": 3000,
-            },
+                "max_chunk_size": 3000
+            }
         }
-
+        
         # Apply random mutations
-        mutation_type = data.draw(
-            st.sampled_from(
-                [
-                    "negative_cache_size",
-                    "invalid_chunk_overlap",
-                    "invalid_api_key_format",
-                    "invalid_provider_combination",
-                ]
-            )
-        )
-
+        mutation_type = data.draw(st.sampled_from([
+            "negative_cache_size",
+            "invalid_chunk_overlap",
+            "invalid_api_key_format",
+            "invalid_provider_combination"
+        ]))
+        
         if mutation_type == "negative_cache_size":
             base_config["cache"]["local_max_size"] = data.draw(st.integers(max_value=0))
             with pytest.raises(ValidationError):
                 Config(**base_config)
-
+        
         elif mutation_type == "invalid_chunk_overlap":
             chunk_size = base_config["chunking"]["chunk_size"]
-            base_config["chunking"]["chunk_overlap"] = data.draw(
-                st.integers(min_value=chunk_size)
-            )
+            base_config["chunking"]["chunk_overlap"] = data.draw(st.integers(min_value=chunk_size))
             with pytest.raises(ValidationError):
                 Config(**base_config)
-
+        
         elif mutation_type == "invalid_api_key_format":
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = data.draw(invalid_api_keys())
@@ -820,6 +798,7 @@ class TestConfigMutationTesting:
                 Config(**base_config)
 
         elif mutation_type == "invalid_provider_combination":
+
             # Use provider that requires API key without providing it
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = None
