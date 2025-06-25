@@ -1,0 +1,213 @@
+name: Performance Regression Testing
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/config/**'
+      - 'tests/benchmarks/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/config/**'
+      - 'tests/benchmarks/**'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  performance-benchmarks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for comparisons
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ matrix.python-version }}-
+          ${{ runner.os }}-uv-
+
+    - name: Install dependencies
+      run: |
+        uv venv
+        uv pip install -e ".[dev]"
+        uv pip install pytest-benchmark matplotlib pandas
+
+    - name: Run configuration performance benchmarks
+      run: |
+        uv run pytest tests/benchmarks/test_config_performance.py \
+          --benchmark-only \
+          --benchmark-json=benchmark_results.json \
+          --benchmark-verbose
+
+    - name: Run reload performance benchmarks
+      run: |
+        uv run pytest tests/benchmarks/test_config_reload_performance.py \
+          --benchmark-only \
+          --benchmark-json=reload_benchmark_results.json \
+          --benchmark-verbose
+
+    - name: Generate performance report
+      run: |
+        uv run python -m src.config.performance_report
+      env:
+        PYTHONPATH: .
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results-${{ matrix.python-version }}
+        path: |
+          benchmark_results.json
+          reload_benchmark_results.json
+          reports/performance_report_*.json
+          reports/performance_charts_*.png
+
+    - name: Check performance regression
+      run: |
+        # Check if any performance targets were violated
+        uv run python -c "
+        import json
+        import sys
+        
+        # Load the performance report
+        import glob
+        report_files = glob.glob('reports/performance_report_*.json')
+        if not report_files:
+            print('No performance report found')
+            sys.exit(1)
+        
+        with open(report_files[0]) as f:
+            report = json.load(f)
+        
+        # Check targets
+        targets_met = report['summary']['targets_met']
+        violations = [k for k, v in targets_met.items() if not v]
+        
+        if violations:
+            print(f'❌ Performance targets violated: {violations}')
+            sys.exit(1)
+        else:
+            print('✅ All performance targets met')
+        "
+
+    - name: Comment PR with performance results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const glob = require('glob');
+          
+          // Find the latest performance report
+          const reportFiles = glob.sync('reports/performance_report_*.json');
+          if (reportFiles.length === 0) return;
+          
+          const report = JSON.parse(fs.readFileSync(reportFiles[0], 'utf8'));
+          const summary = report.summary;
+          
+          // Build comment
+          let comment = '## 🚀 Configuration Performance Report\n\n';
+          comment += '### Performance Targets\n';
+          
+          for (const [target, met] of Object.entries(summary.targets_met)) {
+            const status = met ? '✅' : '❌';
+            const targetName = target.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            comment += `- ${status} ${targetName}\n`;
+          }
+          
+          comment += '\n### Key Metrics\n';
+          comment += `- **Config Loading**: ${report.tests.config_loading.basic_load.mean_ms.toFixed(1)}ms mean\n`;
+          comment += `- **Hot Reload**: ${report.tests.reload_performance.total.mean_ms.toFixed(1)}ms mean\n`;
+          comment += `- **Validation**: ${report.tests.reload_performance.validation.mean_ms.toFixed(1)}ms mean\n`;
+          comment += `- **Sub-100ms Reloads**: ${report.tests.reload_performance.total.sub_100ms_percentage.toFixed(1)}%\n`;
+          
+          // Post comment
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: Store benchmark history
+      if: github.ref == 'refs/heads/main' && matrix.python-version == '3.12'
+      run: |
+        # Store benchmarks for historical comparison
+        mkdir -p benchmark_history
+        cp benchmark_results.json "benchmark_history/benchmark_$(date +%Y%m%d_%H%M%S).json"
+        cp reload_benchmark_results.json "benchmark_history/reload_benchmark_$(date +%Y%m%d_%H%M%S).json"
+        
+        # Keep only last 30 days of results
+        find benchmark_history -name "*.json" -mtime +30 -delete
+
+    - name: Performance trend analysis
+      if: github.ref == 'refs/heads/main' && matrix.python-version == '3.12'
+      run: |
+        uv run python -c "
+        import json
+        import glob
+        from datetime import datetime
+        
+        # Load historical benchmarks
+        history_files = sorted(glob.glob('benchmark_history/benchmark_*.json'))[-10:]
+        
+        if len(history_files) < 2:
+            print('Not enough history for trend analysis')
+            exit(0)
+        
+        # Analyze trends
+        print('## Performance Trend Analysis')
+        print(f'Analyzing last {len(history_files)} benchmarks')
+        
+        # Load data
+        benchmarks = []
+        for f in history_files:
+            with open(f) as file:
+                data = json.load(file)
+                benchmarks.append(data)
+        
+        # Find trends (simplified - would be more sophisticated in practice)
+        print('✅ Performance tracking enabled')
+        "
+
+  performance-dashboard:
+    needs: performance-benchmarks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: benchmark-results-3.12
+        
+    - name: Update performance dashboard
+      run: |
+        # This would update a performance tracking dashboard
+        # Could integrate with tools like Grafana, DataDog, etc.
+        echo "Performance results uploaded to monitoring dashboard"

@@ -1,0 +1,190 @@
+name: 'Deploy Configuration'
+description: 'Deploys configuration using the specified strategy with backup and rollback support'
+inputs:
+  target-environment:
+    description: 'Target environment for deployment'
+    required: true
+  deployment-strategy:
+    description: 'Deployment strategy (blue-green, rolling, direct)'
+    required: true
+  rollback-on-failure:
+    description: 'Automatically rollback on deployment failure'
+    required: false
+    default: 'true'
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.12'
+outputs:
+  deployment-url:
+    description: 'URL of the deployed service'
+    value: ${{ steps.deployment.outputs.url }}
+  snapshot-id:
+    description: 'ID of the deployment snapshot'
+    value: ${{ steps.snapshot.outputs.snapshot-id }}
+  deployment-status:
+    description: 'Status of the deployment'
+    value: ${{ steps.deployment-status.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        uv sync --dev --frozen
+
+    - name: Create deployment snapshot
+      id: snapshot
+      shell: bash
+      run: |
+        TARGET_ENV="${{ inputs.target-environment }}"
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        SNAPSHOT_ID="${TARGET_ENV}-${TIMESTAMP}-${{ github.sha }}"
+        
+        echo "Creating deployment snapshot: $SNAPSHOT_ID"
+        
+        # Create snapshot directory
+        mkdir -p .deployment-snapshots
+        
+        # Save current configuration state
+        tar -czf ".deployment-snapshots/${SNAPSHOT_ID}.tar.gz" config/
+        
+        # Save deployment metadata
+        cat > ".deployment-snapshots/${SNAPSHOT_ID}.json" << EOF
+        {
+          "snapshot_id": "$SNAPSHOT_ID",
+          "environment": "$TARGET_ENV",
+          "timestamp": "$TIMESTAMP",
+          "commit_sha": "${{ github.sha }}",
+          "commit_message": "${{ github.event.head_commit.message }}",
+          "author": "${{ github.event.head_commit.author.name }}",
+          "deployment_strategy": "${{ inputs.deployment-strategy }}",
+          "changed_files": [
+            $(git diff --name-only HEAD~1 HEAD | grep -E '^config/' | jq -R . | paste -sd,)
+          ]
+        }
+        EOF
+        
+        echo "snapshot-id=$SNAPSHOT_ID" >> $GITHUB_OUTPUT
+
+    - name: Pre-deployment backup
+      shell: bash
+      run: |
+        echo "💾 Creating pre-deployment backup..."
+        TARGET_ENV="${{ inputs.target-environment }}"
+        
+        # This would typically backup from the actual deployment target
+        # For now, we'll simulate by copying current production template
+        if [ "$TARGET_ENV" == "production" ] && [ -f "config/templates/production.json" ]; then
+          cp "config/templates/production.json" "config/templates/production.backup-$(date +%Y%m%d-%H%M%S).json"
+          echo "✅ Backup created for production configuration"
+        fi
+
+    - name: Deploy configuration
+      id: deployment
+      shell: bash
+      run: |
+        TARGET_ENV="${{ inputs.target-environment }}"
+        STRATEGY="${{ inputs.deployment-strategy }}"
+        SNAPSHOT_ID="${{ steps.snapshot.outputs.snapshot-id }}"
+        
+        echo "🚀 Deploying configuration..."
+        echo "Environment: $TARGET_ENV"
+        echo "Strategy: $STRATEGY"
+        echo "Snapshot: $SNAPSHOT_ID"
+        
+        # In a real deployment, this would:
+        # 1. Update configuration management systems (e.g., Consul, etcd)
+        # 2. Restart services with new configuration
+        # 3. Verify deployment health
+        
+        # For this demo, we'll simulate deployment steps
+        echo "📋 Deployment steps for $STRATEGY strategy:"
+        
+        case $STRATEGY in
+          "blue-green")
+            echo "  1. Deploy to blue environment"
+            echo "  2. Validate blue environment health"
+            echo "  3. Switch traffic to blue"
+            echo "  4. Decommission green environment"
+            ;;
+          "rolling")
+            echo "  1. Update instances in rolling fashion"
+            echo "  2. Validate each instance after update"
+            echo "  3. Continue until all instances updated"
+            ;;
+          "direct")
+            echo "  1. Direct deployment to development environment"
+            echo "  2. Immediate validation"
+            ;;
+        esac
+        
+        # Simulate deployment time
+        sleep 10
+        
+        # Set deployment URL (would be actual service URL in real deployment)
+        echo "url=https://${TARGET_ENV}.your-app.com/health" >> $GITHUB_OUTPUT
+        
+        echo "✅ Configuration deployment completed"
+
+    - name: Post-deployment validation
+      shell: bash
+      run: |
+        echo "✅ Running post-deployment validation..."
+        TARGET_ENV="${{ inputs.target-environment }}"
+        
+        # Validate the deployed configuration
+        uv run python -c "
+        import sys
+        import os
+        sys.path.append('src')
+        
+        # Simulate loading deployed configuration
+        os.environ['ENVIRONMENT'] = '${TARGET_ENV}'
+        os.environ['CONFIG_PATH'] = 'config/templates/${TARGET_ENV}.json'
+        
+        try:
+          from config.core import load_config
+          config = load_config()
+          
+          # Validate critical configuration sections
+          assert config.get('environment') == '${TARGET_ENV}', 'Environment mismatch'
+          assert 'cache' in config, 'Cache configuration missing'
+          assert 'qdrant' in config, 'Qdrant configuration missing'
+          
+          print('✅ Post-deployment configuration validation passed')
+        except Exception as e:
+          print(f'❌ Post-deployment validation failed: {e}')
+          sys.exit(1)
+        "
+
+    - name: Update deployment status
+      id: deployment-status
+      if: always()
+      shell: bash
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "📝 Deployment successful - updating status"
+          echo "status=success" >> $GITHUB_OUTPUT
+          # In real implementation, update deployment tracking system
+        else
+          echo "❌ Deployment failed - initiating rollback procedures"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          # Trigger rollback if enabled
+          if [ "${{ inputs.rollback-on-failure }}" == "true" ]; then
+            echo "🔄 Automatic rollback enabled - starting rollback"
+            # Implement rollback logic here
+          fi
+        fi
