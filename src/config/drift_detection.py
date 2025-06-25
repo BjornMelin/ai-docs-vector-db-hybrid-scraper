@@ -5,9 +5,11 @@ anomaly detection infrastructure and observability systems to monitor configurat
 changes, detect unauthorized modifications, and alert on compliance violations.
 """
 
+import asyncio
 import hashlib
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -118,7 +120,9 @@ class DriftDetectionConfig(BaseModel):
 
     # Auto-remediation
     enable_auto_remediation: bool = Field(default=False)
-    auto_remediation_severity_threshold: DriftSeverity = Field(default=DriftSeverity.HIGH)
+    auto_remediation_severity_threshold: DriftSeverity = Field(
+        default=DriftSeverity.HIGH
+    )
 
 
 class ConfigDriftDetector:
@@ -126,7 +130,7 @@ class ConfigDriftDetector:
 
     def __init__(self, config: DriftDetectionConfig):
         """Initialize configuration drift detector.
-        
+
         Args:
             config: Drift detection configuration
         """
@@ -134,6 +138,14 @@ class ConfigDriftDetector:
         self._snapshots: dict[str, list[ConfigSnapshot]] = {}
         self._drift_events: list[DriftEvent] = []
         self._last_alert_times: dict[str, datetime] = {}
+
+        # Thread safety locks
+        self._snapshots_lock = threading.RLock()  # Re-entrant lock for snapshots
+        self._events_lock = threading.RLock()  # Re-entrant lock for drift events
+        self._alerts_lock = threading.RLock()  # Re-entrant lock for alert tracking
+
+        # Async lock for async operations (if needed in future)
+        self._async_lock = asyncio.Lock()
 
         # Initialize integrations with existing infrastructure
         self._setup_integrations()
@@ -170,44 +182,44 @@ class ConfigDriftDetector:
         # Create drift detection metrics
         self.drift_counter = self.metrics_bridge.create_custom_counter(
             "config_drift_events_total",
-            "Total number of configuration drift events detected"
+            "Total number of configuration drift events detected",
         )
 
         self.drift_severity_gauge = self.metrics_bridge.create_custom_gauge(
             "config_drift_severity_current",
-            "Current maximum configuration drift severity"
+            "Current maximum configuration drift severity",
         )
 
         self.snapshot_age_gauge = self.metrics_bridge.create_custom_gauge(
             "config_snapshot_age_seconds",
-            "Age of last configuration snapshot in seconds"
+            "Age of last configuration snapshot in seconds",
         )
 
         self.comparison_duration = self.metrics_bridge.create_custom_histogram(
             "config_comparison_duration_ms",
             "Time taken to compare configuration snapshots",
-            "ms"
+            "ms",
         )
 
     def _calculate_config_hash(self, config_data: dict[str, Any]) -> str:
         """Calculate deterministic hash of configuration data.
-        
+
         Args:
             config_data: Configuration data to hash
-            
+
         Returns:
             SHA256 hash of configuration
         """
         # Sort keys to ensure deterministic hashing
-        config_json = json.dumps(config_data, sort_keys=True, separators=(',', ':'))
+        config_json = json.dumps(config_data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(config_json.encode()).hexdigest()
 
     def _load_current_config(self, source: str) -> dict[str, Any]:
         """Load current configuration from source.
-        
+
         Args:
             source: Configuration source (file path, etc.)
-            
+
         Returns:
             Current configuration data
         """
@@ -217,21 +229,22 @@ class ConfigDriftDetector:
             return {}
 
         try:
-            if source_path.suffix in ['.json']:
+            if source_path.suffix in [".json"]:
                 with open(source_path) as f:
                     return json.load(f)
-            elif source_path.suffix in ['.yaml', '.yml']:
+            elif source_path.suffix in [".yaml", ".yml"]:
                 import yaml
+
                 with open(source_path) as f:
                     return yaml.safe_load(f) or {}
-            elif source_path.suffix in ['.env']:
+            elif source_path.suffix in [".env"]:
                 # Parse environment file
                 config = {}
                 with open(source_path) as f:
                     for line in f:
                         line = line.strip()
-                        if line and not line.startswith('#') and '=' in line:
-                            key, value = line.split('=', 1)
+                        if line and not line.startswith("#") and "=" in line:
+                            key, value = line.split("=", 1)
                             config[key.strip()] = value.strip()
                 return config
             else:
@@ -248,10 +261,10 @@ class ConfigDriftDetector:
 
     def take_snapshot(self, source: str) -> ConfigSnapshot:
         """Take a configuration snapshot.
-        
+
         Args:
             source: Configuration source identifier
-            
+
         Returns:
             Configuration snapshot
         """
@@ -273,13 +286,14 @@ class ConfigDriftDetector:
                 metadata={
                     "snapshot_method": "file_based",
                     "data_size": len(json.dumps(config_data)),
-                }
+                },
             )
 
-            # Store snapshot
-            if source not in self._snapshots:
-                self._snapshots[source] = []
-            self._snapshots[source].append(snapshot)
+            # Store snapshot with thread safety
+            with self._snapshots_lock:
+                if source not in self._snapshots:
+                    self._snapshots[source] = []
+                self._snapshots[source].append(snapshot)
 
             # Clean up old snapshots
             self._cleanup_old_snapshots(source)
@@ -294,7 +308,9 @@ class ConfigDriftDetector:
                     with self.performance_monitor.monitor_operation(
                         "config_snapshot", category="config_drift"
                     ) as perf_data:
-                        perf_data["custom_metrics"]["snapshot_size"] = len(json.dumps(config_data))
+                        perf_data["custom_metrics"]["snapshot_size"] = len(
+                            json.dumps(config_data)
+                        )
                         perf_data["custom_metrics"]["source"] = source
 
             logger.debug(f"Created config snapshot for {source}: {config_hash[:8]}")
@@ -306,33 +322,34 @@ class ConfigDriftDetector:
 
     def compare_snapshots(self, source: str) -> list[DriftEvent]:
         """Compare recent snapshots to detect drift.
-        
+
         Args:
             source: Configuration source to compare
-            
+
         Returns:
             List of detected drift events
         """
-        if source not in self._snapshots or len(self._snapshots[source]) < 2:
-            return []
+        # Thread-safe snapshot access
+        with self._snapshots_lock:
+            if source not in self._snapshots or len(self._snapshots[source]) < 2:
+                return []
+
+            # Make copies of snapshots to avoid holding lock during comparison
+            snapshots = self._snapshots[source].copy()
+            current = snapshots[-1]
+            previous = snapshots[-2]
 
         start_time = time.time()
         events = []
 
         try:
-            snapshots = self._snapshots[source]
-            current = snapshots[-1]
-            previous = snapshots[-2]
-
             # Quick hash comparison
             if current.config_hash == previous.config_hash:
                 return []
 
             # Detailed comparison for drift analysis
             drift_details = self._analyze_config_changes(
-                previous.config_data,
-                current.config_data,
-                source
+                previous.config_data, current.config_data, source
             )
 
             # Create drift events
@@ -343,20 +360,25 @@ class ConfigDriftDetector:
                     drift_type=self._classify_drift_type(change, source),
                     severity=self._calculate_drift_severity(change, source),
                     source=source,
-                    description=change['description'],
-                    old_value=change['old_value'],
-                    new_value=change['new_value'],
+                    description=change["description"],
+                    old_value=change["old_value"],
+                    new_value=change["new_value"],
                     diff_details=change,
                     auto_remediable=self._is_auto_remediable(change),
-                    remediation_suggestion=self._generate_remediation_suggestion(change),
+                    remediation_suggestion=self._generate_remediation_suggestion(
+                        change
+                    ),
                     metadata={
                         "snapshot_comparison": True,
-                        "change_path": change['path'],
-                        "change_type": change['type'],
-                    }
+                        "change_path": change["path"],
+                        "change_type": change["type"],
+                    },
                 )
                 events.append(drift_event)
-                self._drift_events.append(drift_event)
+
+                # Thread-safe event storage
+                with self._events_lock:
+                    self._drift_events.append(drift_event)
 
             # Record metrics
             if self.metrics_bridge and events:
@@ -364,16 +386,19 @@ class ConfigDriftDetector:
                 self.comparison_duration.record(duration_ms, {"source": source})
 
                 for event in events:
-                    self.drift_counter.add(1, {
-                        "source": source,
-                        "drift_type": event.drift_type.value,
-                        "severity": event.severity.value,
-                    })
+                    self.drift_counter.add(
+                        1,
+                        {
+                            "source": source,
+                            "drift_type": event.drift_type.value,
+                            "severity": event.severity.value,
+                        },
+                    )
 
                 # Update severity gauge with highest severity
                 max_severity = max(
                     (self._severity_to_int(event.severity) for event in events),
-                    default=0
+                    default=0,
                 )
                 self.drift_severity_gauge.set(max_severity, {"source": source})
 
@@ -385,18 +410,15 @@ class ConfigDriftDetector:
             return []
 
     def _analyze_config_changes(
-        self,
-        old_config: dict[str, Any],
-        new_config: dict[str, Any],
-        source: str
+        self, old_config: dict[str, Any], new_config: dict[str, Any], source: str
     ) -> list[dict[str, Any]]:
         """Analyze configuration changes between two configurations.
-        
+
         Args:
             old_config: Previous configuration
             new_config: Current configuration
             source: Configuration source
-            
+
         Returns:
             List of detected changes
         """
@@ -404,98 +426,122 @@ class ConfigDriftDetector:
 
         # Find added keys
         for key in new_config.keys() - old_config.keys():
-            changes.append({
-                'type': 'added',
-                'path': key,
-                'old_value': None,
-                'new_value': new_config[key],
-                'description': f"New configuration key '{key}' added",
-            })
+            changes.append(
+                {
+                    "type": "added",
+                    "path": key,
+                    "old_value": None,
+                    "new_value": new_config[key],
+                    "description": f"New configuration key '{key}' added",
+                }
+            )
 
         # Find removed keys
         for key in old_config.keys() - new_config.keys():
-            changes.append({
-                'type': 'removed',
-                'path': key,
-                'old_value': old_config[key],
-                'new_value': None,
-                'description': f"Configuration key '{key}' removed",
-            })
+            changes.append(
+                {
+                    "type": "removed",
+                    "path": key,
+                    "old_value": old_config[key],
+                    "new_value": None,
+                    "description": f"Configuration key '{key}' removed",
+                }
+            )
 
         # Find modified keys
         for key in old_config.keys() & new_config.keys():
             if old_config[key] != new_config[key]:
-                changes.append({
-                    'type': 'modified',
-                    'path': key,
-                    'old_value': old_config[key],
-                    'new_value': new_config[key],
-                    'description': f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
-                })
+                changes.append(
+                    {
+                        "type": "modified",
+                        "path": key,
+                        "old_value": old_config[key],
+                        "new_value": new_config[key],
+                        "description": f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
+                    }
+                )
 
         return changes
 
     def _classify_drift_type(self, change: dict[str, Any], source: str) -> DriftType:
         """Classify the type of configuration drift.
-        
+
         Args:
             change: Configuration change details
             source: Configuration source
-            
+
         Returns:
             Drift type classification
         """
-        change_type = change.get('type', '')
-        path = change.get('path', '')
+        change_type = change.get("type", "")
+        path = change.get("path", "")
 
         # Security-related changes
-        if any(security_key in path.lower() for security_key in [
-            'password', 'key', 'secret', 'token', 'auth', 'security', 'ssl', 'tls'
-        ]):
+        if any(
+            security_key in path.lower()
+            for security_key in [
+                "password",
+                "key",
+                "secret",
+                "token",
+                "auth",
+                "security",
+                "ssl",
+                "tls",
+            ]
+        ):
             return DriftType.SECURITY_DEGRADATION
 
         # Environment-specific changes
-        if any(env_key in path.lower() for env_key in [
-            'env', 'environment', 'stage', 'tier', 'debug'
-        ]):
+        if any(
+            env_key in path.lower()
+            for env_key in ["env", "environment", "stage", "tier", "debug"]
+        ):
             return DriftType.ENVIRONMENT_MISMATCH
 
         # Schema violations (unexpected structure changes)
-        if change_type in ['added', 'removed'] and 'required' in str(change.get('old_value', '')):
+        if change_type in ["added", "removed"] and "required" in str(
+            change.get("old_value", "")
+        ):
             return DriftType.SCHEMA_VIOLATION
 
         # Default to manual change
         return DriftType.MANUAL_CHANGE
 
-    def _calculate_drift_severity(self, change: dict[str, Any], source: str) -> DriftSeverity:
+    def _calculate_drift_severity(
+        self, change: dict[str, Any], source: str
+    ) -> DriftSeverity:
         """Calculate severity of configuration drift.
-        
+
         Args:
             change: Configuration change details
             source: Configuration source
-            
+
         Returns:
             Drift severity level
         """
-        change_type = change.get('type', '')
-        path = change.get('path', '').lower()
+        change_type = change.get("type", "")
+        path = change.get("path", "").lower()
 
         # Critical severity triggers
-        if any(critical_key in path for critical_key in [
-            'password', 'secret', 'private_key', 'token'
-        ]):
+        if any(
+            critical_key in path
+            for critical_key in ["password", "secret", "private_key", "token"]
+        ):
             return DriftSeverity.CRITICAL
 
         # High severity triggers
-        if any(high_key in path for high_key in [
-            'security', 'auth', 'ssl', 'database_url', 'api_key'
-        ]):
+        if any(
+            high_key in path
+            for high_key in ["security", "auth", "ssl", "database_url", "api_key"]
+        ):
             return DriftSeverity.HIGH
 
         # Medium severity triggers
-        if change_type in ['removed'] or any(medium_key in path for medium_key in [
-            'url', 'endpoint', 'host', 'port', 'timeout'
-        ]):
+        if change_type in ["removed"] or any(
+            medium_key in path
+            for medium_key in ["url", "endpoint", "host", "port", "timeout"]
+        ):
             return DriftSeverity.MEDIUM
 
         # Default to low severity
@@ -503,57 +549,60 @@ class ConfigDriftDetector:
 
     def _is_auto_remediable(self, change: dict[str, Any]) -> bool:
         """Determine if a configuration change can be automatically remediated.
-        
+
         Args:
             change: Configuration change details
-            
+
         Returns:
             True if auto-remediable
         """
         # Simple heuristics for auto-remediation
-        change_type = change.get('type', '')
-        path = change.get('path', '').lower()
+        change_type = change.get("type", "")
+        path = change.get("path", "").lower()
 
         # Never auto-remediate security changes
-        if any(security_key in path for security_key in [
-            'password', 'key', 'secret', 'token', 'auth'
-        ]):
+        if any(
+            security_key in path
+            for security_key in ["password", "key", "secret", "token", "auth"]
+        ):
             return False
 
         # Auto-remediate simple value reversions
-        if change_type == 'modified' and isinstance(change.get('old_value'), (str, int, bool)):
+        if change_type == "modified" and isinstance(
+            change.get("old_value"), (str, int, bool)
+        ):
             return True
 
         return False
 
     def _generate_remediation_suggestion(self, change: dict[str, Any]) -> str | None:
         """Generate remediation suggestion for configuration drift.
-        
+
         Args:
             change: Configuration change details
-            
+
         Returns:
             Remediation suggestion or None
         """
-        change_type = change.get('type', '')
-        path = change.get('path', '')
-        old_value = change.get('old_value')
+        change_type = change.get("type", "")
+        path = change.get("path", "")
+        old_value = change.get("old_value")
 
-        if change_type == 'modified' and old_value is not None:
+        if change_type == "modified" and old_value is not None:
             return f"Revert '{path}' to previous value: {old_value}"
-        elif change_type == 'added':
+        elif change_type == "added":
             return f"Remove newly added key: '{path}'"
-        elif change_type == 'removed':
+        elif change_type == "removed":
             return f"Restore removed key: '{path}'"
 
         return "Manual review and remediation required"
 
     def _severity_to_int(self, severity: DriftSeverity) -> int:
         """Convert severity enum to integer for comparison.
-        
+
         Args:
             severity: Drift severity
-            
+
         Returns:
             Integer representation
         """
@@ -566,45 +615,51 @@ class ConfigDriftDetector:
 
     def _cleanup_old_snapshots(self, source: str) -> None:
         """Clean up old snapshots based on retention policy.
-        
+
         Args:
             source: Configuration source
         """
-        if source not in self._snapshots:
-            return
+        with self._snapshots_lock:
+            if source not in self._snapshots:
+                return
 
-        cutoff_time = datetime.now() - timedelta(days=self.config.snapshot_retention_days)
-        original_count = len(self._snapshots[source])
+            cutoff_time = datetime.now() - timedelta(
+                days=self.config.snapshot_retention_days
+            )
+            original_count = len(self._snapshots[source])
 
-        self._snapshots[source] = [
-            snapshot for snapshot in self._snapshots[source]
-            if snapshot.timestamp > cutoff_time
-        ]
+            self._snapshots[source] = [
+                snapshot
+                for snapshot in self._snapshots[source]
+                if snapshot.timestamp > cutoff_time
+            ]
 
-        cleaned_count = original_count - len(self._snapshots[source])
-        if cleaned_count > 0:
-            logger.debug(f"Cleaned up {cleaned_count} old snapshots for {source}")
+            cleaned_count = original_count - len(self._snapshots[source])
+            if cleaned_count > 0:
+                logger.debug(f"Cleaned up {cleaned_count} old snapshots for {source}")
 
     def _cleanup_old_events(self) -> None:
         """Clean up old drift events based on retention policy."""
-        cutoff_time = datetime.now() - timedelta(days=self.config.events_retention_days)
-        original_count = len(self._drift_events)
+        with self._events_lock:
+            cutoff_time = datetime.now() - timedelta(
+                days=self.config.events_retention_days
+            )
+            original_count = len(self._drift_events)
 
-        self._drift_events = [
-            event for event in self._drift_events
-            if event.timestamp > cutoff_time
-        ]
+            self._drift_events = [
+                event for event in self._drift_events if event.timestamp > cutoff_time
+            ]
 
-        cleaned_count = original_count - len(self._drift_events)
-        if cleaned_count > 0:
-            logger.debug(f"Cleaned up {cleaned_count} old drift events")
+            cleaned_count = original_count - len(self._drift_events)
+            if cleaned_count > 0:
+                logger.debug(f"Cleaned up {cleaned_count} old drift events")
 
     def should_alert(self, event: DriftEvent) -> bool:
         """Determine if an alert should be sent for a drift event.
-        
+
         Args:
             event: Drift event to evaluate
-            
+
         Returns:
             True if alert should be sent
         """
@@ -612,27 +667,29 @@ class ConfigDriftDetector:
         if event.severity not in self.config.alert_on_severity:
             return False
 
-        # Check rate limiting
+        # Check rate limiting with thread safety
         alert_key = f"{event.source}_{event.drift_type.value}"
         now = datetime.now()
 
-        if alert_key in self._last_alert_times:
-            time_since_last = now - self._last_alert_times[alert_key]
-            if time_since_last < timedelta(hours=1):
-                # Count recent alerts
-                recent_alerts = sum(
-                    1 for alert_time in self._last_alert_times.values()
-                    if now - alert_time < timedelta(hours=1)
-                )
-                if recent_alerts >= self.config.max_alerts_per_hour:
-                    return False
+        with self._alerts_lock:
+            if alert_key in self._last_alert_times:
+                time_since_last = now - self._last_alert_times[alert_key]
+                if time_since_last < timedelta(hours=1):
+                    # Count recent alerts
+                    recent_alerts = sum(
+                        1
+                        for alert_time in self._last_alert_times.values()
+                        if now - alert_time < timedelta(hours=1)
+                    )
+                    if recent_alerts >= self.config.max_alerts_per_hour:
+                        return False
 
-        self._last_alert_times[alert_key] = now
-        return True
+            self._last_alert_times[alert_key] = now
+            return True
 
     def send_alert(self, event: DriftEvent) -> None:
         """Send alert for configuration drift event.
-        
+
         Args:
             event: Drift event to alert on
         """
@@ -654,18 +711,20 @@ class ConfigDriftDetector:
         # Record alert metrics
         if self.metrics_bridge:
             alert_counter = self.metrics_bridge.create_custom_counter(
-                "config_drift_alerts_total",
-                "Total configuration drift alerts sent"
+                "config_drift_alerts_total", "Total configuration drift alerts sent"
             )
-            alert_counter.add(1, {
-                "source": event.source,
-                "drift_type": event.drift_type.value,
-                "severity": event.severity.value,
-            })
+            alert_counter.add(
+                1,
+                {
+                    "source": event.source,
+                    "drift_type": event.drift_type.value,
+                    "severity": event.severity.value,
+                },
+            )
 
     def run_detection_cycle(self) -> list[DriftEvent]:
         """Run a complete drift detection cycle for all monitored sources.
-        
+
         Returns:
             List of all detected drift events
         """
@@ -699,14 +758,17 @@ class ConfigDriftDetector:
 
     def get_drift_summary(self) -> dict[str, Any]:
         """Get summary of configuration drift status.
-        
+
         Returns:
             Drift status summary
         """
-        recent_events = [
-            event for event in self._drift_events
-            if event.timestamp > datetime.now() - timedelta(hours=24)
-        ]
+        # Thread-safe access to drift events
+        with self._events_lock:
+            recent_events = [
+                event
+                for event in self._drift_events
+                if event.timestamp > datetime.now() - timedelta(hours=24)
+            ]
 
         severity_counts = {}
         for severity in DriftSeverity:
@@ -714,18 +776,23 @@ class ConfigDriftDetector:
                 1 for event in recent_events if event.severity == severity
             )
 
+        # Thread-safe access to snapshots
+        with self._snapshots_lock:
+            snapshots_count = sum(
+                len(snapshots) for snapshots in self._snapshots.values()
+            )
+
         return {
             "detection_enabled": self.config.enabled,
             "monitored_sources": len(self.config.monitored_paths),
-            "snapshots_stored": sum(len(snapshots) for snapshots in self._snapshots.values()),
+            "snapshots_stored": snapshots_count,
             "recent_events_24h": len(recent_events),
             "severity_breakdown": severity_counts,
             "auto_remediable_events": sum(
                 1 for event in recent_events if event.auto_remediable
             ),
             "last_detection_run": max(
-                (event.timestamp for event in recent_events),
-                default=None
+                (event.timestamp for event in recent_events), default=None
             ),
         }
 
@@ -736,10 +803,10 @@ _drift_detector: ConfigDriftDetector | None = None
 
 def initialize_drift_detector(config: DriftDetectionConfig) -> ConfigDriftDetector:
     """Initialize global configuration drift detector.
-    
+
     Args:
         config: Drift detection configuration
-        
+
     Returns:
         Initialized drift detector
     """
@@ -750,10 +817,10 @@ def initialize_drift_detector(config: DriftDetectionConfig) -> ConfigDriftDetect
 
 def get_drift_detector() -> ConfigDriftDetector:
     """Get global drift detector instance.
-    
+
     Returns:
         Global drift detector
-        
+
     Raises:
         RuntimeError: If detector not initialized
     """

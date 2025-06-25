@@ -33,7 +33,7 @@ class ConfigurationLifecycleManager:
             app: FastAPI application instance
         """
         self.app = app
-        self.reloader: Optional[ConfigReloader] = None
+        self.reloader: ConfigReloader | None = None
         self.service_callbacks: List[Callable[[Config, Config], bool]] = []
 
         # Setup lifecycle events
@@ -301,7 +301,7 @@ class ConfigurationLifecycleManager:
 
 
 # Global lifecycle manager instance
-_lifecycle_manager: Optional[ConfigurationLifecycleManager] = None
+_lifecycle_manager: ConfigurationLifecycleManager | None = None
 
 
 def setup_configuration_lifecycle(app: FastAPI) -> ConfigurationLifecycleManager:
@@ -318,7 +318,7 @@ def setup_configuration_lifecycle(app: FastAPI) -> ConfigurationLifecycleManager
     return _lifecycle_manager
 
 
-def get_lifecycle_manager() -> Optional[ConfigurationLifecycleManager]:
+def get_lifecycle_manager() -> ConfigurationLifecycleManager | None:
     """Get the global configuration lifecycle manager."""
     return _lifecycle_manager
 

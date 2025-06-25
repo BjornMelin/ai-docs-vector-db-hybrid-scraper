@@ -66,12 +66,12 @@ class ReloadOperation:
     trigger: ReloadTrigger = ReloadTrigger.MANUAL
     status: ReloadStatus = ReloadStatus.PENDING
     start_time: float = field(default_factory=time.time)
-    end_time: Optional[float] = None
+    end_time: float | None = None
 
     # Configuration tracking
-    previous_config_hash: Optional[str] = None
-    new_config_hash: Optional[str] = None
-    config_source: Optional[str] = None
+    previous_config_hash: str | None = None
+    new_config_hash: str | None = None
+    config_source: str | None = None
 
     # Validation results
     validation_errors: list[str] = field(default_factory=list)
@@ -79,7 +79,7 @@ class ReloadOperation:
 
     # Operation results
     success: bool = False
-    error_message: Optional[str] = None
+    error_message: str | None = None
     changes_applied: list[str] = field(default_factory=list)
     services_notified: list[str] = field(default_factory=list)
 
@@ -88,7 +88,7 @@ class ReloadOperation:
     apply_duration_ms: float = 0.0
     total_duration_ms: float = 0.0
 
-    def complete(self, success: bool, error_message: Optional[str] = None) -> None:
+    def complete(self, success: bool, error_message: str | None = None) -> None:
         """Mark the operation as complete."""
         self.end_time = time.time()
         self.success = success
@@ -123,7 +123,7 @@ class ConfigReloader:
 
     def __init__(
         self,
-        config_source: Optional[Path] = None,
+        config_source: Path | None = None,
         backup_count: int = 5,
         validation_timeout: float = 30.0,
         enable_signal_handler: bool = True,
@@ -145,8 +145,8 @@ class ConfigReloader:
         self.signal_number = signal_number
 
         # Current configuration state
-        self._current_config: Optional[Config] = None
-        self._config_hash: Optional[str] = None
+        self._current_config: Config | None = None
+        self._config_hash: str | None = None
         self._reload_lock = Lock()
 
         # Configuration backups for rollback
@@ -160,13 +160,16 @@ class ConfigReloader:
         self._max_history = 100
 
         # File watching
-        self._file_watcher: Optional[asyncio.Task] = None
+        self._file_watcher: asyncio.Task | None = None
         self._file_watch_enabled = False
 
         # Thread pool for blocking operations
         self._executor = ThreadPoolExecutor(
             max_workers=2, thread_name_prefix="config-reload"
         )
+
+        # Track original signal handler for cleanup
+        self._original_signal_handler = None
 
         # Setup signal handler
         if self.enable_signal_handler and hasattr(signal, "SIGHUP"):
@@ -187,7 +190,10 @@ class ConfigReloader:
             )
 
         try:
-            signal.signal(self.signal_number, signal_handler)
+            # Store original handler for cleanup
+            self._original_signal_handler = signal.signal(
+                self.signal_number, signal_handler
+            )
             logger.info(
                 f"Configuration reload signal handler setup for signal {self.signal_number}"
             )
@@ -272,7 +278,7 @@ class ConfigReloader:
     async def reload_config(
         self,
         trigger: ReloadTrigger = ReloadTrigger.MANUAL,
-        config_source: Optional[Path] = None,
+        config_source: Path | None = None,
         force: bool = False,
     ) -> ReloadOperation:
         """Reload configuration with zero-downtime guarantees.
@@ -315,7 +321,7 @@ class ConfigReloader:
     async def _perform_reload(
         self,
         operation: ReloadOperation,
-        config_source: Optional[Path],
+        config_source: Path | None,
         force: bool,
         _span,
     ) -> ReloadOperation:
@@ -474,7 +480,7 @@ class ConfigReloader:
 
     async def _apply_config_changes(
         self,
-        old_config: Optional[Config],
+        old_config: Config | None,
         new_config: Config,
         operation: ReloadOperation,
     ) -> bool:
@@ -535,9 +541,7 @@ class ConfigReloader:
         # Consider success if majority of listeners succeeded
         return success_count >= (total_listeners * 0.5) if total_listeners > 0 else True
 
-    async def rollback_config(
-        self, target_hash: Optional[str] = None
-    ) -> ReloadOperation:
+    async def rollback_config(self, target_hash: str | None = None) -> ReloadOperation:
         """Rollback to a previous configuration.
 
         Args:
@@ -676,13 +680,32 @@ class ConfigReloader:
 
     async def shutdown(self) -> None:
         """Shutdown the configuration reloader."""
+        # Disable file watching
         await self.disable_file_watching()
+
+        # Restore original signal handler
+        if self._original_signal_handler is not None and self.enable_signal_handler:
+            try:
+                signal.signal(self.signal_number, self._original_signal_handler)
+                logger.info(
+                    f"Restored original signal handler for signal {self.signal_number}"
+                )
+            except (OSError, ValueError) as e:
+                logger.warning(f"Failed to restore signal handler: {e}")
+
+        # Shutdown thread pool executor
         self._executor.shutdown(wait=True)
+
+        # Clear listeners and history to free memory
+        self._change_listeners.clear()
+        self._reload_history.clear()
+        self._config_backups.clear()
+
         logger.info("Configuration reloader shutdown completed")
 
 
 # Global configuration reloader instance
-_config_reloader: Optional[ConfigReloader] = None
+_config_reloader: ConfigReloader | None = None
 
 
 def get_config_reloader() -> ConfigReloader:

@@ -5,6 +5,13 @@ Provides all essential configuration without over-engineering.
 """
 
 # Core configuration
+# Configuration management
+from .config_manager import (
+    ConfigManager,
+    create_and_load_config_async,
+    get_config_manager,
+    set_config_manager,
+)
 from .core import (
     BrowserUseConfig,
     CacheConfig,
@@ -43,7 +50,6 @@ from .core import (
 #     load_instrumented_config_from_file,
 #     load_instrumented_config_from_file_async,
 # )
-
 # Deployment tier configuration
 from .deployment_tiers import (
     DeploymentTier,
@@ -76,6 +82,23 @@ from .enums import (
     VectorType,
 )
 
+# Enhanced error handling
+from .error_handling import (
+    ConfigError,
+    ConfigFileWatchError,
+    ConfigLoadError,
+    ConfigReloadError,
+    ConfigValidationError,
+    ErrorContext,
+    GracefulDegradationHandler,
+    RetryableConfigOperation,
+    SafeConfigLoader,
+    async_error_context,
+    get_degradation_handler,
+    handle_validation_error,
+    retry_config_operation,
+)
+
 
 # Legacy aliases for backward compatibility
 UnifiedConfig = Config
@@ -89,6 +112,11 @@ __all__: list[str] = [
     "ChunkingStrategy",
     "CircuitBreakerConfig",
     "Config",
+    "ConfigError",
+    "ConfigFileWatchError",
+    "ConfigLoadError",
+    "ConfigReloadError",
+    "ConfigValidationError",
     "Crawl4AIConfig",
     "CrawlProvider",
     "DeploymentConfig",
@@ -98,10 +126,13 @@ __all__: list[str] = [
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
+    "ConfigManager",
     "Environment",
+    "ErrorContext",
     "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionAlgorithm",
+    "GracefulDegradationHandler",
     "HyDEConfig",
     # "InstrumentedConfig",  # Disabled due to circular imports
     "LogLevel",
@@ -116,7 +147,9 @@ __all__: list[str] = [
     "QueryComplexity",
     "QueryType",
     "RAGConfig",
+    "RetryableConfigOperation",
     "SQLAlchemyConfig",
+    "SafeConfigLoader",
     "SearchAccuracy",
     "SearchStrategy",
     "SecurityConfig",
@@ -126,15 +159,22 @@ __all__: list[str] = [
     "TierManager",
     "UnifiedConfig",
     "VectorType",
+    "async_error_context",
+    "create_and_load_config_async",
     # "create_instrumented_config",  # Disabled due to circular imports
     # "create_instrumented_config_with_auto_detection",  # Disabled due to circular imports
     "default_tier_manager",
     "get_config",
     "get_config_with_auto_detection",
     "get_current_tier_config",
+    "get_degradation_handler",
+    "get_config_manager",
+    "handle_validation_error",
     "is_feature_enabled",
     # "load_instrumented_config_from_file",  # Disabled due to circular imports
     # "load_instrumented_config_from_file_async",  # Disabled due to circular imports
     "reset_config",
+    "retry_config_operation",
     "set_config",
+    "set_config_manager",
 ]

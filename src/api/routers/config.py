@@ -6,7 +6,7 @@ monitoring reload operations, and accessing configuration status information.
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -33,7 +33,7 @@ class ReloadRequest(BaseModel):
     force: bool = Field(
         default=False, description="Force reload even if no changes detected"
     )
-    config_source: Optional[str] = Field(
+    config_source: str | None = Field(
         default=None, description="Optional specific config source path"
     )
 
@@ -44,7 +44,7 @@ class ReloadResponse(BaseModel):
     operation_id: str
     status: str
     success: bool
-    message: Optional[str] = None
+    message: str | None = None
 
     # Timing information
     total_duration_ms: float
@@ -52,8 +52,8 @@ class ReloadResponse(BaseModel):
     apply_duration_ms: float
 
     # Change information
-    previous_config_hash: Optional[str] = None
-    new_config_hash: Optional[str] = None
+    previous_config_hash: str | None = None
+    new_config_hash: str | None = None
     changes_applied: list[str] = Field(default_factory=list)
     services_notified: list[str] = Field(default_factory=list)
 
@@ -80,13 +80,13 @@ class ReloadStatsResponse(BaseModel):
     average_duration_ms: float
     listeners_registered: int
     backups_available: int
-    current_config_hash: Optional[str] = None
+    current_config_hash: str | None = None
 
 
 class RollbackRequest(BaseModel):
     """Configuration rollback request."""
 
-    target_hash: Optional[str] = Field(
+    target_hash: str | None = Field(
         default=None, description="Specific config hash to rollback to"
     )
 

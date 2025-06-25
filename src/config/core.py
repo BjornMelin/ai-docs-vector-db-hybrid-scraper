@@ -435,14 +435,19 @@ class DriftDetectionConfig(BaseModel):
     """Configuration drift detection settings."""
 
     # Core drift detection settings
-    enabled: bool = Field(default=True, description="Enable configuration drift detection")
+    enabled: bool = Field(
+        default=True, description="Enable configuration drift detection"
+    )
     snapshot_interval_minutes: int = Field(
-        default=15, gt=0, le=1440, description="Interval between configuration snapshots"
+        default=15,
+        gt=0,
+        le=1440,
+        description="Interval between configuration snapshots",
     )
     comparison_interval_minutes: int = Field(
         default=5, gt=0, le=60, description="Interval between drift comparisons"
     )
-    
+
     # Monitoring configuration
     monitored_paths: list[str] = Field(
         default_factory=lambda: [
@@ -453,7 +458,7 @@ class DriftDetectionConfig(BaseModel):
             "docker-compose.yml",
             "docker-compose.yaml",
         ],
-        description="Paths to monitor for configuration drift"
+        description="Paths to monitor for configuration drift",
     )
     excluded_paths: list[str] = Field(
         default_factory=lambda: [
@@ -463,18 +468,18 @@ class DriftDetectionConfig(BaseModel):
             "**/cache/",
             "**/tmp/",
         ],
-        description="Paths to exclude from drift monitoring"
+        description="Paths to exclude from drift monitoring",
     )
-    
+
     # Alerting configuration
     alert_on_severity: list[str] = Field(
         default_factory=lambda: ["high", "critical"],
-        description="Drift severity levels that trigger alerts"
+        description="Drift severity levels that trigger alerts",
     )
     max_alerts_per_hour: int = Field(
         default=10, gt=0, description="Maximum alerts per hour to prevent spam"
     )
-    
+
     # Data retention
     snapshot_retention_days: int = Field(
         default=30, gt=0, description="Days to retain configuration snapshots"
@@ -482,7 +487,7 @@ class DriftDetectionConfig(BaseModel):
     events_retention_days: int = Field(
         default=90, gt=0, description="Days to retain drift events"
     )
-    
+
     # Integration settings
     integrate_with_task20_anomaly: bool = Field(
         default=True, description="Integrate with existing Task 20 anomaly detection"
@@ -490,7 +495,7 @@ class DriftDetectionConfig(BaseModel):
     use_performance_monitoring: bool = Field(
         default=True, description="Use existing performance monitoring infrastructure"
     )
-    
+
     # Auto-remediation
     enable_auto_remediation: bool = Field(
         default=False, description="Enable automatic drift remediation for safe changes"
