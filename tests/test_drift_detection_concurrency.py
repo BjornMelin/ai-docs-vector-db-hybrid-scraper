@@ -61,7 +61,7 @@ class TestDriftDetectionConcurrency:
 
         def create_snapshots():
             """Worker function to create snapshots."""
-            for i in range(iterations_per_thread):
+            for _i in range(iterations_per_thread):
                 detector.take_snapshot(str(temp_config_file))
                 time.sleep(0.01)  # Small delay to encourage race conditions
 
@@ -348,7 +348,7 @@ class TestDriftDetectionConcurrency:
 
         def high_contention_worker():
             """Worker that performs many operations rapidly."""
-            for i in range(operations_per_thread):
+            for _i in range(operations_per_thread):
                 # Snapshot operation
                 detector.take_snapshot(str(temp_config_file))
 

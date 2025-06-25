@@ -78,7 +78,7 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
                 logger.warning(f"Unsupported config file format: {suffix}")
 
         except Exception as e:
-            logger.error(f"Failed to load config file {self.config_file}: {e}")
+            logger.exception(f"Failed to load config file {self.config_file}: {e}")
 
     def get_field_value(
         self, field: FieldInfo, field_name: str
@@ -161,7 +161,7 @@ class ConfigFileWatcher(FileSystemEventHandler):
             try:
                 self.reload_callback()
             except Exception as e:
-                logger.error(f"Failed to reload configuration: {e}")
+                logger.exception(f"Failed to reload configuration: {e}")
 
 
 class ConfigManager:
@@ -288,7 +288,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to reload configuration: {e}")
+            logger.exception(f"Failed to reload configuration: {e}")
             return False
 
     def _create_config_with_file_source(self) -> BaseSettings:
@@ -318,7 +318,7 @@ class ConfigManager:
             logger.info(f"Started watching configuration file: {self.config_file}")
 
         except Exception as e:
-            logger.error(f"Failed to start file watching: {e}")
+            logger.exception(f"Failed to start file watching: {e}")
 
     def stop_file_watching(self) -> None:
         """Stop watching configuration file."""
@@ -359,7 +359,7 @@ class ConfigManager:
             try:
                 listener(old_config, new_config)
             except Exception as e:
-                logger.error(f"Change listener failed: {e}")
+                logger.exception(f"Change listener failed: {e}")
 
     def get_config(self) -> BaseSettings:
         """Get current configuration instance."""

@@ -120,15 +120,15 @@ __all__ = [
     # AI/ML tracking
     "AIOperationMetrics",
     "AIOperationTracker",
+    # Configuration instrumentation
+    "ConfigAttributes",
+    "ConfigOperationType",
+    "ConfigPerformanceMonitor",
     "ErrorCorrelationTracker",
     # Legacy compatibility
     "FastAPIObservabilityMiddleware",
     # Core configuration
     "ObservabilityConfig",
-    # Configuration instrumentation
-    "ConfigAttributes",
-    "ConfigOperationType",
-    "ConfigPerformanceMonitor",
     # Metrics bridge
     "OpenTelemetryMetricsBridge",
     "PerformanceMetrics",

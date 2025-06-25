@@ -186,7 +186,7 @@ class TestConfigReloadPerformance:
         async def concurrent_reloads():
             # Try to trigger multiple reloads concurrently
             tasks = []
-            for i in range(5):
+            for _i in range(5):
                 tasks.append(
                     config_reloader.reload_config(
                         trigger=ReloadTrigger.MANUAL, force=True
@@ -250,7 +250,7 @@ class TestConfigReloadPerformance:
 
         # Perform multiple reloads to build history
         async def build_history():
-            for i in range(20):
+            for _i in range(20):
                 await config_reloader.reload_config(force=True)
 
         asyncio.run(build_history())

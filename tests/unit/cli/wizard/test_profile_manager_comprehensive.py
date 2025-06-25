@@ -475,15 +475,18 @@ class TestProfileManagerIntegration:
         manager.profiles_dir.mkdir(parents=True, exist_ok=True)
 
         # This would normally fail due to permissions, but we'll mock it
-        with patch(
-            "pathlib.Path.write_text", side_effect=PermissionError("Permission denied")
+        with (
+            patch(
+                "pathlib.Path.write_text",
+                side_effect=PermissionError("Permission denied"),
+            ),
+            pytest.raises(PermissionError),
         ):
-            with pytest.raises(PermissionError):
-                # Mock template manager
-                mock_config = MagicMock()
-                mock_config.model_dump.return_value = {"test": True}
-                manager.template_manager.create_config_from_template.return_value = (
-                    mock_config
-                )
+            # Mock template manager
+            mock_config = MagicMock()
+            mock_config.model_dump.return_value = {"test": True}
+            manager.template_manager.create_config_from_template.return_value = (
+                mock_config
+            )
 
-                manager.create_profile_config("test", {})
+            manager.create_profile_config("test", {})

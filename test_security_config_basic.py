@@ -18,6 +18,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import the security config module directly
+import sys
+
 from src.config.security import (
     ConfigDataClassification,
     ConfigOperationType,
@@ -223,13 +225,13 @@ def test_configuration_validation():
     # Test invalid configurations (should raise ValidationError)
     try:
         SecurityConfig(encryption_key_rotation_days=0)  # Must be > 0
-        assert False, "Should have raised ValidationError"
+        raise AssertionError("Should have raised ValidationError")
     except ValueError:
         pass  # Expected
 
     try:
         SecurityConfig(backup_retention_days=0)  # Must be > 0
-        assert False, "Should have raised ValidationError"
+        raise AssertionError("Should have raised ValidationError")
     except ValueError:
         pass  # Expected
 
@@ -262,7 +264,7 @@ def main():
         return True
 
     except Exception as e:
-        logger.error(f"Tests failed with error: {e}")
+        logger.exception(f"Tests failed with error: {e}")
         import traceback
 
         traceback.print_exc()
@@ -271,4 +273,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

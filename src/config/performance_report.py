@@ -465,7 +465,7 @@ class ConfigPerformanceReporter:
 
         # Create multiple configs
         configs = []
-        for i in range(100):
+        for _i in range(100):
             configs.append(Config())
 
         gc.collect()

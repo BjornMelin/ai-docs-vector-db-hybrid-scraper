@@ -56,7 +56,7 @@ class ExampleService:
             return True
 
         except Exception as e:
-            logger.error(f"{self.name} configuration update failed: {e}")
+            logger.exception(f"{self.name} configuration update failed: {e}")
             return False
 
     def stop(self) -> None:
@@ -244,7 +244,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Duration: {response.total_duration_ms:.1f}ms")
 
     except Exception as e:
-        logger.error(f"API reload failed: {e}")
+        logger.exception(f"API reload failed: {e}")
 
     # Get stats via API
     try:
@@ -254,7 +254,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Success rate: {stats_response.success_rate:.2%}")
 
     except Exception as e:
-        logger.error(f"API stats failed: {e}")
+        logger.exception(f"API stats failed: {e}")
 
     # Get status via API
     try:
@@ -266,7 +266,7 @@ async def demonstrate_api_integration():
         )
 
     except Exception as e:
-        logger.error(f"API status failed: {e}")
+        logger.exception(f"API status failed: {e}")
 
     await reloader.shutdown()
 

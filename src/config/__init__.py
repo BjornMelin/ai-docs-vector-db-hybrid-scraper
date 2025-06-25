@@ -115,6 +115,7 @@ __all__: list[str] = [
     "ConfigError",
     "ConfigFileWatchError",
     "ConfigLoadError",
+    "ConfigManager",
     "ConfigReloadError",
     "ConfigValidationError",
     "Crawl4AIConfig",
@@ -126,7 +127,6 @@ __all__: list[str] = [
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
-    "ConfigManager",
     "Environment",
     "ErrorContext",
     "FastEmbedConfig",
@@ -165,10 +165,10 @@ __all__: list[str] = [
     # "create_instrumented_config_with_auto_detection",  # Disabled due to circular imports
     "default_tier_manager",
     "get_config",
+    "get_config_manager",
     "get_config_with_auto_detection",
     "get_current_tier_config",
     "get_degradation_handler",
-    "get_config_manager",
     "handle_validation_error",
     "is_feature_enabled",
     # "load_instrumented_config_from_file",  # Disabled due to circular imports

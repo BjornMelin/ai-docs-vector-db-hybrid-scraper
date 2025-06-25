@@ -465,7 +465,7 @@ class ConfigPerformanceMonitor:
         overall_stats = self.get_operation_stats()
 
         # Per-operation-type statistics
-        operation_types = set(op.operation_type for op in self.operation_history)
+        operation_types = {op.operation_type for op in self.operation_history}
         per_type_stats = {
             op_type: self.get_operation_stats(operation_type=op_type)
             for op_type in operation_types

@@ -317,7 +317,7 @@ class ConfigDriftDetector:
             return snapshot
 
         except Exception as e:
-            logger.error(f"Failed to take snapshot of {source}: {e}")
+            logger.exception(f"Failed to take snapshot of {source}: {e}")
             raise
 
     def compare_snapshots(self, source: str) -> list[DriftEvent]:
@@ -406,7 +406,7 @@ class ConfigDriftDetector:
             return events
 
         except Exception as e:
-            logger.error(f"Failed to compare snapshots for {source}: {e}")
+            logger.exception(f"Failed to compare snapshots for {source}: {e}")
             return []
 
     def _analyze_config_changes(
@@ -568,12 +568,10 @@ class ConfigDriftDetector:
             return False
 
         # Auto-remediate simple value reversions
-        if change_type == "modified" and isinstance(
-            change.get("old_value"), (str, int, bool)
-        ):
-            return True
-
-        return False
+        return bool(
+            change_type == "modified"
+            and isinstance(change.get("old_value"), str | int | bool)
+        )
 
     def _generate_remediation_suggestion(self, change: dict[str, Any]) -> str | None:
         """Generate remediation suggestion for configuration drift.
@@ -749,7 +747,7 @@ class ConfigDriftDetector:
                         self.send_alert(event)
 
             except Exception as e:
-                logger.error(f"Failed drift detection for {source}: {e}")
+                logger.exception(f"Failed drift detection for {source}: {e}")
 
         # Clean up old data
         self._cleanup_old_events()

@@ -212,24 +212,23 @@ def data_quality_validator():
                     if (
                         "min_value" in rule.reference_data
                         or "max_value" in rule.reference_data
-                    ):
-                        if isinstance(value, int | float):
-                            min_val = rule.reference_data.get("min_value")
-                            max_val = rule.reference_data.get("max_value")
+                    ) and isinstance(value, int | float):
+                        min_val = rule.reference_data.get("min_value")
+                        max_val = rule.reference_data.get("max_value")
 
-                            if min_val is not None and value < min_val:
-                                failed_records += 1
-                                validation_errors.append(
-                                    f"Value {value} below minimum {min_val}"
-                                )
-                                continue
+                        if min_val is not None and value < min_val:
+                            failed_records += 1
+                            validation_errors.append(
+                                f"Value {value} below minimum {min_val}"
+                            )
+                            continue
 
-                            if max_val is not None and value > max_val:
-                                failed_records += 1
-                                validation_errors.append(
-                                    f"Value {value} above maximum {max_val}"
-                                )
-                                continue
+                        if max_val is not None and value > max_val:
+                            failed_records += 1
+                            validation_errors.append(
+                                f"Value {value} above maximum {max_val}"
+                            )
+                            continue
 
             passed_records = total_records - failed_records
             score = passed_records / max(total_records, 1)
