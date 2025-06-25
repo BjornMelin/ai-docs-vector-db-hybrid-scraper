@@ -24,7 +24,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
-from .chunking import EnhancedChunker
+from .chunking import DocumentChunker
 from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
@@ -224,8 +224,8 @@ class BulkEmbedder:
             if not content_to_chunk:
                 raise Exception("No content extracted")
 
-            # Chunk the content using EnhancedChunker
-            chunker = EnhancedChunker(self.config.chunking)
+            # Chunk the content using DocumentChunker
+            chunker = DocumentChunker(self.config.chunking)
             chunk_results = chunker.chunk_text(content_to_chunk)
             chunks = chunk_results.chunks
 

@@ -9,6 +9,7 @@ import logging
 from enum import Enum
 from typing import Any
 
+from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
@@ -135,6 +136,7 @@ class FilterComposer(BaseFilter):
         description: str = "Compose multiple filters using boolean logic and optimization",
         enabled: bool = True,
         priority: int = 50,
+        max_cache_size: int = 1000,
     ):
         """Initialize filter composer.
 
@@ -143,13 +145,15 @@ class FilterComposer(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+            max_cache_size: Maximum number of items in execution cache
         """
         super().__init__(name, description, enabled, priority)
 
-        # Execution tracking
-        self.execution_cache = {}
+        # Execution tracking with LRU cache to prevent memory leaks
+        self.execution_cache = LRUCache(maxsize=max_cache_size)
         self.performance_stats = {}
         self.optimization_enabled = True
+        self.max_cache_size = max_cache_size
 
         # Filter execution strategies
         self.execution_strategies = {
@@ -701,3 +705,34 @@ class FilterComposer(BaseFilter):
             base_explanation += f"\nSettings: {', '.join(settings)}"
 
         return base_explanation
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Get execution cache statistics.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        return {
+            "enabled": True,
+            "current_size": len(self.execution_cache),
+            "max_size": self.max_cache_size,
+            "cache_type": "LRUCache",
+        }
+
+    def clear_execution_cache(self) -> None:
+        """Clear the execution cache to free memory."""
+        cache_size = len(self.execution_cache)
+        self.execution_cache.clear()
+        logger.info(f"Cleared execution cache ({cache_size} items)")
+
+    def cleanup(self) -> None:
+        """Cleanup resources and clear caches."""
+        logger.info("Starting filter composer cleanup")
+
+        # Clear execution cache
+        self.clear_execution_cache()
+
+        # Clear performance stats
+        self.performance_stats.clear()
+
+        logger.info("Filter composer cleanup completed")

@@ -149,7 +149,7 @@ class ConfigurationWizard:
             ("API Keys", self._customize_api_keys),
             ("Database Connection", self._customize_database),
             ("Performance Settings", self._customize_performance),
-            ("Advanced Options", self._customize_advanced),
+            ("Advanced Options", self._customize_template),
         ]
 
         for section_name, customize_func in customization_sections:
@@ -257,8 +257,8 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_advanced(self, template_data: dict[str, Any]) -> dict[str, Any]:
-        """Customize advanced settings."""
+    def _customize_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize template settings."""
         customizations = {}
 
         # Debug mode

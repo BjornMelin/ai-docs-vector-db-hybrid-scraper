@@ -42,6 +42,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "arq" },
     { name = "asyncio-throttle" },
+    { name = "cachetools" },
     { name = "click" },
     { name = "colorlog" },
     { name = "crawl4ai", extra = ["all"] },
@@ -78,6 +79,7 @@ dependencies = [
     { name = "tomli-w" },
     { name = "tqdm" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "watchdog" },
 ]
 
 [package.optional-dependencies]
@@ -212,6 +214,7 @@ requires-dist = [
     { name = "axe-core-python", marker = "extra == 'accessibility'", specifier = ">=0.1.0,<1.0.0" },
     { name = "beautifulsoup4", marker = "extra == 'accessibility'", specifier = ">=4.12.3,<5.0.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0,<26.0.0" },
+    { name = "cachetools", specifier = ">=5.3.0,<6.0.0" },
     { name = "click", specifier = ">=8.2.1,<9.0.0" },
     { name = "colorlog", specifier = ">=6.9.0,<7.0.0" },
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.6.3,<0.8.0" },
@@ -290,6 +293,7 @@ requires-dist = [
     { name = "tree-sitter-python", marker = "extra == 'parsing'", specifier = ">=0.23.6,<0.24.0" },
     { name = "tree-sitter-typescript", marker = "extra == 'parsing'", specifier = ">=0.23.2,<0.24.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0,<0.40.0" },
+    { name = "watchdog", specifier = ">=6.0.0" },
 ]
 provides-extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "all"]
 

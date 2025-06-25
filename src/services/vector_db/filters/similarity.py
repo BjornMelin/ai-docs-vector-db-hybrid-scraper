@@ -7,11 +7,12 @@ and context-aware threshold selection for optimal search results.
 
 import logging
 import statistics
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 
 import numpy as np
+from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
@@ -164,6 +165,7 @@ class SimilarityThresholdManager(BaseFilter):
         description: str = "Manage similarity thresholds with adaptive optimization",
         enabled: bool = True,
         priority: int = 60,
+        max_cache_size: int = 1000,
     ):
         """Initialize similarity threshold manager.
 
@@ -172,6 +174,7 @@ class SimilarityThresholdManager(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+            max_cache_size: Maximum number of items in clustering cache
         """
         super().__init__(name, description, enabled, priority)
 
@@ -180,9 +183,10 @@ class SimilarityThresholdManager(BaseFilter):
         self.performance_history = []
         self.context_thresholds = {}
 
-        # Clustering cache
-        self.clustering_cache = {}
+        # Clustering cache with LRU to prevent memory leaks
+        self.clustering_cache = LRUCache(maxsize=max_cache_size)
         self.last_clustering_analysis = None
+        self.max_cache_size = max_cache_size
 
         # Performance tracking
         self.query_count = 0
@@ -679,7 +683,7 @@ class SimilarityThresholdManager(BaseFilter):
         self, historical_data: list[dict[str, Any]], days: int
     ) -> list[dict[str, Any]]:
         """Get recent historical data within specified days."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         recent_data = []
         for data in historical_data:
@@ -698,7 +702,7 @@ class SimilarityThresholdManager(BaseFilter):
     ) -> None:
         """Record performance metrics for threshold learning."""
         performance_record = {
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(UTC),
             "threshold": threshold,
             "context": query_context.value,
             "metrics": metrics.model_dump(),
@@ -707,7 +711,7 @@ class SimilarityThresholdManager(BaseFilter):
         self.performance_history.append(performance_record)
 
         # Keep only recent history to prevent memory bloat
-        cutoff_date = datetime.utcnow() - timedelta(days=30)
+        cutoff_date = datetime.now(UTC) - timedelta(days=30)
         self.performance_history = [
             record
             for record in self.performance_history
@@ -778,3 +782,48 @@ class SimilarityThresholdManager(BaseFilter):
             "enable_clustering",
             "enable_historical_learning",
         ]
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Get clustering cache statistics.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        return {
+            "enabled": True,
+            "current_size": len(self.clustering_cache),
+            "max_size": self.max_cache_size,
+            "cache_type": "LRUCache",
+        }
+
+    def clear_clustering_cache(self) -> None:
+        """Clear the clustering cache to free memory."""
+        cache_size = len(self.clustering_cache)
+        self.clustering_cache.clear()
+        self.last_clustering_analysis = None
+        logger.info(f"Cleared clustering cache ({cache_size} items)")
+
+    def cleanup(self) -> None:
+        """Cleanup resources and clear caches."""
+        logger.info("Starting similarity threshold manager cleanup")
+
+        # Clear clustering cache
+        self.clear_clustering_cache()
+
+        # Clear history if it's too large (keep last 100 entries)
+        if len(self.threshold_history) > 100:
+            self.threshold_history = self.threshold_history[-100:]
+        if len(self.performance_history) > 100:
+            self.performance_history = self.performance_history[-100:]
+
+        # Clear context thresholds if too many
+        if len(self.context_thresholds) > 50:
+            # Keep only the most recently used contexts
+            sorted_contexts = sorted(
+                self.context_thresholds.items(),
+                key=lambda x: x[1].get("last_used", datetime.min.replace(tzinfo=UTC)),
+                reverse=True,
+            )
+            self.context_thresholds = dict(sorted_contexts[:50])
+
+        logger.info("Similarity threshold manager cleanup completed")

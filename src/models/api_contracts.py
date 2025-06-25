@@ -53,8 +53,8 @@ class SearchRequest(MCPRequest):
     filters: dict[str, Any] | None = Field(default=None, description="Search filters")
 
 
-class AdvancedSearchRequest(MCPRequest):
-    """Request model for advanced search operations."""
+class SearchRequest(MCPRequest):
+    """Request model for search operations."""
 
     query: str = Field(..., description="Search query text", min_length=1)
     collection_name: str = Field(default="documents", description="Target collection")
@@ -304,7 +304,7 @@ class ValidationResponse(MCPResponse):
 
 # Export all models
 __all__ = [
-    "AdvancedSearchRequest",
+    "SearchRequest",
     "AnalyticsRequest",
     "AnalyticsResponse",
     "BulkDocumentRequest",

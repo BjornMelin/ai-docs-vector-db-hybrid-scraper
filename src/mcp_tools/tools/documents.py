@@ -21,7 +21,7 @@ else:
 
 from src.config import ChunkingConfig, ChunkingStrategy
 
-from ...chunking import EnhancedChunker
+from ...chunking import DocumentChunker
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
 from ..models.requests import BatchRequest, DocumentRequest
@@ -138,7 +138,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Chunking document {doc_id} with strategy {chunk_config.strategy}"
             )
-            chunker = EnhancedChunker(chunk_config)
+            chunker = DocumentChunker(chunk_config)
             chunks = chunker.chunk_content(
                 content=crawl_result["content"],
                 title=crawl_result["title"]
