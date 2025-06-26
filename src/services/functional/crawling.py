@@ -11,12 +11,16 @@ from fastapi import Depends, HTTPException
 
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_crawling_client
+from .enhanced_circuit_breaker import (
+    EnhancedCircuitBreakerConfig,
+    enhanced_circuit_breaker,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-@circuit_breaker(CircuitBreakerConfig.enterprise_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.enterprise_mode("firecrawl"))
 async def crawl_url(
     url: str,
     preferred_provider: str | None = None,
@@ -69,7 +73,7 @@ async def crawl_url(
         raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}")
 
 
-@circuit_breaker(CircuitBreakerConfig.enterprise_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.enterprise_mode("firecrawl"))
 async def crawl_site(
     url: str,
     max_pages: int = 50,
@@ -257,7 +261,7 @@ async def get_tier_metrics(
 
 
 # New function-based capabilities
-@circuit_breaker(CircuitBreakerConfig.enterprise_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.enterprise_mode("firecrawl"))
 async def batch_crawl_urls(
     urls: list[str],
     preferred_provider: str | None = None,

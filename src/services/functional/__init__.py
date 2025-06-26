@@ -51,6 +51,16 @@ from .embeddings import (
     generate_embeddings,
     rerank_results,
 )
+from .enhanced_circuit_breaker import (
+    EnhancedCircuitBreaker,
+    EnhancedCircuitBreakerConfig,
+    create_enhanced_circuit_breaker,
+    enhanced_circuit_breaker,
+    enhanced_circuit_breaker_middleware,
+    get_all_circuit_breaker_metrics,
+    get_circuit_breaker_registry,
+    register_circuit_breaker,
+)
 from .monitoring import (
     check_service_health,
     get_metrics_summary,
@@ -91,6 +101,15 @@ __all__ = [
     "CircuitBreakerState",
     "circuit_breaker_middleware",
     "create_circuit_breaker",
+    # Enhanced circuit breaker
+    "EnhancedCircuitBreaker",
+    "EnhancedCircuitBreakerConfig",
+    "create_enhanced_circuit_breaker",
+    "enhanced_circuit_breaker",
+    "enhanced_circuit_breaker_middleware",
+    "get_all_circuit_breaker_metrics",
+    "get_circuit_breaker_registry",
+    "register_circuit_breaker",
     # Crawling functions
     "crawl_site",
     "crawl_url",

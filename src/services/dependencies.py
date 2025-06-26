@@ -169,17 +169,17 @@ async def get_auto_detection_health_checker(
     """
     from src.services.functional.auto_detection import check_service_availability
     from src.services.functional.monitoring import check_service_health
-    
+
     # Use functional health checking services
     class HealthCheckerWrapper:
         """Wrapper for functional health checking services."""
-        
+
         async def check_health(self, service_name: str):
             return await check_service_health(service_name)
-        
+
         async def check_availability(self, host: str, port: int):
             return await check_service_availability(host, port)
-    
+
     return HealthCheckerWrapper()
 
 
@@ -200,14 +200,14 @@ async def get_auto_detection_connection_pools(
     Protected by circuit breaker for connection pool initialization failures.
     """
     from src.services.functional.auto_detection import get_connection_info
-    
+
     # Use functional connection info services
     class ConnectionPoolWrapper:
         """Wrapper for functional connection info services."""
-        
+
         async def get_connection_info(self, service_name: str):
             return await get_connection_info(service_name)
-    
+
     return ConnectionPoolWrapper()
 
 
@@ -254,15 +254,18 @@ async def perform_auto_detection(
         import time
 
         from src.config.auto_detect import AutoDetectedServices
-        from src.services.functional.auto_detection import detect_environment, discover_services
+        from src.services.functional.auto_detection import (
+            detect_environment,
+            discover_services,
+        )
 
         start_time = time.time()
 
         # Perform environment detection using functional services
-        detected_env = await detect_environment()
+        detected_env = await detect_environment(config)
 
         # Perform service discovery using functional services
-        discovery_result = await discover_services()
+        discovery_result = await discover_services(config)
 
         # Filter services if requested
         services = discovery_result.services

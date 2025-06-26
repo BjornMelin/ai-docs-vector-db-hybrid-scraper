@@ -141,9 +141,17 @@ async def check_service_availability(
         return result
 
 
+class DiscoveryResult:
+    """Result container for service discovery."""
+
+    def __init__(self, services: list[DetectedService], errors: list[str] = None):
+        self.services = services
+        self.errors = errors or []
+
+
 async def discover_services(
     config: Annotated[Config, Depends(get_config)] = None,
-) -> dict[str, DetectedService]:
+) -> DiscoveryResult:
     """Discover available services in the environment.
 
     Pure function replacement for ServiceDiscovery.discover().
@@ -152,21 +160,28 @@ async def discover_services(
         config: Injected configuration
 
     Returns:
-        Dictionary of discovered services
+        DiscoveryResult with discovered services and errors
     """
     try:
         services = {}
 
         # Check Qdrant
+        # Parse URL to get host and port
+        import urllib.parse
+
+        qdrant_parsed = urllib.parse.urlparse(config.qdrant.url)
+        qdrant_host = qdrant_parsed.hostname or "localhost"
+        qdrant_port = qdrant_parsed.port or 6333
+
         qdrant_result = await check_service_availability(
-            config.vector_db.host, config.vector_db.port, service_name="qdrant"
+            qdrant_host, qdrant_port, service_name="qdrant"
         )
 
         if qdrant_result["available"]:
             services["qdrant"] = DetectedService(
                 name="qdrant",
-                host=config.vector_db.host,
-                port=config.vector_db.port,
+                host=qdrant_host,
+                port=qdrant_port,
                 protocol="http",
                 health_endpoint="/health",
                 available=True,
@@ -194,16 +209,21 @@ async def discover_services(
                         response_time_ms=cache_result["response_time_ms"],
                     )
 
-        await increment_counter(
-            "service_discovery", tags={"discovered_count": str(len(services))}
-        )
-        logger.info(f"Discovered {len(services)} services: {list(services.keys())}")
+        # Convert dict values to list for DiscoveryResult
+        services_list = list(services.values())
 
-        return services
+        await increment_counter(
+            "service_discovery", tags={"discovered_count": str(len(services_list))}
+        )
+        logger.info(
+            f"Discovered {len(services_list)} services: {list(services.keys())}"
+        )
+
+        return DiscoveryResult(services=services_list, errors=[])
 
     except Exception as e:
         logger.exception(f"Service discovery failed: {e}")
-        return {}
+        return DiscoveryResult(services=[], errors=[str(e)])
 
 
 async def get_connection_info(
@@ -223,11 +243,18 @@ async def get_connection_info(
     """
     try:
         if service_name == "qdrant":
+            # Parse URL to get host and port
+            import urllib.parse
+
+            qdrant_parsed = urllib.parse.urlparse(config.qdrant.url)
+            qdrant_host = qdrant_parsed.hostname or "localhost"
+            qdrant_port = qdrant_parsed.port or 6333
+
             return {
                 "service": service_name,
-                "host": config.vector_db.host,
-                "port": config.vector_db.port,
-                "url": f"http://{config.vector_db.host}:{config.vector_db.port}",
+                "host": qdrant_host,
+                "port": qdrant_port,
+                "url": config.qdrant.url,
                 "protocol": "http",
                 "connection_pool": {
                     "max_connections": 20,
@@ -285,8 +312,15 @@ async def test_service_endpoints(
 
         if service_name == "qdrant":
             # Test basic connectivity
+            # Parse URL to get host and port
+            import urllib.parse
+
+            qdrant_parsed = urllib.parse.urlparse(config.qdrant.url)
+            qdrant_host = qdrant_parsed.hostname or "localhost"
+            qdrant_port = qdrant_parsed.port or 6333
+
             connectivity = await check_service_availability(
-                config.vector_db.host, config.vector_db.port, service_name="qdrant"
+                qdrant_host, qdrant_port, service_name="qdrant"
             )
             results["endpoints"]["connectivity"] = connectivity
 

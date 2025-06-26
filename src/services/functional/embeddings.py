@@ -12,12 +12,16 @@ from fastapi import Depends, HTTPException
 from ..embeddings.manager import QualityTier, TextAnalysis
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_embedding_client
+from .enhanced_circuit_breaker import (
+    EnhancedCircuitBreakerConfig,
+    enhanced_circuit_breaker,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-@circuit_breaker(CircuitBreakerConfig.simple_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.from_service_config("openai"))
 async def generate_embeddings(
     texts: list[str],
     quality_tier: QualityTier | None = None,
@@ -79,7 +83,7 @@ async def generate_embeddings(
         )
 
 
-@circuit_breaker(CircuitBreakerConfig.simple_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.from_service_config("openai"))
 async def rerank_results(
     query: str,
     results: list[dict[str, Any]],
@@ -316,7 +320,7 @@ async def get_usage_report(
 
 
 # Batch processing function (new functionality)
-@circuit_breaker(CircuitBreakerConfig.enterprise_mode())
+@enhanced_circuit_breaker(EnhancedCircuitBreakerConfig.enterprise_mode("openai"))
 async def batch_generate_embeddings(
     text_batches: list[List[str]],
     quality_tier: QualityTier | None = None,
