@@ -7,7 +7,9 @@ using RAG patterns with the integrated service dependencies.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
+
+from src.api.exceptions import APIException, handle_service_error
 
 from ...dependencies import (
     ConfigDep,
@@ -48,15 +50,17 @@ async def generate_answer(
     """
     # Check if RAG is enabled
     if not config.rag.enable_rag:
-        raise HTTPException(
+        raise APIException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="RAG service is not enabled in configuration",
+            context={"rag_enabled": False},
         )
 
     if not request.search_results:
-        raise HTTPException(
+        raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Search results are required for RAG answer generation",
+            context={"search_results_count": 0},
         )
 
     try:
@@ -66,9 +70,10 @@ async def generate_answer(
 
     except Exception as e:
         logger.exception(f"RAG answer generation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate RAG answer: {e!s}",
+        raise handle_service_error(
+            operation="RAG answer generation",
+            error=e,
+            context={"search_results_count": len(request.search_results)},
         ) from e
 
 
@@ -98,9 +103,9 @@ async def get_metrics(
         }
     except Exception as e:
         logger.exception(f"Failed to get RAG metrics: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get RAG metrics: {e!s}",
+        raise handle_service_error(
+            operation="RAG metrics retrieval",
+            error=e,
         ) from e
 
 
@@ -127,9 +132,9 @@ async def clear_cache(
         return result
     except Exception as e:
         logger.exception(f"Failed to clear RAG cache: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear RAG cache: {e!s}",
+        raise handle_service_error(
+            operation="RAG cache clearing",
+            error=e,
         ) from e
 
 
