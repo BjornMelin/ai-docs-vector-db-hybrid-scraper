@@ -82,7 +82,7 @@ class TestProgressiveSophisticationValidation:
 
         # Configure mock responses for escalation
         side_effects = []
-        for tier, tool, response in escalation_scenario:
+        for _tier, _tool, response in escalation_scenario:
             mock_response = MagicMock()
             mock_response.success = response["success"]
             if not response["success"]:
@@ -114,8 +114,8 @@ class TestProgressiveSophisticationValidation:
         config = system_components["config"]
 
         # Test simple defaults are enabled
-        assert config.enable_caching == True  # Simple default
-        assert config.enable_local_cache == True  # Simple default
+        assert config.enable_caching  # Simple default
+        assert config.enable_local_cache  # Simple default
 
         # Test advanced features are available but may be disabled by default
         available_advanced_features = [
@@ -175,7 +175,7 @@ class TestProgressiveSophisticationValidation:
             ("analytics", {"get_query_patterns": True}),  # Advanced analytics
         ]
 
-        for tool_name, params in workflow_steps:
+        for tool_name, _params in workflow_steps:
             mcp_tools.get_tool.return_value = AsyncMock()
             tool = mcp_tools.get_tool(tool_name)
             assert tool is not None, f"Tool {tool_name} should be available"
@@ -358,7 +358,7 @@ class TestProgressiveSophisticationValidation:
             ("content_intelligence", "ml_service_failure", "rule_based_fallback"),
         ]
 
-        for component_name, failure_mode, expected_fallback in degradation_scenarios:
+        for component_name, _failure_mode, _expected_fallback in degradation_scenarios:
             component = system_components[component_name]
 
             # Simulate component failure
@@ -374,7 +374,7 @@ class TestProgressiveSophisticationValidation:
             assert fallback is not None
 
             degraded_mode = component.enable_degraded_mode()
-            assert degraded_mode == True
+            assert degraded_mode
 
             basic_func = component.get_basic_functionality()
             assert basic_func is not None
@@ -463,7 +463,7 @@ class TestProgressiveSophisticationValidation:
         storage = await vector_db.store_document(
             content, embedding_result, analysis_result
         )
-        assert storage["success"] == True
+        assert storage["success"]
 
         # 5. Intelligent search
         search_query = "test query"

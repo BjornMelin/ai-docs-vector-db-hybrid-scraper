@@ -508,7 +508,7 @@ results = await system.search("query", options=options)
 # Batch document processing
 urls = ["https://docs.example.com", "https://api.example.com"]
 doc_ids = await system.add_documents_from_urls(
-    urls, 
+    urls,
     batch_size=5,
     progress_callback=lambda p, msg: print(f"{p:.1%}: {msg}")
 )

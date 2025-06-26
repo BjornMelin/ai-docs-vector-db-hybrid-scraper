@@ -214,7 +214,7 @@ class PerformanceBenchmarkSuite:
                 )
 
         except Exception as e:
-            logger.error(f"Benchmark failed: {e}")
+            logger.exception(f"Benchmark failed: {e}")
             results["error"] = str(e)
 
         results["duration_seconds"] = time.time() - start_time
@@ -655,7 +655,9 @@ class PerformanceBenchmarkSuite:
 
             percent_change = ((current_value - baseline_value) / baseline_value) * 100
 
-            if (direction == "lower_is_better" and percent_change > threshold_percent) or (
+            if (
+                direction == "lower_is_better" and percent_change > threshold_percent
+            ) or (
                 direction == "higher_is_better" and percent_change < -threshold_percent
             ):
                 regression_analysis["has_regression"] = True

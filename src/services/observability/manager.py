@@ -741,7 +741,7 @@ class ObservabilityManager:
             },
             "recommendations": self.auto_config.recommended_upgrades,
             "dashboard_urls": {
-                name: self.get_dashboard_url(name) for name in self.dashboards.keys()
+                name: self.get_dashboard_url(name) for name in self.dashboards
             },
             "next_steps": self._get_next_steps(),
         }

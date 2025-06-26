@@ -9,6 +9,7 @@ This module implements sophisticated async patterns including:
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import defaultdict, deque
@@ -393,10 +394,8 @@ class IntelligentTaskScheduler:
         self.running = False
         if self.scheduler_task:
             self.scheduler_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.scheduler_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Stopped intelligent task scheduler")
 
     async def _scheduler_loop(self) -> None:
@@ -420,7 +419,7 @@ class IntelligentTaskScheduler:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in scheduler loop: {e}")
+                logger.exception(f"Error in scheduler loop: {e}")
                 await asyncio.sleep(0.1)
 
     async def _execute_task(self, task_info: dict[str, Any]) -> None:
@@ -735,7 +734,7 @@ async def initialize_async_optimizer(
 
 
 # Convenience functions
-async def execute_optimized(
+async def execute_optimized[T](
     coro: Awaitable[T],
     priority: TaskPriority = TaskPriority.NORMAL,
     metadata: dict[str, Any] | None = None,
@@ -745,7 +744,7 @@ async def execute_optimized(
     return await optimizer.execute_optimized(coro, priority, metadata)
 
 
-async def execute_batch_optimized(
+async def execute_batch_optimized[T](
     coros: list[Awaitable[T]],
     priority: TaskPriority = TaskPriority.NORMAL,
     max_concurrency: int | None = None,

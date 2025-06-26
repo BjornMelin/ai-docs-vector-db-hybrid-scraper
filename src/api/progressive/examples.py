@@ -347,7 +347,7 @@ class ProgressiveAPIShowcase:
                 """Custom search implementation."""
                 # Simple keyword matching for demo
                 results = []
-                for doc_id, doc in self._documents.items():
+                for doc in self._documents.values():
                     if query.lower() in doc["content"].lower():
                         results.append(
                             {
@@ -420,7 +420,7 @@ class ProgressiveAPIShowcase:
                 await example()
                 await asyncio.sleep(0.1)  # Brief pause between examples
             except Exception as e:
-                logger.error(f"Example {example.__name__} failed: {e}")
+                logger.exception(f"Example {example.__name__} failed: {e}")
                 print(f"⚠️  Example failed: {e}")
 
         print("\n✅ Progressive API Showcase Complete!")

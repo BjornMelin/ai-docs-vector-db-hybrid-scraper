@@ -141,7 +141,7 @@ class ObservabilityPortfolioDemo:
         # Show available templates
         templates = self.dashboard_generator.get_available_templates()
         print(f"📋 Available dashboard templates: {len(templates)}")
-        for name, info in templates.items():
+        for info in templates.values():
             print(f"   • {info['name']}: {info['visualizations_count']} visualizations")
 
         # Generate dashboards for different platforms
@@ -348,9 +348,7 @@ class ObservabilityPortfolioDemo:
 
                 # Show recent insights
                 if hasattr(self.manager, "insights") and self.manager.insights:
-                    recent_insights = [
-                        insight for insight in self.manager.insights[-3:]
-                    ]
+                    recent_insights = list(self.manager.insights[-3:])
                     if recent_insights:
                         print(
                             f"   💡 Recent insights: {len(recent_insights)} generated"

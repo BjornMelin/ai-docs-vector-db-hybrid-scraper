@@ -309,7 +309,7 @@ class IntelligentCLI:
             self.user_profile.expertise_level = UserExpertiseLevel.INTERMEDIATE
 
     def get_contextual_help(
-        self, command: str, context: Dict[str, Any] = None
+        self, command: str, context: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
         """Get contextual help for a command based on user profile and context.
 
@@ -649,7 +649,7 @@ class IntelligentCLI:
                 },
             ]
 
-    def show_intelligent_suggestions(self, context: Dict[str, Any] = None):
+    def show_intelligent_suggestions(self, context: Dict[str, Any] | None = None):
         """Show intelligent suggestions based on current context."""
         if not self.user_profile.enable_suggestions:
             return
@@ -736,9 +736,7 @@ class IntelligentCLI:
                     value="advanced",
                 ),
                 questionary.Choice(
-                    title="Expert (current)"
-                    if current_level == "expert"
-                    else "Expert",
+                    title="Expert (current)" if current_level == "expert" else "Expert",
                     value="expert",
                 ),
             ],

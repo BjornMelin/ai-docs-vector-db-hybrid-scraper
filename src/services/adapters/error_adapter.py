@@ -208,7 +208,7 @@ def legacy_error_handler(
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def mcp_error_handler(func: F) -> F:
+def mcp_error_handler[F: Callable[..., Any]](func: F) -> F:
     """Decorator for MCP tool error handling with FastAPI integration.
 
     This preserves the existing MCP error handling patterns while

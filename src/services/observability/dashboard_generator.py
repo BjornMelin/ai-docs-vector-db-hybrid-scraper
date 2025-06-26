@@ -117,7 +117,7 @@ class DashboardTemplate(BaseModel):
     visualizations: List[VisualizationConfig] = Field(default_factory=list)
 
     def add_variable(
-        self, name: str, query: str, label: str = None, multi: bool = False
+        self, name: str, query: str, label: str | None = None, multi: bool = False
     ):
         """Add a template variable for dynamic dashboard filtering."""
         self.variables[name] = {
@@ -660,7 +660,7 @@ class ProfessionalDashboardGenerator:
         self,
         output_dir: Union[str, Path],
         template_names: List[str] | None = None,
-        formats: List[str] = None,
+        formats: List[str] | None = None,
     ) -> Dict[str, str]:
         """Export dashboard configurations to files.
 
@@ -704,7 +704,7 @@ class ProfessionalDashboardGenerator:
                     )
 
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         f"❌ Failed to export {template_name} ({format_name}): {e}"
                     )
 
@@ -769,10 +769,9 @@ class IntelligentDashboardRecommender:
                 patterns["recommended_dashboards"].append("ai_operations")
 
         # Analyze error patterns
-        if "error_rate" in metrics_data:
-            if metrics_data["error_rate"] > 0.01:
-                patterns["performance_bottlenecks"].append("high_error_rate")
-                patterns["recommended_dashboards"].append("security")
+        if "error_rate" in metrics_data and metrics_data["error_rate"] > 0.01:
+            patterns["performance_bottlenecks"].append("high_error_rate")
+            patterns["recommended_dashboards"].append("security")
 
         return patterns
 

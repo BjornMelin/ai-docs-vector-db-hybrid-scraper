@@ -573,12 +573,11 @@ class SmartErrorHandler:
 
         # Handle automated actions
         automated_actions = [a for a in actions if a.automated]
-        if automated_actions:
-            if questionary.confirm(
-                f"Run {len(automated_actions)} automated diagnostic checks?",
-                default=True,
-            ).ask():
-                await self._execute_automated_actions(automated_actions)
+        if automated_actions and questionary.confirm(
+            f"Run {len(automated_actions)} automated diagnostic checks?",
+            default=True,
+        ).ask():
+            await self._execute_automated_actions(automated_actions)
 
         # Handle manual actions
         manual_actions = [a for a in actions if not a.automated]
@@ -607,7 +606,8 @@ class SmartErrorHandler:
                 try:
                     result = subprocess.run(
                         action.command,
-                        check=False, shell=True,
+                        check=False,
+                        shell=True,
                         capture_output=True,
                         text=True,
                         timeout=30,

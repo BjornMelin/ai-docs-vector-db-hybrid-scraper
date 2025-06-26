@@ -96,7 +96,7 @@ class ProgressiveSophisticationDemo:
             )
 
         except Exception as e:
-            logger.error(f"❌ Basic Configuration Failed: {e}")
+            logger.exception(f"❌ Basic Configuration Failed: {e}")
             self.demo_results["tier_0_basic"] = {"status": "failed", "error": str(e)}
 
     async def _demonstrate_multi_provider_systems(self):
@@ -142,7 +142,7 @@ class ProgressiveSophisticationDemo:
             )
 
         except Exception as e:
-            logger.error(f"❌ Enhanced Systems Failed: {e}")
+            logger.exception(f"❌ Enhanced Systems Failed: {e}")
             self.demo_results["tier_1_enhanced"] = {"status": "failed", "error": str(e)}
 
     async def _demonstrate_ai_powered_features(self):
@@ -185,7 +185,7 @@ class ProgressiveSophisticationDemo:
 
             available_tiers = (
                 sum(browser_automation.values())
-                if isinstance(list(browser_automation.values())[0], bool)
+                if isinstance(next(iter(browser_automation.values())), bool)
                 else len([v for v in browser_automation.values() if v])
             )
             logger.info(f"✅ Browser Automation Tiers: {available_tiers}/5 available")
@@ -193,7 +193,7 @@ class ProgressiveSophisticationDemo:
             logger.info(f"   Vector DB Batch Size: {config.qdrant.batch_size}")
 
         except Exception as e:
-            logger.error(f"❌ AI-Powered Features Failed: {e}")
+            logger.exception(f"❌ AI-Powered Features Failed: {e}")
             self.demo_results["tier_2_ai_powered"] = {
                 "status": "failed",
                 "error": str(e),
@@ -264,7 +264,7 @@ class ProgressiveSophisticationDemo:
             )
 
         except Exception as e:
-            logger.error(f"❌ Enterprise Features Failed: {e}")
+            logger.exception(f"❌ Enterprise Features Failed: {e}")
             self.demo_results["tier_3_enterprise"] = {
                 "status": "failed",
                 "error": str(e),
@@ -348,7 +348,7 @@ class ProgressiveSophisticationDemo:
             logger.info(f"   Overall System Readiness: {overall_readiness:.1%}")
 
         except Exception as e:
-            logger.error(f"❌ Complete Workflow Failed: {e}")
+            logger.exception(f"❌ Complete Workflow Failed: {e}")
             self.demo_results["portfolio_showcase"] = {
                 "status": "failed",
                 "error": str(e),

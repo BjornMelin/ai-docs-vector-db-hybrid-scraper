@@ -615,7 +615,7 @@ class ClientManager:
             """Backward compatibility wrapper for feature flag functions."""
 
             async def get_flag(
-                self, flag_name: str, user_id: str = None, default: bool = False
+                self, flag_name: str, user_id: str | None = None, default: bool = False
             ):
                 return await get_feature_flag(flag_name, user_id, default)
 
@@ -624,7 +624,7 @@ class ClientManager:
                 flag_name: str,
                 enabled: bool = True,
                 rollout_percentage: int = 100,
-                target_users: list = None,
+                target_users: list | None = None,
             ):
                 return await set_feature_flag(
                     flag_name, enabled, rollout_percentage, target_users
@@ -689,7 +689,7 @@ class ClientManager:
             async def get_status(self, service_name: str):
                 return await get_deployment_status(service_name)
 
-            async def rollback(self, service_name: str, target_version: str = None):
+            async def rollback(self, service_name: str, target_version: str | None = None):
                 return await rollback_deployment(service_name, target_version)
 
         logger.info("Using functional blue/green deployment services")

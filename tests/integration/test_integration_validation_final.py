@@ -85,8 +85,8 @@ class TestFinalIntegrationValidation:
         # Test basic caching (Tier 1)
         assert hasattr(cache_config, "enable_caching")
         assert hasattr(cache_config, "enable_local_cache")
-        assert cache_config.enable_caching == True
-        assert cache_config.enable_local_cache == True
+        assert cache_config.enable_caching
+        assert cache_config.enable_local_cache
 
         # Test advanced caching (Tier 2)
         assert hasattr(cache_config, "enable_dragonfly_cache")
@@ -180,7 +180,7 @@ class TestFinalIntegrationValidation:
 
         # Test basic auto-detection
         assert hasattr(auto_detection_config, "enabled")
-        assert auto_detection_config.enabled == True
+        assert auto_detection_config.enabled
 
         # Test advanced detection features
         detection_features = [
@@ -215,7 +215,7 @@ class TestFinalIntegrationValidation:
 
         # Test basic drift detection
         assert hasattr(drift_config, "enabled")
-        assert drift_config.enabled == True
+        assert drift_config.enabled
 
         # Test advanced monitoring features
         monitoring_features = [
@@ -369,8 +369,8 @@ class TestIntegrationHealthValidation:
         cache_config = config.cache
 
         # Test that basic caching is enabled
-        assert cache_config.enable_caching == True
-        assert cache_config.enable_local_cache == True
+        assert cache_config.enable_caching
+        assert cache_config.enable_local_cache
 
         # Test reasonable defaults
         assert cache_config.ttl_seconds > 0
@@ -382,13 +382,13 @@ class TestIntegrationHealthValidation:
 
         # Test auto-detection enterprise features
         auto_detection = config.auto_detection
-        assert auto_detection.enabled == True
+        assert auto_detection.enabled
         assert auto_detection.max_concurrent_detections > 0
-        assert auto_detection.circuit_breaker_enabled == True
+        assert auto_detection.circuit_breaker_enabled
 
         # Test drift detection enterprise features
         drift_detection = config.drift_detection
-        assert drift_detection.enabled == True
+        assert drift_detection.enabled
         assert len(drift_detection.monitored_paths) > 0
         assert len(drift_detection.alert_on_severity) > 0
 
@@ -455,7 +455,7 @@ class TestPortfolioReadinessValidation:
 
         # Test caching performance optimization
         cache_config = config.cache
-        assert cache_config.enable_caching == True
+        assert cache_config.enable_caching
         assert cache_config.local_max_memory_mb > 0
 
         # Test vector DB performance optimization
@@ -501,7 +501,7 @@ class TestPortfolioReadinessValidation:
         ]
 
         for feature in progressive_features:
-            assert feature == True, (
+            assert feature, (
                 "Progressive sophistication feature should be enabled"
             )
 

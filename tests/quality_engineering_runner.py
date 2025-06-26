@@ -6,6 +6,7 @@ multiple testing dimensions and generates comprehensive quality reports.
 """
 
 import asyncio
+import contextlib
 import json
 import subprocess
 import time
@@ -214,20 +215,14 @@ class QualityTestOrchestrator:
                 parts = line.split()
                 for i, part in enumerate(parts):
                     if part == "passed" and i > 0:
-                        try:
+                        with contextlib.suppress(ValueError):
                             passed = int(parts[i - 1])
-                        except ValueError:
-                            pass
                     elif part == "failed" and i > 0:
-                        try:
+                        with contextlib.suppress(ValueError):
                             failed = int(parts[i - 1])
-                        except ValueError:
-                            pass
                     elif part == "skipped" and i > 0:
-                        try:
+                        with contextlib.suppress(ValueError):
                             skipped = int(parts[i - 1])
-                        except ValueError:
-                            pass
 
         tests = passed + failed + skipped
 
@@ -386,8 +381,8 @@ class QualityTestOrchestrator:
 
         summary = f"""# Quality Engineering Assessment - Executive Summary
 
-**Assessment Date**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}  
-**Overall Quality Score**: {metrics.overall_quality_score:.1f}%  
+**Assessment Date**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Overall Quality Score**: {metrics.overall_quality_score:.1f}%
 **Assessment Duration**: {self.end_time - self.start_time:.1f} seconds
 
 ## Key Quality Indicators
@@ -496,7 +491,7 @@ class QualityTestOrchestrator:
 - **100% Prevention** of security vulnerabilities through automated scanning
 - **90%+ Prevention** of performance regressions through performance contracts
 
-### Development Efficiency  
+### Development Efficiency
 - **{metrics.test_success_rate:.0f}% Test Success Rate** enables confident deployments
 - **Rapid Feedback Loops** with {metrics.execution_time_seconds:.0f}s test execution
 - **Quality Automation** reduces manual testing effort by 75%

@@ -191,7 +191,7 @@ class PerformanceOptimizationShowcase:
             return showcase_results
 
         except Exception as e:
-            logger.error(f"❌ Showcase failed: {e}")
+            logger.exception(f"❌ Showcase failed: {e}")
             raise
 
     async def _initialize_showcase_systems(self) -> None:
@@ -782,7 +782,7 @@ Advanced performance engineering implementation demonstrating sophisticated syst
 - **Intelligent eviction policies** with cost-benefit analysis
 - **Multi-dimensional cache warming** strategies
 
-### ⚡ Intelligent Async Performance Optimization  
+### ⚡ Intelligent Async Performance Optimization
 - **Adaptive concurrency limiting** with backpressure detection
 - **Priority-based task scheduling** with resource awareness
 - **Predictive resource allocation** with ML models

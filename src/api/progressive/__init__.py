@@ -58,25 +58,25 @@ from .types import (
 __all__ = [
     # Core API
     "AIDocSystem",
-    "SimpleSearchResult",
     # Builders
     "AIDocSystemBuilder",
     "AdvancedConfigBuilder",
-    "EmbeddingConfigBuilder",
-    "SearchConfigBuilder",
-    # Protocols
-    "SearchProtocol",
-    "EmbeddingProtocol",
-    "DocumentProcessorProtocol",
     "CacheProtocol",
-    # Types
-    "SearchOptions",
+    "DocumentProcessorProtocol",
+    "EmbeddingConfigBuilder",
     "EmbeddingOptions",
+    "EmbeddingProtocol",
+    "FeatureDiscovery",
     "ProcessingOptions",
     "ProgressiveResponse",
-    # Factory & Discovery
-    "create_system",
+    "SearchConfigBuilder",
+    # Types
+    "SearchOptions",
+    # Protocols
+    "SearchProtocol",
+    "SimpleSearchResult",
     "create_embedding_service",
     "create_search_service",
-    "FeatureDiscovery",
+    # Factory & Discovery
+    "create_system",
 ]

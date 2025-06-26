@@ -297,7 +297,7 @@ class TestDistributedTracing:
                 self.error_spans = []
 
             def record_error(
-                self, span: TraceSpan, error: Exception, error_context: Dict = None
+                self, span: TraceSpan, error: Exception, error_context: Dict | None = None
             ):
                 """Record an error in a span."""
                 span.tags.update(
@@ -1163,7 +1163,7 @@ class TestLogCorrelation:
                 error_type: str,
                 message: str,
                 correlation_id: str,
-                context: Dict = None,
+                context: Dict | None = None,
             ):
                 """Record an error with correlation context."""
                 error_record = {
@@ -1468,7 +1468,7 @@ class TestHealthMonitoring:
                 service: str,
                 operation: str,
                 duration: float,
-                metadata: Dict = None,
+                metadata: Dict | None = None,
             ):
                 """Record performance data."""
                 record = {

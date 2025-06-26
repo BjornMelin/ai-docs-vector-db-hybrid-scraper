@@ -64,7 +64,7 @@ class ConfigValidationError(Exception):
     """Enhanced configuration validation error with helpful guidance."""
 
     def __init__(
-        self, message: str, field_path: str = "", suggestions: List[str] = None
+        self, message: str, field_path: str = "", suggestions: List[str] | None = None
     ):
         self.field_path = field_path
         self.suggestions = suggestions or []
@@ -229,11 +229,10 @@ class BaseConfigBuilder(ABC):
         """Get recommended next steps."""
         steps = []
 
-        if self.auto_detected_services:
-            if self.auto_detected_services.errors:
-                steps.append(
-                    "Review auto-detection errors and resolve connectivity issues"
-                )
+        if self.auto_detected_services and self.auto_detected_services.errors:
+            steps.append(
+                "Review auto-detection errors and resolve connectivity issues"
+            )
 
         steps.extend(
             [

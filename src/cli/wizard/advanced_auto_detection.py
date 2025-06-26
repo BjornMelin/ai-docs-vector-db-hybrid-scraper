@@ -332,7 +332,8 @@ class AdvancedAutoDetector:
         try:
             result = subprocess.run(
                 ["docker", "--version"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -349,7 +350,8 @@ class AdvancedAutoDetector:
         try:
             result = subprocess.run(
                 ["uv", "--version"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -372,7 +374,8 @@ class AdvancedAutoDetector:
             try:
                 result = subprocess.run(
                     ["systemd-detect-virt"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=3,
                 )
@@ -772,7 +775,7 @@ class AdvancedAutoDetector:
             result = sum(i * i for i in range(100000))
 
             # Memory allocation test
-            test_data = [i for i in range(10000)]
+            test_data = list(range(10000))
             del test_data
 
             duration = time.time() - start_time

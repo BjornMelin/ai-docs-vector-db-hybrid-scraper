@@ -144,7 +144,7 @@ async def check_service_availability(
 class DiscoveryResult:
     """Result container for service discovery."""
 
-    def __init__(self, services: list[DetectedService], errors: list[str] = None):
+    def __init__(self, services: list[DetectedService], errors: list[str] | None = None):
         self.services = services
         self.errors = errors or []
 
@@ -436,7 +436,7 @@ async def auto_configure_services(
 
         # Test discovered services
         service_tests = {}
-        for service_name in services.keys():
+        for service_name in services:
             service_tests[service_name] = await test_service_endpoints(
                 service_name, config
             )

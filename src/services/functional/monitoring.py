@@ -357,8 +357,8 @@ async def get_performance_report() -> dict[str, Any]:
         }
 
         # Analyze API call metrics
-        api_calls = [k for k in metrics["counters"].keys() if "api_calls_total" in k]
-        api_errors = [k for k in metrics["counters"].keys() if "api_errors_total" in k]
+        api_calls = [k for k in metrics["counters"] if "api_calls_total" in k]
+        api_errors = [k for k in metrics["counters"] if "api_errors_total" in k]
 
         report["summary"]["total_api_calls"] = sum(
             metrics["counters"][k] for k in api_calls
@@ -369,7 +369,7 @@ async def get_performance_report() -> dict[str, Any]:
 
         # Calculate average response time
         duration_timers = [
-            k for k in metrics["timers"].keys() if "api_call_duration" in k
+            k for k in metrics["timers"] if "api_call_duration" in k
         ]
         if duration_timers:
             total_duration = sum(

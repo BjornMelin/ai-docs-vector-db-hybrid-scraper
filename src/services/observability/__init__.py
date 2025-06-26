@@ -140,19 +140,42 @@ __all__ = [
     # AI/ML tracking
     "AIOperationMetrics",
     "AIOperationTracker",
+    "Alert",
+    "AlertRule",
+    "AlertSeverity",
+    "AlertState",
+    "AnomalyDetection",
+    "AnomalyType",
+    "AutoDetectedConfig",
+    "DashboardTemplate",
+    "DashboardTheme",
+    "EnterpriseAlertRules",
     "ErrorCorrelationTracker",
     # Legacy compatibility
     "FastAPIObservabilityMiddleware",
+    # Intelligent alerting system
+    "IntelligentAlertManager",
+    "IntelligentDashboardRecommender",
+    "MonitoringTier",
     # Core configuration
     "ObservabilityConfig",
+    "ObservabilityInsight",
+    # Enhanced Portfolio Showcase Features (2025)
+    # Auto-magic observability manager
+    "ObservabilityManager",
     # Metrics bridge
     "OpenTelemetryMetricsBridge",
     "PerformanceMetrics",
     # Performance monitoring
     "PerformanceMonitor",
     "PerformanceThresholds",
+    # Professional dashboard generation
+    "ProfessionalDashboardGenerator",
+    "SystemCapability",
     # Correlation and context
     "TraceCorrelationManager",
+    "VisualizationConfig",
+    "VisualizationType",
     "add_span_attribute",
     "add_span_event",
     "correlated_operation",
@@ -164,6 +187,7 @@ __all__ = [
     "get_error_tracker",
     "get_metrics_bridge",
     "get_observability_config",
+    "get_observability_manager",
     "get_operation_statistics",
     "get_performance_monitor",
     "get_resource_attributes",
@@ -191,6 +215,7 @@ __all__ = [
     "set_business_context",
     "set_request_context",
     "set_user_context",
+    "setup_observability_auto",
     "shutdown_observability",
     "trace_async_operation",
     "trace_operation",
@@ -200,29 +225,4 @@ __all__ = [
     "track_rag_pipeline",
     "track_vector_search",
     "update_service_health",
-    # Enhanced Portfolio Showcase Features (2025)
-    # Auto-magic observability manager
-    "ObservabilityManager",
-    "MonitoringTier",
-    "SystemCapability",
-    "AutoDetectedConfig",
-    "ObservabilityInsight",
-    "get_observability_manager",
-    "setup_observability_auto",
-    # Professional dashboard generation
-    "ProfessionalDashboardGenerator",
-    "DashboardTemplate",
-    "VisualizationConfig",
-    "VisualizationType",
-    "DashboardTheme",
-    "IntelligentDashboardRecommender",
-    # Intelligent alerting system
-    "IntelligentAlertManager",
-    "AlertRule",
-    "AlertSeverity",
-    "AlertState",
-    "Alert",
-    "AnomalyDetection",
-    "AnomalyType",
-    "EnterpriseAlertRules",
 ]

@@ -197,7 +197,7 @@ class QualityDashboard:
             """)
 
             conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_timestamp 
+                CREATE INDEX IF NOT EXISTS idx_timestamp
                 ON quality_metrics(timestamp)
             """)
 
@@ -212,7 +212,7 @@ class QualityDashboard:
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
-                INSERT INTO quality_metrics 
+                INSERT INTO quality_metrics
                 (timestamp, metrics_json, build_id, commit_hash, branch_name)
                 VALUES (?, ?, ?, ?, ?)
             """,
@@ -229,7 +229,7 @@ class QualityDashboard:
         """Get the most recent quality metrics."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute("""
-                SELECT metrics_json FROM quality_metrics 
+                SELECT metrics_json FROM quality_metrics
                 ORDER BY timestamp DESC LIMIT 1
             """)
             row = cursor.fetchone()
@@ -248,7 +248,7 @@ class QualityDashboard:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 """
-                SELECT metrics_json FROM quality_metrics 
+                SELECT metrics_json FROM quality_metrics
                 WHERE timestamp >= ?
                 ORDER BY timestamp DESC
             """,
@@ -511,7 +511,7 @@ class QualityDashboard:
                 <div class="score {score_class}">Quality Score: {overall_score:.1f}%</div>
                 <p>Generated: {data["timestamp"]}</p>
             </div>
-            
+
             <div class="metric-grid">
         """
 
@@ -530,7 +530,7 @@ class QualityDashboard:
 
         html += """
             </div>
-            
+
             <h2>Quality Trends</h2>
             <ul>
         """
@@ -540,14 +540,14 @@ class QualityDashboard:
             trend_class = f"trend-{trend['trend_direction']}"
             html += f"""
                 <li class="{trend_class}">
-                    {trend["metric_name"]}: {trend["current_value"]:.1f} 
+                    {trend["metric_name"]}: {trend["current_value"]:.1f}
                     ({trend["trend_direction"]} {abs(trend["trend_percentage"]):.1f}%)
                 </li>
             """
 
         html += """
             </ul>
-            
+
             <h2>Quality Gates</h2>
             <ul>
         """
@@ -564,7 +564,7 @@ class QualityDashboard:
 
         html += """
             </ul>
-            
+
             <h2>Recommendations</h2>
             <ul>
         """

@@ -194,7 +194,7 @@ class FastConfig(BaseSettings, OptimizedConfigMixin):
 
         except Exception as e:
             monitor.record_cache_miss()
-            raise e
+            raise
 
     @classmethod
     @async_performance_timer
@@ -231,7 +231,7 @@ class FastConfig(BaseSettings, OptimizedConfigMixin):
 
         except Exception as e:
             monitor.record_cache_miss()
-            raise e
+            raise
 
     @model_validator(mode="after")
     def create_directories_fast(self) -> "FastConfig":
@@ -480,7 +480,7 @@ async def benchmark_async_config_performance(iterations: int = 100) -> Dict[str,
 
     times = []
 
-    for i in range(iterations):
+    for _i in range(iterations):
         start_time = time.perf_counter()
         config = await load_config_async(environment="development")
         end_time = time.perf_counter()

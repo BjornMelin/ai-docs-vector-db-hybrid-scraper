@@ -123,7 +123,7 @@ class ProcessingOptions(BaseModel):
 
 
 @dataclass
-class ProgressiveResponse(Generic[T]):
+class ProgressiveResponse[T]:
     """Response wrapper that supports progressive feature revelation.
 
     This wrapper allows basic responses to be extended with
