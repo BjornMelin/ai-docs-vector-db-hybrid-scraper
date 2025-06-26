@@ -1,11 +1,49 @@
-"""Simplified configuration system for AI Documentation Vector DB.
+"""Progressive Configuration System for AI Documentation Vector DB.
 
-This module provides a clean, simple configuration system using pydantic-settings v2
-with built-in .env support, validation, and secure handling of sensitive data.
+This module provides a sophisticated configuration system with progressive complexity:
+
+Features:
+- Persona-based configuration builders (Development, Production, Research, Enterprise)
+- Progressive disclosure of advanced features with guided discovery
+- Intelligent auto-detection and smart defaults
+- Advanced Pydantic v2 validation with helpful error messages
+- Enterprise-grade configuration management patterns
+
+Quick Start:
+    # Simple configuration
+    config = await quick_config("development")
+
+    # Guided setup with discovery
+    guide = await guided_config_setup()
+    config = await guide.build_configuration("essential")
+
+    # Advanced builder pattern
+    builder = ConfigBuilderFactory.create_builder("enterprise")
+    config = builder.build()
+
+Portfolio showcase elements:
+- Advanced Pydantic v2 validation patterns
+- Sophisticated auto-detection and service discovery
+- Enterprise-grade configuration management
+- Clean API design hiding complex validation logic
 """
 
-# Main configuration interface
-# Configuration models (for backward compatibility)
+# Progressive configuration builders - NEW SHOWCASE FEATURES
+from .builders import (
+    BaseConfigBuilder,
+    ConfigBuilderFactory,
+    ConfigValidationError,
+    DevelopmentConfigBuilder,
+    EnterpriseConfigBuilder,
+    ProductionConfigBuilder,
+    ProgressiveConfigurationGuide,
+    ResearchConfigBuilder,
+    guided_config_setup,
+    quick_config,
+    validate_configuration_with_help,
+)
+
+# Core configuration models (backward compatibility)
 from .core import (
     BrowserUseConfig,
     CacheConfig,
@@ -28,6 +66,18 @@ from .core import (
     get_config_with_auto_detection,
     reset_config,
     set_config,
+)
+
+# Configuration discovery and intelligence - NEW SHOWCASE FEATURES
+from .discovery import (
+    ConfigurationOptimizer,
+    ConfigurationRecommendation,
+    ConfigurationValidationReport,
+    IntelligentValidator,
+    SystemEnvironment,
+    discover_optimal_configuration,
+    get_system_recommendations,
+    validate_configuration_intelligently,
 )
 
 # Enums for validation (minimal subset actually used)
@@ -74,11 +124,31 @@ def reset_config_compat():
     return reload_settings()
 
 
-# Legacy type aliases
-Config = Settings
+# Legacy type aliases (backward compatibility)
 UnifiedConfig = Settings
 
 __all__ = [
+    # Progressive Configuration Builders - NEW SHOWCASE FEATURES
+    "BaseConfigBuilder",
+    "ConfigBuilderFactory",
+    "ConfigValidationError",
+    "DevelopmentConfigBuilder",
+    "EnterpriseConfigBuilder",
+    "ProductionConfigBuilder",
+    "ProgressiveConfigurationGuide",
+    "ResearchConfigBuilder",
+    "guided_config_setup",
+    "quick_config",
+    "validate_configuration_with_help",
+    # Configuration Discovery and Intelligence - NEW SHOWCASE FEATURES
+    "ConfigurationOptimizer",
+    "ConfigurationRecommendation",
+    "ConfigurationValidationReport",
+    "IntelligentValidator",
+    "SystemEnvironment",
+    "discover_optimal_configuration",
+    "get_system_recommendations",
+    "validate_configuration_intelligently",
     # Main interface
     "Settings",
     "get_settings",

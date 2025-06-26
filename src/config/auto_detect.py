@@ -13,14 +13,12 @@ import asyncio
 import logging
 import os
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from urllib.parse import urlparse
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field, computed_field
 
-from src.config.enums import DeploymentTier, Environment
+from src.config.enums import Environment
 
 
 # Delayed import to avoid circular dependency
@@ -41,7 +39,7 @@ class DetectedEnvironment(BaseModel):
     container_runtime: str | None = Field(None, description="Container runtime")
     detection_confidence: float = Field(description="Confidence score 0.0-1.0")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -59,12 +57,12 @@ class DetectedService(BaseModel):
     supports_pooling: bool = Field(
         default=False, description="Supports connection pooling"
     )
-    pool_config: Dict[str, Any] = Field(
+    pool_config: dict[str, Any] = Field(
         default_factory=dict, description="Pool configuration"
     )
     health_check_url: str | None = Field(None, description="Health check endpoint")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -127,7 +125,7 @@ class AutoDetectedServices(BaseModel):
     """Container for all auto-detected services and environment."""
 
     environment: DetectedEnvironment = Field(description="Detected environment")
-    services: List[DetectedService] = Field(
+    services: list[DetectedService] = Field(
         default_factory=list, description="Detected services"
     )
     detection_started_at: float = Field(
@@ -139,7 +137,7 @@ class AutoDetectedServices(BaseModel):
     total_detection_time_ms: float | None = Field(
         None, description="Total detection time"
     )
-    errors: List[str] = Field(default_factory=list, description="Detection errors")
+    errors: list[str] = Field(default_factory=list, description="Detection errors")
 
     @computed_field
     @property
