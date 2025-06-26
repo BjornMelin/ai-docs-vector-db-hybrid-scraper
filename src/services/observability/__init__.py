@@ -1,18 +1,23 @@
 import typing
 
 
-"""Comprehensive OpenTelemetry observability for AI/ML documentation system.
+"""Enterprise-grade observability system with auto-magic setup and portfolio-quality UX.
 
-This module provides enterprise-grade observability with advanced instrumentation,
-AI/ML operation tracking, trace correlation, performance monitoring, and metrics
-bridging that integrates seamlessly with existing monitoring infrastructure.
+This module provides a comprehensive observability solution that demonstrates:
+- Zero-configuration setup with intelligent environment detection
+- Progressive enhancement from basic to enterprise monitoring
+- Advanced OpenTelemetry integration with cost attribution
+- ML-powered anomaly detection and intelligent alerting
+- Professional dashboard generation for multiple platforms
+- Context-aware performance insights and optimization recommendations
 
-Modern 2025 Features:
-- Advanced auto-instrumentation for AI/ML operations
-- Distributed tracing with context propagation
-- Cost attribution and performance monitoring
-- Error correlation and alerting
-- Dual metrics export (OpenTelemetry + Prometheus)
+Portfolio Showcase Features (2025):
+- DataDog/New Relic inspired UX patterns
+- Intelligent baseline learning with statistical anomaly detection
+- Auto-generated professional monitoring dashboards
+- Enterprise-grade alerting with noise reduction
+- Sophisticated metrics aggregation and correlation
+- Production-ready monitoring infrastructure
 """
 
 # Core configuration and initialization
@@ -101,6 +106,35 @@ from .performance import (
 )
 from .tracking import record_ai_operation, track_cost
 
+# Enhanced Portfolio Showcase Features (2025)
+from .manager import (
+    ObservabilityManager,
+    MonitoringTier,
+    SystemCapability,
+    AutoDetectedConfig,
+    ObservabilityInsight,
+    get_observability_manager,
+    setup_observability_auto,
+)
+from .dashboard_generator import (
+    ProfessionalDashboardGenerator,
+    DashboardTemplate,
+    VisualizationConfig,
+    VisualizationType,
+    DashboardTheme,
+    IntelligentDashboardRecommender,
+)
+from .intelligent_alerting import (
+    IntelligentAlertManager,
+    AlertRule,
+    AlertSeverity,
+    AlertState,
+    Alert,
+    AnomalyDetection,
+    AnomalyType,
+    EnterpriseAlertRules,
+)
+
 
 __all__ = [
     # AI/ML tracking
@@ -166,4 +200,32 @@ __all__ = [
     "track_rag_pipeline",
     "track_vector_search",
     "update_service_health",
+    
+    # Enhanced Portfolio Showcase Features (2025)
+    # Auto-magic observability manager
+    "ObservabilityManager",
+    "MonitoringTier",
+    "SystemCapability",
+    "AutoDetectedConfig",
+    "ObservabilityInsight",
+    "get_observability_manager",
+    "setup_observability_auto",
+    
+    # Professional dashboard generation
+    "ProfessionalDashboardGenerator",
+    "DashboardTemplate",
+    "VisualizationConfig",
+    "VisualizationType",
+    "DashboardTheme",
+    "IntelligentDashboardRecommender",
+    
+    # Intelligent alerting system
+    "IntelligentAlertManager",
+    "AlertRule",
+    "AlertSeverity",
+    "AlertState",
+    "Alert",
+    "AnomalyDetection",
+    "AnomalyType",
+    "EnterpriseAlertRules",
 ]
