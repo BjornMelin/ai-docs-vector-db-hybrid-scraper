@@ -17,7 +17,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict
 from unittest.mock import AsyncMock
 
 import pytest

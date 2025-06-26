@@ -5,6 +5,7 @@ for all FastAPI and MCP endpoints.
 """
 
 import json
+from typing import Dict
 
 import pytest
 import schemathesis

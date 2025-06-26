@@ -5,6 +5,7 @@ validating system performance under expected user loads.
 """
 
 import logging
+from typing import Dict
 
 import pytest
 

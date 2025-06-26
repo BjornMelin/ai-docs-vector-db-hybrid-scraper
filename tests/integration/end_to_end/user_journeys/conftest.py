@@ -7,9 +7,10 @@ across the entire AI Documentation Vector DB Hybrid Scraper system.
 import asyncio
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -22,10 +23,10 @@ class JourneyStep:
     action: str
     params: dict[str, Any]
     expected_result: dict[str, Any] | None = None
-    validation_func: callable | None = None
+    validation_func: Callable | None = None
     timeout_seconds: float = 30.0
     retry_count: int = 0
-    dependencies: list[str] = None
+    dependencies: list[str] | None = None
 
     def __post_init__(self):
         if self.dependencies is None:
@@ -39,9 +40,9 @@ class UserJourney:
     name: str
     description: str
     steps: list[JourneyStep]
-    setup_func: callable | None = None
-    teardown_func: callable | None = None
-    success_criteria: dict[str, Any] = None
+    setup_func: Callable | None = None
+    teardown_func: Callable | None = None
+    success_criteria: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.success_criteria is None:

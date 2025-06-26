@@ -7,6 +7,7 @@ under sudden traffic spikes and auto-scaling scenarios.
 import asyncio
 import logging
 import time
+from typing import Dict
 
 import pytest
 

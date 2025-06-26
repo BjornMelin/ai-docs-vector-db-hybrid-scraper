@@ -6,6 +6,7 @@ and modern pytest patterns following 2025 standards.
 
 import asyncio
 import logging
+from typing import Dict
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

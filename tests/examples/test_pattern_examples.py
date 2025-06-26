@@ -7,7 +7,7 @@ These examples serve as templates for consistent test implementation.
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

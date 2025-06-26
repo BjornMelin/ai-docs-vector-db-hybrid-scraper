@@ -7,7 +7,7 @@ filtering operations in the vector database system.
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
 from qdrant_client import models
@@ -23,7 +23,7 @@ class FilterResult(BaseModel):
     the Qdrant filter conditions and metadata about the filtering process.
     """
 
-    filter_conditions: models.Filter | None = Field(
+    filter_conditions: Optional[models.Filter] = Field(
         None, description="Qdrant filter conditions to apply"
     )
     metadata: dict[str, Any] = Field(
@@ -80,7 +80,7 @@ class BaseFilter(ABC):
 
     @abstractmethod
     async def apply(
-        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], context: Optional[dict[str, Any]] = None
     ) -> FilterResult:
         """Apply the filter with given criteria.
 
@@ -181,9 +181,9 @@ class FilterError(Exception):
     def __init__(
         self,
         message: str,
-        filter_name: str | None = None,
-        filter_criteria: dict[str, Any] | None = None,
-        underlying_error: Exception | None = None,
+        filter_name: Optional[str] = None,
+        filter_criteria: Optional[dict[str, Any]] = None,
+        underlying_error: Optional[Exception] = None,
     ):
         """Initialize the filter error.
 

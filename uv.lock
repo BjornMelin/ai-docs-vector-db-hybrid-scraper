@@ -192,6 +192,9 @@ parsing = [
 ]
 
 [package.dev-dependencies]
+contract = [
+    { name = "schemathesis" },
+]
 dev = [
     { name = "coverage" },
     { name = "hypothesis" },
@@ -304,6 +307,7 @@ requires-dist = [
 provides-extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "all"]
 
 [package.metadata.requires-dev]
+contract = [{ name = "schemathesis", specifier = ">=4.0.2" }]
 dev = [
     { name = "coverage", specifier = ">=7.6.0" },
     { name = "hypothesis", specifier = ">=6.135.0,<7.0.0" },

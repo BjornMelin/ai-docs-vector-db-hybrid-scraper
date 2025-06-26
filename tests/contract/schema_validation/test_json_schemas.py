@@ -5,11 +5,11 @@ and ensures data structure compliance.
 """
 
 from datetime import datetime
+from typing import Dict
 
 import pytest
 
 from src.models.api_contracts import (
-    AdvancedSearchRequest,
     BulkDocumentRequest,
     CollectionRequest,
     DocumentRequest,
@@ -18,6 +18,7 @@ from src.models.api_contracts import (
     SearchRequest,
     SearchResponse,
 )
+from src.services.query_processing import AdvancedSearchRequest
 
 
 class TestPydanticModelValidation:

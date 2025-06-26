@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from src.models.api_contracts import AdvancedSearchRequest
+from src.services.query_processing import AdvancedSearchRequest
 from src.models.api_contracts import AnalyticsRequest
 from src.models.api_contracts import AnalyticsResponse
 from src.models.api_contracts import BulkDocumentRequest
