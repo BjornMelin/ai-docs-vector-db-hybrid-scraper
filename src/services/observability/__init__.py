@@ -32,24 +32,10 @@ from .config import (
     get_resource_attributes,
 )
 
-# Configuration-specific instrumentation
-from .config_instrumentation import (
-    ConfigAttributes,
-    ConfigOperationType,
-    instrument_auto_detection,
-    instrument_config_operation,
-    instrument_config_validation,
-    record_config_change,
-    set_config_context,
-    trace_async_config_operation,
-    trace_config_operation,
-)
-from .config_performance import (
-    ConfigPerformanceMonitor,
-    get_config_performance_monitor,
-    record_config_operation as record_config_performance,
-)
-
+# NOTE: Configuration-specific instrumentation modules were removed:
+# - config_instrumentation.py (over-engineered config tracking)
+# - config_performance.py (custom config performance monitoring)
+# Core observability features remain available through other modules
 # Trace correlation and context propagation
 from .correlation import (
     ErrorCorrelationTracker,
@@ -120,19 +106,11 @@ __all__ = [
     # AI/ML tracking
     "AIOperationMetrics",
     "AIOperationTracker",
-    # Configuration instrumentation
-    "ConfigAttributes",
-    "ConfigOperationType",
-    "ConfigPerformanceMonitor",
     "ErrorCorrelationTracker",
     # Legacy compatibility
     "FastAPIObservabilityMiddleware",
     # Core configuration
     "ObservabilityConfig",
-    # Configuration instrumentation
-    "ConfigAttributes",
-    "ConfigOperationType",
-    "ConfigPerformanceMonitor",
     # Metrics bridge
     "OpenTelemetryMetricsBridge",
     "PerformanceMetrics",
@@ -145,7 +123,6 @@ __all__ = [
     "add_span_event",
     "correlated_operation",
     "get_ai_tracker",
-    "get_config_performance_monitor",
     "get_correlation_manager",
     "get_current_span_id",
     "get_current_trace_context",
@@ -162,9 +139,6 @@ __all__ = [
     "initialize_metrics_bridge",
     "initialize_observability",
     "initialize_performance_monitor",
-    "instrument_auto_detection",
-    "instrument_config_operation",
-    "instrument_config_validation",
     "instrument_embedding_generation",
     "instrument_function",
     "instrument_llm_call",
@@ -178,18 +152,13 @@ __all__ = [
     "record_ai_metrics",
     "record_ai_operation",
     "record_cache_metrics",
-    "record_config_change",
-    "record_config_performance",
     "record_error",
     "record_vector_metrics",
     "set_business_context",
-    "set_config_context",
     "set_request_context",
     "set_user_context",
     "shutdown_observability",
-    "trace_async_config_operation",
     "trace_async_operation",
-    "trace_config_operation",
     "trace_operation",
     "track_cost",
     "track_embedding_generation",

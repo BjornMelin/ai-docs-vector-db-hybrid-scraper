@@ -16,9 +16,13 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
     # Environment and basic settings
-    environment: str = Field(default="development", pattern="^(development|testing|staging|production)$")
+    environment: str = Field(
+        default="development", pattern="^(development|testing|staging|production)$"
+    )
     debug: bool = Field(default=False)
-    log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
+    log_level: str = Field(
+        default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$"
+    )
     app_name: str = Field(default="AI Documentation Vector DB")
     version: str = Field(default="0.1.0")
 
@@ -28,24 +32,26 @@ class Settings(BaseSettings):
     logs_dir: Path = Field(default=Path("logs"))
 
     # API Keys (all as SecretStr)
-    openai_api_key: Optional[SecretStr] = Field(default=None)
-    firecrawl_api_key: Optional[SecretStr] = Field(default=None)
-    qdrant_api_key: Optional[SecretStr] = Field(default=None)
-    dragonfly_password: Optional[SecretStr] = Field(default=None)
-    flagsmith_api_key: Optional[SecretStr] = Field(default=None)
-    flagsmith_environment_key: Optional[SecretStr] = Field(default=None)
-    vault_token: Optional[SecretStr] = Field(default=None)
-    config_admin_api_key: Optional[SecretStr] = Field(default=None)
+    openai_api_key: SecretStr | None = Field(default=None)
+    firecrawl_api_key: SecretStr | None = Field(default=None)
+    qdrant_api_key: SecretStr | None = Field(default=None)
+    dragonfly_password: SecretStr | None = Field(default=None)
+    flagsmith_api_key: SecretStr | None = Field(default=None)
+    flagsmith_environment_key: SecretStr | None = Field(default=None)
+    vault_token: SecretStr | None = Field(default=None)
+    config_admin_api_key: SecretStr | None = Field(default=None)
 
     # Database URLs (as SecretStr for security)
-    database_url: SecretStr = Field(default=SecretStr("sqlite+aiosqlite:///data/app.db"))
+    database_url: SecretStr = Field(
+        default=SecretStr("sqlite+aiosqlite:///data/app.db")
+    )
     dragonfly_url: SecretStr = Field(default=SecretStr("redis://localhost:6379"))
     redis_url: SecretStr = Field(default=SecretStr("redis://localhost:6379"))
 
     # Service URLs
     qdrant_url: str = Field(default="http://localhost:6333")
     firecrawl_api_url: str = Field(default="https://api.firecrawl.dev")
-    vault_url: Optional[str] = Field(default=None)
+    vault_url: str | None = Field(default=None)
     otlp_endpoint: str = Field(default="http://localhost:4317")
     flagsmith_api_url: str = Field(default="https://edge.api.flagsmith.com/api/v1/")
 
@@ -70,7 +76,9 @@ class Settings(BaseSettings):
     # Chunking settings
     chunk_size: int = Field(default=1600, gt=0)
     chunk_overlap: int = Field(default=320, ge=0)
-    chunking_strategy: str = Field(default="enhanced", pattern="^(basic|enhanced|ast_aware)$")
+    chunking_strategy: str = Field(
+        default="enhanced", pattern="^(basic|enhanced|ast_aware)$"
+    )
 
     # Search settings
     search_strategy: str = Field(default="dense", pattern="^(dense|sparse|hybrid)$")
@@ -99,7 +107,9 @@ class Settings(BaseSettings):
     enable_drift_detection: bool = Field(default=True)
 
     # Deployment tier
-    deployment_tier: str = Field(default="enterprise", pattern="^(personal|professional|enterprise)$")
+    deployment_tier: str = Field(
+        default="enterprise", pattern="^(personal|professional|enterprise)$"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -121,7 +131,7 @@ class Settings(BaseSettings):
 
     @field_validator("openai_api_key")
     @classmethod
-    def validate_openai_key(cls, v: Optional[SecretStr]) -> Optional[SecretStr]:
+    def validate_openai_key(cls, v: SecretStr | None) -> SecretStr | None:
         """Validate OpenAI API key format."""
         if v and not v.get_secret_value().startswith("sk-"):
             raise ValueError("OpenAI API key must start with 'sk-'")
@@ -129,7 +139,7 @@ class Settings(BaseSettings):
 
     @field_validator("firecrawl_api_key")
     @classmethod
-    def validate_firecrawl_key(cls, v: Optional[SecretStr]) -> Optional[SecretStr]:
+    def validate_firecrawl_key(cls, v: SecretStr | None) -> SecretStr | None:
         """Validate Firecrawl API key format."""
         if v and not v.get_secret_value().startswith("fc-"):
             raise ValueError("Firecrawl API key must start with 'fc-'")
@@ -162,17 +172,18 @@ class Settings(BaseSettings):
         if exclude_secrets:
             # Replace SecretStr values with masked versions
             for key, value in data.items():
-                if isinstance(getattr(self.__class__, key, None), type) and \
-                   issubclass(getattr(self.__class__, key), SecretStr):
+                if isinstance(getattr(self.__class__, key, None), type) and issubclass(
+                    getattr(self.__class__, key), SecretStr
+                ):
                     data[key] = "***" if value else None
         return data
 
 
 # Global settings instance cache
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     global _settings

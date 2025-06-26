@@ -14,13 +14,13 @@ from fastmcp import FastMCP
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
-from src.services.logging_config import configure_logging
 from src.services.functional.monitoring import (
-    get_system_status,
     check_service_health,
-    increment_counter,
     get_metrics_summary,
+    get_system_status,
+    increment_counter,
 )
+from src.services.logging_config import configure_logging
 
 
 # Initialize logging
@@ -149,7 +149,7 @@ async def lifespan():
 
         # Initialize simplified functional monitoring
         logger.info("Initializing functional monitoring system...")
-        
+
         # Initialize basic health checks using functional services
         async def periodic_health_monitoring():
             """Simplified periodic health monitoring using functional services."""
@@ -157,22 +157,22 @@ async def lifespan():
                 try:
                     # Check system status
                     system_status = await get_system_status()
-                    
+
                     # Update metrics
                     await increment_counter("health_checks_total")
-                    
+
                     if system_status["status"] != "healthy":
                         logger.warning(f"System health issue detected: {system_status}")
                         await increment_counter("health_check_failures")
                     else:
                         logger.debug("System health check passed")
-                    
+
                 except Exception as e:
                     logger.exception(f"Health monitoring error: {e}")
                     await increment_counter("health_check_errors")
-                
+
                 await asyncio.sleep(60.0)  # Check every minute
-        
+
         # Start background monitoring if enabled
         if config.monitoring.enabled:
             health_check_task = asyncio.create_task(periodic_health_monitoring())

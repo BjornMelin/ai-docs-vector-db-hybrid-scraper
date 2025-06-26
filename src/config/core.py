@@ -145,12 +145,26 @@ class EmbeddingConfig(BaseModel):
 class SecurityConfig(BaseModel):
     """Basic security settings."""
 
+    # Core security
+    enabled: bool = Field(default=True)
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)
     require_api_keys: bool = Field(default=True)
     api_key_header: str = Field(default="X-API-Key")
+
+    # Rate limiting
     enable_rate_limiting: bool = Field(default=True)
     rate_limit_requests: int = Field(default=100, gt=0)
+    rate_limit_window: int = Field(default=3600, gt=0)
+
+    # Security headers
+    x_frame_options: str = Field(default="DENY")
+    x_content_type_options: str = Field(default="nosniff")
+    x_xss_protection: str = Field(default="1; mode=block")
+    strict_transport_security: str = Field(
+        default="max-age=31536000; includeSubDomains"
+    )
+    content_security_policy: str = Field(default="default-src 'self'")
 
 
 class SQLAlchemyConfig(BaseModel):
@@ -217,13 +231,50 @@ class CircuitBreakerConfig(BaseModel):
         default=True, description="Enable circuit breaker metrics"
     )
 
+    # Enhanced circuit breaker features
+    use_enhanced_circuit_breaker: bool = Field(
+        default=True, description="Use enhanced circuit breaker with standard library"
+    )
+    enable_detailed_metrics: bool = Field(
+        default=True, description="Enable detailed metrics collection"
+    )
+    enable_fallback_mechanisms: bool = Field(
+        default=True, description="Enable fallback mechanisms for failures"
+    )
+
     # Service-specific overrides
     service_overrides: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: {
-            "openai": {"failure_threshold": 3, "recovery_timeout": 30.0},
-            "firecrawl": {"failure_threshold": 5, "recovery_timeout": 60.0},
-            "qdrant": {"failure_threshold": 3, "recovery_timeout": 15.0},
-            "redis": {"failure_threshold": 2, "recovery_timeout": 10.0},
+            "openai": {
+                "failure_threshold": 3,
+                "recovery_timeout": 30.0,
+                "enable_metrics": True,
+                "enable_fallback": True,
+            },
+            "firecrawl": {
+                "failure_threshold": 5,
+                "recovery_timeout": 60.0,
+                "enable_metrics": True,
+                "enable_fallback": True,
+            },
+            "qdrant": {
+                "failure_threshold": 3,
+                "recovery_timeout": 15.0,
+                "enable_metrics": True,
+                "enable_fallback": False,
+            },
+            "redis": {
+                "failure_threshold": 2,
+                "recovery_timeout": 10.0,
+                "enable_metrics": True,
+                "enable_fallback": False,
+            },
+            "crawl4ai": {
+                "failure_threshold": 4,
+                "recovery_timeout": 45.0,
+                "enable_metrics": True,
+                "enable_fallback": True,
+            },
         }
     )
 

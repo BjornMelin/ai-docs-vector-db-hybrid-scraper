@@ -15,7 +15,6 @@ from src.config.config_manager import (
     ConfigManager,
     SecureConfig,
     get_config_manager,
-    migrate_from_old_config_reloader,
 )
 
 
@@ -288,30 +287,7 @@ class TestConfigManager:
         assert info["change_listeners_count"] == 0
 
 
-class TestMigration:
-    """Tests for migration from old ConfigReloader."""
-
-    def test_migrate_from_old_reloader(self):
-        """Test migration from old ConfigReloader to ConfigManager."""
-        # Mock old reloader
-        old_reloader = MagicMock()
-        old_reloader.config_source = Path(".env")
-        old_reloader._file_watch_enabled = True
-        old_reloader._change_listeners = []
-
-        # Add mock listener
-        mock_listener = MagicMock()
-        mock_listener.name = "test_listener"
-        mock_listener.callback = MagicMock(return_value=True)
-        old_reloader._change_listeners.append(mock_listener)
-
-        # Migrate
-        new_manager = migrate_from_old_config_reloader(old_reloader)
-
-        assert isinstance(new_manager, ConfigManager)
-        assert new_manager.config_file == Path(".env")
-        assert new_manager.enable_file_watching is True
-        assert len(new_manager._change_listeners) == 1
+# NOTE: Migration tests removed - old ConfigReloader was deleted during cleanup
 
 
 class TestGlobalConfigManager:

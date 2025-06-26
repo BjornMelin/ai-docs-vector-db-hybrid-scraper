@@ -7,11 +7,11 @@ from typing import Any, Optional
 
 def get_env_bool(key: str, default: bool = False) -> bool:
     """Get boolean value from environment variable.
-    
+
     Args:
         key: Environment variable name
         default: Default value if not set
-        
+
     Returns:
         Boolean value
     """
@@ -23,11 +23,11 @@ def get_env_bool(key: str, default: bool = False) -> bool:
 
 def get_env_list(key: str, separator: str = ",") -> list[str]:
     """Get list from comma-separated environment variable.
-    
+
     Args:
         key: Environment variable name
         separator: String separator (default: comma)
-        
+
     Returns:
         List of strings
     """
@@ -39,11 +39,11 @@ def get_env_list(key: str, separator: str = ",") -> list[str]:
 
 def mask_secret(value: str, visible_chars: int = 4) -> str:
     """Mask a secret value for safe display.
-    
+
     Args:
         value: Secret value to mask
         visible_chars: Number of characters to show at start
-        
+
     Returns:
         Masked string
     """
@@ -54,10 +54,10 @@ def mask_secret(value: str, visible_chars: int = 4) -> str:
 
 def ensure_path_exists(path: Path) -> Path:
     """Ensure a directory path exists.
-    
+
     Args:
         path: Path to create if needed
-        
+
     Returns:
         The path object
     """
@@ -65,24 +65,26 @@ def ensure_path_exists(path: Path) -> Path:
     return path
 
 
-def merge_config_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+def merge_config_dicts(
+    base: dict[str, Any], override: dict[str, Any]
+) -> dict[str, Any]:
     """Deep merge configuration dictionaries.
-    
+
     Args:
         base: Base configuration
         override: Override values
-        
+
     Returns:
         Merged configuration
     """
     result = base.copy()
-    
+
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = merge_config_dicts(result[key], value)
         else:
             result[key] = value
-    
+
     return result
 
 
