@@ -70,14 +70,14 @@ class SystemCapabilities:
     disk_space_gb: float
     network_interfaces: List[str]
     docker_available: bool = False
-    docker_version: Optional[str] = None
+    docker_version: str | None = None
     python_version: str = ""
     uv_available: bool = False
-    uv_version: Optional[str] = None
+    uv_version: str | None = None
     architecture: str = ""
     os_type: str = ""
     os_version: str = ""
-    virtualization_type: Optional[str] = None
+    virtualization_type: str | None = None
     performance_score: float = 0.0
     optimization_opportunities: List[str] = field(default_factory=list)
 
@@ -121,11 +121,11 @@ class DetectionResult:
     detection_id: str
     timestamp: float
     phase: DetectionPhase
-    system_capabilities: Optional[SystemCapabilities] = None
+    system_capabilities: SystemCapabilities | None = None
     service_capabilities: List[ServiceCapabilities] = field(default_factory=list)
-    performance_profile: Optional[PerformanceProfile] = None
-    environment_type: Optional[Environment] = None
-    deployment_tier: Optional[DeploymentTier] = None
+    performance_profile: PerformanceProfile | None = None
+    environment_type: Environment | None = None
+    deployment_tier: DeploymentTier | None = None
     confidence_score: float = 0.0
     optimization_score: float = 0.0
     recommendations: List[str] = field(default_factory=list)
@@ -206,7 +206,9 @@ class AdvancedAutoDetector:
             TextColumn("[progress.description]{task.description}"),
             console=self.console,
         ) as progress:
-            main_task = progress.add_task("🔍 Advanced Auto-Detection", total=len(phases))
+            main_task = progress.add_task(
+                "🔍 Advanced Auto-Detection", total=len(phases)
+            )
 
             for phase, description in phases:
                 self.detection_result.phase = phase
@@ -255,7 +257,7 @@ class AdvancedAutoDetector:
         return self.detection_result
 
     async def _analyze_system_capabilities(
-        self, progress: Optional[Progress] = None, task_id: Optional[int] = None
+        self, progress: Progress | None = None, task_id: int | None = None
     ):
         """Analyze comprehensive system capabilities."""
         self.logger.info("Analyzing system capabilities")
@@ -325,12 +327,12 @@ class AdvancedAutoDetector:
             self.logger.exception(f"System analysis failed: {e}")
             raise
 
-    async def _detect_docker(self) -> Tuple[bool, Optional[str]]:
+    async def _detect_docker(self) -> Tuple[bool, str | None]:
         """Detect Docker availability and version."""
         try:
             result = subprocess.run(
                 ["docker", "--version"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -342,12 +344,12 @@ class AdvancedAutoDetector:
 
         return False, None
 
-    async def _detect_uv(self) -> Tuple[bool, Optional[str]]:
+    async def _detect_uv(self) -> Tuple[bool, str | None]:
         """Detect UV package manager availability and version."""
         try:
             result = subprocess.run(
                 ["uv", "--version"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -359,7 +361,7 @@ class AdvancedAutoDetector:
 
         return False, None
 
-    async def _detect_virtualization(self) -> Optional[str]:
+    async def _detect_virtualization(self) -> str | None:
         """Detect virtualization technology."""
         try:
             # Check for common virtualization indicators
@@ -370,7 +372,7 @@ class AdvancedAutoDetector:
             try:
                 result = subprocess.run(
                     ["systemd-detect-virt"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=3,
                 )
@@ -400,7 +402,7 @@ class AdvancedAutoDetector:
         freq_score = min(cpu_freq / 50, 100) if cpu_freq > 0 else 50
 
         # Weighted average
-        return (cpu_score * 0.4 + memory_score * 0.4 + freq_score * 0.2)
+        return cpu_score * 0.4 + memory_score * 0.4 + freq_score * 0.2
 
     def _identify_optimization_opportunities(
         self,
@@ -415,16 +417,24 @@ class AdvancedAutoDetector:
 
         # CPU optimization
         if cpu_count <= 2:
-            opportunities.append("Consider upgrading to a multi-core system for better parallel processing")
+            opportunities.append(
+                "Consider upgrading to a multi-core system for better parallel processing"
+            )
         elif cpu_count >= 8:
-            opportunities.append("High CPU count detected - enable parallel processing features")
+            opportunities.append(
+                "High CPU count detected - enable parallel processing features"
+            )
 
         # Memory optimization
         memory_gb = memory.total / (1024**3)
         if memory_gb < 4:
-            opportunities.append("Low memory detected - consider increasing RAM for better performance")
+            opportunities.append(
+                "Low memory detected - consider increasing RAM for better performance"
+            )
         elif memory_gb >= 16:
-            opportunities.append("High memory available - consider increasing cache sizes")
+            opportunities.append(
+                "High memory available - consider increasing cache sizes"
+            )
 
         # Disk optimization
         disk_gb = disk.total / (1024**3)
@@ -434,14 +444,18 @@ class AdvancedAutoDetector:
 
         # Tool optimization
         if not docker_available:
-            opportunities.append("Docker not detected - install for containerized services")
+            opportunities.append(
+                "Docker not detected - install for containerized services"
+            )
         if not uv_available:
-            opportunities.append("UV package manager not detected - install for faster Python dependency management")
+            opportunities.append(
+                "UV package manager not detected - install for faster Python dependency management"
+            )
 
         return opportunities
 
     async def _discover_services(
-        self, progress: Optional[Progress] = None, task_id: Optional[int] = None
+        self, progress: Progress | None = None, task_id: int | None = None
     ):
         """Discover and analyze available services."""
         self.logger.info("Discovering services")
@@ -453,7 +467,9 @@ class AdvancedAutoDetector:
         for service_name, endpoints in self.service_endpoints.items():
             current_service += 1
             if progress and task_id:
-                progress.update(task_id, completed=(current_service / total_services) * 100)
+                progress.update(
+                    task_id, completed=(current_service / total_services) * 100
+                )
 
             service_capability = await self._analyze_service(service_name, endpoints)
             if service_capability:
@@ -463,7 +479,7 @@ class AdvancedAutoDetector:
 
     async def _analyze_service(
         self, service_name: str, endpoints: List[str]
-    ) -> Optional[ServiceCapabilities]:
+    ) -> ServiceCapabilities | None:
         """Analyze a specific service's capabilities."""
         for endpoint in endpoints:
             try:
@@ -477,7 +493,7 @@ class AdvancedAutoDetector:
 
     async def _probe_service_endpoint(
         self, service_name: str, endpoint: str
-    ) -> Optional[ServiceCapabilities]:
+    ) -> ServiceCapabilities | None:
         """Probe a specific service endpoint for capabilities."""
         try:
             if service_name == "qdrant":
@@ -491,7 +507,7 @@ class AdvancedAutoDetector:
 
         return None
 
-    async def _probe_qdrant(self, endpoint: str) -> Optional[ServiceCapabilities]:
+    async def _probe_qdrant(self, endpoint: str) -> ServiceCapabilities | None:
         """Probe Qdrant service capabilities."""
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -506,14 +522,26 @@ class AdvancedAutoDetector:
 
                 # Get cluster info
                 cluster_response = await client.get(f"{endpoint}/cluster")
-                cluster_info = cluster_response.json() if cluster_response.status_code == 200 else {}
+                cluster_info = (
+                    cluster_response.json()
+                    if cluster_response.status_code == 200
+                    else {}
+                )
 
                 # Get telemetry/metrics if available
                 telemetry_response = await client.get(f"{endpoint}/telemetry")
-                telemetry = telemetry_response.json() if telemetry_response.status_code == 200 else {}
+                telemetry = (
+                    telemetry_response.json()
+                    if telemetry_response.status_code == 200
+                    else {}
+                )
 
                 # Calculate health status
-                health_status = ServiceHealth.HEALTHY if response_time < 100 else ServiceHealth.DEGRADED
+                health_status = (
+                    ServiceHealth.HEALTHY
+                    if response_time < 100
+                    else ServiceHealth.DEGRADED
+                )
 
                 # Extract version and capabilities
                 version = "unknown"
@@ -530,7 +558,9 @@ class AdvancedAutoDetector:
                     memory_usage_mb=0.0,  # Would need system monitoring
                     cpu_usage_percent=0.0,  # Would need system monitoring
                     feature_flags=feature_flags,
-                    optimization_recommendations=self._get_qdrant_optimizations(response_time),
+                    optimization_recommendations=self._get_qdrant_optimizations(
+                        response_time
+                    ),
                 )
 
         except Exception as e:
@@ -539,7 +569,7 @@ class AdvancedAutoDetector:
 
     async def _probe_redis(
         self, service_name: str, endpoint: str
-    ) -> Optional[ServiceCapabilities]:
+    ) -> ServiceCapabilities | None:
         """Probe Redis/Dragonfly service capabilities."""
         try:
             # For Redis, we'd use redis-py library
@@ -559,7 +589,9 @@ class AdvancedAutoDetector:
             if result != 0:
                 return None
 
-            health_status = ServiceHealth.HEALTHY if response_time < 50 else ServiceHealth.DEGRADED
+            health_status = (
+                ServiceHealth.HEALTHY if response_time < 50 else ServiceHealth.DEGRADED
+            )
 
             return ServiceCapabilities(
                 service_name=service_name,
@@ -569,14 +601,16 @@ class AdvancedAutoDetector:
                 throughput_score=self._calculate_throughput_score(response_time),
                 memory_usage_mb=0.0,
                 cpu_usage_percent=0.0,
-                optimization_recommendations=self._get_redis_optimizations(response_time),
+                optimization_recommendations=self._get_redis_optimizations(
+                    response_time
+                ),
             )
 
         except Exception as e:
             self.logger.debug(f"Redis probe failed: {e}")
             return None
 
-    async def _probe_postgresql(self, endpoint: str) -> Optional[ServiceCapabilities]:
+    async def _probe_postgresql(self, endpoint: str) -> ServiceCapabilities | None:
         """Probe PostgreSQL service capabilities."""
         try:
             # For PostgreSQL, we'd use asyncpg library
@@ -594,7 +628,9 @@ class AdvancedAutoDetector:
             if result != 0:
                 return None
 
-            health_status = ServiceHealth.HEALTHY if response_time < 100 else ServiceHealth.DEGRADED
+            health_status = (
+                ServiceHealth.HEALTHY if response_time < 100 else ServiceHealth.DEGRADED
+            )
 
             return ServiceCapabilities(
                 service_name="postgresql",
@@ -604,7 +640,9 @@ class AdvancedAutoDetector:
                 throughput_score=self._calculate_throughput_score(response_time),
                 memory_usage_mb=0.0,
                 cpu_usage_percent=0.0,
-                optimization_recommendations=self._get_postgresql_optimizations(response_time),
+                optimization_recommendations=self._get_postgresql_optimizations(
+                    response_time
+                ),
             )
 
         except Exception as e:
@@ -632,11 +670,13 @@ class AdvancedAutoDetector:
             recommendations.append("Consider enabling HNSW index optimization")
             recommendations.append("Increase memory limit for better performance")
 
-        recommendations.extend([
-            "Enable payload indexing for filtered searches",
-            "Configure appropriate HNSW parameters for your use case",
-            "Consider using quantization for large datasets",
-        ])
+        recommendations.extend(
+            [
+                "Enable payload indexing for filtered searches",
+                "Configure appropriate HNSW parameters for your use case",
+                "Consider using quantization for large datasets",
+            ]
+        )
 
         return recommendations
 
@@ -648,11 +688,13 @@ class AdvancedAutoDetector:
             recommendations.append("Check network latency to Redis instance")
             recommendations.append("Consider Redis connection pooling")
 
-        recommendations.extend([
-            "Configure appropriate memory policies",
-            "Enable Redis persistence if needed",
-            "Consider Redis Cluster for high availability",
-        ])
+        recommendations.extend(
+            [
+                "Configure appropriate memory policies",
+                "Enable Redis persistence if needed",
+                "Consider Redis Cluster for high availability",
+            ]
+        )
 
         return recommendations
 
@@ -664,16 +706,18 @@ class AdvancedAutoDetector:
             recommendations.append("Optimize PostgreSQL connection pooling")
             recommendations.append("Consider increasing shared_buffers")
 
-        recommendations.extend([
-            "Configure connection pooling with pgbouncer",
-            "Optimize queries with proper indexing",
-            "Monitor and tune PostgreSQL parameters",
-        ])
+        recommendations.extend(
+            [
+                "Configure connection pooling with pgbouncer",
+                "Optimize queries with proper indexing",
+                "Monitor and tune PostgreSQL parameters",
+            ]
+        )
 
         return recommendations
 
     async def _profile_performance(
-        self, progress: Optional[Progress] = None, task_id: Optional[int] = None
+        self, progress: Progress | None = None, task_id: int | None = None
     ):
         """Profile system and service performance."""
         self.logger.info("Profiling performance")
@@ -835,25 +879,33 @@ class AdvancedAutoDetector:
         recommendations = []
 
         if benchmark_score < 50:
-            recommendations.append("CPU performance is below average - consider upgrading hardware")
+            recommendations.append(
+                "CPU performance is below average - consider upgrading hardware"
+            )
 
         if memory_efficiency < 30:
-            recommendations.append("High memory usage detected - consider adding more RAM")
+            recommendations.append(
+                "High memory usage detected - consider adding more RAM"
+            )
 
         if io_performance < 50:
-            recommendations.append("I/O performance is slow - consider using SSD storage")
+            recommendations.append(
+                "I/O performance is slow - consider using SSD storage"
+            )
 
         # Always include general recommendations
-        recommendations.extend([
-            "Enable connection pooling for database connections",
-            "Configure appropriate cache sizes based on available memory",
-            "Monitor resource usage in production",
-        ])
+        recommendations.extend(
+            [
+                "Enable connection pooling for database connections",
+                "Configure appropriate cache sizes based on available memory",
+                "Monitor resource usage in production",
+            ]
+        )
 
         return recommendations
 
     async def _analyze_optimizations(
-        self, progress: Optional[Progress] = None, task_id: Optional[int] = None
+        self, progress: Progress | None = None, task_id: int | None = None
     ):
         """Analyze optimization opportunities across the entire system."""
         self.logger.info("Analyzing optimization opportunities")
@@ -907,7 +959,9 @@ class AdvancedAutoDetector:
 
         # Add configuration-specific recommendations
         if capabilities.docker_available:
-            recommendations.append("Configure Docker resource limits for optimal performance")
+            recommendations.append(
+                "Configure Docker resource limits for optimal performance"
+            )
 
         if capabilities.uv_available:
             recommendations.append("Use UV for faster dependency management")
@@ -945,7 +999,7 @@ class AdvancedAutoDetector:
         return score, profile.optimization_suggestions
 
     async def _validate_configuration(
-        self, progress: Optional[Progress] = None, task_id: Optional[int] = None
+        self, progress: Progress | None = None, task_id: int | None = None
     ):
         """Validate the detected configuration and provide warnings."""
         self.logger.info("Validating configuration")
@@ -1004,7 +1058,9 @@ class AdvancedAutoDetector:
 
         # UV requirements
         if not capabilities.uv_available:
-            warnings.append("UV package manager recommended for faster Python dependency management")
+            warnings.append(
+                "UV package manager recommended for faster Python dependency management"
+            )
 
         return warnings
 
@@ -1024,7 +1080,9 @@ class AdvancedAutoDetector:
         # Service health warnings
         for service in self.detection_result.service_capabilities:
             if service.health_status == ServiceHealth.DEGRADED:
-                warnings.append(f"Service '{service.service_name}' shows degraded performance")
+                warnings.append(
+                    f"Service '{service.service_name}' shows degraded performance"
+                )
             elif service.health_status == ServiceHealth.UNHEALTHY:
                 warnings.append(f"Service '{service.service_name}' is unhealthy")
 
@@ -1082,7 +1140,8 @@ class AdvancedAutoDetector:
         # Simple heuristics for demonstration
         if (
             self.detection_result.system_capabilities
-            and self.detection_result.system_capabilities.virtualization_type == "docker"
+            and self.detection_result.system_capabilities.virtualization_type
+            == "docker"
         ):
             self.detection_result.environment_type = Environment.PRODUCTION
             self.detection_result.deployment_tier = DeploymentTier.PRODUCTION
@@ -1117,15 +1176,28 @@ class AdvancedAutoDetector:
 
     def show_detection_results(self):
         """Display comprehensive detection results with rich formatting."""
-        self.console.print("\n[bold cyan]🔍 Advanced Auto-Detection Results[/bold cyan]")
+        self.console.print(
+            "\n[bold cyan]🔍 Advanced Auto-Detection Results[/bold cyan]"
+        )
 
         # Overview panel
         overview_text = Text()
         overview_text.append("Detection Complete!\n\n", style="bold green")
-        overview_text.append(f"Environment: {self.detection_result.environment_type.value if self.detection_result.environment_type else 'Unknown'}\n", style="cyan")
-        overview_text.append(f"Deployment Tier: {self.detection_result.deployment_tier.value if self.detection_result.deployment_tier else 'Unknown'}\n", style="cyan")
-        overview_text.append(f"Confidence: {self.detection_result.confidence_score:.1%}\n", style="green")
-        overview_text.append(f"Optimization Score: {self.detection_result.optimization_score:.1f}/100", style="yellow")
+        overview_text.append(
+            f"Environment: {self.detection_result.environment_type.value if self.detection_result.environment_type else 'Unknown'}\n",
+            style="cyan",
+        )
+        overview_text.append(
+            f"Deployment Tier: {self.detection_result.deployment_tier.value if self.detection_result.deployment_tier else 'Unknown'}\n",
+            style="cyan",
+        )
+        overview_text.append(
+            f"Confidence: {self.detection_result.confidence_score:.1%}\n", style="green"
+        )
+        overview_text.append(
+            f"Optimization Score: {self.detection_result.optimization_score:.1f}/100",
+            style="yellow",
+        )
 
         overview_panel = Panel(
             overview_text,
@@ -1159,7 +1231,9 @@ class AdvancedAutoDetector:
         """Display system capabilities."""
         capabilities = self.detection_result.system_capabilities
 
-        table = Table(title="💻 System Capabilities", show_header=True, header_style="bold cyan")
+        table = Table(
+            title="💻 System Capabilities", show_header=True, header_style="bold cyan"
+        )
         table.add_column("Component", style="cyan")
         table.add_column("Details", style="")
         table.add_column("Score", style="green")
@@ -1194,7 +1268,9 @@ class AdvancedAutoDetector:
 
     def _show_service_capabilities(self):
         """Display service capabilities."""
-        table = Table(title="🚀 Service Capabilities", show_header=True, header_style="bold cyan")
+        table = Table(
+            title="🚀 Service Capabilities", show_header=True, header_style="bold cyan"
+        )
         table.add_column("Service", style="cyan")
         table.add_column("Version", style="dim")
         table.add_column("Health", style="")
@@ -1225,15 +1301,29 @@ class AdvancedAutoDetector:
 
         perf_text = Text()
         perf_text.append("Performance Metrics:\n\n", style="bold")
-        perf_text.append(f"Benchmark Score: {profile.benchmark_score:.1f}/100\n", style="green")
-        perf_text.append(f"Memory Efficiency: {profile.memory_efficiency:.1f}%\n", style="cyan")
-        perf_text.append(f"I/O Performance: {profile.io_performance:.1f}/100\n", style="yellow")
-        perf_text.append(f"Network Latency: {profile.network_latency_ms:.1f}ms\n\n", style="blue")
+        perf_text.append(
+            f"Benchmark Score: {profile.benchmark_score:.1f}/100\n", style="green"
+        )
+        perf_text.append(
+            f"Memory Efficiency: {profile.memory_efficiency:.1f}%\n", style="cyan"
+        )
+        perf_text.append(
+            f"I/O Performance: {profile.io_performance:.1f}/100\n", style="yellow"
+        )
+        perf_text.append(
+            f"Network Latency: {profile.network_latency_ms:.1f}ms\n\n", style="blue"
+        )
 
         perf_text.append("Recommendations:\n", style="bold")
-        perf_text.append(f"Concurrent Connections: {profile.concurrent_connections}\n", style="cyan")
-        perf_text.append(f"Worker Processes: {profile.recommended_workers}\n", style="cyan")
-        perf_text.append(f"Batch Size: {profile.recommended_batch_size}\n", style="cyan")
+        perf_text.append(
+            f"Concurrent Connections: {profile.concurrent_connections}\n", style="cyan"
+        )
+        perf_text.append(
+            f"Worker Processes: {profile.recommended_workers}\n", style="cyan"
+        )
+        perf_text.append(
+            f"Batch Size: {profile.recommended_batch_size}\n", style="cyan"
+        )
         perf_text.append(f"Cache Size: {profile.cache_size_mb}MB", style="cyan")
 
         perf_panel = Panel(

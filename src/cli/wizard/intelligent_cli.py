@@ -115,7 +115,7 @@ class ContextualSuggestion:
 class IntelligentCLI:
     """Intelligent CLI with contextual help and progressive feature discovery."""
 
-    def __init__(self, config_dir: Optional[Path] = None):
+    def __init__(self, config_dir: Path | None = None):
         """Initialize the intelligent CLI.
 
         Args:
@@ -144,9 +144,7 @@ class IntelligentCLI:
                     data = json.load(f)
                 return UserProfile.from_dict(data)
             except Exception as e:
-                console.print(
-                    f"[yellow]Could not load user profile: {e}[/yellow]"
-                )
+                console.print(f"[yellow]Could not load user profile: {e}[/yellow]")
 
         return UserProfile()
 
@@ -560,7 +558,9 @@ class IntelligentCLI:
                 info_text.append(f"• {related}\n", style="cyan")
 
         if feature.documentation_url:
-            info_text.append(f"\nDocumentation: {feature.documentation_url}", style="blue")
+            info_text.append(
+                f"\nDocumentation: {feature.documentation_url}", style="blue"
+            )
 
         panel = Panel(
             info_text,
@@ -588,12 +588,16 @@ class IntelligentCLI:
             self.console.print(step["description"])
 
             if "command" in step:
-                self.console.print(f"\n[dim]Command:[/dim] [green]{step['command']}[/green]")
+                self.console.print(
+                    f"\n[dim]Command:[/dim] [green]{step['command']}[/green]"
+                )
 
             if not questionary.confirm("Ready for next step?", default=True).ask():
                 break
 
-        self.console.print("\n[bold green]✅ Feature exploration complete![/bold green]")
+        self.console.print(
+            "\n[bold green]✅ Feature exploration complete![/bold green]"
+        )
 
     def _get_feature_steps(self, feature: CommandFeature) -> List[Dict[str, str]]:
         """Get step-by-step guidance for a feature."""
@@ -665,9 +669,7 @@ class IntelligentCLI:
 
         for suggestion in suggestions:
             confidence_percent = f"{suggestion.confidence:.0%}"
-            table.add_row(
-                suggestion.title, suggestion.description, confidence_percent
-            )
+            table.add_row(suggestion.title, suggestion.description, confidence_percent)
 
         self.console.print(table)
 
@@ -682,9 +684,7 @@ class IntelligentCLI:
             selected = questionary.select(
                 "Which suggestion would you like to try?",
                 choices=[
-                    questionary.Choice(
-                        title=f"{s.title} - {s.command}", value=s
-                    )
+                    questionary.Choice(title=f"{s.title} - {s.command}", value=s)
                     for s in suggestions
                 ]
                 + [questionary.Choice(title="None", value=None)],
@@ -718,19 +718,27 @@ class IntelligentCLI:
             "What's your expertise level with AI documentation tools?",
             choices=[
                 questionary.Choice(
-                    title=f"Beginner (current)" if current_level == "beginner" else "Beginner",
+                    title="Beginner (current)"
+                    if current_level == "beginner"
+                    else "Beginner",
                     value="beginner",
                 ),
                 questionary.Choice(
-                    title=f"Intermediate (current)" if current_level == "intermediate" else "Intermediate",
+                    title="Intermediate (current)"
+                    if current_level == "intermediate"
+                    else "Intermediate",
                     value="intermediate",
                 ),
                 questionary.Choice(
-                    title=f"Advanced (current)" if current_level == "advanced" else "Advanced",
+                    title="Advanced (current)"
+                    if current_level == "advanced"
+                    else "Advanced",
                     value="advanced",
                 ),
                 questionary.Choice(
-                    title=f"Expert (current)" if current_level == "expert" else "Expert",
+                    title="Expert (current)"
+                    if current_level == "expert"
+                    else "Expert",
                     value="expert",
                 ),
             ],
@@ -782,22 +790,40 @@ class IntelligentCLI:
     def _show_personalization_summary(self):
         """Show summary of current personalization settings."""
         summary_text = Text()
-        summary_text.append("🎯 Your Personalized CLI Experience\n\n", style="bold cyan")
+        summary_text.append(
+            "🎯 Your Personalized CLI Experience\n\n", style="bold cyan"
+        )
 
         summary_text.append("Expertise Level: ", style="dim")
-        summary_text.append(f"{self.user_profile.expertise_level.value.title()}\n", style="cyan")
+        summary_text.append(
+            f"{self.user_profile.expertise_level.value.title()}\n", style="cyan"
+        )
 
         summary_text.append("Help Style: ", style="dim")
-        summary_text.append(f"{self.user_profile.preferred_help_style.title()}\n", style="cyan")
+        summary_text.append(
+            f"{self.user_profile.preferred_help_style.title()}\n", style="cyan"
+        )
 
         summary_text.append("Smart Suggestions: ", style="dim")
-        summary_text.append(f"{'Enabled' if self.user_profile.enable_suggestions else 'Disabled'}\n", style="green" if self.user_profile.enable_suggestions else "red")
+        summary_text.append(
+            f"{'Enabled' if self.user_profile.enable_suggestions else 'Disabled'}\n",
+            style="green" if self.user_profile.enable_suggestions else "red",
+        )
 
         summary_text.append("Feature Discovery: ", style="dim")
-        summary_text.append(f"{'Enabled' if self.user_profile.enable_feature_discovery else 'Disabled'}\n", style="green" if self.user_profile.enable_feature_discovery else "red")
+        summary_text.append(
+            f"{'Enabled' if self.user_profile.enable_feature_discovery else 'Disabled'}\n",
+            style="green" if self.user_profile.enable_feature_discovery else "red",
+        )
 
-        summary_text.append(f"\nCommands Used: {len(self.user_profile.command_usage_count)}\n", style="dim")
-        summary_text.append(f"Features Discovered: {len(self.user_profile.discovered_features)}", style="dim")
+        summary_text.append(
+            f"\nCommands Used: {len(self.user_profile.command_usage_count)}\n",
+            style="dim",
+        )
+        summary_text.append(
+            f"Features Discovered: {len(self.user_profile.discovered_features)}",
+            style="dim",
+        )
 
         panel = Panel(
             summary_text,
@@ -828,7 +854,15 @@ class IntelligentCLI:
         usage_table.add_column("Proficiency", style="yellow")
 
         for command, count in sorted_commands[:10]:
-            proficiency = "Expert" if count >= 20 else "Advanced" if count >= 10 else "Intermediate" if count >= 5 else "Beginner"
+            proficiency = (
+                "Expert"
+                if count >= 20
+                else "Advanced"
+                if count >= 10
+                else "Intermediate"
+                if count >= 5
+                else "Beginner"
+            )
             usage_table.add_row(command, str(count), proficiency)
 
         self.console.print(usage_table)
@@ -840,7 +874,10 @@ class IntelligentCLI:
         summary_text = Text()
         summary_text.append(f"Total Commands: {total_commands}\n", style="green")
         summary_text.append(f"Unique Commands: {unique_commands}\n", style="cyan")
-        summary_text.append(f"Expertise Level: {self.user_profile.expertise_level.value.title()}\n", style="yellow")
+        summary_text.append(
+            f"Expertise Level: {self.user_profile.expertise_level.value.title()}\n",
+            style="yellow",
+        )
 
         panel = Panel(
             summary_text,
@@ -858,6 +895,8 @@ class IntelligentCLI:
         ).ask():
             self.user_profile = UserProfile()
             self._save_user_profile()
-            self.console.print("[bold green]✅ Profile reset successfully![/bold green]")
+            self.console.print(
+                "[bold green]✅ Profile reset successfully![/bold green]"
+            )
         else:
             self.console.print("[yellow]Profile reset cancelled.[/yellow]")

@@ -10,10 +10,11 @@ This module provides sophisticated error handling that showcases advanced UX thi
 import asyncio
 import logging
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import questionary
 from rich.console import Console
@@ -71,7 +72,7 @@ class RecoveryAction:
 
     title: str
     description: str
-    command: Optional[str] = None
+    command: str | None = None
     automated: bool = False
     risk_level: str = "low"  # low, medium, high
     prerequisites: List[str] = None
@@ -102,7 +103,7 @@ class SmartErrorSolution:
 class SmartErrorHandler:
     """Intelligent error handler with contextual analysis and automated recovery."""
 
-    def __init__(self, config: Optional[Any] = None):
+    def __init__(self, config: Any | None = None):
         """Initialize the smart error handler.
 
         Args:
@@ -201,9 +202,7 @@ class SmartErrorHandler:
             elapsed = asyncio.get_event_loop().time() - start_time
             logger.debug(f"Smart error analysis completed in {elapsed:.2f}s")
 
-    def _create_error_signature(
-        self, error: Exception, context: ErrorContext
-    ) -> str:
+    def _create_error_signature(self, error: Exception, context: ErrorContext) -> str:
         """Create a unique signature for error caching."""
         error_type = type(error).__name__
         error_msg = str(error)[:100]  # First 100 chars
@@ -258,7 +257,9 @@ class SmartErrorHandler:
             confidence_score=0.6,  # Lower confidence for heuristic analysis
         )
 
-    def _categorize_error(self, error: Exception, context: ErrorContext) -> ErrorCategory:
+    def _categorize_error(
+        self, error: Exception, context: ErrorContext
+    ) -> ErrorCategory:
         """Categorize error for intelligent handling."""
         error_str = str(error).lower()
         error_type = type(error).__name__.lower()
@@ -268,29 +269,42 @@ class SmartErrorHandler:
             for keyword in ["connection", "network", "timeout", "refused"]
         ):
             return ErrorCategory.NETWORK
-        elif any(keyword in error_str for keyword in ["permission", "access", "denied"]):
+        elif any(
+            keyword in error_str for keyword in ["permission", "access", "denied"]
+        ):
             return ErrorCategory.PERMISSIONS
-        elif any(keyword in error_str for keyword in ["not found", "missing", "import"]):
+        elif any(
+            keyword in error_str for keyword in ["not found", "missing", "import"]
+        ):
             return ErrorCategory.DEPENDENCIES
         elif any(keyword in error_str for keyword in ["config", "setting", "invalid"]):
             return ErrorCategory.CONFIGURATION
         elif any(keyword in error_str for keyword in ["service", "server", "port"]):
             return ErrorCategory.SERVICES
-        elif any(keyword in error_str for keyword in ["validation", "format", "schema"]):
+        elif any(
+            keyword in error_str for keyword in ["validation", "format", "schema"]
+        ):
             return ErrorCategory.VALIDATION
         elif any(keyword in error_str for keyword in ["memory", "disk", "space"]):
             return ErrorCategory.RESOURCES
         else:
             return ErrorCategory.UNKNOWN
 
-    def _assess_severity(self, error: Exception, context: ErrorContext) -> ErrorSeverity:
+    def _assess_severity(
+        self, error: Exception, context: ErrorContext
+    ) -> ErrorSeverity:
         """Assess error severity for prioritization."""
         error_str = str(error).lower()
 
         # Critical errors that block all functionality
         if any(
             keyword in error_str
-            for keyword in ["fatal", "critical", "cannot start", "initialization failed"]
+            for keyword in [
+                "fatal",
+                "critical",
+                "cannot start",
+                "initialization failed",
+            ]
         ):
             return ErrorSeverity.CRITICAL
 
@@ -302,9 +316,7 @@ class SmartErrorHandler:
             return ErrorSeverity.HIGH
 
         # Medium severity - reduces functionality
-        if any(
-            keyword in error_str for keyword in ["timeout", "slow", "degraded"]
-        ):
+        if any(keyword in error_str for keyword in ["timeout", "slow", "degraded"]):
             return ErrorSeverity.MEDIUM
 
         # Low severity - minor issues
@@ -511,14 +523,14 @@ class SmartErrorHandler:
 
         error_text = Text()
         error_text.append("🔍 Error Analysis\n\n", style="bold cyan")
-        error_text.append(f"Category: ", style="dim")
+        error_text.append("Category: ", style="dim")
         error_text.append(f"{solution.category.value.title()}\n", style="cyan")
-        error_text.append(f"Severity: ", style="dim")
+        error_text.append("Severity: ", style="dim")
         error_text.append(
             f"{solution.severity.value.title()}\n",
             style=severity_color[solution.severity],
         )
-        error_text.append(f"Confidence: ", style="dim")
+        error_text.append("Confidence: ", style="dim")
         error_text.append(f"{solution.confidence_score:.1%}\n\n", style="green")
 
         error_text.append("Root Cause:\n", style="bold")
@@ -591,13 +603,11 @@ class SmartErrorHandler:
 
         for action in actions:
             if action.command:
-                self.console.print(
-                    f"[dim]Running: {action.title}...[/dim]", end=""
-                )
+                self.console.print(f"[dim]Running: {action.title}...[/dim]", end="")
                 try:
                     result = subprocess.run(
                         action.command,
-                        shell=True,
+                        check=False, shell=True,
                         capture_output=True,
                         text=True,
                         timeout=30,
@@ -624,7 +634,9 @@ class SmartErrorHandler:
             self.console.print(action.description)
 
             if action.command:
-                self.console.print(f"\n[dim]Command:[/dim] [green]{action.command}[/green]")
+                self.console.print(
+                    f"\n[dim]Command:[/dim] [green]{action.command}[/green]"
+                )
 
             if action.prerequisites:
                 self.console.print("\n[dim]Prerequisites:[/dim]")
@@ -637,7 +649,7 @@ class SmartErrorHandler:
                 )
 
             completed = questionary.confirm(
-                f"Have you completed this action?", default=False
+                "Have you completed this action?", default=False
             ).ask()
 
             if completed:
@@ -717,7 +729,7 @@ class SmartErrorHandler:
     # Built-in error pattern handlers
     async def _handle_connection_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle connection-related errors."""
         return SmartErrorSolution(
             category=ErrorCategory.NETWORK,
@@ -764,7 +776,7 @@ class SmartErrorHandler:
 
     async def _handle_permission_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle permission-related errors."""
         return SmartErrorSolution(
             category=ErrorCategory.PERMISSIONS,
@@ -804,7 +816,7 @@ class SmartErrorHandler:
 
     async def _handle_missing_module(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle missing module/dependency errors."""
         return SmartErrorSolution(
             category=ErrorCategory.DEPENDENCIES,
@@ -844,7 +856,7 @@ class SmartErrorHandler:
 
     async def _handle_api_key_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle API key related errors."""
         return SmartErrorSolution(
             category=ErrorCategory.CONFIGURATION,
@@ -884,7 +896,7 @@ class SmartErrorHandler:
 
     async def _handle_validation_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle validation errors."""
         return SmartErrorSolution(
             category=ErrorCategory.VALIDATION,
@@ -923,7 +935,7 @@ class SmartErrorHandler:
 
     async def _handle_timeout_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle timeout errors."""
         return SmartErrorSolution(
             category=ErrorCategory.NETWORK,
@@ -962,7 +974,7 @@ class SmartErrorHandler:
 
     async def _handle_disk_space_error(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle disk space errors."""
         return SmartErrorSolution(
             category=ErrorCategory.RESOURCES,
@@ -1002,7 +1014,7 @@ class SmartErrorHandler:
 
     async def _handle_port_conflict(
         self, error: Exception, context: ErrorContext
-    ) -> Optional[SmartErrorSolution]:
+    ) -> SmartErrorSolution | None:
         """Handle port conflict errors."""
         return SmartErrorSolution(
             category=ErrorCategory.SERVICES,

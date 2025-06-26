@@ -142,7 +142,8 @@ class QualityTestOrchestrator:
             # Execute tests
             result = subprocess.run(
                 cmd,
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 cwd=self.project_root,
                 timeout=300,  # 5 minute timeout per category

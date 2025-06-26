@@ -7,24 +7,24 @@ of the AI Documentation System.
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Type, Union, get_type_hints
-from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type, Union, get_type_hints
 
+from .protocols import (
+    CacheProtocol,
+    DocumentProcessorProtocol,
+    EmbeddingProtocol,
+    MonitoringProtocol,
+    SearchProtocol,
+)
 from .simple import AIDocSystem
 from .types import (
-    QualityTier,
-    SystemConfiguration,
     FeatureCapability,
+    QualityTier,
     SystemCapabilities,
-)
-from .protocols import (
-    SearchProtocol,
-    EmbeddingProtocol,
-    DocumentProcessorProtocol,
-    CacheProtocol,
-    MonitoringProtocol,
+    SystemConfiguration,
 )
 
 
@@ -33,14 +33,16 @@ logger = logging.getLogger(__name__)
 
 class FeatureLevel(str, Enum):
     """Feature sophistication levels."""
-    BASIC = "basic"           # One-line setup, immediate value
+
+    BASIC = "basic"  # One-line setup, immediate value
     PROGRESSIVE = "progressive"  # Builder patterns, configurable
-    EXPERT = "expert"         # Full control, custom implementations
+    EXPERT = "expert"  # Full control, custom implementations
 
 
 @dataclass
 class ProviderInfo:
     """Information about a service provider."""
+
     name: str
     description: str
     capabilities: List[str]
@@ -52,67 +54,67 @@ class ProviderInfo:
 
 class FeatureDiscovery:
     """Feature discovery and capability introspection.
-    
+
     This class helps users understand what features are available
     and how to access them as they become more sophisticated.
-    
+
     Examples:
         Basic discovery:
             >>> discovery = FeatureDiscovery()
             >>> features = discovery.get_basic_features()
-        
+
         Provider discovery:
             >>> providers = discovery.discover_embedding_providers()
             >>> openai_info = discovery.get_provider_info("openai")
-        
+
         Learning path:
             >>> path = discovery.get_learning_path("beginner")
     """
-    
+
     def __init__(self):
         """Initialize feature discovery."""
-        self._capabilities_cache: Optional[SystemCapabilities] = None
-    
+        self._capabilities_cache: SystemCapabilities | None = None
+
     def get_system_capabilities(self) -> SystemCapabilities:
         """Get complete system capabilities overview.
-        
+
         Returns:
             SystemCapabilities with all features and learning paths
         """
         if self._capabilities_cache is None:
             self._capabilities_cache = self._build_capabilities()
         return self._capabilities_cache
-    
+
     def get_basic_features(self) -> List[FeatureCapability]:
         """Get basic features for immediate use.
-        
+
         Returns:
             List of basic feature capabilities
         """
         capabilities = self.get_system_capabilities()
         return capabilities.basic_features
-    
+
     def get_progressive_features(self) -> List[FeatureCapability]:
         """Get progressive features for building sophistication.
-        
+
         Returns:
             List of progressive feature capabilities
         """
         capabilities = self.get_system_capabilities()
         return capabilities.progressive_features
-    
+
     def get_expert_features(self) -> List[FeatureCapability]:
         """Get expert features for maximum control.
-        
+
         Returns:
             List of expert feature capabilities
         """
         capabilities = self.get_system_capabilities()
         return capabilities.expert_features
-    
+
     def discover_embedding_providers(self) -> List[ProviderInfo]:
         """Discover available embedding providers.
-        
+
         Returns:
             List of embedding provider information
         """
@@ -145,10 +147,10 @@ class FeatureDiscovery:
                 example_usage="EmbeddingConfigBuilder().with_provider('huggingface')",
             ),
         ]
-    
+
     def discover_search_strategies(self) -> List[Dict[str, Any]]:
         """Discover available search strategies.
-        
+
         Returns:
             List of search strategy information
         """
@@ -186,13 +188,13 @@ class FeatureDiscovery:
                 "example": "SearchConfigBuilder().with_strategy('adaptive')",
             },
         ]
-    
-    def get_provider_info(self, provider_name: str) -> Optional[ProviderInfo]:
+
+    def get_provider_info(self, provider_name: str) -> ProviderInfo | None:
         """Get detailed information about a specific provider.
-        
+
         Args:
             provider_name: Name of the provider
-            
+
         Returns:
             Provider information or None if not found
         """
@@ -201,13 +203,13 @@ class FeatureDiscovery:
             if provider.name == provider_name:
                 return provider
         return None
-    
+
     def get_learning_path(self, experience_level: str = "beginner") -> List[str]:
         """Get recommended learning path based on experience level.
-        
+
         Args:
             experience_level: "beginner", "intermediate", or "advanced"
-            
+
         Returns:
             List of recommended learning steps
         """
@@ -235,7 +237,7 @@ class FeatureDiscovery:
             ],
         }
         return paths.get(experience_level, paths["beginner"])
-    
+
     def _build_capabilities(self) -> SystemCapabilities:
         """Build the complete system capabilities description."""
         basic_features = [
@@ -248,7 +250,7 @@ class FeatureDiscovery:
             ),
             FeatureCapability(
                 name="Simple Search",
-                description="Basic document search functionality", 
+                description="Basic document search functionality",
                 level="basic",
                 example="results = await system.search('machine learning')",
                 documentation_url="/docs/search",
@@ -268,7 +270,7 @@ class FeatureDiscovery:
                 documentation_url="/docs/crawling",
             ),
         ]
-        
+
         progressive_features = [
             FeatureCapability(
                 name="Builder Pattern",
@@ -280,7 +282,7 @@ class FeatureDiscovery:
             FeatureCapability(
                 name="Advanced Search",
                 description="Configurable search with multiple strategies",
-                level="progressive", 
+                level="progressive",
                 example="options = SearchOptions(strategy='hybrid', rerank=True)",
                 documentation_url="/docs/advanced-search",
             ),
@@ -299,7 +301,7 @@ class FeatureDiscovery:
                 documentation_url="/docs/monitoring",
             ),
         ]
-        
+
         expert_features = [
             FeatureCapability(
                 name="Custom Protocols",
@@ -326,7 +328,7 @@ class FeatureDiscovery:
                 documentation_url="/docs/processing",
             ),
         ]
-        
+
         return SystemCapabilities(
             basic_features=basic_features,
             progressive_features=progressive_features,
@@ -355,34 +357,34 @@ class FeatureDiscovery:
 def create_system(
     *,
     provider: str = "fastembed",
-    quality: str = "balanced", 
-    workspace: Optional[Union[str, Path]] = None,
+    quality: str = "balanced",
+    workspace: Union[str, Path] | None = None,
     **kwargs,
 ) -> AIDocSystem:
     """Factory function for creating AI Documentation Systems.
-    
+
     This provides a clean factory interface for system creation
     with sensible defaults and progressive options.
-    
+
     Args:
         provider: Embedding provider ("fastembed", "openai")
         quality: Quality tier ("fast", "balanced", "best")
         workspace: Workspace directory
         **kwargs: Additional configuration options
-        
+
     Returns:
         Configured AIDocSystem instance
-        
+
     Examples:
         Basic:
             >>> system = create_system()
-        
+
         With options:
             >>> system = create_system(
             ...     provider="openai",
-            ...     quality="best", 
+            ...     quality="best",
             ...     enable_cache=True,
-            ...     enable_monitoring=True
+            ...     enable_monitoring=True,
             ... )
     """
     return AIDocSystem(
@@ -398,68 +400,68 @@ async def create_embedding_service(
     **kwargs,
 ) -> EmbeddingProtocol:
     """Factory function for creating embedding services.
-    
+
     Args:
         provider: Embedding provider name
         **kwargs: Provider-specific configuration
-        
+
     Returns:
         Configured embedding service
     """
-    from src.services.embeddings.manager import EmbeddingManager
     from src.config import get_settings
     from src.infrastructure.client_manager import ClientManager
-    
+    from src.services.embeddings.manager import EmbeddingManager
+
     config = get_settings()
     client_manager = ClientManager()
-    
+
     manager = EmbeddingManager(
         config=config,
         client_manager=client_manager,
         **kwargs,
     )
-    
+
     await manager.initialize()
     return manager
 
 
 async def create_search_service(
-    embedding_service: Optional[EmbeddingProtocol] = None,
+    embedding_service: EmbeddingProtocol | None = None,
     **kwargs,
 ) -> SearchProtocol:
     """Factory function for creating search services.
-    
+
     Args:
         embedding_service: Optional embedding service instance
         **kwargs: Search service configuration
-        
+
     Returns:
         Configured search service
     """
-    from src.services.vector_db.search import VectorSearchService
     from src.config import get_settings
-    
+    from src.services.vector_db.search import VectorSearchService
+
     config = get_settings()
-    
+
     if embedding_service is None:
         embedding_service = await create_embedding_service()
-    
+
     service = VectorSearchService(
         config=config,
         embedding_manager=embedding_service,
         **kwargs,
     )
-    
+
     await service.initialize()
     return service
 
 
 def discover_features() -> FeatureDiscovery:
     """Create a feature discovery instance.
-    
+
     Returns:
         FeatureDiscovery instance for capability exploration
-        
+
     Examples:
         >>> discovery = discover_features()
         >>> basic_features = discovery.get_basic_features()
@@ -470,7 +472,7 @@ def discover_features() -> FeatureDiscovery:
 
 def get_quick_examples() -> Dict[str, str]:
     """Get quick examples for common use cases.
-    
+
     Returns:
         Dictionary of example code snippets
     """
@@ -483,7 +485,6 @@ async with system:
     for result in results:
         print(f"{result.title}: {result.content[:100]}...")
         """,
-        
         "builder_pattern": """
 # Progressive configuration
 system = (AIDocSystem.builder()
@@ -492,7 +493,6 @@ system = (AIDocSystem.builder()
     .with_monitoring(enabled=True, track_costs=True)
     .build())
         """,
-        
         "advanced_search": """
 # Sophisticated search options
 options = SearchOptions(
@@ -504,7 +504,6 @@ options = SearchOptions(
 )
 results = await system.search("query", options=options)
         """,
-        
         "document_processing": """
 # Batch document processing
 urls = ["https://docs.example.com", "https://api.example.com"]
@@ -514,7 +513,6 @@ doc_ids = await system.add_documents_from_urls(
     progress_callback=lambda p, msg: print(f"{p:.1%}: {msg}")
 )
         """,
-        
         "feature_discovery": """
 # Discover available features
 discovery = discover_features()
@@ -526,20 +524,20 @@ learning_path = discovery.get_learning_path("intermediate")
 
 def validate_configuration(config: SystemConfiguration) -> List[str]:
     """Validate system configuration and return any issues.
-    
+
     Args:
         config: System configuration to validate
-        
+
     Returns:
         List of validation warnings/errors
     """
     issues = []
-    
+
     # Check embedding provider
     valid_providers = ["fastembed", "openai", "huggingface"]
     if config.embedding_provider not in valid_providers:
         issues.append(f"Unknown embedding provider: {config.embedding_provider}")
-    
+
     # Check workspace directory
     if config.workspace_dir:
         workspace_path = Path(config.workspace_dir)
@@ -547,31 +545,34 @@ def validate_configuration(config: SystemConfiguration) -> List[str]:
             issues.append(f"Workspace directory does not exist: {config.workspace_dir}")
         elif not workspace_path.is_dir():
             issues.append(f"Workspace path is not a directory: {config.workspace_dir}")
-    
+
     # Check cache configuration
     if config.cache_options.enabled:
         if config.cache_options.ttl_seconds < 60:
             issues.append("Cache TTL should be at least 60 seconds")
         if config.cache_options.max_size < 10:
             issues.append("Cache max size should be at least 10")
-    
+
     # Check monitoring configuration
     if config.monitoring_options.track_costs and not config.monitoring_options.enabled:
         issues.append("Cost tracking requires monitoring to be enabled")
-    
-    if config.monitoring_options.budget_limit and config.monitoring_options.budget_limit <= 0:
+
+    if (
+        config.monitoring_options.budget_limit
+        and config.monitoring_options.budget_limit <= 0
+    ):
         issues.append("Budget limit must be positive")
-    
+
     return issues
 
 
 __all__ = [
     "FeatureDiscovery",
-    "ProviderInfo", 
     "FeatureLevel",
-    "create_system",
+    "ProviderInfo",
     "create_embedding_service",
     "create_search_service",
+    "create_system",
     "discover_features",
     "get_quick_examples",
     "validate_configuration",

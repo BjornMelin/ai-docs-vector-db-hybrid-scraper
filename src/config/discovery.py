@@ -100,10 +100,9 @@ class ConfigurationOptimizer:
             memory_gb = memory_bytes / (1024**3)
 
             # Check for Docker
-            is_docker = (
-                os.path.exists("/.dockerenv")
-                or (os.path.exists("/proc/1/cgroup")
-                and "docker" in open("/proc/1/cgroup").read())
+            is_docker = os.path.exists("/.dockerenv") or (
+                os.path.exists("/proc/1/cgroup")
+                and "docker" in open("/proc/1/cgroup").read()
             )
 
             # Check for CI environment

@@ -1,6 +1,6 @@
 """Progressive API interface for AI Documentation System.
 
-This module provides elegant, progressive API interfaces that offer immediate value 
+This module provides elegant, progressive API interfaces that offer immediate value
 while progressively revealing sophisticated features.
 
 Design Philosophy:
@@ -16,65 +16,64 @@ Usage Patterns:
         >>> results = await system.search("your query")
 
     Intermediate (builder pattern):
-        >>> system = (AIDocSystem.builder()
+        >>> system = (
+        ...     AIDocSystem.builder()
         ...     .with_embedding_provider("openai")
         ...     .with_cache(enabled=True)
-        ...     .build())
+        ...     .build()
+        ... )
 
     Advanced (full configuration):
         >>> config = AdvancedConfig.builder()...
         >>> system = AIDocSystem(config=config)
 """
 
-from .simple import AIDocSystem, SimpleSearchResult
 from .builders import (
-    AIDocSystemBuilder,
     AdvancedConfigBuilder,
+    AIDocSystemBuilder,
     EmbeddingConfigBuilder,
     SearchConfigBuilder,
 )
-from .protocols import (
-    SearchProtocol,
-    EmbeddingProtocol,
-    DocumentProcessorProtocol,
-    CacheProtocol,
+from .factory import (
+    FeatureDiscovery,
+    create_embedding_service,
+    create_search_service,
+    create_system,
 )
+from .protocols import (
+    CacheProtocol,
+    DocumentProcessorProtocol,
+    EmbeddingProtocol,
+    SearchProtocol,
+)
+from .simple import AIDocSystem, SimpleSearchResult
 from .types import (
-    SearchOptions,
     EmbeddingOptions,
     ProcessingOptions,
     ProgressiveResponse,
+    SearchOptions,
 )
-from .factory import (
-    create_system,
-    create_embedding_service,
-    create_search_service,
-    FeatureDiscovery,
-)
+
 
 __all__ = [
     # Core API
     "AIDocSystem",
     "SimpleSearchResult",
-    
     # Builders
-    "AIDocSystemBuilder", 
+    "AIDocSystemBuilder",
     "AdvancedConfigBuilder",
     "EmbeddingConfigBuilder",
     "SearchConfigBuilder",
-    
     # Protocols
     "SearchProtocol",
-    "EmbeddingProtocol", 
+    "EmbeddingProtocol",
     "DocumentProcessorProtocol",
     "CacheProtocol",
-    
     # Types
     "SearchOptions",
     "EmbeddingOptions",
-    "ProcessingOptions", 
+    "ProcessingOptions",
     "ProgressiveResponse",
-    
     # Factory & Discovery
     "create_system",
     "create_embedding_service",

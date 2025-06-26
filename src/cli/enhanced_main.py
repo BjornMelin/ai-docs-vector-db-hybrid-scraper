@@ -21,11 +21,6 @@ from rich.text import Text
 from src.config import Config, get_config
 from src.config.auto_detect import AutoDetectionConfig
 
-# Import enhanced components
-from .wizard.advanced_auto_detection import AdvancedAutoDetector
-from .wizard.intelligent_cli import IntelligentCLI
-from .wizard.smart_error_handler import ErrorContext, SmartErrorHandler
-
 # Import existing command groups
 from .commands import (
     batch as batch_commands,
@@ -33,6 +28,12 @@ from .commands import (
     database as db_commands,
     setup as setup_commands,
 )
+
+# Import enhanced components
+from .wizard.advanced_auto_detection import AdvancedAutoDetector
+from .wizard.intelligent_cli import IntelligentCLI
+from .wizard.smart_error_handler import ErrorContext, SmartErrorHandler
+
 
 console = Console()
 
@@ -45,10 +46,10 @@ class EnhancedCLI:
         self.console = Console()
         self.intelligent_cli = IntelligentCLI()
         self.error_handler = SmartErrorHandler()
-        self.auto_detector: Optional[AdvancedAutoDetector] = None
+        self.auto_detector: AdvancedAutoDetector | None = None
 
         # CLI state
-        self.current_command: Optional[str] = None
+        self.current_command: str | None = None
         self.context: Dict[str, Any] = {}
 
     def setup_context(self, ctx: click.Context):
@@ -67,9 +68,7 @@ class EnhancedCLI:
             ctx.obj["config"] = None
             self.context["config_exists"] = False
             self.context["has_config_errors"] = True
-            self.console.print(
-                f"[yellow]Configuration issue detected: {e}[/yellow]"
-            )
+            self.console.print(f"[yellow]Configuration issue detected: {e}[/yellow]")
 
     async def handle_command_error(
         self, error: Exception, command: str, **kwargs
@@ -110,9 +109,7 @@ class EnhancedCLI:
             return True  # Continue execution
 
         except Exception as handler_error:
-            self.console.print(
-                f"[red]Error handling failed: {handler_error}[/red]"
-            )
+            self.console.print(f"[red]Error handling failed: {handler_error}[/red]")
             return False
 
     async def _gather_system_state(self) -> Dict[str, Any]:
@@ -132,7 +129,7 @@ class EnhancedCLI:
                 import subprocess
 
                 result = subprocess.run(
-                    ["docker", "ps"], capture_output=True, timeout=5
+                    ["docker", "ps"], check=False, capture_output=True, timeout=5
                 )
                 state["docker_running"] = result.returncode == 0
             except Exception:
@@ -154,17 +151,23 @@ class EnhancedCLI:
 
         # Personalized message based on expertise
         if expertise_level == "beginner":
-            welcome_text.append("👋 Welcome! I'll guide you through getting started.\n", style="green")
+            welcome_text.append(
+                "👋 Welcome! I'll guide you through getting started.\n", style="green"
+            )
             welcome_text.append("💡 Try: ", style="dim")
             welcome_text.append("ai-docs setup", style="cyan")
             welcome_text.append(" to begin configuration\n", style="dim")
         elif expertise_level == "intermediate":
-            welcome_text.append("👋 Welcome back! Ready to explore advanced features?\n", style="green")
+            welcome_text.append(
+                "👋 Welcome back! Ready to explore advanced features?\n", style="green"
+            )
             welcome_text.append("⚡ Quick start: ", style="dim")
             welcome_text.append("ai-docs status", style="cyan")
             welcome_text.append(" to check system health\n", style="dim")
         else:  # advanced/expert
-            welcome_text.append("👋 Welcome, expert user! All features unlocked.\n", style="green")
+            welcome_text.append(
+                "👋 Welcome, expert user! All features unlocked.\n", style="green"
+            )
             welcome_text.append("🚀 Try: ", style="dim")
             welcome_text.append("ai-docs auto-detect", style="cyan")
             welcome_text.append(" for comprehensive system analysis\n", style="dim")
@@ -172,7 +175,10 @@ class EnhancedCLI:
         # Usage statistics
         total_commands = sum(profile.command_usage_count.values())
         if total_commands > 0:
-            welcome_text.append(f"\n📊 You've run {total_commands} commands across {len(profile.command_usage_count)} different tools", style="dim")
+            welcome_text.append(
+                f"\n📊 You've run {total_commands} commands across {len(profile.command_usage_count)} different tools",
+                style="dim",
+            )
 
         panel = Panel(
             welcome_text,
@@ -273,8 +279,12 @@ class EnhancedCLI:
             applied_count += 1
 
         success_text = Text()
-        success_text.append(f"✅ Applied {applied_count} optimizations!\n\n", style="bold green")
-        success_text.append("Your system is now optimized for better performance.\n", style="")
+        success_text.append(
+            f"✅ Applied {applied_count} optimizations!\n\n", style="bold green"
+        )
+        success_text.append(
+            "Your system is now optimized for better performance.\n", style=""
+        )
         success_text.append("Run ", style="dim")
         success_text.append("ai-docs status", style="cyan")
         success_text.append(" to verify improvements.", style="dim")
@@ -301,12 +311,12 @@ class EnhancedCLI:
             with open(results_file, "w") as f:
                 json.dump(summary, f, indent=2)
 
-            self.console.print(
-                f"[dim]Detection results saved to {results_file}[/dim]"
-            )
+            self.console.print(f"[dim]Detection results saved to {results_file}[/dim]")
 
         except Exception as e:
-            self.console.print(f"[yellow]Could not save detection results: {e}[/yellow]")
+            self.console.print(
+                f"[yellow]Could not save detection results: {e}[/yellow]"
+            )
 
 
 # Create global enhanced CLI instance
@@ -350,15 +360,17 @@ class EnhancedGroup(click.Group):
     type=click.Choice(["beginner", "intermediate", "advanced", "expert"]),
     help="Set your expertise level for personalized experience",
 )
-@click.version_option(version="2.0.0", prog_name="AI Documentation Scraper Enhanced CLI")
+@click.version_option(
+    version="2.0.0", prog_name="AI Documentation Scraper Enhanced CLI"
+)
 @click.pass_context
 def main(ctx: click.Context, config: Path | None, quiet: bool, expertise: str | None):
     """🚀 AI Documentation Scraper - Enhanced CLI with Intelligence.
 
     An advanced command-line interface featuring:
-    
+
     • 🧠 Intelligent error handling with automated recovery suggestions
-    • 🎯 Contextual help with progressive feature discovery  
+    • 🎯 Contextual help with progressive feature discovery
     • 🔍 Advanced auto-detection with optimization insights
     • 📊 Personalized experience adapting to your expertise level
     • ⚡ Smart suggestions based on usage patterns and context
@@ -368,7 +380,9 @@ def main(ctx: click.Context, config: Path | None, quiet: bool, expertise: str | 
     # Set expertise level if provided
     if expertise:
         enhanced_cli.intelligent_cli.user_profile.expertise_level = (
-            enhanced_cli.intelligent_cli.user_profile.expertise_level.__class__(expertise)
+            enhanced_cli.intelligent_cli.user_profile.expertise_level.__class__(
+                expertise
+            )
         )
         enhanced_cli.intelligent_cli._save_user_profile()
 
@@ -386,11 +400,15 @@ def main(ctx: click.Context, config: Path | None, quiet: bool, expertise: str | 
 
 # Enhanced commands with intelligent features
 @main.command()
-@click.option("--comprehensive", is_flag=True, help="Run comprehensive detection with optimization analysis")
+@click.option(
+    "--comprehensive",
+    is_flag=True,
+    help="Run comprehensive detection with optimization analysis",
+)
 @click.pass_context
 def auto_detect(ctx: click.Context, comprehensive: bool):
     """🔍 Advanced auto-detection with intelligent optimization insights.
-    
+
     Performs comprehensive system analysis including:
     • System capabilities and performance profiling
     • Service discovery with health validation
@@ -413,7 +431,7 @@ def auto_detect(ctx: click.Context, comprehensive: bool):
 @click.pass_context
 def smart_help(ctx: click.Context, command: str | None):
     """💡 Intelligent contextual help with personalized suggestions.
-    
+
     Provides smart assistance based on:
     • Your current expertise level and usage patterns
     • System state and configuration status
@@ -427,7 +445,7 @@ def smart_help(ctx: click.Context, command: str | None):
 @click.pass_context
 def personalize(ctx: click.Context):
     """🎛️ Customize your CLI experience and preferences.
-    
+
     Configure:
     • Expertise level for appropriate feature discovery
     • Help style preferences (verbose, concise, examples)
@@ -442,7 +460,7 @@ def personalize(ctx: click.Context):
 @click.pass_context
 def insights(ctx: click.Context):
     """📊 Show command usage insights and learning patterns.
-    
+
     Displays:
     • Your command usage statistics and proficiency levels
     • Discovered features and progression tracking
@@ -457,7 +475,7 @@ def insights(ctx: click.Context):
 @click.pass_context
 def discover(ctx: click.Context):
     """🌟 Explore new features based on your current expertise.
-    
+
     Progressive feature discovery:
     • Features appropriate for your current skill level
     • Interactive exploration with guided usage examples
@@ -473,7 +491,7 @@ def discover(ctx: click.Context):
 @click.pass_context
 def reset(ctx: click.Context, reset_profile: bool):
     """🔄 Reset CLI personalization and learning data.
-    
+
     Options:
     • Reset user profile and expertise level
     • Clear command usage history and patterns
@@ -527,7 +545,7 @@ for command_group, name in [
 @click.pass_context
 def status(ctx: click.Context):
     """🔍 Enhanced system status with intelligent health analysis.
-    
+
     Comprehensive status check including:
     • Service health with performance metrics
     • System resource utilization and optimization opportunities
@@ -550,7 +568,9 @@ def status(ctx: click.Context):
         results = ServiceHealthChecker.perform_all_health_checks(config)
 
     # Create enhanced status table
-    table = Table(title="Enhanced System Status", show_header=True, header_style="bold cyan")
+    table = Table(
+        title="Enhanced System Status", show_header=True, header_style="bold cyan"
+    )
     table.add_column("Component", style="dim", width=20)
     table.add_column("Status", width=12)
     table.add_column("Performance", width=15)
@@ -562,7 +582,11 @@ def status(ctx: click.Context):
 
         # Add performance info (simulated)
         performance = "Good" if result["connected"] else "N/A"
-        recommendations = "Operating normally" if result["connected"] else "Check service configuration"
+        recommendations = (
+            "Operating normally"
+            if result["connected"]
+            else "Check service configuration"
+        )
 
         table.add_row(
             component.title(),

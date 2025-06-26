@@ -15,56 +15,53 @@ Portfolio Showcase Components:
 
 Usage:
     from src.services.performance import run_performance_optimization_showcase
-    
+
     results = await run_performance_optimization_showcase()
     print(f"Performance improved by {results.average_improvement:.1f}%")
 """
 
 from .async_optimization import (
-    AsyncPerformanceOptimizer,
-    TaskPriority,
     AdaptiveConcurrencyLimiter,
+    AsyncPerformanceOptimizer,
     IntelligentTaskScheduler,
-    execute_optimized,
+    TaskPriority,
     execute_batch_optimized,
+    execute_optimized,
     get_async_optimizer,
     initialize_async_optimizer,
 )
-
 from .benchmark_suite import (
-    PerformanceBenchmarkSuite,
     BenchmarkMetrics,
     BenchmarkResult,
     LoadTestConfig,
+    PerformanceBenchmarkSuite,
     get_benchmark_suite,
     run_performance_benchmark,
 )
-
 from .optimization_showcase import (
-    PerformanceOptimizationShowcase,
     OptimizationResults,
+    PerformanceOptimizationShowcase,
     run_performance_optimization_showcase,
 )
+
 
 __all__ = [
     # Async Optimization
     "AsyncPerformanceOptimizer",
-    "TaskPriority", 
+    "TaskPriority",
     "AdaptiveConcurrencyLimiter",
     "IntelligentTaskScheduler",
     "execute_optimized",
     "execute_batch_optimized",
     "get_async_optimizer",
     "initialize_async_optimizer",
-    
     # Benchmarking
     "PerformanceBenchmarkSuite",
     "BenchmarkMetrics",
-    "BenchmarkResult", 
+    "BenchmarkResult",
     "LoadTestConfig",
     "get_benchmark_suite",
     "run_performance_benchmark",
-    
     # Showcase
     "PerformanceOptimizationShowcase",
     "OptimizationResults",

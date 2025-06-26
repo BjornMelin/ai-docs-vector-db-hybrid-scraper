@@ -439,7 +439,9 @@ class AIGeneratedTestStrategies:
                 st.lists(st.text(min_size=100, max_size=500), min_size=3, max_size=8)
             )
             headers = [f"## Section {i + 1}" for i in range(len(sections))]
-            content = "\n\n".join(f"{h}\n\n{s}" for h, s in zip(headers, sections, strict=False))
+            content = "\n\n".join(
+                f"{h}\n\n{s}" for h, s in zip(headers, sections, strict=False)
+            )
 
         elif doc_type == "api_reference":
             methods = draw(

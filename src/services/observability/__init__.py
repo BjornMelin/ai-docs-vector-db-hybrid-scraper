@@ -52,6 +52,14 @@ from .correlation import (
     record_error,
     set_request_context,
 )
+from .dashboard_generator import (
+    DashboardTemplate,
+    DashboardTheme,
+    IntelligentDashboardRecommender,
+    ProfessionalDashboardGenerator,
+    VisualizationConfig,
+    VisualizationType,
+)
 from .init import (
     initialize_observability,
     is_observability_enabled,
@@ -73,6 +81,27 @@ from .instrumentation import (
     set_user_context,
     trace_async_operation,
     trace_operation,
+)
+from .intelligent_alerting import (
+    Alert,
+    AlertRule,
+    AlertSeverity,
+    AlertState,
+    AnomalyDetection,
+    AnomalyType,
+    EnterpriseAlertRules,
+    IntelligentAlertManager,
+)
+
+# Enhanced Portfolio Showcase Features (2025)
+from .manager import (
+    AutoDetectedConfig,
+    MonitoringTier,
+    ObservabilityInsight,
+    ObservabilityManager,
+    SystemCapability,
+    get_observability_manager,
+    setup_observability_auto,
 )
 
 # Metrics bridge
@@ -105,35 +134,6 @@ from .performance import (
     monitor_operation,
 )
 from .tracking import record_ai_operation, track_cost
-
-# Enhanced Portfolio Showcase Features (2025)
-from .manager import (
-    ObservabilityManager,
-    MonitoringTier,
-    SystemCapability,
-    AutoDetectedConfig,
-    ObservabilityInsight,
-    get_observability_manager,
-    setup_observability_auto,
-)
-from .dashboard_generator import (
-    ProfessionalDashboardGenerator,
-    DashboardTemplate,
-    VisualizationConfig,
-    VisualizationType,
-    DashboardTheme,
-    IntelligentDashboardRecommender,
-)
-from .intelligent_alerting import (
-    IntelligentAlertManager,
-    AlertRule,
-    AlertSeverity,
-    AlertState,
-    Alert,
-    AnomalyDetection,
-    AnomalyType,
-    EnterpriseAlertRules,
-)
 
 
 __all__ = [
@@ -200,7 +200,6 @@ __all__ = [
     "track_rag_pipeline",
     "track_vector_search",
     "update_service_health",
-    
     # Enhanced Portfolio Showcase Features (2025)
     # Auto-magic observability manager
     "ObservabilityManager",
@@ -210,7 +209,6 @@ __all__ = [
     "ObservabilityInsight",
     "get_observability_manager",
     "setup_observability_auto",
-    
     # Professional dashboard generation
     "ProfessionalDashboardGenerator",
     "DashboardTemplate",
@@ -218,7 +216,6 @@ __all__ = [
     "VisualizationType",
     "DashboardTheme",
     "IntelligentDashboardRecommender",
-    
     # Intelligent alerting system
     "IntelligentAlertManager",
     "AlertRule",
