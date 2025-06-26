@@ -12,8 +12,15 @@ from high-level design to detailed implementation patterns.
 
 ### System Overview
 
-AI Documentation Vector DB is a hybrid scraping and vector search system that combines intelligent browser automation,
-advanced vector search, and AI-powered query enhancement for high-performance documentation indexing and retrieval.
+AI Documentation Vector DB has been modernized from a complex multi-class architecture to a simplified, functional approach. The system now emphasizes simplicity, maintainability, and performance while retaining all core capabilities.
+
+**Key Modernization Changes:**
+- **Configuration**: 21 files → 3 files with pydantic-settings v2
+- **Services**: 50+ classes → Simple functions with dependency injection
+- **Error Handling**: Custom exceptions → FastAPI HTTPException
+- **Circuit Breaker**: Custom implementation → Standard circuitbreaker library
+- **CI/CD**: Complex workflows → 4 simple workflows
+- **Code Reduction**: ~23,650 lines removed (83% complexity reduction)
 
 ```mermaid
 flowchart LR
@@ -73,159 +80,121 @@ architecture-beta
 
 ## 🧩 Core Components
 
-### 1. Unified Configuration System
+### 1. Simplified Configuration System
 
 #### Architecture Pattern
 
 - **Location**: `src/config/`
-- **Pattern**: Centralized Pydantic v2 models with nested configuration
-- **Features**: Environment variable support, runtime validation, type safety
+- **Pattern**: Single pydantic-settings v2 model with direct .env support
+- **Features**: Automatic environment loading, built-in validation, secure secret handling
 
-#### Component Structure
+#### Simplified Structure
 
 ```mermaid
 classDiagram
-    class UnifiedConfig {
-        +embedding: EmbeddingConfig
-        +qdrant: QdrantConfig
-        +crawl4ai: Crawl4AIConfig
-        +openai: OpenAIConfig
-        +cache: CacheConfig
-        +security: SecurityConfig
-        +load_from_env() Config
-        +validate() bool
+    class Settings {
+        +environment: str
+        +debug: bool
+        +log_level: str
+        +openai_api_key: SecretStr
+        +qdrant_url: str
+        +embedding_provider: str
+        +enable_caching: bool
+        +chunk_size: int
+        +search_strategy: str
+        +model_config: SettingsConfigDict
+        +requires_openai() bool
+        +get_database_url() str
+        +to_dict(exclude_secrets=True) dict
     }
-
-    class EmbeddingConfig {
-        +provider: EmbeddingProvider
-        +model: str
-        +batch_size: int
-        +timeout: float
-    }
-
-    class QdrantConfig {
-        +url: str
-        +api_key: Optional[str]
-        +timeout: float
-        +max_retries: int
-        +collection_name: str
-    }
-
-    class SecurityConfig {
-        +enable_url_validation: bool
-        +allowed_domains: List[str]
-        +blocked_domains: List[str]
-        +max_request_size: int
-    }
-
-    UnifiedConfig --> EmbeddingConfig
-    UnifiedConfig --> QdrantConfig
-    UnifiedConfig --> SecurityConfig
+    
+    note for Settings "Single model handles all configuration\nwith automatic .env loading"
 ```
 
-#### Configuration Loading Strategy
+#### Simplified Configuration Loading
 
 ```python
-# Configuration resolution order
-1. Environment variables (highest priority)
-2. Configuration files (.env, config.yaml)
-3. Default values (lowest priority)
+# Automatic loading from .env file
+from src.config import get_settings
 
-# Example configuration structure
-config = UnifiedConfig(
-    embedding=EmbeddingConfig(
-        provider="openai",
-        model="text-embedding-3-small",
-        batch_size=100
-    ),
-    qdrant=QdrantConfig(
-        url="http://localhost:6333",
-        collection_name="documents"
-    ),
-    security=SecurityConfig(
-        enable_url_validation=True,
-        blocked_domains=["localhost", "127.0.0.1"]
-    )
-)
+# Configuration loads automatically on first access
+settings = get_settings()
+
+# Environment variables with AI_DOCS_ prefix
+# Example .env file:
+AI_DOCS_ENVIRONMENT=production
+AI_DOCS_OPENAI_API_KEY=sk-...
+AI_DOCS_QDRANT_URL=http://localhost:6333
+AI_DOCS_EMBEDDING_PROVIDER=openai
+AI_DOCS_ENABLE_CACHING=true
+
+# All validation happens automatically
+print(f"Embedding provider: {settings.embedding_provider}")
+print(f"Cache enabled: {settings.enable_caching}")
 ```
 
-### 2. Service Layer Architecture
+### 2. Functional Service Layer
 
-#### Base Service Pattern
+#### Function-Based Architecture
 
-All services inherit from a common base pattern ensuring consistent lifecycle management:
+Services have been modernized from complex classes to simple functions with FastAPI dependency injection:
 
 ```mermaid
-classDiagram
-    class BaseService {
-        <<abstract>>
-        +config: Dict[str, Any]
-        +logger: Logger
-        +_initialized: bool
-        +initialize() None
-        +cleanup() None
-        +_setup()* None
-        +_teardown()* None
-        +__aenter__() Self
-        +__aexit__() None
-    }
-
-    class EmbeddingManager {
-        +provider: EmbeddingProvider
-        +cache: EmbeddingCache
-        +generate_embeddings(texts) List[float]
-        +generate_sparse_embeddings(texts) List[Dict]
-        +get_dimensions() int
-    }
-
-    class QdrantService {
-        +client: QdrantClient
-        +query_api: QueryAPI
-        +search_vectors(query, collection) List[SearchResult]
-        +hybrid_search(dense, sparse, collection) List[SearchResult]
-        +add_documents(docs, collection) bool
-        +create_collection(name, config) bool
-    }
-
-    class UnifiedBrowserManager {
-        +router: AutomationRouter
-        +tiers: Dict[str, BrowserTier]
-        +scrape(request) ScrapingResponse
-        +analyze_url(url) AnalysisResult
-        +get_system_status() SystemStatus
-    }
-
-    BaseService <|-- EmbeddingManager
-    BaseService <|-- QdrantService
-    BaseService <|-- UnifiedBrowserManager
+flowchart TD
+    A["🔧 FastAPI Dependencies"] --> B["📦 Function Services"]
+    B --> C["🛡️ Circuit Breakers"]
+    C --> D["📊 Monitoring"]
+    
+    subgraph "Core Functions"
+        E["generate_embeddings()"]
+        F["crawl_url()"]
+        G["search_vectors()"]
+        H["cache_get/set()"]
+    end
+    
+    subgraph "Infrastructure"
+        I["get_embedding_client()"]
+        J["get_vector_db_client()"]
+        K["get_cache_client()"]
+    end
+    
+    B --> E
+    B --> F
+    B --> G
+    B --> H
+    
+    I --> E
+    J --> G
+    K --> H
+    
+    classDef functions fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef infra fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    
+    class E,F,G,H functions
+    class I,J,K infra
 ```
 
-#### Service Interaction Patterns
+#### Functional Service Patterns
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant M as ServiceManager
-    participant E as EmbeddingService
-    participant Q as QdrantService
-    participant B as BrowserService
+    participant F as FastAPI
+    participant S as Service Functions
+    participant CB as Circuit Breaker
+    participant D as Dependencies
 
-    C->>M: initialize_services()
-    M->>E: initialize()
-    M->>Q: initialize()
-    M->>B: initialize()
+    C->>F: API Request
+    F->>D: Inject Dependencies
+    D->>S: Call Service Function
+    S->>CB: Execute with Protection
+    CB->>S: Result or Fallback
+    S-->>F: Response
+    F-->>C: JSON Response
 
-    C->>M: process_request(url)
-    M->>B: scrape(url)
-    B-->>M: content
-    M->>E: generate_embeddings(content)
-    E-->>M: vectors
-    M->>Q: store_vectors(vectors)
-    Q-->>M: success
-    M-->>C: result
-
-    Note over M: Services use dependency injection
-    Note over E,Q,B: All services implement BaseService
+    Note over D: Dependencies injected automatically
+    Note over CB: Standard circuitbreaker library
+    Note over S: Simple, stateless functions
 ```
 
 ### 3. 5-Tier Browser Automation System
@@ -731,28 +700,29 @@ stateDiagram-v2
     }
 ```
 
-#### Circuit Breaker Configuration
+#### Simplified Circuit Breaker
 
 ```python
-@dataclass
-class CircuitBreakerConfig:
-    """Configuration for multi-level circuit breaker."""
+from circuitbreaker import circuit
+from src.services.functional import enhanced_circuit_breaker
 
-    # Failure thresholds per type
-    connection_threshold: int = 3      # Connection failures
-    timeout_threshold: int = 5         # Timeout failures
-    query_threshold: int = 10          # Query failures
-    transaction_threshold: int = 5     # Transaction failures
-    resource_threshold: int = 3        # Resource failures
+# Standard library usage
+@circuit(failure_threshold=5, recovery_timeout=30, expected_exception=Exception)
+async def protected_service_call():
+    """Protected service call with standard circuit breaker."""
+    # Service logic here
+    pass
 
-    # Recovery settings
-    recovery_timeout: float = 60.0     # Recovery attempt interval
-    half_open_max_requests: int = 3    # Test requests in half-open
-    half_open_success_threshold: int = 2 # Successes needed for recovery
-
-    # Failure rate thresholds
-    failure_rate_threshold: float = 0.5  # 50% failure rate limit
-    min_requests_for_rate: int = 10      # Min requests for rate calculation
+# Enhanced circuit breaker with metrics
+@enhanced_circuit_breaker(
+    failure_threshold=5,
+    recovery_timeout=30,
+    half_open_max_calls=3
+)
+async def advanced_service_call():
+    """Service call with enhanced monitoring and metrics."""
+    # Service logic here
+    pass
 ```
 
 ### Connection Affinity Management
@@ -928,191 +898,117 @@ class AsyncConnectionManager:
 
 ## 🔧 Implementation Patterns
 
-### Service Dependency Injection
+### FastAPI Dependency Injection
 
 ```python
-class ServiceContainer:
-    """Dependency injection container for services."""
+from fastapi import Depends
+from src.services.functional import (
+    get_config,
+    get_cache_client,
+    get_embedding_client,
+    get_vector_db_client
+)
 
-    def __init__(self, config: UnifiedConfig):
-        self.config = config
-        self._services = {}
-        self._initialized = False
+# Simple dependency injection using FastAPI
+async def create_document(
+    content: str,
+    settings=Depends(get_config),
+    cache=Depends(get_cache_client),
+    embeddings=Depends(get_embedding_client),
+    vector_db=Depends(get_vector_db_client)
+):
+    """Create document with automatic dependency injection."""
+    
+    # Generate embeddings
+    embedding = await embeddings.generate(content)
+    
+    # Store in vector database
+    result = await vector_db.upsert(
+        collection="documents",
+        points=[{"id": "doc1", "vector": embedding, "payload": {"content": content}}]
+    )
+    
+    # Cache result
+    await cache.set(f"doc:doc1", result, ttl=3600)
+    
+    return {"success": True, "document_id": "doc1"}
 
-    async def initialize(self):
-        """Initialize all services in dependency order."""
-        if self._initialized:
-            return
-
-        # Initialize core services first
-        self._services['cache'] = CacheManager(self.config.cache)
-        await self._services['cache'].initialize()
-
-        self._services['embedding'] = EmbeddingManager(
-            config=self.config.embedding,
-            cache=self._services['cache']
-        )
-        await self._services['embedding'].initialize()
-
-        self._services['qdrant'] = QdrantService(
-            config=self.config.qdrant,
-            embedding_manager=self._services['embedding']
-        )
-        await self._services['qdrant'].initialize()
-
-        self._services['browser'] = UnifiedBrowserManager(
-            config=self.config.browser
-        )
-        await self._services['browser'].initialize()
-
-        self._initialized = True
-
-    def get_service(self, name: str):
-        """Get service by name."""
-        if not self._initialized:
-            raise RuntimeError("Container not initialized")
-        return self._services.get(name)
-
-    async def cleanup(self):
-        """Cleanup all services."""
-        for service in reversed(list(self._services.values())):
-            if hasattr(service, 'cleanup'):
-                await service.cleanup()
-        self._services.clear()
-        self._initialized = False
+# Dependencies are automatically managed by FastAPI
+# No manual initialization or cleanup required
 ```
 
-### Error Handling Strategy
+### Modernized Error Handling
 
 ```python
-class ServiceError(Exception):
-    """Base exception for service errors."""
+from fastapi import HTTPException, status
+from src.services.functional import enhanced_circuit_breaker
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
-        super().__init__(message)
-        self.details = details or {}
+# Use FastAPI's native HTTPException
+def handle_service_error(error: Exception, context: str) -> HTTPException:
+    """Convert errors to FastAPI HTTPExceptions."""
+    if isinstance(error, ValidationError):
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Validation failed in {context}: {str(error)}"
+        )
+    elif isinstance(error, ConnectionError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Service unavailable: {context}"
+        )
+    else:
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
 
-class ErrorHandler:
-    """Centralized error handling with retry logic."""
-
-    @staticmethod
-    async def with_retry(
-        operation: Callable,
-        max_retries: int = 3,
-        backoff_factor: float = 1.0,
-        exceptions: Tuple = (Exception,)
-    ):
-        """Execute operation with exponential backoff retry."""
-        last_exception = None
-
-        for attempt in range(max_retries + 1):
-            try:
-                return await operation()
-            except exceptions as e:
-                last_exception = e
-                if attempt == max_retries:
-                    break
-
-                wait_time = backoff_factor * (2 ** attempt)
-                await asyncio.sleep(wait_time)
-
-        raise last_exception
-
-    @staticmethod
-    def handle_service_error(error: Exception, context: str) -> ServiceError:
-        """Convert various errors to standardized service errors."""
-        if isinstance(error, ValidationError):
-            return ServiceError(f"Validation failed in {context}", {
-                "error_type": "validation",
-                "original_error": str(error)
-            })
-        elif isinstance(error, aiohttp.ClientError):
-            return ServiceError(f"Network error in {context}", {
-                "error_type": "network",
-                "original_error": str(error)
-            })
-        else:
-            return ServiceError(f"Unknown error in {context}", {
-                "error_type": "unknown",
-                "original_error": str(error)
-            })
+# Circuit breaker handles retries automatically
+@enhanced_circuit_breaker(failure_threshold=3, recovery_timeout=30)
+async def reliable_service_call():
+    """Service call with automatic retry and circuit breaker protection."""
+    # Service logic - retries handled by circuit breaker
+    pass
 ```
 
-### Configuration Management
+### Simplified Configuration Management
 
 ```python
-class ConfigurationManager:
-    """Advanced configuration management with validation and hot-reload."""
+from src.config import get_settings, reload_settings
+from src.services.config_watcher import ConfigWatcher
 
-    def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path
-        self.config = None
-        self.validators = []
-        self.change_handlers = []
+# Simple configuration access
+settings = get_settings()
+print(f"Current environment: {settings.environment}")
 
-    def add_validator(self, validator: Callable[[UnifiedConfig], bool]):
-        """Add configuration validator."""
-        self.validators.append(validator)
+# Reload configuration when needed
+new_settings = reload_settings()
 
-    def add_change_handler(self, handler: Callable[[UnifiedConfig], None]):
-        """Add configuration change handler."""
-        self.change_handlers.append(handler)
+# Optional: Watch for .env file changes
+config_watcher = ConfigWatcher(
+    watch_paths=[".env", ".env.local"],
+    reload_callback=lambda: reload_settings()
+)
 
-    def load_config(self) -> UnifiedConfig:
-        """Load and validate configuration."""
-        # Load from environment and files
-        config_data = self._load_config_data()
+# Start watching (optional)
+await config_watcher.start()
 
-        # Create config object with validation
-        config = UnifiedConfig(**config_data)
+# Configuration validation happens automatically
+# No manual setup required - pydantic handles everything
 
-        # Run custom validators
-        for validator in self.validators:
-            if not validator(config):
-                raise ConfigurationError("Configuration validation failed")
+# Example usage in FastAPI endpoint
+from fastapi import Depends
 
-        self.config = config
-        return config
-
-    def _load_config_data(self) -> Dict[str, Any]:
-        """Load configuration from multiple sources."""
-        config_data = {}
-
-        # 1. Load defaults
-        config_data.update(self._get_defaults())
-
-        # 2. Load from file
-        if self.config_path and os.path.exists(self.config_path):
-            config_data.update(self._load_from_file(self.config_path))
-
-        # 3. Load from environment
-        config_data.update(self._load_from_env())
-
-        return config_data
-
-    async def watch_config_changes(self):
-        """Watch for configuration changes and reload."""
-        if not self.config_path:
-            return
-
-        last_modified = os.path.getmtime(self.config_path)
-
-        while True:
-            await asyncio.sleep(5)  # Check every 5 seconds
-
-            try:
-                current_modified = os.path.getmtime(self.config_path)
-                if current_modified > last_modified:
-                    logger.info("Configuration file changed, reloading...")
-                    new_config = self.load_config()
-
-                    # Notify handlers
-                    for handler in self.change_handlers:
-                        await handler(new_config)
-
-                    last_modified = current_modified
-            except Exception as e:
-                logger.error(f"Error reloading configuration: {e}")
+@app.get("/config/status")
+async def get_config_status(settings=Depends(get_settings)):
+    """Get current configuration status."""
+    return {
+        "environment": settings.environment,
+        "debug": settings.debug,
+        "embedding_provider": settings.embedding_provider,
+        "caching_enabled": settings.enable_caching,
+        "requires_openai": settings.requires_openai(),
+        "requires_firecrawl": settings.requires_firecrawl()
+    }
 ```
 
 ## 🚀 Performance Architecture

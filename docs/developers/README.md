@@ -27,7 +27,7 @@ integrate, and contribute to the AI Documentation Vector DB system.
 
 ### Development Environment
 
-- Prerequisites and installation steps (Python 3.11-3.12)
+- Prerequisites and installation steps (Python 3.11-3.13)
 - Local development setup with Docker
 - Testing framework and quality standards
 - Cross-platform CI pipeline (Linux, Windows, macOS)
