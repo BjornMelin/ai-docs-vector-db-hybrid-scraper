@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHONUNBUFFERED: 1
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: uv sync --dev --frozen
+      
+      - name: Lint with ruff
+        run: |
+          uv run ruff check . --fix
+          uv run ruff format .
+      
+      - name: Validate configs
+        run: uv run python scripts/validate_config.py
+      
+      - name: Run tests
+        run: uv run pytest tests/ --cov=src --cov-report=term-missing -v
+      
+      - name: Check coverage
+        run: |
+          # Generate coverage report
+          uv run coverage report
+          
+          # Extract coverage percentage
+          coverage_percent=$(uv run coverage report | grep TOTAL | awk '{print $NF}' | sed 's/%//')
+          
+          # Check if coverage meets threshold
+          if [ -z "$coverage_percent" ]; then
+            echo "⚠️ Could not determine coverage percentage"
+          elif [ "$coverage_percent" -lt 80 ]; then
+            echo "❌ Coverage is below 80%: $coverage_percent%"
+            exit 1
+          else
+            echo "✅ Coverage is $coverage_percent%"
+          fi

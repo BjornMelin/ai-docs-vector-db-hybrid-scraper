@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
+      - name: Install dependencies
+        run: uv sync --frozen
+      
+      - name: Validate configuration
+        run: |
+          echo "🔍 Validating ${{ inputs.environment }} configuration..."
+          uv run python scripts/validate_config.py
+      
+      - name: Run deployment checks
+        run: |
+          echo "🏃 Running pre-deployment checks..."
+          
+          # Check if config file exists
+          CONFIG_FILE="config/templates/${{ inputs.environment }}.json"
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "❌ Configuration file not found: $CONFIG_FILE"
+            exit 1
+          fi
+          
+          # Basic connectivity test
+          uv run python -c "
+          import json
+          with open('$CONFIG_FILE') as f:
+              config = json.load(f)
+          print(f'✅ Configuration loaded for {config.get(\"environment\")}')
+          "
+      
+      - name: Build Docker image
+        if: inputs.environment != 'development'
+        run: |
+          echo "🐳 Building Docker image..."
+          docker build -t ai-docs-scraper:${{ github.sha }} .
+          echo "✅ Docker image built successfully"
+      
+      - name: Deploy configuration
+        run: |
+          echo "📋 Deploying configuration for ${{ inputs.environment }}..."
+          
+          # Copy environment-specific config
+          cp config/templates/${{ inputs.environment }}.json config/active.json
+          
+          # Set environment variables
+          echo "ENVIRONMENT=${{ inputs.environment }}" > .env.deploy
+          echo "CONFIG_PATH=config/active.json" >> .env.deploy
+          
+          echo "✅ Configuration deployed"
+      
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests..."
+          
+          # Test configuration loading
+          uv run python -c "
+          import sys
+          import os
+          sys.path.append('src')
+          os.environ['ENVIRONMENT'] = '${{ inputs.environment }}'
+          
+          from config.manager import ConfigManager
+          config = ConfigManager()
+          print(f'✅ Config loaded: {config.environment}')
+          "
+          
+          echo "✅ Smoke tests passed"
