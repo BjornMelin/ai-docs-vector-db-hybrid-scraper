@@ -44,32 +44,32 @@ class WorkerSettings:
 
         # Use the simplified config structure
         redis_url = config.get_redis_url()
-        
+
         # Parse Redis URL to extract components
         # Format: redis://[password@]host:port/database
-        if redis_url.startswith('redis://'):
+        if redis_url.startswith("redis://"):
             url_parts = redis_url[8:]  # Remove redis://
             password = None
-            
-            if '@' in url_parts:
-                password, url_parts = url_parts.split('@', 1)
-            
-            if '/' in url_parts:
-                host_port, database_str = url_parts.split('/', 1)
+
+            if "@" in url_parts:
+                password, url_parts = url_parts.split("@", 1)
+
+            if "/" in url_parts:
+                host_port, database_str = url_parts.split("/", 1)
                 database = int(database_str) if database_str else 0
             else:
                 host_port = url_parts
                 database = 0
-            
-            if ':' in host_port:
-                host, port_str = host_port.split(':', 1)
+
+            if ":" in host_port:
+                host, port_str = host_port.split(":", 1)
                 port = int(port_str)
             else:
                 host = host_port
                 port = 6379
         else:
             # Fallback defaults
-            host = 'localhost'
+            host = "localhost"
             port = 6379
             password = None
             database = 0
