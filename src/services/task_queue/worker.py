@@ -41,36 +41,42 @@ class WorkerSettings:
     def get_redis_settings(cls) -> RedisSettings:
         """Get Redis settings from config."""
         config = get_config()
-        tq_config = config.task_queue
 
-        # Parse redis URL
-        url = tq_config.redis_url
-        password = tq_config.redis_password
-        database = tq_config.redis_database
-
-        # Handle different URL formats
-        if url.startswith("redis://"):
-            url = url[8:]  # Remove redis:// prefix
-
-        # Extract host and port
-        if "@" in url:
-            # Has auth in URL
-            auth_part, host_part = url.split("@", 1)
-            if ":" in auth_part:
-                _, url_password = auth_part.split(":", 1)
-                # Config password takes precedence over URL password
-                if not password:
-                    password = url_password
-            host, port = (
-                host_part.split(":", 1) if ":" in host_part else (host_part, "6379")
-            )
+        # Use the simplified config structure
+        redis_url = config.get_redis_url()
+        
+        # Parse Redis URL to extract components
+        # Format: redis://[password@]host:port/database
+        if redis_url.startswith('redis://'):
+            url_parts = redis_url[8:]  # Remove redis://
+            password = None
+            
+            if '@' in url_parts:
+                password, url_parts = url_parts.split('@', 1)
+            
+            if '/' in url_parts:
+                host_port, database_str = url_parts.split('/', 1)
+                database = int(database_str) if database_str else 0
+            else:
+                host_port = url_parts
+                database = 0
+            
+            if ':' in host_port:
+                host, port_str = host_port.split(':', 1)
+                port = int(port_str)
+            else:
+                host = host_port
+                port = 6379
         else:
-            # No auth in URL
-            host, port = url.split(":", 1) if ":" in url else (url, "6379")
+            # Fallback defaults
+            host = 'localhost'
+            port = 6379
+            password = None
+            database = 0
 
         return RedisSettings(
             host=host,
-            port=int(port),
+            port=port,
             password=password,
             database=database,
         )

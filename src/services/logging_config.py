@@ -39,7 +39,8 @@ def configure_logging(
     config = get_config()
 
     if level is None:
-        level = config.log_level.value
+        # Handle both string and enum types for log_level
+        level = config.log_level.value if hasattr(config.log_level, 'value') else config.log_level
 
     if log_file is None and hasattr(config, "log_file"):
         log_file = config.log_file
