@@ -1,0 +1,195 @@
+{
+  "environment": "production",
+  "debug": false,
+  "log_level": "INFO",
+  "app_name": "AI Documentation Vector DB - Enterprise",
+  "version": "1.0.0",
+  "embedding_provider": "openai",
+  "crawl_provider": "crawl4ai",
+  "cache": {
+    "enable_caching": true,
+    "enable_local_cache": true,
+    "enable_dragonfly_cache": true,
+    "dragonfly_url": "redis://dragonfly:6379",
+    "local_max_size": 2000,
+    "local_max_memory_mb": 500.0,
+    "ttl_seconds": 3600,
+    "cache_ttl_seconds": {
+      "search_results": 3600,
+      "embeddings": 86400,
+      "collections": 7200
+    }
+  },
+  "database": {
+    "database_url": "postgresql+asyncpg://user:pass@postgres:5432/ai_docs",
+    "echo_queries": false,
+    "pool_size": 50,
+    "max_overflow": 20,
+    "pool_timeout": 30.0
+  },
+  "qdrant": {
+    "url": "http://qdrant:6333",
+    "collection_name": "enterprise_documents",
+    "batch_size": 200,
+    "prefer_grpc": true,
+    "grpc_port": 6334,
+    "timeout": 60.0
+  },
+  "openai": {
+    "model": "text-embedding-3-large",
+    "dimensions": 3072,
+    "batch_size": 200,
+    "max_requests_per_minute": 5000,
+    "cost_per_million_tokens": 0.13
+  },
+  "embedding": {
+    "provider": "openai",
+    "dense_model": "text-embedding-3-large",
+    "search_strategy": "hybrid",
+    "enable_quantization": true
+  },
+  "chunking": {
+    "chunk_size": 1600,
+    "chunk_overlap": 320,
+    "strategy": "enhanced",
+    "min_chunk_size": 100,
+    "max_chunk_size": 3000,
+    "enable_ast_chunking": true,
+    "preserve_code_blocks": true,
+    "detect_language": true
+  },
+  "hyde": {
+    "enable_hyde": true,
+    "num_generations": 3,
+    "generation_temperature": 0.7
+  },
+  "rag": {
+    "enable_rag": true,
+    "model": "gpt-4",
+    "temperature": 0.1,
+    "max_tokens": 2000,
+    "max_context_length": 6000,
+    "max_results_for_context": 8,
+    "include_sources": true,
+    "enable_answer_metrics": true,
+    "enable_caching": true
+  },
+  "performance": {
+    "max_concurrent_requests": 50,
+    "request_timeout": 30.0,
+    "max_retries": 5,
+    "retry_base_delay": 1.0,
+    "max_memory_usage_mb": 4000.0
+  },
+  "security": {
+    "enabled": true,
+    "require_api_keys": true,
+    "enable_rate_limiting": true,
+    "rate_limit_requests": 1000,
+    "rate_limit_window": 3600,
+    "x_frame_options": "SAMEORIGIN",
+    "x_content_type_options": "nosniff",
+    "x_xss_protection": "1; mode=block",
+    "strict_transport_security": "max-age=31536000; includeSubDomains",
+    "content_security_policy": "default-src 'self'; script-src 'self' 'unsafe-inline'",
+    "allowed_domains": [],
+    "blocked_domains": []
+  },
+  "circuit_breaker": {
+    "failure_threshold": 5,
+    "recovery_timeout": 60.0,
+    "half_open_max_calls": 3,
+    "enable_adaptive_timeout": true,
+    "enable_bulkhead_isolation": true,
+    "enable_metrics_collection": true,
+    "use_enhanced_circuit_breaker": true,
+    "enable_detailed_metrics": true,
+    "enable_fallback_mechanisms": true,
+    "service_overrides": {
+      "openai": {
+        "failure_threshold": 3,
+        "recovery_timeout": 30.0,
+        "enable_metrics": true,
+        "enable_fallback": true
+      },
+      "qdrant": {
+        "failure_threshold": 2,
+        "recovery_timeout": 15.0,
+        "enable_metrics": true,
+        "enable_fallback": false
+      }
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "enable_metrics": true,
+    "enable_health_checks": true,
+    "metrics_port": 8001,
+    "include_system_metrics": true,
+    "system_metrics_interval": 15.0,
+    "health_check_timeout": 10.0
+  },
+  "observability": {
+    "enabled": true,
+    "service_name": "ai-docs-vector-db-enterprise",
+    "service_version": "1.0.0",
+    "service_namespace": "ai-docs-enterprise",
+    "otlp_endpoint": "http://jaeger:4317",
+    "trace_sample_rate": 0.1,
+    "track_ai_operations": true,
+    "track_costs": true,
+    "instrument_fastapi": true,
+    "instrument_httpx": true,
+    "instrument_redis": true,
+    "instrument_sqlalchemy": true
+  },
+  "deployment": {
+    "tier": "enterprise",
+    "enable_feature_flags": true,
+    "enable_deployment_services": true,
+    "enable_ab_testing": true,
+    "enable_blue_green": true,
+    "enable_canary": true,
+    "enable_monitoring": true
+  },
+  "task_queue": {
+    "redis_url": "redis://dragonfly:6379",
+    "max_jobs": 50,
+    "job_timeout": 600,
+    "default_queue_name": "enterprise"
+  },
+  "auto_detection": {
+    "enabled": true,
+    "timeout_seconds": 10.0,
+    "cache_ttl_seconds": 300,
+    "parallel_detection": true,
+    "max_concurrent_detections": 10,
+    "circuit_breaker_enabled": true
+  },
+  "drift_detection": {
+    "enabled": true,
+    "snapshot_interval_minutes": 10,
+    "comparison_interval_minutes": 2,
+    "alert_on_severity": ["medium", "high", "critical"],
+    "max_alerts_per_hour": 20,
+    "enable_auto_remediation": true,
+    "auto_remediation_severity_threshold": "high",
+    "integrate_with_task20_anomaly": true
+  },
+  "documentation_sites": [
+    {
+      "name": "Enterprise Documentation Hub",
+      "url": "https://docs.enterprise.example.com",
+      "max_pages": 1000,
+      "max_depth": 4,
+      "priority": "critical"
+    },
+    {
+      "name": "API Reference",
+      "url": "https://api.enterprise.example.com/docs",
+      "max_pages": 500,
+      "max_depth": 3,
+      "priority": "high"
+    }
+  ]
+}
