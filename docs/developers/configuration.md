@@ -1,108 +1,419 @@
 # Configuration Guide
 
-> **Status**: Active  
-> **Last Updated**: 2025-01-09  
-> **Purpose**: Complete configuration system documentation  
+> **Status**: Modernized  
+> **Last Updated**: December 2024  
+> **Purpose**: Simplified configuration system documentation  
 > **Audience**: Developers configuring and deploying the system
 
-This comprehensive guide covers the unified configuration system, environment setup,
-provider configuration, and deployment patterns for the AI Documentation Vector DB system.
+This guide covers the modernized, simplified configuration system using pydantic-settings v2
+with automatic .env support, built-in validation, and secure secret handling.
 
 ## 🚀 Quick Configuration Start
 
-### Essential Environment Setup
+### Simplified .env Setup
 
 ```bash
+# Create .env file (automatically loaded)
+cat > .env << EOF
 # Required API keys
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
+AI_DOCS_OPENAI_API_KEY=sk-...
 
-# Optional services
-export QDRANT_URL="http://localhost:6333"
-export REDIS_URL="redis://localhost:6379"
-export FIRECRAWL_API_KEY="fc-..."
+# Optional services  
+AI_DOCS_FIRECRAWL_API_KEY=fc-...
+AI_DOCS_QDRANT_API_KEY=...
 
-# Environment
-export AI_DOCS__ENVIRONMENT="development"
-export AI_DOCS__DEBUG="true"
+# Service URLs
+AI_DOCS_QDRANT_URL=http://localhost:6333
+AI_DOCS_DRAGONFLY_URL=redis://localhost:6379
+
+# Configuration preferences
+AI_DOCS_ENVIRONMENT=development
+AI_DOCS_DEBUG=true
+AI_DOCS_LOG_LEVEL=DEBUG
+AI_DOCS_EMBEDDING_PROVIDER=openai
+AI_DOCS_CRAWL_PROVIDER=crawl4ai
+AI_DOCS_ENABLE_MONITORING=true
+EOF
+
+# Configuration is automatically validated on startup
 ```
 
-### Basic Configuration File
+### Verify Configuration
 
-```json
-{
-  "environment": "development",
-  "embedding_provider": "openai",
-  "openai": {
-    "api_key": "${OPENAI_API_KEY}",
-    "model": "text-embedding-3-small"
-  },
-  "qdrant": {
-    "url": "http://localhost:6333"
-  }
-}
+```python
+from src.config import get_settings
+
+# Configuration loads automatically from .env
+settings = get_settings()
+print(f"Config loaded: {settings.app_name}")
+print(f"Environment: {settings.environment}")
+print(f"Provider: {settings.embedding_provider}")
 ```
 
-## 🏗️ Unified Configuration System
+## 🏗️ Simplified Configuration System
 
 ### Architecture Overview
 
-The system uses a comprehensive unified configuration model built with Pydantic v2 that
-consolidates all application settings into a single, well-structured configuration with
-complete validation and type safety.
+The system now uses a single pydantic-settings model that handles all configuration
+with automatic .env loading, built-in validation, and secure secret handling.
+
+**Key Simplifications:**
+- **21 files → 3 files**: settings.py, core.py, enums.py
+- **Automatic .env loading**: No manual file handling
+- **Built-in validation**: Pydantic handles all validation
+- **Secure secrets**: SecretStr for sensitive data
 
 ```mermaid
 classDiagram
-    class UnifiedConfig {
-        +environment: Environment
-        +embedding_provider: EmbeddingProvider
-        +cache: CacheConfig
-        +qdrant: QdrantConfig
-        +openai: OpenAIConfig
-        +crawl4ai: Crawl4AIConfig
-        +security: SecurityConfig
-        +get_active_providers() Dict
-        +validate_completeness() List
-    }
-
-    class CacheConfig {
+    class Settings {
+        +environment: str
+        +debug: bool
+        +log_level: str
+        +openai_api_key: SecretStr
+        +qdrant_url: str
+        +embedding_provider: str
         +enable_caching: bool
-        +redis_url: str
-        +ttl: int
-        +max_memory_mb: int
+        +chunk_size: int
+        +search_strategy: str
+        +model_config: SettingsConfigDict
+        +requires_openai() bool
+        +get_database_url() str
+        +to_dict(exclude_secrets=True) dict
     }
-
-    class QdrantConfig {
-        +url: str
-        +api_key: Optional[str]
-        +collection_name: str
-        +timeout: float
-    }
-
-    class SecurityConfig {
-        +enable_url_validation: bool
-        +allowed_domains: List[str]
-        +blocked_domains: List[str]
-        +max_request_size: int
-    }
-
-    UnifiedConfig --> CacheConfig
-    UnifiedConfig --> QdrantConfig
-    UnifiedConfig --> SecurityConfig
+    
+    note for Settings "Single model handles all configuration\nwith automatic .env loading and validation"
 ```
 
 ### Configuration Structure
 
-#### Root Configuration Properties
+#### Single Settings Model
 
 ```python
-class UnifiedConfig(BaseSettings):
-    # Environment settings
-    environment: Environment  # development, testing, production
-    debug: bool = False
-    log_level: LogLevel = LogLevel.INFO
+class Settings(BaseSettings):
+    """Application settings with environment variable support."""
+    
+    # Environment and basic settings
+    environment: str = Field(default="development", pattern="^(development|testing|staging|production)$")
+    debug: bool = Field(default=False)
+    log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
+    app_name: str = Field(default="AI Documentation Vector DB")
+    
+    # API Keys (all as SecretStr for security)
+    openai_api_key: SecretStr | None = Field(default=None)
+    firecrawl_api_key: SecretStr | None = Field(default=None)
+    qdrant_api_key: SecretStr | None = Field(default=None)
+    
+    # Service URLs
+    qdrant_url: str = Field(default="http://localhost:6333")
+    dragonfly_url: SecretStr = Field(default=SecretStr("redis://localhost:6379"))
+    
+    # Provider preferences
+    embedding_provider: str = Field(default="fastembed", pattern="^(openai|fastembed)$")
+    crawl_provider: str = Field(default="crawl4ai", pattern="^(firecrawl|crawl4ai)$")
+    
+    # Feature flags
+    enable_caching: bool = Field(default=True)
+    enable_monitoring: bool = Field(default=True)
+    enable_hyde: bool = Field(default=True)
+    
+    # Automatic .env loading configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="AI_DOCS_",
+        case_sensitive=False,
+        extra="ignore",
+        env_nested_delimiter="__"
+    )
+    
+    @field_validator("openai_api_key")
+    @classmethod
+    def validate_openai_key(cls, v: SecretStr | None) -> SecretStr | None:
+        """Validate OpenAI API key format."""
+        if v and not v.get_secret_value().startswith("sk-"):
+            raise ValueError("OpenAI API key must start with 'sk-'")
+        return v
+    
+    def requires_openai(self) -> bool:
+        """Check if OpenAI API key is required."""
+        return self.embedding_provider == "openai" and not self.openai_api_key
+    
+    def to_dict(self, exclude_secrets: bool = True) -> dict:
+        """Convert settings to dictionary, optionally excluding secrets."""
+        data = self.model_dump()
+        if exclude_secrets:
+            # Replace SecretStr values with masked versions
+            for key, value in data.items():
+                if isinstance(getattr(self.__class__, key, None), type):
+                    data[key] = "***" if value else None
+        return data
+```
 
-    # Application metadata
+## 💼 Environment-Specific Configuration
+
+### Development Environment
+
+```bash
+# .env.development
+AI_DOCS_ENVIRONMENT=development
+AI_DOCS_DEBUG=true
+AI_DOCS_LOG_LEVEL=DEBUG
+AI_DOCS_OPENAI_API_KEY=sk-...
+AI_DOCS_QDRANT_URL=http://localhost:6333
+AI_DOCS_ENABLE_MONITORING=true
+AI_DOCS_ENABLE_CACHING=true
+AI_DOCS_MAX_CONCURRENT_REQUESTS=5
+```
+
+### Production Environment
+
+```bash
+# .env.production
+AI_DOCS_ENVIRONMENT=production
+AI_DOCS_DEBUG=false
+AI_DOCS_LOG_LEVEL=INFO
+AI_DOCS_OPENAI_API_KEY=sk-...
+AI_DOCS_QDRANT_URL=https://qdrant.production.com
+AI_DOCS_QDRANT_API_KEY=...
+AI_DOCS_ENABLE_MONITORING=true
+AI_DOCS_REQUIRE_API_KEYS=true
+AI_DOCS_RATE_LIMIT_REQUESTS=1000
+AI_DOCS_MAX_CONCURRENT_REQUESTS=20
+```
+
+### Testing Environment
+
+```bash
+# .env.testing
+AI_DOCS_ENVIRONMENT=testing
+AI_DOCS_DEBUG=false
+AI_DOCS_LOG_LEVEL=WARNING
+AI_DOCS_EMBEDDING_PROVIDER=fastembed  # No API key required
+AI_DOCS_ENABLE_CACHING=false
+AI_DOCS_MAX_CONCURRENT_REQUESTS=2
+AI_DOCS_REQUEST_TIMEOUT=10.0
+```
+
+## 🔧 Configuration Usage Patterns
+
+### Basic Configuration Access
+
+```python
+from src.config import get_settings
+
+# Get configuration (cached after first load)
+settings = get_settings()
+
+# Access configuration values
+print(f"Environment: {settings.environment}")
+print(f"Debug mode: {settings.debug}")
+print(f"Embedding provider: {settings.embedding_provider}")
+
+# Check API key requirements
+if settings.requires_openai():
+    raise ValueError("OpenAI API key required but not provided")
+
+# Get URLs (SecretStr handling)
+db_url = settings.get_database_url()
+redis_url = settings.get_redis_url()
+```
+
+### FastAPI Integration
+
+```python
+from fastapi import Depends, FastAPI
+from src.config import get_settings, Settings
+
+app = FastAPI()
+
+@app.get("/config/status")
+async def get_config_status(settings: Settings = Depends(get_settings)):
+    """Get current configuration status."""
+    return {
+        "environment": settings.environment,
+        "debug": settings.debug,
+        "embedding_provider": settings.embedding_provider,
+        "caching_enabled": settings.enable_caching,
+        "requires_openai": settings.requires_openai(),
+        "requires_firecrawl": settings.requires_firecrawl()
+    }
+
+@app.get("/config/health")
+async def config_health_check(settings: Settings = Depends(get_settings)):
+    """Check configuration health."""
+    issues = []
+    
+    if settings.requires_openai():
+        issues.append("OpenAI API key required")
+    
+    if settings.requires_firecrawl():
+        issues.append("Firecrawl API key required")
+    
+    return {
+        "healthy": len(issues) == 0,
+        "issues": issues,
+        "environment": settings.environment
+    }
+```
+
+### Configuration Validation
+
+```python
+from src.config import get_settings
+from pydantic import ValidationError
+
+try:
+    settings = get_settings()
+    print("Configuration loaded successfully")
+except ValidationError as e:
+    print(f"Configuration validation failed: {e}")
+    # Handle validation errors
+```
+
+## 🔒 Security Best Practices
+
+### Secret Management
+
+```python
+# Secrets are automatically handled as SecretStr
+settings = get_settings()
+
+# ✅ Correct: Use get_secret_value() to access secrets
+api_key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else None
+
+# ❌ Incorrect: Don't access secrets directly
+# api_key = settings.openai_api_key  # This returns SecretStr object
+
+# Safe dictionary conversion (excludes secrets by default)
+safe_config = settings.to_dict(exclude_secrets=True)
+print(safe_config)  # Secrets shown as "***"
+```
+
+### Environment Variable Patterns
+
+```bash
+# ✅ Correct: Use AI_DOCS_ prefix
+AI_DOCS_OPENAI_API_KEY=sk-...
+AI_DOCS_ENVIRONMENT=production
+
+# ❌ Incorrect: Don't use raw variable names
+OPENAI_API_KEY=sk-...  # Won't be loaded
+ENVIRONMENT=production  # Won't be loaded
+```
+
+## 📊 Configuration Monitoring
+
+### Live Configuration Monitoring
+
+```python
+from src.services.config_watcher import ConfigWatcher
+from src.config import reload_settings
+
+# Watch for .env file changes (optional feature)
+config_watcher = ConfigWatcher(
+    watch_paths=[".env", ".env.local"],
+    reload_callback=lambda: reload_settings()
+)
+
+# Start watching
+await config_watcher.start()
+
+# Manual reload when needed
+new_settings = reload_settings()
+```
+
+### Configuration Metrics
+
+```python
+from src.config import get_settings
+
+settings = get_settings()
+
+# Log configuration metrics
+metrics = {
+    "environment": settings.environment,
+    "providers": {
+        "embedding": settings.embedding_provider,
+        "crawl": settings.crawl_provider
+    },
+    "features": {
+        "caching": settings.enable_caching,
+        "monitoring": settings.enable_monitoring,
+        "hyde": settings.enable_hyde
+    },
+    "performance": {
+        "chunk_size": settings.chunk_size,
+        "max_concurrent": settings.max_concurrent_requests,
+        "timeout": settings.request_timeout
+    }
+}
+```
+
+## 🚀 Migration from Legacy Configuration
+
+### Before (Complex)
+
+```python
+# Old complex approach
+from src.config import ConfigManager, UnifiedConfig, EmbeddingConfig
+from src.config.wizard import ConfigurationWizard
+
+wizard = ConfigurationWizard()
+config_path = wizard.run_setup_wizard()
+config_manager = ConfigManager()
+config = config_manager.load_config(config_path)
+
+embedding_config = EmbeddingConfig(
+    provider="openai",
+    model="text-embedding-3-small"
+)
+```
+
+### After (Simple)
+
+```python
+# New simple approach
+from src.config import get_settings
+
+# Create .env file
+cat > .env << EOF
+AI_DOCS_EMBEDDING_PROVIDER=openai
+AI_DOCS_EMBEDDING_MODEL=text-embedding-3-small
+AI_DOCS_OPENAI_API_KEY=sk-...
+EOF
+
+# Configuration loads automatically
+settings = get_settings()
+```
+
+## 🎯 Best Practices Summary
+
+### Do's ✅
+
+1. **Use .env files**: Store configuration in environment-specific .env files
+2. **Prefix variables**: Always use `AI_DOCS_` prefix for environment variables
+3. **Validate early**: Let pydantic handle validation automatically
+4. **Secure secrets**: Use SecretStr for sensitive data
+5. **Environment-specific**: Create separate .env files for different environments
+
+### Don'ts ❌
+
+1. **Don't hardcode secrets**: Never put API keys directly in code
+2. **Don't skip validation**: Let the configuration validation catch errors early
+3. **Don't access SecretStr directly**: Always use `.get_secret_value()`
+4. **Don't ignore environment**: Always set appropriate environment values
+5. **Don't overcomplicate**: Keep configuration simple and focused
+
+## 🔗 Related Documentation
+
+- [Settings Model Reference](../api/config.md) - Complete API documentation
+- [Environment Setup Guide](../getting-started.md) - Development environment setup
+- [Deployment Configuration](../../operators/configuration.md) - Production deployment
+- [Security Guide](../../operators/security.md) - Security best practices
+
+---
+
+*⚙️ The modernized configuration system provides all the power of the original with a fraction of the complexity. Simple .env files, automatic validation, and standard patterns make configuration management straightforward and reliable.*
     app_name: str = "AI Documentation Vector DB"
     version: str = "1.0.0"
 

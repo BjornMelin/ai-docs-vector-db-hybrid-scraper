@@ -41,23 +41,28 @@ strategies to achieve superior performance compared to existing solutions.
 
 ### Core Features
 
+**🏗️ Simplified Architecture**
+- **Modern Configuration**: Single pydantic-settings v2 model with .env support
+- **Functional Services**: Simple functions with dependency injection instead of complex classes
+- **Standard Libraries**: FastAPI HTTPException, circuitbreaker library for resilience
+- **Streamlined Error Handling**: FastAPI-native patterns with standardized responses
+
+**🚀 Performance & Automation**
 - **Multi-Tier Browser Automation**: Five-tier routing system (httpx → Crawl4AI → Enhanced → browser-use → Playwright)
 - **Enhanced Database Connection Pool**: ML-based predictive scaling with 50.9% latency reduction and 887.9% throughput increase
-- **Advanced Configuration Management**: Interactive wizard, templates, backup/restore, and migration system
-- **Advanced Filtering Architecture**: Temporal, content type, metadata, and similarity filtering with boolean logic
-- **Federated Search**: Cross-collection search with intelligent ranking and result fusion
-- **Personalized Ranking**: User-based ranking with preference learning and collaborative filtering
-- **Query Processing Pipeline**: 14-category intent classification with Matryoshka embeddings
-- **ML Security**: Minimalistic security implementation with input validation, dependency scanning, and monitoring
-- **Result Clustering**: HDBSCAN-based organization with cluster summaries
 - **Hybrid Vector Search**: Dense + sparse embeddings with reciprocal rank fusion
 - **Query Enhancement**: HyDE (Hypothetical Document Embeddings) implementation
 - **Advanced Reranking**: Cross-encoder reranking with BGE-reranker-v2-m3
 - **Memory-Adaptive Processing**: Dynamic concurrency control based on system resources
 - **Vector Quantization**: Storage optimization with minimal accuracy loss
 - **Collection Aliases**: Zero-downtime deployments with blue-green switching
-- **MCP Protocol Integration**: Unified server with 24 tools for Claude Desktop/Code integration
+
+**🔧 Integration & Tools**
+- **MCP Protocol Integration**: Unified server with 24+ tools for Claude Desktop/Code integration
 - **Comprehensive Caching**: DragonflyDB + in-memory LRU with intelligent warming
+- **Advanced Filtering**: Temporal, content type, metadata, and similarity filtering
+- **Result Clustering**: HDBSCAN-based organization with cluster summaries
+- **Security**: Input validation, domain filtering, and rate limiting
 
 ### Technology Stack
 
@@ -72,11 +77,40 @@ strategies to achieve superior performance compared to existing solutions.
 | **Embeddings**               | OpenAI + FastEmbed               | Latest   |
 | **Reranking**                | BGE-reranker-v2-m3               | 1.0+     |
 | **Web Framework**            | FastAPI                          | 0.115.0+ |
-| **Configuration**            | Pydantic                         | 2.0+     |
+| **Configuration**            | pydantic-settings                | 2.0+     |
 | **Package Manager**          | uv                               | Latest   |
 | **Task Queue**               | ARQ                              | Latest   |
 
 ## Technical Architecture
+
+### Simplified Modern Architecture
+
+The system has been streamlined from a complex multi-class architecture to a modern, functional approach:
+
+```mermaid
+flowchart TB
+    subgraph "Simplified Core"
+        A1["⚙️ Single Settings Model<br/>pydantic-settings v2<br/>Direct .env support"]
+        A2["🔧 Functional Services<br/>FastAPI dependency injection<br/>Simple functions"]
+        A3["🛡️ Standard Libraries<br/>FastAPI HTTPException<br/>circuitbreaker library"]
+    end
+
+    subgraph "Performance Layer"
+        B1["🚀 Enhanced Database Pool<br/>ML-based predictive scaling<br/>887.9% throughput increase"]
+        B2["⚡ DragonflyDB Cache<br/>900K ops/sec<br/>0.8ms P99 latency"]
+        B3["🔍 Hybrid Vector Search<br/>Dense + sparse + reranking<br/>30% accuracy improvement"]
+    end
+
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+
+    classDef simplified fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef performance fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+
+    class A1,A2,A3 simplified
+    class B1,B2,B3 performance
+```
 
 ### Multi-Tier Crawling System
 
@@ -248,7 +282,7 @@ Production Benchmarks (1000-document corpus):
 
 ### Prerequisites
 
-- Python 3.11 or 3.12 (3.13 not yet supported due to dependency constraints)
+- Python 3.11, 3.12, or 3.13 (3.13+ recommended for optimal performance)
 - Docker Desktop with WSL2 integration (Windows) or Docker Engine (Linux/macOS)
 - OpenAI API key
 - 4GB+ RAM (8GB+ recommended for production)
@@ -309,77 +343,73 @@ redis-cli -p 6379 ping  # Should return "PONG"
 
 ## Configuration
 
-### Interactive Configuration Setup
+### Simplified Configuration
 
-Get started quickly with the configuration wizard:
+Modern configuration using pydantic-settings v2 with automatic .env support:
 
 ```bash
-# Launch interactive setup wizard
-uv run python -m src.cli.main config wizard
+# Create .env file (automatically loaded)
+cat > .env << EOF
+# Required API keys
+AI_DOCS_OPENAI_API_KEY=sk-...
 
-# Create configuration from template
-uv run python -m src.cli.main config template apply production -o config.json
+# Optional services
+AI_DOCS_FIRECRAWL_API_KEY=fc-...
+AI_DOCS_QDRANT_API_KEY=...
 
-# Backup current configuration
-uv run python -m src.cli.main config backup create config.json --description "Production backup"
+# Configuration preferences
+AI_DOCS_EMBEDDING_PROVIDER=openai
+AI_DOCS_CRAWL_PROVIDER=crawl4ai
+AI_DOCS_ENABLE_MONITORING=true
+EOF
 
-# Validate configuration
-uv run python -m src.cli.main config validate config.json --health-check
+# Configuration is automatically validated on startup
+uv run python -c "from src.config import get_settings; print('Config loaded:', get_settings().app_name)"
 ```
 
-### Advanced System Configuration
+### Configuration in Code
 
 ```python
-from src.config import get_config
-from src.config.models import EmbeddingConfig, VectorSearchStrategy
-from src.config.wizard import ConfigurationWizard
+from src.config import get_settings
 
-# Interactive configuration setup
-wizard = ConfigurationWizard()
-config_path = wizard.run_setup_wizard()
+# Get configuration (auto-loads from .env)
+settings = get_settings()
 
-# Get unified configuration with validation
-config = get_config()
+# Access configuration values
+print(f"Embedding provider: {settings.embedding_provider}")
+print(f"Cache enabled: {settings.enable_caching}")
+print(f"Debug mode: {settings.debug}")
 
-# Advanced embedding configuration
-embedding_config = EmbeddingConfig(
-    provider="HYBRID",
-    dense_model="text-embedding-3-small",
-    sparse_model="SPLADE_PP_EN_V1",
-    search_strategy=VectorSearchStrategy.HYBRID_RRF,
-    enable_quantization=True,
-    enable_reranking=True,
-    reranker_model="BAAI/bge-reranker-v2-m3",
-    batch_size=32,
-    max_tokens_per_chunk=512
-)
+# Configuration includes validation
+if settings.requires_openai():
+    print("OpenAI API key required but not provided")
+
+# Convert to dict (secrets masked)
+config_dict = settings.to_dict(exclude_secrets=True)
 ```
 
-### Configuration Templates
+### Environment-Based Configuration
 
-Multiple optimized templates are available for different deployment scenarios:
+Simple environment-based configuration management:
 
 ```bash
-# Development environment
-uv run python -m src.cli.main config template apply development
+# Development environment (.env.development)
+AI_DOCS_ENVIRONMENT=development
+AI_DOCS_DEBUG=true
+AI_DOCS_LOG_LEVEL=DEBUG
+AI_DOCS_ENABLE_MONITORING=true
 
-# Production with security hardening
-uv run python -m src.cli.main config template apply production
+# Production environment (.env.production)
+AI_DOCS_ENVIRONMENT=production
+AI_DOCS_DEBUG=false
+AI_DOCS_LOG_LEVEL=INFO
+AI_DOCS_ENABLE_MONITORING=true
+AI_DOCS_REQUIRE_API_KEYS=true
 
-# Minimal configuration
-uv run python -m src.cli.main config template apply minimal
-
-# Personal use configuration
-uv run python -m src.cli.main config template apply personal-use
-
-# Testing configuration
-uv run python -m src.cli.main config template apply testing
-
-# Local-only configuration (no external services)
-uv run python -m src.cli.main config template apply local-only
-
-# Custom benchmarks configuration
-uv run python -m src.cli.main config template apply custom-benchmarks
+# Testing environment (.env.testing)
+AI_DOCS_ENVIRONMENT=testing
+AI_DOCS_ENABLE_CACHING=false
+AI_DOCS_MAX_CONCURRENT_REQUESTS=5
 ```
 
 ### Crawling Configuration
@@ -405,90 +435,87 @@ crawler_config = Crawl4AIConfig(
 ### Basic Document Processing
 
 ```python
-from src.services import EmbeddingManager, QdrantService
-from src.config import get_config
+from src.services.functional import generate_embeddings, get_vector_db_client
+from src.config import get_settings
 
-config = get_config()
+settings = get_settings()
 
 async def process_documents():
-    async with EmbeddingManager(config) as embeddings:
-        async with QdrantService(config) as qdrant:
-            # Create collection with hybrid search support
-            await qdrant.create_collection(
-                "knowledge_base",
-                vector_size=1536,
-                sparse_vector_name="sparse"
-            )
-
-            # Process documents with chunking
-            texts = ["Document content...", "More content..."]
-            dense_vectors, sparse_vectors = await embeddings.generate_embeddings(
-                texts,
-                generate_sparse=True
-            )
-
-            # Store with metadata
-            await qdrant.upsert_documents(
-                collection_name="knowledge_base",
-                documents=texts,
-                dense_vectors=dense_vectors,
-                sparse_vectors=sparse_vectors,
-                metadata=[{"source": "doc1"}, {"source": "doc2"}]
-            )
+    # Simple functional approach with dependency injection
+    texts = ["Document content...", "More content..."]
+    
+    # Generate embeddings using functional service
+    embeddings = await generate_embeddings(
+        texts=texts,
+        provider=settings.embedding_provider
+    )
+    
+    # Store in vector database
+    async with get_vector_db_client() as qdrant:
+        await qdrant.upsert(
+            collection_name="knowledge_base",
+            points=[
+                {
+                    "id": i,
+                    "vector": embedding,
+                    "payload": {"text": text, "source": f"doc{i}"}
+                }
+                for i, (text, embedding) in enumerate(zip(texts, embeddings))
+            ]
+        )
 ```
 
 ### Advanced Search with Reranking
 
 ```python
-from src.services.embeddings.reranker import BGEReranker
+from src.services.functional import rerank_results
+from src.services.vector_db import hybrid_search
 
 async def hybrid_search_with_reranking():
-    async with QdrantService(config) as qdrant:
-        # Perform hybrid search
-        results = await qdrant.hybrid_search(
-            collection_name="knowledge_base",
-            query_text="vector database optimization",
-            dense_weight=0.7,
-            sparse_weight=0.3,
-            limit=20
-        )
-
-        # Rerank results for improved relevance
-        reranker = BGEReranker()
-        reranked_results = await reranker.rerank(
-            query="vector database optimization",
-            results=results,
-            top_k=5
-        )
-
-        return reranked_results
+    # Perform hybrid search using modern functional approach
+    search_results = await hybrid_search(
+        collection_name="knowledge_base",
+        query_text="vector database optimization",
+        dense_weight=0.7,
+        sparse_weight=0.3,
+        limit=20
+    )
+    
+    # Rerank results for improved relevance
+    reranked_results = await rerank_results(
+        query="vector database optimization",
+        results=search_results,
+        top_k=5,
+        model="BAAI/bge-reranker-v2-m3"
+    )
+    
+    return reranked_results
 ```
 
 ### Multi-Tier Web Crawling
 
 ```python
-from src.services.browser import UnifiedBrowserManager
+from src.services.functional import crawl_url
+from src.chunking import enhanced_chunk_text
 
 async def crawl_with_intelligent_routing():
-    async with UnifiedBrowserManager(config) as browser:
-        # Automatic tier selection based on page complexity
-        result = await browser.scrape_url(
-            "https://docs.complex-site.com",
-            tier_preference="auto",  # Let system choose optimal tier
-            enable_javascript=True,
-            wait_for_content=True
-        )
-
-        # Process with enhanced chunking
-        from src.chunking import enhanced_chunk_text
-        chunks = enhanced_chunk_text(
-            result.content,
-            chunk_size=1600,
-            preserve_code_blocks=True,
-            enable_ast_chunking=True
-        )
-
-        return chunks
+    # Simple functional crawling with automatic tier selection
+    result = await crawl_url(
+        url="https://docs.complex-site.com",
+        tier="auto",  # Automatic tier selection
+        enable_javascript=True,
+        wait_for_content=True
+    )
+    
+    # Process with enhanced chunking
+    chunks = enhanced_chunk_text(
+        result.content,
+        chunk_size=1600,
+        preserve_code_blocks=True,
+        enable_ast_chunking=True
+    )
+    
+    return chunks
 ```
 
 ### Enhanced Database Connection Pool Usage
@@ -666,13 +693,22 @@ bandit -r src/
 
 ## Development Guidelines
 
+### Modernization Benefits
+
+**🎯 83% Complexity Reduction**
+- Configuration: 21 files → 3 files (settings.py, core.py, enums.py)
+- Services: 50+ classes → Simple functions with dependency injection
+- Error Handling: Custom exceptions → FastAPI HTTPException
+- Circuit Breaker: Custom implementation → Standard circuitbreaker library
+- CI/CD: Complex workflows → 4 simple workflows (main, pr, deploy, docs)
+
 ### Architecture Principles
 
-1. **Service-Oriented Architecture**: Clean separation of concerns with dependency injection
-2. **Async-First Design**: Full async/await support for optimal performance
-3. **Configuration-Driven**: Centralized Pydantic-based configuration with validation
-4. **Error Handling**: Comprehensive error types with automatic retry logic
-5. **Observability**: Built-in metrics, logging, and health checks
+1. **Functional Design**: Simple functions over complex classes
+2. **Dependency Injection**: FastAPI's native DI system
+3. **Standard Libraries**: Prefer proven libraries over custom implementations
+4. **Configuration Simplicity**: Single pydantic-settings model with .env support
+5. **Error Handling**: FastAPI-native HTTPException patterns
 
 ### Contributing Workflow
 

@@ -57,16 +57,17 @@ uv sync --dev
 #### Environment Configuration
 
 ```python
-# config.py
+# config.py or .env file
 import os
-from ai_docs_vector_db import UnifiedConfig
+from src.config import get_settings
 
-config = UnifiedConfig(
-    openai_api_key=os.getenv("OPENAI_API_KEY"),
-    qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-    enable_cache=True,
-    cache_ttl=3600
-)
+# Create .env file (automatically loaded)
+# AI_DOCS_OPENAI_API_KEY=sk-...
+# AI_DOCS_QDRANT_URL=http://localhost:6333
+# AI_DOCS_ENABLE_CACHING=true
+
+# Configuration loads automatically
+settings = get_settings()
 ```
 
 ### Core SDK Usage Patterns
@@ -75,10 +76,12 @@ config = UnifiedConfig(
 
 ```python
 from ai_docs_vector_db import DocumentDB, SearchRequest
+from src.config import get_settings
 
 class MyApplication:
     def __init__(self):
-        self.db = DocumentDB(config)
+        self.settings = get_settings()
+        self.db = DocumentDB(self.settings)
 
     async def initialize(self):
         """Initialize the document database."""

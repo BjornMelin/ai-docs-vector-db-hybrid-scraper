@@ -254,7 +254,7 @@ Our CI pipeline tests the entire application comprehensively across multiple pla
 - **Linux (Ubuntu)**: Full test suite including unit, integration, and browser tests
 - **Windows**: Core functionality tests (unit and integration)
 - **macOS**: Core functionality tests (unit and integration)
-- **Python versions**: 3.11-3.12 (3.13 not yet supported due to browser-use compatibility)
+- **Python versions**: 3.11-3.13 (3.13+ recommended for optimal performance)
 
 #### Test Categories
 - **Unit tests**: Fast isolated component tests

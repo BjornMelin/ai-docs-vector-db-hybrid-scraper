@@ -4,7 +4,7 @@
 > **Last Updated**: 2025-06-23  
 > **Purpose**: Modern Python configuration standards and tooling best practices  
 > **Audience**: Developers implementing configuration standards  
-> **Prerequisites**: Python 3.11+, modern development tools
+> **Prerequisites**: Python 3.11+, modern development tools (3.13+ recommended)
 
 This guide documents the 2025 Python configuration standards implemented in the AI Docs Vector DB Hybrid Scraper project, focusing on modern tooling, performance optimizations, and development best practices.
 
@@ -143,7 +143,7 @@ Comprehensive quality gates:
 ```yaml
 strategy:
   matrix:
-    python-version: ["3.11", "3.12"]
+    python-version: ["3.11", "3.12", "3.13"]
     os: [ubuntu-latest, windows-latest, macos-latest]
 
 env:

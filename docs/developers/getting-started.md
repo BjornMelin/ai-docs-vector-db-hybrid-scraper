@@ -14,7 +14,7 @@ This guide takes you from zero to productive development in about 30 minutes.
 
 ```bash
 # Required tools - install if missing
-python --version    # Need 3.11-3.12 (3.13 not supported yet)
+python --version    # Need 3.11-3.13 (3.13+ recommended)
 uv --version       # Need latest uv package manager
 docker --version   # Need Docker Desktop
 git --version      # Need Git
@@ -39,18 +39,17 @@ If everything passes, you're ready to develop! Skip to [First Contribution](#fir
 
 ### 1. System Prerequisites
 
-#### Python 3.11-3.12
+#### Python 3.11-3.13
 
 ```bash
-# Check version (must be 3.11 or 3.12)
+# Check version (must be 3.11, 3.12, or 3.13)
 python --version
 
-# Install Python 3.12 (recommended)
+# Install Python 3.13 (recommended)
 # Linux/macOS:
-curl -sSL https://install.python.org/python-3.12.sh | bash
+curl -sSL https://install.python.org/python-3.13.sh | bash
 
-# Windows: Download Python 3.12 from python.org
-# Note: Python 3.13 not yet supported due to browser-use library compatibility
+# Windows: Download Python 3.13 from python.org
 ```
 
 #### UV Package Manager
