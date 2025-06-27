@@ -1,6 +1,7 @@
 """Comprehensive tests for crawl4ai_bulk_embedder module."""
 
 import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -114,7 +115,7 @@ class TestBulkEmbedder:
     ):
         """Test loading state from existing file."""
         # Write state file
-        with open(temp_state_file, "w") as f:
+        with temp_state_file.open("w") as f:
             json.dump(sample_state_data, f)
 
         embedder = BulkEmbedder(
@@ -142,7 +143,7 @@ class TestBulkEmbedder:
         assert temp_state_file.exists()
 
         # Load and verify
-        with open(temp_state_file) as f:
+        with temp_state_file.open() as f:
             saved_data = json.load(f)
 
         assert saved_data["completed_urls"] == ["https://example.com/test"]

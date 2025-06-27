@@ -323,7 +323,7 @@ class TestSecureConfigManagerCore:
         assert audit_log_file.exists()
 
         # Read audit log content
-        with open(audit_log_file, encoding="utf-8") as f:
+        with audit_log_file.open(encoding="utf-8") as f:
             log_content = f.read().strip()
 
         assert len(log_content) > 0

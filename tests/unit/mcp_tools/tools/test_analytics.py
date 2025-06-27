@@ -6,9 +6,10 @@ import pytest
 
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.responses import AnalyticsResponse, SystemHealthResponse
+from src.mcp_tools.tools.analytics import register_tools
 
 
-    # register_tools imported at top
+
 
 
 class TestAnalyticsTools:
@@ -61,7 +62,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_get_analytics_basic(self, mock_client_manager, mock_context):
         """Test basic analytics retrieval."""
-    # register_tools imported at top
+
 
         # Create a mock MCP server
         mock_mcp = MagicMock()
@@ -100,7 +101,7 @@ class TestAnalyticsTools:
         self, mock_client_manager, mock_context
     ):
         """Test analytics with performance metrics."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -130,7 +131,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_get_analytics_with_costs(self, mock_client_manager, mock_context):
         """Test analytics with cost estimates."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -159,7 +160,7 @@ class TestAnalyticsTools:
         self, mock_client_manager, mock_context
     ):
         """Test analytics for a specific collection."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -185,7 +186,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_get_system_health(self, mock_client_manager, mock_context):
         """Test system health check."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -210,7 +211,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_analytics_error_handling(self, mock_client_manager, mock_context):
         """Test analytics error handling."""
-    # register_tools imported at top
+
 
         # Make qdrant service raise an exception
         mock_qdrant = AsyncMock()
@@ -288,7 +289,7 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
         """Test that context logging is properly integrated."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -318,7 +319,7 @@ class TestAnalyticsTools:
 
     def test_tool_registration(self, mock_client_manager):
         """Test that tools are properly registered with the MCP server."""
-    # register_tools imported at top
+
 
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)
