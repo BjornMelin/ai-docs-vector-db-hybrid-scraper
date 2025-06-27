@@ -6,7 +6,7 @@ and security tracking for wizard-generated configurations.
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +68,7 @@ class ConfigAuditor:
 
         # Save detailed audit record
         audit_record = {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "action": "wizard_completion",
             "profile": profile,
             "config_path": str(config_path),
@@ -97,8 +97,7 @@ class ConfigAuditor:
     def _save_audit_record(self, record: dict[str, Any]) -> None:
         """Save detailed audit record to JSON file."""
         audit_file = (
-            self.audit_dir
-            / f"audit_{datetime.now(tz=timezone.utc).strftime('%Y%m%d')}.json"
+            self.audit_dir / f"audit_{datetime.now(tz=UTC).strftime('%Y%m%d')}.json"
         )
 
         # Load existing records
@@ -118,7 +117,7 @@ class ConfigAuditor:
             with open(audit_file, "w") as f:
                 json.dump(records, f, indent=2)
         except OSError as e:
-            self.logger.exception(f"Failed to save audit record: {e}")
+            self.logger.exception("Failed to save audit record")
 
     def get_recent_activity(self, days: int = 7) -> list[dict[str, Any]]:
         """Get recent wizard activity from audit logs.
@@ -132,7 +131,7 @@ class ConfigAuditor:
         recent_records = []
 
         # Check audit files from the last N days
-        end_date = datetime.now(tz=timezone.utc)
+        end_date = datetime.now(tz=UTC)
         start_date = end_date - timedelta(days=days)
 
         current_date = start_date
@@ -191,7 +190,7 @@ class ConfigAuditor:
         Args:
             keep_days: Number of days of audit history to keep
         """
-        cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=keep_days)
+        cutoff_date = datetime.now(tz=UTC) - timedelta(days=keep_days)
 
         audit_files = list(self.audit_dir.glob("audit_*.json"))
         deleted_count = 0

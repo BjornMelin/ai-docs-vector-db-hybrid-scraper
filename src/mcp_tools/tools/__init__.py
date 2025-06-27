@@ -1,6 +1,3 @@
-import typing
-
-
 """MCP Tools Package.
 
 This package contains all modular tool implementations for the MCP server.

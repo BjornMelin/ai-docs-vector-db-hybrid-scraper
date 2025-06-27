@@ -66,5 +66,5 @@ if __name__ == "__main__":
         logger.info("Worker stopped by user")
         sys.exit(0)
     except Exception as e:
-        logger.exception(f"Worker failed: {e}")
+        logger.exception("Worker failed")
         sys.exit(1)

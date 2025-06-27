@@ -314,8 +314,11 @@ ignore = [
 unfixable = ["F401", "F841"] # Don't auto-remove unused imports/variables
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["D", "ANN", "S101", "PLR"]
+"tests/**/*" = ["D", "ANN", "S101", "S311", "PLR"]
 "examples/**/*" = ["D", "ANN", "T201", "F841"]
+"src/config/**/*" = ["PLW0603"]  # Allow global statements for singleton patterns
+"src/services/observability/**/*" = ["PLW0603"]  # Allow global statements for observability singletons
+"src/services/config_drift_service.py" = ["PLW0603"]  # Allow global statements for drift service singleton
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

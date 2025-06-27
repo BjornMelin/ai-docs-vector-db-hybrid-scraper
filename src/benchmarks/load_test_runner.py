@@ -210,7 +210,7 @@ class LoadTestUser:
                 await asyncio.sleep(think_time)
 
             except Exception as e:
-                logger.exception(f"User {self.user_id} session error: {e}")
+                logger.exception(f"User {self.user_id} session error")
                 self.failures += 1
                 break
 
@@ -474,7 +474,7 @@ class LoadTestRunner:
                     break
 
             except Exception as e:
-                logger.exception(f"Stress test failed at {user_count} users: {e}")
+                logger.exception(f"Stress test failed at {user_count} users")
                 break
 
         return stress_results

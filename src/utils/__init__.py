@@ -1,6 +1,3 @@
-import typing
-
-
 """Utilities package for the AI documentation vector database system."""
 
 # Re-export functions from parent utils.py and local imports module

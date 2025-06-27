@@ -62,7 +62,7 @@ class TemplateManager:
                 console.print(f"[red]Error loading template {template_file}: {e}[/red]")
 
     def _extract_metadata(
-        self, template_data: dict[str, Any], name: str
+        self, _template_data: dict[str, Any], name: str
     ) -> dict[str, str]:
         """Extract metadata from template data."""
         # Template metadata mapping

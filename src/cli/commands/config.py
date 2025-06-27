@@ -14,6 +14,7 @@ from rich.table import Table
 
 from src.config import Config
 
+
 try:
     import yaml
 except ImportError:

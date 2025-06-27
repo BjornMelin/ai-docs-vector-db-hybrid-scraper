@@ -1,6 +1,3 @@
-import typing
-
-
 """HyDE (Hypothetical Document Embeddings) implementation."""
 
 from .cache import HyDECache

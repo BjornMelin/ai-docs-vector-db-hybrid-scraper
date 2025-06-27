@@ -268,8 +268,13 @@ class ConfigManager:
                 del self.environments[temp_name]
 
 
-# Global configuration manager instance
+# Module-level configuration manager instance
 _config_manager = ConfigManager()
+
+
+def get_config_manager() -> ConfigManager:
+    """Get the test configuration manager instance."""
+    return _config_manager
 
 
 def get_test_environment(name: str | None = None) -> EnvironmentConfig:
@@ -281,13 +286,14 @@ def get_test_environment(name: str | None = None) -> EnvironmentConfig:
     Returns:
         Test environment configuration
     """
+    config_manager = get_config_manager()
     if name is None:
-        if _config_manager.current_environment is None:
+        if config_manager.current_environment is None:
             # Default to unit test environment
-            _config_manager.set_current_environment("unit")
-        return _config_manager.current_environment
+            config_manager.set_current_environment("unit")
+        return config_manager.current_environment
 
-    return _config_manager.get_environment(name)
+    return config_manager.get_environment(name)
 
 
 def setup_test_database(environment_name: str = "unit") -> dict[str, Any]:
@@ -399,7 +405,7 @@ def create_test_config(
         "vector_db_url": "memory://localhost",
         "embedding_api_key": "test-key",
         "cache_url": "memory://localhost",
-        "temp_dir": _config_manager._create_temp_dir(name),
+        "temp_dir": get_config_manager()._create_temp_dir(name),
         "log_level": "INFO",
         "debug_mode": True,
         "additional_config": {},
@@ -409,7 +415,7 @@ def create_test_config(
         base_config.update(overrides)
 
     env = EnvironmentConfig(**base_config)
-    _config_manager.environments[name] = env
+    get_config_manager().environments[name] = env
 
     return env
 
@@ -560,15 +566,16 @@ def validate_test_environment(environment_name: str) -> dict[str, Any]:
 # Cleanup function for pytest fixtures
 def cleanup_all_test_environments():
     """Clean up all test environments and temporary resources."""
-    global _config_manager
+    config_manager = get_config_manager()
 
     # Clean up temporary directories
-    _config_manager.cleanup_temp_directories()
+    config_manager.cleanup_temp_directories()
 
     # Reset environment variables
     test_env_vars = [key for key in os.environ if key.startswith("TEST_")]
     for var in test_env_vars:
         os.environ.pop(var, None)
 
-    # Reset configuration manager
-    _config_manager = ConfigManager()
+    # Reset configuration manager state
+    config_manager.environments.clear()
+    config_manager.current_environment = None

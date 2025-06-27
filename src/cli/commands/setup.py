@@ -257,7 +257,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_template(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize template settings."""
         customizations = {}
 
@@ -447,7 +447,7 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(
-    ctx: click.Context, profile: str | None, output: Path | None, config_dir: Path
+    ctx: click.Context, profile: str | None, _output: Path | None, config_dir: Path
 ):
     """🧙 Modern template-driven configuration wizard.
 
@@ -494,7 +494,9 @@ def setup(
 
         if validate_choice:
             try:
-                from .config import validate_config  # noqa: PLC0415 - avoid circular import
+                from .config import (  # noqa: PLC0415 - avoid circular import
+                    validate_config,
+                )
 
                 ctx.invoke(validate_config, config_file=config_path)
             except ImportError:

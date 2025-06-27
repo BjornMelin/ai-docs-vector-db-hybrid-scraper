@@ -80,14 +80,14 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
             logger.exception(f"Failed to load config file {self.config_file}: {e}")
 
     def get_field_value(
-        self, field: FieldInfo, field_name: str
+        self, _field: FieldInfo, field_name: str
     ) -> tuple[Any, str, bool]:
         """Get field value from config data."""
         field_value = self._config_data.get(field_name)
         return field_value, field_name, False
 
     def prepare_field_value(
-        self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool
+        self, _field_name: str, _field: FieldInfo, value: Any, _value_is_complex: bool
     ) -> Any:
         """Prepare field value - no special preparation needed."""
         return value

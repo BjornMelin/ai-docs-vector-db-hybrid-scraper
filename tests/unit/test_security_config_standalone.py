@@ -18,7 +18,7 @@ import pytest
 from pydantic import ValidationError
 
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.config.security import (
     ConfigDataClassification,

@@ -176,7 +176,7 @@ class ConfigurationLifecycleManager:
                 return False
 
         # Global configuration update callback
-        async def update_global_config(old_config: Config, new_config: Config) -> bool:
+        async def update_global_config(_old_config: Config, new_config: Config) -> bool:
             """Update global configuration instance."""
             try:
                 # Update global configuration

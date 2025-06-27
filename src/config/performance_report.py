@@ -186,11 +186,11 @@ class ConfigPerformanceReporter:
         reloader.set_current_config(config)
 
         # Add mock listeners
-        async def fast_listener(old_cfg, new_cfg):
+        async def fast_listener(_old_cfg, _new_cfg):
             await asyncio.sleep(0.001)  # 1ms
             return True
 
-        async def medium_listener(old_cfg, new_cfg):
+        async def medium_listener(_old_cfg, _new_cfg):
             await asyncio.sleep(0.01)  # 10ms
             return True
 

@@ -123,7 +123,7 @@ class ConfigCache:
 _config_cache = ConfigCache()
 
 
-def cached_model(cache: ConfigCache | None = None, ttl: float | None = None):
+def cached_model(cache: ConfigCache | None = None, _ttl: float | None = None):
     """Decorator to add caching to Pydantic model creation.
 
     Args:

@@ -9,11 +9,17 @@ import asyncio
 import json
 import time
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None
 
 
 T = TypeVar("T")
@@ -243,7 +249,7 @@ class AssertionHelpers:
             timestamp: Timestamp to validate (ISO string, datetime, or Unix timestamp)
             max_age_seconds: Maximum age in seconds (default: 60.0)
         """
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         if isinstance(timestamp, str):
             # Parse ISO format timestamp
@@ -671,11 +677,7 @@ def assert_contract_compliance(
     Raises:
         AssertionError: If response doesn't match schema
     """
-    try:
-        import jsonschema
-
-        jsonschema.validate(actual_response, expected_schema)
-    except ImportError:
+    if jsonschema is None:
         # Fallback validation if jsonschema not available
         if strict_mode:
             required_fields = expected_schema.get("required", [])
@@ -683,8 +685,11 @@ def assert_contract_compliance(
                 assert field in actual_response, (
                     f"Response missing required field: {field}"
                 )
-    except jsonschema.ValidationError as e:
-        raise AssertionError(f"Response doesn't match contract schema: {e.message}")
+    else:
+        try:
+            jsonschema.validate(actual_response, expected_schema)
+        except jsonschema.ValidationError as e:
+            raise AssertionError(f"Response doesn't match contract schema: {e.message}")
 
 
 # Performance timing decorator

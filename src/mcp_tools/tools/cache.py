@@ -65,7 +65,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to clear cache: {e}")
-            logger.exception(f"Failed to clear cache: {e}")
+            logger.exception("Failed to clear cache")
             raise
 
     @mcp.tool()
@@ -93,5 +93,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to retrieve cache statistics: {e}")
-            logger.exception(f"Failed to retrieve cache statistics: {e}")
+            logger.exception("Failed to retrieve cache statistics")
             raise

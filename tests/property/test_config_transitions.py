@@ -8,13 +8,11 @@ possible state changes.
 import asyncio
 import json
 import time
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Optional
-from unittest.mock import MagicMock, patch
+from typing import Any
 
 import pytest
-from hypothesis import assume, given, note, settings, strategies as st
+from hypothesis import assume, given, note, strategies as st
 from hypothesis.stateful import (
     Bundle,
     RuleBasedStateMachine,
@@ -24,7 +22,7 @@ from hypothesis.stateful import (
 )
 from pydantic import ValidationError
 
-from src.config.core import Config, get_config, reset_config
+from src.config.core import Config
 from src.config.drift_detection import (
     ConfigDriftDetector,
     DriftDetectionConfig,
@@ -32,11 +30,9 @@ from src.config.drift_detection import (
     DriftType,
 )
 from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
-from src.config.reload import ConfigReloader, ReloadStatus, ReloadTrigger
+from src.config.reload import ConfigReloader
 from src.config.security import (
-    ConfigAccessLevel,
     ConfigDataClassification,
-    ConfigOperationType,
     SecureConfigManager,
     SecurityConfig,
 )

@@ -66,7 +66,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         )
                 except Exception as e:
                     logger.exception(
-                        f"Failed to get info for collection {collection_name}: {e}"
+                        f"Failed to get info for collection {collection_name}"
                     )
                     if ctx:
                         await ctx.warning(
@@ -84,7 +84,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list collections: {e}")
-            logger.exception(f"Failed to list collections: {e}")
+            logger.exception("Failed to list collections")
             raise
 
     @mcp.tool()
@@ -123,7 +123,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to delete collection {collection_name}: {e}")
-            logger.exception(f"Failed to delete collection {collection_name}: {e}")
+            logger.exception(f"Failed to delete collection {collection_name}")
             return CollectionOperationResponse(status="error", message=str(e))
 
     @mcp.tool()
@@ -165,5 +165,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to optimize collection {collection_name}: {e}")
-            logger.exception(f"Failed to optimize collection {collection_name}: {e}")
+            logger.exception(f"Failed to optimize collection {collection_name}")
             return CollectionOperationResponse(status="error", message=str(e))

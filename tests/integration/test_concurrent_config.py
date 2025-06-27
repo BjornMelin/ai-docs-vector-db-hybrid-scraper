@@ -6,34 +6,23 @@ for the configuration system using asyncio and threading.
 
 import asyncio
 import concurrent.futures
-import hashlib
-import json
 import random
 import threading
 import time
-from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from hypothesis import given, strategies as st
 
-from src.config.core import Config, get_config, reset_config
+from src.config.core import Config
 from src.config.drift_detection import (
     ConfigDriftDetector,
     DriftDetectionConfig,
-    DriftSeverity,
-    DriftType,
 )
 from src.config.reload import (
     ConfigReloader,
-    ReloadStatus,
     ReloadTrigger,
-    get_config_reloader,
 )
 from src.config.security import (
-    ConfigAccessLevel,
-    ConfigOperationType,
     SecureConfigManager,
     SecurityConfig,
 )

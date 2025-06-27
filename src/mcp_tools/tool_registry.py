@@ -7,6 +7,8 @@ with the server, following FastMCP 2.0 best practices.
 import logging
 from typing import TYPE_CHECKING
 
+from . import tools
+
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -26,8 +28,6 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
         mcp: The FastMCP server instance
         client_manager: The unified client manager for all services
     """
-    from . import tools
-
     # Track registration for logging
     registered_tools = []
 

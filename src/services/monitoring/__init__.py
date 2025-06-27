@@ -1,6 +1,3 @@
-import typing
-
-
 """Monitoring and observability services for ML/vector search application.
 
 This package provides comprehensive monitoring infrastructure including:

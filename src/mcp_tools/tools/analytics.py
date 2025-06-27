@@ -20,6 +20,7 @@ else:
 
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import AnalyticsRequest
+from ..models.responses import AnalyticsResponse, SystemHealthResponse
 
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register analytics and monitoring tools with the MCP server."""
-
-    from ..models.responses import AnalyticsResponse, SystemHealthResponse
 
     @mcp.tool()
     async def get_analytics(
@@ -110,7 +109,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Failed to collect analytics: {e}")
-            logger.exception(f"Failed to collect analytics: {e}")
+            logger.exception("Failed to collect analytics")
             raise
 
     @mcp.tool()

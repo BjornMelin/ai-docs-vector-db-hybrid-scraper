@@ -410,7 +410,7 @@ class ConfigDriftDetector:
             return []
 
     def _analyze_config_changes(
-        self, old_config: dict[str, Any], new_config: dict[str, Any], source: str
+        self, old_config: dict[str, Any], new_config: dict[str, Any], _source: str
     ) -> list[dict[str, Any]]:
         """Analyze configuration changes between two configurations.
 
@@ -463,7 +463,7 @@ class ConfigDriftDetector:
 
         return changes
 
-    def _classify_drift_type(self, change: dict[str, Any], source: str) -> DriftType:
+    def _classify_drift_type(self, change: dict[str, Any], _source: str) -> DriftType:
         """Classify the type of configuration drift.
 
         Args:
@@ -509,7 +509,7 @@ class ConfigDriftDetector:
         return DriftType.MANUAL_CHANGE
 
     def _calculate_drift_severity(
-        self, change: dict[str, Any], source: str
+        self, change: dict[str, Any], _source: str
     ) -> DriftSeverity:
         """Calculate severity of configuration drift.
 

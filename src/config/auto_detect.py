@@ -238,10 +238,8 @@ class EnvironmentDetector:
                 f"in {detection_time_ms:.1f}ms"
             )
 
-            return detected_env
-
         except Exception as e:
-            self.logger.exception(f"Environment detection failed: {e}")
+            self.logger.exception("Environment detection failed")
             # Return default environment on failure
             return DetectedEnvironment(
                 environment_type=Environment.DEVELOPMENT,
@@ -251,6 +249,8 @@ class EnvironmentDetector:
                 detection_time_ms=(time.time() - start_time) * 1000,
                 metadata={"error": str(e)},
             )
+        else:
+            return detected_env
 
     def _is_cache_valid(self) -> bool:
         """Check if cached result is still valid."""
