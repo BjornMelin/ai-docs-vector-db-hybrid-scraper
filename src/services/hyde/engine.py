@@ -88,7 +88,7 @@ class HyDEQueryEngine(BaseService):
             self._initialized = True
             logger.info("HyDE query engine initialized")
 
-        except Exception as e:
+        except Exception:
             raise EmbeddingServiceError("Failed to initialize HyDE engine") from e
 
     async def cleanup(self) -> None:
@@ -205,7 +205,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception as e:
+        except Exception:
             logger.error("HyDE search failed", exc_info=True)
 
             # Fallback to regular search if enabled
@@ -308,7 +308,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception as e:
+        except Exception:
             logger.exception("Query API search failed")
             raise QdrantServiceError("HyDE search execution failed") from e
 
@@ -329,7 +329,7 @@ class HyDEQueryEngine(BaseService):
                 logger.debug("Reranking not available, returning original results")
                 return results
 
-        except Exception as e:
+        except Exception:
             logger.warning("Reranking failed, returning original results")
             return results
 
@@ -358,7 +358,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception as e:
+        except Exception:
             logger.exception("Fallback search failed")
             raise EmbeddingServiceError("Both HyDE and fallback search failed") from e
 

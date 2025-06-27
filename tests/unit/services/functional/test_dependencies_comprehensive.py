@@ -292,8 +292,10 @@ class TestCircuitBreakerIntegration:
             return f"success_call_{call_count}"
 
         # Trigger circuit opening
-        from tests.unit.services.functional.test_dependencies_comprehensive import TestError
-        
+        from tests.unit.services.functional.test_dependencies_comprehensive import (
+            TestError,
+        )
+
         with pytest.raises(TestError):
             await circuit_breaker.call(recovering_service)
 

@@ -189,7 +189,7 @@ class AutomationRouter(BaseService):
         #     await adapter.initialize()
         #     self._adapters["firecrawl"] = adapter
         #     self.logger.info("Initialized Firecrawl adapter")
-        # except Exception as e:
+        # except Exception:
         #     self.logger.warning("Failed to initialize Firecrawl adapter")
 
         if not self._adapters:

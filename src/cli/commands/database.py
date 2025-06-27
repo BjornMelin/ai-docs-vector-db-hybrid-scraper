@@ -125,7 +125,7 @@ def list_collections(ctx: click.Context, output_format: str):
 
             asyncio.run(db_manager.cleanup())
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Failed to list collections", str(e))
             raise click.Abort() from e
 
@@ -265,7 +265,7 @@ def create_collection(
             if not success:
                 raise CollectionCreationError("Collection creation failed")
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Failed to create collection", str(e))
             raise click.Abort() from e
 
@@ -319,7 +319,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
             if not success:
                 raise CollectionDeletionError("Collection deletion failed")
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Failed to delete collection", str(e))
             raise click.Abort() from e
 
@@ -365,7 +365,7 @@ def collection_info(ctx: click.Context, collection_name: str):
                 },
             }
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Failed to get collection info", str(e))
             raise click.Abort() from e
 
@@ -439,7 +439,7 @@ def search_collection(
 
             asyncio.run(db_manager.cleanup())
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Search failed", str(e))
             raise click.Abort() from e
 
@@ -515,7 +515,7 @@ def database_stats(ctx: click.Context):
             # Calculate totals
             total_collections = len(collections)
 
-        except Exception as e:
+        except Exception:
             rich_cli.show_error("Failed to get database stats", str(e))
             raise click.Abort() from e
 

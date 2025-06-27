@@ -216,7 +216,7 @@ class FilterComposer(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception as e:
+        except Exception:
             error_msg = "Failed to apply filter composition"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -280,7 +280,7 @@ class FilterComposer(BaseFilter):
                 total_execution_time_ms=execution_time_ms,
             )
 
-        except Exception as e:
+        except Exception:
             execution_time_ms = (time.time() - start_time) * 1000
 
             return CompositionResult(
@@ -339,7 +339,7 @@ class FilterComposer(BaseFilter):
                     try:
                         result = await task
                         results[name] = result
-                    except Exception as e:
+                    except Exception:
                         self._logger.exception("Filter {name} failed")
                         if criteria.fail_fast:
                             raise
@@ -376,7 +376,7 @@ class FilterComposer(BaseFilter):
                         f"Required filter {filter_ref.filter_instance.name} failed"
                     )
 
-            except Exception as e:
+            except Exception:
                 self._logger.exception(
                     "Filter {filter_ref.filter_instance.name} failed"
                 )
@@ -443,7 +443,7 @@ class FilterComposer(BaseFilter):
 
             return await filter_ref.filter_instance.apply(filter_ref.criteria, context)
 
-        except Exception as e:
+        except Exception:
             self._logger.exception(
                 "Filter {filter_ref.filter_instance.name} execution failed"
             )
@@ -614,7 +614,7 @@ class FilterComposer(BaseFilter):
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except Exception:
             self._logger.warning("Invalid composition criteria")
             return False
 

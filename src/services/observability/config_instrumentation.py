@@ -166,7 +166,7 @@ def instrument_config_operation(
 
                     return result
 
-                except Exception as e:
+                except Exception:
                     # Record exception with configuration context
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -232,7 +232,7 @@ def instrument_config_operation(
 
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
 
@@ -320,7 +320,7 @@ def instrument_config_validation(
                     span.set_status(Status(StatusCode.OK))
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -374,7 +374,7 @@ def instrument_config_validation(
                     span.set_status(Status(StatusCode.OK))
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -455,7 +455,7 @@ def instrument_auto_detection(
                     span.set_status(Status(StatusCode.OK))
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -498,7 +498,7 @@ def instrument_auto_detection(
                     span.set_status(Status(StatusCode.OK))
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -551,7 +551,7 @@ def trace_config_operation(
         try:
             yield span
             span.set_status(Status(StatusCode.OK))
-        except Exception as e:
+        except Exception:
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
@@ -596,7 +596,7 @@ async def trace_async_config_operation(
         try:
             yield span
             span.set_status(Status(StatusCode.OK))
-        except Exception as e:
+        except Exception:
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
@@ -643,7 +643,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
         if "env" in kwargs or any("env" in str(arg).lower() for arg in args):
             span.set_attribute(ConfigAttributes.SOURCE_TYPE, "environment")
 
-    except Exception as e:
+    except Exception:
         # Don't fail the operation due to instrumentation issues
         logger.debug(f"Failed to extract config source info: {e}")
 
@@ -695,7 +695,7 @@ def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
                     ConfigAttributes.VALIDATION_WARNINGS, len(result["warnings"])
                 )
 
-    except Exception as e:
+    except Exception:
         # Don't fail the operation due to instrumentation issues
         logger.debug(f"Failed to extract config content metrics: {e}")
 

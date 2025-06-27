@@ -126,7 +126,7 @@ class BrowserUseAdapter(BaseService):
             self.logger.info(
                 f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
             )
-        except Exception as e:
+        except Exception:
             raise CrawlServiceError("Failed to initialize browser-use") from e
 
     async def cleanup(self) -> None:
@@ -618,7 +618,7 @@ class BrowserUseAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),

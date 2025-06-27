@@ -117,7 +117,7 @@ class ContentIntelligenceService(BaseService):
             self._initialized = True
             logger.info("ContentIntelligenceService initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize ContentIntelligenceService")
             raise APIError(f"Content intelligence initialization failed: {e}") from e
 
@@ -131,7 +131,7 @@ class ContentIntelligenceService(BaseService):
             self._initialized = False
             logger.info("ContentIntelligenceService cleaned up successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error during ContentIntelligenceService cleanup")
 
     async def analyze_content(
@@ -185,7 +185,7 @@ class ContentIntelligenceService(BaseService):
                 cache_hit=False,
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Content analysis failed")
             return ContentAnalysisResponse(
                 success=False,
@@ -222,7 +222,7 @@ class ContentIntelligenceService(BaseService):
                 extraction_metadata=extraction_metadata,
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Quality assessment failed")
             # Return minimal quality score on failure
             return QualityScore(
@@ -260,7 +260,7 @@ class ContentIntelligenceService(BaseService):
                 use_semantic_analysis=bool(self.embedding_manager),
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Content classification failed")
             # Return unknown classification on failure
             from .models import ContentType
@@ -300,7 +300,7 @@ class ContentIntelligenceService(BaseService):
                 extraction_metadata=extraction_metadata,
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
@@ -360,7 +360,7 @@ class ContentIntelligenceService(BaseService):
 
             return recommendations[:5]  # Return top 5 recommendations
 
-        except Exception as e:
+        except Exception:
             logger.exception("Adaptation recommendation failed")
             return []
 
@@ -413,7 +413,7 @@ class ContentIntelligenceService(BaseService):
                         title=request.title,
                     )
                 )
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Content classification failed: {e}")
 
         # Perform quality assessment if enabled
@@ -442,7 +442,7 @@ class ContentIntelligenceService(BaseService):
                     enriched_content.quality_score.quality_issues
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Quality assessment failed: {e}")
 
         # Perform metadata extraction if enabled
@@ -453,7 +453,7 @@ class ContentIntelligenceService(BaseService):
                     url=request.url,
                     raw_html=request.raw_html,
                 )
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Metadata extraction failed: {e}")
 
         # Generate adaptation recommendations if enabled
@@ -465,7 +465,7 @@ class ContentIntelligenceService(BaseService):
                         quality_score=enriched_content.quality_score,
                     )
                 )
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Adaptation recommendations failed: {e}")
 
         # Set processing metadata
@@ -617,7 +617,7 @@ class ContentIntelligenceService(BaseService):
             cached_data = await self.cache_manager.get(cache_key)
             if cached_data:
                 return EnrichedContent.model_validate(cached_data)
-        except Exception as e:
+        except Exception:
             logger.warning(f"Cache retrieval failed: {e}")
 
         return None
@@ -639,7 +639,7 @@ class ContentIntelligenceService(BaseService):
                 result.model_dump(),
                 ttl=3600,
             )
-        except Exception as e:
+        except Exception:
             logger.warning(f"Cache storage failed: {e}")
 
     def get_performance_metrics(self) -> dict[str, Any]:

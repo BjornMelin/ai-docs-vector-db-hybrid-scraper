@@ -530,7 +530,9 @@ async def assert_async_operation_completes(
         result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
         return result
     except TimeoutError as e:
-        raise AssertionError(f"{operation_name} timed out after {timeout_seconds}s") from e
+        raise AssertionError(
+            f"{operation_name} timed out after {timeout_seconds}s"
+        ) from e
     except Exception as e:
         raise AssertionError(f"{operation_name} failed with error: {e}") from e
 
@@ -689,7 +691,9 @@ def assert_contract_compliance(
         try:
             jsonschema.validate(actual_response, expected_schema)
         except jsonschema.ValidationError as e:
-            raise AssertionError(f"Response doesn't match contract schema: {e.message}") from e
+            raise AssertionError(
+                f"Response doesn't match contract schema: {e.message}"
+            ) from e
 
 
 # Performance timing decorator

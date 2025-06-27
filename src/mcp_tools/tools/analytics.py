@@ -69,7 +69,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         "status": info.get("status", "unknown"),
                     }
                     await ctx.debug(f"Collected analytics for collection {collection}")
-                except Exception as e:
+                except Exception:
                     await ctx.warning(f"Failed to get analytics for {collection}: {e}")
                     logger.warning(f"Failed to get analytics for {collection}: {e}")
 
@@ -107,7 +107,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return AnalyticsResponse(**analytics)
 
-        except Exception as e:
+        except Exception:
             await ctx.error(f"Failed to collect analytics: {e}")
             logger.exception("Failed to collect analytics")
             raise
@@ -138,7 +138,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "collections": len(collections),
             }
             await ctx.debug(f"Qdrant healthy with {len(collections)} collections")
-        except Exception as e:
+        except Exception:
             health["services"]["qdrant"] = {
                 "status": "unhealthy",
                 "error": str(e),
@@ -158,7 +158,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Embeddings healthy with provider: {provider_info.get('name', 'unknown')}"
             )
-        except Exception as e:
+        except Exception:
             health["services"]["embeddings"] = {
                 "status": "unhealthy",
                 "error": str(e),
@@ -178,7 +178,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Cache healthy with hit rate: {cache_stats.get('hit_rate', 0)}"
             )
-        except Exception as e:
+        except Exception:
             health["services"]["cache"] = {
                 "status": "unhealthy",
                 "error": str(e),

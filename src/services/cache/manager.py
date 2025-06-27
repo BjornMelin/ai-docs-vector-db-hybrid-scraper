@@ -113,7 +113,7 @@ class CacheManager:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Cache monitoring enabled with Prometheus integration")
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed to initialize cache monitoring: {e}")
 
         logger.info(
@@ -244,7 +244,7 @@ class CacheManager:
                             "distributed", cache_type.value
                         )
                     return value
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache get error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -324,7 +324,7 @@ class CacheManager:
                 success = await self._distributed_cache.set(
                     cache_key, value, ttl=effective_ttl
                 )
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache set error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -358,7 +358,7 @@ class CacheManager:
             # Delete from L2 cache
             if self._distributed_cache:
                 success = await self._distributed_cache.delete(cache_key)
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache delete error for key {cache_key}: {e}")
             return False
         else:
@@ -391,7 +391,7 @@ class CacheManager:
                     await self._local_cache.clear()
                 if self._distributed_cache:
                     await self._distributed_cache.clear()
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache clear error: {e}")
             return False
         else:
@@ -456,7 +456,7 @@ class CacheManager:
             if self._distributed_cache:
                 await self._distributed_cache.close()
             logger.info("Cache manager closed successfully")
-        except Exception as e:
+        except Exception:
             logger.error(f"Error closing cache manager: {e}")
 
     def _get_cache_key(self, key: str, cache_type: CacheType) -> str:

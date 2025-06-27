@@ -76,9 +76,10 @@ def register_tools(mcp, client_manager: ClientManager):
                 or not crawl_result.get("success")
                 or not crawl_result.get("content")
             ):
+
                 def _raise_scrape_error():
                     raise ValueError(f"Failed to scrape {request.url}")
-                
+
                 await ctx.error(f"Failed to scrape {request.url}")
                 _raise_scrape_error()
 
@@ -111,7 +112,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.warning(
                             f"Content intelligence analysis failed for {doc_id}"
                         )
-                except Exception as e:
+                except Exception:
                     await ctx.warning(
                         f"Content intelligence analysis error for {doc_id}: {e}"
                     )
@@ -265,7 +266,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             await ctx.info(completion_msg)
 
-        except Exception as e:
+        except Exception:
             await ctx.error(f"Failed to process document {doc_id}: {e}")
             logger.exception("Failed to add document")
             raise

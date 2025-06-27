@@ -41,7 +41,7 @@ class TaskQueueManager(BaseService):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Task queue monitoring enabled")
-            except Exception as e:
+            except Exception:
                 logger.debug("Task queue monitoring disabled")
 
     def _create_redis_settings(self) -> RedisSettings:
@@ -84,7 +84,7 @@ class TaskQueueManager(BaseService):
             self._redis_pool = await create_pool(self._redis_settings)
             logger.info("Task queue manager initialized")
             self._initialized = True
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize task queue")
             raise
 
@@ -149,7 +149,7 @@ class TaskQueueManager(BaseService):
 
                 return None
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error enqueueing task {task_name}")
             return None
 
@@ -185,7 +185,7 @@ class TaskQueueManager(BaseService):
                 "error": str(job.error) if job.error else None,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error getting job status")
             return {"status": "error", "message": str(e)}
 
@@ -209,7 +209,7 @@ class TaskQueueManager(BaseService):
                 return True
             return False
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error cancelling job")
             return False
 
@@ -242,7 +242,7 @@ class TaskQueueManager(BaseService):
 
             return stats
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error getting queue stats")
             return {"error": -1}
 

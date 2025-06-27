@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Volume testing scenarios for large dataset processing.
 
 This module implements volume tests to validate system behavior
@@ -14,13 +8,19 @@ import asyncio
 import logging
 import random
 import time
-from typing import Dict
+from typing import Any
 
 import pytest
 
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SteadyLoadProfile
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -239,7 +239,7 @@ class TestVolumeLoad:
                 self.result_size_distribution = []
 
             async def search_with_large_results(
-                self, query: str, limit: int = 1000, **kwargs
+                self, query: str, limit: int = 1000, **_kwargs
             ):
                 """Perform search that returns large result sets."""
                 search_start = time.time()
@@ -252,22 +252,20 @@ class TestVolumeLoad:
                 await asyncio.sleep(search_time)
 
                 # Generate large result set
-                results = []
-                for i in range(limit):
-                    results.append(
-                        {
-                            "id": f"doc_{i}",
-                            "title": f"Document {i} about {query}",
-                            "content": f"This is content for document {i} "
-                            * 50,  # Large content
-                            "score": 1.0 - (i / limit),
-                            "metadata": {
-                                "source": f"source_{i % 10}",
-                                "category": f"category_{i % 5}",
-                                "timestamp": time.time() - i,
-                            },
-                        }
-                    )
+                results = [
+                    {
+                        "id": f"doc_{i}",
+                        "title": f"Document {i} about {query}",
+                        "content": f"This is content for document {i} " * 50,  # Large content
+                        "score": 1.0 - (i / limit),
+                        "metadata": {
+                            "source": f"source_{i % 10}",
+                            "category": f"category_{i % 5}",
+                            "timestamp": time.time() - i,
+                        },
+                    }
+                    for i in range(limit)
+                ]
 
                 processing_time = time.time() - search_start
                 result_size_kb = len(str(results).encode("utf-8")) / 1024
@@ -400,10 +398,9 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        import random
-
                         if random.random() < 0.01:  # 1% failure rate
-                            raise TestError(f"Processing failed for {doc['url']}")
+                            error_msg = f"Processing failed for {doc['url']}"
+                            raise TestError(error_msg)
 
                         processed_doc = {
                             "id": f"doc_{len(processed_docs)}",

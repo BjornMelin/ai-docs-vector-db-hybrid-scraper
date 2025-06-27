@@ -101,7 +101,7 @@ class AdaptiveFusionTuner:
 
             return weights
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Failed to compute adaptive weights: {e}", exc_info=True)
             # Return default balanced weights on error
             return {"dense": 0.7, "sparse": 0.3}
@@ -139,7 +139,7 @@ class AdaptiveFusionTuner:
 
             return adjustment
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"Failed to compute performance adjustment: {e}")
             return 0.0
 
@@ -165,7 +165,7 @@ class AdaptiveFusionTuner:
                 self.performance_history[query_key].get("usage_count", 0) + 1
             )
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"Failed to update performance history: {e}")
 
     def get_performance_stats(self) -> dict[str, Any]:
@@ -193,7 +193,7 @@ class AdaptiveFusionTuner:
                 "query_types_seen": len(self.performance_history),
                 "performance_history_size": len(self.performance_history),
             }
-        except Exception as e:
+        except Exception:
             logger.error(f"Failed to get performance stats: {e}", exc_info=True)
             return {
                 "total_queries": self.total_queries,

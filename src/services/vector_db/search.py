@@ -189,7 +189,7 @@ class QdrantSearch:
                 for point in results.points
             ]
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Hybrid search failed in collection {collection_name}: {e}",
                 exc_info=True,
@@ -329,7 +329,7 @@ class QdrantSearch:
                 for point in results.points
             ]
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Multi-stage search failed in collection {collection_name}: {e}",
                 exc_info=True,
@@ -458,7 +458,7 @@ class QdrantSearch:
                 for point in results.points
             ]
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"HyDE search failed in collection {collection_name}: {e}",
                 exc_info=True,
@@ -557,7 +557,7 @@ class QdrantSearch:
                 for point in results.points
             ]
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Filtered search failed in collection {collection_name}: {e}",
                 exc_info=True,

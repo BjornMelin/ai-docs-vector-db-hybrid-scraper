@@ -451,7 +451,7 @@ def mock_wizard_components():
         "production",
     ]
     components["profile_manager"].create_profile_config.return_value = Path(
-        "/tmp/config.json"
+        "/tmp/config.json"  # noqa: S108 # test temp path
     )
 
     components["validator"].validate_api_key.return_value = (True, None)

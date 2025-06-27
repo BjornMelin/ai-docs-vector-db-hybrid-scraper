@@ -434,7 +434,7 @@ class FederatedSearchService:
 
             return result
 
-        except Exception as e:
+        except Exception:
             total_search_time = (time.time() - start_time) * 1000
             self._logger.error("Federated search failed", exc_info=True)
 
@@ -484,7 +484,7 @@ class FederatedSearchService:
 
             self._logger.info("Registered collection")
 
-        except Exception as e:
+        except Exception:
             self._logger.exception("Failed to register collection {collection_name}")
             raise
 
@@ -502,7 +502,7 @@ class FederatedSearchService:
 
             self._logger.info("Unregistered collection")
 
-        except Exception as e:
+        except Exception:
             self._logger.exception("Failed to unregister collection {collection_name}")
 
     async def _select_collections(self, request: FederatedSearchRequest) -> list[str]:
@@ -711,7 +711,7 @@ class FederatedSearchService:
                 results.append(
                     self._create_error_result("Collection timeout", collection_name)
                 )
-            except Exception as e:
+            except Exception:
                 self._logger.exception("Search failed for collection {collection_name}")
                 results.append(self._create_error_result(str(e), collection_name))
 
@@ -814,7 +814,7 @@ class FederatedSearchService:
                 has_errors=False,
             )
 
-        except Exception as e:
+        except Exception:
             search_time = (time.time() - start_time) * 1000
             self._update_collection_performance(collection_name, search_time, False)
 

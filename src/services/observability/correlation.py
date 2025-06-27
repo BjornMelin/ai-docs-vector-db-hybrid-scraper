@@ -242,7 +242,7 @@ class TraceCorrelationManager:
             try:
                 yield correlation_id
                 span.set_status(Status(StatusCode.OK))
-            except Exception as e:
+            except Exception:
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 raise
@@ -444,7 +444,7 @@ class ErrorCorrelationTracker:
 
                 try:
                     yield span
-                except Exception as e:
+                except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise

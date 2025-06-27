@@ -85,7 +85,7 @@ async def delete_collection(
             "collection": collection_name,
             "duration": time.time() - start_time,
         }
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to delete collection {collection_name}")
         return {
             "status": "failed",
@@ -146,7 +146,7 @@ async def persist_cache(
             "duration": time.time() - start_time,
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to persist data for {key}")
         return {
             "status": "failed",
@@ -190,7 +190,7 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
         return result
 
-    except Exception as e:
+    except Exception:
         logger.exception("Configuration snapshot task failed")
         return {
             "status": "failed",
@@ -234,7 +234,7 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
         return result
 
-    except Exception as e:
+    except Exception:
         logger.exception("Configuration comparison task failed")
         return {
             "status": "failed",
@@ -292,7 +292,7 @@ async def config_drift_remediation(
             "task_duration": time.time() - start_time,
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("Configuration drift remediation failed for event {event_id}")
         return {
             "status": "failed",

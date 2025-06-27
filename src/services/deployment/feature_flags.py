@@ -87,7 +87,7 @@ class FeatureFlagManager:
             self._current_tier = await self._determine_tier()
             self._initialized = True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize feature flag manager: %s", e)
             self._current_tier = self.config.fallback_tier
             self._initialized = True
@@ -127,7 +127,7 @@ class FeatureFlagManager:
                 # Use tier-based fallback
                 return self._get_feature_by_tier(feature_name)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error checking feature flag %s: %s", feature_name, e)
             return self._get_feature_by_tier(feature_name)
 
@@ -156,7 +156,7 @@ class FeatureFlagManager:
                 # Use tier-based fallback
                 return self._get_config_by_tier(config_key, default)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error getting config value %s: %s", config_key, e)
             return default
 
@@ -264,7 +264,7 @@ class FeatureFlagManager:
                 tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
                 return DeploymentTier(tier_env)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error determining deployment tier: %s", e)
             return self.config.fallback_tier
 
@@ -327,7 +327,7 @@ class FeatureFlagManager:
 
             return flags
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error fetching flags from client: %s", e)
             return {}
 

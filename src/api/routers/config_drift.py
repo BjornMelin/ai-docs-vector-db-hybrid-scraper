@@ -96,7 +96,7 @@ async def get_drift_status():
             status = await get_drift_service_status()
             return DriftServiceStatusResponse(**status)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to get drift service status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -129,7 +129,7 @@ async def run_drift_detection(
 
             return DriftDetectionResponse(**results)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Manual drift detection failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -175,7 +175,7 @@ async def get_drift_events(
 
             return events
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to get drift events")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -219,7 +219,7 @@ async def get_drift_summary():
 
             return summary
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to get drift summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -263,7 +263,7 @@ async def check_drift_health():
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Drift health check failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -301,7 +301,7 @@ async def get_drift_config():
 
             return drift_config
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to get drift config")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

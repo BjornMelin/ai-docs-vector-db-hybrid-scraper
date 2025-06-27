@@ -297,7 +297,7 @@ class MetadataFilter(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception as e:
+        except Exception:
             error_msg = "Failed to apply metadata filter"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -485,7 +485,7 @@ class MetadataFilter(BaseFilter):
                 self._logger.warning("Unsupported operator")
                 return None
 
-        except Exception as e:
+        except Exception:
             self._logger.exception("Failed to build condition for field '{field}'")
             return None
 
@@ -558,7 +558,7 @@ class MetadataFilter(BaseFilter):
         try:
             MetadataFilterCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except Exception:
             self._logger.warning("Invalid metadata criteria")
             return False
 

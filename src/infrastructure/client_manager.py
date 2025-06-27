@@ -813,7 +813,7 @@ class ClientManager:
 
                         logger.info(f"Created {name} client")
 
-                    except Exception as e:
+                    except Exception:
                         logger.exception(f"Failed to create {name} client")
                         raise APIError(f"Failed to create {name} client: {e}") from e
 
@@ -970,7 +970,7 @@ class ClientManager:
                 await breaker.call(client.get_collections)
             else:
                 await client.get_collections()
-        except Exception as e:
+        except Exception:
             logger.warning(f"Qdrant health check failed: {e}")
             return False
         else:
@@ -989,7 +989,7 @@ class ClientManager:
                 await breaker.call(client.models.list)
             else:
                 await client.models.list()
-        except Exception as e:
+        except Exception:
             logger.warning(f"OpenAI health check failed: {e}")
             return False
         else:
@@ -1002,7 +1002,7 @@ class ClientManager:
             # Firecrawl doesn't have a direct health endpoint
             # We'll assume it's healthy if client exists
             return bool(client)
-        except Exception as e:
+        except Exception:
             logger.warning(f"Firecrawl health check failed: {e}")
             return False
 
@@ -1019,7 +1019,7 @@ class ClientManager:
                 await breaker.call(client.ping)
             else:
                 await client.ping()
-        except Exception as e:
+        except Exception:
             logger.warning(f"Redis health check failed: {e}")
             return False
         else:
@@ -1072,7 +1072,7 @@ class ClientManager:
         except TimeoutError:
             logger.exception(f"{name} health check timed out")
             self._update_health_failure(name, "Health check timeout")
-        except Exception as e:
+        except Exception:
             logger.exception(f"{name} health check error")
             self._update_health_failure(name, str(e))
 
@@ -1101,7 +1101,7 @@ class ClientManager:
 
             logger.info(f"Recreated {name} client after recovery")
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to recreate {name} client: {e}")
 
     async def _health_check_loop(self) -> None:

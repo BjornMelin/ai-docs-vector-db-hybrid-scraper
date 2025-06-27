@@ -378,7 +378,7 @@ class ConnectionPoolManager:
             finally:
                 await client.aclose()
 
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"Redis health check failed: {e}")
             metrics.is_healthy = False
 
@@ -401,7 +401,7 @@ class ConnectionPoolManager:
                 }
             )
 
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"Qdrant health check failed: {e}")
             metrics.is_healthy = False
 
@@ -413,7 +413,7 @@ class ConnectionPoolManager:
             metrics.is_healthy = True
             metrics.library_stats = {"status": "configured_but_not_implemented"}
 
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"PostgreSQL health check failed: {e}")
             metrics.is_healthy = False
 
@@ -471,7 +471,7 @@ class ConnectionPoolManager:
             elif pool_name == "postgresql":
                 # Would implement actual health check in real code
                 return True
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"Immediate health check failed for {pool_name}: {e}")
             return False
 

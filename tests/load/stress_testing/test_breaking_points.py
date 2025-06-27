@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Breaking point identification tests for AI Documentation Vector DB.
 
 This module implements tests to identify system breaking points through
@@ -22,6 +16,12 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SpikeLoadProfile
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)

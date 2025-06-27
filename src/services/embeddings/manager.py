@@ -126,7 +126,7 @@ class EmbeddingManager:
             try:
                 self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
                 logger.info("Initialized reranker")
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to initialize reranker")
 
     async def initialize(self) -> None:
@@ -156,7 +156,7 @@ class EmbeddingManager:
                 logger.info(
                     f"Initialized OpenAI provider with {self.config.openai.model}"
                 )
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to initialize OpenAI provider")
 
         # Initialize FastEmbed provider - always available for local embeddings
@@ -167,7 +167,7 @@ class EmbeddingManager:
             logger.info(
                 f"Initialized FastEmbed provider with {self.config.fastembed.model}"
             )
-        except Exception as e:
+        except Exception:
             logger.warning("Failed to initialize FastEmbed provider")
 
         if not self.providers:
@@ -493,7 +493,7 @@ class EmbeddingManager:
                 try:
                     sparse_embeddings = await provider.generate_sparse_embeddings(texts)
                     logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
-                except Exception as e:
+                except Exception:
                     logger.warning("Failed to generate sparse embeddings")
                     # Continue with dense embeddings only
 
@@ -514,7 +514,7 @@ class EmbeddingManager:
                             dimensions=len(embeddings[0]),
                         )
                         logger.info("Cached embedding for future use")
-                except Exception as e:
+                except Exception:
                     logger.warning("Failed to cache embedding")
 
             result = {
@@ -534,7 +534,7 @@ class EmbeddingManager:
                 result["sparse_embeddings"] = sparse_embeddings
 
             return result
-        except Exception as e:
+        except Exception:
             logger.exception("Embedding generation failed")
             raise
 

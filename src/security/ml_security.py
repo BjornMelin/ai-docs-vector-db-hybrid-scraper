@@ -144,7 +144,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
 
-        except Exception as e:
+        except Exception:
             logger.exception("Input validation error")
             result = SecurityCheckResult(
                 check_type="input_validation",
@@ -227,7 +227,7 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
-        except Exception as e:
+        except Exception:
             logger.exception("Dependency check error")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
@@ -304,7 +304,7 @@ class MLSecurityValidator:
                 self.checks_performed.append(result)
                 return result
 
-        except Exception as e:
+        except Exception:
             logger.info("Container scan skipped")
             result = SecurityCheckResult(
                 check_type="container_scan",

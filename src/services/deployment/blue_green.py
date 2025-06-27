@@ -436,7 +436,7 @@ class BlueGreenDeployment:
                 )
                 return True
 
-            except Exception as e:
+            except Exception:
                 logger.warning(
                     "Health check failed for %s environment (attempt %d): %s",
                     env.name,

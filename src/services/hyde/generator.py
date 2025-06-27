@@ -92,7 +92,7 @@ class HypotheticalDocumentGenerator(BaseService):
             self._initialized = True
             logger.info("HyDE document generator initialized")
 
-        except Exception as e:
+        except Exception:
             raise EmbeddingServiceError(
                 f"Failed to initialize HyDE generator: {e}"
             ) from e
@@ -182,7 +182,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
             return result
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to generate hypothetical documents: {e}", exc_info=True
             )
@@ -319,7 +319,7 @@ class HypotheticalDocumentGenerator(BaseService):
                 document = await self._generate_single_document(prompt)
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed to generate document: {e}")
                 continue
 
@@ -345,7 +345,7 @@ class HypotheticalDocumentGenerator(BaseService):
         except TimeoutError:
             logger.warning("Document generation timed out")
             return ""
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to generate document: {e}")
             return ""
 

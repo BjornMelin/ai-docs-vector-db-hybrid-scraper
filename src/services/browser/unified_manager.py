@@ -195,7 +195,7 @@ class UnifiedBrowserManager(BaseService):
             self._initialized = True
             logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize UnifiedBrowserManager")
             raise CrawlServiceError(
                 "Failed to initialize unified browser manager"
@@ -411,7 +411,7 @@ class UnifiedBrowserManager(BaseService):
 
             return response
 
-        except Exception as e:
+        except Exception:
             execution_time = (time.time() - start_time) * 1000
             self._update_tier_metrics("unknown", False, execution_time)
 
@@ -475,7 +475,7 @@ class UnifiedBrowserManager(BaseService):
 
             return analysis
 
-        except Exception as e:
+        except Exception:
             logger.exception("URL analysis failed for {url}")
             return {
                 "url": url,
@@ -529,7 +529,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 monitoring_health = self._monitor.get_system_health()
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to get monitoring health")
                 monitoring_health = {"error": str(e)}
 

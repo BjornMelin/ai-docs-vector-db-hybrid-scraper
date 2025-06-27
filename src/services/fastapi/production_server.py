@@ -60,7 +60,7 @@ class ProductionMCPServer:
             await self.startup()
             yield
 
-        except Exception as e:
+        except Exception:
             logger.exception("Startup failed")
             raise
 
@@ -88,7 +88,7 @@ class ProductionMCPServer:
                 # FastMCP cleanup would go here if it had cleanup methods
                 logger.info("FastMCP server cleanup complete")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error during shutdown")
 
         logger.info("Production MCP server shutdown complete")
@@ -147,7 +147,7 @@ class ProductionMCPServer:
             server = uvicorn.Server(config)
             await server.serve()
 
-        except Exception as e:
+        except Exception:
             logger.exception("Server error")
             raise
 
@@ -181,7 +181,7 @@ def main() -> None:
         asyncio.run(run_production_server_async(config, host, port))
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
-    except Exception as e:
+    except Exception:
         logger.exception("Server error")
         sys.exit(1)
 

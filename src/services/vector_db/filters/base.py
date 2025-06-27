@@ -277,7 +277,7 @@ class FilterRegistry:
         if filter_class:
             try:
                 return filter_class(**kwargs)
-            except Exception as e:
+            except Exception:
                 self._logger.exception("Failed to create filter {filter_name}")
                 return None
 

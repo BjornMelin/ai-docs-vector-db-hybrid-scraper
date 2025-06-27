@@ -83,7 +83,7 @@ class QdrantDocuments:
 
             return True
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to upsert {len(points)} points to {collection_name}: {e}",
                 exc_info=True,
@@ -152,7 +152,7 @@ class QdrantDocuments:
 
             return formatted_results
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to retrieve points from {collection_name}: {e}",
                 exc_info=True,
@@ -202,7 +202,7 @@ class QdrantDocuments:
 
             return True
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to delete points from {collection_name}: {e}",
                 exc_info=True,
@@ -252,7 +252,7 @@ class QdrantDocuments:
 
             return True
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to update payload for point {point_id}: {e}",
                 exc_info=True,
@@ -288,7 +288,7 @@ class QdrantDocuments:
             )
             return result.count
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to count points in {collection_name}: {e}", exc_info=True
             )
@@ -349,7 +349,7 @@ class QdrantDocuments:
                 "next_offset": result[1],  # Next offset for pagination
             }
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to scroll points in {collection_name}: {e}",
                 exc_info=True,
@@ -381,7 +381,7 @@ class QdrantDocuments:
             logger.info(f"Cleared all points from collection: {collection_name}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"Failed to clear collection {collection_name}: {e}",
                 exc_info=True,

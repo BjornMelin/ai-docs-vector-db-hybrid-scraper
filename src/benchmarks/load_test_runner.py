@@ -168,7 +168,7 @@ class LoadTestUser:
                     self.errors.append("timeout")
                     logger.debug(f"User {self.user_id}: Request timeout")
 
-                except Exception as e:
+                except Exception:
                     self.failures += 1
                     error_type = type(e).__name__
                     self.errors.append(error_type)

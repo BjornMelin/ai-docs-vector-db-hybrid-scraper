@@ -69,7 +69,7 @@ async def generate_embeddings(
             f"using {result.get('provider', 'unknown')} provider"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Embedding generation failed")
         raise HTTPException(
             status_code=500, detail=f"Embedding generation failed: {e!s}"
@@ -145,7 +145,7 @@ async def analyze_text_characteristics(
             f"complexity={analysis.complexity_score:.2f}"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Text analysis failed")
         raise HTTPException(
             status_code=500, detail=f"Text analysis failed: {e!s}"
@@ -181,7 +181,7 @@ async def estimate_embedding_cost(
         costs = embedding_client.estimate_cost(texts, provider_name)
         logger.debug(f"Estimated costs for {len(texts)} texts")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Cost estimation failed")
         raise HTTPException(
             status_code=500, detail=f"Cost estimation failed: {e!s}"
@@ -213,7 +213,7 @@ async def get_provider_info(
         info = embedding_client.get_provider_info()
         logger.debug(f"Retrieved info for {len(info)} providers")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Provider info retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Provider info retrieval failed: {e!s}"
@@ -266,7 +266,7 @@ async def get_smart_recommendation(
             f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Smart recommendation failed")
         raise HTTPException(
             status_code=500, detail=f"Smart recommendation failed: {e!s}"
@@ -303,7 +303,7 @@ async def get_usage_report(
         report = embedding_client.get_usage_report()
         logger.debug("Retrieved usage report")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Usage report retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Usage report retrieval failed: {e!s}"
@@ -371,7 +371,7 @@ async def batch_generate_embeddings(
             f"{sum(1 for r in processed_results if r.get('success', True))} successes"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Batch embedding generation failed")
         raise HTTPException(
             status_code=500, detail=f"Batch processing failed: {e!s}"

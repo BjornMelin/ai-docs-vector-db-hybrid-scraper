@@ -67,7 +67,7 @@ class ProjectStorage:
             self._initialized = True
             logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
 
-        except Exception as e:
+        except Exception:
             raise ProjectStorageError("Failed to initialize project storage") from e
 
     async def load_projects(self) -> dict[str, dict[str, Any]]:
@@ -147,7 +147,7 @@ class ProjectStorage:
             # Atomically replace the old file
             temp_path.replace(self.storage_path)
 
-        except Exception as e:
+        except Exception:
             raise ProjectStorageError("Failed to save projects") from e
 
     async def cleanup(self) -> None:

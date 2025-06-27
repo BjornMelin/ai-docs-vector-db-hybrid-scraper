@@ -56,7 +56,7 @@ class CrawlManager:
             self._initialized = True
             logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize UnifiedBrowserManager")
             raise CrawlServiceError("Failed to initialize crawl manager") from e
 
@@ -66,7 +66,7 @@ class CrawlManager:
             try:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
-            except Exception as e:
+            except Exception:
                 logger.exception("Error cleaning up UnifiedBrowserManager")
 
             self._unified_browser_manager = None
@@ -135,7 +135,7 @@ class CrawlManager:
                 "failed_tiers": result.failed_tiers,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("UnifiedBrowserManager failed for {url}")
             return {
                 "success": False,
@@ -265,7 +265,7 @@ class CrawlManager:
                 "error": None if pages else "No pages could be crawled",
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Site crawl failed for {url}")
             return {
                 "success": False,

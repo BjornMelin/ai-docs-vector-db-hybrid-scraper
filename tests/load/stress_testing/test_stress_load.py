@@ -12,14 +12,17 @@ and behavior under extreme load conditions.
 
 import asyncio
 import logging
+import os
+import random
 import time
-from typing import Dict
+from typing import Any
 
+import psutil
 import pytest
 
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import BreakpointLoadProfile
+from ..load_profiles import BreakpointLoadProfile, create_custom_step_profile
 
 
 logger = logging.getLogger(__name__)
@@ -82,12 +85,13 @@ class TestStressLoad:
                 )
 
                 # Check if we've hit breaking point
-                if error_rate > 10.0 or avg_response_time > 3000:
-                    if breaking_point is None:
-                        breaking_point = current_users
-                        logger.warning(
-                            f"Breaking point detected at {current_users} users"
-                        )
+                if (
+                    error_rate > 10.0
+                    or (avg_response_time > 3000
+                    and breaking_point is None)
+                ):
+                    breaking_point = current_users
+                    logger.warning(f"Breaking point detected at {current_users} users")
 
         # Run stress test
         load_test_runner.run_load_test(
@@ -136,8 +140,7 @@ class TestStressLoad:
         async def monitor_resources(**kwargs):
             """Monitor for resource exhaustion indicators."""
             try:
-                result = await mock_load_test_service.process_request(**kwargs)
-                return result
+                return await mock_load_test_service.process_request(**kwargs)
             except Exception as e:
                 error_msg = str(e).lower()
                 if "timeout" in error_msg:
@@ -204,18 +207,20 @@ class TestStressLoad:
             try:
                 # Call multiple services
                 await services.call_service("cache")
+            except Exception:
+                # Check if failure is cascading
+                pass
+            else:
                 await services.call_service("embedding")
                 await services.call_service("vector_db")
                 return {"status": "success"}
-            except Exception:
-                # Check if failure is cascading
                 failed_services = sum(
                     1 for h in services.service_health.values() if not h
                 )
                 if failed_services > 1:
                     raise TestError(
                         f"Cascading failure: {failed_services} services down"
-                    )
+                    ) from None
                 raise
 
         # Run stress test
@@ -256,8 +261,6 @@ class TestStressLoad:
             {"duration": 300, "users": 500, "spawn_rate": 50, "name": "stress"},
             {"duration": 180, "users": 50, "spawn_rate": 10, "name": "recovery"},
         ]
-
-        from ..load_profiles import create_custom_step_profile
 
         profile = create_custom_step_profile(stages)
 
@@ -304,10 +307,6 @@ class TestStressLoad:
 
         async def memory_tracking_operation(**kwargs):
             """Operation that tracks memory usage."""
-            import os
-
-            import psutil
-
             process = psutil.Process(os.getpid())
             memory_before = process.memory_info().rss / 1024 / 1024  # MB
 
@@ -354,9 +353,6 @@ class TestStressLoad:
 
     def _high_load_operation(self, **_kwargs):
         """Simulate high-load operation."""
-        import asyncio
-        import random
-
         # Simulate CPU-intensive operation
         start = time.time()
         while time.time() - start < 0.1:

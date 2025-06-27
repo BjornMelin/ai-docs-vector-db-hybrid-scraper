@@ -268,7 +268,7 @@ class SimilarityThresholdManager(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception as e:
+        except Exception:
             error_msg = "Failed to apply similarity threshold management"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -675,7 +675,7 @@ class SimilarityThresholdManager(BaseFilter):
                 noise_ratio=noise_ratio,
             )
 
-        except Exception as e:
+        except Exception:
             self._logger.exception("Clustering analysis failed")
             return None
 
@@ -765,7 +765,7 @@ class SimilarityThresholdManager(BaseFilter):
         try:
             SimilarityThresholdCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except Exception:
             self._logger.warning("Invalid similarity threshold criteria")
             return False
 

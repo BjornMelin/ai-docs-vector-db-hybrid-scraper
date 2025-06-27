@@ -341,7 +341,7 @@ class BackgroundTaskManager:
                 if self._shutdown_event.is_set():
                     break
                 continue
-            except Exception as e:
+            except Exception:
                 logger.exception("Worker {worker_name} error")
 
         logger.debug(f"Worker {worker_name} stopped")
@@ -412,7 +412,7 @@ class BackgroundTaskManager:
 
             await self._handle_task_retry(task, result)
 
-        except Exception as e:
+        except Exception:
             # Task failed
             result.status = TaskStatus.FAILED
             result.error = str(e)

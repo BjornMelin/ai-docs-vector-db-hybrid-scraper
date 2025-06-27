@@ -267,7 +267,7 @@ class SearchOrchestrator(BaseService):
                         expanded_query = expansion_result.expanded_query
                         processed_query = expanded_query
                         features_used.append("query_expansion")
-                except Exception as e:
+                except Exception:
                     self._logger.warning("Query expansion failed")
 
             # Step 2: Execute search (would call actual search service)
@@ -297,7 +297,7 @@ class SearchOrchestrator(BaseService):
                                         sr["cluster_id"] = cluster.cluster_id
                                         sr["cluster_label"] = cluster.label
                         features_used.append("result_clustering")
-                    except Exception as e:
+                    except Exception:
                         self._logger.warning("Clustering failed")
 
                 # Personalized ranking (if enabled)
@@ -316,7 +316,7 @@ class SearchOrchestrator(BaseService):
                             search_results, ranking_result
                         )
                         features_used.append("personalized_ranking")
-                    except Exception as e:
+                    except Exception:
                         self._logger.warning("Personalized ranking failed")
 
             # Step 4: RAG answer generation (if enabled)
@@ -373,7 +373,7 @@ class SearchOrchestrator(BaseService):
                             )
                             features_used.append("rag_answer_generation")
 
-                except Exception as e:
+                except Exception:
                     self._logger.warning("RAG answer generation failed")
                     # Continue without RAG - don't fail the entire search
 
@@ -409,7 +409,7 @@ class SearchOrchestrator(BaseService):
 
             return result
 
-        except Exception as e:
+        except Exception:
             self._logger.exception("Search failed")
             # Return minimal result on error
             return SearchResult(
@@ -499,7 +499,7 @@ class SearchOrchestrator(BaseService):
 
                 return results
 
-            except Exception as e:
+            except Exception:
                 self._logger.warning("Federated search failed")
                 # Fall back to mock results
 

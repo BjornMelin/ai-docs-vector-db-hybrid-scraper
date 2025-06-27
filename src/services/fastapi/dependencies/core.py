@@ -389,7 +389,7 @@ class ServiceHealthChecker:
             # Attempt a simple health check operation
             await self.container.vector_service.list_collections()
             health["services"]["vector_db"] = {"status": "healthy"}
-        except Exception as e:
+        except Exception:
             health["status"] = "degraded"
             health["services"]["vector_db"] = {"status": "unhealthy", "error": str(e)}
 
@@ -397,7 +397,7 @@ class ServiceHealthChecker:
         try:
             # Check if embedding manager is responsive
             health["services"]["embeddings"] = {"status": "healthy"}
-        except Exception as e:
+        except Exception:
             health["status"] = "degraded"
             health["services"]["embeddings"] = {"status": "unhealthy", "error": str(e)}
 
@@ -405,7 +405,7 @@ class ServiceHealthChecker:
         try:
             # Check cache manager health
             health["services"]["cache"] = {"status": "healthy"}
-        except Exception as e:
+        except Exception:
             health["status"] = "degraded"
             health["services"]["cache"] = {"status": "unhealthy", "error": str(e)}
 

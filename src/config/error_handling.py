@@ -132,7 +132,7 @@ async def async_error_context(operation: str, **context):
     ctx = ErrorContext(operation, **context)
     try:
         yield ctx
-    except Exception as e:
+    except Exception:
         ctx.context["end_time"] = datetime.now(UTC).isoformat()
         ctx.context["error_type"] = type(e).__name__
         ctx.context["error_message"] = str(e)
@@ -305,7 +305,7 @@ class SafeConfigLoader:
                     context={"file_path": str(file_path)},
                     cause=e,
                 ) from e
-            except Exception as e:
+            except Exception:
                 raise ConfigLoadError(
                     "Failed to load configuration file",
                     context={"file_path": str(file_path)},
@@ -325,7 +325,7 @@ class SafeConfigLoader:
                 # Convert to our custom validation error with context
                 raise handle_validation_error(e, "config_data") from e
 
-            except Exception as e:
+            except Exception:
                 logger.warning(
                     f"Failed to create config, using fallback: {e}",
                     exc_info=True,
@@ -351,7 +351,7 @@ class SafeConfigLoader:
                 # Re-raise our custom errors
                 raise
 
-            except Exception as e:
+            except Exception:
                 # Wrap unexpected errors
                 raise ConfigLoadError(
                     "Unexpected error loading configuration",

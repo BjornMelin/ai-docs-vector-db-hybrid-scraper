@@ -141,7 +141,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     except ImportError as e:
         logger.warning("OpenTelemetry packages not available")
         return False
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to initialize OpenTelemetry")
         return False
 
@@ -201,7 +201,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
             except ImportError:
                 logger.warning("SQLAlchemy instrumentation not available")
 
-    except Exception as e:
+    except Exception:
         logger.warning("Auto-instrumentation setup failed")
 
 
@@ -218,7 +218,7 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry tracer provider...")
             _tracer_provider.shutdown()
-        except Exception as e:
+        except Exception:
             logger.exception("Error during tracer provider shutdown")
         finally:
             _tracer_provider = None
@@ -228,7 +228,7 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry meter provider...")
             _meter_provider.shutdown()
-        except Exception as e:
+        except Exception:
             logger.exception("Error during meter provider shutdown")
         finally:
             _meter_provider = None

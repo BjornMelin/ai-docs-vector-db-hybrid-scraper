@@ -98,7 +98,7 @@ class CachePatterns:
 
                 return data
 
-            except Exception as e:
+            except Exception:
                 logger.error(f"Error fetching data for {key}: {e}")
                 # If we fail, try to return stale data if available
                 cached = await self.cache.get(key)
@@ -180,7 +180,7 @@ class CachePatterns:
                     results.update(fresh_data)
                     logger.debug(f"Cached {len(fresh_data)} fresh items")
 
-            except Exception as e:
+            except Exception:
                 logger.error(f"Error fetching batch data: {e}")
                 # Continue with partial results
 
@@ -230,7 +230,7 @@ class CachePatterns:
             await self.cache.set(cache_key, result, ttl=ttl)
             return result
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in cached computation {func.__name__}: {e}")
             raise
 
@@ -271,7 +271,7 @@ class CachePatterns:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Write-through error for {key}: {e}")
             return False
 
@@ -366,7 +366,7 @@ class CachePatterns:
                 else:
                     logger.warning(f"Cache warming batch {i // batch_size + 1} failed")
 
-            except Exception as e:
+            except Exception:
                 logger.error(f"Cache warming batch error: {e}")
 
         logger.info(

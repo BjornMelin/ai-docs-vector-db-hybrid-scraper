@@ -88,7 +88,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return GenericDictResponse(**costs)
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error("Failed to estimate costs")
             logger.exception("Failed to estimate costs")
@@ -162,7 +162,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 details=config_status,
             )
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error("Failed to validate configuration")
             logger.exception("Failed to validate configuration")

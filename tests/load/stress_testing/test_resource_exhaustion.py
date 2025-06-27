@@ -235,7 +235,9 @@ class TestResourceExhaustion:
                     }
 
                 except MemoryError as e:
-                    raise TestError("Memory exhausted during document processing") from e
+                    raise TestError(
+                        "Memory exhausted during document processing"
+                    ) from e
 
             # Configure stress test with large document processing
             config = LoadTestConfig(
@@ -734,10 +736,14 @@ class TestResourceExhaustion:
 
                 except TimeoutError as e:
                     failure_types["cpu"] += 1
-                    raise TestError("CPU timeout during multi-resource operation") from e
+                    raise TestError(
+                        "CPU timeout during multi-resource operation"
+                    ) from e
                 except MemoryError as e:
                     failure_types["memory"] += 1
-                    raise TestError("Memory exhausted during multi-resource operation") from e
+                    raise TestError(
+                        "Memory exhausted during multi-resource operation"
+                    ) from e
                 except Exception as e:
                     # Count the failure type
                     error_msg = str(e).lower()

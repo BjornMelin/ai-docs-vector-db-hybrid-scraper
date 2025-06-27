@@ -110,7 +110,7 @@ class PlaywrightAdapter(BaseService):
                 f"(anti-detection: {anti_detection_status})"
             )
 
-        except Exception as e:
+        except Exception:
             raise CrawlServiceError("Failed to initialize Playwright") from e
 
     async def cleanup(self) -> None:
@@ -134,6 +134,7 @@ class PlaywrightAdapter(BaseService):
         self,
         url: str,
         actions: list[dict],
+        *,
         timeout: int = 30000,
     ) -> dict[str, Any]:
         """Scrape with direct Playwright control.
@@ -178,7 +179,7 @@ class PlaywrightAdapter(BaseService):
 
             return result
 
-        except Exception as e:
+        except Exception:
             return await self._build_error_result(e, url, start_time, site_profile)
 
         finally:
@@ -200,7 +201,7 @@ class PlaywrightAdapter(BaseService):
         return site_profile, stealth_config
 
     async def _create_browser_context_and_page(
-        self, site_profile: str, stealth_config: Any, _timeout: int
+        self, _site_profile: str, stealth_config: Any, _timeout: int
     ) -> tuple[Any, Any]:
         """Create browser context and page with appropriate configuration."""
         # Create browser context with enhanced settings
@@ -231,13 +232,19 @@ class PlaywrightAdapter(BaseService):
         page = await context.new_page()
 
         # Set up event listeners for debugging
-        page.on("console", lambda msg: self.logger.debug("Console"))
-        page.on("pageerror", lambda error: self.logger.warning("Page error"))
+        page.on("console", lambda _msg: self.logger.debug("Console"))
+        page.on("pageerror", lambda _error: self.logger.warning("Page error"))
 
         return context, page
 
     async def _navigate_and_execute_actions(
-        self, page: Any, url: str, actions: list[dict], timeout: int, site_profile: str
+        self,
+        page: Any,
+        url: str,
+        actions: list[dict],
+        *,
+        timeout: int,
+        site_profile: str,
     ) -> list[dict[str, Any]]:
         """Navigate to URL and execute all actions."""
         # Inject stealth JavaScript patterns for enhanced anti-detection
@@ -267,8 +274,8 @@ class PlaywrightAdapter(BaseService):
             try:
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
-            except Exception as e:
-                self.logger.warning("Action {i} failed")
+            except Exception:
+                self.logger.warning(f"Action {i} failed")
                 action_results.append(
                     {
                         "action_index": i,
@@ -503,7 +510,7 @@ class PlaywrightAdapter(BaseService):
 
             return self._create_success_result(index, action_type, start_time)
 
-        except Exception as e:
+        except Exception:
             return self._create_error_result(index, action_type, start_time, str(e))
 
     async def _perform_action(
@@ -930,7 +937,7 @@ class PlaywrightAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),

@@ -1,9 +1,3 @@
-class CustomError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Chaos engineering fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive chaos engineering testing including
@@ -21,6 +15,12 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class FailureType(Enum):

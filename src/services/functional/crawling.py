@@ -65,7 +65,7 @@ async def crawl_url(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception(f"URL crawling failed for {url}")
         raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}") from e
     else:
@@ -123,9 +123,11 @@ async def crawl_site(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception(f"Site crawling failed for {url}")
-        raise HTTPException(status_code=500, detail=f"Site crawling failed: {e!s}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Site crawling failed: {e!s}"
+        ) from e
     else:
         return result
 
@@ -327,9 +329,11 @@ async def batch_crawl_urls(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Batch URL crawling failed")
-        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {e!s}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Batch crawling failed: {e!s}"
+        ) from e
     else:
         return processed_results
 
@@ -379,7 +383,7 @@ async def validate_url(url: str) -> dict[str, Any]:
                 "details": {"domain": parsed.netloc},
             }
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"URL validation failed for {url}")
         return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
     else:
@@ -451,7 +455,7 @@ async def estimate_crawl_cost(
             },
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("Crawl cost estimation failed")
         return {
             "total_urls": len(urls),
@@ -469,13 +473,9 @@ def _raise_url_required() -> None:
 
 def _raise_invalid_max_pages() -> None:
     """Raise HTTPException for invalid max_pages."""
-    raise HTTPException(
-        status_code=400, detail="max_pages must be between 1 and 1000"
-    )
+    raise HTTPException(status_code=400, detail="max_pages must be between 1 and 1000")
 
 
 def _raise_invalid_max_parallel() -> None:
     """Raise HTTPException for invalid max_parallel."""
-    raise HTTPException(
-        status_code=400, detail="max_parallel must be between 1 and 20"
-    )
+    raise HTTPException(status_code=400, detail="max_parallel must be between 1 and 20")

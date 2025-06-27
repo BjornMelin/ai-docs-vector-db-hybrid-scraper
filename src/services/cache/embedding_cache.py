@@ -65,7 +65,7 @@ class EmbeddingCache:
 
             return None
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error retrieving embedding from cache: {e}")
             return None
 
@@ -113,7 +113,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error caching embedding: {e}")
             return False
 
@@ -170,7 +170,7 @@ class EmbeddingCache:
 
             return cached, missing
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in batch embedding retrieval: {e}")
             # Return all as missing on error
             return {}, texts
@@ -237,7 +237,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in batch embedding caching: {e}")
             return False
 
@@ -285,7 +285,7 @@ class EmbeddingCache:
 
             return missing_texts
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in cache warming: {e}")
             return common_queries  # Return all as missing on error
 
@@ -328,7 +328,7 @@ class EmbeddingCache:
 
             return 0
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error invalidating model cache: {e}")
             return 0
 
@@ -373,7 +373,7 @@ class EmbeddingCache:
 
             return stats
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
 

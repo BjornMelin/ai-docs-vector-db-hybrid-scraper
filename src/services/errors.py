@@ -308,7 +308,7 @@ def retry_async(
                     )
 
                     await asyncio.sleep(delay)
-                except Exception as e:
+                except Exception:
                     # Non-retryable error
                     logger.exception("Non-retryable error in {func.__name__}")
                     raise
@@ -516,7 +516,7 @@ class AdvancedCircuitBreaker:
             response_time = time.time() - start_time
             self._record_failure(e, response_time)
             raise
-        except Exception as e:
+        except Exception:
             # Non-retryable error - don't count against circuit breaker
             logger.warning(
                 f"Non-retryable error in {self.service_name}: {e}. "
@@ -843,7 +843,7 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             error_type = error_type_map.get(type(e), "general")
             logger.warning("{error_type.capitalize()} error in {func.__name__}")
             return safe_response(False, error=str(e), error_type=error_type)
-        except Exception as e:
+        except Exception:
             # Mask internal errors for security
             logger.error("Unexpected error in {func.__name__}", exc_info=True)
             return safe_response(
@@ -880,7 +880,7 @@ def validate_input(**validators) -> Callable[[F], F]:
                     try:
                         validated_value = validator(value)
                         bound_args.arguments[param_name] = validated_value
-                    except Exception as e:
+                    except Exception:
                         raise ValidationError(
                             "Invalid {param_name}",
                             error_code="invalid_input",

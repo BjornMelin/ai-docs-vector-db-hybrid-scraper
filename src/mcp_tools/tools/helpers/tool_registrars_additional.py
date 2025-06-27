@@ -52,7 +52,7 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
 
             return health_status
 
-        except Exception as e:
+        except Exception:
             await ctx.error("Pipeline health check {request_id} failed")
             logger.exception("Pipeline health check failed")
             return {
@@ -87,7 +87,7 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
 
             return metrics
 
-        except Exception as e:
+        except Exception:
             await ctx.error("Pipeline metrics collection {request_id} failed")
             logger.exception("Pipeline metrics collection failed")
             return {"error": str(e), "metrics_available": False}

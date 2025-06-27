@@ -370,7 +370,7 @@ class ResultClusteringService:
                 },
             )
 
-        except Exception as e:
+        except Exception:
             processing_time_ms = (time.time() - start_time) * 1000
             self._logger.error(f"Result clustering failed: {e}", exc_info=True)
 
@@ -906,7 +906,7 @@ class ResultClusteringService:
                             valid_embeddings, valid_labels
                         )
 
-                except Exception as e:
+                except Exception:
                     self._logger.warning(f"Failed to calculate quality metrics: {e}")
 
         return metrics

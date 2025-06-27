@@ -624,7 +624,7 @@ class MetricsRegistry:
                 # This is a placeholder for future implementation
                 pass
 
-        except Exception as e:
+        except Exception:
             # Log error but don't raise to avoid breaking monitoring
             import logging
 

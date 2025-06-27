@@ -211,7 +211,7 @@ async def get_cache_stats(
         stats = await cache_client.get_stats()
         logger.debug("Retrieved cache statistics")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Cache stats retrieval failed")
         return {
             "manager": {"enabled_layers": []},
@@ -475,7 +475,7 @@ async def bulk_cache_operations(
                     results["failed"] += 1
                     results["errors"].append(f"Unknown operation: {op_type}")
 
-            except Exception as e:
+            except Exception:
                 results["failed"] += 1
                 results["errors"].append(f"Operation {i} failed: {e!s}")
 
@@ -484,7 +484,7 @@ async def bulk_cache_operations(
             f"{results['successful']}/{results['total']} successful"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Bulk cache operations failed")
         return {
             "total": len(operations),

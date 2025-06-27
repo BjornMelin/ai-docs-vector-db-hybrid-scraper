@@ -112,7 +112,7 @@ def register_tools(mcp, client_manager: ClientManager):
                             and crawl_result.get("content")
                         ):
                             successful_count += 1
-                    except Exception as e:
+                    except Exception:
                         if ctx:
                             await ctx.warning(f"Failed to process URL {url}: {e}")
                         logger.warning(f"Failed to process URL {url}: {e}")
@@ -141,7 +141,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return ProjectInfo(**project)
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to create project {request.name}: {e}")
             logger.exception("Failed to create project")
@@ -178,7 +178,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.debug(
                             f"Project {project['name']}: {info.vectors_count} vectors"
                         )
-                except Exception as e:
+                except Exception:
                     project["vector_count"] = 0
                     project["indexed_count"] = 0
                     if ctx:
@@ -193,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return [ProjectInfo(**p) for p in projects]
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to list projects: {e}")
             logger.exception("Failed to list projects")
@@ -283,7 +283,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return search_results
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to search project {project_id}: {e}")
             logger.exception("Failed to search project")
@@ -334,7 +334,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return ProjectInfo(**project)
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to update project {project_id}: {e}")
             logger.exception("Failed to update project")
@@ -375,7 +375,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     if ctx:
                         await ctx.debug(f"Deleted collection: {project['collection']}")
-                except Exception as e:
+                except Exception:
                     if ctx:
                         await ctx.warning(
                             f"Failed to delete collection {project['collection']}: {e}"
@@ -400,7 +400,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 },
             )
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to delete project {project_id}: {e}")
             logger.exception("Failed to delete project")
@@ -469,7 +469,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "data": formatted_data,
             }
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to export project {project_id}: {e}")
             logger.exception("Failed to export project")
@@ -533,7 +533,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         urls_added += 1
                         if ctx:
                             await ctx.debug(f"Successfully added URL: {url}")
-                except Exception as e:
+                except Exception:
                     if ctx:
                         await ctx.warning(f"Failed to process URL {url}: {e}")
                     logger.warning(f"Failed to process URL {url}: {e}")
@@ -553,7 +553,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "total_urls": len(updated_urls),
             }
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to add URLs to project {project_id}: {e}")
             logger.exception("Failed to add URLs to project")
@@ -597,7 +597,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.debug(
                         f"Project {project.get('name', project_id)}: {info.vectors_count} vectors"
                     )
-            except Exception as e:
+            except Exception:
                 project["vector_count"] = 0
                 project["indexed_count"] = 0
                 if ctx:
@@ -615,7 +615,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except ValueError:
             # Re-raise ValueError as is
             raise
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to get project details for {project_id}: {e}")
             logger.exception("Failed to get project details")

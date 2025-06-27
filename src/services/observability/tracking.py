@@ -99,7 +99,7 @@ def _initialize_metrics() -> None:
             description="Total tokens processed by AI operations",
         )
 
-    except Exception as e:
+    except Exception:
         logger.warning(f"Failed to initialize AI metrics: {e}")
 
 
@@ -146,7 +146,7 @@ def instrument_function(
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
-                    except Exception as e:
+                    except Exception:
                         logger.debug(f"Failed to record function arguments: {e}")
 
                 try:
@@ -159,7 +159,7 @@ def instrument_function(
 
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.set_attribute("function.success", False)
                     span.set_attribute("error.type", type(e).__name__)
                     span.set_attribute("error.message", str(e)[:200])
@@ -189,7 +189,7 @@ def instrument_function(
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
-                    except Exception as e:
+                    except Exception:
                         logger.debug(f"Failed to record function arguments: {e}")
 
                 try:
@@ -201,7 +201,7 @@ def instrument_function(
 
                     return result
 
-                except Exception as e:
+                except Exception:
                     span.set_attribute("function.success", False)
                     span.set_attribute("error.type", type(e).__name__)
                     span.set_attribute("error.message", str(e)[:200])
@@ -272,7 +272,7 @@ def record_ai_operation(
                 token_attrs = {**attrs, "token_type": "output"}
                 _ai_token_counter.add(output_tokens, token_attrs)
 
-    except Exception as e:
+    except Exception:
         logger.warning(f"Failed to record AI operation metrics: {e}")
 
 
@@ -309,7 +309,7 @@ def track_cost(
         if _ai_cost_counter:
             _ai_cost_counter.add(cost_usd, attrs)
 
-    except Exception as e:
+    except Exception:
         logger.warning(f"Failed to record AI cost: {e}")
 
 

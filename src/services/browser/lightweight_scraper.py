@@ -171,7 +171,7 @@ class LightweightScraper(BaseService):
                 analysis.content_type = head_analysis.get("content_type")
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Error analyzing URL {url}: {e}")
             analysis.reasons.append(f"Analysis error: {e!s}")
 
@@ -305,7 +305,7 @@ class LightweightScraper(BaseService):
 
             return analysis
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"HEAD request failed for {url}: {e}")
             return None
 
@@ -360,7 +360,7 @@ class LightweightScraper(BaseService):
                 logger.debug(f"Anti-bot protection detected for {url}, escalating")
                 return None
             raise
-        except Exception as e:
+        except Exception:
             logger.warning(f"Error scraping {url}: {e}")
             return None
 

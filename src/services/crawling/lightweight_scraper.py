@@ -101,7 +101,7 @@ class LightweightScraper(CrawlProvider):
             try:
                 recommendation = await self._analyze_url(url)
                 return recommendation == TierRecommendation.LIGHTWEIGHT_OK
-            except Exception as e:
+            except Exception:
                 logger.debug("HEAD analysis failed for {url}")
                 return False
 
@@ -159,7 +159,7 @@ class LightweightScraper(CrawlProvider):
         except httpx.TimeoutException:
             logger.debug(f"HEAD request timeout for {url}")
             return TierRecommendation.BROWSER_REQUIRED
-        except Exception as e:
+        except Exception:
             logger.debug("HEAD request failed for {url}")
             return TierRecommendation.BROWSER_REQUIRED
 
@@ -242,7 +242,7 @@ class LightweightScraper(CrawlProvider):
                 "error": f"HTTP {e.response.status_code}",
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
-        except Exception as e:
+        except Exception:
             logger.exception("Error scraping {url} with lightweight tier")
             return {
                 "success": False,

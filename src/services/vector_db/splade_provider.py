@@ -43,7 +43,7 @@ class SPLADEProvider:
             # Try to import and load SPLADE model
             await self._load_splade_model()
             logger.info("SPLADE provider initialized successfully")
-        except Exception as e:
+        except Exception:
             logger.warning(
                 f"Failed to load SPLADE model: {e}. Using fallback sparse generation."
             )
@@ -69,7 +69,7 @@ class SPLADEProvider:
             logger.warning(
                 "Transformers library not available, using fallback sparse generation"
             )
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to load SPLADE model")
             raise
 
@@ -108,7 +108,7 @@ class SPLADEProvider:
 
             return sparse_vector
 
-        except Exception as e:
+        except Exception:
             logger.error("Sparse vector generation failed", exc_info=True)
             # Return empty sparse vector as fallback
             return {}

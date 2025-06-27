@@ -174,7 +174,7 @@ class AIOperationTracker:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except Exception:
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))
 
@@ -280,7 +280,7 @@ class AIOperationTracker:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except Exception:
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))
 
@@ -378,7 +378,7 @@ class AIOperationTracker:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except Exception:
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))
 
@@ -490,7 +490,7 @@ class AIOperationTracker:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception as e:
+            except Exception:
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))
 

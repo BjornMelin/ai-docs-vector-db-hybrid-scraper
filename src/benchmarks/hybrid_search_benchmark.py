@@ -293,7 +293,7 @@ class HybridSearchBenchmark:
 
             return results
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Benchmark failed: {e}", exc_info=True)
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
@@ -380,7 +380,7 @@ class HybridSearchBenchmark:
                     correct_predictions += 1
                 total_predictions += 1
 
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Classification failed for query '{query_text}': {e}")
                 total_predictions += 1
 
@@ -421,7 +421,7 @@ class HybridSearchBenchmark:
                     appropriate_selections += 1
                 total_selections += 1
 
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Model selection failed for query '{query_text}': {e}")
                 total_selections += 1
 
@@ -449,7 +449,7 @@ class HybridSearchBenchmark:
                     effective_fusions += 1
                 total_fusions += 1
 
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Fusion tuning failed for query '{query.query}': {e}")
                 total_fusions += 1
 

@@ -567,7 +567,7 @@ class SecureConfigManager:
             logger.debug(f"Configuration encrypted successfully: {config_path}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to encrypt configuration {config_path}")
 
             # Log audit event for failure
@@ -648,7 +648,7 @@ class SecureConfigManager:
             logger.debug(f"Configuration decrypted successfully: {config_path}")
             return config_data
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to decrypt configuration {config_path}")
 
             # Log audit event for failure
@@ -825,7 +825,7 @@ class SecureConfigManager:
             logger.info(f"Configuration backup created successfully: {backup_path}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Configuration backup failed")
 
             # Log backup failure
@@ -930,7 +930,7 @@ class SecureConfigManager:
 
             return status
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to get security status")
             return {"error": str(e)}
 

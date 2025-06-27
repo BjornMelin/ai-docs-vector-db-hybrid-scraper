@@ -16,6 +16,8 @@ import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Import services for auto-detection (used in async method)
+from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
 from .auto_detect import AutoDetectedServices, AutoDetectionConfig
 from .enums import (
     ChunkingStrategy,
@@ -26,9 +28,6 @@ from .enums import (
     LogLevel,
     SearchStrategy,
 )
-
-# Import services for auto-detection (used in async method)
-from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
 
 
 class CacheConfig(BaseModel):
@@ -693,7 +692,7 @@ class Config(BaseSettings):
 
             return updated_config
 
-        except Exception as e:
+        except Exception:
             # Log error but don't fail configuration loading
 
             logger = logging.getLogger(__name__)

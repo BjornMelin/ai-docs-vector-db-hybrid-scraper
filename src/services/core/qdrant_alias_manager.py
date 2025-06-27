@@ -128,7 +128,7 @@ class QdrantAliasManager(BaseService):
             logger.info(f"Created alias {alias_name} -> {collection_name}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to create alias")
             raise QdrantServiceError(f"Failed to create alias: {e}") from e
 
@@ -196,7 +196,7 @@ class QdrantAliasManager(BaseService):
 
             return old_collection
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to switch alias")
             raise QdrantServiceError(f"Failed to switch alias: {e}") from e
 
@@ -224,7 +224,7 @@ class QdrantAliasManager(BaseService):
             logger.info(f"Deleted alias {alias_name}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to delete alias")
             return False
 
@@ -272,7 +272,7 @@ class QdrantAliasManager(BaseService):
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to list aliases")
             return {}
 
@@ -366,7 +366,7 @@ class QdrantAliasManager(BaseService):
             logger.info(f"Cloned collection schema from {source} to {target}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to clone collection schema")
             raise QdrantServiceError(f"Failed to clone collection schema: {e}") from e
 
@@ -433,7 +433,7 @@ class QdrantAliasManager(BaseService):
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
-                    except Exception as e:
+                    except Exception:
                         logger.warning(f"Progress callback failed: {e}")
 
                 # Check limit
@@ -448,7 +448,7 @@ class QdrantAliasManager(BaseService):
             logger.info(f"Copied {total_copied} points from {source} to {target}")
             return total_copied
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to copy collection data")
             raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
 
@@ -508,6 +508,6 @@ class QdrantAliasManager(BaseService):
 
             return True, "Collections are compatible"
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to validate collection compatibility")
             return False, f"Validation error: {e!s}"

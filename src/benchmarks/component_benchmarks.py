@@ -127,7 +127,7 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Query classification failed: {e}")
                 failures += 1
 
@@ -175,7 +175,7 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Model selection failed: {e}")
                 failures += 1
 
@@ -225,7 +225,7 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Adaptive fusion failed: {e}")
                 failures += 1
 
@@ -267,7 +267,7 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
+            except Exception:
                 logger.debug(f"SPLADE generation failed: {e}")
                 failures += 1
 
@@ -311,7 +311,7 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
+            except Exception:
                 logger.debug(f"End-to-end search failed: {e}")
                 failures += 1
 
@@ -363,7 +363,7 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 cold_latencies.append((end - start) * 1000)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"SPLADE cold run failed for query '{query.query}': {e}")
                 continue
 
@@ -375,7 +375,7 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 warm_latencies.append((end - start) * 1000)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"SPLADE warm run failed for query '{query.query}': {e}")
                 continue
 

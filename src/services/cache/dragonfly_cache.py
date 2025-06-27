@@ -91,7 +91,7 @@ class DragonflyCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except Exception as e:
+            except Exception:
                 logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
 
     @property

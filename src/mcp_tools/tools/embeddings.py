@@ -80,7 +80,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 total_tokens=result.total_tokens,
             )
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Embedding generation failed: {e}")
             logger.exception("Embedding generation failed")
@@ -173,7 +173,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return [EmbeddingProviderInfo(**p) for p in providers]
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error(f"Failed to list embedding providers: {e}")
             logger.exception("Failed to list embedding providers")

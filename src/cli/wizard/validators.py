@@ -148,7 +148,7 @@ class WizardValidator:
                 check_path.mkdir(parents=True, exist_ok=True)
         except PermissionError:
             return False, f"No write permission for path: {path}"
-        except Exception as e:
+        except Exception:
             return False, f"Invalid path: {e}"
 
         return True, None
@@ -185,7 +185,7 @@ class WizardValidator:
                 error_msg = error["msg"]
                 errors.append(f"{field_path}: {error_msg}")
 
-        except Exception as e:
+        except Exception:
             errors.append(f"Validation error: {e!s}")
 
         return False, errors

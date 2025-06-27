@@ -235,7 +235,7 @@ class TestConfigDriftDetector:
         assert len(detector._snapshots[str(temp_config_file)]) == 1
 
     def test_compare_snapshots_no_change(
-        self, drift_config, temp_config_file, mock_metrics_bridge
+        self, drift_config, temp_config_file, _mock_metrics_bridge
     ):
         """Test comparing snapshots with no changes."""
         detector = ConfigDriftDetector(drift_config)
@@ -561,7 +561,7 @@ class TestGlobalFunctions:
 
     @patch("src.config.drift_detection.get_drift_detector")
     def test_run_drift_detection(
-        self, mock_get_detector, _drift_config, mock_metrics_bridge
+        self, mock_get_detector, _drift_config, _mock_metrics_bridge
     ):
         """Test global drift detection run."""
         mock_detector = MagicMock()
@@ -575,7 +575,7 @@ class TestGlobalFunctions:
 
     @patch("src.config.drift_detection.get_drift_detector")
     def test_get_drift_summary_global(
-        self, mock_get_detector, _drift_config, mock_metrics_bridge
+        self, mock_get_detector, _drift_config, _mock_metrics_bridge
     ):
         """Test global drift summary."""
         mock_detector = MagicMock()
@@ -592,7 +592,7 @@ class TestIntegrationWithTask20:
     """Test integration with existing Task 20 infrastructure."""
 
     def test_performance_monitor_integration(
-        self, drift_config, mock_performance_monitor, mock_metrics_bridge
+        self, drift_config, mock_performance_monitor, _mock_metrics_bridge
     ):
         """Test integration with performance monitoring."""
         drift_config.use_performance_monitoring = True

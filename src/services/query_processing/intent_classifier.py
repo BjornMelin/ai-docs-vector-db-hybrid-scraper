@@ -554,7 +554,7 @@ class QueryIntentClassifier:
                         intent_scores[intent] = (
                             intent_scores[intent] * 0.7 + semantic_scores[intent] * 0.3
                         )
-            except Exception as e:
+            except Exception:
                 logger.warning("Semantic intent classification failed")
 
         # Determine complexity level
@@ -699,7 +699,7 @@ class QueryIntentClassifier:
 
             return scores
 
-        except Exception as e:
+        except Exception:
             logger.exception("Semantic intent classification failed")
             return {}
 

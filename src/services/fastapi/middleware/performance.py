@@ -189,7 +189,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             if self._process:
                 memory_info = self._process.memory_info()
                 return memory_info.rss / 1024 / 1024  # Convert to MB
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to get memory usage: {e}")
         return None
 
@@ -280,7 +280,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                         "memory_usage_percent": self._process.memory_percent(),
                         "cpu_percent": cpu_percent,
                     }
-                except Exception as e:
+                except Exception:
                     logger.warning(f"Failed to get system metrics: {e}")
 
             return summary

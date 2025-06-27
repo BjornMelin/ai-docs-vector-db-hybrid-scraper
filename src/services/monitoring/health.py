@@ -110,7 +110,7 @@ class HealthCheck(ABC):
                 duration_ms=duration_ms,
             )
 
-        except Exception as e:
+        except Exception:
             duration_ms = (time.time() - start_time) * 1000
             return HealthCheckResult(
                 name=self.name,
@@ -181,7 +181,7 @@ class QdrantHealthCheck(HealthCheck):
                     duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
-            except Exception as e:
+            except Exception:
                 return HealthCheckResult(
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
@@ -255,7 +255,7 @@ class RedisHealthCheck(HealthCheck):
                     duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
-            except Exception as e:
+            except Exception:
                 return HealthCheckResult(
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
@@ -345,7 +345,7 @@ class HTTPHealthCheck(HealthCheck):
                     duration_ms=0.0,  # Will be updated by _execute_with_timeout
                 )
 
-            except Exception as e:
+            except Exception:
                 return HealthCheckResult(
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
@@ -440,7 +440,7 @@ class SystemResourceHealthCheck(HealthCheck):
                     },
                 )
 
-            except Exception as e:
+            except Exception:
                 return HealthCheckResult(
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,

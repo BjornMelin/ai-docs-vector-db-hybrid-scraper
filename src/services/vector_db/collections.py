@@ -177,7 +177,7 @@ class QdrantCollections(BaseService):
             await self._client.delete_collection(collection_name)
             logger.info(f"Deleted collection: {collection_name}")
             return True
-        except Exception as e:
+        except Exception:
             raise QdrantServiceError(f"Failed to delete collection: {e}") from e
 
     async def get_collection_info(self, collection_name: str) -> dict[str, Any]:
@@ -199,7 +199,7 @@ class QdrantCollections(BaseService):
                 "points_count": info.points_count,
                 "config": info.config.model_dump() if info.config else {},
             }
-        except Exception as e:
+        except Exception:
             raise QdrantServiceError(f"Failed to get collection info: {e}") from e
 
     async def list_collections(self) -> list[str]:
@@ -213,7 +213,7 @@ class QdrantCollections(BaseService):
         try:
             collections = await self._client.get_collections()
             return [col.name for col in collections.collections]
-        except Exception as e:
+        except Exception:
             raise QdrantServiceError(f"Failed to list collections: {e}") from e
 
     async def list_collections_details(self) -> list[dict[str, Any]]:
@@ -240,7 +240,7 @@ class QdrantCollections(BaseService):
                             "config": info.get("config", {}),
                         }
                     )
-                except Exception as e:
+                except Exception:
                     logger.warning(
                         f"Failed to get details for collection {col.name}: {e}"
                     )
@@ -252,7 +252,7 @@ class QdrantCollections(BaseService):
                     )
 
             return details
-        except Exception as e:
+        except Exception:
             raise QdrantServiceError(f"Failed to list collection details: {e}") from e
 
     async def trigger_collection_optimization(self, collection_name: str) -> bool:
@@ -280,7 +280,7 @@ class QdrantCollections(BaseService):
 
             logger.info(f"Triggered optimization for collection: {collection_name}")
             return True
-        except Exception as e:
+        except Exception:
             raise QdrantServiceError(f"Failed to optimize collection: {e}") from e
 
     def _get_hnsw_config_for_collection_type(self, collection_type: str):
@@ -408,7 +408,7 @@ class QdrantCollections(BaseService):
                 "points_count": points_count,
             }
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to validate HNSW configuration: {e}")
             # Return default healthy status if HNSW validation fails
             return {

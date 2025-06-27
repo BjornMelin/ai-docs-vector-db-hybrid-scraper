@@ -5,11 +5,12 @@ external services used by the AI Documentation Vector DB system.
 """
 
 import asyncio
+
 import httpx
+import redis
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
-import redis
 
 from src.config import Config
 
@@ -53,7 +54,7 @@ class ServiceHealthChecker:
                 result["error"] = "Authentication failed - check API key"
             else:
                 result["error"] = f"HTTP {e.status_code}: {e.reason_phrase}"
-        except Exception as e:
+        except Exception:
             result["error"] = str(e)
 
         return result
@@ -87,7 +88,7 @@ class ServiceHealthChecker:
 
         except redis.ConnectionError:
             result["error"] = "Connection refused - is DragonflyDB running?"
-        except Exception as e:
+        except Exception:
             result["error"] = str(e)
 
         return result
@@ -146,7 +147,7 @@ class ServiceHealthChecker:
             result["details"]["dimensions"] = config.openai.dimensions
             result["details"]["available_models_count"] = len(models)
 
-        except Exception as e:
+        except Exception:
             result["error"] = str(e)
 
         return result
@@ -191,7 +192,7 @@ class ServiceHealthChecker:
             else:
                 result["error"] = f"API returned status {response.status_code}"
 
-        except Exception as e:
+        except Exception:
             result["error"] = str(e)
 
         return result

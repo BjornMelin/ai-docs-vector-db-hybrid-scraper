@@ -70,7 +70,7 @@ class ServiceDiscovery:
                         self.logger.info(
                             f"Discovered {service_type}: {result.host}:{result.port}"
                         )
-                except Exception as e:
+                except Exception:
                     error_msg = f"Failed to discover {service_type}: {e}"
                     errors.append(error_msg)
                     self.logger.warning(error_msg)
@@ -157,7 +157,7 @@ class ServiceDiscovery:
                     self._cache_service("redis", service)
                     return service
 
-            except Exception as e:
+            except Exception:
                 self.logger.debug(f"Redis discovery failed for {host}:{port}: {e}")
                 continue
 
@@ -223,7 +223,7 @@ class ServiceDiscovery:
                     self._cache_service("qdrant", service)
                     return service
 
-            except Exception as e:
+            except Exception:
                 self.logger.debug(f"Qdrant discovery failed for {host}:{port}: {e}")
                 continue
 
@@ -278,7 +278,7 @@ class ServiceDiscovery:
                     self._cache_service("postgresql", service)
                     return service
 
-            except Exception as e:
+            except Exception:
                 self.logger.debug(f"PostgreSQL discovery failed for {host}:{port}: {e}")
                 continue
 
@@ -339,7 +339,7 @@ class ServiceDiscovery:
         except ImportError:
             self.logger.warning("redis package not available for connection testing")
             return None
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"Redis connection test failed: {e}")
             return None
 
@@ -375,7 +375,7 @@ class ServiceDiscovery:
                 "qdrant-client package not available for connection testing"
             )
             return None
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"Qdrant connection test failed: {e}")
             return None
 
@@ -449,7 +449,7 @@ class ServiceDiscovery:
                 "asyncpg package not available for PostgreSQL connection testing"
             )
             return None
-        except Exception as e:
+        except Exception:
             self.logger.debug(f"PostgreSQL connection test failed: {e}")
 
         return None
@@ -467,7 +467,7 @@ class ServiceDiscovery:
                 parsed = urlparse(redis_url)
                 if parsed.hostname and parsed.port:
                     candidates.append((parsed.hostname, parsed.port))
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Failed to parse Redis URL '{redis_url}': {e}")
 
         return candidates

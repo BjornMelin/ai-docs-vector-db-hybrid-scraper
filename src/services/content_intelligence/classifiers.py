@@ -509,7 +509,7 @@ class ContentClassifier:
                         + semantic_scores[content_type] * blend_ratio
                     )
             reasoning_parts.append("semantic analysis applied")
-        except Exception as e:
+        except Exception:
             logger.warning("Semantic analysis failed")
 
         return type_scores
@@ -645,7 +645,7 @@ class ContentClassifier:
 
             return scores
 
-        except Exception as e:
+        except Exception:
             logger.exception("Semantic classification failed")
             return {}
 

@@ -205,7 +205,7 @@ class TemporalFilter(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception as e:
+        except Exception:
             error_msg = f"Failed to apply temporal filter: {e}"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -393,7 +393,7 @@ class TemporalFilter(BaseFilter):
         try:
             TemporalCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except Exception:
             self._logger.warning(f"Invalid temporal criteria: {e}")
             return False
 
@@ -517,7 +517,7 @@ class TemporalFilter(BaseFilter):
             if match:
                 try:
                     return calculator(match)
-                except Exception as e:
+                except Exception:
                     self._logger.warning(
                         f"Failed to calculate relative date for '{relative_date_str}': {e}"
                     )

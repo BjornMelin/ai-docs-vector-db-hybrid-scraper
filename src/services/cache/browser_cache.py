@@ -205,7 +205,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
                     data = json.loads(cached_json)
                     logger.debug(f"Browser cache hit (local): {key}")
                     return BrowserCacheEntry.from_dict(data)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error reading from local browser cache: {e}")
 
         # Try distributed cache
@@ -225,7 +225,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
                     logger.debug(f"Browser cache hit (distributed): {key}")
                     return entry
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error reading from distributed browser cache: {e}")
 
         self._cache_stats["misses"] += 1
@@ -275,7 +275,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error caching browser result: {e}")
             return False
 
@@ -294,14 +294,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 result = await self.local_cache.delete(key)
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error deleting from local cache: {e}")
 
         if self.distributed_cache:
             try:
                 result = await self.distributed_cache.delete(key)
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error deleting from distributed cache: {e}")
 
         return any(results) if results else False
@@ -329,7 +329,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
                 logger.info(
                     f"Invalidated {count} browser cache entries matching {pattern}"
                 )
-            except Exception as e:
+            except Exception:
                 logger.error(f"Error invalidating browser cache pattern: {e}")
 
         return count
@@ -398,7 +398,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
             return entry, False
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error fetching content for {url}: {e}")
             raise
 
@@ -439,14 +439,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.local_cache:
             try:
                 count += await self.local_cache.clear()
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error clearing local cache: {e}")
 
         if self.distributed_cache:
             try:
                 # Don't double count if same entries in both
                 await self.distributed_cache.clear()
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error clearing distributed cache: {e}")
 
         # Reset stats
@@ -485,11 +485,11 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.local_cache:
             try:
                 await self.local_cache.close()
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error closing local cache: {e}")
 
         if self.distributed_cache:
             try:
                 await self.distributed_cache.close()
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Error closing distributed cache: {e}")

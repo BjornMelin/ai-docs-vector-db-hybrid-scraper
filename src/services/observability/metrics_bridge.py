@@ -219,7 +219,7 @@ class OpenTelemetryMetricsBridge:
                     self.prometheus_registry._metrics["search_duration"].labels(
                         collection=collection, query_type=query_type
                     ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
-                except Exception as e:
+                except Exception:
                     logger.warning(f"Failed to update Prometheus metrics: {e}")
 
     def record_cache_operation(
@@ -385,7 +385,7 @@ class OpenTelemetryMetricsBridge:
                     elif hasattr(instrument, "set"):
                         instrument.set(value, labels)
 
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed to record metric {metric_name}: {e}")
 
     def create_custom_counter(

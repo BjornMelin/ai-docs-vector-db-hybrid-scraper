@@ -168,7 +168,7 @@ class HealthChecker:
             else:
                 return await self._check_generic_health(service, start_time)
 
-        except Exception as e:
+        except Exception:
             response_time_ms = (time.time() - start_time) * 1000
 
             self.logger.warning("Health check failed for {service.service_name}")
@@ -216,7 +216,7 @@ class HealthChecker:
 
         except ImportError:
             raise RuntimeError("redis package not available")
-        except Exception as e:
+        except Exception:
             raise RuntimeError("Redis health check failed")
 
     async def _check_qdrant_health(
@@ -246,7 +246,7 @@ class HealthChecker:
                     try:
                         health_data = response.json()
                         metadata.update(health_data)
-                    except Exception as e:
+                    except Exception:
                         logger.debug(
                             "Failed to parse health data from {service.service_name}"
                         )
@@ -260,7 +260,7 @@ class HealthChecker:
                     metadata=metadata,
                 )
 
-        except Exception as e:
+        except Exception:
             raise RuntimeError("Qdrant health check failed")
 
     async def _check_postgresql_health(
@@ -289,7 +289,7 @@ class HealthChecker:
                 },
             )
 
-        except Exception as e:
+        except Exception:
             raise RuntimeError("PostgreSQL health check failed")
 
     async def _check_generic_health(
@@ -337,7 +337,7 @@ class HealthChecker:
                     },
                 )
 
-        except Exception as e:
+        except Exception:
             raise RuntimeError("Generic health check failed")
 
     async def _monitor_loop(self) -> None:
@@ -359,7 +359,7 @@ class HealthChecker:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Health monitoring error")
                 await asyncio.sleep(60)  # Wait longer on error
 

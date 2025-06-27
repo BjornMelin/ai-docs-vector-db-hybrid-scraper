@@ -54,7 +54,7 @@ def get_observability_service() -> dict[str, any]:
             "enabled": is_observability_enabled(),
         }
 
-    except Exception as e:
+    except Exception:
         logger.warning("Failed to initialize observability service")
         return {
             "config": ObservabilityConfig(),
@@ -151,7 +151,7 @@ async def record_ai_operation_metrics(
             **kwargs,
         )
 
-    except Exception as e:
+    except Exception:
         logger.debug("Failed to record AI operation metrics")
 
 
@@ -179,7 +179,7 @@ async def track_ai_cost_metrics(
             **kwargs,
         )
 
-    except Exception as e:
+    except Exception:
         logger.debug("Failed to track AI cost metrics")
 
 
@@ -218,7 +218,7 @@ async def get_observability_health(
 
         return health
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to get observability health")
         return {
             "enabled": False,

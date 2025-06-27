@@ -195,7 +195,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception as e:
+        except Exception:
             await ctx.error("Multi-stage search {request_id} failed")
             logger.exception("Multi-stage search failed")
             raise
@@ -329,7 +329,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception as e:
+        except Exception:
             await ctx.error("HyDE search {request_id} failed")
             logger.exception("HyDE search failed")
             # Fallback to regular search on error
@@ -385,7 +385,7 @@ def register_tools(mcp, client_manager: ClientManager):
             try:
                 hyde_engine = await client_manager.get_hyde_engine()
                 embedding_manager = await client_manager.get_embedding_manager()
-            except Exception as e:
+            except Exception:
                 if ctx:
                     await ctx.error("HyDE engine not available")
                 raise ValueError("HyDE engine not initialized") from e
@@ -515,7 +515,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return HyDEAdvancedResponse(**result_dict)
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error("Advanced HyDE search {request_id} failed")
             logger.exception("Advanced HyDE search failed")
@@ -582,7 +582,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception as e:
+        except Exception:
             await ctx.error("Filtered search {request_id} failed")
             logger.exception("Filtered search failed")
             raise

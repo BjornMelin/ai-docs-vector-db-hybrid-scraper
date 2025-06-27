@@ -82,7 +82,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 description="Number of active HTTP requests",
             )
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to initialize request metrics: {e}")
             self.meter = None
 
@@ -140,7 +140,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
 
                 return response
 
-            except Exception as e:
+            except Exception:
                 # Record exception
                 span.record_exception(e)
                 if Status and StatusCode:
@@ -205,7 +205,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             if content_type:
                 span.set_attribute("http.request.content_type", content_type)
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"Failed to add AI context: {e}")
 
     def _record_request_metrics(
@@ -241,7 +241,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to record request metrics: {e}")
 
     def _record_error_metrics(
@@ -268,5 +268,5 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to record error metrics: {e}")
