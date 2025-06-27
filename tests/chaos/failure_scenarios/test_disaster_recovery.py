@@ -83,7 +83,7 @@ class TestDisasterRecovery:
             async def restore_from_backup(
                 self, backup_id: str | None = None
             ) -> dict[str, Any]:
-                    raise TestError("No backups available")
+                if not self.backups:
                     raise TestError("No backups available")
 
                 if backup_id:

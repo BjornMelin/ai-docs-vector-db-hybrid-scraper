@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Service fault injection tests for chaos engineering.
 
 This module implements service-level fault injection to test resilience
@@ -13,11 +7,17 @@ against service failures, resource exhaustion, and degraded performance.
 import asyncio
 import random
 import time
+from collections import Counter
 from typing import Any
 
 import pytest
 
 from tests.chaos.conftest import FailureType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
 
 
 class AuthenticationError(Exception):

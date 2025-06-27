@@ -4,6 +4,12 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
+import httpx
+from openai import OpenAI
+from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
+import redis
+
 from src.config import Config
 
 
