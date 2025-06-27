@@ -4,8 +4,9 @@ Transforms the complex EmbeddingManager class into pure functions with
 dependency injection. Maintains all functionality while improving testability.
 """
 
+import asyncio
 import logging
-from typing import Any, List
+from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException
 
@@ -49,12 +50,10 @@ async def generate_embeddings(
     Raises:
         HTTPException: If embedding generation fails
     """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
 
+    try:
         result = await embedding_client.generate_embeddings(
             texts=texts,
             quality_tier=quality_tier,
@@ -74,7 +73,7 @@ async def generate_embeddings(
         logger.exception("Embedding generation failed")
         raise HTTPException(
             status_code=500, detail=f"Embedding generation failed: {e!s}"
-        )
+        ) from e
     else:
         return result
 
@@ -108,7 +107,7 @@ async def rerank_results(
         reranked = await embedding_client.rerank_results(query, results)
         logger.info(f"Reranked {len(results)} results")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Reranking failed")
         # Return original results on failure (graceful degradation)
         return results
@@ -134,12 +133,10 @@ async def analyze_text_characteristics(
     Raises:
         HTTPException: If analysis fails
     """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
 
+    try:
         analysis = embedding_client.analyze_text_characteristics(texts)
 
         logger.debug(
@@ -150,7 +147,9 @@ async def analyze_text_characteristics(
 
     except Exception as e:
         logger.exception("Text analysis failed")
-        raise HTTPException(status_code=500, detail=f"Text analysis failed: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Text analysis failed: {e!s}"
+        ) from e
     else:
         return analysis
 
@@ -175,18 +174,18 @@ async def estimate_embedding_cost(
     Raises:
         HTTPException: If cost estimation fails
     """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
 
+    try:
         costs = embedding_client.estimate_cost(texts, provider_name)
         logger.debug(f"Estimated costs for {len(texts)} texts")
 
     except Exception as e:
         logger.exception("Cost estimation failed")
-        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Cost estimation failed: {e!s}"
+        ) from e
     else:
         return costs
 
@@ -218,7 +217,7 @@ async def get_provider_info(
         logger.exception("Provider info retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Provider info retrieval failed: {e!s}"
-        )
+        ) from e
     else:
         return info
 
@@ -247,12 +246,10 @@ async def get_smart_recommendation(
     Raises:
         HTTPException: If recommendation fails
     """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
 
+    try:
         # Analyze text characteristics
         text_analysis = await analyze_text_characteristics(texts, embedding_client)
 
@@ -273,7 +270,7 @@ async def get_smart_recommendation(
         logger.exception("Smart recommendation failed")
         raise HTTPException(
             status_code=500, detail=f"Smart recommendation failed: {e!s}"
-        )
+        ) from e
     else:
         return recommendation
 
@@ -310,7 +307,7 @@ async def get_usage_report(
         logger.exception("Usage report retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Usage report retrieval failed: {e!s}"
-        )
+        ) from e
     else:
         return report
 
@@ -340,8 +337,6 @@ async def batch_generate_embeddings(
         HTTPException: If batch processing fails
     """
     try:
-        import asyncio
-
         semaphore = asyncio.Semaphore(max_parallel)
 
         async def process_batch(texts: list[str]) -> dict[str, Any]:
@@ -378,6 +373,8 @@ async def batch_generate_embeddings(
 
     except Exception as e:
         logger.exception("Batch embedding generation failed")
-        raise HTTPException(status_code=500, detail=f"Batch processing failed: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Batch processing failed: {e!s}"
+        ) from e
     else:
         return processed_results

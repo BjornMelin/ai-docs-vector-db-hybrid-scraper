@@ -17,6 +17,7 @@ from tests.chaos.conftest import FailureType
 
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
 
 
@@ -230,21 +231,23 @@ class TestServiceFaultInjection:
             nonlocal service_b_failures
             try:
                 result_c = await service_c()
-                return {"service": "B", "dependency": result_c}
             except Exception:
                 service_b_failures += 1
                 # Circuit breaker: fail fast after dependency failure
                 if service_b_failures > 1:
-                    raise TestError("Service B circuit breaker open")
+                    raise TestError("Service B circuit breaker open") from None
                 raise
+            else:
+                return {"service": "B", "dependency": result_c}
 
         async def service_a():
             try:
                 result_b = await service_b()
-                return {"service": "A", "dependency": result_b}
             except Exception:
                 # Fallback mechanism
                 return {"service": "A", "dependency": None, "fallback": True}
+            else:
+                return {"service": "A", "dependency": result_b}
 
         # Test cascade failure prevention
         results = []
@@ -262,8 +265,6 @@ class TestServiceFaultInjection:
         corruption_rate = 0.2
 
         async def data_processing_service(data: dict[str, Any]):
-            import random
-
             # Simulate data corruption
             if random.random() < corruption_rate:
                 # Corrupt the data
@@ -302,7 +303,7 @@ class TestServiceFaultInjection:
         assert successful_processing > 0, "Expected some successful processing"
 
     async def test_partial_service_degradation(
-        self, _fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test partial service degradation scenarios."""
         service_health = "healthy"  # healthy, degraded, critical
@@ -364,12 +365,13 @@ class TestServiceFaultInjection:
             for attempt in range(5):  # Try up to 5 times
                 try:
                     result = await service_startup()
-                    return result
                 except Exception:
                     if attempt < 4:  # Not the last attempt
                         await asyncio.sleep(0.01)  # Brief delay before retry
                         continue
                     raise
+                else:
+                    return result
 
         # Test service startup with retries
         result = await service_manager()
@@ -377,7 +379,7 @@ class TestServiceFaultInjection:
         assert result["attempts"] == max_startup_attempts
 
     async def test_service_dependency_timeout(
-        self, _fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test service dependency timeout scenarios."""
 
@@ -390,7 +392,6 @@ class TestServiceFaultInjection:
             try:
                 # Set timeout for dependency call
                 result = await asyncio.wait_for(slow_dependency_service(), timeout=0.1)
-                return {"status": "success", "dependency": result}
             except TimeoutError:
                 # Handle timeout gracefully
                 return {
@@ -399,6 +400,8 @@ class TestServiceFaultInjection:
                     "timeout": True,
                     "fallback_used": True,
                 }
+            else:
+                return {"status": "success", "dependency": result}
 
         # Test timeout handling
         result = await main_service_with_timeout()
@@ -421,12 +424,14 @@ class TestAdvancedServiceFaults:
         async def elect_leader(node: str):
             nonlocal leader
 
-            if network_partition and node in ["node_b", "node_c"]:
-                # Simulate partition: nodes B and C can't communicate with A
-                if leader == "node_a":
-                    # Potential split-brain: elect new leader
-                    leader = "node_b"
-                    return {"leader": "node_b", "warning": "potential_split_brain"}
+            if (
+                network_partition
+                and node in ["node_b", "node_c"]
+                and leader == "node_a"
+            ):
+                # Potential split-brain: elect new leader
+                leader = "node_b"
+                return {"leader": "node_b", "warning": "potential_split_brain"}
 
             return {"leader": leader, "status": "normal"}
 
@@ -542,8 +547,6 @@ class TestAdvancedServiceFaults:
             values = [node["value"] for node in nodes.values()]
 
             # Simple majority consensus
-            from collections import Counter
-
             value_counts = Counter(values)
             consensus_value, count = value_counts.most_common(1)[0]
 
@@ -565,7 +568,6 @@ class TestAdvancedServiceFaults:
 
     async def test_jitter_injection(self, _fault_injector):
         """Test jitter injection for timing-based chaos."""
-        import random
 
         async def timing_sensitive_operation():
             # Add random jitter
