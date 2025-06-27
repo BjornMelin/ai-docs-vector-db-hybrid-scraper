@@ -15,7 +15,6 @@ from ..config.drift_detection import (
     ConfigDriftDetector,
     DriftDetectionConfig as CoreDriftDetectionConfig,
     DriftSeverity,
-    get_drift_detector,
     initialize_drift_detector,
 )
 from ..services.observability.performance import get_performance_monitor

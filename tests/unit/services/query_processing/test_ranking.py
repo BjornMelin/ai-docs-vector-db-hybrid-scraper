@@ -1,7 +1,7 @@
 """Comprehensive tests for the personalized ranking service."""
 
 import asyncio
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest

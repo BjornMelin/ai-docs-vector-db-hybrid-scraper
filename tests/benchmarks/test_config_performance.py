@@ -14,7 +14,6 @@ Run with: pytest tests/benchmarks/ -k config --benchmark-only
 
 import asyncio
 import json
-import os
 import tempfile
 from functools import lru_cache
 from pathlib import Path
@@ -24,7 +23,6 @@ import pytest
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
-from src.config.auto_detect import AutoDetectionConfig
 from src.config.core import Config
 
 

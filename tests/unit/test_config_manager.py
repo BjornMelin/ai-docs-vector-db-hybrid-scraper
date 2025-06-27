@@ -1,7 +1,6 @@
 """Tests for the configuration management system using pydantic-settings features."""
 
 import json
-import tempfile
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch

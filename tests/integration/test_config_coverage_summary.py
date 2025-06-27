@@ -4,7 +4,6 @@ This module provides a quick verification that all configuration
 test scenarios are properly covered.
 """
 
-import pytest
 
 
 class TestConfigurationCoverageSummary:

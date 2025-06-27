@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Lock
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import ValidationError

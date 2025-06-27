@@ -3,7 +3,7 @@
 import asyncio
 import json
 import tempfile
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 

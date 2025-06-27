@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from src.config import ConfigModel
+    pass
 
 # Try to import config function - may not be available in all contexts
 try:

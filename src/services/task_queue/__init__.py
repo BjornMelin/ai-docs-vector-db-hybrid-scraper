@@ -1,4 +1,3 @@
-import typing
 
 
 """Task queue module for persistent background tasks."""

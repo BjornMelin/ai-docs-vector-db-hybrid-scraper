@@ -6,13 +6,9 @@ Uses property-based testing for edge cases and modern async testing patterns.
 """
 
 import asyncio
-import json
-import os
-import tempfile
 import time
-from contextlib import asynccontextmanager, suppress
-from typing import Any, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from contextlib import suppress
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest

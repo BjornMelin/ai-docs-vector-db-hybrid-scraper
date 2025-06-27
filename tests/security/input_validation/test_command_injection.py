@@ -184,7 +184,7 @@ class TestCommandInjectionPrevention:
             ["ls", "; rm -rf /"],
             ["cat", "file.txt | whoami"],
             ["grep", "pattern", "file && id"],
-            ["find", "/tmp", "-name", "`whoami`.txt"],
+            ["find", "$TMPDIR", "-name", "`whoami`.txt"],
         ]
 
         with patch("subprocess.run") as mock_run:

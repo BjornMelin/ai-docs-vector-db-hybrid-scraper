@@ -12,8 +12,6 @@ from typing import Any
 
 
 try:
-    import hypothesis.strategies as st
-    from hypothesis import given, settings
 
     HYPOTHESIS_AVAILABLE = True
 except ImportError:

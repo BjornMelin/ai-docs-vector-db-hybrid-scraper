@@ -177,7 +177,7 @@ class ProfileManager:
         # Save configuration
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             import json
 
             json.dump(config.model_dump(), f, indent=2)
@@ -297,7 +297,7 @@ class ProfileManager:
         )
 
         # Write .env file
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             f.write("\n".join(env_content))
 
         return output_path

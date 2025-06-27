@@ -563,13 +563,13 @@ class HybridSearchBenchmark:
 
         # Save JSON results
         json_file = output_dir / f"benchmark_results_{int(time.time())}.json"
-        with open(json_file, "w") as f:
+        with json_file.open("w") as f:
             json.dump(results.model_dump(), f, indent=2, default=str)
 
         # Generate HTML report
         html_report = await self.benchmark_reporter.generate_html_report(results)
         html_file = output_dir / f"benchmark_report_{int(time.time())}.html"
-        with open(html_file, "w") as f:
+        with html_file.open("w") as f:
             f.write(html_report)
 
         logger.info(f"Results saved to {output_dir}")

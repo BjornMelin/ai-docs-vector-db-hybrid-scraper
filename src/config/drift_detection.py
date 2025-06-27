@@ -453,17 +453,17 @@ class ConfigDriftDetector:
         )
 
         # Find modified keys
-        for key in old_config.keys() & new_config.keys():
-            if old_config[key] != new_config[key]:
-                changes.append(
-                    {
-                        "type": "modified",
-                        "path": key,
-                        "old_value": old_config[key],
-                        "new_value": new_config[key],
-                        "description": f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
-                    }
-                )
+        changes.extend([
+            {
+                "type": "modified",
+                "path": key,
+                "old_value": old_config[key],
+                "new_value": new_config[key],
+                "description": f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
+            }
+            for key in old_config.keys() & new_config.keys()
+            if old_config[key] != new_config[key]
+        ])
 
         return changes
 

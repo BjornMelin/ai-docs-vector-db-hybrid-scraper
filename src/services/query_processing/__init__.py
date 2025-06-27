@@ -1,4 +1,3 @@
-import typing
 
 
 """Advanced Query Processing Services.

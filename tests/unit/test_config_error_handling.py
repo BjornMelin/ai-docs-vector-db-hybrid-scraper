@@ -1,14 +1,13 @@
 """Tests for enhanced configuration error handling."""
 
-import asyncio
 import json
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 import yaml
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from src.config.config_manager import (
@@ -17,16 +16,13 @@ from src.config.config_manager import (
 )
 from src.config.error_handling import (
     ConfigError,
-    ConfigFileWatchError,
     ConfigLoadError,
-    ConfigReloadError,
     ConfigValidationError,
     ErrorContext,
     GracefulDegradationHandler,
     RetryableConfigOperation,
     SafeConfigLoader,
     async_error_context,
-    get_degradation_handler,
     handle_validation_error,
 )
 

@@ -7,7 +7,6 @@ instead of custom configuration management.
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -293,7 +292,7 @@ class TestPydanticSettingsPatterns:
         Verifies that dynamic defaults work correctly with
         pydantic-settings.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         class DynamicSettings(BaseSettings):
             created_at: datetime = Field(default_factory=datetime.now)

@@ -1,4 +1,3 @@
-import typing
 
 
 """Advanced filtering system for vector database operations.

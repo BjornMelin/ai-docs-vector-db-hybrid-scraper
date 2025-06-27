@@ -4,12 +4,11 @@
 import gc
 import signal
 import sys
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from src.config.reload import ConfigReloader, ReloadTrigger
+from src.config.reload import ConfigReloader
 from src.config.security import (
     SecureConfigManager,
     SecurityConfig,
@@ -47,7 +46,6 @@ class TestSecurityEnhancements:
         manager = SecureConfigManager(config)
 
         # Add mock cache attributes for testing
-        from functools import lru_cache
         from unittest.mock import MagicMock
 
         mock_cache = MagicMock()
@@ -64,7 +62,6 @@ class TestSecurityEnhancements:
         manager = SecureConfigManager(config)
 
         # Mock cache behavior
-        from unittest.mock import MagicMock
 
         mock_cache = {}
 
@@ -96,7 +93,6 @@ class TestSecurityEnhancements:
         manager = SecureConfigManager(config)
 
         # Mock cache methods
-        from unittest.mock import MagicMock
 
         mock_cache = {}
 

@@ -11,13 +11,11 @@ Run with: pytest tests/benchmarks/test_config_reload_performance.py --benchmark-
 
 import asyncio
 import json
-import os
 import tempfile
 import time
 from datetime import UTC
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from cryptography.fernet import Fernet
@@ -33,7 +31,6 @@ from src.config.reload import (
     ConfigChangeListener,
     ConfigReloader,
     ReloadOperation,
-    ReloadStatus,
     ReloadTrigger,
 )
 from src.config.security import SecureConfigManager
@@ -406,7 +403,7 @@ class TestDriftDetectionPerformance:
 
     def test_drift_alert_performance(self, benchmark, drift_detector):
         """Benchmark drift alert generation performance."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from src.config.drift_detection import DriftEvent
 

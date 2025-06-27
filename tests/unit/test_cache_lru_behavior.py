@@ -5,10 +5,7 @@ Validates that caches respect size limits and properly evict items.
 """
 
 import asyncio
-import gc
-import time
-from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from hypothesis import given, settings, strategies as st

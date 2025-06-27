@@ -4,13 +4,12 @@ import asyncio
 import json
 import signal
 import time
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 import yaml
 
-from src.config.config_manager import ConfigManager, get_config_manager
+from src.config.config_manager import ConfigManager
 from src.config.core import Config
 from src.config.error_handling import get_degradation_handler
 

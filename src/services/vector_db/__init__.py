@@ -1,4 +1,3 @@
-import typing
 
 
 """Vector database services with modular Qdrant implementation.

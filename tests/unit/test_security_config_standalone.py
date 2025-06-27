@@ -6,7 +6,6 @@ core functionality without complex import dependencies.
 """
 
 import json
-import os
 
 # Import components directly to avoid config system dependencies
 import sys

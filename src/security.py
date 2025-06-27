@@ -2,7 +2,6 @@
 """Security utilities for MCP server with unified configuration integration."""
 
 import logging
-import os
 import re
 from pathlib import Path
 from typing import ClassVar

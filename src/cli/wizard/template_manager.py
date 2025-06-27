@@ -163,15 +163,18 @@ class TemplateManager:
             "minimal",
         ]
 
-        ordered_templates = []
-        for template_name in template_order:
-            if template_name in self._templates:
-                ordered_templates.append(template_name)
+        ordered_templates = [
+            template_name
+            for template_name in template_order
+            if template_name in self._templates
+        ]
 
         # Add any templates not in the order
-        for template_name in self._templates:
-            if template_name not in ordered_templates:
-                ordered_templates.append(template_name)
+        ordered_templates.extend([
+            template_name
+            for template_name in self._templates
+            if template_name not in ordered_templates
+        ])
 
         for template_name in ordered_templates:
             template_data = self._templates[template_name]

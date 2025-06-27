@@ -104,7 +104,7 @@ class ConfigAuditor:
         records = []
         if audit_file.exists():
             try:
-                with open(audit_file) as f:
+                with audit_file.open() as f:
                     records = json.load(f)
             except (OSError, json.JSONDecodeError):
                 records = []
@@ -114,7 +114,7 @@ class ConfigAuditor:
 
         # Save back to file
         try:
-            with open(audit_file, "w") as f:
+            with audit_file.open("w") as f:
                 json.dump(records, f, indent=2)
         except OSError as e:
             self.logger.exception("Failed to save audit record")
@@ -142,7 +142,7 @@ class ConfigAuditor:
 
             if audit_file.exists():
                 try:
-                    with open(audit_file) as f:
+                    with audit_file.open() as f:
                         daily_records = json.load(f)
                         recent_records.extend(daily_records)
                 except (OSError, json.JSONDecodeError):

@@ -1,7 +1,7 @@
 """Tests for the similarity threshold filter implementation."""
 
 import asyncio
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 

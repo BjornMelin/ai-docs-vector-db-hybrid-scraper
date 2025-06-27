@@ -816,21 +816,21 @@ class BenchmarkReporter:
         if "html" in formats:
             html_report = await self.generate_html_report(results)
             html_file = output_dir / f"benchmark_report_{timestamp}.html"
-            with open(html_file, "w", encoding="utf-8") as f:
+            with html_file.open("w", encoding="utf-8") as f:
                 f.write(html_report)
             saved_files["html"] = str(html_file)
 
         if "json" in formats:
             json_report = self.generate_json_report(results)
             json_file = output_dir / f"benchmark_results_{timestamp}.json"
-            with open(json_file, "w", encoding="utf-8") as f:
+            with json_file.open("w", encoding="utf-8") as f:
                 f.write(json_report)
             saved_files["json"] = str(json_file)
 
         if "csv" in formats:
             csv_report = self.generate_csv_summary(results)
             csv_file = output_dir / f"benchmark_summary_{timestamp}.csv"
-            with open(csv_file, "w", encoding="utf-8") as f:
+            with csv_file.open("w", encoding="utf-8") as f:
                 f.write(csv_report)
             saved_files["csv"] = str(csv_file)
 

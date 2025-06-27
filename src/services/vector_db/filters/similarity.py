@@ -7,7 +7,7 @@ and context-aware threshold selection for optimal search results.
 
 import logging
 import statistics
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 

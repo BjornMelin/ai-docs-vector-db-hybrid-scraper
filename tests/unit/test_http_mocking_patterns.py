@@ -4,7 +4,6 @@ Demonstrates proper boundary mocking for HTTP services using respx
 instead of implementation detail mocking.
 """
 
-from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest

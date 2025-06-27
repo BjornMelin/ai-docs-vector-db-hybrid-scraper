@@ -10,7 +10,7 @@ Implements modern async service discovery patterns with:
 import asyncio
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -466,8 +466,8 @@ class ServiceDiscovery:
                 parsed = urlparse(redis_url)
                 if parsed.hostname and parsed.port:
                     candidates.append((parsed.hostname, parsed.port))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to parse Redis URL '{redis_url}': {e}")
 
         return candidates
 

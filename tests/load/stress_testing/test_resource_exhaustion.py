@@ -8,7 +8,6 @@ network bandwidth, database connections, and file descriptors.
 import asyncio
 import gc
 import logging
-import os
 import resource
 import tempfile
 import threading

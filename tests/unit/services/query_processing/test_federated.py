@@ -1,7 +1,7 @@
 """Tests for federated search service."""
 
 import asyncio
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest

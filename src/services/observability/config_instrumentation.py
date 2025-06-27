@@ -7,7 +7,6 @@ Follows OpenTelemetry semantic conventions for configuration management.
 
 import asyncio
 import functools
-import json
 import logging
 import time
 from collections.abc import Callable

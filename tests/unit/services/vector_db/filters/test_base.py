@@ -1,7 +1,7 @@
 """Tests for the base filter architecture."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import pytest

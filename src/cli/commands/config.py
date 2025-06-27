@@ -59,7 +59,7 @@ def export(ctx: click.Context, output: str, format: str):
 
     try:
         if format == "json":
-            with open(output_path, "w") as f:
+            with output_path.open("w") as f:
                 json.dump(config_obj.model_dump(), f, indent=2)
         elif format == "yaml":
             if yaml is None:
@@ -67,7 +67,7 @@ def export(ctx: click.Context, output: str, format: str):
                     "❌ YAML support not available. Please install PyYAML", style="red"
                 )
                 return
-            with open(output_path, "w") as f:
+            with output_path.open("w") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")

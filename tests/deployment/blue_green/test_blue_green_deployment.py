@@ -5,7 +5,7 @@ switching, traffic routing, health checks, and zero-downtime deployment validati
 """
 
 import asyncio
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest

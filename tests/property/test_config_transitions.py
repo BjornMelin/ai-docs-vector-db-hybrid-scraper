@@ -82,7 +82,8 @@ class ConfigurationStateMachine(RuleBasedStateMachine):
 
     def __init__(self):
         super().__init__()
-        self.temp_dir = Path("/tmp/config_state_test")
+        import tempfile
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="config_state_test_"))
         self.temp_dir.mkdir(exist_ok=True)
 
         # Initialize components

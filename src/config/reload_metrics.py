@@ -6,11 +6,9 @@ including timing, success rates, and performance characteristics.
 
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from prometheus_client import Counter, Gauge, Histogram, Summary
-
-from ..services.observability.metrics_bridge import get_metrics_bridge
 
 
 # Reload operation metrics

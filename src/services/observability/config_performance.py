@@ -5,16 +5,14 @@ including load times, validation performance, auto-detection latency, and
 configuration change impact analysis.
 """
 
-import asyncio
 import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any, Dict, List
 
 from opentelemetry import metrics
-from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 from opentelemetry.trace import get_current_span
 
 

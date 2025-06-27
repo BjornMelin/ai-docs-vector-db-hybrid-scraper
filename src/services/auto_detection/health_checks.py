@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
@@ -246,8 +246,8 @@ class HealthChecker:
                     try:
                         health_data = response.json()
                         metadata.update(health_data)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Failed to parse health data from {service.service_name}: {e}")
 
                 return HealthCheckResult(
                     service_name=service.service_name,
