@@ -12,7 +12,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .tracking import get_tracer, get_meter
+from .tracking import get_meter, get_tracer
+
 
 # Optional OpenTelemetry imports
 try:

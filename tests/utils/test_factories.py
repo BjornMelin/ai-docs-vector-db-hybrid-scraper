@@ -8,7 +8,7 @@ type hints, and builder patterns.
 import random
 import time
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -101,7 +101,7 @@ class VectorFactory:
         """
         vector = [
             random.uniform(value_range[0], value_range[1])
-            for _ in range(dimension)  # noqa: S311
+            for _ in range(dimension)
         ]
 
         if normalize:

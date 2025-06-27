@@ -1,6 +1,6 @@
 """Simple tests for content intelligence models."""
 
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 
 from src.services.content_intelligence.models import (
     AdaptationStrategy,

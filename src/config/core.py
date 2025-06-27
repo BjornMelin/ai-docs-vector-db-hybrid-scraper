@@ -742,7 +742,7 @@ _config: Config | None = None
 
 def get_config() -> Config:
     """Get the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     if _config is None:
         _config = Config()
     return _config
@@ -757,7 +757,7 @@ async def get_config_with_auto_detection() -> Config:
     Returns:
         Config instance with auto-detected services applied
     """
-    global _config  # noqa: PLW0603
+    global _config
     if _config is None:
         base_config = Config()
         _config = await base_config.auto_detect_and_apply_services()
@@ -766,13 +766,13 @@ async def get_config_with_auto_detection() -> Config:
 
 def set_config(config: Config) -> None:
     """Set the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     _config = config
 
 
 def reset_config() -> None:
     """Reset the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     _config = None
 
 

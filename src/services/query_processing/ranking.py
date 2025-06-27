@@ -6,7 +6,7 @@ result rankings optimized for individual users and contexts.
 """
 
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 

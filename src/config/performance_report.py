@@ -7,7 +7,7 @@ configuration implementations, validating all performance claims.
 import asyncio
 import json
 import time
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict
 

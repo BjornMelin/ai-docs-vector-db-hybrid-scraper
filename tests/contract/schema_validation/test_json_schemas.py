@@ -4,7 +4,7 @@ This module tests JSON schema validation for all request/response models
 and ensures data structure compliance.
 """
 
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 
 import pytest
 

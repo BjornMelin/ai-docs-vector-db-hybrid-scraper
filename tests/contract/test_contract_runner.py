@@ -6,7 +6,7 @@ and managing contract validation results.
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any

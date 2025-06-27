@@ -4,7 +4,7 @@ This module tests API endpoint contracts for request/response validation,
 backward compatibility, and breaking change detection.
 """
 
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient

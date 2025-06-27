@@ -7,6 +7,7 @@ configuration management, and other production services.
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -19,7 +20,6 @@ from src.infrastructure.client_manager import ClientManager
 from src.services.dependencies import get_cache_manager, get_embedding_manager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
-from datetime import datetime, UTC
 
 
 logger = logging.getLogger(__name__)

@@ -13,10 +13,10 @@ from fastapi import Depends
 from .config import ObservabilityConfig, get_observability_config
 from .init import initialize_observability, is_observability_enabled
 from .tracking import (
+    _NoOpMeter,
+    _NoOpTracer,
     get_meter,
     get_tracer,
-    _NoOpTracer,
-    _NoOpMeter,
     record_ai_operation,
     track_cost,
 )

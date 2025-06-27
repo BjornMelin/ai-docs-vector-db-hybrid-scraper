@@ -6,7 +6,7 @@ time-based content relevance analysis.
 """
 
 import logging
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator

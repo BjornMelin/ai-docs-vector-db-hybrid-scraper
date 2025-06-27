@@ -5,7 +5,7 @@ test execution, deployment automation, and rollback procedures.
 """
 
 import asyncio
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any
 

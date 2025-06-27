@@ -177,10 +177,10 @@ class ConfigManager:
             raise FileNotFoundError(f"Configuration file not found: {file_path}")
 
         if file_path.suffix.lower() == ".yaml" or file_path.suffix.lower() == ".yml":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 config_data = yaml.safe_load(f)
         elif file_path.suffix.lower() == ".json":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 config_data = json.load(f)
         else:
             raise ValueError(
@@ -207,10 +207,10 @@ class ConfigManager:
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         if format.lower() == "yaml":
-            with open(file_path, "w") as f:
+            with Path(file_path).open("w") as f:
                 yaml.dump(config_data, f, default_flow_style=False)
         elif format.lower() == "json":
-            with open(file_path, "w") as f:
+            with Path(file_path).open("w") as f:
                 json.dump(config_data, f, indent=2)
         else:
             raise ValueError(f"Unsupported format: {format}")

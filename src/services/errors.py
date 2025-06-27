@@ -26,7 +26,7 @@ import functools
 import logging
 import time
 from collections.abc import Callable
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
 

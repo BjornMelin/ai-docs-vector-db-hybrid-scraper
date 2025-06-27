@@ -5,7 +5,7 @@ system, view drift events, manage alerting, and trigger manual drift checks.
 """
 
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status

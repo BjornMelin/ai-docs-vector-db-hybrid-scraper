@@ -6,7 +6,7 @@ including HTML reports, charts, and performance analysis summaries.
 
 import json
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 

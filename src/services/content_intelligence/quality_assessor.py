@@ -7,7 +7,7 @@ readability, and duplicate detection with similarity thresholds.
 
 import logging
 import re
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import QualityScore

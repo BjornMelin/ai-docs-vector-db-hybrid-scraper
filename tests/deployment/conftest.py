@@ -10,7 +10,7 @@ import os
 import tempfile
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any
 

@@ -10,7 +10,7 @@ import json
 import random
 import statistics
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 import pytest

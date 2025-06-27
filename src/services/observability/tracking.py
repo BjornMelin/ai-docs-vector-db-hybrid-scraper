@@ -10,9 +10,10 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
+
 # Optional OpenTelemetry imports - handled at runtime
 try:
-    from opentelemetry import trace, metrics
+    from opentelemetry import metrics, trace
 except ImportError:
     trace = None
     metrics = None

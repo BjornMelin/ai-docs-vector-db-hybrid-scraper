@@ -6,9 +6,10 @@ and cost tracking that integrates seamlessly with the existing configuration.
 
 import logging
 from functools import lru_cache
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
     from src.config import ConfigModel

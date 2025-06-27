@@ -5,7 +5,7 @@ operations, failover mechanisms, and business continuity validation.
 """
 
 import asyncio
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 

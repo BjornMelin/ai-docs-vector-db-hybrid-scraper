@@ -15,23 +15,24 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
 
+
 # Optional clustering dependencies
 try:
+    import sklearn.cluster
     from sklearn.cluster import (
         DBSCAN,
-        KMeans,
         AgglomerativeClustering,
+        KMeans,
         SpectralClustering,
     )
-    from sklearn.mixture import GaussianMixture
     from sklearn.metrics import (
-        silhouette_score,
         calinski_harabasz_score,
         davies_bouldin_score,
+        silhouette_score,
     )
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.mixture import GaussianMixture
     from sklearn.neighbors import NearestNeighbors
-    import sklearn.cluster
+    from sklearn.preprocessing import StandardScaler
 except ImportError:
     DBSCAN = None
     KMeans = None

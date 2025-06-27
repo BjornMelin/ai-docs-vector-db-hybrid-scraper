@@ -9,7 +9,7 @@ This module tests the advanced circuit breaker implementation including:
 """
 
 import asyncio
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

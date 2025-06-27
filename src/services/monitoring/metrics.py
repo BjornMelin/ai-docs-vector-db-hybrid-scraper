@@ -324,6 +324,12 @@ class MetricsRegistry:
 
                 try:
                     result = await func(*args, **kwargs)
+                except Exception:
+                    self._metrics["search_requests"].labels(
+                        collection=collection, status="error"
+                    ).inc()
+                    raise
+                else:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="success"
                     ).inc()
@@ -336,12 +342,6 @@ class MetricsRegistry:
                         ).observe(max_score)
 
                     return result
-
-                except Exception:
-                    self._metrics["search_requests"].labels(
-                        collection=collection, status="error"
-                    ).inc()
-                    raise
 
                 finally:
                     duration = time.time() - start_time

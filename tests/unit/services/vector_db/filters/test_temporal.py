@@ -1,6 +1,6 @@
 """Tests for the temporal filter implementation."""
 
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 

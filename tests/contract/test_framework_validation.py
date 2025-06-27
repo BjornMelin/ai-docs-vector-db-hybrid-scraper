@@ -5,7 +5,7 @@ integrated and working correctly with all components.
 """
 
 import json
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime, timezone
 
 import pytest
 

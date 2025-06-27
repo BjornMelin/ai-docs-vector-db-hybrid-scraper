@@ -163,7 +163,9 @@ class UnifiedBrowserManager(BaseService):
 
             # Initialize browser cache if enabled
             if self._cache_enabled:
-                from ...services.cache.browser_cache import BrowserCache
+                from ...services.cache.browser_cache import (
+                    BrowserCache,
+                )
 
                 # Get cache manager for underlying caches
                 cache_manager = await self._client_manager.get_cache_manager()
@@ -254,7 +256,9 @@ class UnifiedBrowserManager(BaseService):
             and self._browser_cache
             and not request.interaction_required
         ):
-            from ...services.cache.browser_cache import BrowserCacheEntry
+            from ...services.cache.browser_cache import (
+                BrowserCacheEntry,
+            )
 
             try:
                 # Generate cache key
@@ -375,7 +379,9 @@ class UnifiedBrowserManager(BaseService):
                 and response.content_length > 0
             ):
                 try:
-                    from ...services.cache.browser_cache import BrowserCacheEntry
+                    from ...services.cache.browser_cache import (
+                        BrowserCacheEntry,
+                    )
 
                     cache_entry = BrowserCacheEntry(
                         url=request.url,

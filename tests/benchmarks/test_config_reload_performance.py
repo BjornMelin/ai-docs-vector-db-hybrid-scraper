@@ -14,6 +14,7 @@ import json
 import os
 import tempfile
 import time
+from datetime import UTC
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -36,7 +37,6 @@ from src.config.reload import (
     ReloadTrigger,
 )
 from src.config.security import SecureConfigManager
-from datetime import UTC
 
 
 class TestConfigReloadPerformance:
