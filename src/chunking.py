@@ -286,18 +286,16 @@ class DocumentChunker:
 
     def _find_code_blocks(self, content: str) -> list[CodeBlock]:
         """Find all code blocks in content"""
-        blocks = []
-        for match in self.CODE_FENCE_PATTERN.finditer(content):
-            blocks.append(
-                CodeBlock(
-                    language=match.group(2) or "unknown",
-                    content=match.group(3),
-                    start_pos=match.start(),
-                    end_pos=match.end(),
-                    fence_type=match.group(1),
-                )
+        return [
+            CodeBlock(
+                language=match.group(2) or "unknown",
+                content=match.group(3),
+                start_pos=match.start(),
+                end_pos=match.end(),
+                fence_type=match.group(1),
             )
-        return blocks
+            for match in self.CODE_FENCE_PATTERN.finditer(content)
+        ]
 
     def _semantic_chunking(
         self, content: str, _language: str | None = None

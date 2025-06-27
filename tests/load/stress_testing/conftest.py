@@ -14,6 +14,7 @@ import threading
 import time
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import psutil
@@ -326,7 +327,7 @@ class FailureInjector:
             # Clean up temporary files
             for temp_file_path in temp_files:
                 with suppress(OSError, FileNotFoundError):
-                    os.unlink(temp_file_path)
+                    Path(temp_file_path).unlink()
 
             if failure_id in self.active_failures:
                 del self.active_failures[failure_id]

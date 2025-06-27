@@ -7,7 +7,7 @@ load balancing, and distributed query optimization.
 
 import asyncio
 import logging
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Any
 

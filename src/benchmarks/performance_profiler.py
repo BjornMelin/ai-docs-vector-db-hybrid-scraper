@@ -444,22 +444,18 @@ class PerformanceProfiler:
 
     def get_resource_timeline(self) -> list[dict[str, Any]]:
         """Get detailed resource usage timeline."""
-        timeline = []
-
-        for snapshot in self.resource_snapshots:
-            timeline.append(
-                {
-                    "timestamp": snapshot.timestamp,
-                    "cpu_percent": snapshot.cpu_percent,
-                    "memory_mb": snapshot.memory_mb,
-                    "memory_percent": snapshot.memory_percent,
-                    "threads": snapshot.active_threads,
-                    "disk_read_mb": snapshot.disk_io_read_mb,
-                    "disk_write_mb": snapshot.disk_io_write_mb,
-                }
-            )
-
-        return timeline
+        return [
+            {
+                "timestamp": snapshot.timestamp,
+                "cpu_percent": snapshot.cpu_percent,
+                "memory_mb": snapshot.memory_mb,
+                "memory_percent": snapshot.memory_percent,
+                "threads": snapshot.active_threads,
+                "disk_read_mb": snapshot.disk_io_read_mb,
+                "disk_write_mb": snapshot.disk_io_write_mb,
+            }
+            for snapshot in self.resource_snapshots
+        ]
 
     def clear_snapshots(self) -> None:
         """Clear collected resource snapshots."""

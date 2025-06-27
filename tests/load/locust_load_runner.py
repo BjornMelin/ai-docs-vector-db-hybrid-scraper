@@ -10,7 +10,7 @@ import logging
 import os
 import random
 import time
-from typing import Any
+from typing import Any, List
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment

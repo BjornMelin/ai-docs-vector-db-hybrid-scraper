@@ -425,8 +425,8 @@ class ConfigDriftDetector:
         changes = []
 
         # Find added keys
-        for key in new_config.keys() - old_config.keys():
-            changes.append(
+        changes.extend(
+            [
                 {
                     "type": "added",
                     "path": key,
@@ -434,11 +434,13 @@ class ConfigDriftDetector:
                     "new_value": new_config[key],
                     "description": f"New configuration key '{key}' added",
                 }
-            )
+                for key in new_config.keys() - old_config.keys()
+            ]
+        )
 
         # Find removed keys
-        for key in old_config.keys() - new_config.keys():
-            changes.append(
+        changes.extend(
+            [
                 {
                     "type": "removed",
                     "path": key,
@@ -446,7 +448,9 @@ class ConfigDriftDetector:
                     "new_value": None,
                     "description": f"Configuration key '{key}' removed",
                 }
-            )
+                for key in old_config.keys() - new_config.keys()
+            ]
+        )
 
         # Find modified keys
         for key in old_config.keys() & new_config.keys():

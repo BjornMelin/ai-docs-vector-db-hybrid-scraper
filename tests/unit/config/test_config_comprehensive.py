@@ -669,7 +669,7 @@ class TestConfigFileLoadingModern:
             with pytest.raises(ValueError, match="Unsupported config file format"):
                 Config.load_from_file(txt_file)
         finally:
-            os.unlink(txt_file)
+            Path(txt_file).unlink()
 
 
 class TestConfigSingletonModern:

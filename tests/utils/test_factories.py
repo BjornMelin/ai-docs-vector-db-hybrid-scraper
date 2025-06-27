@@ -8,7 +8,7 @@ type hints, and builder patterns.
 import random
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from typing import Any
 from uuid import uuid4
 

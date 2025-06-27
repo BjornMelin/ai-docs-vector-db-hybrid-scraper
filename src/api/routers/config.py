@@ -160,6 +160,14 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
         return response
 
 
+def _raise_rollback_error(operation: object) -> None:
+    """Raise HTTPException for failed rollback operation."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Configuration rollback failed: {operation.error_message}",
+    )
+
+
 @router.post("/rollback", response_model=ReloadResponse)
 @instrument_config_operation(
     operation_type=ConfigOperationType.ROLLBACK,
@@ -190,10 +198,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         response = _operation_to_response(operation)
 
         if not operation.success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Configuration rollback failed: {operation.error_message}",
-            )
+            _raise_rollback_error(operation)
 
     except HTTPException:
         raise

@@ -615,19 +615,23 @@ class BenchmarkReporter:
         if bottlenecks:
             content.append("<h3>⚠️ Performance Bottlenecks</h3>")
             content.append('<ul class="recommendations-list">')
-            content.extend([
-                f'<li class="recommendation-item bottleneck-item">{bottleneck}</li>'
-                for bottleneck in bottlenecks
-            ])
+            content.extend(
+                [
+                    f'<li class="recommendation-item bottleneck-item">{bottleneck}</li>'
+                    for bottleneck in bottlenecks
+                ]
+            )
             content.append("</ul>")
 
         if recommendations:
             content.append("<h3>💡 Optimization Recommendations</h3>")
             content.append('<ul class="recommendations-list">')
-            content.extend([
-                f'<li class="recommendation-item">{recommendation}</li>'
-                for recommendation in recommendations
-            ])
+            content.extend(
+                [
+                    f'<li class="recommendation-item">{recommendation}</li>'
+                    for recommendation in recommendations
+                ]
+            )
             content.append("</ul>")
 
         if not content:

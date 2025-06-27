@@ -16,21 +16,19 @@ that complements the existing security monitoring and compliance logging.
 """
 
 import hashlib
-import hmac
 import json
 import logging
 import os
 import secrets
-import time
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar
 
 from cryptography.fernet import Fernet, MultiFernet
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic import BaseModel, Field, SecretStr
 
 from src.config.core import SecurityConfig as BaseSecurityConfig
 from src.security import SecurityValidator
@@ -335,7 +333,7 @@ class SecureConfigManager:
         # Encrypt and store key data
         encrypted_key_data = fernet_key.encrypt(json.dumps(key_data).encode())
 
-        with open(key_file, "wb") as f:
+        with Path(key_file).open("wb") as f:
             f.write(encrypted_key_data)
 
         # Set secure file permissions

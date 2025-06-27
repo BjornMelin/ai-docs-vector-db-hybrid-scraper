@@ -6,12 +6,49 @@ group search results for better organization and presentation.
 """
 
 import logging
+import re
+import time
 import warnings
 from enum import Enum
 from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
+
+# Optional clustering dependencies
+try:
+    from sklearn.cluster import (
+        DBSCAN,
+        KMeans,
+        AgglomerativeClustering,
+        SpectralClustering,
+    )
+    from sklearn.mixture import GaussianMixture
+    from sklearn.metrics import (
+        silhouette_score,
+        calinski_harabasz_score,
+        davies_bouldin_score,
+    )
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.neighbors import NearestNeighbors
+    import sklearn.cluster
+except ImportError:
+    DBSCAN = None
+    KMeans = None
+    AgglomerativeClustering = None
+    SpectralClustering = None
+    GaussianMixture = None
+    silhouette_score = None
+    calinski_harabasz_score = None
+    davies_bouldin_score = None
+    StandardScaler = None
+    NearestNeighbors = None
+    sklearn = None
+
+try:
+    import hdbscan
+except ImportError:
+    hdbscan = None
 
 
 logger = logging.getLogger(__name__)
@@ -171,6 +208,16 @@ class ResultClusteringRequest(BaseModel):
         return v
 
 
+def _raise_invalid_clustering_request() -> None:
+    """Raise ValueError for invalid clustering request."""
+    raise ValueError("Invalid clustering request")
+
+
+def _raise_no_valid_embeddings() -> None:
+    """Raise ValueError when no valid embeddings are found."""
+    raise ValueError("No valid embeddings found in results")
+
+
 class ResultClusteringResult(BaseModel):
     """Result of clustering operations."""
 
@@ -257,8 +304,6 @@ class ResultClusteringService:
         Returns:
             ResultClusteringResult with clustered groups and metadata
         """
-        import time
-
         start_time = time.time()
 
         try:
@@ -271,12 +316,12 @@ class ResultClusteringService:
 
             # Validate request
             if not self._validate_clustering_request(request):
-                raise ValueError("Invalid clustering request")
+                _raise_invalid_clustering_request()
 
             # Extract embeddings
             embeddings = self._extract_embeddings(request.results)
             if embeddings is None:
-                raise ValueError("No valid embeddings found in results")
+                _raise_no_valid_embeddings()
 
             # Select and apply clustering method
             method = self._select_clustering_method(request, embeddings)
@@ -324,6 +369,24 @@ class ResultClusteringService:
                 },
             )
 
+        except Exception as e:
+            processing_time_ms = (time.time() - start_time) * 1000
+            self._logger.error(f"Result clustering failed: {e}", exc_info=True)
+
+            # Return fallback result
+            return ResultClusteringResult(
+                clusters=[],
+                outliers=[],
+                method_used=ClusteringMethod.KMEANS,
+                total_results=len(request.results),
+                clustered_results=0,
+                outlier_count=0,
+                cluster_count=0,
+                processing_time_ms=processing_time_ms,
+                cache_hit=False,
+                clustering_metadata={"error": str(e)},
+            )
+        else:
             # Cache result
             if request.enable_caching:
                 self._cache_result(request, result)
@@ -338,48 +401,16 @@ class ResultClusteringService:
 
             return result
 
-        except Exception as e:
-            processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Result clustering failed: {e}", exc_info=True)
-
-            # Return fallback result
-            return ResultClusteringResult(
-                clusters=[],
-                outliers=[],
-                method_used=request.method,
-                total_results=len(request.results),
-                clustered_results=0,
-                outlier_count=len(request.results),
-                cluster_count=0,
-                processing_time_ms=processing_time_ms,
-                clustering_metadata={"error": str(e)},
-            )
-
     def _check_algorithm_availability(self) -> dict[str, bool]:
         """Check which clustering algorithms are available."""
         algorithms = {}
 
-        try:
-            import sklearn.cluster  # noqa: F401
+        algorithms["sklearn"] = sklearn is not None
+        algorithms["hdbscan"] = hdbscan is not None
+        algorithms["numpy"] = True  # numpy is always available
 
-            algorithms["sklearn"] = True
-        except ImportError:
-            algorithms["sklearn"] = False
-
-        try:
-            import hdbscan  # noqa: F401
-
-            algorithms["hdbscan"] = True
-        except ImportError:
-            algorithms["hdbscan"] = False
+        if not algorithms["hdbscan"]:
             self.enable_hdbscan = False
-
-        try:
-            import numpy  # noqa: F401
-
-            algorithms["numpy"] = True
-        except ImportError:
-            algorithms["numpy"] = False
 
         return algorithms
 
@@ -472,10 +503,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply HDBSCAN clustering."""
-        try:
-            import hdbscan
-        except ImportError as err:
-            raise ImportError("HDBSCAN requires the 'hdbscan' package") from err
+        if hdbscan is None:
+            raise ImportError("HDBSCAN requires the 'hdbscan' package")
 
         # Configure parameters
         min_cluster_size = max(request.min_cluster_size, 3)
@@ -513,7 +542,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply DBSCAN clustering."""
-        from sklearn.cluster import DBSCAN
+        if DBSCAN is None:
+            raise ImportError("DBSCAN requires scikit-learn")
 
         # Auto-determine eps if not provided
         eps = request.eps
@@ -552,7 +582,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply K-means clustering."""
-        from sklearn.cluster import KMeans
+        if KMeans is None:
+            raise ImportError("KMeans requires scikit-learn")
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -581,7 +612,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply agglomerative clustering."""
-        from sklearn.cluster import AgglomerativeClustering
+        if AgglomerativeClustering is None:
+            raise ImportError("AgglomerativeClustering requires scikit-learn")
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -606,7 +638,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply spectral clustering."""
-        from sklearn.cluster import SpectralClustering
+        if SpectralClustering is None:
+            raise ImportError("SpectralClustering requires scikit-learn")
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -635,7 +668,8 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply Gaussian mixture model clustering."""
-        from sklearn.mixture import GaussianMixture
+        if GaussianMixture is None:
+            raise ImportError("GaussianMixture requires scikit-learn")
 
         # Determine number of components
         n_components = request.max_clusters
@@ -662,7 +696,8 @@ class ResultClusteringService:
 
     def _estimate_eps(self, embeddings: np.ndarray, min_cluster_size: int) -> float:
         """Estimate eps parameter for DBSCAN using k-distance."""
-        from sklearn.neighbors import NearestNeighbors
+        if NearestNeighbors is None:
+            raise ImportError("NearestNeighbors requires scikit-learn")
 
         # Use k = min_cluster_size for k-distance
         k = min_cluster_size
@@ -845,36 +880,33 @@ class ResultClusteringService:
         if not self.enable_advanced_metrics:
             return metrics
 
-        try:
-            from sklearn.metrics import (
-                calinski_harabasz_score,
-                davies_bouldin_score,
-                silhouette_score,
-            )
-
+        if silhouette_score is not None:
             # Filter out noise points for metrics calculation
             valid_mask = cluster_labels != -1
             if np.sum(valid_mask) > 1 and len(set(cluster_labels[valid_mask])) > 1:
                 valid_embeddings = embeddings[valid_mask]
                 valid_labels = cluster_labels[valid_mask]
 
-                # Silhouette score
-                metrics["silhouette_score"] = silhouette_score(
-                    valid_embeddings, valid_labels, metric="cosine"
-                )
+                try:
+                    # Silhouette score
+                    metrics["silhouette_score"] = silhouette_score(
+                        valid_embeddings, valid_labels, metric="cosine"
+                    )
 
-                # Calinski-Harabasz index
-                metrics["calinski_harabasz_score"] = calinski_harabasz_score(
-                    valid_embeddings, valid_labels
-                )
+                    # Calinski-Harabasz index
+                    if calinski_harabasz_score is not None:
+                        metrics["calinski_harabasz_score"] = calinski_harabasz_score(
+                            valid_embeddings, valid_labels
+                        )
 
-                # Davies-Bouldin index
-                metrics["davies_bouldin_score"] = davies_bouldin_score(
-                    valid_embeddings, valid_labels
-                )
+                    # Davies-Bouldin index
+                    if davies_bouldin_score is not None:
+                        metrics["davies_bouldin_score"] = davies_bouldin_score(
+                            valid_embeddings, valid_labels
+                        )
 
-        except Exception as e:
-            self._logger.warning(f"Failed to calculate quality metrics: {e}")
+                except Exception as e:
+                    self._logger.warning(f"Failed to calculate quality metrics: {e}")
 
         return metrics
 
@@ -888,8 +920,6 @@ class ResultClusteringService:
         )  # Use first 5 for efficiency
 
         # Extract most common meaningful words
-        import re
-
         words = re.findall(r"\b\w{3,}\b", all_titles)
 
         # Remove common stop words
@@ -959,8 +989,6 @@ class ResultClusteringService:
             text_content += f"{result.title} {result.content} "
 
         # Extract keywords using simple frequency analysis
-        import re
-
         words = re.findall(r"\b\w{4,}\b", text_content.lower())
 
         # Remove common words

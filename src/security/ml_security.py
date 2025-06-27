@@ -14,7 +14,7 @@ import logging
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from typing import Any
 
 from pydantic import BaseModel, Field

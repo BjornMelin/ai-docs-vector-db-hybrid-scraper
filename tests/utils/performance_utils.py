@@ -22,7 +22,7 @@ import tracemalloc
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from typing import Any
 
 

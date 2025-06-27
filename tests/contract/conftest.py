@@ -12,6 +12,142 @@ import jsonschema
 import pytest
 
 
+class JSONSchemaValidator:
+    def __init__(self):
+        self.schemas = {}
+
+    def register_schema(self, name: str, schema: dict[str, Any]):
+        """Register a JSON schema for validation."""
+        self.schemas[name] = schema
+
+    def validate_data(self, data: Any, schema_name: str) -> dict[str, Any]:
+        """Validate data against a registered schema."""
+        if schema_name not in self.schemas:
+            return {
+                "valid": False,
+                "errors": [f"Schema '{schema_name}' not found"],
+            }
+
+        schema = self.schemas[schema_name]
+        try:
+            jsonschema.validate(data, schema)
+            return {"valid": True, "errors": []}
+        except jsonschema.ValidationError as e:
+            return {
+                "valid": False,
+                "errors": [str(e)],
+                "path": list(e.absolute_path),
+                "schema_path": list(e.schema_path),
+            }
+        except jsonschema.SchemaError as e:
+            return {
+                "valid": False,
+                "errors": [f"Invalid schema: {e!s}"],
+            }
+
+    def validate_against_schema(
+        self, data: Any, schema: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Validate data against a provided schema."""
+        try:
+            jsonschema.validate(data, schema)
+            return {"valid": True, "errors": []}
+        except jsonschema.ValidationError as e:
+            return {
+                "valid": False,
+                "errors": [str(e)],
+                "path": list(e.absolute_path),
+                "schema_path": list(e.schema_path),
+                "failed_value": e.instance,
+            }
+        except jsonschema.SchemaError as e:
+            return {
+                "valid": False,
+                "errors": [f"Invalid schema: {e!s}"],
+            }
+
+    def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
+        """Generate test data based on schema."""
+        test_cases = []
+
+        # Generate valid test case
+        valid_data = self._generate_valid_data(schema)
+        test_cases.append(
+            {
+                "type": "valid",
+                "data": valid_data,
+                "expected_valid": True,
+            }
+        )
+
+        # Generate invalid test cases
+        invalid_cases = self._generate_invalid_data(schema)
+        test_cases.extend(invalid_cases)
+
+        return test_cases
+
+    def _generate_valid_data(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """Generate valid data for schema."""
+        data = {}
+        properties = schema.get("properties", {})
+
+        for prop_name, prop_schema in properties.items():
+            if prop_schema.get("type") == "string":
+                if "enum" in prop_schema:
+                    data[prop_name] = prop_schema["enum"][0]
+                else:
+                    data[prop_name] = "test_value"
+            elif prop_schema.get("type") == "integer":
+                minimum = prop_schema.get("minimum", 0)
+                maximum = prop_schema.get("maximum", 100)
+                data[prop_name] = minimum + (maximum - minimum) // 2
+            elif prop_schema.get("type") == "number":
+                data[prop_name] = 50.5
+            elif prop_schema.get("type") == "boolean":
+                data[prop_name] = True
+            elif prop_schema.get("type") == "array":
+                data[prop_name] = []
+            elif prop_schema.get("type") == "object":
+                data[prop_name] = {}
+
+        return data
+
+    def _generate_invalid_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
+        """Generate invalid test cases for schema."""
+        invalid_cases = []
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        # Missing required field case
+        if required:
+            incomplete_data = self._generate_valid_data(schema)
+            del incomplete_data[required[0]]
+            invalid_cases.append(
+                {
+                    "type": "missing_required",
+                    "data": incomplete_data,
+                    "expected_valid": False,
+                    "expected_error": f"'{required[0]}' is a required property",
+                }
+            )
+
+        # Type mismatch cases
+        for prop_name, prop_schema in properties.items():
+            if prop_schema.get("type") == "string":
+                invalid_data = self._generate_valid_data(schema)
+                invalid_data[prop_name] = 12345  # Wrong type
+                invalid_cases.append(
+                    {
+                        "type": "type_mismatch",
+                        "data": invalid_data,
+                        "expected_valid": False,
+                        "property": prop_name,
+                    }
+                )
+
+        return invalid_cases
+
+
 @pytest.fixture(scope="session")
 def contract_test_config():
     """Provide contract testing configuration."""
@@ -50,178 +186,6 @@ def contract_test_config():
 @pytest.fixture
 def json_schema_validator():
     """JSON schema validation utilities."""
-
-    class JSONSchemaValidator:
-        def __init__(self):
-            self.schemas = {}
-
-        def register_schema(self, name: str, schema: dict[str, Any]):
-            """Register a JSON schema for validation."""
-            self.schemas[name] = schema
-
-        def validate_data(self, data: Any, schema_name: str) -> dict[str, Any]:
-            """Validate data against a registered schema."""
-            if schema_name not in self.schemas:
-                return {
-                    "valid": False,
-                    "errors": [f"Schema '{schema_name}' not found"],
-                }
-
-            schema = self.schemas[schema_name]
-            try:
-                jsonschema.validate(data, schema)
-                return {"valid": True, "errors": []}
-            except jsonschema.ValidationError as e:
-                return {
-                    "valid": False,
-                    "errors": [str(e)],
-                    "path": list(e.absolute_path),
-                    "schema_path": list(e.schema_path),
-                }
-            except jsonschema.SchemaError as e:
-                return {
-                    "valid": False,
-                    "errors": [f"Invalid schema: {e!s}"],
-                }
-
-        def validate_against_schema(
-            self, data: Any, schema: dict[str, Any]
-        ) -> dict[str, Any]:
-            """Validate data against a provided schema."""
-            try:
-                jsonschema.validate(data, schema)
-                return {"valid": True, "errors": []}
-            except jsonschema.ValidationError as e:
-                return {
-                    "valid": False,
-                    "errors": [str(e)],
-                    "path": list(e.absolute_path),
-                    "schema_path": list(e.schema_path),
-                    "failed_value": e.instance,
-                }
-            except jsonschema.SchemaError as e:
-                return {
-                    "valid": False,
-                    "errors": [f"Invalid schema: {e!s}"],
-                }
-
-        def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
-            """Generate test data based on schema."""
-            test_cases = []
-
-            # Generate valid test case
-            valid_data = self._generate_valid_data(schema)
-            test_cases.append(
-                {
-                    "type": "valid",
-                    "data": valid_data,
-                    "expected_valid": True,
-                }
-            )
-
-            # Generate invalid test cases
-            invalid_cases = self._generate_invalid_data(schema)
-            test_cases.extend(invalid_cases)
-
-            return test_cases
-
-        def _generate_valid_data(self, schema: dict[str, Any]) -> Any:
-            """Generate valid data based on schema."""
-            schema_type = schema.get("type", "object")
-
-            if schema_type == "object":
-                data = {}
-                properties = schema.get("properties", {})
-                required = schema.get("required", [])
-
-                for prop, prop_schema in properties.items():
-                    if prop in required or "default" in prop_schema:
-                        data[prop] = self._generate_valid_data(prop_schema)
-
-                return data
-
-            elif schema_type == "array":
-                items_schema = schema.get("items", {})
-                min_items = schema.get("minItems", 1)
-                return [
-                    self._generate_valid_data(items_schema) for _ in range(min_items)
-                ]
-
-            elif schema_type == "string":
-                if "enum" in schema:
-                    return schema["enum"][0]
-                return schema.get("default", "test_string")
-
-            elif schema_type == "integer":
-                minimum = schema.get("minimum", 0)
-                maximum = schema.get("maximum", 100)
-                return max(minimum, min(maximum, schema.get("default", 42)))
-
-            elif schema_type == "number":
-                minimum = schema.get("minimum", 0.0)
-                maximum = schema.get("maximum", 100.0)
-                return max(minimum, min(maximum, schema.get("default", 42.0)))
-
-            elif schema_type == "boolean":
-                return schema.get("default", True)
-
-            elif schema_type == "null":
-                return None
-
-            return None
-
-        def _generate_invalid_data(
-            self, schema: dict[str, Any]
-        ) -> list[dict[str, Any]]:
-            """Generate invalid data based on schema."""
-            invalid_cases = []
-            schema_type = schema.get("type", "object")
-
-            # Type mismatch cases
-            if schema_type == "string":
-                invalid_cases.append(
-                    {
-                        "type": "invalid_type",
-                        "data": 123,
-                        "expected_valid": False,
-                        "description": "Number instead of string",
-                    }
-                )
-
-            elif schema_type == "integer":
-                invalid_cases.append(
-                    {
-                        "type": "invalid_type",
-                        "data": "not_a_number",
-                        "expected_valid": False,
-                        "description": "String instead of integer",
-                    }
-                )
-
-            elif schema_type == "object":
-                # Missing required field
-                required = schema.get("required", [])
-                if required:
-                    incomplete_data = {}
-                    # Include all but the first required field
-                    properties = schema.get("properties", {})
-                    for prop in required[1:]:
-                        if prop in properties:
-                            incomplete_data[prop] = self._generate_valid_data(
-                                properties[prop]
-                            )
-
-                    invalid_cases.append(
-                        {
-                            "type": "missing_required",
-                            "data": incomplete_data,
-                            "expected_valid": False,
-                            "description": f"Missing required field: {required[0]}",
-                        }
-                    )
-
-            return invalid_cases
-
     return JSONSchemaValidator()
 
 

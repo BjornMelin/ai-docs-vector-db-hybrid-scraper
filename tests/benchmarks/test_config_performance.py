@@ -100,7 +100,7 @@ def temp_config_file():
         temp_path = f.name
 
     yield temp_path
-    os.unlink(temp_path)
+    Path(temp_path).unlink()
 
 
 @pytest.fixture

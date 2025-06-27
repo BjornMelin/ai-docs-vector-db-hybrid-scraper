@@ -363,8 +363,9 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 cold_latencies.append((end - start) * 1000)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"SPLADE cold run failed for query '{query.query}': {e}")
+                continue
 
         # Second run (warm cache) - same queries
         warm_latencies = []
@@ -374,8 +375,9 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 warm_latencies.append((end - start) * 1000)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"SPLADE warm run failed for query '{query.query}': {e}")
+                continue
 
         if cold_latencies and warm_latencies:
             cache_metrics["cold_avg_latency_ms"] = statistics.mean(cold_latencies)

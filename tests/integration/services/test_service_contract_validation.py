@@ -17,6 +17,7 @@ import asyncio
 import time
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 import pytest
 
@@ -35,8 +36,8 @@ class ServiceContract:
 
     service_name: str
     version: ContractVersion
-    endpoints: dict[str, Dict]
-    data_schemas: dict[str, Dict]
+    endpoints: dict[str, Any]
+    data_schemas: dict[str, Any]
     dependencies: list[str]
     breaking_changes: list[str]
 
@@ -269,7 +270,9 @@ class TestAPIEndpointContracts:
 
         # Mock schema validator
         class JSONSchemaValidator:
-            def validate(self, data: Dict, schema: Dict) -> Dict:
+            def validate(
+                self, data: dict[str, Any], schema: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Validate data against JSON schema."""
                 errors = []
                 warnings = []
@@ -280,9 +283,11 @@ class TestAPIEndpointContracts:
                     properties = schema.get("properties", {})
 
                     # Check required fields
-                    for field in required_fields:
-                        if field not in data:
-                            errors.append(f"Missing required field: {field}")
+                    errors.extend(
+                        f"Missing required field: {field}"
+                        for field in required_fields
+                        if field not in data
+                    )
 
                     # Check field types
                     for field, value in data.items():
@@ -381,7 +386,9 @@ class TestAPIEndpointContracts:
         ]
 
         class ResponseValidator:
-            def validate_response(self, response: Dict, schema: Dict) -> Dict:
+            def validate_response(
+                self, response: dict[str, Any], schema: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Validate response against schema."""
                 errors = []
 
@@ -389,17 +396,20 @@ class TestAPIEndpointContracts:
                 schema.get("properties", {})
 
                 # Check required fields
-                for field in required_fields:
-                    if field not in response:
-                        errors.append(f"Missing required response field: {field}")
+                errors.extend(
+                    f"Missing required response field: {field}"
+                    for field in required_fields
+                    if field not in response
+                )
 
                 # Check array types specifically
                 if "embeddings" in response:
                     if not isinstance(response["embeddings"], list):
                         errors.append("embeddings must be an array")
-                    elif len(response["embeddings"]) > 0:
-                        if not isinstance(response["embeddings"][0], list):
-                            errors.append("embeddings must be array of arrays")
+                    elif len(response["embeddings"]) > 0 and not isinstance(
+                        response["embeddings"][0], list
+                    ):
+                        errors.append("embeddings must be array of arrays")
 
                 return {"valid": len(errors) == 0, "errors": errors}
 
@@ -433,8 +443,8 @@ class TestAPIEndpointContracts:
                 self,
                 producer_contract: ServiceContract,
                 _consumer_contract: ServiceContract,
-                integration_points: list[Dict],
-            ) -> Dict:
+                integration_points: list[dict[str, Any]],
+            ) -> dict[str, Any]:
                 """Check compatibility between service contracts."""
                 compatibility_issues = []
                 compatibility_score = 1.0
@@ -627,16 +637,20 @@ class TestDataSchemaValidation:
         }
 
         class DocumentValidator:
-            def validate_document(self, document: Dict, schema: Dict) -> Dict:
+            def validate_document(
+                self, document: dict[str, Any], schema: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Validate document against schema."""
                 errors = []
                 warnings = []
 
                 # Check required fields
                 required = schema.get("required", [])
-                for field in required:
-                    if field not in document:
-                        errors.append(f"Missing required field: {field}")
+                errors.extend(
+                    f"Missing required field: {field}"
+                    for field in required
+                    if field not in document
+                )
 
                 # Check field types
                 properties = schema.get("properties", {})
@@ -721,26 +735,29 @@ class TestDataSchemaValidation:
         }
 
         class EventValidator:
-            def validate_event(self, event: Dict, schema: Dict) -> Dict:
+            def validate_event(
+                self, event: dict[str, Any], schema: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Validate event against schema."""
                 errors = []
 
                 # Check required fields
                 required = schema.get("required", [])
-                for field in required:
-                    if field not in event:
-                        errors.append(f"Missing required field: {field}")
+                errors.extend(
+                    f"Missing required field: {field}"
+                    for field in required
+                    if field not in event
+                )
 
                 # Check enum values
                 properties = schema.get("properties", {})
                 for field, value in event.items():
                     if field in properties:
                         field_schema = properties[field]
-                        if "enum" in field_schema:
-                            if value not in field_schema["enum"]:
-                                errors.append(
-                                    f"Field '{field}' has invalid value '{value}', must be one of {field_schema['enum']}"
-                                )
+                        if "enum" in field_schema and value not in field_schema["enum"]:
+                            errors.append(
+                                f"Field '{field}' has invalid value '{value}', must be one of {field_schema['enum']}"
+                            )
 
                 return {"valid": len(errors) == 0, "errors": errors}
 
@@ -770,7 +787,9 @@ class TestDataSchemaValidation:
 
         # Mock data transformation between services
         class DataTransformer:
-            def transform_crawl_to_document(self, crawl_result: Dict) -> Dict:
+            def transform_crawl_to_document(
+                self, crawl_result: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Transform crawl result to document schema."""
                 return {
                     "id": crawl_result.get("url_hash", "unknown"),
@@ -784,8 +803,8 @@ class TestDataSchemaValidation:
                 }
 
             def transform_document_to_vector_point(
-                self, document: Dict, embeddings: list[float]
-            ) -> Dict:
+                self, document: dict[str, Any], embeddings: list[float]
+            ) -> dict[str, Any]:
                 """Transform document to vector point schema."""
                 return {
                     "id": document["id"],
@@ -870,7 +889,7 @@ class TestVersionCompatibility:
 
             def check_backward_compatibility(
                 self, service: str, from_version: str, to_version: str
-            ) -> Dict:
+            ) -> dict[str, Any]:
                 """Check backward compatibility between versions."""
                 if service not in self.versions:
                     return {"compatible": False, "error": "Service not found"}
@@ -884,11 +903,11 @@ class TestVersionCompatibility:
                 compatibility_issues = []
 
                 # Check if old endpoints still exist
-                for endpoint in from_spec["endpoints"]:
-                    if endpoint not in to_spec["endpoints"]:
-                        compatibility_issues.append(
-                            f"Endpoint {endpoint} removed in {to_version}"
-                        )
+                compatibility_issues.extend(
+                    f"Endpoint {endpoint} removed in {to_version}"
+                    for endpoint in from_spec["endpoints"]
+                    if endpoint not in to_spec["endpoints"]
+                )
 
                 # Check for breaking changes
                 breaking_changes = to_spec.get("breaking_changes", [])
@@ -933,7 +952,7 @@ class TestVersionCompatibility:
                 self.api_version = api_version
                 self.supported_versions = ["1.0", "1.1", "2.0"]
 
-            async def search(self, _query_data: Dict) -> Dict:
+            async def search(self, _query_data: dict[str, Any]) -> dict[str, Any]:
                 """Perform search with version-specific handling."""
                 if self.api_version == "1.0":
                     # Legacy format
@@ -964,7 +983,9 @@ class TestVersionCompatibility:
                         "metadata": {"total_count": 2, "search_duration_ms": 45},
                     }
 
-            def adapt_response(self, response: Dict, target_version: str) -> Dict:
+            def adapt_response(
+                self, response: dict[str, Any], target_version: str
+            ) -> dict[str, Any]:
                 """Adapt response format between versions."""
                 if self.api_version == "2.0" and target_version in ["1.0", "1.1"]:
                     # Convert v2.0 format to v1.x format
@@ -1029,7 +1050,9 @@ class TestVersionCompatibility:
         """Test automatic detection of breaking changes."""
 
         class BreakingChangeDetector:
-            def compare_schemas(self, old_schema: Dict, new_schema: Dict) -> Dict:
+            def compare_schemas(
+                self, old_schema: dict[str, Any], new_schema: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Compare schemas to detect breaking changes."""
                 breaking_changes = []
                 warnings = []
@@ -1049,11 +1072,11 @@ class TestVersionCompatibility:
 
                 # Detect added required fields
                 new_required_fields = new_required - old_required
-                for field in new_required_fields:
-                    if field not in old_props:
-                        breaking_changes.append(
-                            f"New required field '{field}' was added"
-                        )
+                breaking_changes.extend(
+                    f"New required field '{field}' was added"
+                    for field in new_required_fields
+                    if field not in old_props
+                )
 
                 # Detect type changes
                 for field in old_props:
@@ -1195,7 +1218,9 @@ class TestConsumerDrivenContracts:
         }
 
         class ConsumerContractValidator:
-            def validate_contract(self, consumer_name: str, contract: Dict) -> Dict:
+            def validate_contract(
+                self, consumer_name: str, contract: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Validate consumer contract against provider capabilities."""
                 validation_results = []
 
@@ -1227,8 +1252,11 @@ class TestConsumerDrivenContracts:
                 }
 
             def _validate_interaction(
-                self, provider: str, request: Dict, expected_response: Dict
-            ) -> Dict:
+                self,
+                provider: str,
+                request: dict[str, Any],
+                expected_response: dict[str, Any],
+            ) -> dict[str, Any]:
                 """Validate individual interaction."""
                 errors = []
 
@@ -1275,9 +1303,11 @@ class TestConsumerDrivenContracts:
                 expected_body = expected_response.get("body", {})
                 provider_fields = endpoint.get("response_fields", [])
 
-                for field in expected_body:
-                    if field not in provider_fields:
-                        errors.append(f"Provider does not guarantee field: {field}")
+                errors.extend(
+                    f"Provider does not guarantee field: {field}"
+                    for field in expected_body
+                    if field not in provider_fields
+                )
 
                 return {"valid": len(errors) == 0, "errors": errors}
 
@@ -1307,7 +1337,9 @@ class TestConsumerDrivenContracts:
             def __init__(self):
                 self.test_results = []
 
-            async def run_contract_tests(self, consumer_contract: Dict) -> Dict:
+            async def run_contract_tests(
+                self, consumer_contract: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Run contract tests against provider."""
                 provider = consumer_contract["provider"]
                 interactions = consumer_contract["interactions"]
@@ -1327,7 +1359,9 @@ class TestConsumerDrivenContracts:
                     "test_results": test_results,
                 }
 
-            async def _execute_interaction_test(self, interaction: Dict) -> Dict:
+            async def _execute_interaction_test(
+                self, interaction: dict[str, Any]
+            ) -> dict[str, Any]:
                 """Execute individual interaction test."""
                 description = interaction["description"]
                 interaction["request"]
@@ -1358,7 +1392,9 @@ class TestConsumerDrivenContracts:
                     "body_match": body_match,
                 }
 
-            def _compare_response_bodies(self, actual: Dict, expected: Dict) -> bool:
+            def _compare_response_bodies(
+                self, actual: dict[str, Any], expected: dict[str, Any]
+            ) -> bool:
                 """Compare response bodies for contract compliance."""
                 # Simple comparison - in real implementation would be more sophisticated
                 for key, expected_value in expected.items():
@@ -1372,20 +1408,22 @@ class TestConsumerDrivenContracts:
                         if len(expected_value) > 0 and len(actual[key]) > 0:
                             expected_item = expected_value[0]
                             actual_item = actual[key][0]
-                            if isinstance(expected_item, dict) and isinstance(
-                                actual_item, dict
-                            ):
-                                if not self._compare_response_bodies(
+                            if (
+                                isinstance(expected_item, dict)
+                                and isinstance(actual_item, dict)
+                                and not self._compare_response_bodies(
                                     actual_item, expected_item
-                                ):
-                                    return False
-                    elif isinstance(expected_value, dict) and isinstance(
-                        actual[key], dict
-                    ):
-                        if not self._compare_response_bodies(
+                                )
+                            ):
+                                return False
+                    elif (
+                        isinstance(expected_value, dict)
+                        and isinstance(actual[key], dict)
+                        and not self._compare_response_bodies(
                             actual[key], expected_value
-                        ):
-                            return False
+                        )
+                    ):
+                        return False
 
                 return True
 

@@ -285,7 +285,10 @@ class ServiceDiscovery:
         return None
 
     async def _test_tcp_connection(
-        self, host: str, port: int, timeout: float = 5.0
+        self,
+        host: str,
+        port: int,
+        timeout: float = 5.0,  # noqa: ASYNC109  # timeout used in asyncio.wait_for
     ) -> bool:
         """Test basic TCP connectivity to a service.
 

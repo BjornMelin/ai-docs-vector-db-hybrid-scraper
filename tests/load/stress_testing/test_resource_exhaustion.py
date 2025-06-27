@@ -16,6 +16,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import psutil
 import pytest
@@ -641,7 +642,7 @@ class TestResourceExhaustion:
                     for temp_file in open_files:
                         try:
                             temp_file.close()
-                            os.unlink(temp_file.name)
+                            Path(temp_file.name).unlink()
                         except (OSError, AttributeError):
                             pass
                     open_files.clear()

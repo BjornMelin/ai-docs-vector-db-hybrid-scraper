@@ -7,7 +7,7 @@ drift monitoring and alerting using the application's task queue system.
 import asyncio
 import contextlib
 import logging
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from ..config.core import get_config

@@ -55,8 +55,8 @@ async def cache_get(
 
         return result
 
-    except Exception as e:
-        logger.exception(f"Cache get failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache get failed for key {key}")
         # Return default on cache failure (graceful degradation)
         return default
 
@@ -100,8 +100,8 @@ async def cache_set(
 
         return success
 
-    except Exception as e:
-        logger.exception(f"Cache set failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache set failed for key {key}")
         # Don't raise exception for cache failures
         return False
 
@@ -141,8 +141,8 @@ async def cache_delete(
 
         return success
 
-    except Exception as e:
-        logger.exception(f"Cache delete failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache delete failed for key {key}")
         return False
 
 
@@ -180,8 +180,8 @@ async def cache_clear(
 
         return success
 
-    except Exception as e:
-        logger.exception(f"Cache clear failed: {e}")
+    except Exception:
+        logger.exception("Cache clear failed")
         return False
 
 
@@ -214,7 +214,7 @@ async def get_cache_stats(
         return stats
 
     except Exception as e:
-        logger.exception(f"Cache stats retrieval failed: {e}")
+        logger.exception("Cache stats retrieval failed")
         return {
             "manager": {"enabled_layers": []},
             "error": f"Stats retrieval failed: {e!s}",
@@ -246,8 +246,8 @@ async def get_performance_stats(
         logger.debug("Retrieved cache performance statistics")
         return stats
 
-    except Exception as e:
-        logger.exception(f"Cache performance stats retrieval failed: {e}")
+    except Exception:
+        logger.exception("Cache performance stats retrieval failed")
         return {}
 
 
@@ -285,8 +285,8 @@ async def cache_embedding(
 
         return False
 
-    except Exception as e:
-        logger.exception(f"Embedding cache failed: {e}")
+    except Exception:
+        logger.exception("Embedding cache failed")
         return False
 
 
@@ -321,8 +321,8 @@ async def get_cached_embedding(
 
         return None
 
-    except Exception as e:
-        logger.exception(f"Cached embedding retrieval failed: {e}")
+    except Exception:
+        logger.exception("Cached embedding retrieval failed")
         return None
 
 
@@ -361,8 +361,8 @@ async def cache_search_results(
 
         return False
 
-    except Exception as e:
-        logger.exception(f"Search results cache failed: {e}")
+    except Exception:
+        logger.exception("Search results cache failed")
         return False
 
 
@@ -399,8 +399,8 @@ async def get_cached_search_results(
 
         return None
 
-    except Exception as e:
-        logger.exception(f"Cached search results retrieval failed: {e}")
+    except Exception:
+        logger.exception("Cached search results retrieval failed")
         return None
 
 
@@ -483,7 +483,7 @@ async def bulk_cache_operations(
         return results
 
     except Exception as e:
-        logger.exception(f"Bulk cache operations failed: {e}")
+        logger.exception("Bulk cache operations failed")
         return {
             "total": len(operations),
             "successful": 0,

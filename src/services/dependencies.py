@@ -588,10 +588,11 @@ async def crawl_site(
             max_pages=request.max_pages,
             preferred_provider=request.preferred_provider,
         )
-        return result
     except Exception as e:
         logger.exception(f"Site crawling failed for {request.url}")
         raise CrawlServiceError(f"Failed to crawl site: {e}") from e
+    else:
+        return result
 
 
 # Task Queue Service Dependencies
@@ -634,10 +635,11 @@ async def enqueue_task(
             _queue_name=request.queue_name,
             **request.kwargs,
         )
-        return job_id
     except Exception as e:
         logger.exception(f"Task enqueue failed for {request.task_name}")
         raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
+    else:
+        return job_id
 
 
 async def get_task_status(
@@ -649,10 +651,12 @@ async def get_task_status(
     Function-based replacement for TaskQueueManager.get_job_status().
     """
     try:
-        return await task_manager.get_job_status(job_id)
+        status = await task_manager.get_job_status(job_id)
     except Exception as e:
         logger.exception(f"Task status check failed for {job_id}")
         return {"status": "error", "message": str(e)}
+    else:
+        return status
 
 
 # Database Dependencies
@@ -877,10 +881,12 @@ async def get_rag_metrics(
     Function-based replacement for RAGGenerator.get_metrics().
     """
     try:
-        return rag_generator.get_metrics()
+        metrics = rag_generator.get_metrics()
     except Exception as e:
         logger.exception("Failed to get RAG metrics")
         return {"error": str(e)}
+    else:
+        return metrics
 
 
 async def clear_rag_cache(
@@ -892,13 +898,14 @@ async def clear_rag_cache(
     """
     try:
         rag_generator.clear_cache()
+    except Exception as e:
+        logger.exception("Failed to clear RAG cache")
+        return {"status": "error", "message": str(e)}
+    else:
         return {
             "status": "success",
             "message": "RAG answer cache cleared successfully",
         }
-    except Exception as e:
-        logger.exception("Failed to clear RAG cache")
-        return {"status": "error", "message": str(e)}
 
 
 # Browser Automation Dependencies
@@ -1270,8 +1277,6 @@ async def get_auto_detection_summary(
         else:
             summary["overall_status"] = "unknown"
 
-        return summary
-
     except Exception as e:
         logger.exception("Auto-detection summary failed")
         return {
@@ -1282,6 +1287,8 @@ async def get_auto_detection_summary(
             "service_health": {},
             "connection_pools": {},
         }
+    else:
+        return summary
 
 
 # Service Performance Metrics
@@ -1317,11 +1324,11 @@ async def get_service_metrics() -> dict[str, Any]:
         except Exception as e:
             logger.debug("Crawl metrics unavailable", exc_info=e)
 
-        return metrics
-
     except Exception as e:
         logger.exception("Metrics collection failed")
         return {"error": str(e)}
+    else:
+        return metrics
 
 
 # Cleanup Function

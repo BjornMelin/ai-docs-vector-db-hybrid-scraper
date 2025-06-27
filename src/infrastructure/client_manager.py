@@ -1,16 +1,13 @@
-import typing
-
-
 """Centralized API client management with singleton pattern and health checks."""
 
 import asyncio
 import contextlib
+from copy import deepcopy
 import logging
 import threading
 import time
+import typing
 from contextlib import asynccontextmanager
-
-# Import for type hints (avoid circular import by using TYPE_CHECKING)
 from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
@@ -21,6 +18,13 @@ from qdrant_client import AsyncQdrantClient
 from src.config import Config
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
+
+# Optional imports for configuration functions to avoid circular imports
+try:
+    from src.config import get_config, get_config_with_auto_detection
+except ImportError:
+    get_config = None
+    get_config_with_auto_detection = None
 
 
 if TYPE_CHECKING:
@@ -40,7 +44,7 @@ class ClientManager:
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()  # Thread-safe lock for singleton creation
 
-    def __new__(cls, config: Config | None = None):
+    def __new__(cls):
         """Ensure singleton instance with thread safety."""
         if cls._instance is None:
             with cls._init_lock:
@@ -58,8 +62,8 @@ class ClientManager:
         """
 
         # Load the unified configuration
-        from src.config import get_config
-
+        if get_config is None:
+            raise RuntimeError("Configuration system not available")
         unified_config = get_config()
         return cls(unified_config)
 
@@ -72,7 +76,8 @@ class ClientManager:
         """
 
         # Load configuration with auto-detection applied
-        from src.config import get_config_with_auto_detection
+        if get_config_with_auto_detection is None:
+            raise RuntimeError("Configuration system with auto-detection not available")
 
         unified_config = await get_config_with_auto_detection()
         return cls(unified_config)
@@ -109,8 +114,8 @@ class ClientManager:
             return
 
         if config is None:
-            from src.config import get_config
-
+            if get_config is None:
+                raise RuntimeError("Configuration system not available")
             config = get_config()
 
         self.config = config

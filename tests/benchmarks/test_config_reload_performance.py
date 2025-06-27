@@ -69,7 +69,7 @@ class TestConfigReloadPerformance:
             temp_path = f.name
 
         yield Path(temp_path)
-        os.unlink(temp_path)
+        Path(temp_path).unlink()
 
     @pytest.fixture
     def mock_listeners(self):
@@ -312,7 +312,7 @@ class TestDriftDetectionPerformance:
         yield files
 
         for file in files:
-            os.unlink(file)
+            Path(file).unlink()
 
     def test_snapshot_performance(self, benchmark, drift_detector, temp_config_files):
         """Benchmark configuration snapshot performance."""
@@ -385,7 +385,7 @@ class TestDriftDetectionPerformance:
             )
 
         finally:
-            os.unlink(config_file)
+            Path(config_file).unlink()
 
     def test_drift_detection_cycle_performance(
         self, benchmark, drift_detector, temp_config_files
@@ -604,7 +604,7 @@ class TestWatchdogOptimization:
         finally:
             for file in watched_files:
                 if file.exists():
-                    os.unlink(file)
+                    Path(file).unlink()
 
     def test_directory_vs_file_watching(self, benchmark):
         """Compare directory watching vs specific file watching."""
