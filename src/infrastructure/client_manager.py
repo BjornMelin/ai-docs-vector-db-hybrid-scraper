@@ -299,7 +299,7 @@ class ClientManager:
 
             async with self._service_locks["qdrant_service"]:
                 if self._qdrant_service is None:
-                    from src.services.vector_db.service import (
+                    from src.services.vector_db.service import (  # noqa: PLC0415
                         QdrantService,
                     )
 

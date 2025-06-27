@@ -59,7 +59,7 @@ async def get_cache_client(
     Yields:
         CacheManager: Initialized cache manager
     """
-    from ..cache.manager import CacheManager
+    from ..cache.manager import CacheManager  # noqa: PLC0415
 
     cache_manager = CacheManager(
         dragonfly_url=config.cache.dragonfly_url,
@@ -91,7 +91,7 @@ async def get_embedding_client(
     Yields:
         EmbeddingManager: Initialized embedding manager
     """
-    from ..embeddings.manager import EmbeddingManager
+    from ..embeddings.manager import EmbeddingManager  # noqa: PLC0415
 
     embedding_manager = EmbeddingManager(
         config=config,
@@ -119,7 +119,7 @@ async def get_vector_db_client(
     Yields:
         QdrantService: Initialized vector database client
     """
-    from ..vector_db.service import QdrantService
+    from ..vector_db.service import QdrantService  # noqa: PLC0415
 
     qdrant_manager = QdrantService(config)
 
@@ -161,7 +161,7 @@ async def get_crawling_client(
     Yields:
         CrawlManager: Initialized crawl manager
     """
-    from ..crawling.manager import CrawlManager
+    from ..crawling.manager import CrawlManager  # noqa: PLC0415
 
     crawl_manager = CrawlManager(
         config=config,

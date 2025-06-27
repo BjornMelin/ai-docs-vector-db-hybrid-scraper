@@ -357,16 +357,16 @@ class MetricsRegistry:
 
                 try:
                     result = func(*args, **kwargs)
-                    self._metrics["search_requests"].labels(
-                        collection=collection, status="success"
-                    ).inc()
-                    return result
-
                 except Exception:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
                     raise
+                else:
+                    self._metrics["search_requests"].labels(
+                        collection=collection, status="success"
+                    ).inc()
+                    return result
 
                 finally:
                     duration = time.time() - start_time

@@ -100,8 +100,7 @@ class VectorFactory:
             List of float values representing the vector
         """
         vector = [
-            random.uniform(value_range[0], value_range[1])
-            for _ in range(dimension)
+            random.uniform(value_range[0], value_range[1]) for _ in range(dimension)
         ]
 
         if normalize:

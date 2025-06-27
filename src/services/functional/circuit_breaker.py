@@ -13,7 +13,7 @@ from enum import Enum
 from functools import wraps
 from typing import Any, TypeVar
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -378,8 +378,6 @@ class CircuitBreakerMiddleware(BaseHTTPMiddleware):
         try:
             return await self.circuit_breaker.call(call_next, request)
         except CircuitBreakerError as e:
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=503, detail=str(e))
 
 
