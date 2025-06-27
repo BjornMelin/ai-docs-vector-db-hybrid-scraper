@@ -238,7 +238,7 @@ class LoadTestRunner:
             }
 
         except Exception:
-            pass
+            logger.exception("Error in test execution")
         else:
             return result
 
@@ -309,7 +309,7 @@ class LoadTestRunner:
             logger.info(f"Regression analysis saved to: {report_file}")
 
         except Exception:
-            pass
+            logger.exception("Error in test execution")
         else:
             return regression_analysis
 
