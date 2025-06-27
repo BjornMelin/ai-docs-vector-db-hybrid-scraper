@@ -1,9 +1,9 @@
 """Hypothetical document generator for HyDE."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import hashlib
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from typing import TYPE_CHECKING
 
 

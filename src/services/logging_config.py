@@ -1,6 +1,6 @@
 """Logging configuration for service layer."""
 
-import logging  # noqa: PLC0415
+import logging
 import sys
 from typing import Any
 
@@ -56,7 +56,7 @@ def configure_logging(
 
     if enable_color:
         try:
-            import colorlog  # noqa: PLC0415
+            import colorlog
 
             formatter = colorlog.ColoredFormatter(
                 "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s",

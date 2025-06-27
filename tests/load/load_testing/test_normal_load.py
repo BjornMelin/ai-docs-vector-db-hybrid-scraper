@@ -4,7 +4,7 @@ This module implements load tests for normal operating conditions,
 validating system performance under expected user loads.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Dict
 
 import pytest
@@ -138,7 +138,7 @@ class TestNormalLoad:
         ]
 
         # Create custom profile
-        from ..load_profiles import create_custom_step_profile  # noqa: PLC0415
+        from ..load_profiles import create_custom_step_profile
 
         profile = create_custom_step_profile(stages)
 
@@ -173,7 +173,7 @@ class TestNormalLoad:
 
         async def cached_search_workload(**kwargs):
             """Workload that repeats queries to test caching."""
-            import random  # noqa: PLC0415
+            import random
 
             query = random.choice(repeated_queries)
             return await mock_load_test_service.search_documents(query=query, **kwargs)
@@ -197,8 +197,8 @@ class TestNormalLoad:
 
     def _simulate_normal_traffic(self, **_kwargs):
         """Simulate normal traffic patterns."""
-        import asyncio  # noqa: PLC0415
-        import random  # noqa: PLC0415
+        import asyncio
+        import random
 
         operations = [
             ("search", 0.6),

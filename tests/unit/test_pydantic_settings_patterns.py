@@ -4,7 +4,7 @@ Tests for the modernized configuration system using pydantic-settings
 instead of custom configuration management.
 """
 
-import os  # noqa: PLC0415
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -197,7 +197,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "postgresql://localhost/test"
-            assert settings.api_secret == "super-secret-key"  # noqa: S105
+            assert settings.api_secret == "super-secret-key"
 
         # Test with field names
         with patch.dict(
@@ -210,7 +210,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "mysql://localhost/app"
-            assert settings.api_secret == "another-secret"  # noqa: S105
+            assert settings.api_secret == "another-secret"
 
     def test_configuration_from_multiple_sources(self):
         """Test configuration loading from multiple sources.
@@ -292,7 +292,7 @@ class TestPydanticSettingsPatterns:
         Verifies that dynamic defaults work correctly with
         pydantic-settings.
         """
-        from datetime import datetime  # noqa: PLC0415
+        from datetime import datetime
 
         class DynamicSettings(BaseSettings):
             created_at: datetime = Field(default_factory=datetime.now)
@@ -310,7 +310,7 @@ class TestPydanticSettingsPatterns:
         Verifies that custom validators work properly with
         pydantic-settings.
         """
-        from pydantic import field_validator  # noqa: PLC0415
+        from pydantic import field_validator
 
         class CustomValidatedSettings(BaseSettings):
             email: str = Field(description="User email address")
@@ -339,7 +339,7 @@ class TestPydanticSettingsPatterns:
             email="USER@EXAMPLE.COM", password="SecurePass123"
         )
         assert settings.email == "user@example.com"  # Lowercased
-        assert settings.password == "SecurePass123"  # noqa: S105
+        assert settings.password == "SecurePass123"
 
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:
@@ -391,7 +391,7 @@ class TestConfigurationIntegrationPatterns:
                 """Simulate loading config from remote source."""
                 # In real implementation, this would make HTTP requests
                 # or database queries
-                import asyncio  # noqa: PLC0415
+                import asyncio
 
                 await asyncio.sleep(0.01)  # Simulate network delay
                 return {

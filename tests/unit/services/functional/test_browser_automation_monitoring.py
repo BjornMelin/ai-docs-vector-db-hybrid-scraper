@@ -11,8 +11,8 @@ including tier health metrics, performance optimization, failover mechanisms,
 and monitoring for lightweight, playwright, crawl4ai, browser_use, and firecrawl tiers.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from typing import Any
 
 import pytest
@@ -98,7 +98,7 @@ class MockBrowserTier:
         }
 
 
-class MockBrowserMonitoringSystem:  # noqa: PLC0415
+class MockBrowserMonitoringSystem:
     """Mock 5-tier browser monitoring system."""
 
     def __init__(self):

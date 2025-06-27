@@ -5,8 +5,8 @@ intelligently routes requests to the most appropriate tier based on content
 complexity, requirements, and performance characteristics.
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from typing import Any, Literal
 from urllib.parse import urlparse
 
@@ -151,7 +151,7 @@ class UnifiedBrowserManager(BaseService):
 
         try:
             # Get client manager and automation router
-            from ...infrastructure.client_manager import ClientManager  # noqa: PLC0415
+            from ...infrastructure.client_manager import ClientManager
 
             self._client_manager = ClientManager(self.config)
             await self._client_manager.initialize()
@@ -163,7 +163,7 @@ class UnifiedBrowserManager(BaseService):
 
             # Initialize browser cache if enabled
             if self._cache_enabled:
-                from ...services.cache.browser_cache import (  # noqa: PLC0415
+                from ...services.cache.browser_cache import (
                     BrowserCache,
                 )
 
@@ -207,7 +207,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 await self._monitor.stop_monitoring()
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to stop monitoring during cleanup")
 
         if self._client_manager:
@@ -256,7 +256,7 @@ class UnifiedBrowserManager(BaseService):
             and self._browser_cache
             and not request.interaction_required
         ):
-            from ...services.cache.browser_cache import (  # noqa: PLC0415
+            from ...services.cache.browser_cache import (
                 BrowserCacheEntry,
             )
 
@@ -290,7 +290,7 @@ class UnifiedBrowserManager(BaseService):
                                 response_time_ms=execution_time,
                                 cache_hit=True,
                             )
-                        except Exception as e:
+                        except Exception:
                             logger.warning(
                                 "Failed to record cache hit monitoring metrics"
                             )
@@ -315,7 +315,7 @@ class UnifiedBrowserManager(BaseService):
                         ),
                         failed_tiers=[],
                     )
-            except Exception as e:
+            except Exception:
                 logger.warning(
                     "Cache error for {request.url}, continuing with fresh scrape"
                 )
@@ -352,7 +352,7 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         cache_hit=False,  # Fresh scrape
                     )
-                except Exception as e:
+                except Exception:
                     logger.warning("Failed to record monitoring metrics")
 
             # Create unified response
@@ -379,7 +379,7 @@ class UnifiedBrowserManager(BaseService):
                 and response.content_length > 0
             ):
                 try:
-                    from ...services.cache.browser_cache import (  # noqa: PLC0415
+                    from ...services.cache.browser_cache import (
                         BrowserCacheEntry,
                     )
 
@@ -401,7 +401,7 @@ class UnifiedBrowserManager(BaseService):
                     logger.debug(
                         f"Cached browser result for {request.url} (tier: {tier_used})"
                     )
-                except Exception as e:
+                except Exception:
                     logger.warning("Failed to cache result for {request.url}")
 
             logger.info(
@@ -424,7 +424,7 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         error_type=type(e).__name__,
                     )
-                except Exception as monitor_error:
+                except Exception:
                     logger.warning("Failed to record error monitoring metrics")
 
             logger.exception("Unified scraping failed for {request.url}")
@@ -505,7 +505,7 @@ class UnifiedBrowserManager(BaseService):
         if self._automation_router:
             try:
                 router_metrics = self._automation_router.get_metrics()
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to get router metrics")
 
         # Calculate overall health

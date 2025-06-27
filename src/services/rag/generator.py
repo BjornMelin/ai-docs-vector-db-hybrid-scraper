@@ -4,10 +4,10 @@ This service generates contextual answers from search results using LLMs,
 providing a portfolio-worthy implementation of modern RAG patterns.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import hashlib
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from typing import Any
 
 from ...infrastructure.client_manager import ClientManager

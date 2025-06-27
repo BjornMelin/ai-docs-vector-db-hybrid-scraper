@@ -3,7 +3,7 @@
 Tests environment variable loading, file loading, and complex integration scenarios.
 """
 
-import os  # noqa: PLC0415
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -211,7 +211,7 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            import json  # noqa: PLC0415
+            import json
 
             json.dump(config_data, f, indent=2)
             json_file = f.name
@@ -348,7 +348,7 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            import json  # noqa: PLC0415
+            import json
 
             json.dump(invalid_config, f)
             json_file = f.name

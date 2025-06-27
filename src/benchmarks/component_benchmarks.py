@@ -4,10 +4,10 @@ This module provides isolated performance testing for each component
 of the advanced hybrid search system.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import statistics
-import time  # noqa: PLC0415
+import time
 
 from pydantic import BaseModel, Field
 

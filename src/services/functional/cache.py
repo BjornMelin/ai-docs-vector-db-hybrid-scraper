@@ -4,7 +4,7 @@ Transforms the CacheManager class into pure functions with dependency injection.
 Provides simple cache operations with circuit breaker patterns.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Annotated, Any
 
 from fastapi import Depends

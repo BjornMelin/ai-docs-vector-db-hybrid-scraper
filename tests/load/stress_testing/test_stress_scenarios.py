@@ -11,8 +11,8 @@ breaking points, resource exhaustion conditions, and failure modes under
 extreme load conditions.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 
 import pytest
 
@@ -361,7 +361,7 @@ class TestStressScenarios:
                         self.consecutive_failures = 0
 
                 # Simulate failure probability that increases with load
-                import random  # noqa: PLC0415
+                import random
 
                 current_load = self.service.request_count / 100.0  # Normalize load
                 failure_probability = min(

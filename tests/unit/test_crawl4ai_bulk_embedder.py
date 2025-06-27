@@ -1,7 +1,7 @@
 """Comprehensive tests for crawl4ai_bulk_embedder module."""
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
+import asyncio
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 

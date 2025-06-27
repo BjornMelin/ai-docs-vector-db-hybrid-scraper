@@ -1,8 +1,8 @@
 """Project management tools for MCP server."""
 
 import contextlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -26,8 +26,8 @@ else:
 from src.config import SearchStrategy
 
 from ...infrastructure.client_manager import ClientManager
-from ..models.requests import ProjectRequest  # noqa: PLC0415
-from ..models.responses import SearchResult  # noqa: PLC0415
+from ..models.requests import ProjectRequest
+from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
-    from ..models.responses import OperationStatus, ProjectInfo  # noqa: PLC0415
+    from ..models.responses import OperationStatus, ProjectInfo
 
     @mcp.tool()
     async def create_project(

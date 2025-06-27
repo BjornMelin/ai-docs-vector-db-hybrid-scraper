@@ -4,9 +4,9 @@ This module provides comprehensive health checking for all system dependencies
 including Qdrant, Redis, external APIs, and internal services.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
@@ -291,7 +291,7 @@ class HTTPHealthCheck(HealthCheck):
             headers: Optional HTTP headers
         """
         if name is None:
-            from urllib.parse import urlparse  # noqa: PLC0415
+            from urllib.parse import urlparse
 
             parsed = urlparse(url)
             name = f"http_{parsed.netloc}"
@@ -390,7 +390,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         async def _check():
             try:
-                import psutil  # noqa: PLC0415
+                import psutil
 
                 # Check CPU usage
                 cpu_percent = psutil.cpu_percent(interval=1)

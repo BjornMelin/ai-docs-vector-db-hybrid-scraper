@@ -1,8 +1,8 @@
 """Tests for configuration drift detection system."""
 
-import json  # noqa: PLC0415
+import json
 import tempfile
-import time  # noqa: PLC0415
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -185,7 +185,7 @@ class TestConfigDriftDetector:
         assert len(hash1) == 64  # SHA256 produces 64-character hex string
 
     def test_load_config_json(
-        self, drift_config, temp_config_file, mock_metrics_bridge
+        self, drift_config, temp_config_file, _mock_metrics_bridge
     ):
         """Test loading JSON configuration."""
         detector = ConfigDriftDetector(drift_config)
@@ -552,7 +552,7 @@ class TestGlobalFunctions:
     def test_get_detector_not_initialized(self):
         """Test getting detector when not initialized."""
         # Reset global state
-        import src.config.drift_detection  # noqa: PLC0415
+        import src.config.drift_detection
 
         src.config.drift_detection._drift_detector = None
 

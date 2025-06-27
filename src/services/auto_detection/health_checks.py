@@ -7,11 +7,11 @@ Provides comprehensive health monitoring for:
 - Performance metrics and alerting thresholds
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
-from typing import Any, List
+import logging
+import time
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -187,7 +187,7 @@ class HealthChecker:
     ) -> HealthCheckResult:
         """Check Redis service health."""
         try:
-            import redis.asyncio as redis  # noqa: PLC0415
+            import redis.asyncio as redis
 
             client = redis.Redis(host=service.host, port=service.port, socket_timeout=5)
 
@@ -224,7 +224,7 @@ class HealthChecker:
     ) -> HealthCheckResult:
         """Check Qdrant service health."""
         try:
-            import httpx  # noqa: PLC0415
+            import httpx
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -299,7 +299,7 @@ class HealthChecker:
         try:
             if service.health_check_url:
                 # HTTP health check
-                import httpx  # noqa: PLC0415
+                import httpx
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)

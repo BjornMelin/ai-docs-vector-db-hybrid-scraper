@@ -13,12 +13,12 @@ Performance Areas:
 Run with: pytest tests/benchmarks/ -k caching --benchmark-only
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
 import gc
-import json  # noqa: PLC0415
+import json
 import tempfile
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 from typing import ClassVar
 

@@ -4,11 +4,11 @@ This module provides comprehensive load testing capabilities with
 concurrent user simulation and realistic query patterns.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import random
 import statistics
-import time  # noqa: PLC0415
+import time
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -143,7 +143,7 @@ class LoadTestUser:
 
             try:
                 # Select random query
-                query = random.choice(self.test_queries).model_copy()  # noqa: S311
+                query = random.choice(self.test_queries).model_copy()
                 query.user_id = f"load_test_user_{self.user_id}"
                 query.session_id = (
                     f"load_test_session_{self.user_id}_{int(time.time())}"
@@ -202,7 +202,7 @@ class LoadTestUser:
 
                 # Think time between requests
                 think_time = (
-                    random.randint(  # noqa: S311
+                    random.randint(
                         self.config.think_time_min_ms, self.config.think_time_max_ms
                     )
                     / 1000.0

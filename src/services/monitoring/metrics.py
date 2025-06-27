@@ -4,9 +4,9 @@ This module provides a comprehensive metrics collection system using Prometheus
 with support for vector search, embeddings, cache, and ML model performance monitoring.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import functools
-import time  # noqa: PLC0415
+import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -626,7 +626,7 @@ class MetricsRegistry:
 
         except Exception as e:
             # Log error but don't raise to avoid breaking monitoring
-            import logging  # noqa: PLC0415
+            import logging
 
             logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
 
@@ -805,6 +805,6 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
     Returns:
         Initialized MetricsRegistry instance
     """
-    global _global_registry  # noqa: PLW0603
+    global _global_registry
     _global_registry = MetricsRegistry(config)
     return _global_registry

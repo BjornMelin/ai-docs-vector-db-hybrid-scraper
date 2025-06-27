@@ -726,7 +726,7 @@ class TestHyDEConfigIntegration:
 
     def test_from_unified_config(self):
         """Test creating HyDEConfig from unified configuration."""
-        from unittest.mock import Mock  # noqa: PLC0415
+        from unittest.mock import Mock
 
         # Mock unified HyDE config
         unified_config = Mock()

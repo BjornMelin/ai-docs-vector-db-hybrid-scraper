@@ -313,7 +313,7 @@ class TestColorContrastCompliance:
         """
 
         # Extract color combinations from CSS (simplified regex matching)
-        import re  # noqa: PLC0415
+        import re
 
         color_pattern = r"color:\s*([^;]+);.*?background-color:\s*([^;]+);"
         matches = re.findall(color_pattern, css_content, re.DOTALL)

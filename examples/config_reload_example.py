@@ -4,9 +4,9 @@ This example shows how to use the configuration reloading mechanism
 with proper observability integration and service notifications.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from pathlib import Path
 
 from src.api.routers.config import (

@@ -319,9 +319,9 @@ class TestDataGenerator:
         content_parts = [document["content"]]
 
         # Inject some query terms into content
-        for term in query_terms:
-            if random.random() < 0.7:  # 70% chance to include each term
-                content_parts.append(f" {term}")
+        content_parts.extend(
+            f" {term}" for term in query_terms if random.random() < 0.7
+        )
 
         return {
             "id": document["id"],

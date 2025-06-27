@@ -5,8 +5,8 @@ LLM calls, embedding generation, vector search, and RAG pipeline monitoring
 with detailed cost tracking and performance analysis.
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 

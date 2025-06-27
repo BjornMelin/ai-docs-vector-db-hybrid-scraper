@@ -4,7 +4,7 @@ This module tests role-based access control (RBAC), permission validation,
 and authorization boundary enforcement.
 """
 
-import time  # noqa: PLC0415
+import time
 from typing import Any
 
 import pytest
@@ -564,7 +564,7 @@ class TestAccessControl:
         delegation_system = PermissionDelegation()
 
         # Admin delegates write permission to user
-        import time  # noqa: PLC0415
+        import time
 
         current_time = int(time.time())
         expiry_time = current_time + 3600  # 1 hour

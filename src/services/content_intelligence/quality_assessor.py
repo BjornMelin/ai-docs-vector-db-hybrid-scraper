@@ -5,7 +5,7 @@ including completeness, relevance, confidence, freshness, structure quality,
 readability, and duplicate detection with similarity thresholds.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Any
@@ -690,7 +690,7 @@ class QualityAssessor:
             float: Cosine similarity between vectors
         """
         try:
-            import math  # noqa: PLC0415
+            import math
 
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
             magnitude1 = math.sqrt(sum(a * a for a in vec1))

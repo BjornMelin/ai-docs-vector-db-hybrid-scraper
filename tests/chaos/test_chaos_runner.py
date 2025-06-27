@@ -5,8 +5,8 @@ orchestrates chaos experiments, manages test execution, and provides
 reporting and analysis capabilities.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from enum import Enum

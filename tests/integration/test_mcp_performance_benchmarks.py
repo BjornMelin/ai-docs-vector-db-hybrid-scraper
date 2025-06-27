@@ -8,10 +8,10 @@ Comprehensive performance testing including:
 - Resource utilization monitoring
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import gc
-import os  # noqa: PLC0415
-import time  # noqa: PLC0415
+import os
+import time
 import tracemalloc
 from dataclasses import dataclass
 from statistics import mean, median, stdev

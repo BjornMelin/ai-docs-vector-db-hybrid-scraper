@@ -4,7 +4,7 @@ This module provides intelligent strategy selection based on query intent,
 complexity, and characteristics to optimize search performance and quality.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from .models import (

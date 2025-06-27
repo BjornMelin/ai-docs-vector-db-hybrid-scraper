@@ -1,10 +1,10 @@
 """Centralized API client management with singleton pattern and health checks."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import logging  # noqa: PLC0415
+import logging
 import threading
-import time  # noqa: PLC0415
+import time
 import typing
 from contextlib import asynccontextmanager
 from copy import deepcopy
@@ -299,7 +299,7 @@ class ClientManager:
 
             async with self._service_locks["qdrant_service"]:
                 if self._qdrant_service is None:
-                    from src.services.vector_db.service import (  # noqa: PLC0415
+                    from src.services.vector_db.service import (
                         QdrantService,
                     )
 
@@ -319,7 +319,7 @@ class ClientManager:
 
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
-                    from src.services.embeddings.manager import (  # noqa: PLC0415
+                    from src.services.embeddings.manager import (
                         EmbeddingManager,
                     )
 
@@ -341,7 +341,7 @@ class ClientManager:
 
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
-                    from src.services.cache.manager import (  # noqa: PLC0415
+                    from src.services.cache.manager import (
                         CacheManager,
                     )
 
@@ -381,7 +381,7 @@ class ClientManager:
 
             async with self._service_locks["crawl_manager"]:
                 if self._crawl_manager is None:
-                    from src.services.crawling.manager import (  # noqa: PLC0415
+                    from src.services.crawling.manager import (
                         CrawlManager,
                     )
 
@@ -403,12 +403,12 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    from src.services.hyde.config import (  # noqa: PLC0415
+                    from src.services.hyde.config import (
                         HyDEConfig,
                         HyDEMetricsConfig,
                         HyDEPromptConfig,
                     )
-                    from src.services.hyde.engine import (  # noqa: PLC0415
+                    from src.services.hyde.engine import (
                         HyDEQueryEngine,
                     )
 
@@ -445,7 +445,7 @@ class ClientManager:
 
             async with self._service_locks["project_storage"]:
                 if self._project_storage is None:
-                    from src.services.core.project_storage import (  # noqa: PLC0415
+                    from src.services.core.project_storage import (
                         ProjectStorage,
                     )
 
@@ -472,7 +472,7 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.browser_router import (  # noqa: PLC0415
+                    from src.services.browser.browser_router import (
                         EnhancedAutomationRouter,
                     )
 
@@ -494,7 +494,7 @@ class ClientManager:
 
             async with self._service_locks["task_queue_manager"]:
                 if self._task_queue_manager is None:
-                    from src.services.task_queue.manager import (  # noqa: PLC0415
+                    from src.services.task_queue.manager import (
                         TaskQueueManager,
                     )
 
@@ -529,7 +529,7 @@ class ClientManager:
 
             async with self._service_locks["content_intelligence_service"]:
                 if self._content_intelligence_service is None:
-                    from src.services.content_intelligence.service import (  # noqa: PLC0415
+                    from src.services.content_intelligence.service import (
                         ContentIntelligenceService,
                     )
 
@@ -555,7 +555,7 @@ class ClientManager:
 
             async with self._service_locks["rag_generator"]:
                 if self._rag_generator is None:
-                    from src.services.rag import RAGGenerator  # noqa: PLC0415
+                    from src.services.rag import RAGGenerator
 
                     self._rag_generator = RAGGenerator(
                         config=self.config.rag,
@@ -575,7 +575,7 @@ class ClientManager:
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
                     # Create enterprise monitoring components
-                    from .database.monitoring import (  # noqa: PLC0415
+                    from .database.monitoring import (
                         LoadMonitor,
                         QueryMonitor,
                     )
@@ -611,7 +611,7 @@ class ClientManager:
 
             async with self._service_locks["search_orchestrator"]:
                 if self._search_orchestrator is None:
-                    from src.services.query_processing import (  # noqa: PLC0415
+                    from src.services.query_processing import (
                         AdvancedSearchOrchestrator,
                     )
 
@@ -632,7 +632,7 @@ class ClientManager:
 
             async with self._service_locks["feature_flag_manager"]:
                 if self._feature_flag_manager is None:
-                    from src.services.deployment.feature_flags import (  # noqa: PLC0415
+                    from src.services.deployment.feature_flags import (
                         FeatureFlagConfig,
                         FeatureFlagManager,
                     )
@@ -662,7 +662,7 @@ class ClientManager:
 
             async with self._service_locks["ab_testing_manager"]:
                 if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import (  # noqa: PLC0415
+                    from src.services.deployment.ab_testing import (
                         ABTestingManager,
                     )
 
@@ -692,7 +692,7 @@ class ClientManager:
 
             async with self._service_locks["blue_green_deployment"]:
                 if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import (  # noqa: PLC0415
+                    from src.services.deployment.blue_green import (
                         BlueGreenDeployment,
                     )
 
@@ -722,7 +722,7 @@ class ClientManager:
 
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
-                    from src.services.deployment.canary import (  # noqa: PLC0415
+                    from src.services.deployment.canary import (
                         CanaryDeployment,
                     )
 

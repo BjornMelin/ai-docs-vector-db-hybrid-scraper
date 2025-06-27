@@ -1,7 +1,7 @@
 """Tests for tier-specific rate limiting functionality."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import Mock
 
 import pytest

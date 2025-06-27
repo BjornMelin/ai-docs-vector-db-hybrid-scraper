@@ -4,8 +4,8 @@ This module contains comprehensive browser automation tests that validate
 user workflows through real browser interactions using Playwright.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 
 import pytest
 
@@ -142,7 +142,8 @@ class TestBrowserUserJourneys:
                     )
                     if search_element:
                         break
-                except:
+                except Exception:
+                    # Try next selector pattern
                     continue
 
             # If no search element found, create a simulated search scenario

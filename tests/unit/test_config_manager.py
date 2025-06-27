@@ -1,7 +1,7 @@
 """Tests for the configuration management system using pydantic-settings features."""
 
-import json  # noqa: PLC0415
-import time  # noqa: PLC0415
+import json
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -327,7 +327,7 @@ class TestGlobalConfigManager:
     def test_config_manager_singleton(self):
         """Test that config manager follows singleton pattern."""
         # Reset global instance
-        import src.config.config_manager  # noqa: PLC0415
+        import src.config.config_manager
 
         src.config.config_manager._config_manager = None
 

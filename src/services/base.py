@@ -1,6 +1,6 @@
 """Base service class for all services."""
 
-import logging  # noqa: PLC0415
+import logging
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 

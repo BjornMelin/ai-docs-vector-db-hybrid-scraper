@@ -1,6 +1,6 @@
 """Tests for error tracking and correlation across observability systems."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
@@ -475,7 +475,7 @@ class TestErrorMetrics:
                         _raise_value_error("Invalid API response")
                     elif error_type == "timeout_error":
                         _raise_timeout_error("Request timeout")
-            except Exception:  # noqa: S110
+            except Exception:
                 pass  # Errors are expected and tracked
 
         # AI tracker should have recorded error metrics

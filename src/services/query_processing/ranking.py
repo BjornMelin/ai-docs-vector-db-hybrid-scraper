@@ -5,7 +5,7 @@ user interactions, preferences, and behavior patterns to deliver customized sear
 result rankings optimized for individual users and contexts.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
@@ -345,7 +345,7 @@ class PersonalizedRankingService:
         Returns:
             PersonalizedRankingResult with reranked results and metadata
         """
-        import time  # noqa: PLC0415
+        import time
 
         start_time = time.time()
 

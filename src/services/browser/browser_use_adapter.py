@@ -1,9 +1,9 @@
 """Browser-use adapter for AI-powered browser automation."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import os
+import time
 from typing import Any
 
 from src.config import BrowserUseConfig
@@ -22,7 +22,7 @@ try:
     from langchain_openai import ChatOpenAI
 
     BROWSER_USE_AVAILABLE = True
-except ImportError as e:
+except ImportError:
     BROWSER_USE_AVAILABLE = False
     logger.warning("browser-use not available")
     Agent = None  # type: ignore
@@ -134,7 +134,7 @@ class BrowserUseAdapter(BaseService):
         if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Error cleaning up browser-use")
             finally:
                 # Always reset state even if close() fails
@@ -232,7 +232,7 @@ class BrowserUseAdapter(BaseService):
                 # Exponential backoff
                 await asyncio.sleep(2**retry_count)
 
-            except Exception as e:
+            except Exception:
                 retry_count += 1
                 error_msg = "browser-use execution error"
                 self.logger.warning(f"{error_msg} (attempt {retry_count})")
@@ -331,9 +331,9 @@ class BrowserUseAdapter(BaseService):
                 selector = instruction.get("selector", "")
                 formatted_actions.append("{i}. Click on element")
             elif action == "type":
-                selector = instruction.get("selector", "")
-                text = instruction.get("text", "")
-                formatted_actions.append("{i}. Type '{text}' into element")
+                _selector = instruction.get("selector", "")
+                _text = instruction.get("text", "")
+                formatted_actions.append("{i}. Type '{_text}' into element")
             elif action == "scroll":
                 direction = instruction.get("direction", "")
                 formatted_actions.append(f"{i}. Scroll {direction}")
@@ -394,7 +394,7 @@ class BrowserUseAdapter(BaseService):
                 content = str(result) if result else ""
                 html = ""
                 title = ""
-        except Exception as e:
+        except Exception:
             self.logger.warning("Failed to extract page content")
             # Fallback to agent result
             content = str(result) if result else ""
@@ -568,7 +568,7 @@ class BrowserUseAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "healthy": False,
                 "status": "error",

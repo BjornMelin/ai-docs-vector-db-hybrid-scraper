@@ -7,12 +7,12 @@ with different configurations, profiles, and reporting options.
 
 import argparse
 import contextlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import logging
+import os
 import subprocess
 import sys
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 
 from locust import main as locust_main
@@ -797,7 +797,7 @@ def main():
     except Exception:
         logger.exception("Test execution failed")
         if args.verbose:
-            import traceback  # noqa: PLC0415
+            import traceback
 
             traceback.print_exc()
         sys.exit(1)

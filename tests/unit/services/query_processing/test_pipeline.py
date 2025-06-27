@@ -6,8 +6,8 @@ class TestError(Exception):
 
 """Tests for query processing pipeline."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -317,7 +317,7 @@ class TestQueryProcessingPipeline:
 
     async def test_concurrent_processing(self, initialized_pipeline):
         """Test concurrent query processing."""
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         requests = [
             QueryProcessingRequest(
@@ -350,7 +350,7 @@ class TestQueryProcessingPipeline:
         self, initialized_pipeline, mock_orchestrator
     ):
         """Test handling of processing timeouts."""
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         # Mock a slow response
         async def slow_process(*_args, **_kwargs):
@@ -1367,7 +1367,7 @@ class TestAdditionalEdgeCases:
 
     async def test_warmup_timing_measurement(self, initialized_pipeline):
         """Test that warmup properly measures timing."""
-        import time  # noqa: PLC0415
+        import time
 
         start_time = time.time()
         result = await initialized_pipeline.warm_up()

@@ -178,7 +178,7 @@ class ProfileManager:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with output_path.open("w") as f:
-            import json  # noqa: PLC0415
+            import json
 
             json.dump(config.model_dump(), f, indent=2)
 

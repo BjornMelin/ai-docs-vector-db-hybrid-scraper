@@ -211,7 +211,7 @@ class TestTreeSitterImportErrors:
         try:
             with patch("builtins.__import__", side_effect=mock_import):
                 # This should trigger the import and handle the error
-                from src.chunking import DocumentChunker  # noqa: PLC0415
+                from src.chunking import DocumentChunker
 
                 config = ChunkingConfig()
                 chunker = DocumentChunker(config)

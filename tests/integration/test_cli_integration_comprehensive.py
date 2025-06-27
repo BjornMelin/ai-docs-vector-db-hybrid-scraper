@@ -4,8 +4,8 @@ This module provides complete integration testing for CLI components including
 Rich console integration, questionary flows, and real user interaction scenarios.
 """
 
-import json  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -149,7 +149,7 @@ class TestCLIInteractiveFlows:
                         # Mock wizard to use these questionary calls
                         def mock_run_setup():
                             # Simulate questionary usage
-                            import questionary  # noqa: PLC0415
+                            import questionary
 
                             questionary.confirm("Test question?").ask()
                             questionary.select("Choose:", choices=["a", "b"]).ask()
@@ -463,7 +463,7 @@ class TestCLIPerformanceIntegration:
         }
         config_file.write_text(json.dumps(config_data, indent=2))
 
-        import time  # noqa: PLC0415
+        import time
 
         start_time = time.time()
 
@@ -506,8 +506,8 @@ class TestCLIPerformanceIntegration:
 
     def test_concurrent_cli_operations(self, _tmp_path):
         """Test concurrent CLI operations don't interfere."""
-        import queue  # noqa: PLC0415
-        import threading  # noqa: PLC0415
+        import queue
+        import threading
 
         results = queue.Queue()
 

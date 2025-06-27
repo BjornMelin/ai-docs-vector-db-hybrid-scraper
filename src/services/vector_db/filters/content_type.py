@@ -5,7 +5,7 @@ document type classification, semantic category filtering, intent-based filterin
 and content quality assessment.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
 from enum import Enum
 from typing import Any

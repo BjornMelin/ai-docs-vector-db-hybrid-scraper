@@ -1,6 +1,6 @@
 """Comprehensive tests for Enhanced Automation Router."""
 
-import time  # noqa: PLC0415
+import time
 from collections import deque
 from unittest.mock import AsyncMock, Mock, patch
 

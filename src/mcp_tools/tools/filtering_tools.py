@@ -5,7 +5,7 @@ including temporal filtering, content type filtering, metadata filtering, and fi
 composition with boolean logic.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -31,7 +31,7 @@ from ...services.query_processing import (
     SearchMode,
     SearchPipeline,
 )
-from ..models.responses import SearchResult  # noqa: PLC0415
+from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)

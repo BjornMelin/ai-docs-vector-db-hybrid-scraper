@@ -4,8 +4,8 @@ This module provides middleware components for automatic HTTP request monitoring
 health check endpoints, and Prometheus metrics exposure.
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from collections.abc import Callable
 
 from fastapi import FastAPI, Request, Response

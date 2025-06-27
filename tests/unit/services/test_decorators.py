@@ -1,6 +1,6 @@
 """Unit tests for core decorators module."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest

@@ -4,7 +4,7 @@ This module tests OpenAPI specification compliance and validation
 for all FastAPI and MCP endpoints.
 """
 
-import json  # noqa: PLC0415
+import json
 
 import pytest
 import schemathesis

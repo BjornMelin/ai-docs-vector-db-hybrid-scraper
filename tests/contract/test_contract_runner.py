@@ -4,7 +4,7 @@ This module provides utilities for running contract tests, generating reports,
 and managing contract validation results.
 """
 
-import json  # noqa: PLC0415
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum

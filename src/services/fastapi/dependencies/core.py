@@ -4,7 +4,7 @@ This module provides essential dependencies for database sessions,
 configuration management, and other production services.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -152,7 +152,7 @@ async def initialize_dependencies(config: Config | None = None) -> None:
     Args:
         config: Application configuration
     """
-    global _container  # noqa: PLW0603
+    global _container
     if _container is None:
         _container = DependencyContainer()
     await _container.initialize(config)
@@ -160,7 +160,7 @@ async def initialize_dependencies(config: Config | None = None) -> None:
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container  # noqa: PLW0603
+    global _container
     if _container:
         await _container.cleanup()
         _container = None

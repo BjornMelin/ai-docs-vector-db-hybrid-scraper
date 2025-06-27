@@ -4,7 +4,7 @@ This module provides detailed metrics collection for configuration reload operat
 including timing, success rates, and performance characteristics.
 """
 
-import time  # noqa: PLC0415
+import time
 from contextlib import contextmanager
 from typing import Any
 
@@ -337,7 +337,7 @@ def track_reload_operation(trigger: str):
         collector.record_reload_attempt(trigger, "success")
         collector.record_reload_duration(trigger, "total", duration)
 
-    except Exception as e:
+    except Exception:
         # Record failed reload
         duration = time.time() - start_time
         collector.record_reload_attempt(trigger, "failed")

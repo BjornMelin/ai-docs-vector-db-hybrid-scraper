@@ -7,9 +7,9 @@ Implements modern async service discovery patterns with:
 - Graceful fallback to manual configuration
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from typing import Any
 from urllib.parse import urlparse
 
@@ -288,7 +288,7 @@ class ServiceDiscovery:
         self,
         host: str,
         port: int,
-        timeout: float = 5.0,  # noqa: ASYNC109  # timeout used in asyncio.wait_for
+        timeout: float = 5.0,  # timeout used in asyncio.wait_for
     ) -> bool:
         """Test basic TCP connectivity to a service.
 
@@ -310,7 +310,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Redis connection and get server info using redis-py."""
         try:
-            import redis.asyncio as redis  # noqa: PLC0415
+            import redis.asyncio as redis
 
             # Use redis-py for reliable connection testing
             client = redis.Redis(
@@ -348,7 +348,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Qdrant connection using AsyncQdrantClient directly."""
         try:
-            from qdrant_client import AsyncQdrantClient  # noqa: PLC0415
+            from qdrant_client import AsyncQdrantClient
 
             # Use AsyncQdrantClient for native connection testing
             client = AsyncQdrantClient(url=f"http://{host}:{port}", timeout=3.0)
@@ -397,7 +397,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test PostgreSQL connection using asyncpg directly."""
         try:
-            import asyncpg  # noqa: PLC0415
+            import asyncpg
 
             # Use asyncpg for native connection testing with common credentials
             connection_params = [
@@ -440,7 +440,8 @@ class ServiceDiscovery:
                         },
                     }
 
-                except (TimeoutError, Exception):
+                except (TimeoutError, Exception) as e:
+                    self.logger.debug(f"Database connection failed: {e}")
                     continue  # Try next credential set
 
         except ImportError:
@@ -458,7 +459,7 @@ class ServiceDiscovery:
         candidates = []
 
         # Check for Redis URL in environment
-        import os  # noqa: PLC0415
+        import os
 
         redis_url = os.getenv("REDIS_URL")
         if redis_url:

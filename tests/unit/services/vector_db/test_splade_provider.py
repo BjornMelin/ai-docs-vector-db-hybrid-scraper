@@ -110,7 +110,7 @@ class TestSPLADEProvider:
         assert normalized != unnormalized
 
         # Check that normalized vector has L2 norm ≈ 1
-        import math  # noqa: PLC0415
+        import math
 
         norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance
@@ -214,7 +214,7 @@ class TestSPLADEProvider:
 
     async def test_token_id_generation(self, provider):
         """Test token ID generation and consistency."""
-        token = "python"  # noqa: S105
+        token = "python"
 
         # Should return consistent IDs
         id1 = provider._get_token_id(token)
@@ -226,7 +226,7 @@ class TestSPLADEProvider:
 
     async def test_unknown_token_handling(self, provider):
         """Test handling of unknown tokens."""
-        unknown_token = "veryunusualtoken12345"  # noqa: S105
+        unknown_token = "veryunusualtoken12345"
 
         token_id = provider._get_token_id(unknown_token)
 
@@ -335,7 +335,7 @@ class TestSPLADEProvider:
     async def test_token_info_retrieval(self, provider):
         """Test token information retrieval."""
         # Add a token to vocabulary
-        token = "testtoken"  # noqa: S105
+        token = "testtoken"
         token_id = provider._get_token_id(token)
 
         info = provider.get_token_info(token_id)

@@ -1,8 +1,8 @@
 """Crawl4AI adapter for browser automation router."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from typing import Any
 
 from src.config import Crawl4AIConfig

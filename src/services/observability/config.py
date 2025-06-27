@@ -4,7 +4,7 @@ Provides configuration for OpenTelemetry distributed tracing, AI/ML monitoring,
 and cost tracking that integrates seamlessly with the existing configuration.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 

@@ -7,7 +7,7 @@ Clean 2025 implementation of enterprise features:
 - Multi-level circuit breaker for 99.9% uptime
 """
 
-import logging  # noqa: PLC0415
+import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -109,7 +109,7 @@ class DatabaseManager:
                 f"ml_monitoring: enabled, circuit_breaker: enabled)"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize enterprise database manager")
             raise
 
@@ -130,7 +130,7 @@ class DatabaseManager:
 
             logger.info("Enterprise database manager cleaned up")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager

@@ -471,7 +471,7 @@ class TestSecurityConfigIntegration:
         assert ConfigDataClassification.PUBLIC == "public"
         assert ConfigDataClassification.INTERNAL == "internal"
         assert ConfigDataClassification.CONFIDENTIAL == "confidential"
-        assert ConfigDataClassification.SECRET == "secret"  # noqa: S105
+        assert ConfigDataClassification.SECRET == "secret"
 
         # Test enum ordering (more sensitive = higher value)
         classifications = list(ConfigDataClassification)

@@ -11,9 +11,9 @@ normal load testing, stress testing, spike testing, endurance testing,
 volume testing, and scalability testing.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import statistics
-import time  # noqa: PLC0415
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -684,7 +684,7 @@ def mock_load_test_service():
             self.request_count += 1
 
             # Simulate failure
-            import random  # noqa: PLC0415
+            import random
 
             if random.random() < self.failure_rate:
                 raise CustomError(f"Simulated failure (rate: {self.failure_rate})")

@@ -4,8 +4,11 @@ Transforms the CrawlManager class into pure functions with dependency injection.
 Provides crawling operations with circuit breaker patterns.
 """
 
-import logging  # noqa: PLC0415
-from typing import Any
+import asyncio
+import logging
+import re
+from typing import Annotated, Any, Dict
+from urllib.parse import urlparse
 
 from fastapi import Depends, HTTPException
 
@@ -43,7 +46,7 @@ async def crawl_url(
             raise HTTPException(status_code=500, detail="Crawling client not available")
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         result = await crawling_client.scrape_url(
             url=url,
@@ -64,7 +67,7 @@ async def crawl_url(
         raise
     except Exception as e:
         logger.exception(f"URL crawling failed for {url}")
-        raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}") from e
     else:
         return result
 
@@ -97,12 +100,10 @@ async def crawl_site(
             raise HTTPException(status_code=500, detail="Crawling client not available")
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         if max_pages <= 0 or max_pages > 1000:
-            raise HTTPException(
-                status_code=400, detail="max_pages must be between 1 and 1000"
-            )
+            _raise_invalid_max_pages()
 
         result = await crawling_client.crawl_site(
             url=url,
@@ -124,7 +125,7 @@ async def crawl_site(
         raise
     except Exception as e:
         logger.exception(f"Site crawling failed for {url}")
-        raise HTTPException(status_code=500, detail=f"Site crawling failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Site crawling failed: {e!s}") from e
     else:
         return result
 
@@ -182,7 +183,7 @@ async def get_recommended_tool(
             return "crawl4ai"  # Default fallback
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         recommendation = await crawling_client.get_recommended_tool(url)
         logger.debug(f"Recommended tool for {url}: {recommendation}")
@@ -281,15 +282,11 @@ async def batch_crawl_urls(
         HTTPException: If batch crawling fails
     """
     try:
-        import asyncio  # noqa: PLC0415
-
         if not urls:
             return []
 
         if max_parallel <= 0 or max_parallel > 20:
-            raise HTTPException(
-                status_code=400, detail="max_parallel must be between 1 and 20"
-            )
+            _raise_invalid_max_parallel()
 
         semaphore = asyncio.Semaphore(max_parallel)
 
@@ -332,7 +329,7 @@ async def batch_crawl_urls(
         raise
     except Exception as e:
         logger.exception("Batch URL crawling failed")
-        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {e!s}") from e
     else:
         return processed_results
 
@@ -349,9 +346,6 @@ async def validate_url(url: str) -> dict[str, Any]:
         Validation result with status and details
     """
     try:
-        import re  # noqa: PLC0415
-        from urllib.parse import urlparse  # noqa: PLC0415
-
         if not url:
             return {"valid": False, "error": "URL is required", "details": {}}
 
@@ -466,3 +460,22 @@ async def estimate_crawl_cost(
             "resource_requirements": "unknown",
             "error": str(e),
         }
+
+
+def _raise_url_required() -> None:
+    """Raise HTTPException for missing URL."""
+    raise HTTPException(status_code=400, detail="URL is required")
+
+
+def _raise_invalid_max_pages() -> None:
+    """Raise HTTPException for invalid max_pages."""
+    raise HTTPException(
+        status_code=400, detail="max_pages must be between 1 and 1000"
+    )
+
+
+def _raise_invalid_max_parallel() -> None:
+    """Raise HTTPException for invalid max_parallel."""
+    raise HTTPException(
+        status_code=400, detail="max_parallel must be between 1 and 20"
+    )

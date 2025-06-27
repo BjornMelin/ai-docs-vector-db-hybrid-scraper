@@ -1,6 +1,6 @@
 """Qdrant collection management service."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient, models

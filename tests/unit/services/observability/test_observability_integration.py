@@ -1,7 +1,7 @@
 """Integration tests for the complete observability system."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import Mock, patch
 
 from src.services.observability.ai_tracking import (
@@ -231,7 +231,7 @@ class TestObservabilitySystemIntegration:
 
             except ConnectionError as e:
                 # Test error recording with correlation
-                from src.services.observability.correlation import record_error  # noqa: PLC0415
+                from src.services.observability.correlation import record_error
 
                 error_id = record_error(
                     error=e,

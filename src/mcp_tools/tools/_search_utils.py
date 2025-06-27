@@ -1,13 +1,13 @@
 """Core search utilities for MCP tools."""
 
-import logging  # noqa: PLC0415
+import logging
 from uuid import uuid4
 
 from src.config import SearchStrategy
 
 from ...infrastructure.client_manager import ClientManager
-from ..models.requests import SearchRequest  # noqa: PLC0415
-from ..models.responses import SearchResult  # noqa: PLC0415
+from ..models.requests import SearchRequest
+from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)

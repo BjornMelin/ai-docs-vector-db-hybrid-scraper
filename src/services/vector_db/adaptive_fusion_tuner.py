@@ -4,8 +4,8 @@ This module implements machine learning-based tuning of fusion weights for hybri
 optimizing the combination of dense and sparse vector search results.
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from typing import Any
 
 from ...config import Config

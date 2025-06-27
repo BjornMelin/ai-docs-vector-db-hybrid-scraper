@@ -1,6 +1,6 @@
 """Tests for consolidated configuration system."""
 
-import os  # noqa: PLC0415
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch

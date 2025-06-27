@@ -1,8 +1,8 @@
 """Playwright adapter for maximum control browser automation."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from typing import Any
 from urllib.parse import urlparse
 
@@ -127,7 +127,7 @@ class PlaywrightAdapter(BaseService):
             self._initialized = False
             self.logger.info("Playwright adapter cleaned up")
 
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error cleaning up Playwright")
 
     async def scrape(
@@ -373,7 +373,7 @@ class PlaywrightAdapter(BaseService):
         if context:
             try:
                 await context.close()
-            except Exception as e:
+            except Exception:
                 self.logger.warning("Failed to close context")
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
@@ -477,7 +477,7 @@ class PlaywrightAdapter(BaseService):
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
-        except Exception as e:
+        except Exception:
             self.logger.warning("Failed to inject stealth scripts")
 
     async def _execute_action(
@@ -667,7 +667,7 @@ class PlaywrightAdapter(BaseService):
                     if text and len(text.strip()) > 50:
                         return {"text": text, "html": html}
 
-            except Exception as e:
+            except Exception:
                 self.logger.debug("Failed to extract with selector {selector}")
                 continue
 
@@ -677,7 +677,7 @@ class PlaywrightAdapter(BaseService):
                 "text": await page.inner_text("body"),
                 "html": await page.inner_html("body"),
             }
-        except Exception as e:
+        except Exception:
             self.logger.warning("Failed to extract body content")
             return {"text": "", "html": ""}
 
@@ -733,7 +733,7 @@ class PlaywrightAdapter(BaseService):
 
             return metadata
 
-        except Exception as e:
+        except Exception:
             self.logger.warning("Failed to extract metadata")
             return {
                 "title": await page.title() if page else "",
@@ -772,7 +772,7 @@ class PlaywrightAdapter(BaseService):
 
             return metrics
 
-        except Exception as e:
+        except Exception:
             self.logger.debug("Failed to get performance metrics")
             return {}
 
@@ -879,7 +879,7 @@ class PlaywrightAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "healthy": False,
                 "status": "error",

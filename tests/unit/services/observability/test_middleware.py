@@ -1,7 +1,7 @@
 """Tests for FastAPI observability middleware."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest

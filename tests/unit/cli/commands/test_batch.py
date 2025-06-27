@@ -142,7 +142,7 @@ class TestProgressTracking:
 
     def test_progress_imports_available(self):
         """Test that progress tracking modules can be imported."""
-        from rich.progress import Progress, SpinnerColumn, TextColumn  # noqa: PLC0415
+        from rich.progress import Progress, SpinnerColumn, TextColumn
 
         assert Progress is not None
         assert SpinnerColumn is not None
@@ -154,7 +154,7 @@ class TestBatchOperationQueue:
 
     def test_batch_module_structure(self):
         """Test that batch module has expected structure."""
-        from src.cli.commands.batch import batch  # noqa: PLC0415
+        from src.cli.commands.batch import batch
 
         assert batch is not None
         assert hasattr(batch, "commands")
@@ -191,7 +191,7 @@ class TestBatchIntegration:
 
     def test_batch_imports(self):
         """Test that batch module can be imported."""
-        from src.cli.commands.batch import batch, complete_collection_name  # noqa: PLC0415
+        from src.cli.commands.batch import batch, complete_collection_name
 
         assert batch is not None
         assert complete_collection_name is not None
@@ -223,7 +223,7 @@ class TestDataStructures:
 
     def test_batch_operation_data_structure(self):
         """Test batch operation data structure."""
-        from dataclasses import dataclass  # noqa: PLC0415
+        from dataclasses import dataclass
 
         # Test that we can create batch operation data structures
         @dataclass

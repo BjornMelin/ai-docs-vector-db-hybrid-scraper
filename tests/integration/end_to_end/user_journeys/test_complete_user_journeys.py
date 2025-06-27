@@ -4,8 +4,8 @@ This module contains end-to-end tests that validate complete user workflows
 from initial document ingestion through final search and discovery.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 
 import pytest
 

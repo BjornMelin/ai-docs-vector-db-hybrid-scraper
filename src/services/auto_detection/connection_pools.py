@@ -8,8 +8,8 @@ Provides optimized connection pools with:
 - Performance monitoring and metrics
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -90,7 +90,7 @@ class ConnectionPoolManager:
     async def _initialize_redis_pool(self, service: DetectedService) -> None:
         """Initialize Redis connection pool with Redis 8.2 optimizations."""
         try:
-            import redis.asyncio as redis  # noqa: PLC0415
+            import redis.asyncio as redis
 
             pool_config = {
                 **service.pool_config,
@@ -135,7 +135,7 @@ class ConnectionPoolManager:
     async def _initialize_qdrant_pool(self, service: DetectedService) -> None:
         """Initialize Qdrant connection pool with gRPC optimization."""
         try:
-            from qdrant_client import AsyncQdrantClient  # noqa: PLC0415
+            from qdrant_client import AsyncQdrantClient
 
             # Prefer gRPC if available
             prefer_grpc = service.metadata.get("grpc_available", False)
@@ -192,7 +192,7 @@ class ConnectionPoolManager:
         """Initialize PostgreSQL connection pool with asyncpg."""
         try:
             # Check if asyncpg is available without importing
-            import importlib.util  # noqa: PLC0415
+            import importlib.util
 
             if not importlib.util.find_spec("asyncpg"):
                 raise ImportError("asyncpg not available")
@@ -243,7 +243,7 @@ class ConnectionPoolManager:
         client = None
 
         try:
-            import redis.asyncio as redis  # noqa: PLC0415
+            import redis.asyncio as redis
 
             pool = self._pools["redis"]
             client = redis.Redis(connection_pool=pool)
@@ -349,7 +349,7 @@ class ConnectionPoolManager:
             pool = self._pools["redis"]
 
             # Use library's ping method for health check
-            import redis.asyncio as redis  # noqa: PLC0415
+            import redis.asyncio as redis
 
             client = redis.Redis(connection_pool=pool)
 

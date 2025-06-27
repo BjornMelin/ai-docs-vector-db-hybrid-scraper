@@ -307,10 +307,10 @@ class TestModernConfigurationWizard:
 
         # Mock profile manager
         wizard.profile_manager.create_profile_config.return_value = Path(
-            "/tmp/profile_config.json"  # noqa: S108
+            "/tmp/profile_config.json"
         )
-        wizard.profile_manager.activate_profile.return_value = Path("/tmp/config.json")  # noqa: S108
-        wizard.profile_manager.generate_env_file.return_value = Path("/tmp/.env")  # noqa: S108
+        wizard.profile_manager.activate_profile.return_value = Path("/tmp/config.json")
+        wizard.profile_manager.generate_env_file.return_value = Path("/tmp/.env")
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
             mock_questionary.confirm.return_value.ask.side_effect = [
@@ -321,7 +321,7 @@ class TestModernConfigurationWizard:
             config_data = {"test": "config"}
             result = wizard.save_configuration("test-profile", config_data)
 
-            assert result == Path("/tmp/config.json")  # noqa: S108
+            assert result == Path("/tmp/config.json")
             wizard.profile_manager.create_profile_config.assert_called_once_with(
                 "test-profile", customizations=config_data
             )
@@ -364,7 +364,7 @@ class TestModernConfigurationWizard:
         # Setup mocks
         mock_select_profile.return_value = "personal"
         mock_customize.return_value = {"openai": {"api_key": "test"}}
-        mock_save.return_value = Path("/tmp/config.json")  # noqa: S108
+        mock_save.return_value = Path("/tmp/config.json")
 
         # Mock profile templates
         wizard.profile_manager.profile_templates = {"personal": "personal-use"}
@@ -383,7 +383,7 @@ class TestModernConfigurationWizard:
 
             result = wizard.run_setup()
 
-            assert result == Path("/tmp/config.json")  # noqa: S108
+            assert result == Path("/tmp/config.json")
             mock_welcome.assert_called_once()
             mock_select_profile.assert_called_once()
             mock_customize.assert_called_once_with("personal-use")
@@ -441,7 +441,7 @@ class TestModernConfigurationWizard:
         wizard.selected_profile = "personal"
         wizard.profile_manager.profile_templates = {"personal": "personal-use"}
 
-        wizard._show_success_message(Path("/tmp/config.json"))  # noqa: S108
+        wizard._show_success_message(Path("/tmp/config.json"))
 
         rich_output_capturer.assert_panel_title("🚀 Template-Driven Setup Complete")
         rich_output_capturer.assert_contains("🎉 Modern Setup Complete!")
@@ -459,7 +459,7 @@ class TestSetupCommandModernized:
         """Test setup command with pre-selected profile."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
+            mock_wizard.run_setup.return_value = Path("/tmp/config.json")
             mock_wizard_class.return_value = mock_wizard
 
             # Mock profile manager
@@ -498,7 +498,7 @@ class TestSetupCommandModernized:
         """Test setup command with configuration validation."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
+            mock_wizard.run_setup.return_value = Path("/tmp/config.json")
             mock_wizard_class.return_value = mock_wizard
 
             with patch("src.cli.commands.config.validate_config"):
@@ -516,7 +516,7 @@ class TestSetupCommandModernized:
         """Test setup command validation fallback when config command unavailable."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
+            mock_wizard.run_setup.return_value = Path("/tmp/config.json")
             mock_wizard_class.return_value = mock_wizard
 
             # Mock file content
@@ -640,7 +640,7 @@ class TestSetupIntegrationModernized:
     def test_configuration_wizard_import_safety(self):
         """Test that ConfigurationWizard imports safely."""
         try:
-            from src.cli.commands.setup import ConfigurationWizard  # noqa: PLC0415
+            from src.cli.commands.setup import ConfigurationWizard
 
             wizard = ConfigurationWizard()
             assert wizard is not None
@@ -653,7 +653,7 @@ class TestSetupIntegrationModernized:
     def test_setup_command_import_safety(self):
         """Test that setup command imports safely."""
         try:
-            from src.cli.commands.setup import setup  # noqa: PLC0415
+            from src.cli.commands.setup import setup
 
             assert setup is not None
             assert hasattr(setup, "invoke")

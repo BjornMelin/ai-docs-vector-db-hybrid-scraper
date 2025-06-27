@@ -4,7 +4,7 @@ This module implements intelligent embedding model selection based on query
 characteristics, performance history, and cost optimization.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from src.config import (

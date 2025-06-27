@@ -1,7 +1,7 @@
 """Tests for browser automation monitoring system."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 
 import pytest
 

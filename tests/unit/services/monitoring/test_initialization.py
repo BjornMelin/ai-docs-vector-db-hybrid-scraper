@@ -6,7 +6,7 @@ class TestError(Exception):
 
 """Comprehensive tests for monitoring system initialization."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -310,7 +310,7 @@ class TestBackgroundMonitoringTasks:
         assert mock_metrics_registry.update_system_metrics.call_count >= 2
 
 
-class TestMonitoringIntegration:  # noqa: PLC0415
+class TestMonitoringIntegration:
     """Test monitoring system integration scenarios."""
 
     @pytest.mark.asyncio

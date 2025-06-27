@@ -1,8 +1,8 @@
 """HyDE Query Engine with Query API integration."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from typing import Any
 
 import numpy as np
@@ -415,7 +415,7 @@ class HyDEQueryEngine(BaseService):
         """Determine if query should use HyDE for A/B testing."""
 
         # Simple hash-based assignment for consistent user experience
-        import hashlib  # noqa: PLC0415
+        import hashlib
 
         query_hash = int(hashlib.sha256(query.encode()).hexdigest(), 16)
 

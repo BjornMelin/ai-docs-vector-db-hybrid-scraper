@@ -1,6 +1,6 @@
 """Tests for circuit breaker implementation."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
 
 import pytest

@@ -5,7 +5,7 @@ user context tracking, business context baggage, and cross-service trace correla
 for comprehensive distributed tracing in AI/ML pipelines.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import uuid
 from contextlib import contextmanager
 from typing import Any

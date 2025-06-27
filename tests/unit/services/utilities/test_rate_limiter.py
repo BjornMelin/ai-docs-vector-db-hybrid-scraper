@@ -1,7 +1,7 @@
 """Tests for rate limiting utilities."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import MagicMock
 
 import pytest

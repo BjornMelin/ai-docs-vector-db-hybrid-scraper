@@ -4,8 +4,8 @@ This module tests environment-specific configurations and ensures consistency
 across development, staging, and production environments.
 """
 
-import json  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -555,7 +555,7 @@ class EnvironmentVariableValidator:
 
                 # Check pattern
                 if "pattern" in requirements:
-                    import re  # noqa: PLC0415
+                    import re
 
                     if not re.match(requirements["pattern"], value):
                         errors.append(

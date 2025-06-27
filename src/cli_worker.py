@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CLI script to run the ARQ task queue worker."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import sys
 
 import click

@@ -148,7 +148,7 @@ class TestPipelineFactoryIntegration:
         assert hasattr(pipeline_factory, "client_manager")
 
         # Verify the create_pipeline method accepts the expected parameters
-        import inspect  # noqa: PLC0415
+        import inspect
 
         sig = inspect.signature(pipeline_factory.create_pipeline)
         params = list(sig.parameters.keys())
@@ -194,7 +194,7 @@ class TestPipelineFactoryRealWorld:
 
         # The factory should be able to handle None context
         # This is tested by verifying the method signature allows it
-        import inspect  # noqa: PLC0415
+        import inspect
 
         sig = inspect.signature(pipeline_factory.create_pipeline)
 

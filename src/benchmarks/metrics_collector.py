@@ -4,10 +4,10 @@ This module provides comprehensive metrics collection capabilities
 for performance analysis and monitoring integration.
 """
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import statistics
-import time  # noqa: PLC0415
+import time
 from collections import defaultdict, deque
 from typing import Any
 

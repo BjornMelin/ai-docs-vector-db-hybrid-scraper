@@ -376,7 +376,7 @@ class TestConfigIntegration:
 
     def test_config_imports(self):
         """Test that config module can be imported."""
-        from src.cli.commands.config import config  # noqa: PLC0415
+        from src.cli.commands.config import config
 
         assert config is not None
         assert hasattr(config, "commands")

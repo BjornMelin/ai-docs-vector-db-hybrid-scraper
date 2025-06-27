@@ -511,7 +511,7 @@ class TestQueryProcessingIntegration:
 
     async def test_concurrent_processing_integration(self, complete_pipeline):
         """Test concurrent processing with integrated system."""
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         requests = [
             QueryProcessingRequest(

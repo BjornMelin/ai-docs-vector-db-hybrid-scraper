@@ -4,9 +4,9 @@ This module provides comprehensive performance profiling capabilities
 including CPU, memory, and I/O monitoring during benchmark execution.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any

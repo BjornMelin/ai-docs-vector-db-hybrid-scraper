@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Resource exhaustion stress tests for AI Documentation Vector DB.
 
 This module implements comprehensive resource exhaustion scenarios to test
@@ -11,13 +5,13 @@ system behavior under various resource constraints including memory, CPU,
 network bandwidth, database connections, and file descriptors.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import gc
-import logging  # noqa: PLC0415
+import logging
 import resource
 import tempfile
 import threading
-import time  # noqa: PLC0415
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -27,6 +21,12 @@ import psutil
 import pytest
 
 from ..conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class ResourceMonitor:
                 # Timestamp
                 self.metrics.timestamps.append(time.time())
 
-            except Exception as e:
+            except Exception:
                 logger.warning("Error collecting resource metrics")
 
             time.sleep(self.interval)
@@ -234,9 +234,8 @@ class TestResourceExhaustion:
                         "embeddings_count": len(embeddings),
                     }
 
-                except MemoryError:
-                    raise TestError("Memory exhausted during document processing")
-                    raise TestError("Memory exhausted during document processing")
+                except MemoryError as e:
+                    raise TestError("Memory exhausted during document processing") from e
 
             # Configure stress test with large document processing
             config = LoadTestConfig(
@@ -499,17 +498,17 @@ class TestResourceExhaustion:
                     # Release connection
                     await pool.release_connection(connection)
 
-                    return {
-                        "status": "db_operation_complete",
-                        "connection": connection,
-                        "active_connections": pool.active_connections,
-                    }
-
                 except Exception as e:
                     if "pool exhausted" in str(e).lower():
                         pool_exhaustion_detected = True
                         logger.warning("Database connection pool exhausted")
                     raise
+                else:
+                    return {
+                        "status": "db_operation_complete",
+                        "connection": connection,
+                        "active_connections": pool.active_connections,
+                    }
 
             # Configure database stress test
             config = LoadTestConfig(
@@ -573,8 +572,8 @@ class TestResourceExhaustion:
                     try:
                         # Create temporary files to consume file descriptors
                         for _i in range(5):  # Try to open multiple files per request
-                            temp_file = tempfile.NamedTemporaryFile(delete=False)
-                            open_files.append(temp_file)
+                            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                                open_files.append(temp_file)
 
                             # Write some data
                             temp_file.write(
@@ -595,9 +594,9 @@ class TestResourceExhaustion:
                         if "too many open files" in str(e).lower() or e.errno == 24:
                             fd_exhaustion_detected = True
                             logger.warning("File descriptor limit reached")
-                        raise TestError("File descriptor exhaustion")
+                        raise TestError("File descriptor exhaustion") from e
 
-                    except Exception as e:
+                    except Exception:
                         logger.exception("Unexpected error in file operation")
                         raise
 
@@ -671,6 +670,10 @@ class TestResourceExhaustion:
             cascading_failure_detected = False
             memory_hogs = []
 
+            def _raise_system_overload():
+                """Helper function to raise system overload error."""
+                raise TestError("System overload")
+
             async def multi_resource_operation(**_kwargs):
                 """Operation that stresses multiple resources simultaneously."""
                 nonlocal cascading_failure_detected
@@ -719,7 +722,7 @@ class TestResourceExhaustion:
                         logger.warning("Cascading failure detected")
                         # Simulate system instability
                         if len(active_failures) >= 3:
-                            raise TestError("System overload")
+                            self._raise_system_overload()
 
                     return {
                         "status": "multi_resource_complete",
@@ -729,12 +732,12 @@ class TestResourceExhaustion:
                         "cpu_result": cpu_result,
                     }
 
-                except TimeoutError:
+                except TimeoutError as e:
                     failure_types["cpu"] += 1
-                    raise TestError("CPU timeout during multi-resource operation")
-                except MemoryError:
+                    raise TestError("CPU timeout during multi-resource operation") from e
+                except MemoryError as e:
                     failure_types["memory"] += 1
-                    raise TestError("Memory exhausted during multi-resource operation")
+                    raise TestError("Memory exhausted during multi-resource operation") from e
                 except Exception as e:
                     # Count the failure type
                     error_msg = str(e).lower()

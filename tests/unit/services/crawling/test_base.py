@@ -269,7 +269,7 @@ class TestCrawlProvider:
     def test_method_parameter_defaults(self):
         """Test default parameter values are correctly defined."""
         # Check crawl_site default parameters
-        import inspect  # noqa: PLC0415
+        import inspect
 
         sig = inspect.signature(CrawlProvider.crawl_site)
 

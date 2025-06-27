@@ -4,7 +4,7 @@ Provides clean initialization patterns that integrate with the existing
 service architecture while following OpenTelemetry best practices.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING, Any
 
 
@@ -52,20 +52,20 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
     try:
         # Import OpenTelemetry components - must be inside try/except for optional dependency
-        from opentelemetry import metrics, trace  # noqa: PLC0415
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (  # noqa: PLC0415
+        from opentelemetry import metrics, trace
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
             OTLPMetricExporter,
         )
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.sdk.metrics import MeterProvider  # noqa: PLC0415
-        from opentelemetry.sdk.metrics.export import (  # noqa: PLC0415
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import (
             PeriodicExportingMetricReader,
         )
-        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415
-        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         logger.info("Initializing OpenTelemetry observability...")
 
@@ -98,7 +98,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
         # Add console exporter for development
         if config.console_exporter:
-            from opentelemetry.sdk.trace.export import (  # noqa: PLC0415
+            from opentelemetry.sdk.trace.export import (
                 ConsoleSpanExporter,
             )
 
@@ -156,7 +156,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # FastAPI instrumentation
         if config.instrument_fastapi:
             try:
-                from opentelemetry.instrumentation.fastapi import (  # noqa: PLC0415
+                from opentelemetry.instrumentation.fastapi import (
                     FastAPIInstrumentor,
                 )
 
@@ -168,7 +168,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # HTTP client instrumentation
         if config.instrument_httpx:
             try:
-                from opentelemetry.instrumentation.httpx import (  # noqa: PLC0415
+                from opentelemetry.instrumentation.httpx import (
                     HTTPXClientInstrumentor,
                 )
 
@@ -180,7 +180,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # Redis instrumentation
         if config.instrument_redis:
             try:
-                from opentelemetry.instrumentation.redis import (  # noqa: PLC0415
+                from opentelemetry.instrumentation.redis import (
                     RedisInstrumentor,
                 )
 
@@ -192,7 +192,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # SQLAlchemy instrumentation
         if config.instrument_sqlalchemy:
             try:
-                from opentelemetry.instrumentation.sqlalchemy import (  # noqa: PLC0415
+                from opentelemetry.instrumentation.sqlalchemy import (
                     SQLAlchemyInstrumentor,
                 )
 

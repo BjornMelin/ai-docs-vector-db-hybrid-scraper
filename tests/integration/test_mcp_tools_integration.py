@@ -4,8 +4,8 @@ Tests all 11 MCP tools with realistic scenarios, proper mocking of external depe
 and validation of request/response models following FastMCP 2.0 best practices.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

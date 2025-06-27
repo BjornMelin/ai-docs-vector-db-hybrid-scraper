@@ -7,13 +7,13 @@ Designed to achieve 95%+ success rate on challenging sites while maintaining per
 Note: Uses standard random module for anti-detection purposes (timing, user agents, etc.)
 This is intentional and not cryptographically sensitive.
 """
-# ruff: noqa: S311  # Standard random is acceptable for anti-detection purposes
+# Standard random is acceptable for anti-detection purposes
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import random
 import secrets
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 from typing import Any
 

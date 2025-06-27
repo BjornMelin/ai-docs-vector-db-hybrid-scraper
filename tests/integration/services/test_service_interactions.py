@@ -14,9 +14,9 @@ Tests the integration between different service layers including:
 - Circuit breaker coordination across services
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import time  # noqa: PLC0415
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -813,7 +813,7 @@ class TestCircuitBreakerCoordination:
                 await embedding_circuit.call(embedding_operation)
 
         # Now embedding circuit should be open
-        from src.services.functional.circuit_breaker import CircuitBreakerError  # noqa: PLC0415
+        from src.services.functional.circuit_breaker import CircuitBreakerError
 
         try:
             await embedding_circuit.call(embedding_operation)
@@ -932,8 +932,9 @@ class TestCircuitBreakerCoordination:
             await monitor.call_service_with_protection(
                 "vector_db_service", degraded_operation
             )
-        except Exception as e:
-            pass  # Expected failure
+        except Exception:
+            # Expected failure - testing degraded service behavior
+            pass
 
         # Verify different circuit breaker configurations
         embedding_cb = monitor.circuit_breakers["embedding_service"]

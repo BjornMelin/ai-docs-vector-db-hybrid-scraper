@@ -6,10 +6,10 @@ for storage in Qdrant vector database. It supports concurrent processing, resuma
 and various input formats.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import csv
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -100,7 +100,7 @@ class BulkEmbedder:
                         f"Resumed from state: {len(state.completed_urls)} completed"
                     )
                     return state
-            except Exception as e:
+            except Exception:
                 logger.warning("Failed to load state")
         return ProcessingState(collection_name=self.collection_name)
 

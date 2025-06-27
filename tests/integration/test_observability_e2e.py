@@ -1,8 +1,8 @@
 """End-to-end observability integration tests."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import time  # noqa: PLC0415
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -317,7 +317,7 @@ class TestObservabilityE2E:
                 ):
                     raise ConnectionError("OpenAI API unavailable")
             except ConnectionError as e:
-                from src.services.observability.correlation import record_error  # noqa: PLC0415
+                from src.services.observability.correlation import record_error
 
                 error_id = record_error(
                     error=e, error_type="api_connection_error", severity="high"
@@ -640,7 +640,7 @@ class TestObservabilityCompliance:
     def test_metrics_naming_conventions(self):
         """Test metrics naming conventions compliance."""
         try:
-            from src.services.observability.metrics_bridge import (  # noqa: PLC0415
+            from src.services.observability.metrics_bridge import (
                 initialize_metrics_bridge,
             )
 
@@ -667,7 +667,7 @@ class TestObservabilityCompliance:
 
     def test_trace_context_propagation_standards(self):
         """Test trace context propagation follows W3C standards."""
-        from src.services.observability.correlation import (  # noqa: PLC0415
+        from src.services.observability.correlation import (
             extract_context_from_headers,
             inject_context_to_headers,
         )

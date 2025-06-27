@@ -16,9 +16,9 @@ that complements the existing security monitoring and compliance logging.
 """
 
 import hashlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import logging
+import os
 import secrets
 from datetime import UTC, datetime
 from enum import Enum
@@ -43,7 +43,7 @@ class ConfigDataClassification(str, Enum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
-    SECRET = "secret"  # noqa: S105  # This is an enum, not a hardcoded password
+    SECRET = "secret"  # This is an enum, not a hardcoded password
 
 
 class ConfigAccessLevel(str, Enum):
@@ -792,7 +792,7 @@ class SecureConfigManager:
 
             # Create backup (simplified implementation)
             # In production, use tar/gzip or similar
-            import shutil  # noqa: PLC0415
+            import shutil
 
             backup_dir = self.config_dir / "backup_temp"
             backup_dir.mkdir(exist_ok=True)

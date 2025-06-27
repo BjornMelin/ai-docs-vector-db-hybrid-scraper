@@ -4,7 +4,7 @@ Provides dependency injection functions that integrate OpenTelemetry
 observability with the existing function-based service architecture.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from functools import lru_cache
 from typing import Annotated
 

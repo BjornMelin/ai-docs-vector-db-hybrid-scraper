@@ -4,10 +4,10 @@ This module provides comprehensive background task management including
 task scheduling, monitoring, and lifecycle management for production environments.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import threading
-import time  # noqa: PLC0415
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -540,7 +540,7 @@ def get_task_manager() -> BackgroundTaskManager:
     Returns:
         Background task manager instance
     """
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager is None:
         _task_manager = BackgroundTaskManager()
     return _task_manager
@@ -555,7 +555,7 @@ async def initialize_task_manager(
         max_workers: Maximum number of concurrent workers
         max_queue_size: Maximum size of task queue
     """
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager is None:
         _task_manager = BackgroundTaskManager(max_workers, max_queue_size)
     await _task_manager.start()
@@ -563,7 +563,7 @@ async def initialize_task_manager(
 
 async def cleanup_task_manager() -> None:
     """Clean up the global background task manager."""
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager:
         await _task_manager.stop()
         _task_manager = None

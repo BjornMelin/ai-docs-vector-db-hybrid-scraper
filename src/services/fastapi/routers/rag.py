@@ -4,7 +4,7 @@ This module provides FastAPI endpoints for generating contextual answers
 using RAG patterns with the integrated service dependencies.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status

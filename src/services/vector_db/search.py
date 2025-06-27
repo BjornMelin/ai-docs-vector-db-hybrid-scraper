@@ -4,7 +4,7 @@ This module provides a clean, focused implementation of search functionality
 extracted from QdrantService, focusing specifically on search operations.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 import numpy as np

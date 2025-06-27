@@ -4,7 +4,7 @@ Tests for the memory leak fixes and LRU cache implementations.
 Validates that caches respect size limits and properly evict items.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest

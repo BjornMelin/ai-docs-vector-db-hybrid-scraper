@@ -5,7 +5,7 @@ for controlling access to enterprise deployment features while maintaining
 simplicity for personal use.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -63,7 +63,7 @@ class FeatureFlagManager:
             if self.config.enabled and self.config.api_key:
                 # Initialize Flagsmith client (optional dependency)
                 try:
-                    from flagsmith import Flagsmith  # noqa: PLC0415
+                    from flagsmith import Flagsmith
 
                     self._client = Flagsmith(
                         environment_key=self.config.environment_key,
@@ -259,7 +259,7 @@ class FeatureFlagManager:
                     return DeploymentTier.PERSONAL
             else:
                 # Fallback to environment-based detection
-                import os  # noqa: PLC0415
+                import os
 
                 tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
                 return DeploymentTier(tier_env)
@@ -284,7 +284,7 @@ class FeatureFlagManager:
 
         try:
             # Simple implementation - in production, you'd add proper caching
-            import time  # noqa: PLC0415
+            import time
 
             cache_key = f"flags_{user_id or 'anonymous'}"
             current_time = time.time()

@@ -6,9 +6,9 @@ and data protection mechanisms.
 
 import base64
 import hashlib
-import os  # noqa: PLC0415
+import os
 import secrets
-import time  # noqa: PLC0415
+import time
 from typing import Any
 
 import pytest
@@ -219,7 +219,7 @@ class TestDataProtection:
 
     def test_password_hashing_security(self, encryption_service):
         """Test password hashing security."""
-        password = "strong_password_123!"  # noqa: S105
+        password = "strong_password_123!"
 
         # Hash password
         result = encryption_service.hash_password(password)
@@ -263,7 +263,7 @@ class TestDataProtection:
         assert len(token_custom) >= 64
 
         # Tokens should be URL-safe
-        import string  # noqa: PLC0415
+        import string
 
         allowed_chars = string.ascii_letters + string.digits + "-_"
         assert all(c in allowed_chars for c in token1)
@@ -271,7 +271,7 @@ class TestDataProtection:
 
     def test_constant_time_comparison(self, encryption_service):
         """Test constant time comparison for timing attack prevention."""
-        secret = "secret_token_123"  # noqa: S105
+        secret = "secret_token_123"
 
         # Valid comparison
         assert encryption_service.constant_time_compare(secret, secret) is True
@@ -285,7 +285,7 @@ class TestDataProtection:
         assert encryption_service.constant_time_compare(secret, "") is False
 
         # Test timing attack resistance (simplified test)
-        import time  # noqa: PLC0415
+        import time
 
         # Compare similar length strings
         start_time = time.perf_counter()
@@ -570,7 +570,7 @@ class TestDataProtection:
         assert unique_values > 200  # Should have good variety
 
         # Check that no single value dominates
-        from collections import Counter  # noqa: PLC0415
+        from collections import Counter
 
         value_counts = Counter(random_values)
         max_count = max(value_counts.values())
@@ -579,7 +579,7 @@ class TestDataProtection:
     def test_side_channel_attack_resistance(self, encryption_service):
         """Test resistance to side-channel attacks."""
         # Test timing attack resistance in password verification
-        correct_password = "correct_password_123"
+        correct_password = "correct_password_123"  # test password
         password_hash = encryption_service.hash_password(correct_password)
 
         # Test with different wrong passwords of varying lengths
@@ -754,7 +754,7 @@ class TestDataProtection:
         backup_service = KeyBackupService()
 
         # Create backup
-        backup_password = "strong_backup_password_456!"
+        backup_password = "strong_backup_password_456!"  # test password
         backup_id = backup_service.create_backup(keys_to_backup, backup_password)
 
         assert backup_id is not None

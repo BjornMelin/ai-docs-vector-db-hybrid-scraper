@@ -8,9 +8,9 @@ This module extends the basic AutomationRouter with:
 - Circuit breaker pattern for tier health
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from collections import defaultdict, deque
 from typing import Any
 from urllib.parse import urlparse
@@ -87,7 +87,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         super().__init__(config)
 
         # Load enhanced configuration
-        from .tier_config import create_default_routing_config  # noqa: PLC0415
+        from .tier_config import create_default_routing_config
 
         self.routing_config = create_default_routing_config()
 

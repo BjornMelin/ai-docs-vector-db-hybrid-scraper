@@ -1,6 +1,6 @@
 """Integration tests for OpenTelemetry observability."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import importlib
 from unittest.mock import MagicMock, patch
 
@@ -275,11 +275,11 @@ class TestFastAPIObservabilityIntegration:
                 ),
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware  # noqa: PLC0415
+                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (  # noqa: PLC0415
+                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 
@@ -333,11 +333,11 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware  # noqa: PLC0415
+                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (  # noqa: PLC0415
+                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 
@@ -387,11 +387,11 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware  # noqa: PLC0415
+                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (  # noqa: PLC0415
+                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 

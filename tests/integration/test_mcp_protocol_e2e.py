@@ -4,9 +4,9 @@ Tests complete MCP request/response cycles, transport layers, and
 protocol compliance following JSON-RPC 2.0 specifications.
 """
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import json
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

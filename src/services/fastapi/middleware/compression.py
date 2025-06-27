@@ -5,7 +5,7 @@ and improve performance in production environments.
 """
 
 import gzip
-import logging  # noqa: PLC0415
+import logging
 from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -186,7 +186,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
         # Check if brotli is available
         try:
-            import brotli  # noqa: PLC0415
+            import brotli
 
             self.brotli = brotli
             self.brotli_available = True

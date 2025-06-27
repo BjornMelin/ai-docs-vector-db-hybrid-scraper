@@ -5,8 +5,8 @@ external API calls, resource utilization, and AI/ML operation performance analys
 with automated performance degradation detection and alerting.
 """
 
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field

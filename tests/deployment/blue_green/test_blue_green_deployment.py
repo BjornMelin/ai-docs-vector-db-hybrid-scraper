@@ -4,7 +4,7 @@ This module tests blue-green deployment functionality including environment
 switching, traffic routing, health checks, and zero-downtime deployment validation.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 

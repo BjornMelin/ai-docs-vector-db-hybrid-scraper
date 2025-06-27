@@ -4,7 +4,7 @@ This module provides a clean, modular way to register all MCP tools
 with the server, following FastMCP 2.0 best practices.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
 
 from . import tools

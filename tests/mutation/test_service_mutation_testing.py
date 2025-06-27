@@ -12,7 +12,7 @@ logic paths including circuit breakers, dependency injection, and
 error handling patterns.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -475,7 +475,7 @@ class TestServiceCachingMutationTesting:
     async def test_cache_expiration_mutations(self):
         """Test mutations in cache expiration logic."""
 
-        import time  # noqa: PLC0415
+        import time
 
         class MockCache:
             def __init__(self):

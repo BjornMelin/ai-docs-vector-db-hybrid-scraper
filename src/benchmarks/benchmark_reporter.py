@@ -4,8 +4,8 @@ This module provides comprehensive reporting capabilities for benchmark results
 including HTML reports, charts, and performance analysis summaries.
 """
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

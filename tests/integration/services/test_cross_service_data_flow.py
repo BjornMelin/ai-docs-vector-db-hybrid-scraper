@@ -11,8 +11,8 @@ Tests include:
 - Event-driven architecture validation
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 

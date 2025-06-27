@@ -1,6 +1,6 @@
 """Search and retrieval tools for MCP server."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
 
 
@@ -18,8 +18,8 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ..models.requests import SearchRequest  # noqa: PLC0415
-from ..models.responses import SearchResult  # noqa: PLC0415
+from ..models.requests import SearchRequest
+from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Supports dense, sparse, and hybrid search strategies with optional
         BGE reranking for improved accuracy.
         """
-        from ._search_utils import search_documents_core  # noqa: PLC0415
+        from ._search_utils import search_documents_core
 
         return await search_documents_core(request, client_manager, ctx)
 

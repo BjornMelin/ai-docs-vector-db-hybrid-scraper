@@ -5,9 +5,9 @@ validation patterns across all test categories. These helpers ensure
 consistent error messages and validation logic throughout the test suite.
 """
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import json
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
@@ -529,10 +529,10 @@ async def assert_async_operation_completes(
     try:
         result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
         return result
-    except TimeoutError:
-        raise AssertionError(f"{operation_name} timed out after {timeout_seconds}s")
+    except TimeoutError as e:
+        raise AssertionError(f"{operation_name} timed out after {timeout_seconds}s") from e
     except Exception as e:
-        raise AssertionError(f"{operation_name} failed with error: {e}")
+        raise AssertionError(f"{operation_name} failed with error: {e}") from e
 
 
 def assert_collection_has_size(
@@ -689,7 +689,7 @@ def assert_contract_compliance(
         try:
             jsonschema.validate(actual_response, expected_schema)
         except jsonschema.ValidationError as e:
-            raise AssertionError(f"Response doesn't match contract schema: {e.message}")
+            raise AssertionError(f"Response doesn't match contract schema: {e.message}") from e
 
 
 # Performance timing decorator

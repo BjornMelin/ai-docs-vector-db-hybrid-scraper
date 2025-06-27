@@ -14,10 +14,10 @@ Benchmarks service layer performance including:
 - Memory usage patterns
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import logging
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -66,7 +66,7 @@ class TestDependencyInjectionPerformance:
 
     def test_dependency_caching_performance(self, benchmark):
         """Benchmark dependency caching effectiveness."""
-        from functools import lru_cache  # noqa: PLC0415
+        from functools import lru_cache
 
         @lru_cache(maxsize=128)
         def cached_expensive_operation(param):
@@ -338,7 +338,7 @@ class TestMemoryUsagePatterns:
 
     def test_dependency_memory_overhead(self, benchmark):
         """Benchmark memory overhead of dependency injection."""
-        import sys  # noqa: PLC0415
+        import sys
 
         def measure_dependency_memory():
             # Get initial memory usage
@@ -357,7 +357,7 @@ class TestMemoryUsagePatterns:
 
         # Import gc if available
         try:
-            import gc  # noqa: PLC0415
+            import gc
         except ImportError:
             gc = None
 
@@ -394,7 +394,7 @@ class TestMemoryUsagePatterns:
 
     def test_service_cache_memory_efficiency(self, benchmark):
         """Benchmark service cache memory efficiency."""
-        from functools import lru_cache  # noqa: PLC0415
+        from functools import lru_cache
 
         @lru_cache(maxsize=1000)
         def cached_service_operation(data_id):

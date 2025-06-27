@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """System monitoring and metrics collection during stress testing.
 
 This module implements comprehensive monitoring of system resources,
@@ -11,14 +5,17 @@ application metrics, and performance indicators during stress tests
 to identify bottlenecks and performance degradation patterns.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
+import concurrent.futures
 import contextlib
 import gc
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import logging
+import os
+import random
 import statistics
+import tempfile
 import threading
-import time  # noqa: PLC0415
+import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any
@@ -27,6 +24,12 @@ import psutil
 import pytest
 
 from ..conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -509,8 +512,6 @@ class TestSystemMonitoring:
                                 return sum(i**2 for i in range(100000))
 
                             # Run CPU work in thread pool
-                            import concurrent.futures  # noqa: PLC0415
-
                             with concurrent.futures.ThreadPoolExecutor(
                                 max_workers=2
                             ) as executor:
@@ -520,8 +521,6 @@ class TestSystemMonitoring:
 
                         elif stress_type == "io":
                             # I/O stress (file operations)
-                            import tempfile  # noqa: PLC0415
-
                             with tempfile.NamedTemporaryFile(delete=True) as tmp:
                                 data = b"x" * (1024 * 1024)  # 1MB
                                 tmp.write(data)
@@ -550,14 +549,17 @@ class TestSystemMonitoring:
                             "cpu_tasks", len(self.cpu_intensive_tasks)
                         )
 
+                    except Exception as e:
+                        # Handle stress operation errors
+                        logger.warning(f"Stress operation failed: {e}")
+                        raise
+                    else:
                         return {
                             "status": "stress_applied",
                             "stress_type": stress_type,
                             "response_time": response_time,
                             "call_count": self.call_count,
                         }
-
-                    except Exception as e:
                         response_time = time.perf_counter() - start_time
                         metrics_collector.record_response_time(response_time)
                         metrics_collector.record_error(type(e).__name__)
@@ -728,8 +730,6 @@ class TestSystemMonitoring:
                     current_latency = self.base_latency * self.degradation_factor
 
                     # Add some randomness
-                    import random  # noqa: PLC0415
-
                     actual_latency = current_latency * random.uniform(0.8, 1.5)
 
                     start_time = time.perf_counter()

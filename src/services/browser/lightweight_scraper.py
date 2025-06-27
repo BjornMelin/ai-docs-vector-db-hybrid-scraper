@@ -5,9 +5,9 @@ providing 5-10x performance improvement for static content by avoiding
 browser overhead for simple HTML pages.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
-import time  # noqa: PLC0415
+import time
 from typing import Any
 from urllib.parse import urljoin, urlparse
 

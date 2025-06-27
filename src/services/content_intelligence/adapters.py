@@ -4,7 +4,7 @@ This module provides automated site adaptation analysis and recommendations
 for improving extraction quality based on site patterns and characteristics.
 """
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 from urllib.parse import urlparse
 

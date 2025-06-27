@@ -1,6 +1,6 @@
 """Tests for EmbeddingManager benchmark loading functionality."""
 
-import json  # noqa: PLC0415
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -303,7 +303,7 @@ class TestEmbeddingManagerBenchmarks:
         manager.load_custom_benchmarks(benchmark_file)
 
         # Create mock text analysis
-        from src.services.embeddings.manager import TextAnalysis  # noqa: PLC0415
+        from src.services.embeddings.manager import TextAnalysis
 
         text_analysis = TextAnalysis(
             total_length=500,

@@ -4,7 +4,7 @@ This module tests that services are properly configured for each environment,
 including database connections, caching, monitoring, and external integrations.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from typing import Any
 
 import pytest

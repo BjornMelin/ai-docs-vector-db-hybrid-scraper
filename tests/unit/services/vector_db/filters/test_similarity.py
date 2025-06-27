@@ -1,6 +1,6 @@
 """Tests for the similarity threshold filter implementation."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest

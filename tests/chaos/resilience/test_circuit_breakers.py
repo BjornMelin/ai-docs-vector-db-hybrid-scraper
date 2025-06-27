@@ -4,9 +4,9 @@ This module implements comprehensive circuit breaker testing to validate
 failure detection, fast-fail behavior, and automatic recovery mechanisms.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import random
-import time  # noqa: PLC0415
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum

@@ -6,8 +6,8 @@ class TestError(Exception):
 
 """Comprehensive tests for Crawl4AI browser adapter."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

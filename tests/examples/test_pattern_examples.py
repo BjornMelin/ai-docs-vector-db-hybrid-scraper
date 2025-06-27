@@ -5,8 +5,8 @@ standardized patterns defined in the TEST_PATTERNS_STYLE_GUIDE.md.
 These examples serve as templates for consistent test implementation.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -287,7 +287,7 @@ class TestStandardizedPatterns:
         - Complex data construction
         - Fluent interface patterns
         """
-        from tests.utils.test_factories import TestDataBuilder  # noqa: PLC0415
+        from tests.utils.test_factories import TestDataBuilder
 
         # Arrange - Build complex test data
         complex_data = (
@@ -353,7 +353,7 @@ class TestStandardizedPatterns:
         Args:
             mock_accessibility_scanner: Mocked accessibility scanner
         """
-        from tests.utils.assertion_helpers import assert_accessibility_compliant  # noqa: PLC0415
+        from tests.utils.assertion_helpers import assert_accessibility_compliant
 
         # Arrange
         accessibility_report = {

@@ -1,6 +1,6 @@
 """Firecrawl provider using direct SDK."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from firecrawl import FirecrawlApp
@@ -159,7 +159,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             logger.info(f"Started crawl job {crawl_id} for {url}")
 
             # Poll for completion
-            import asyncio  # noqa: PLC0415
+            import asyncio
 
             max_attempts = 120  # 10 minutes with 5 second intervals
             for _ in range(max_attempts):
@@ -291,7 +291,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             await self.rate_limiter.acquire("firecrawl")
 
         # Run synchronous method in thread pool to avoid blocking
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._client.scrape_url, url, formats)
@@ -312,7 +312,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
         if self.rate_limiter:
             await self.rate_limiter.acquire("firecrawl")
 
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(

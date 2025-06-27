@@ -12,8 +12,8 @@ Performance Targets:
 Run with: pytest tests/benchmarks/ -k config --benchmark-only
 """
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
+import asyncio
+import json
 import tempfile
 from functools import lru_cache
 from pathlib import Path

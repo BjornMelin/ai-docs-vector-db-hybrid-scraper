@@ -1,6 +1,6 @@
 """Utility tools for MCP server."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
 
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register utility tools with the MCP server."""
 
-    from ..models.responses import ConfigValidationResponse, GenericDictResponse  # noqa: PLC0415
+    from ..models.responses import ConfigValidationResponse, GenericDictResponse
 
     @mcp.tool()
     async def estimate_costs(

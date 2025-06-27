@@ -5,8 +5,8 @@ resilience against split-brain conditions, consensus failures, and network
 isolation scenarios.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any

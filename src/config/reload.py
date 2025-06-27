@@ -5,12 +5,12 @@ validation, rollback, and observability integration. Supports signal-based and
 API-based configuration reloads with zero-downtime guarantees.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import signal
-import time  # noqa: PLC0415
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -212,7 +212,7 @@ class ConfigReloader:
         # Convert config to dict and create a stable hash
         config_dict = config.model_dump()
         config_json = json.dumps(config_dict, sort_keys=True, default=str)
-        import hashlib  # noqa: PLC0415
+        import hashlib
 
         return hashlib.sha256(config_json.encode()).hexdigest()[:16]
 

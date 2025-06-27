@@ -1,6 +1,6 @@
 """Unit tests for unified_mcp_server module."""
 
-import os  # noqa: PLC0415
+import os
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,7 +20,7 @@ sys.modules["src.services.vector_db"] = MagicMock()
 sys.modules["src.services.vector_db.search"] = MagicMock()
 
 # This is intentionally after mocks due to import dependencies
-from src import unified_mcp_server  # noqa: E402
+from src import unified_mcp_server
 
 
 class TestValidateStreamingConfig:
@@ -560,13 +560,13 @@ class TestServerConfiguration:
     def test_logging_configuration(self):
         """Test that logging is configured on import."""
         # Since we mocked the import, we just verify the mock exists
-        import sys  # noqa: PLC0415
+        import sys
 
         assert "src.services.logging_config" in sys.modules
 
     def test_sys_path_setup(self):
         """Test that sys path is properly configured."""
-        import sys  # noqa: PLC0415
+        import sys
 
         # The path should be in sys.path (added during import)
         # We can't assert exact position due to import order
@@ -579,9 +579,9 @@ class TestImportAndModuleStructure:
     def test_all_required_imports(self):
         """Test that all required modules can be imported."""
         # These imports should work without errors
-        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
-        from src.mcp_tools.tool_registry import register_all_tools  # noqa: PLC0415
-        from src.services.logging_config import configure_logging  # noqa: PLC0415
+        from src.infrastructure.client_manager import ClientManager
+        from src.mcp_tools.tool_registry import register_all_tools
+        from src.services.logging_config import configure_logging
 
         assert ClientManager is not None
         assert register_all_tools is not None
@@ -589,7 +589,7 @@ class TestImportAndModuleStructure:
 
     def test_fastmcp_import(self):
         """Test that FastMCP can be imported."""
-        from fastmcp import FastMCP  # noqa: PLC0415
+        from fastmcp import FastMCP
 
         assert FastMCP is not None
 

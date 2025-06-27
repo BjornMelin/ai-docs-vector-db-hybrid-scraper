@@ -792,7 +792,7 @@ class TestCLICommands:
             mock_create_embeddings.return_value = [0.1, 0.2, 0.3]
 
             # Create proper SearchResult objects
-            from src.manage_vector_db import SearchResult  # noqa: PLC0415
+            from src.manage_vector_db import SearchResult
 
             mock_search_results = [
                 SearchResult(

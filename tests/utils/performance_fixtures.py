@@ -1,8 +1,8 @@
 """Optimized performance fixtures for faster test execution."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import gc
-import time  # noqa: PLC0415
+import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 

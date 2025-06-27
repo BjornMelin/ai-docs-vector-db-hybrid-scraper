@@ -15,7 +15,7 @@ Comprehensive testing of:
 - Security edge cases
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

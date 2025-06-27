@@ -1,6 +1,6 @@
 """Query Processing Pipeline Factory for MCP server."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
 
 
@@ -52,7 +52,7 @@ class QueryProcessingPipelineFactory:
                     )
 
             # Create orchestrator
-            from ....services.query_processing.orchestrator import (  # noqa: PLC0415
+            from ....services.query_processing.orchestrator import (
                 QueryProcessingOrchestrator,
             )
 
@@ -69,7 +69,7 @@ class QueryProcessingPipelineFactory:
 
             return pipeline
 
-        except Exception as e:
+        except Exception:
             if ctx:
                 await ctx.error("Failed to initialize query processing pipeline")
             logger.exception("Pipeline initialization failed")

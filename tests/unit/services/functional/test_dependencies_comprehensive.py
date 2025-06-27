@@ -1,16 +1,10 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Comprehensive tests for function-based dependency injection.
 
 Tests modern dependency injection patterns with FastAPI integration,
 circuit breaker patterns, and async service lifecycle management.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -33,6 +27,12 @@ from src.services.functional.dependencies import (
     get_embedding_client,
     get_vector_db_client,
 )
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class TestDependencyLifecycle:
@@ -188,7 +188,8 @@ class TestFastAPIIntegration:
         app = FastAPI()
 
         @app.get("/config")
-        async def get_config_endpoint(config: Config = Depends(get_config)):
+        async def get_config_endpoint():
+            config = get_config()
             return {
                 "provider": config.embedding_provider.value
                 if hasattr(config, "embedding_provider")
@@ -212,10 +213,9 @@ class TestFastAPIIntegration:
         app.router.lifespan_context = lifespan
 
         @app.get("/health")
-        async def health_check(
-            config: Config = Depends(get_config),
-            _client_manager=Depends(get_client_manager),
-        ):
+        async def health_check():
+            config = get_config()
+            _client_manager = get_client_manager()
             return {"status": "healthy", "config_loaded": config is not None}
 
         # Test endpoint creation doesn't raise errors
@@ -231,7 +231,8 @@ class TestFastAPIIntegration:
         app.dependency_overrides[get_config] = mock_config
 
         @app.get("/test")
-        async def test_endpoint(config: Config = Depends(get_config)):
+        async def test_endpoint():
+            config = get_config()
             return {"is_mock": isinstance(config, MagicMock)}
 
         with TestClient(app) as client:
@@ -291,7 +292,9 @@ class TestCircuitBreakerIntegration:
             return f"success_call_{call_count}"
 
         # Trigger circuit opening
-        with pytest.raises(Exception):
+        from tests.unit.services.functional.test_dependencies_comprehensive import TestError
+        
+        with pytest.raises(TestError):
             await circuit_breaker.call(recovering_service)
 
         assert circuit_breaker.state.value == "open"
@@ -320,10 +323,9 @@ class TestCircuitBreakerIntegration:
         @app.post("/embeddings")
         async def generate_embeddings_endpoint():
             try:
-                result = await service_circuit_breaker.call(protected_embedding_service)
-                return result
+                return await service_circuit_breaker.call(protected_embedding_service)
             except CircuitBreakerError as e:
-                raise HTTPException(status_code=503, detail=str(e))
+                raise HTTPException(status_code=503, detail=str(e)) from e
 
         with TestClient(app) as client:
             # First call should succeed
@@ -332,7 +334,7 @@ class TestCircuitBreakerIntegration:
             assert "embeddings" in response.json()
 
 
-class TestServiceInteractions:  # noqa: PLC0415
+class TestServiceInteractions:
     """Test service interactions and composition."""
 
     @pytest.mark.asyncio

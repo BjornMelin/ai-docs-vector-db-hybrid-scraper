@@ -4,9 +4,9 @@ This module implements service-level fault injection to test resilience
 against service failures, resource exhaustion, and degraded performance.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import random
-import time  # noqa: PLC0415
+import time
 from collections import Counter
 from typing import Any
 

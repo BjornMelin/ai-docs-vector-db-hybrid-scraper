@@ -1,7 +1,7 @@
 """Tests for enhanced configuration error handling."""
 
-import json  # noqa: PLC0415
-import time  # noqa: PLC0415
+import json
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -87,9 +87,8 @@ class TestErrorContext:
 
     def test_error_context_with_exception(self, caplog):
         """Test ErrorContext when exception occurs."""
-        with pytest.raises(ValueError):
-            with ErrorContext("failing_operation", test_id=123):
-                raise ValueError("test error")
+        with pytest.raises(ValueError), ErrorContext("failing_operation", test_id=123):
+            raise ValueError("test error")
 
         # Check that error was logged with context
         assert "Error in failing_operation" in caplog.text
@@ -503,7 +502,7 @@ class TestFileWatchingErrorHandling:
 
     def test_file_watch_error_callback(self, tmp_path):
         """Test file watch error callback."""
-        from src.config.config_manager import (  # noqa: PLC0415
+        from src.config.config_manager import (
             ConfigFileWatcher as EnhancedConfigFileWatcher,
         )
 

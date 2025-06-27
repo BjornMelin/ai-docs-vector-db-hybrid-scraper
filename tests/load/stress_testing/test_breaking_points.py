@@ -11,10 +11,10 @@ gradual load increases, sudden traffic spikes, and performance degradation
 analysis with recovery time measurement.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import statistics
-import time  # noqa: PLC0415
+import time
 from dataclasses import dataclass, field
 
 import pytest
@@ -223,7 +223,7 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                import random  # noqa: PLC0415
+                import random
 
                 if random.random() < error_probability:
                     raise TestError(f"Service overloaded at {current_users} users")

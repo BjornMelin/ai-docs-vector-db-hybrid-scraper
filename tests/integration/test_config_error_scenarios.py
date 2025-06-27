@@ -1,9 +1,9 @@
 """Integration tests for configuration error handling scenarios."""
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
+import asyncio
+import json
 import signal
-import time  # noqa: PLC0415
+import time
 from unittest.mock import patch
 
 import pytest
@@ -333,7 +333,7 @@ class TestEnvironmentSpecificErrors:
         if not hasattr(signal, "SIGHUP"):
             pytest.skip("SIGHUP not available on this platform")
 
-        from src.config.reload import ConfigReloader  # noqa: PLC0415
+        from src.config.reload import ConfigReloader
 
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
@@ -412,7 +412,7 @@ class TestAsyncErrorPropagation:
     @pytest.mark.asyncio
     async def test_async_error_context_preservation(self, config_dir):
         """Test that error context is preserved across async boundaries."""
-        from src.config.error_handling import ConfigLoadError  # noqa: PLC0415
+        from src.config.error_handling import ConfigLoadError
 
         config_file = config_dir / "missing.json"
 

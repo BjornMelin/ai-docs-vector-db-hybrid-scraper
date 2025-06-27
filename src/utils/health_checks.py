@@ -4,7 +4,7 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import httpx
 from openai import OpenAI
 from qdrant_client import QdrantClient

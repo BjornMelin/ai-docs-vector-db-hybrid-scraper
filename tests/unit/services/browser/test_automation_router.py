@@ -1,6 +1,6 @@
 """Comprehensive tests for AutomationRouter with Pydantic configuration."""
 
-import json  # noqa: PLC0415
+import json
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest

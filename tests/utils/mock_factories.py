@@ -1,18 +1,12 @@
-class CustomError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Mock factories for creating test doubles and stubs.
 
 This module provides factory functions and classes for creating consistent,
 configurable mock objects that simulate the behavior of real system components.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import random
-import time  # noqa: PLC0415
+import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -20,6 +14,12 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 from .data_generators import TestDataGenerator
+
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class MockFactory:
@@ -337,7 +337,7 @@ def create_mock_web_scraper(
     return mock_scraper
 
 
-def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) -> Mock:  # noqa: PLC0415
+def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) -> Mock:
     """Create a mock cache service.
 
     Args:

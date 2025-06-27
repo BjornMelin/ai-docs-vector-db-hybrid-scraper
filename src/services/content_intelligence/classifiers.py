@@ -5,7 +5,7 @@ using local models to avoid external API dependencies. It combines rule-based
 classification with semantic similarity for accurate content type detection.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
 from typing import Any
 
@@ -660,7 +660,7 @@ class ContentClassifier:
             float: Cosine similarity between vectors
         """
         try:
-            import math  # noqa: PLC0415
+            import math
 
             # Calculate dot product
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))

@@ -5,7 +5,7 @@ users through setting up their AI Documentation Scraper instance.
 Modern template-driven approach with real-time validation.
 """
 
-import json  # noqa: PLC0415
+import json
 from pathlib import Path
 from typing import Any
 
@@ -494,7 +494,7 @@ def setup(
 
         if validate_choice:
             try:
-                from .config import (  # noqa: PLC0415 - avoid circular import
+                from .config import (
                     validate_config,
                 )
 

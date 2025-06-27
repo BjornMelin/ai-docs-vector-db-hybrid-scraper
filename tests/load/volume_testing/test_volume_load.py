@@ -10,10 +10,10 @@ This module implements volume tests to validate system behavior
 with large datasets, bulk operations, and high-throughput scenarios.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import random
-import time  # noqa: PLC0415
+import time
 from typing import Dict
 
 import pytest
@@ -400,7 +400,7 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        import random  # noqa: PLC0415
+                        import random
 
                         if random.random() < 0.01:  # 1% failure rate
                             raise TestError(f"Processing failed for {doc['url']}")

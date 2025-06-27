@@ -5,7 +5,7 @@ related term discovery, semantic expansion, and intelligent query reformulation 
 improve search recall and relevance.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
 from enum import Enum
 from typing import Any
@@ -209,7 +209,7 @@ class QueryExpansionService:
         Returns:
             QueryExpansionResult with expanded terms and metadata
         """
-        import time  # noqa: PLC0415
+        import time
 
         start_time = time.time()
 

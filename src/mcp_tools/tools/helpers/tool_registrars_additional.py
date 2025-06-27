@@ -1,6 +1,6 @@
 """Additional tool registration functions for query processing MCP tools."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -118,7 +118,7 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
             return {"status": "success", "message": "Pipeline warmed up successfully"}
 
-        except Exception as e:
+        except Exception:
             await ctx.warning("Pipeline warm-up {request_id} had issues")
             logger.warning("Pipeline warm-up failed")
             return {

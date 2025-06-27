@@ -1,6 +1,6 @@
 """Comprehensive tests for the personalized ranking service."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 

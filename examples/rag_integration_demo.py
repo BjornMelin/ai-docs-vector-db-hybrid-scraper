@@ -14,8 +14,8 @@ Usage:
     python examples/rag_integration_demo.py
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 
 # Add the src directory to the path
 import sys

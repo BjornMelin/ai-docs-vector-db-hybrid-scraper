@@ -5,11 +5,11 @@ implementing user behavior scenarios, performance metrics collection, and
 integration with the existing test infrastructure.
 """
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import logging
+import os
 import random
-import time  # noqa: PLC0415
+import time
 from typing import Any
 
 from locust import HttpUser, TaskSet, between, events, task
@@ -339,8 +339,8 @@ def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
     Returns:
         Configured Locust environment
     """
-    from locust.env import Environment  # noqa: PLC0415
-    from locust.log import setup_logging  # noqa: PLC0415
+    from locust.env import Environment
+    from locust.log import setup_logging
 
     setup_logging("INFO", None)
 

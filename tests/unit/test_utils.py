@@ -1,6 +1,6 @@
 """Unit tests for core utils module."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from unittest.mock import patch
 
 import click
@@ -284,7 +284,7 @@ class TestModuleExports:
 
     def test_all_exports(self):
         """Test that __all__ contains expected functions."""
-        from src import utils  # noqa: PLC0415
+        from src import utils
 
         assert hasattr(utils, "__all__")
         assert "async_command" in utils.__all__
@@ -292,7 +292,7 @@ class TestModuleExports:
 
     def test_exported_functions_exist(self):
         """Test that all exported functions exist."""
-        from src import utils  # noqa: PLC0415
+        from src import utils
 
         for export in utils.__all__:
             assert hasattr(utils, export)

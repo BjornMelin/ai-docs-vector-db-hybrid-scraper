@@ -10,7 +10,7 @@ Philosophy: Use existing, proven security infrastructure rather than building ML
 """
 
 import importlib.util
-import logging  # noqa: PLC0415
+import logging
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
@@ -176,7 +176,7 @@ class MLSecurityValidator:
 
         try:
             # Use pip-audit if available
-            result = subprocess.run(  # noqa: S603,S607 - trusted security tool
+            result = subprocess.run(
                 ["pip-audit", "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -185,7 +185,7 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json  # noqa: PLC0415
+                import json
 
                 audit_data = json.loads(result.stdout)
                 vulnerabilities = audit_data.get("vulnerabilities", [])
@@ -249,7 +249,7 @@ class MLSecurityValidator:
         """
         try:
             # Try trivy first
-            result = subprocess.run(  # noqa: S603,S607 - trusted security tool
+            result = subprocess.run(
                 [
                     "trivy",
                     "image",
@@ -267,7 +267,7 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json  # noqa: PLC0415
+                import json
 
                 scan_data = json.loads(result.stdout)
 

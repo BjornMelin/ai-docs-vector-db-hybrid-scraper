@@ -5,8 +5,8 @@ connection pooling, health monitoring, and integration with configuration system
 Uses property-based testing for edge cases and modern async testing patterns.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from contextlib import suppress
 from unittest.mock import AsyncMock, Mock, patch
 

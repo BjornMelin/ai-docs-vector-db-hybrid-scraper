@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Tests for HyDE query processing engine."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -17,6 +11,12 @@ from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptCo
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 from src.services.vector_db.service import QdrantService
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class TestHyDEQueryEngine:

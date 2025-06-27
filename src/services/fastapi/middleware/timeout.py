@@ -4,9 +4,9 @@ This middleware provides request timeouts and circuit breaker patterns
 to prevent cascading failures and improve system resilience.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum

@@ -1,6 +1,6 @@
 """Tests for EnhancedAutomationRouter with rate limiting integration."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
 from unittest.mock import AsyncMock, Mock, patch
 

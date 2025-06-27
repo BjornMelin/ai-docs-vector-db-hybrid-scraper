@@ -478,7 +478,7 @@ class TestContractPerformanceValidation:
         self, _api_contract_validator, json_schema_validator
     ):
         """Test performance of contract validation at scale."""
-        import time  # noqa: PLC0415
+        import time
 
         # Setup large-scale contract
         large_schema = {
@@ -517,8 +517,8 @@ class TestContractPerformanceValidation:
     @pytest.mark.integration
     def test_concurrent_contract_validation(self, api_contract_validator):
         """Test concurrent contract validation scenarios."""
-        import asyncio  # noqa: PLC0415
-        import time  # noqa: PLC0415
+        import asyncio
+        import time
 
         # Setup contract
         contract = {

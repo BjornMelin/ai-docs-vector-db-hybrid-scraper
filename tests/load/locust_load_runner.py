@@ -5,11 +5,11 @@ with user behavior scenarios, performance metrics collection, and
 integration with CI/CD pipelines.
 """
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import logging
+import os
 import random
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 from typing import Any, List
 
@@ -715,8 +715,8 @@ def create_load_test_environment(
     Returns:
         Configured Locust environment
     """
-    from locust.env import Environment  # noqa: PLC0415
-    from locust.log import setup_logging  # noqa: PLC0415
+    from locust.env import Environment
+    from locust.log import setup_logging
 
     setup_logging("INFO", None)
 

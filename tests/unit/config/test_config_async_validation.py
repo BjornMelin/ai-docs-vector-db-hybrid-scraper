@@ -3,7 +3,7 @@
 Tests async configuration loading and validation patterns.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 
 import pytest
 
@@ -201,7 +201,7 @@ class TestAsyncConfigurationLoading:
             data = config.model_dump(mode="json")  # Use JSON mode for serialization
 
             if format_type == "json":
-                import json  # noqa: PLC0415
+                import json
 
                 return json.dumps(data, indent=2)
             elif format_type == "dict":

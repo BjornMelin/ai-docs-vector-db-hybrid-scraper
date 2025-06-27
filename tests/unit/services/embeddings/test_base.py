@@ -414,7 +414,7 @@ class TestProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_provider_usage(self):
         """Test concurrent usage of provider."""
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         provider = ConcreteEmbeddingProvider()
 

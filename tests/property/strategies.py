@@ -117,7 +117,7 @@ def http_urls(draw, schemes: List[str] | None = None) -> str:
 @st.composite
 def file_paths(draw, relative: bool = False) -> Path:
     """Generate valid file paths."""
-    import tempfile  # noqa: PLC0415
+    import tempfile
 
     components = draw(
         st.lists(

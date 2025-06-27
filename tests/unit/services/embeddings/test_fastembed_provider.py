@@ -673,7 +673,7 @@ class TestFastEmbedProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_embedding_generation(self):
         """Test concurrent embedding generation."""
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         provider = FastEmbedProvider()
         provider._initialized = True

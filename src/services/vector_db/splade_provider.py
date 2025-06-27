@@ -4,7 +4,7 @@ This module implements SPLADE (Sparse Lexical And Expansion model for Passage re
 for generating high-quality sparse vectors that combine keyword matching with semantic expansion.
 """
 
-import logging  # noqa: PLC0415
+import logging
 import re
 from typing import Any
 

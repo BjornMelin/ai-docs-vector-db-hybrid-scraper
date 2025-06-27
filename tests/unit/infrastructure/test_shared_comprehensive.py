@@ -1,7 +1,7 @@
 """Comprehensive tests for infrastructure shared module to improve coverage."""
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 
 import pytest
 

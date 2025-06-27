@@ -282,7 +282,7 @@ class TestRAGIntegration:
 
     def test_rag_config_integration(self):
         """Test RAG configuration integration with core config."""
-        from src.config import get_config  # noqa: PLC0415
+        from src.config import get_config
 
         config = get_config()
 

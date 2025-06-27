@@ -4,8 +4,8 @@ This module contains comprehensive API workflow tests that validate
 complete API client journeys and endpoint interactions.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -296,7 +296,7 @@ class TestAPIWorkflowValidation:
             )
 
             assert "access_token" in login_response, "Login should return access token"
-            assert login_response["token_type"] == "bearer", (  # noqa: S105
+            assert login_response["token_type"] == "bearer", (
                 "Token type should be bearer"
             )
 

@@ -1,6 +1,6 @@
 """Crawl manager with 5-tier browser automation via UnifiedBrowserManager."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
 
 from src.config import Config
@@ -48,7 +48,7 @@ class CrawlManager:
             return
 
         try:
-            from ..browser.unified_manager import UnifiedBrowserManager  # noqa: PLC0415
+            from ..browser.unified_manager import UnifiedBrowserManager
 
             self._unified_browser_manager = UnifiedBrowserManager(self.config)
             await self._unified_browser_manager.initialize()
@@ -108,7 +108,7 @@ class CrawlManager:
 
         try:
             # Create unified request
-            from ..browser.unified_manager import UnifiedScrapingRequest  # noqa: PLC0415
+            from ..browser.unified_manager import UnifiedScrapingRequest
 
             request = UnifiedScrapingRequest(
                 url=url,

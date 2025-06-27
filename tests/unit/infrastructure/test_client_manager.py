@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Unit tests for ClientManager with proper dependency injection patterns.
 
 This test module demonstrates modern testing patterns including:
@@ -13,8 +7,8 @@ This test module demonstrates modern testing patterns including:
 - Clear test organization and naming
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
@@ -22,10 +16,16 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config import Config
+from src.config import Config, SQLAlchemyConfig
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 # Abstract interfaces for better testability
@@ -282,7 +282,7 @@ class TestCircuitBreaker:
         assert circuit_breaker._state == ClientState.HEALTHY
 
 
-class TestClientManagerInitialization:  # noqa: PLC0415
+class TestClientManagerInitialization:
     """Test ClientManager initialization and singleton pattern."""
 
     @pytest.mark.asyncio
@@ -395,7 +395,7 @@ class TestClientManagerHealthChecks:
 
     @pytest.mark.asyncio
     async def test_check_qdrant_health_success(
-        self, client_manager_with_stub, stub_factory
+        self, client_manager_with_stub, _stub_factory
     ):
         """Test successful Qdrant health check."""
         # Create client first
@@ -411,7 +411,7 @@ class TestClientManagerHealthChecks:
 
     @pytest.mark.asyncio
     async def test_check_qdrant_health_failure(
-        self, client_manager_with_stub, stub_factory
+        self, client_manager_with_stub, _stub_factory
     ):
         """Test failed Qdrant health check."""
         # Create client first
@@ -629,7 +629,6 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_get_database_manager_creation(self):
         """Test creation of database manager."""
-        from src.config import SQLAlchemyConfig
 
         config = Config()
         config.database = SQLAlchemyConfig(
@@ -663,7 +662,6 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_in_managed_client(self):
         """Test database manager through managed_client interface."""
-        from src.config import SQLAlchemyConfig
 
         config = Config()
         config.database = SQLAlchemyConfig(
@@ -686,7 +684,6 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_cleanup(self):
         """Test database manager is included in cleanup."""
-        from src.config import SQLAlchemyConfig
 
         config = Config()
         config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
@@ -706,7 +703,6 @@ class TestClientManagerDatabaseIntegration:
     @pytest.mark.asyncio
     async def test_database_manager_enterprise_creation(self):
         """Test database manager uses enterprise DatabaseManager with monitoring."""
-        from src.config import SQLAlchemyConfig
 
         config = Config()
         config.database = SQLAlchemyConfig(

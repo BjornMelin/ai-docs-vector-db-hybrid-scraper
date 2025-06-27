@@ -4,8 +4,8 @@ This module tests API endpoints for security vulnerabilities including
 authentication bypass, authorization flaws, and injection attacks.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from typing import Any, Dict
 
 import pytest
@@ -173,7 +173,7 @@ class TestAPISecurity:
         """Test authorization bypass techniques."""
 
         # Get regular user token (simulated)
-        user_token = "user_token_123"
+        user_token = "user_token_123"  # test token, not real password
 
         # Test privilege escalation attempts
         escalation_attempts = [

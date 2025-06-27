@@ -4,7 +4,7 @@ This module contains critical functionality verification tests that run
 immediately after deployment to ensure the system is functioning correctly.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 from typing import Any
 
 import pytest

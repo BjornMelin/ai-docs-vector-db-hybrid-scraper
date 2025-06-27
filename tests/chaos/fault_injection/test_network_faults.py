@@ -10,8 +10,8 @@ This module implements network-level fault injection to test system resilience
 against network failures, timeouts, and connectivity issues.
 """
 
-import asyncio  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import time
 from unittest.mock import AsyncMock
 
 import pytest
