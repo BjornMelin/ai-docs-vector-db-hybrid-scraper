@@ -52,7 +52,7 @@ class TestInfrastructureAsCode:
 
         # Write Terraform configuration
         terraform_file = temp_deployment_dir / "main.tf.json"
-        with open(terraform_file, "w") as f:
+        with terraform_file.open("w") as f:
             json.dump(terraform_config, f, indent=2)
 
         # Validate configuration
@@ -106,7 +106,7 @@ class TestInfrastructureAsCode:
         compose_file = temp_deployment_dir / "docker-compose.yml"
         import yaml
 
-        with open(compose_file, "w") as f:
+        with compose_file.open("w") as f:
             yaml.safe_dump(compose_config, f, default_flow_style=False)
 
         # Validate configuration
@@ -191,10 +191,10 @@ class TestInfrastructureAsCode:
 
         import yaml
 
-        with open(namespace_file, "w") as f:
+        with namespace_file.open("w") as f:
             yaml.safe_dump(namespace_manifest, f, default_flow_style=False)
 
-        with open(deployment_file, "w") as f:
+        with deployment_file.open("w") as f:
             yaml.safe_dump(deployment_manifest, f, default_flow_style=False)
 
         # Validate manifests
@@ -633,7 +633,7 @@ class TerraformValidator:
 
     def validate_configuration(self, terraform_file: Path) -> dict[str, Any]:
         """Validate Terraform configuration file."""
-        with open(terraform_file) as f:
+        with terraform_file.open() as f:
             config = json.load(f)
 
         # Validate basic structure
@@ -663,7 +663,7 @@ class DockerComposeValidator:
         """Validate Docker Compose configuration."""
         import yaml
 
-        with open(compose_file) as f:
+        with compose_file.open() as f:
             config = yaml.safe_load(f)
 
         # Validate version
@@ -701,7 +701,7 @@ class KubernetesValidator:
         all_valid = True
 
         for manifest_file in manifest_files:
-            with open(manifest_file) as f:
+            with manifest_file.open() as f:
                 manifest = yaml.safe_load(f)
 
             manifest_validation = self._validate_single_manifest(manifest)

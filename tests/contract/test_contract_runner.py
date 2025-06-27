@@ -139,12 +139,12 @@ class ContractTestRunner:
             ],
         }
 
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             json.dump(report_data, f, indent=2)
 
     def load_report(self, input_path: Path) -> ContractTestReport:
         """Load test report from file."""
-        with open(input_path) as f:
+        with input_path.open() as f:
             data = json.load(f)
 
         metadata = data["metadata"]

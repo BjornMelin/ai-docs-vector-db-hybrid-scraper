@@ -4,13 +4,16 @@ This module provides the core testing infrastructure with standardized fixtures,
 configuration, and utilities that follow 2025 testing best practices.
 """
 
+import asyncio
 import os
+import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -49,8 +52,18 @@ if _test_env_path.exists():
     load_dotenv(_test_env_path, override=True)
 
 
-# Import cross-platform utilities
+# Import optional dependencies and core modules
 try:
+    from src.config import SQLAlchemyConfig
+    from src.infrastructure.database.adaptive_config import (
+        AdaptationStrategy,
+        AdaptiveConfigManager,
+    )
+    from src.infrastructure.database.connection_affinity import (
+        ConnectionAffinityManager,
+    )
+    from src.infrastructure.database.load_monitor import LoadMetrics
+    from src.infrastructure.shared import CircuitBreaker, ClientState
     from src.utils.cross_platform import (
         get_playwright_browser_path,
         is_ci_environment,
@@ -461,9 +474,6 @@ def _check_browser_availability() -> bool:
         bool: True if browsers are available, False otherwise
     """
     try:
-        import subprocess
-        import sys
-
         # Try to check if Playwright browsers are installed
         result = subprocess.run(
             [
@@ -491,8 +501,6 @@ def _check_browser_availability() -> bool:
 @pytest.fixture()
 def enhanced_db_config():
     """Enhanced SQLAlchemy configuration for testing."""
-    from src.config import SQLAlchemyConfig
-
     return SQLAlchemyConfig(
         database_url="sqlite+aiosqlite:///:memory:",
         pool_size=5,
@@ -513,10 +521,6 @@ def enhanced_db_config():
 @pytest.fixture()
 def mock_multi_level_circuit_breaker():
     """Mock simple CircuitBreaker for testing (renamed for compatibility)."""
-    import asyncio
-    from unittest.mock import AsyncMock, Mock
-
-    from src.infrastructure.shared import CircuitBreaker, ClientState
 
     # Create a properly spec'd mock with all expected attributes
     breaker = Mock(spec=CircuitBreaker)
@@ -560,11 +564,6 @@ def mock_multi_level_circuit_breaker():
 @pytest.fixture()
 def mock_connection_affinity_manager():
     """Mock ConnectionAffinityManager for testing."""
-    from unittest.mock import AsyncMock, Mock
-
-    from src.infrastructure.database.connection_affinity import (
-        ConnectionAffinityManager,
-    )
 
     # Create a properly spec'd mock
     manager = Mock(spec=ConnectionAffinityManager)
@@ -631,12 +630,6 @@ def mock_connection_affinity_manager():
 @pytest.fixture()
 def mock_adaptive_config_manager():
     """Mock AdaptiveConfigManager for testing."""
-    from unittest.mock import AsyncMock, Mock
-
-    from src.infrastructure.database.adaptive_config import (
-        AdaptationStrategy,
-        AdaptiveConfigManager,
-    )
 
     # Create a properly spec'd mock
     manager = Mock(spec=AdaptiveConfigManager)
@@ -718,9 +711,6 @@ def mock_adaptive_config_manager():
 @pytest.fixture()
 def sample_load_metrics():
     """Sample load metrics for testing."""
-    import time
-
-    from src.infrastructure.database.load_monitor import LoadMetrics
 
     return [
         LoadMetrics(

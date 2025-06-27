@@ -10,8 +10,12 @@ Run with: pytest tests/benchmarks/ --benchmark-only
 """
 
 import asyncio
+import logging
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import text
 
 from src.config.core import Config

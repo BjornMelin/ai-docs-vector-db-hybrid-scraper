@@ -5,11 +5,15 @@ system resilience against failure propagation and system-wide outages.
 """
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceState(Enum):

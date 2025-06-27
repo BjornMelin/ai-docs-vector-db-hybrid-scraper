@@ -218,14 +218,13 @@ class ConfigurationValidator:
 
         for setting, (min_val, max_val) in numeric_settings.items():
             value = qdrant_config.get(setting)
-            if value is not None:
-                if not isinstance(value, int) or value < min_val or value > max_val:
-                    self.errors.append(
-                        ValidationError(
-                            path=f"qdrant.{setting}",
-                            message=f"Qdrant {setting} must be an integer between {min_val} and {max_val}",
-                        )
+            if value is not None and (not isinstance(value, int) or value < min_val or value > max_val):
+                self.errors.append(
+                    ValidationError(
+                        path=f"qdrant.{setting}",
+                        message=f"Qdrant {setting} must be an integer between {min_val} and {max_val}",
                     )
+                )
 
     def _validate_openai_config(self, openai_config: Dict[str, Any]) -> None:
         """Validate OpenAI configuration"""

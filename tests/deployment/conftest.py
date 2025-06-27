@@ -195,7 +195,7 @@ def mock_infrastructure_config(temp_deployment_dir: Path) -> dict[str, Any]:
 
     # Write config to file
     config_file = temp_deployment_dir / "infrastructure.json"
-    with open(config_file, "w") as f:
+    with config_file.open("w") as f:
         json.dump(config, f, indent=2)
 
     return config

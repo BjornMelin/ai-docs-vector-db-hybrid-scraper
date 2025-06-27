@@ -5,12 +5,18 @@ against service failures, resource exhaustion, and degraded performance.
 """
 
 import asyncio
+import random
 import time
+from collections import Counter
 from typing import Any
 
 import pytest
 
 from tests.chaos.conftest import FailureType
+
+
+class AuthenticationError(Exception):
+    """Custom authentication error for testing."""
 
 
 @pytest.mark.chaos
@@ -19,7 +25,7 @@ class TestServiceFaultInjection:
     """Test service-level fault injection scenarios."""
 
     async def test_service_unavailable_injection(
-        self, fault_injector, mock_resilient_service
+        self, fault_injector, _mock_resilient_service
     ):
         """Test service unavailable fault injection."""
         # Inject service unavailable fault
@@ -64,7 +70,7 @@ class TestServiceFaultInjection:
             fault_injector.remove_fault(fault_id)
 
     async def test_database_connection_failure(
-        self, _fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test database connection failure scenarios."""
         # Mock database service
@@ -76,16 +82,14 @@ class TestServiceFaultInjection:
             db_connection_count += 1
 
             if db_connection_count > max_connections:
-                raise Exception("Database connection pool exhausted")
+                raise ConnectionError("Database connection pool exhausted")
 
             # Simulate database operation
             await asyncio.sleep(0.01)
             return {"result": "database_data"}
 
         # Test connection pool exhaustion
-        tasks = []
-        for _i in range(5):  # Exceed max connections
-            tasks.append(database_operation())
+        tasks = [database_operation() for _i in range(5)]  # Exceed max connections
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -107,18 +111,18 @@ class TestServiceFaultInjection:
 
         for failure_mode in auth_failure_modes:
 
-            async def auth_operation():
-                if failure_mode == "token_expired":
-                    raise Exception("Authentication token has expired")
-                elif failure_mode == "invalid_credentials":
-                    raise Exception("Invalid authentication credentials")
-                elif failure_mode == "auth_service_down":
+            async def auth_operation(mode=failure_mode):
+                if mode == "token_expired":
+                    raise AuthenticationError("Authentication token has expired")
+                elif mode == "invalid_credentials":
+                    raise AuthenticationError("Invalid authentication credentials")
+                elif mode == "auth_service_down":
                     raise ConnectionError("Authentication service unavailable")
-                elif failure_mode == "rate_limit_exceeded":
-                    raise Exception("Authentication rate limit exceeded")
+                elif mode == "rate_limit_exceeded":
+                    raise AuthenticationError("Authentication rate limit exceeded")
 
             # Test each failure mode
-            with pytest.raises(Exception):
+            with pytest.raises((AuthenticationError, ConnectionError)):
                 await auth_operation()
 
     async def test_cache_service_failures(self, _fault_injector, _resilience_validator):
