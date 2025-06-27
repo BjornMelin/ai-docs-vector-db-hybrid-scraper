@@ -4,10 +4,14 @@ This test suite provides complete coverage for the utils package __init__.py
 including both normal and fallback scenarios.
 """
 
+import importlib.util
 import sys
 from unittest.mock import Mock, patch
 
 import pytest
+
+import src.utils as utils_package
+from src.utils.imports import resolve_imports, setup_import_paths
 
 
 class TestUtilsPackageInit:
@@ -15,9 +19,6 @@ class TestUtilsPackageInit:
 
     def test_normal_imports_available(self):
         """Test that normal imports are available."""
-        # Import the utils package fresh to test normal behavior
-        import src.utils as utils_package
-
         # Test that the main functions are available
         assert hasattr(utils_package, "resolve_imports")
         assert hasattr(utils_package, "setup_import_paths")
@@ -32,7 +33,6 @@ class TestUtilsPackageInit:
 
     def test_all_exports_defined(self):
         """Test that __all__ contains expected exports."""
-        import src.utils as utils_package
 
         expected_exports = [
             "async_command",
@@ -50,9 +50,6 @@ class TestUtilsPackageInit:
 
     def test_imports_from_local_modules(self):
         """Test that imports from local modules work correctly."""
-        import src.utils as utils_package
-        from src.utils.imports import resolve_imports, setup_import_paths
-
         # Verify these are the same functions
         assert utils_package.resolve_imports is resolve_imports
         assert utils_package.setup_import_paths is setup_import_paths
@@ -71,7 +68,7 @@ class TestUtilsPackageFallback:
                 del sys.modules[module_name]
 
             # Re-import to trigger fallback behavior
-            import src.utils as utils_package
+            import src.utils as utils_package  # noqa: PLC0415
 
             # Test that fallback functions exist and raise ImportError
             assert hasattr(utils_package, "async_command")

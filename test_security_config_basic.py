@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: S101  # assert statements are expected in test files
 """Simple test script to verify enhanced security configuration management functionality.
 
 This script demonstrates and validates the core features of the enhanced security
@@ -131,7 +132,7 @@ def test_secure_config_manager_basic():
 
             logger.info("✓ SecureConfigManager basic functionality tests passed")
 
-        except ImportError as e:
+        except ImportError as e:  # noqa: F841
             if "SecurityValidator" in str(e):
                 logger.warning(
                     "⚠ SecurityValidator import failed (expected in test environment)"
@@ -263,7 +264,7 @@ def main():
 
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: F841
         logger.exception(f"Tests failed with error: {e}")
         import traceback
 
