@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
@@ -242,9 +243,9 @@ class TestBulkEmbedderExtended:
 
         # Mock process_url to raise exception
         async def mock_process(url):
+            if "exception" in url:
                 raise TestError("Processing failed")
-                raise TestError("Processing failed")
-            return {"url": url, "success": True, "chunks": 2, "error": None} # noqa: PLC0415
+            return {"url": url, "success": True, "chunks": 2, "error": None}
 
         with (
             patch.object(embedder, "process_url", side_effect=mock_process),

@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Comprehensive tests for function-based dependency injection.
 
@@ -285,7 +286,7 @@ class TestCircuitBreakerIntegration:
         async def recovering_service():
             nonlocal call_count
             call_count += 1
-                raise TestError("Initial failure") # noqa: PLC0415
+            if call_count == 1:
                 raise TestError("Initial failure")
             return f"success_call_{call_count}"
 
@@ -331,7 +332,7 @@ class TestCircuitBreakerIntegration:
             assert "embeddings" in response.json()
 
 
-class TestServiceInteractions: # noqa: PLC0415
+class TestServiceInteractions:  # noqa: PLC0415
     """Test service interactions and composition."""
 
     @pytest.mark.asyncio

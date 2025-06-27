@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Tests for crawling manager module."""
 
@@ -28,9 +29,9 @@ class MockCrawlProvider(CrawlProvider):
         self.crawl_calls = []
 
     async def initialize(self) -> None:
+        if self.should_fail:
             raise TestError(f"Failed to initialize {self.name}")
-            raise TestError(f"Failed to initialize {self.name}")
-        self.initialized = True # noqa: PLC0415
+        self.initialized = True
 
     async def cleanup(self) -> None:
         self.cleanup_called = True

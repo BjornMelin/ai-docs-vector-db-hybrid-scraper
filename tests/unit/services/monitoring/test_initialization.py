@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Comprehensive tests for monitoring system initialization."""
 
@@ -288,7 +289,7 @@ class TestBackgroundMonitoringTasks:
         def side_effect():
             nonlocal call_count
             call_count += 1
-                raise TestError("Test error") # noqa: PLC0415
+            if call_count == 1:
                 raise TestError("Test error")
 
         mock_metrics_registry.update_system_metrics.side_effect = side_effect
@@ -309,7 +310,7 @@ class TestBackgroundMonitoringTasks:
         assert mock_metrics_registry.update_system_metrics.call_count >= 2
 
 
-class TestMonitoringIntegration: # noqa: PLC0415
+class TestMonitoringIntegration:  # noqa: PLC0415
     """Test monitoring system integration scenarios."""
 
     @pytest.mark.asyncio

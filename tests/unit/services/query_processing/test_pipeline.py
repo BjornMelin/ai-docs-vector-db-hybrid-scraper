@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Tests for query processing pipeline."""
 
@@ -156,10 +157,14 @@ class TestQueryProcessingPipeline:
         """Test batch processing with some failures."""
 
         # Make second request fail
+        call_count = 0
+
         def side_effect(request):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:  # Second request fails
                 raise TestError("Processing failed")
-                raise TestError("Processing failed")
-            return QueryProcessingResponse( # noqa: PLC0415
+            return QueryProcessingResponse(
                 success=True,
                 results=[],
                 total_results=0,

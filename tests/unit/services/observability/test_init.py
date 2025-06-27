@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Tests for OpenTelemetry initialization."""
 
@@ -173,9 +174,9 @@ class TestObservabilityInitialization:
         with patch("builtins.__import__") as mock_import:
 
             def side_effect(name, *args, **kwargs):
+                if "opentelemetry" in name:
                     raise TestError("Initialization failed")
-                    raise TestError("Initialization failed")
-                return __import__(name, *args, **kwargs) # noqa: PLC0415
+                return __import__(name, *args, **kwargs)
 
             mock_import.side_effect = side_effect
 

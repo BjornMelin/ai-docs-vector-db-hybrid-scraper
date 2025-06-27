@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Tests for Qdrant alias manager service."""
 
@@ -725,7 +726,7 @@ class TestQdrantAliasManager:
         mock_points = [MagicMock() for _ in range(10)]
         mock_client.scroll.side_effect = [(mock_points, None)]
 
-            raise TestError("Callback failed") # noqa: PLC0415
+        async def failing_callback(copied, total):
             raise TestError("Callback failed")
 
         # Should not raise exception, just log warning

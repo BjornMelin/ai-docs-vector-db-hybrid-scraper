@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Tests for 5-tier browser automation health monitoring.
 
@@ -60,7 +61,7 @@ class MockBrowserTier:
 
     async def execute_request(self, request_type: str) -> dict[str, Any]:
         """Execute browser automation request."""
-            raise TestError(f"Tier {self.name} is unhealthy") # noqa: PLC0415
+        if not self.is_healthy:
             raise TestError(f"Tier {self.name} is unhealthy")
 
         if self.active_sessions >= self.max_sessions:
@@ -97,7 +98,7 @@ class MockBrowserTier:
         }
 
 
-class MockBrowserMonitoringSystem: # noqa: PLC0415
+class MockBrowserMonitoringSystem:  # noqa: PLC0415
     """Mock 5-tier browser monitoring system."""
 
     def __init__(self):

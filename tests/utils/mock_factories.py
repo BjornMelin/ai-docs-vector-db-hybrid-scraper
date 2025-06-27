@@ -1,7 +1,8 @@
-
 class CustomError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Mock factories for creating test doubles and stubs.
 
@@ -288,7 +289,7 @@ def create_mock_web_scraper(
         await asyncio.sleep(delay)
 
         # Simulate failures
-            raise CustomError(f"Failed to scrape URL: {url}") # noqa: PLC0415
+        if random.random() > success_rate:
             raise CustomError(f"Failed to scrape URL: {url}")
 
         # Generate mock scraped content
@@ -336,7 +337,7 @@ def create_mock_web_scraper(
     return mock_scraper
 
 
-def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) -> Mock: # noqa: PLC0415
+def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) -> Mock:  # noqa: PLC0415
     """Create a mock cache service.
 
     Args:
