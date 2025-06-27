@@ -28,6 +28,20 @@ from .chunking import DocumentChunker
 from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
+
+
+class ScrapingError(Exception):
+    """Exception raised when web scraping fails."""
+
+
+class ContentExtractionError(Exception):
+    """Exception raised when content extraction fails."""
+
+
+class ChunkGenerationError(Exception):
+    """Exception raised when chunk generation fails."""
+
+
 from .services.logging_config import configure_logging
 
 
@@ -81,7 +95,7 @@ class BulkEmbedder:
         """Load processing state from file if exists."""
         if self.state_file.exists():
             try:
-                with open(self.state_file) as f:
+                with Path(self.state_file).open() as f:
                     data = json.load(f)
                     state = ProcessingState.model_validate(data)
                     logger.info(
@@ -95,7 +109,7 @@ class BulkEmbedder:
     def _save_state(self) -> None:
         """Save current processing state."""
         self.state.last_checkpoint = datetime.now(tz=UTC)
-        with open(self.state_file, "w") as f:
+        with Path(self.state_file).open("w") as f:
             json.dump(self.state.model_dump(mode="json"), f, indent=2, default=str)
 
     async def initialize_services(self) -> None:
@@ -125,7 +139,7 @@ class BulkEmbedder:
         urls = []
 
         if file_path.suffix == ".csv":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     # Try common column names
@@ -138,7 +152,7 @@ class BulkEmbedder:
                     if url:
                         urls.append(url.strip())
         elif file_path.suffix == ".json":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 data = json.load(f)
                 if isinstance(data, list):
                     urls = [
@@ -149,7 +163,7 @@ class BulkEmbedder:
                 elif isinstance(data, dict) and "urls" in data:
                     urls = data["urls"]
         elif file_path.suffix == ".txt":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 urls = [
                     line.strip()
                     for line in f
@@ -157,7 +171,7 @@ class BulkEmbedder:
                 ]
         else:
             # Try as plain text
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 urls = [
                     line.strip()
                     for line in f
@@ -211,7 +225,7 @@ class BulkEmbedder:
             scrape_result = await self.crawl_manager.scrape_url(url=url)
 
             if not scrape_result.get("success"):
-                raise Exception(scrape_result.get("error", "Scraping failed"))
+                raise ScrapingError(scrape_result.get("error", "Scraping failed"))
 
             content = scrape_result.get("content", {})
             markdown_content = content.get("markdown", "")
@@ -222,7 +236,7 @@ class BulkEmbedder:
             content_to_chunk = markdown_content or text_content
 
             if not content_to_chunk:
-                raise Exception("No content extracted")
+                raise ContentExtractionError("No content extracted")
 
             # Chunk the content using DocumentChunker
             chunker = DocumentChunker(self.config.chunking)
@@ -230,7 +244,7 @@ class BulkEmbedder:
             chunks = chunk_results.chunks
 
             if not chunks:
-                raise Exception("No chunks generated")
+                raise ChunkGenerationError("No chunks generated")
 
             # Generate embeddings for all chunks
             texts = [chunk.content for chunk in chunks]

@@ -87,7 +87,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         super().__init__(config)
 
         # Load enhanced configuration
-        from .tier_config import create_default_routing_config
+        from .tier_config import create_default_routing_config  # noqa: PLC0415
 
         self.routing_config = create_default_routing_config()
 

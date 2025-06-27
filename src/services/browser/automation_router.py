@@ -141,7 +141,7 @@ class AutomationRouter(BaseService):
         # Import adapters dynamically to avoid circular imports
         # Initialize Tier 0: Lightweight HTTP scraper
         try:
-            from .lightweight_scraper import LightweightScraper
+            from .lightweight_scraper import LightweightScraper  # noqa: PLC0415
 
             adapter = LightweightScraper(self.config)
             await adapter.initialize()
@@ -153,7 +153,7 @@ class AutomationRouter(BaseService):
 
         # Initialize Tier 1: Crawl4AI Basic
         try:
-            from .crawl4ai_adapter import Crawl4AIAdapter
+            from .crawl4ai_adapter import Crawl4AIAdapter  # noqa: PLC0415
 
             adapter = Crawl4AIAdapter(self.config.crawl4ai)
             await adapter.initialize()
@@ -165,7 +165,7 @@ class AutomationRouter(BaseService):
 
         # Initialize Tier 2: BrowserUse (Enhanced)
         try:
-            from .browser_use_adapter import BrowserUseAdapter
+            from .browser_use_adapter import BrowserUseAdapter  # noqa: PLC0415
 
             adapter = BrowserUseAdapter(self.config.browser_use)
             await adapter.initialize()
@@ -177,7 +177,7 @@ class AutomationRouter(BaseService):
 
         # Initialize Tier 3: Playwright
         try:
-            from .playwright_adapter import PlaywrightAdapter
+            from .playwright_adapter import PlaywrightAdapter  # noqa: PLC0415
 
             adapter = PlaywrightAdapter(self.config.playwright)
             await adapter.initialize()

@@ -191,7 +191,7 @@ class ClientManager:
                         await service.cleanup()
                         logger.info(f"Cleaned up {service_name}")
                     except Exception as e:
-                        logger.exception(f"Error cleaning up {service_name}: {e}")
+                        logger.exception(f"Error cleaning up {service_name}")
                 setattr(self, service_name, None)
 
         # Close all clients
@@ -203,7 +203,7 @@ class ClientManager:
                     await client.aclose()
                 logger.info(f"Closed {name} client")
             except Exception as e:
-                logger.exception(f"Error closing {name} client: {e}")
+                logger.exception(f"Error closing {name} client")
 
         self._clients.clear()
         self._health.clear()
@@ -316,7 +316,7 @@ class ClientManager:
 
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
-                    from src.services.embeddings.manager import EmbeddingManager  # noqa: PLC0415
+                    from src.services.embeddings.manager import EmbeddingManager  # noqa: PLC0415  # noqa: PLC0415
 
                     # Pass ClientManager to EmbeddingManager
                     self._embedding_manager = EmbeddingManager(
@@ -336,7 +336,7 @@ class ClientManager:
 
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
-                    from src.services.cache.manager import CacheManager  # noqa: PLC0415
+                    from src.services.cache.manager import CacheManager  # noqa: PLC0415  # noqa: PLC0415
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -374,7 +374,7 @@ class ClientManager:
 
             async with self._service_locks["crawl_manager"]:
                 if self._crawl_manager is None:
-                    from src.services.crawling.manager import CrawlManager
+                    from src.services.crawling.manager import CrawlManager  # noqa: PLC0415  # noqa: PLC0415
 
                     # CrawlManager expects rate_limiter but we'll pass None for now
                     self._crawl_manager = CrawlManager(
@@ -394,12 +394,12 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    from src.services.hyde.config import (
+                    from src.services.hyde.config import (  # noqa: PLC0415
                         HyDEConfig,
                         HyDEMetricsConfig,
                         HyDEPromptConfig,
                     )
-                    from src.services.hyde.engine import HyDEQueryEngine
+                    from src.services.hyde.engine import HyDEQueryEngine  # noqa: PLC0415
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()
@@ -434,7 +434,7 @@ class ClientManager:
 
             async with self._service_locks["project_storage"]:
                 if self._project_storage is None:
-                    from src.services.core.project_storage import ProjectStorage
+                    from src.services.core.project_storage import ProjectStorage  # noqa: PLC0415  # noqa: PLC0415
 
                     self._project_storage = ProjectStorage(
                         data_dir=self.config.data_dir
@@ -459,7 +459,7 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.browser_router import (
+                    from src.services.browser.browser_router import (  # noqa: PLC0415
                         EnhancedAutomationRouter,
                     )
 
@@ -481,7 +481,7 @@ class ClientManager:
 
             async with self._service_locks["task_queue_manager"]:
                 if self._task_queue_manager is None:
-                    from src.services.task_queue.manager import TaskQueueManager
+                    from src.services.task_queue.manager import TaskQueueManager  # noqa: PLC0415
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -514,7 +514,7 @@ class ClientManager:
 
             async with self._service_locks["content_intelligence_service"]:
                 if self._content_intelligence_service is None:
-                    from src.services.content_intelligence.service import (
+                    from src.services.content_intelligence.service import (  # noqa: PLC0415
                         ContentIntelligenceService,
                     )
 
@@ -540,7 +540,7 @@ class ClientManager:
 
             async with self._service_locks["rag_generator"]:
                 if self._rag_generator is None:
-                    from src.services.rag import RAGGenerator
+                    from src.services.rag import RAGGenerator  # noqa: PLC0415
 
                     self._rag_generator = RAGGenerator(
                         config=self.config.rag,
@@ -560,7 +560,7 @@ class ClientManager:
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
                     # Create enterprise monitoring components
-                    from .database.monitoring import LoadMonitor, QueryMonitor
+                    from .database.monitoring import LoadMonitor, QueryMonitor  # noqa: PLC0415
 
                     load_monitor = LoadMonitor()
                     query_monitor = QueryMonitor()
@@ -593,7 +593,7 @@ class ClientManager:
 
             async with self._service_locks["search_orchestrator"]:
                 if self._search_orchestrator is None:
-                    from src.services.query_processing import AdvancedSearchOrchestrator
+                    from src.services.query_processing import AdvancedSearchOrchestrator  # noqa: PLC0415
 
                     self._search_orchestrator = AdvancedSearchOrchestrator(
                         enable_all_features=True, enable_performance_optimization=True
@@ -612,7 +612,7 @@ class ClientManager:
 
             async with self._service_locks["feature_flag_manager"]:
                 if self._feature_flag_manager is None:
-                    from src.services.deployment.feature_flags import (
+                    from src.services.deployment.feature_flags import (  # noqa: PLC0415
                         FeatureFlagConfig,
                         FeatureFlagManager,
                     )
@@ -642,7 +642,7 @@ class ClientManager:
 
             async with self._service_locks["ab_testing_manager"]:
                 if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import ABTestingManager
+                    from src.services.deployment.ab_testing import ABTestingManager  # noqa: PLC0415
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -670,7 +670,7 @@ class ClientManager:
 
             async with self._service_locks["blue_green_deployment"]:
                 if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import BlueGreenDeployment
+                    from src.services.deployment.blue_green import BlueGreenDeployment  # noqa: PLC0415
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -698,7 +698,7 @@ class ClientManager:
 
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
-                    from src.services.deployment.canary import CanaryDeployment
+                    from src.services.deployment.canary import CanaryDeployment  # noqa: PLC0415
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -788,7 +788,7 @@ class ClientManager:
                         logger.info(f"Created {name} client")
 
                     except Exception as e:
-                        logger.exception(f"Failed to create {name} client: {e}")
+                        logger.exception(f"Failed to create {name} client")
                         raise APIError(f"Failed to create {name} client: {e}") from e
 
         # Check health status
@@ -1047,7 +1047,7 @@ class ClientManager:
             logger.exception(f"{name} health check timed out")
             self._update_health_failure(name, "Health check timeout")
         except Exception as e:
-            logger.exception(f"{name} health check error: {e}")
+            logger.exception(f"{name} health check error")
             self._update_health_failure(name, str(e))
 
     async def _recreate_client_if_needed(self, name: str) -> None:
@@ -1120,7 +1120,7 @@ class ClientManager:
                 logger.info("Health check loop cancelled")
                 break
             except Exception as e:
-                logger.exception(f"Error in health check loop: {e}")
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(10)  # Brief pause before retry
 
     def _update_health_failure(self, name: str, error: str) -> None:
@@ -1185,7 +1185,7 @@ class ClientManager:
             client = await client_getters[client_type]()
             yield client
         except Exception as e:
-            logger.exception(f"Error using {client_type} client: {e}")
+            logger.exception(f"Error using {client_type} client")
             raise
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:

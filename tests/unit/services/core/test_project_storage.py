@@ -92,7 +92,7 @@ class TestProjectStorage:
         assert project_storage._initialized is True
 
         # Verify file contains empty JSON object
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             data = json.load(f)
             assert data == {}
 
@@ -105,7 +105,7 @@ class TestProjectStorage:
         }
 
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             json.dump(test_data, f)
 
         await project_storage.initialize()
@@ -117,7 +117,7 @@ class TestProjectStorage:
         """Test initialization handles corrupted JSON file."""
         # Create corrupted JSON file
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             f.write("{ invalid json }")
 
         await project_storage.initialize()
@@ -160,7 +160,7 @@ class TestProjectStorage:
         test_data = {"project1": {"name": "Test"}}
 
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             json.dump(test_data, f)
 
         loaded_data = await project_storage.load_projects()
@@ -218,7 +218,7 @@ class TestProjectStorage:
         assert project_storage._projects_cache["test_project"] == project_data
 
         # Verify project is saved to file
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert file_data["test_project"] == project_data
 
@@ -322,7 +322,7 @@ class TestProjectStorage:
         assert "test_project" not in project_storage._projects_cache
 
         # Verify project is removed from file
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert "test_project" not in file_data
 
@@ -348,7 +348,7 @@ class TestProjectStorage:
         assert project_storage.storage_path.exists()
 
         # Verify content
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert file_data == test_data
 
@@ -426,7 +426,7 @@ class TestProjectStorage:
         assert len(projects) == 10
 
         # Verify cache consistency
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert len(file_data) == 10
 

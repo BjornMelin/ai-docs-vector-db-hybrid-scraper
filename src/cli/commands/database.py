@@ -22,6 +22,14 @@ from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
 
 
+class CollectionCreationError(Exception):
+    """Exception raised when collection creation fails."""
+
+
+class CollectionDeletionError(Exception):
+    """Exception raised when collection deletion fails."""
+
+
 console = Console()
 
 
@@ -255,7 +263,7 @@ def create_collection(
             asyncio.run(db_manager.cleanup())
 
             if not success:
-                raise Exception("Collection creation failed")
+                raise CollectionCreationError("Collection creation failed")
 
         except Exception as e:
             rich_cli.show_error("Failed to create collection", str(e))
@@ -309,7 +317,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
             asyncio.run(db_manager.cleanup())
 
             if not success:
-                raise Exception("Collection deletion failed")
+                raise CollectionDeletionError("Collection deletion failed")
 
         except Exception as e:
             rich_cli.show_error("Failed to delete collection", str(e))

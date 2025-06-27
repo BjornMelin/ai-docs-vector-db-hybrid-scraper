@@ -151,7 +151,7 @@ class UnifiedBrowserManager(BaseService):
 
         try:
             # Get client manager and automation router
-            from ...infrastructure.client_manager import ClientManager
+            from ...infrastructure.client_manager import ClientManager  # noqa: PLC0415
 
             self._client_manager = ClientManager(self.config)
             await self._client_manager.initialize()

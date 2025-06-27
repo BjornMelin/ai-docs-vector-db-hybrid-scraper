@@ -372,8 +372,8 @@ class SecureConfigManager:
 
             logger.info(f"Loaded {len(self._encryption_keys)} encryption keys")
 
-        except Exception as e:
-            logger.exception(f"Failed to load encryption keys: {e}")
+        except Exception:
+            logger.exception("Failed to load encryption keys")
             # Fallback to generating new keys
             self._generate_initial_keys(key_file)
 
@@ -468,8 +468,8 @@ class SecureConfigManager:
         try:
             with Path(self.audit_log_file).open("a", encoding="utf-8") as f:
                 f.write(audit_event.model_dump_json() + "\n")
-        except Exception as e:
-            logger.exception(f"Failed to write audit log: {e}")
+        except Exception:
+            logger.exception("Failed to write audit log")
 
         # Log to structured logger for integration with Task 20 monitoring
         if self.config.integrate_security_monitoring:
@@ -537,7 +537,7 @@ class SecureConfigManager:
 
             # Store encrypted configuration
             config_file = self.config_dir / f"{validated_path}.enc"
-            with open(config_file, "wb") as f:
+            with Path(config_file).open("wb") as f:
                 f.write(config_item.model_dump_json().encode("utf-8"))
 
             # Set secure file permissions
@@ -564,7 +564,7 @@ class SecureConfigManager:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to encrypt configuration {config_path}: {e}")
+            logger.exception(f"Failed to encrypt configuration {config_path}")
 
             # Log audit event for failure
             self._log_audit_event(
@@ -608,7 +608,7 @@ class SecureConfigManager:
                 return None
 
             # Load encrypted configuration
-            with open(config_file, "rb") as f:
+            with Path(config_file).open("rb") as f:
                 config_data = json.loads(f.read().decode("utf-8"))
 
             config_item = EncryptedConfigItem(**config_data)
@@ -645,7 +645,7 @@ class SecureConfigManager:
             return config_data
 
         except Exception as e:
-            logger.exception(f"Failed to decrypt configuration {config_path}: {e}")
+            logger.exception(f"Failed to decrypt configuration {config_path}")
 
             # Log audit event for failure
             self._log_audit_event(
@@ -671,7 +671,7 @@ class SecureConfigManager:
             # Load existing integrity data
             integrity_data = {}
             if self.integrity_file.exists():
-                with open(self.integrity_file, encoding="utf-8") as f:
+                with Path(self.integrity_file).open(encoding="utf-8") as f:
                     integrity_data = json.load(f)
 
             # Update record
@@ -682,14 +682,14 @@ class SecureConfigManager:
             }
 
             # Save updated integrity data
-            with open(self.integrity_file, "w", encoding="utf-8") as f:
+            with Path(self.integrity_file).open("w", encoding="utf-8") as f:
                 json.dump(integrity_data, f, indent=2)
 
             # Set secure file permissions
             self.integrity_file.chmod(0o600)
 
-        except Exception as e:
-            logger.exception(f"Failed to update integrity record: {e}")
+        except Exception:
+            logger.exception("Failed to update integrity record")
 
     def validate_configuration_integrity(
         self,
@@ -751,15 +751,15 @@ class SecureConfigManager:
                         None if results[path] else "Checksum mismatch",
                     )
 
-                except Exception as e:
-                    logger.exception(f"Failed to validate configuration {path}: {e}")
+                except Exception:
+                    logger.exception(f"Failed to validate configuration {path}")
                     results[path] = False
 
             logger.info(f"Configuration integrity validation completed: {results}")
             return results
 
-        except Exception as e:
-            logger.exception(f"Configuration integrity validation failed: {e}")
+        except Exception:
+            logger.exception("Configuration integrity validation failed")
             return results
 
     def backup_configurations(
@@ -822,7 +822,7 @@ class SecureConfigManager:
             return True
 
         except Exception as e:
-            logger.exception(f"Configuration backup failed: {e}")
+            logger.exception("Configuration backup failed")
 
             # Log backup failure
             self._log_audit_event(
@@ -858,7 +858,7 @@ class SecureConfigManager:
             if not self.audit_log_file.exists():
                 return events
 
-            with open(self.audit_log_file, encoding="utf-8") as f:
+            with Path(self.audit_log_file).open(encoding="utf-8") as f:
                 lines = f.readlines()
 
             # Process events in reverse order (newest first)
@@ -881,8 +881,8 @@ class SecureConfigManager:
 
             return events[:limit]
 
-        except Exception as e:
-            logger.exception(f"Failed to retrieve audit events: {e}")
+        except Exception:
+            logger.exception("Failed to retrieve audit events")
             return events
 
     def get_security_status(self) -> dict[str, Any]:
@@ -927,7 +927,7 @@ class SecureConfigManager:
             return status
 
         except Exception as e:
-            logger.exception(f"Failed to get security status: {e}")
+            logger.exception("Failed to get security status")
             return {"error": str(e)}
 
 

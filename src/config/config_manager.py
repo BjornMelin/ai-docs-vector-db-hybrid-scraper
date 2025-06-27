@@ -76,8 +76,8 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
             else:
                 logger.warning(f"Unsupported config file format: {suffix}")
 
-        except Exception as e:
-            logger.exception(f"Failed to load config file {self.config_file}: {e}")
+        except Exception:
+            logger.exception(f"Failed to load config file {self.config_file}")
 
     def get_field_value(
         self, _field: FieldInfo, field_name: str
@@ -159,8 +159,8 @@ class ConfigFileWatcher(FileSystemEventHandler):
 
             try:
                 self.reload_callback()
-            except Exception as e:
-                logger.exception(f"Failed to reload configuration: {e}")
+            except Exception:
+                logger.exception("Failed to reload configuration")
 
 
 class ConfigManager:
@@ -286,8 +286,8 @@ class ConfigManager:
             )
             return True
 
-        except Exception as e:
-            logger.exception(f"Failed to reload configuration: {e}")
+        except Exception:
+            logger.exception("Failed to reload configuration")
             return False
 
     def _create_config_with_file_source(self) -> BaseSettings:
@@ -316,8 +316,8 @@ class ConfigManager:
 
             logger.info(f"Started watching configuration file: {self.config_file}")
 
-        except Exception as e:
-            logger.exception(f"Failed to start file watching: {e}")
+        except Exception:
+            logger.exception("Failed to start file watching")
 
     def stop_file_watching(self) -> None:
         """Stop watching configuration file."""
@@ -357,8 +357,8 @@ class ConfigManager:
         for listener in self._change_listeners:
             try:
                 listener(old_config, new_config)
-            except Exception as e:
-                logger.exception(f"Change listener failed: {e}")
+            except Exception:
+                logger.exception("Change listener failed")
 
     def get_config(self) -> BaseSettings:
         """Get current configuration instance."""

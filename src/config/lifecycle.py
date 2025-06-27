@@ -86,8 +86,8 @@ class ConfigurationLifecycleManager:
 
             logger.info("Configuration reloading system initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize configuration system: {e}")
+        except Exception:
+            logger.exception("Failed to initialize configuration system")
             raise
 
     async def _register_core_service_callbacks(self) -> None:
@@ -102,8 +102,8 @@ class ConfigurationLifecycleManager:
                     # Note: Database connections typically require restart
                     # This is a placeholder for actual database reconfiguration
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update database configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update database configuration")
                 return False
 
         # Cache configuration callback
@@ -115,8 +115,8 @@ class ConfigurationLifecycleManager:
                     # Placeholder for cache reconfiguration
                     # In a real implementation, this would update cache connections
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update cache configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update cache configuration")
                 return False
 
         # Observability configuration callback
@@ -144,8 +144,8 @@ class ConfigurationLifecycleManager:
                             return False
 
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update observability configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update observability configuration")
                 return False
 
         # Performance configuration callback
@@ -157,8 +157,8 @@ class ConfigurationLifecycleManager:
                     # Placeholder for performance setting updates
                     # This could update request limits, timeouts, etc.
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update performance configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update performance configuration")
                 return False
 
         # Security configuration callback
@@ -170,8 +170,8 @@ class ConfigurationLifecycleManager:
                     # Placeholder for security setting updates
                     # This could update API keys, rate limits, etc.
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update security configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update security configuration")
                 return False
 
         # Global configuration update callback
@@ -182,8 +182,8 @@ class ConfigurationLifecycleManager:
                 set_config(new_config)
                 logger.info("Global configuration updated")
                 return True
-            except Exception as e:
-                logger.exception(f"Failed to update global configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update global configuration")
                 return False
 
         # Register all callbacks
@@ -238,8 +238,8 @@ class ConfigurationLifecycleManager:
 
             logger.info("Configuration reloading system shutdown completed")
 
-        except Exception as e:
-            logger.exception(f"Error during configuration system shutdown: {e}")
+        except Exception:
+            logger.exception("Error during configuration system shutdown")
 
     def register_service_callback(
         self,
