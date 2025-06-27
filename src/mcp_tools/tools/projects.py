@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
-    from ..models. # noqa: PLC0415responses import OperationStatus, ProjectInfo # noqa: PLC0415
+    from ..models.responses import OperationStatus, ProjectInfo  # noqa: PLC0415
 
     @mcp.tool()
     async def create_project(

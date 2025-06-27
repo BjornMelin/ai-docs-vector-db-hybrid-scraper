@@ -118,7 +118,7 @@ def register_tools(mcp, client_manager: ClientManager):
             logger.exception("Failed to list payload indexes")
             raise
 
-    from ..models. # noqa: PLC0415responses import ReindexCollectionResponse # noqa: PLC0415
+    from ..models.responses import ReindexCollectionResponse  # noqa: PLC0415
 
     @mcp.tool()
     async def reindex_collection(
