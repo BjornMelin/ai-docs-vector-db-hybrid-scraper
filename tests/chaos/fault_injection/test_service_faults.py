@@ -7,7 +7,6 @@ against service failures, resource exhaustion, and degraded performance.
 import asyncio
 import random
 import time
-from collections import Counter
 from typing import Any
 
 import pytest
@@ -17,6 +16,10 @@ from tests.chaos.conftest import FailureType
 
 class AuthenticationError(Exception):
     """Custom authentication error for testing."""
+
+
+class RateLimitError(Exception):
+    """Custom rate limit error for testing."""
 
 
 @pytest.mark.chaos
@@ -132,10 +135,9 @@ class TestServiceFaultInjection:
 
         async def cache_get(key: str):
             nonlocal cache_hit_count
-            import random
 
             if random.random() < cache_failure_rate:
-                raise Exception("Cache service temporarily unavailable")
+                raise ConnectionError("Cache service temporarily unavailable")
 
             cache_hit_count += 1
             return f"cached_value_for_{key}"
@@ -182,7 +184,7 @@ class TestServiceFaultInjection:
             request_count += 1
 
             if request_count > rate_limit:
-                raise Exception("API rate limit exceeded - too many requests")
+                raise RateLimitError("API rate limit exceeded - too many requests")
 
             return {"status": "success", "data": "api_response"}
 
@@ -195,11 +197,8 @@ class TestServiceFaultInjection:
             try:
                 await rate_limited_api_call()
                 successes += 1
-            except Exception as e:
-                if "rate limit exceeded" in str(e):
-                    failures += 1
-                else:
-                    raise
+            except RateLimitError:
+                failures += 1
 
         assert successes <= rate_limit, (
             f"Too many successes: {successes} > {rate_limit}"
@@ -207,7 +206,7 @@ class TestServiceFaultInjection:
         assert failures > 0, "Expected some rate limit failures"
 
     async def test_microservice_cascade_failure(
-        self, _fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test cascade failure prevention in microservices."""
         # Service dependency chain: A -> B -> C
