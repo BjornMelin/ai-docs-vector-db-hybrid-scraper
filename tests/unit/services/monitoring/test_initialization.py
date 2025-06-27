@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Comprehensive tests for monitoring system initialization."""
 
 import asyncio
@@ -283,8 +288,8 @@ class TestBackgroundMonitoringTasks:
         def side_effect():
             nonlocal call_count
             call_count += 1
-            if call_count == 1:
-                raise Exception("Test error")
+                raise TestError("Test error")
+                raise TestError("Test error")
 
         mock_metrics_registry.update_system_metrics.side_effect = side_effect
 

@@ -61,7 +61,7 @@ class ProductionMCPServer:
             yield
 
         except Exception as e:
-            logger.exception(f"Startup failed: {e}")
+            logger.exception("Startup failed")
             raise
 
         finally:
@@ -89,7 +89,7 @@ class ProductionMCPServer:
                 logger.info("FastMCP server cleanup complete")
 
         except Exception as e:
-            logger.exception(f"Error during shutdown: {e}")
+            logger.exception("Error during shutdown")
 
         logger.info("Production MCP server shutdown complete")
 
@@ -148,7 +148,7 @@ class ProductionMCPServer:
             await server.serve()
 
         except Exception as e:
-            logger.exception(f"Server error: {e}")
+            logger.exception("Server error")
             raise
 
 
@@ -182,7 +182,7 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
-        logger.exception(f"Server error: {e}")
+        logger.exception("Server error")
         sys.exit(1)
 
 

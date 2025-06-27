@@ -265,7 +265,7 @@ def main():
         return True
 
     except Exception as e:  # noqa: F841
-        logger.exception(f"Tests failed with error: {e}")
+        logger.exception("Tests failed with error")
         import traceback
 
         traceback.print_exc()

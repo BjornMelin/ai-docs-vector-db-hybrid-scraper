@@ -37,7 +37,7 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
 
     def __init__(
         self,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         config_file: Path | None = None,
         config_data: dict[str, Any] | None = None,
     ):
@@ -175,7 +175,7 @@ class ConfigManager:
 
     def __init__(
         self,
-        config_class: Type[BaseSettings] = SecureConfig,
+        config_class: type[BaseSettings] = SecureConfig,
         config_file: Path | None = None,
         enable_file_watching: bool = True,
         enable_drift_detection: bool = True,
@@ -421,7 +421,7 @@ class ConfigManager:
 # Async helper for creating and loading configuration
 async def create_and_load_config_async(
     config_file: Path | None = None,
-    config_class: Type[BaseSettings] = SecureConfig,
+    config_class: type[BaseSettings] = SecureConfig,
 ) -> tuple[ConfigManager, BaseSettings]:
     """Create and load configuration asynchronously.
 

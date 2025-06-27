@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Tests for database connection pooling with ML-based scaling.
 
 This module tests database connection pooling patterns, ML-based predictive scaling,
@@ -31,8 +37,8 @@ class MockConnectionPool:
             # Simulate connection affinity hit rate of 73%
             if self.total_requests % 100 < 73:
                 self.connection_affinity_hits += 1
-            return Mock()
-        raise Exception("No connections available")
+        raise TestError("No connections available")
+        raise TestError("No connections available")
 
     async def release_connection(self, _conn):
         """Release connection back to pool."""
@@ -96,7 +102,7 @@ class MockCircuitBreaker:
     def call(self, func, *args, **kwargs):
         """Execute function with circuit breaker protection."""
         if self.state == "open":
-            raise Exception("Circuit breaker is open")
+            raise TestError("Circuit breaker is open")
 
         try:
             result = func(*args, **kwargs)

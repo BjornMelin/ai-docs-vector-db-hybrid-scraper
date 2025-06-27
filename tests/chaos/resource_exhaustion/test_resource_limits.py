@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Resource exhaustion tests for chaos engineering.
 
 This module implements resource exhaustion scenarios to test system behavior
@@ -161,8 +166,8 @@ class ResourceExhaustionSimulator:
         if monitor.is_critical():
             # Simulate disk operations becoming slow/failing
             await asyncio.sleep(0.1)  # Simulate slow disk I/O
-            if target_usage >= monitor.max_capacity:
-                raise Exception("Disk full - cannot write data")
+                raise TestError("Disk full - cannot write data")
+                raise TestError("Disk full - cannot write data")
 
         return {
             "available_space": monitor.max_capacity - target_usage,
@@ -329,7 +334,7 @@ class TestResourceExhaustion:
 
             if available <= 0:
                 # No connections available - implement queuing or rejection
-                raise Exception("Connection pool exhausted - request queued")
+                raise TestError("Connection pool exhausted - request queued")
 
             return {"connection_id": "conn_123", "status": "acquired"}
 
@@ -369,7 +374,7 @@ class TestResourceExhaustion:
             available_space = monitor.max_capacity - monitor.current_usage
 
             if data_size > available_space:
-                raise Exception(
+                raise TestError(
                     f"Insufficient disk space: need {data_size}GB, have {available_space}GB"
                 )
 

@@ -7,7 +7,7 @@ and service registration for zero-downtime configuration reloading.
 
 import logging
 from collections.abc import Callable
-from typing import Dict, List
+from typing import Any, List
 
 from fastapi import FastAPI
 
@@ -33,7 +33,7 @@ class ConfigurationLifecycleManager:
         """
         self.app = app
         self.reloader: ConfigReloader | None = None
-        self.service_callbacks: List[Callable[[Config, Config], bool]] = []
+        self.service_callbacks: list[Callable[[Config, Config], bool]] = []
 
         # Setup lifecycle events
         self._setup_lifecycle_events()
@@ -298,7 +298,7 @@ class ConfigurationLifecycleManager:
         if self.reloader:
             await self.reloader.disable_file_watching()
 
-    def get_reloader_stats(self) -> Dict[str, any]:
+    def get_reloader_stats(self) -> dict[str, any]:
         """Get configuration reloader statistics."""
         if self.reloader:
             return self.reloader.get_reload_stats()

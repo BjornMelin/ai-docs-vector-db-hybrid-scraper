@@ -7,6 +7,12 @@ external services used by the AI Documentation Vector DB system.
 from src.config import Config
 
 
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 class ServiceHealthChecker:
     """Centralized service health checking utility."""
 
@@ -116,8 +122,8 @@ class ServiceHealthChecker:
 
                 async def _check_async():
                     client = await client_manager.get_openai_client()
-                    if client is None:
-                        raise Exception("OpenAI client not available")
+                    if not client:
+                        raise CustomError("OpenAI client not available")
                     models = await client.models.list()
                     return list(models)
 

@@ -431,11 +431,11 @@ class ResultClusteringService:
 
     def _extract_embeddings(self, results: list[SearchResult]) -> np.ndarray | None:
         """Extract and validate embeddings from results."""
-        embeddings = []
-
-        for result in results:
-            if result.embedding is not None and len(result.embedding) > 0:
-                embeddings.append(result.embedding)
+        embeddings = [
+            result.embedding
+            for result in results
+            if result.embedding is not None and len(result.embedding) > 0
+        ]
 
         if len(embeddings) < 3:
             return None

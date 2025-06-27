@@ -46,7 +46,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             self._initialized = True
             logger.info("Firecrawl client initialized")
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize Firecrawl: {e}") from e
+            raise CrawlServiceError("Failed to initialize Firecrawl") from e
 
     async def cleanup(self) -> None:
         """Cleanup Firecrawl resources."""
@@ -94,7 +94,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 }
 
         except Exception as e:
-            logger.error(f"Failed to scrape {url}: {e}", exc_info=True)
+            logger.error("Failed to scrape {url}", exc_info=True)
 
             error_msg = str(e).lower()
             if "rate limit" in error_msg:
@@ -111,10 +111,10 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "Request timed out. The page may be too large or slow to load."
                 )
             elif "not found" in error_msg or "404" in error_msg:
-                logger.info(f"Page not found: {url}")
+                logger.info("Page not found")
                 error_detail = "Page not found (404)."
             else:
-                error_detail = f"Scraping failed: {e!s}"
+                error_detail = "Scraping failed"
 
             return {
                 "success": False,
@@ -204,7 +204,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             }
 
         except Exception as e:
-            logger.exception(f"Failed to crawl {url}: {e}")
+            logger.exception("Failed to crawl {url}")
             return {
                 "success": False,
                 "error": str(e),
@@ -228,7 +228,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             result = self._client.cancel_crawl(crawl_id)
             return result.get("success", False)
         except Exception as e:
-            logger.exception(f"Failed to cancel crawl {crawl_id}: {e}")
+            logger.exception("Failed to cancel crawl {crawl_id}")
             return False
 
     async def map_url(
@@ -267,7 +267,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 }
 
         except Exception as e:
-            logger.exception(f"Failed to map {url}: {e}")
+            logger.exception("Failed to map {url}")
             return {
                 "success": False,
                 "error": str(e),

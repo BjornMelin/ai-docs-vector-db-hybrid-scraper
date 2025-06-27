@@ -4,9 +4,15 @@ Consolidated configuration system following KISS principles and Pydantic best pr
 All configuration models in one place for V1 release.
 """
 
+import json
+import logging
+import os
+import tomllib
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,6 +26,9 @@ from .enums import (
     LogLevel,
     SearchStrategy,
 )
+
+# Import services for auto-detection (used in async method)
+from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
 
 
 class CacheConfig(BaseModel):
@@ -606,8 +615,6 @@ class Config(BaseSettings):
         Returns:
             Updated Config instance
         """
-        import os
-        from copy import deepcopy
 
         # Create a copy to avoid mutating the original
         updated_config = deepcopy(self)
@@ -661,8 +668,6 @@ class Config(BaseSettings):
         if not self.auto_detection.enabled:
             return self
 
-        from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
-
         try:
             # Detect environment
             env_detector = EnvironmentDetector(self.auto_detection)
@@ -690,7 +695,6 @@ class Config(BaseSettings):
 
         except Exception as e:
             # Log error but don't fail configuration loading
-            import logging
 
             logger = logging.getLogger(__name__)
             logger.warning(f"Auto-detection failed, using manual configuration: {e}")
@@ -715,20 +719,14 @@ class Config(BaseSettings):
         """Load configuration from a specific file."""
         config_path = Path(config_path)
         if config_path.suffix == ".json":
-            import json
-
             with config_path.open() as f:
                 data = json.load(f)
             return cls(**data)
         elif config_path.suffix in [".yaml", ".yml"]:
-            import yaml
-
             with config_path.open() as f:
                 data = yaml.safe_load(f)
             return cls(**data)
         elif config_path.suffix == ".toml":
-            import tomllib
-
             with config_path.open("rb") as f:
                 data = tomllib.load(f)
             return cls(**data)

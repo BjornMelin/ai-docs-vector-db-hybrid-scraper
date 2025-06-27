@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Performance benchmarks for service layer using pytest-benchmark.
 
 Benchmarks service layer performance including:
@@ -167,8 +172,8 @@ class TestCircuitBreakerPerformance:
         config.failure_threshold = 1
         circuit_breaker = CircuitBreaker(config)
 
-        async def failing_operation():
-            raise Exception("Simulated failure")
+            raise TestError("Simulated failure")
+            raise TestError("Simulated failure")
 
         async def state_transition_test():
             # Trigger failure to open circuit
@@ -445,7 +450,7 @@ class TestServiceReliabilityBenchmarks:
         """Benchmark fallback mechanism performance."""
 
         async def primary_service():
-            raise Exception("Primary service down")
+            raise TestError("Primary service down")
 
         async def fallback_service():
             await asyncio.sleep(0.0001)  # Minimal delay
@@ -529,7 +534,7 @@ class TestServiceScalabilityBenchmarks:
                     return f"connection_{self.active_connections}"
 
                 # Pool exhausted
-                raise Exception("Pool exhausted")
+                raise TestError("Pool exhausted")
 
             async def release(self, connection):
                 self.pool.append(connection)

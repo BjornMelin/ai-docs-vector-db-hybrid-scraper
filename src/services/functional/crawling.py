@@ -5,7 +5,7 @@ Provides crawling operations with circuit breaker patterns.
 """
 
 import logging
-from typing import Annotated, Any, Dict
+from typing import Any
 
 from fastapi import Depends, HTTPException
 

@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Mutation testing for service logic validation.
 
 Tests service logic robustness by introducing mutations and verifying
@@ -33,8 +38,8 @@ class TestCircuitBreakerMutationTesting:
         config.failure_threshold = 3
         circuit_breaker = CircuitBreaker(config)
 
-        async def failing_operation():
-            raise Exception("Test failure")
+            raise TestError("Test failure")
+            raise TestError("Test failure")
 
         # Test normal behavior (baseline)
         failure_count = 0
@@ -349,7 +354,7 @@ class TestServiceLogicMutationTesting:
         """Test mutations in fallback logic."""
 
         async def primary_service():
-            raise Exception("Primary service down")
+            raise TestError("Primary service down")
 
         async def fallback_service():
             return "fallback_result"

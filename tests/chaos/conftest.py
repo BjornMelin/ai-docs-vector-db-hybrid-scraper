@@ -1,3 +1,9 @@
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Chaos engineering fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive chaos engineering testing including
@@ -150,8 +156,8 @@ def fault_injector():
             fault_id = f"service_unavailable_{target}_{time.time()}"
 
             async def service_fault():
-                if random.random() < failure_rate:
-                    raise Exception(f"Service {target} is temporarily unavailable")
+                raise CustomError(f"Service {target} is temporarily unavailable")
+                raise CustomError(f"Service {target} is temporarily unavailable")
 
             self.active_faults[fault_id] = {
                 "type": FailureType.SERVICE_UNAVAILABLE,
@@ -174,7 +180,7 @@ def fault_injector():
                         "Rate limit exceeded",
                         "Partial data corruption",
                     ]
-                    raise Exception(f"{random.choice(failure_types)} for {target}")
+                    raise CustomError(f"{random.choice(failure_types)} for {target}")
 
             self.active_faults[fault_id] = {
                 "type": FailureType.PARTIAL_FAILURE,
@@ -750,7 +756,7 @@ def mock_resilient_service():
         async def health_check(self):
             """Health check endpoint."""
             if self.failure_mode == "service_unavailable":
-                raise Exception("Service unavailable")
+                raise CustomError("Service unavailable")
             return {"status": "healthy"}
 
         async def process_request(self):
@@ -758,7 +764,7 @@ def mock_resilient_service():
             if self.failure_mode == "network_timeout":
                 raise TimeoutError("Network timeout")
             elif self.failure_mode == "service_unavailable":
-                raise Exception("Service unavailable")
+                raise CustomError("Service unavailable")
             elif self.failure_mode == "memory_pressure":
                 raise MemoryError("Out of memory")
 

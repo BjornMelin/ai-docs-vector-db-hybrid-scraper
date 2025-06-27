@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for services/embeddings/fastembed_provider.py - FastEmbed integration.
 
 This module tests the FastEmbed provider that provides local embedding model management,
@@ -628,8 +633,8 @@ class TestFastEmbedProviderIntegration:
         def mock_embed_response(texts):
             nonlocal call_count
             call_count += 1
-            if call_count == 1:
-                raise Exception("Temporary failure")
+                raise TestError("Temporary failure")
+                raise TestError("Temporary failure")
             # Success on second call
             return iter([np.array([0.1, 0.2, 0.3]) for _ in texts])
 

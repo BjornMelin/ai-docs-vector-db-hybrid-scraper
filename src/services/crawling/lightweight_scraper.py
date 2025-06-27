@@ -102,7 +102,7 @@ class LightweightScraper(CrawlProvider):
                 recommendation = await self._analyze_url(url)
                 return recommendation == TierRecommendation.LIGHTWEIGHT_OK
             except Exception as e:
-                logger.debug(f"HEAD analysis failed for {url}: {e}")
+                logger.debug("HEAD analysis failed for {url}")
                 return False
 
         return False
@@ -145,9 +145,7 @@ class LightweightScraper(CrawlProvider):
             # Check response size
             content_length = int(response.headers.get("content-length", 0))
             if content_length > self.config.max_lightweight_size:
-                logger.debug(
-                    f"Content too large for lightweight tier: {content_length}"
-                )
+                logger.debug("Content too large for lightweight tier")
                 return TierRecommendation.STREAMING_REQUIRED
 
             # Check for JavaScript requirements in headers
@@ -162,7 +160,7 @@ class LightweightScraper(CrawlProvider):
             logger.debug(f"HEAD request timeout for {url}")
             return TierRecommendation.BROWSER_REQUIRED
         except Exception as e:
-            logger.debug(f"HEAD request failed for {url}: {e}")
+            logger.debug("HEAD request failed for {url}")
             return TierRecommendation.BROWSER_REQUIRED
 
     async def scrape_url(
@@ -238,14 +236,14 @@ class LightweightScraper(CrawlProvider):
             return result
 
         except httpx.HTTPStatusError as e:
-            logger.warning(f"HTTP error scraping {url}: {e}")
+            logger.warning("HTTP error scraping {url}")
             return {
                 "success": False,
                 "error": f"HTTP {e.response.status_code}",
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
         except Exception as e:
-            logger.exception(f"Error scraping {url} with lightweight tier: {e}")
+            logger.exception("Error scraping {url} with lightweight tier")
             return {
                 "success": False,
                 "error": str(e),

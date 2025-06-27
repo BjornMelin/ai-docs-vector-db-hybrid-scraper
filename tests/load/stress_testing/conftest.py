@@ -312,7 +312,7 @@ class FailureInjector:
                     time.sleep(0.1)
 
                 except Exception as e:
-                    logger.warning(f"Disk I/O stress error: {e}")
+                    logger.warning("Disk I/O stress error")
                     break
 
         # Start I/O work in separate thread
@@ -363,7 +363,7 @@ class StressTestOrchestrator:
 
     async def run_chaos_scenario(self, scenario: ChaosScenario) -> dict[str, Any]:
         """Run a chaos engineering scenario."""
-        logger.info(f"Starting chaos scenario: {scenario.name}")
+        logger.info("Starting chaos scenario")
 
         scenario_start = time.time()
         scenario_result = {
@@ -421,9 +421,9 @@ class StressTestOrchestrator:
                     "error": str(e),
                 }
             )
-            logger.exception(f"Chaos scenario {scenario.name} failed: {e}")
+            logger.exception("Chaos scenario {scenario.name} failed")
 
-        logger.info(f"Completed chaos scenario: {scenario.name}")
+        logger.info("Completed chaos scenario")
         return scenario_result
 
     async def run_multi_phase_stress_test(
@@ -495,7 +495,7 @@ class StressTestOrchestrator:
                         "error": str(e),
                     }
                 )
-                logger.exception(f"Stress test phase {i + 1} failed: {e}")
+                logger.exception("Stress test phase {i + 1} failed")
 
             phase_results.append(phase_result)
             logger.info(f"Completed stress test phase {i + 1}")
@@ -664,7 +664,7 @@ def stress_test_environment():
             else:
                 logger.info("Memory limit: unlimited")
         except Exception as e:
-            logger.warning(f"Could not check resource limits: {e}")
+            logger.warning("Could not check resource limits")
 
     yield
 

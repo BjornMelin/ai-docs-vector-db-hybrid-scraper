@@ -3,7 +3,11 @@
 This module provides sophisticated anti-detection capabilities for browser automation,
 including fingerprint management, behavioral patterns, and success rate monitoring.
 Designed to achieve 95%+ success rate on challenging sites while maintaining performance.
+
+Note: Uses standard random module for anti-detection purposes (timing, user agents, etc.)
+This is intentional and not cryptographically sensitive.
 """
+# ruff: noqa: S311  # Standard random is acceptable for anti-detection purposes
 
 import json
 import logging

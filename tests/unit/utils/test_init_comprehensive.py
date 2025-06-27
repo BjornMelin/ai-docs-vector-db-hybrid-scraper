@@ -88,7 +88,7 @@ class TestUtilsPackageFallback:
             if module_name in sys.modules:
                 del sys.modules[module_name]
 
-            import src.utils as utils_package
+            import src.utils as utils_package  # noqa: PLC0415
 
             # Test with positional arguments
             with pytest.raises(ImportError, match="async_command not available"):
@@ -168,6 +168,7 @@ class TestUtilsPackageImportLogic:
                 del sys.modules[module_name]
 
             # Import to trigger the logic
+            import src.utils as utils_package_dynamic  # noqa: PLC0415
 
             # Verify the importlib functions were called
             mock_spec_func.assert_called()
@@ -180,7 +181,6 @@ class TestUtilsPackageEdgeCases:
 
     def test_module_reload_behavior(self):
         """Test behavior when module is reloaded."""
-        import src.utils as utils_package
 
         # Basic sanity check after potential reload
         assert hasattr(utils_package, "resolve_imports")
@@ -220,7 +220,6 @@ class TestUtilsPackageEdgeCases:
 
     def test_docstring_present(self):
         """Test that package docstring is present."""
-        import src.utils as utils_package
 
         assert utils_package.__doc__ is not None
         assert "Utilities package" in utils_package.__doc__

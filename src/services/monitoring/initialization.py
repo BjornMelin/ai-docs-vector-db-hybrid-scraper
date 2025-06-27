@@ -213,7 +213,7 @@ def initialize_monitoring_system(
             name=service_name,
             timeout_seconds=config.monitoring.health_check_timeout,
         )
-        logger.info(f"Added external service health check: {service_name}")
+        logger.info("Added external service health check")
 
     # Start metrics server
     if metrics_config.enabled:
@@ -223,7 +223,7 @@ def initialize_monitoring_system(
                 f"Prometheus metrics server started on port {metrics_config.export_port}"
             )
         except Exception as e:
-            logger.exception(f"Failed to start metrics server: {e}")
+            logger.exception("Failed to start metrics server")
 
     logger.info("Monitoring system initialization complete")
     return metrics_registry, health_manager
@@ -354,7 +354,7 @@ def setup_fastmcp_monitoring(
             )
 
     except Exception as e:
-        logger.exception(f"Failed to set up FastMCP monitoring: {e}")
+        logger.exception("Failed to set up FastMCP monitoring")
 
 
 async def run_periodic_health_checks(
@@ -376,7 +376,7 @@ async def run_periodic_health_checks(
             await health_manager.check_all()
             logger.debug("Completed periodic health check")
         except Exception as e:
-            logger.exception(f"Error in periodic health check: {e}")
+            logger.exception("Error in periodic health check")
 
         await asyncio.sleep(interval_seconds)
 
@@ -402,7 +402,7 @@ async def update_system_metrics_periodically(
             metrics_registry.update_system_metrics()
             logger.debug("Updated system metrics")
         except Exception as e:
-            logger.exception(f"Error updating system metrics: {e}")
+            logger.exception("Error updating system metrics")
 
         await asyncio.sleep(interval_seconds)
 
@@ -429,6 +429,6 @@ async def update_cache_metrics_periodically(
             metrics_registry.update_cache_stats(cache_manager)
             logger.debug("Updated cache metrics")
         except Exception as e:
-            logger.exception(f"Error updating cache metrics: {e}")
+            logger.exception("Error updating cache metrics")
 
         await asyncio.sleep(interval_seconds)

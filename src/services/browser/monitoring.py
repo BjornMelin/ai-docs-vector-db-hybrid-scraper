@@ -173,7 +173,7 @@ class BrowserAutomationMonitor:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Browser monitoring Prometheus integration enabled")
             except Exception as e:
-                logger.debug(f"Browser monitoring Prometheus integration disabled: {e}")
+                logger.debug("Browser monitoring Prometheus integration disabled")
 
         logger.info("BrowserAutomationMonitor initialized")
 
@@ -416,9 +416,9 @@ class BrowserAutomationMonitor:
             try:
                 handler(alert)
             except Exception as e:
-                logger.exception(f"Alert handler failed: {e}")
+                logger.exception("Alert handler failed")
 
-        logger.warning(f"Alert raised: {alert.message}")
+        logger.warning("Alert raised")
 
     async def _monitoring_loop(self):
         """Main monitoring loop that runs in background."""
@@ -436,7 +436,7 @@ class BrowserAutomationMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Monitoring loop error: {e}")
+                logger.exception("Monitoring loop error")
                 await asyncio.sleep(5)  # Brief pause before retry
 
     async def _cleanup_old_data(self):
@@ -478,14 +478,14 @@ class BrowserAutomationMonitor:
                 await self._raise_alert(
                     alert_type=AlertType.TIER_FAILURE,
                     severity=AlertSeverity.CRITICAL,
-                    message=f"Unhealthy tiers detected: {', '.join(unhealthy_tiers)}",
+                    message="Unhealthy tiers detected",
                     metadata={"unhealthy_tiers": unhealthy_tiers},
                 )
             elif degraded_tiers:
                 await self._raise_alert(
                     alert_type=AlertType.PERFORMANCE_DEGRADATION,
                     severity=AlertSeverity.MEDIUM,
-                    message=f"Degraded performance in tiers: {', '.join(degraded_tiers)}",
+                    message="Degraded performance in tiers",
                     metadata={"degraded_tiers": degraded_tiers},
                 )
 
@@ -496,7 +496,7 @@ class BrowserAutomationMonitor:
             handler: Function that takes an Alert object
         """
         self.alert_handlers.append(handler)
-        logger.info(f"Added alert handler: {handler.__name__}")
+        logger.info("Added alert handler")
 
     def get_system_health(self) -> dict[str, Any]:
         """Get overall system health status.
@@ -584,5 +584,5 @@ class BrowserAutomationMonitor:
                 if alert.id == alert_id and not alert.resolved:
                     alert.resolved = True
                     alert.resolved_at = time.time()
-                    logger.info(f"Alert resolved: {alert_id}")
+                    logger.info("Alert resolved")
                     break

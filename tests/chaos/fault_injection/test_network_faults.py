@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Network fault injection tests for chaos engineering.
 
 This module implements network-level fault injection to test system resilience
@@ -227,8 +233,8 @@ class TestNetworkFaultInjection:
 
             # Simulate circuit breaker after 3 failures
             if failure_count >= 3:
-                circuit_breaker_triggered = True
-                raise Exception("Circuit breaker open")
+                raise TestError("Circuit breaker open")
+                raise TestError("Circuit breaker open")
 
             raise ConnectionError("Network failure")
 
@@ -388,9 +394,9 @@ class TestNetworkChaosWithRealServices:
 
             # After 3 failures, circuit breaker should open
             if failure_count > 3:
-                raise Exception("Circuit breaker open - preventing cascade")
+                raise TestError("Circuit breaker open - preventing cascade")
 
-            raise Exception("Vector DB failure")
+            raise TestError("Vector DB failure")
 
         # Validate circuit breaker prevents cascade
         circuit_result = await resilience_validator.validate_circuit_breaker(
@@ -467,7 +473,7 @@ class TestNetworkChaosWithRealServices:
 
         async def dns_dependent_operation(hostname: str):
             if dns_failure_active and hostname not in ["localhost", "127.0.0.1"]:
-                raise Exception(f"DNS resolution failed for {hostname}")
+                raise TestError(f"DNS resolution failed for {hostname}")
 
             return {"resolved": True, "hostname": hostname}
 

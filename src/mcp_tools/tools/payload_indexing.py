@@ -80,10 +80,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
         except Exception as e:
-            await ctx.error(
-                f"Failed to create payload indexes for {collection_name}: {e}"
-            )
-            logger.exception(f"Failed to create payload indexes: {e}")
+            await ctx.error("Failed to create payload indexes for {collection_name}")
+            logger.exception("Failed to create payload indexes")
             raise
 
     @mcp.tool()
@@ -95,7 +93,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Shows which fields are indexed and their types for performance monitoring.
         """
-        await ctx.info(f"Listing payload indexes for collection: {collection_name}")
+        await ctx.info("Listing payload indexes for collection")
 
         try:
             # Validate collection name
@@ -116,10 +114,8 @@ def register_tools(mcp, client_manager: ClientManager):
             return GenericDictResponse(**stats)
 
         except Exception as e:
-            await ctx.error(
-                f"Failed to list payload indexes for {collection_name}: {e}"
-            )
-            logger.exception(f"Failed to list payload indexes: {e}")
+            await ctx.error("Failed to list payload indexes for {collection_name}")
+            logger.exception("Failed to list payload indexes")
             raise
 
     from ..models.responses import ReindexCollectionResponse
@@ -160,7 +156,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 collection_name
             )
 
-            await ctx.info(f"Successfully reindexed collection: {collection_name}")
+            await ctx.info("Successfully reindexed collection")
 
             return ReindexCollectionResponse(
                 status="success",
@@ -176,8 +172,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
         except Exception as e:
-            await ctx.error(f"Failed to reindex collection {collection_name}: {e}")
-            logger.exception(f"Failed to reindex collection: {e}")
+            await ctx.error("Failed to reindex collection {collection_name}")
+            logger.exception("Failed to reindex collection")
             raise
 
     @mcp.tool()
@@ -194,9 +190,7 @@ def register_tools(mcp, client_manager: ClientManager):
         effectiveness of payload indexing.
         """
         if ctx:
-            await ctx.info(
-                f"Benchmarking filtered search on collection: {collection_name}"
-            )
+            await ctx.info("Benchmarking filtered search on collection")
 
         try:
             # Validate collection name and filters
@@ -260,6 +254,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Failed to benchmark filtered search: {e}")
-            logger.exception(f"Failed to benchmark filtered search: {e}")
+                await ctx.error("Failed to benchmark filtered search")
+            logger.exception("Failed to benchmark filtered search")
             raise

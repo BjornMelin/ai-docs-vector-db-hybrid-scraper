@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Breaking point analysis tests for stress testing.
 
 This module identifies the exact breaking points of the system under various
@@ -462,8 +467,8 @@ class TestBreakingPointAnalysis:
 
                 if random.random() < total_error_rate:
                     # Increase cascade level on error
-                    self.error_cascade_level = min(5.0, self.error_cascade_level + 0.1)
-                    raise Exception(
+                    raise TestError(
+                    raise TestError(
                         f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
                     )
                 else:

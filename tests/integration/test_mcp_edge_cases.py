@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Edge case and error handling tests for MCP server.
 
 Comprehensive testing of:
@@ -285,8 +290,8 @@ class TestMCPEdgeCases:
         async def rate_limited_search(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
-            if call_count > 3:
-                raise Exception("Rate limit exceeded: 429 Too Many Requests")
+                raise TestError("Rate limit exceeded: 429 Too Many Requests")
+                raise TestError("Rate limit exceeded: 429 Too Many Requests")
             return [{"id": f"doc-{call_count}", "content": "Result", "score": 0.9}]
 
         mock_client_manager.vector_service.search_documents = rate_limited_search
@@ -566,7 +571,7 @@ class TestMCPEdgeCases:
         # Configure to fail on specific inputs
         async def selective_failure(texts, **_kwargs):
             if any("fail" in text for text in texts):
-                raise Exception("Cannot process texts containing 'fail'")
+                raise TestError("Cannot process texts containing 'fail'")
             return {
                 "embeddings": [[0.1] * 384 for _ in texts],
                 "model": "test-model",

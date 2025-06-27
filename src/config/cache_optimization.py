@@ -20,7 +20,7 @@ import json
 import time
 from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any, Dict, Type, TypeVar, Union
+from typing import Any, Type, TypeVar, Union
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
@@ -41,11 +41,11 @@ class ConfigCache:
         """
         self.max_size = max_size
         self.default_ttl = default_ttl
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._timestamps: Dict[str, float] = {}
-        self._access_times: Dict[str, float] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
+        self._timestamps: dict[str, float] = {}
+        self._access_times: dict[str, float] = {}
 
-    def _generate_key(self, model_class: Type[T], data: Dict[str, Any]) -> str:
+    def _generate_key(self, model_class: type[T], data: dict[str, Any]) -> str:
         """Generate cache key from model class and data."""
         class_name = model_class.__name__
         data_hash = hashlib.sha256(
@@ -75,7 +75,7 @@ class ConfigCache:
             self._timestamps.pop(lru_key, None)
             self._access_times.pop(lru_key, None)
 
-    def get(self, model_class: Type[T], data: Dict[str, Any]) -> T | None:
+    def get(self, model_class: type[T], data: dict[str, Any]) -> T | None:
         """Get cached config model instance."""
         self._evict_expired()
 
@@ -89,7 +89,7 @@ class ConfigCache:
 
         return None
 
-    def set(self, model_class: Type[T], data: Dict[str, Any], instance: T) -> None:
+    def set(self, model_class: type[T], data: dict[str, Any], instance: T) -> None:
         """Cache config model instance."""
         self._evict_expired()
         self._evict_lru()
@@ -108,7 +108,7 @@ class ConfigCache:
         self._timestamps.clear()
         self._access_times.clear()
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "size": len(self._cache),
@@ -131,7 +131,7 @@ def cached_model(cache: ConfigCache | None = None, _ttl: float | None = None):
         ttl: Custom TTL for this model type
     """
 
-    def decorator(model_class: Type[T]) -> Type[T]:
+    def decorator(model_class: type[T]) -> type[T]:
         cache_instance = cache or _config_cache
 
         # Override original __new__ method
@@ -175,11 +175,11 @@ class AsyncConfigLoader:
         """
         self.max_concurrent_loads = max_concurrent_loads
         self._semaphore = asyncio.Semaphore(max_concurrent_loads)
-        self._load_cache: Dict[str, asyncio.Task] = {}
+        self._load_cache: dict[str, asyncio.Task] = {}
 
     async def load_config_async(
         self,
-        config_class: Type[T],
+        config_class: type[T],
         config_path: Union[str, Path] | None = None,
         **kwargs,
     ) -> T:
@@ -216,7 +216,7 @@ class AsyncConfigLoader:
             self._load_cache.pop(cache_key, None)
 
     async def _do_load_config(
-        self, config_class: Type[T], config_path: Union[str, Path] | None, **kwargs
+        self, config_class: type[T], config_path: Union[str, Path] | None, **kwargs
     ) -> T:
         """Internal method to perform config loading."""
         async with self._semaphore:
@@ -228,11 +228,10 @@ class AsyncConfigLoader:
                 if isinstance(config_path, str):
                     config_path = Path(config_path)
 
-                if config_path.exists():
-                    if config_path.suffix == ".json":
-                        with config_path.open() as f:
-                            file_data = json.load(f)
-                        kwargs.update(file_data)
+                if config_path.exists() and config_path.suffix == ".json":
+                    with config_path.open() as f:
+                        file_data = json.load(f)
+                    kwargs.update(file_data)
 
             # Create config instance
             return config_class(**kwargs)
@@ -258,7 +257,7 @@ class CachedConfigMixin:
         """Load config asynchronously."""
         return await _async_loader.load_config_async(cls, config_path, **kwargs)
 
-    def model_dump_cached(self) -> Dict[str, Any]:
+    def model_dump_cached(self) -> dict[str, Any]:
         """Get cached model dump for serialization."""
         if not hasattr(self, "_cached_dump"):
             self._cached_dump = self.model_dump()
@@ -341,17 +340,17 @@ class ConfigValidationCache:
 
     def __init__(self, max_size: int = 512):
         self.max_size = max_size
-        self._validation_cache: Dict[str, bool] = {}
-        self._error_cache: Dict[str, str] = {}
+        self._validation_cache: dict[str, bool] = {}
+        self._error_cache: dict[str, str] = {}
 
-    def _hash_data(self, data: Dict[str, Any]) -> str:
+    def _hash_data(self, data: dict[str, Any]) -> str:
         """Generate hash key for validation data."""
         return hashlib.sha256(
             json.dumps(data, sort_keys=True, default=str).encode()
         ).hexdigest()
 
     def get_validation_result(
-        self, data: Dict[str, Any]
+        self, data: dict[str, Any]
     ) -> tuple[bool, str | None] | None:
         """Get cached validation result."""
         key = self._hash_data(data)
@@ -362,7 +361,7 @@ class ConfigValidationCache:
         return None
 
     def cache_validation_result(
-        self, data: Dict[str, Any], is_valid: bool, error: str | None = None
+        self, data: dict[str, Any], is_valid: bool, error: str | None = None
     ):
         """Cache validation result."""
         if len(self._validation_cache) >= self.max_size:
@@ -404,7 +403,7 @@ def clear_all_caches() -> None:
     _async_loader._load_cache.clear()
 
 
-def cache_stats() -> Dict[str, Any]:
+def cache_stats() -> dict[str, Any]:
     """Get comprehensive cache statistics."""
     return {
         "config_cache": _config_cache.stats(),
@@ -437,7 +436,7 @@ class ConfigPerformanceMonitor:
         """Record cache miss."""
         self.cache_misses += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get performance statistics."""
         if not self.load_times:
             return {"no_data": True}

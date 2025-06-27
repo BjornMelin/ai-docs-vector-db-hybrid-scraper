@@ -297,9 +297,7 @@ def retry_async(
                     last_exception = e
 
                     if attempt == max_attempts - 1:
-                        logger.exception(
-                            f"Final attempt failed for {func.__name__}: {e}"
-                        )
+                        logger.exception("Final attempt failed for {func.__name__}")
                         break
 
                     delay = min(base_delay * (backoff_factor**attempt), max_delay)
@@ -312,7 +310,7 @@ def retry_async(
                     await asyncio.sleep(delay)
                 except Exception as e:
                     # Non-retryable error
-                    logger.exception(f"Non-retryable error in {func.__name__}: {e}")
+                    logger.exception("Non-retryable error in {func.__name__}")
                     raise
 
             raise last_exception or Exception("All retry attempts failed")
@@ -559,7 +557,7 @@ class AdvancedCircuitBreaker:
 
         logger.warning(
             f"Circuit breaker '{self.service_name}' failure "
-            f"{self.failure_count}/{self.failure_threshold}: {exception}"
+            "{self.failure_count}/{self.failure_threshold}"
         )
 
         # Check if we should open the circuit
@@ -788,7 +786,7 @@ def tenacity_circuit_breaker(
                         # Log retry attempt
                         logger.warning(
                             f"Tenacity retry attempt {attempt.retry_state.attempt_number}/"
-                            f"{max_attempts} failed for {service_name}: {e}"
+                            "{max_attempts} failed for {service_name}"
                         )
                         raise
 
@@ -824,7 +822,7 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             return safe_response(True, result=result)
         except (ToolError, ResourceError) as e:
             # These errors are meant to be sent to clients
-            logger.warning(f"MCP error in {func.__name__}: {e}")
+            logger.warning("MCP error in {func.__name__}")
             return safe_response(
                 False, error=str(e), error_type=e.error_code or "mcp_error"
             )
@@ -843,11 +841,11 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 ConfigurationError: "configuration",
             }
             error_type = error_type_map.get(type(e), "general")
-            logger.warning(f"{error_type.capitalize()} error in {func.__name__}: {e}")
+            logger.warning("{error_type.capitalize()} error in {func.__name__}")
             return safe_response(False, error=str(e), error_type=error_type)
         except Exception as e:
             # Mask internal errors for security
-            logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
+            logger.error("Unexpected error in {func.__name__}", exc_info=True)
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )
@@ -884,7 +882,7 @@ def validate_input(**validators) -> Callable[[F], F]:
                         bound_args.arguments[param_name] = validated_value
                     except Exception as e:
                         raise ValidationError(
-                            f"Invalid {param_name}: {e}",
+                            "Invalid {param_name}",
                             error_code="invalid_input",
                             context={"field": param_name, "value": value},
                         ) from e

@@ -86,7 +86,7 @@ async def delete_collection(
             "duration": time.time() - start_time,
         }
     except Exception as e:
-        logger.exception(f"Failed to delete collection {collection_name}: {e}")
+        logger.exception("Failed to delete collection {collection_name}")
         return {
             "status": "failed",
             "collection": collection_name,
@@ -147,7 +147,7 @@ async def persist_cache(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to persist data for {key}: {e}")
+        logger.exception("Failed to persist data for {key}")
         return {
             "status": "failed",
             "key": key,
@@ -178,7 +178,7 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
         logger.info(
             f"Configuration snapshot completed - "
             f"snapshots taken: {result['snapshots_taken']}, "
-            f"errors: {len(result['errors'])}"
+            "errors"
         )
 
         result.update(
@@ -191,7 +191,7 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
         return result
 
     except Exception as e:
-        logger.exception(f"Configuration snapshot task failed: {e}")
+        logger.exception("Configuration snapshot task failed")
         return {
             "status": "failed",
             "error": str(e),
@@ -222,7 +222,7 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
             f"Configuration comparison completed - "
             f"sources compared: {result['sources_compared']}, "
             f"drift events: {len(result['drift_events'])}, "
-            f"alerts sent: {result['alerts_sent']}"
+            "alerts sent"
         )
 
         result.update(
@@ -235,7 +235,7 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
         return result
 
     except Exception as e:
-        logger.exception(f"Configuration comparison task failed: {e}")
+        logger.exception("Configuration comparison task failed")
         return {
             "status": "failed",
             "error": str(e),
@@ -269,7 +269,7 @@ async def config_drift_remediation(
         # Log the remediation attempt (actual implementation would apply changes)
         logger.info(
             f"Remediating drift event {event_id} in {source}: "
-            f"Type: {drift_type}, Suggestion: {suggestion}"
+            "Type: {drift_type}, Suggestion"
         )
 
         # For now, this is a placeholder for actual remediation logic
@@ -293,9 +293,7 @@ async def config_drift_remediation(
         }
 
     except Exception as e:
-        logger.exception(
-            f"Configuration drift remediation failed for event {event_id}: {e}"
-        )
+        logger.exception("Configuration drift remediation failed for event {event_id}")
         return {
             "status": "failed",
             "event_id": event_id,

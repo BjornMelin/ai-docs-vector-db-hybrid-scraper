@@ -101,7 +101,7 @@ class BulkEmbedder:
                     )
                     return state
             except Exception as e:
-                logger.warning(f"Failed to load state: {e}")
+                logger.warning("Failed to load state")
         return ProcessingState(collection_name=self.collection_name)
 
     def _save_state(self) -> None:
@@ -130,7 +130,7 @@ class BulkEmbedder:
                 enable_quantization=True,
                 collection_type="general",
             )
-            logger.info(f"Created collection: {self.collection_name}")
+            logger.info("Created collection")
 
     async def load_urls_from_file(self, file_path: Path) -> list[str]:
         """Load URLs from various file formats."""
@@ -304,7 +304,7 @@ class BulkEmbedder:
 
         except Exception as e:
             result["error"] = str(e)
-            logger.exception(f"Failed to process {url}: {e}")
+            logger.exception("Failed to process {url}")
 
         return result
 
@@ -431,7 +431,7 @@ class BulkEmbedder:
         if self.state.failed_urls:
             console.print("\n[red]Failed URLs:[/red]")
             for url, error in self.state.failed_urls.items():
-                console.print(f"  • {url}: {error}")
+                console.print("  • {url}")
 
 
 @click.command()

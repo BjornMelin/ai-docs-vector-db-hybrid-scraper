@@ -79,11 +79,11 @@ async def _perform_ab_test_search(
     # Handle any exceptions
     if isinstance(hyde_results, Exception):
         if ctx:
-            await ctx.warning(f"HyDE search failed in A/B test: {hyde_results}")
+            await ctx.warning("HyDE search failed in A/B test")
         hyde_results = []
     if isinstance(regular_results, Exception):
         if ctx:
-            await ctx.warning(f"Regular search failed in A/B test: {regular_results}")
+            await ctx.warning("Regular search failed in A/B test")
         regular_results = []
 
     # Compare results
@@ -196,8 +196,8 @@ def register_tools(mcp, client_manager: ClientManager):
             return search_results
 
         except Exception as e:
-            await ctx.error(f"Multi-stage search {request_id} failed: {e}")
-            logger.exception(f"Multi-stage search failed: {e}")
+            await ctx.error("Multi-stage search {request_id} failed")
+            logger.exception("Multi-stage search failed")
             raise
 
     @mcp.tool()
@@ -330,8 +330,8 @@ def register_tools(mcp, client_manager: ClientManager):
             return search_results
 
         except Exception as e:
-            await ctx.error(f"HyDE search {request_id} failed: {e}")
-            logger.exception(f"HyDE search failed: {e}")
+            await ctx.error("HyDE search {request_id} failed")
+            logger.exception("HyDE search failed")
             # Fallback to regular search on error
             try:
                 await ctx.warning(
@@ -346,7 +346,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
                 return await _search_documents_direct(fallback_request, ctx)
             except Exception as fallback_error:
-                await ctx.error(f"Fallback search also failed: {fallback_error}")
+                await ctx.error("Fallback search also failed")
                 raise e from fallback_error
 
     @mcp.tool()
@@ -422,7 +422,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     result_dict["ab_test_results"] = ab_test_results
                 except Exception as ab_error:
                     if ctx:
-                        await ctx.warning(f"A/B testing failed: {ab_error}")
+                        await ctx.warning("A/B testing failed")
                     # Fallback to regular HyDE search
                     search_results = await hyde_engine.enhanced_search(
                         query=query,
@@ -517,8 +517,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Advanced HyDE search {request_id} failed: {e}")
-            logger.exception(f"Advanced HyDE search failed: {e}")
+                await ctx.error("Advanced HyDE search {request_id} failed")
+            logger.exception("Advanced HyDE search failed")
             raise
 
     @mcp.tool()
@@ -533,9 +533,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         # Generate request ID for tracking
         request_id = str(uuid4())
-        await ctx.info(
-            f"Starting filtered search {request_id} with filters: {request.filters}"
-        )
+        await ctx.info("Starting filtered search {request_id} with filters")
 
         try:
             # Validate collection name and query
@@ -585,6 +583,6 @@ def register_tools(mcp, client_manager: ClientManager):
             return search_results
 
         except Exception as e:
-            await ctx.error(f"Filtered search {request_id} failed: {e}")
-            logger.exception(f"Filtered search failed: {e}")
+            await ctx.error("Filtered search {request_id} failed")
+            logger.exception("Filtered search failed")
             raise

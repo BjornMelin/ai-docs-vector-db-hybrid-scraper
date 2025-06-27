@@ -65,6 +65,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Worker stopped by user")
         sys.exit(0)
-    except Exception as e:
+    except Exception:
         logger.exception("Worker failed")
         sys.exit(1)

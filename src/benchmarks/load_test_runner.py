@@ -209,7 +209,7 @@ class LoadTestUser:
                 )
                 await asyncio.sleep(think_time)
 
-            except Exception as e:
+            except Exception:
                 logger.exception(f"User {self.user_id} session error")
                 self.failures += 1
                 break
@@ -473,7 +473,7 @@ class LoadTestRunner:
                     logger.warning(f"System degradation detected at {user_count} users")
                     break
 
-            except Exception as e:
+            except Exception:
                 logger.exception(f"Stress test failed at {user_count} users")
                 break
 

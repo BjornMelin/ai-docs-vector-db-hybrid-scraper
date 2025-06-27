@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Spike testing scenarios for sudden load increases.
 
 This module implements spike tests to validate system behavior
@@ -259,14 +265,14 @@ class TestSpikeLoad:
                         self.events.append(
                             {"timestamp": current_time, "event": "HALF_OPEN"}
                         )
-                    else:
-                        raise Exception("Circuit breaker is OPEN")
+                        raise TestError("Circuit breaker is OPEN")
+                        raise TestError("Circuit breaker is OPEN")
 
                 try:
                     # Simulate higher failure rate during spikes
                     failure_rate = kwargs.get("spike_intensity", 0.1)
                     if current_time % 1.0 < failure_rate:
-                        raise Exception("Service temporarily unavailable")
+                        raise TestError("Service temporarily unavailable")
 
                     # Success
                     if self.state == "HALF_OPEN":

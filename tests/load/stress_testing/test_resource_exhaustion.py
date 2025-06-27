@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Resource exhaustion stress tests for AI Documentation Vector DB.
 
 This module implements comprehensive resource exhaustion scenarios to test
@@ -128,7 +134,7 @@ class ResourceMonitor:
                 self.metrics.timestamps.append(time.time())
 
             except Exception as e:
-                logger.warning(f"Error collecting resource metrics: {e}")
+                logger.warning("Error collecting resource metrics")
 
             time.sleep(self.interval)
 
@@ -229,8 +235,8 @@ class TestResourceExhaustion:
                     }
 
                 except MemoryError:
-                    memory_exhaustion_detected = True
-                    raise Exception("Memory exhausted during document processing")
+                    raise TestError("Memory exhausted during document processing")
+                    raise TestError("Memory exhausted during document processing")
 
             # Configure stress test with large document processing
             config = LoadTestConfig(
@@ -466,7 +472,7 @@ class TestResourceExhaustion:
                         self.connection_requests += 1
                         if self.active_connections >= self.max_connections:
                             self.pool_exhausted_count += 1
-                            raise Exception("Connection pool exhausted")
+                            raise TestError("Connection pool exhausted")
 
                         self.active_connections += 1
                         return f"connection_{self.active_connections}"
@@ -543,9 +549,7 @@ class TestResourceExhaustion:
             total_requests = result.metrics.total_requests
             if total_requests > 0:
                 pool_error_rate = pool_errors / total_requests
-                assert pool_error_rate < 0.8, (
-                    f"Too many pool exhaustion errors: {pool_error_rate:.2%}"
-                )
+                assert pool_error_rate < 0.8, "Too many pool exhaustion errors"
 
         finally:
             monitor.stop_monitoring()
@@ -591,10 +595,10 @@ class TestResourceExhaustion:
                         if "too many open files" in str(e).lower() or e.errno == 24:
                             fd_exhaustion_detected = True
                             logger.warning("File descriptor limit reached")
-                        raise Exception(f"File descriptor exhaustion: {e}")
+                        raise TestError("File descriptor exhaustion")
 
                     except Exception as e:
-                        logger.exception(f"Unexpected error in file operation: {e}")
+                        logger.exception("Unexpected error in file operation")
                         raise
 
                 # Configure file descriptor stress test
@@ -712,12 +716,10 @@ class TestResourceExhaustion:
                     # Check for cascading failure (multiple resources stressed)
                     if len(active_failures) >= 2:
                         cascading_failure_detected = True
-                        logger.warning(f"Cascading failure detected: {active_failures}")
+                        logger.warning("Cascading failure detected")
                         # Simulate system instability
                         if len(active_failures) >= 3:
-                            raise Exception(
-                                f"System overload: {', '.join(active_failures)}"
-                            )
+                            raise TestError("System overload")
 
                     return {
                         "status": "multi_resource_complete",
@@ -729,10 +731,10 @@ class TestResourceExhaustion:
 
                 except TimeoutError:
                     failure_types["cpu"] += 1
-                    raise Exception("CPU timeout during multi-resource operation")
+                    raise TestError("CPU timeout during multi-resource operation")
                 except MemoryError:
                     failure_types["memory"] += 1
-                    raise Exception("Memory exhausted during multi-resource operation")
+                    raise TestError("Memory exhausted during multi-resource operation")
                 except Exception as e:
                     # Count the failure type
                     error_msg = str(e).lower()
@@ -776,9 +778,7 @@ class TestResourceExhaustion:
             active_failure_types = sum(
                 1 for count in failure_types.values() if count > 0
             )
-            assert active_failure_types >= 2, (
-                f"Not enough resource types stressed: {failure_types}"
-            )
+            assert active_failure_types >= 2, "Not enough resource types stressed"
 
             # Verify peak resource usage
             assert peak_usage["peak_memory_mb"] > 100, "Insufficient memory stress"
@@ -787,7 +787,7 @@ class TestResourceExhaustion:
             # Verify system behavior under cascading failure
             total_failures = sum(failure_types.values())
             assert total_failures > 0, "No resource failures detected"
-            logger.info(f"Resource failure distribution: {failure_types}")
+            logger.info("Resource failure distribution")
 
         finally:
             monitor.stop_monitoring()

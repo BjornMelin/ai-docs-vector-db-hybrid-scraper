@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for HyDE query processing engine."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -765,8 +770,8 @@ class TestHyDEQueryEngine:
 
         # Mock enhanced_search with some errors
         async def mock_enhanced_search(query, **_kwargs):
-            if "error" in query:
-                raise Exception("Search error")
+                raise TestError("Search error")
+                raise TestError("Search error")
             return [{"id": f"doc_{query}", "score": 0.8}]
 
         engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)

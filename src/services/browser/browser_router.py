@@ -209,7 +209,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.exception(f"{selected_tier} failed for {url}: {e}")
+            logger.exception("{selected_tier} failed for {url}")
 
             # Record failure
             await self._record_performance(
@@ -439,7 +439,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.exception(f"Fallback {fallback_tier} also failed: {e}")
+                logger.exception("Fallback {fallback_tier} also failed")
 
                 # Record failure
                 await self._record_performance(
@@ -460,7 +460,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         # All tiers failed
         return {
             "success": False,
-            "error": f"All tiers failed for {url}. Original error: {error_message}",
+            "error": "All tiers failed for {url}. Original error",
             "content": "",
             "metadata": {},
             "url": url,
@@ -549,7 +549,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         elif tier == "firecrawl":
             return await self._try_firecrawl(url, timeout)
         else:
-            raise CrawlServiceError(f"Unknown tier: {tier}")
+            raise CrawlServiceError("Unknown tier")
 
     async def _record_performance(
         self,

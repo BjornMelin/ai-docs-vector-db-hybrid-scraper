@@ -50,7 +50,7 @@ class QueryProcessingPipeline(BaseService):
             logger.info("QueryProcessingPipeline initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize QueryProcessingPipeline: {e}")
+            logger.exception("Failed to initialize QueryProcessingPipeline")
             raise
 
     async def process(
@@ -143,9 +143,7 @@ class QueryProcessingPipeline(BaseService):
                 try:
                     return await self.process(request)
                 except Exception as e:
-                    logger.exception(
-                        f"Batch processing failed for query '{request}': {e}"
-                    )
+                    logger.exception("Batch processing failed for query '{request}'")
                     return QueryProcessingResponse(
                         success=False, results=[], total_results=0, error=str(e)
                     )
@@ -288,7 +286,7 @@ class QueryProcessingPipeline(BaseService):
                     health_status["status"] = "degraded"
 
             except Exception as e:
-                logger.exception(f"Health check failed: {e}")
+                logger.exception("Health check failed")
                 health_status["status"] = "unhealthy"
                 health_status["components"] = {
                     "orchestrator": {"status": "unhealthy", "message": str(e)},
@@ -367,7 +365,7 @@ class QueryProcessingPipeline(BaseService):
             end_time = time.time()
             warmup_time_ms = (end_time - start_time) * 1000
 
-            logger.warning(f"Pipeline warmup had issues: {e}")
+            logger.warning("Pipeline warmup had issues")
 
             return {
                 "status": "partial",

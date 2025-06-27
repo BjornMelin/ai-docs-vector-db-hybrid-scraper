@@ -5,10 +5,14 @@ performance degradation over time, and system stability issues.
 """
 
 import asyncio
+import hashlib
 import logging
+import os
+import random
 import time
 from typing import Dict
 
+import psutil
 import pytest
 
 from ..base_load_test import create_load_test_runner
@@ -55,9 +59,6 @@ class TestEnduranceLoad:
         @env.events.stats_reset.add_listener
         def collect_time_series_metrics(**_kwargs):
             """Collect metrics at regular intervals."""
-            import os
-
-            import psutil
 
             current_time = time.time()
             process = psutil.Process(os.getpid())
@@ -259,8 +260,6 @@ class TestEnduranceLoad:
 
         async def cache_aware_operation(**kwargs):
             """Operation that uses cache."""
-            import hashlib
-            import random
 
             # Generate cache key from operation parameters
             query = kwargs.get("query", f"query_{random.randint(1, 100)}")
@@ -490,8 +489,6 @@ class TestEnduranceLoad:
 
     def _stable_operation(self, **_kwargs):
         """Stable operation for endurance testing."""
-        import asyncio
-        import random
 
         # Consistent, predictable operation
         base_time = 0.05
@@ -642,7 +639,6 @@ class MemoryLeakSimulator:
 
     def allocate_memory(self, size_mb: float):
         """Simulate memory allocation."""
-        import random
 
         # Simulate memory allocation (using list as proxy)
         data = [random.random() for _ in range(int(size_mb * 1000))]
@@ -668,7 +664,6 @@ class MemoryLeakSimulator:
         """Simulate memory cleanup."""
         if self.allocated_memory:
             # Remove 10-30% of allocations
-            import random
 
             cleanup_count = random.randint(1, max(1, len(self.allocated_memory) // 3))
 

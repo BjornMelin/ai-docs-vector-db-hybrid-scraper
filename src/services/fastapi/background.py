@@ -342,7 +342,7 @@ class BackgroundTaskManager:
                     break
                 continue
             except Exception as e:
-                logger.exception(f"Worker {worker_name} error: {e}")
+                logger.exception("Worker {worker_name} error")
 
         logger.debug(f"Worker {worker_name} stopped")
 
@@ -418,7 +418,7 @@ class BackgroundTaskManager:
             result.error = str(e)
             result.end_time = datetime.now(tz=UTC)
 
-            logger.exception(f"Task {task_id} failed: {e}")
+            logger.exception("Task {task_id} failed")
             await self._handle_task_retry(task, result)
 
     async def _handle_task_retry(

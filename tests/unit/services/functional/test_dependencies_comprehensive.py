@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Comprehensive tests for function-based dependency injection.
 
 Tests modern dependency injection patterns with FastAPI integration,
@@ -280,8 +285,8 @@ class TestCircuitBreakerIntegration:
         async def recovering_service():
             nonlocal call_count
             call_count += 1
-            if call_count == 1:
-                raise Exception("Initial failure")
+                raise TestError("Initial failure")
+                raise TestError("Initial failure")
             return f"success_call_{call_count}"
 
         # Trigger circuit opening

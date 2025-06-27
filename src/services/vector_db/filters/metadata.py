@@ -298,7 +298,7 @@ class MetadataFilter(BaseFilter):
             )
 
         except Exception as e:
-            error_msg = f"Failed to apply metadata filter: {e}"
+            error_msg = "Failed to apply metadata filter"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
                 error_msg,
@@ -482,13 +482,11 @@ class MetadataFilter(BaseFilter):
                 )
 
             else:
-                self._logger.warning(f"Unsupported operator: {operator}")
+                self._logger.warning("Unsupported operator")
                 return None
 
         except Exception as e:
-            self._logger.exception(
-                f"Failed to build condition for field '{field}': {e}"
-            )
+            self._logger.exception("Failed to build condition for field '{field}'")
             return None
 
     def _build_boolean_expression(
@@ -561,7 +559,7 @@ class MetadataFilter(BaseFilter):
             MetadataFilterCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid metadata criteria: {e}")
+            self._logger.warning("Invalid metadata criteria")
             return False
 
     def get_supported_operators(self) -> list[str]:
@@ -603,7 +601,7 @@ class MetadataFilter(BaseFilter):
         try:
             operator = BooleanOperator(operator_key)
         except ValueError:
-            raise ValueError(f"Invalid boolean operator: {operator_key}") from None
+            raise ValueError("Invalid boolean operator") from None
 
         # Parse conditions
         parsed_conditions = []
@@ -619,7 +617,7 @@ class MetadataFilter(BaseFilter):
                     # Nested boolean expression
                     parsed_conditions.append(self.build_expression_from_dict(condition))
             else:
-                raise ValueError(f"Invalid condition format: {condition}")
+                raise ValueError("Invalid condition format")
 
         return BooleanExpressionModel(operator=operator, conditions=parsed_conditions)
 
@@ -691,16 +689,16 @@ class MetadataFilter(BaseFilter):
 
         # Explain shorthand conditions
         if criteria.exact_matches:
-            explanations.append(f"Exact matches: {criteria.exact_matches}")
+            explanations.append("Exact matches")
 
         if criteria.exclude_matches:
-            explanations.append(f"Exclude matches: {criteria.exclude_matches}")
+            explanations.append("Exclude matches")
 
         if criteria.range_filters:
-            explanations.append(f"Range filters: {criteria.range_filters}")
+            explanations.append("Range filters")
 
         if criteria.text_searches:
-            explanations.append(f"Text searches: {criteria.text_searches}")
+            explanations.append("Text searches")
 
         # Explain field conditions
         if criteria.field_conditions:
@@ -713,11 +711,9 @@ class MetadataFilter(BaseFilter):
 
         # Explain boolean expression
         if criteria.expression:
-            explanations.append(
-                f"Boolean expression: {self._explain_expression(criteria.expression)}"
-            )
+            explanations.append("Boolean expression")
 
-        return f"Metadata filter: {' AND '.join(explanations)}"
+        return "Metadata filter"
 
     def _explain_expression(self, expression: BooleanExpressionModel) -> str:
         """Generate explanation for boolean expression."""

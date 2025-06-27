@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for query processing pipeline."""
 
 import asyncio
@@ -152,8 +157,8 @@ class TestQueryProcessingPipeline:
 
         # Make second request fail
         def side_effect(request):
-            if "Query 1" in request.query:
-                raise Exception("Processing failed")
+                raise TestError("Processing failed")
+                raise TestError("Processing failed")
             return QueryProcessingResponse(
                 success=True,
                 results=[],
@@ -291,7 +296,7 @@ class TestQueryProcessingPipeline:
 
         # Make orchestrator fail
         def side_effect(*_args, **_kwargs):
-            raise Exception("Temporary failure")
+            raise TestError("Temporary failure")
 
         mock_orchestrator.process_query.side_effect = side_effect
 
@@ -627,7 +632,7 @@ class TestBatchProcessing:
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second request fails
-                raise Exception("Processing error")
+                raise TestError("Processing error")
             return QueryProcessingResponse(
                 success=True, results=[{"id": f"result_{call_count}"}], total_results=1
             )
@@ -855,7 +860,7 @@ class TestWarmUp:
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second warmup query fails
-                raise Exception("Warmup failure")
+                raise TestError("Warmup failure")
             return QueryProcessingResponse(success=True, results=[], total_results=0)
 
         mock_orchestrator.process_query.side_effect = side_effect
@@ -874,7 +879,7 @@ class TestWarmUp:
 
         # Mock process_batch to fail completely
         async def failing_batch(*_args, **_kwargs):
-            raise Exception("Complete failure")
+            raise TestError("Complete failure")
 
         # Mock the process_batch method directly on the pipeline
         original_process_batch = initialized_pipeline.process_batch

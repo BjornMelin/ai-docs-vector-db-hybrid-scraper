@@ -111,7 +111,7 @@ class PlaywrightAdapter(BaseService):
             )
 
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize Playwright: {e}") from e
+            raise CrawlServiceError("Failed to initialize Playwright") from e
 
     async def cleanup(self) -> None:
         """Cleanup Playwright resources."""
@@ -128,7 +128,7 @@ class PlaywrightAdapter(BaseService):
             self.logger.info("Playwright adapter cleaned up")
 
         except Exception as e:
-            self.logger.exception(f"Error cleaning up Playwright: {e}")
+            self.logger.exception("Error cleaning up Playwright")
 
     async def scrape(
         self,
@@ -215,7 +215,7 @@ class PlaywrightAdapter(BaseService):
                 extra_http_headers=stealth_config.headers,
                 device_scale_factor=stealth_config.viewport.device_scale_factor,
             )
-            self.logger.debug(f"Using anti-detection profile: {site_profile}")
+            self.logger.debug("Using anti-detection profile")
         else:
             # Use original configuration
             context = await self._browser.new_context(
@@ -231,8 +231,8 @@ class PlaywrightAdapter(BaseService):
         page = await context.new_page()
 
         # Set up event listeners for debugging
-        page.on("console", lambda msg: self.logger.debug(f"Console: {msg.text}"))
-        page.on("pageerror", lambda error: self.logger.warning(f"Page error: {error}"))
+        page.on("console", lambda msg: self.logger.debug("Console"))
+        page.on("pageerror", lambda error: self.logger.warning("Page error"))
 
         return context, page
 
@@ -259,7 +259,7 @@ class PlaywrightAdapter(BaseService):
         try:
             validated_actions = validate_actions(actions)
         except ValidationError as e:
-            raise CrawlServiceError(f"Invalid actions: {e}") from e
+            raise CrawlServiceError("Invalid actions") from e
 
         # Execute custom actions
         action_results = []
@@ -268,7 +268,7 @@ class PlaywrightAdapter(BaseService):
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
             except Exception as e:
-                self.logger.warning(f"Action {i} failed: {e}")
+                self.logger.warning("Action {i} failed")
                 action_results.append(
                     {
                         "action_index": i,
@@ -340,7 +340,7 @@ class PlaywrightAdapter(BaseService):
     ) -> dict[str, Any]:
         """Build error result for failed scraping."""
         processing_time = (time.time() - start_time) * 1000
-        self.logger.error(f"Playwright error for {url}: {error}")
+        self.logger.error("Playwright error for {url}")
 
         # Record failed attempt for anti-detection monitoring
         if self.anti_detection:
@@ -374,7 +374,7 @@ class PlaywrightAdapter(BaseService):
             try:
                 await context.close()
             except Exception as e:
-                self.logger.warning(f"Failed to close context: {e}")
+                self.logger.warning("Failed to close context")
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
         """Inject JavaScript patterns to avoid detection.
@@ -478,7 +478,7 @@ class PlaywrightAdapter(BaseService):
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
         except Exception as e:
-            self.logger.warning(f"Failed to inject stealth scripts: {e}")
+            self.logger.warning("Failed to inject stealth scripts")
 
     async def _execute_action(
         self, page: Any, action: Any, index: int
@@ -535,7 +535,7 @@ class PlaywrightAdapter(BaseService):
             await self._execute_drag_drop_action(page, action)
 
         else:
-            raise ValueError(f"Unknown action type: {action_type}")
+            raise ValueError("Unknown action type")
 
         return None  # No custom result
 
@@ -668,7 +668,7 @@ class PlaywrightAdapter(BaseService):
                         return {"text": text, "html": html}
 
             except Exception as e:
-                self.logger.debug(f"Failed to extract with selector {selector}: {e}")
+                self.logger.debug("Failed to extract with selector {selector}")
                 continue
 
         # Fallback to full body
@@ -678,7 +678,7 @@ class PlaywrightAdapter(BaseService):
                 "html": await page.inner_html("body"),
             }
         except Exception as e:
-            self.logger.warning(f"Failed to extract body content: {e}")
+            self.logger.warning("Failed to extract body content")
             return {"text": "", "html": ""}
 
     async def _extract_metadata(self, page: Any) -> dict[str, Any]:
@@ -734,7 +734,7 @@ class PlaywrightAdapter(BaseService):
             return metadata
 
         except Exception as e:
-            self.logger.warning(f"Failed to extract metadata: {e}")
+            self.logger.warning("Failed to extract metadata")
             return {
                 "title": await page.title() if page else "",
                 "description": None,
@@ -773,7 +773,7 @@ class PlaywrightAdapter(BaseService):
             return metrics
 
         except Exception as e:
-            self.logger.debug(f"Failed to get performance metrics: {e}")
+            self.logger.debug("Failed to get performance metrics")
             return {}
 
     def get_capabilities(self) -> dict[str, Any]:
@@ -883,7 +883,7 @@ class PlaywrightAdapter(BaseService):
             return {
                 "healthy": False,
                 "status": "error",
-                "message": f"Health check failed: {e}",
+                "message": "Health check failed",
                 "available": True,
             }
 

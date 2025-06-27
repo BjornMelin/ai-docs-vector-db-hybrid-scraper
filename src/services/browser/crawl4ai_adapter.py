@@ -45,9 +45,7 @@ class Crawl4AIAdapter(BaseService):
             self._initialized = True
             self.logger.info("Crawl4AI adapter initialized successfully")
         except Exception as e:
-            raise CrawlServiceError(
-                f"Failed to initialize Crawl4AI adapter: {e}"
-            ) from e
+            raise CrawlServiceError("Failed to initialize Crawl4AI adapter") from e
 
     async def cleanup(self) -> None:
         """Cleanup Crawl4AI resources."""
@@ -56,7 +54,7 @@ class Crawl4AIAdapter(BaseService):
                 await self._provider.cleanup()
                 self.logger.info("Crawl4AI adapter cleaned up")
             except Exception as e:
-                self.logger.exception(f"Error cleaning up Crawl4AI adapter: {e}")
+                self.logger.exception("Error cleaning up Crawl4AI adapter")
             finally:
                 self._initialized = False
 
@@ -124,7 +122,7 @@ class Crawl4AIAdapter(BaseService):
                 }
 
         except Exception as e:
-            self.logger.exception(f"Crawl4AI adapter error for {url}: {e}")
+            self.logger.exception("Crawl4AI adapter error for {url}")
             return {
                 "success": False,
                 "url": url,
@@ -271,7 +269,7 @@ class Crawl4AIAdapter(BaseService):
             return {
                 "healthy": False,
                 "status": "error",
-                "message": f"Health check failed: {e}",
+                "message": "Health check failed",
             }
 
     async def get_performance_metrics(self) -> dict[str, Any]:

@@ -461,7 +461,7 @@ class ContentClassifier:
             if url_matches > 0:
                 url_score = min(url_matches / len(patterns["url_patterns"]), 1.0)
                 score += url_score * CLASSIFICATION_WEIGHTS["url_weight"]
-                type_reasoning.append(f"URL patterns: {url_matches}")
+                type_reasoning.append("URL patterns")
 
         # Title pattern matching
         if title_lower and patterns.get("title_patterns"):
@@ -473,7 +473,7 @@ class ContentClassifier:
             if title_matches > 0:
                 title_score = min(title_matches / len(patterns["title_patterns"]), 1.0)
                 score += title_score * CLASSIFICATION_WEIGHTS["title_weight"]
-                type_reasoning.append(f"title patterns: {title_matches}")
+                type_reasoning.append("title patterns")
 
         # Content indicator matching
         if patterns.get("content_indicators"):
@@ -487,7 +487,7 @@ class ContentClassifier:
                     indicator_matches / len(patterns["content_indicators"]), 1.0
                 )
                 score += indicator_score * CLASSIFICATION_WEIGHTS["indicator_weight"]
-                type_reasoning.append(f"indicators: {indicator_matches}")
+                type_reasoning.append("indicators")
 
         return score, type_reasoning
 
@@ -510,7 +510,7 @@ class ContentClassifier:
                     )
             reasoning_parts.append("semantic analysis applied")
         except Exception as e:
-            logger.warning(f"Semantic analysis failed: {e}")
+            logger.warning("Semantic analysis failed")
 
         return type_scores
 
@@ -564,7 +564,7 @@ class ContentClassifier:
             secondary_types = self._determine_secondary_types(sorted_types)
 
         # Generate reasoning
-        reasoning = f"Rule-based classification: {'; '.join(reasoning_parts[:3])}"
+        reasoning = "Rule-based classification"
         if len(reasoning_parts) > 3:
             reasoning += f" (and {len(reasoning_parts) - 3} more factors)"
 
@@ -646,7 +646,7 @@ class ContentClassifier:
             return scores
 
         except Exception as e:
-            logger.exception(f"Semantic classification failed: {e}")
+            logger.exception("Semantic classification failed")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

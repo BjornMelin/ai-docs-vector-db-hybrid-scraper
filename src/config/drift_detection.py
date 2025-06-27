@@ -159,8 +159,8 @@ class ConfigDriftDetector:
                 logger.info("Integrated with existing performance monitoring system")
             else:
                 self.performance_monitor = None
-        except Exception as e:
-            logger.warning(f"Failed to initialize performance monitor: {e}")
+        except Exception:
+            logger.warning("Failed to initialize performance monitor")
             self.performance_monitor = None
 
         try:
@@ -170,8 +170,8 @@ class ConfigDriftDetector:
             # Create custom metrics for drift detection
             self._setup_custom_metrics()
             logger.info("Integrated with existing metrics bridge system")
-        except Exception as e:
-            logger.warning(f"Failed to initialize metrics bridge: {e}")
+        except Exception:
+            logger.warning("Failed to initialize metrics bridge")
             self.metrics_bridge = None
 
     def _setup_custom_metrics(self) -> None:
@@ -255,8 +255,8 @@ class ConfigDriftDetector:
                     "mtime": stat.st_mtime,
                     "permissions": oct(stat.st_mode),
                 }
-        except Exception as e:
-            logger.warning(f"Failed to load config from {source}: {e}")
+        except Exception:
+            logger.warning("Failed to load config from {source}")
             return {}
 
     def take_snapshot(self, source: str) -> ConfigSnapshot:
@@ -300,7 +300,9 @@ class ConfigDriftDetector:
 
             # Record metrics
             if self.metrics_bridge:
-                duration_ms = (time.time() - start_time) * 1000
+                _duration_ms = (
+                    time.time() - start_time
+                ) * 1000  # Recorded but not used in current implementation
                 self.snapshot_age_gauge.set(0, {"source": source})
 
                 # Record with performance monitor if available
@@ -313,11 +315,11 @@ class ConfigDriftDetector:
                         )
                         perf_data["custom_metrics"]["source"] = source
 
-            logger.debug(f"Created config snapshot for {source}: {config_hash[:8]}")
+            logger.debug("Created config snapshot for {source}")
             return snapshot
 
-        except Exception as e:
-            logger.exception(f"Failed to take snapshot of {source}: {e}")
+        except Exception:
+            logger.exception("Failed to take snapshot of {source}")
             raise
 
     def compare_snapshots(self, source: str) -> list[DriftEvent]:
@@ -405,8 +407,8 @@ class ConfigDriftDetector:
             logger.info(f"Detected {len(events)} drift events for {source}")
             return events
 
-        except Exception as e:
-            logger.exception(f"Failed to compare snapshots for {source}: {e}")
+        except Exception:
+            logger.exception("Failed to compare snapshots for {source}")
             return []
 
     def _analyze_config_changes(
@@ -593,7 +595,7 @@ class ConfigDriftDetector:
         old_value = change.get("old_value")
 
         if change_type == "modified" and old_value is not None:
-            return f"Revert '{path}' to previous value: {old_value}"
+            return "Revert '{path}' to previous value"
         elif change_type == "added":
             return f"Remove newly added key: '{path}'"
         elif change_type == "removed":
@@ -752,8 +754,8 @@ class ConfigDriftDetector:
                     if self.should_alert(event):
                         self.send_alert(event)
 
-            except Exception as e:
-                logger.exception(f"Failed drift detection for {source}: {e}")
+            except Exception:
+                logger.exception("Failed drift detection for {source}")
 
         # Clean up old data
         self._cleanup_old_events()

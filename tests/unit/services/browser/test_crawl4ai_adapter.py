@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Comprehensive tests for Crawl4AI browser adapter."""
 
 import asyncio
@@ -776,8 +782,8 @@ class TestCrawl4AIAdapterTimeTracking:
 
         # Add delay before failure
         async def delayed_failure(*_args, **_kwargs):
-            await asyncio.sleep(0.1)
-            raise Exception("Provider failed")
+            raise TestError("Provider failed")
+            raise TestError("Provider failed")
 
         mock_provider.scrape_url = delayed_failure
         mock_provider_class.return_value = mock_provider

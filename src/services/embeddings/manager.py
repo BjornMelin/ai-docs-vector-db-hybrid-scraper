@@ -125,9 +125,9 @@ class EmbeddingManager:
         if FlagReranker is not None:
             try:
                 self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
-                logger.info(f"Initialized reranker: {self._reranker_model}")
+                logger.info("Initialized reranker")
             except Exception as e:
-                logger.warning(f"Failed to initialize reranker: {e}")
+                logger.warning("Failed to initialize reranker")
 
     async def initialize(self) -> None:
         """Initialize available providers.
@@ -157,7 +157,7 @@ class EmbeddingManager:
                     f"Initialized OpenAI provider with {self.config.openai.model}"
                 )
             except Exception as e:
-                logger.warning(f"Failed to initialize OpenAI provider: {e}")
+                logger.warning("Failed to initialize OpenAI provider")
 
         # Initialize FastEmbed provider - always available for local embeddings
         try:
@@ -168,7 +168,7 @@ class EmbeddingManager:
                 f"Initialized FastEmbed provider with {self.config.fastembed.model}"
             )
         except Exception as e:
-            logger.warning(f"Failed to initialize FastEmbed provider: {e}")
+            logger.warning("Failed to initialize FastEmbed provider")
 
         if not self.providers:
             raise EmbeddingServiceError(
@@ -256,7 +256,7 @@ class EmbeddingManager:
             provider_name = recommendation["provider"]
             selected_model = recommendation["model"]
             estimated_cost = recommendation["estimated_cost"]
-            reasoning = f"Default smart selection: {recommendation['reasoning']}"
+            reasoning = "Default smart selection"
 
             logger.info(
                 f"Default smart selection: {provider_name}/{selected_model} "
@@ -291,8 +291,7 @@ class EmbeddingManager:
             provider = self.providers.get(provider_name)
             if not provider:
                 raise EmbeddingServiceError(
-                    f"Provider '{provider_name}' not available. "
-                    f"Available: {list(self.providers.keys())}"
+                    f"Provider '{provider_name}' not available. Available"
                 )
         elif quality_tier:
             preferred = self._tier_providers.get(quality_tier)
@@ -321,13 +320,11 @@ class EmbeddingManager:
         """
         budget_check = self.check_budget_constraints(estimated_cost)
         if not budget_check["within_budget"]:
-            raise EmbeddingServiceError(
-                f"Budget constraint violated: {budget_check['warnings'][0]}"
-            )
+            raise EmbeddingServiceError("Budget constraint violated")
 
         # Log warnings if any
         for warning in budget_check["warnings"]:
-            logger.warning(f"Budget warning: {warning}")
+            logger.warning("Budget warning")
 
     def _calculate_metrics_and_update_stats(
         self,
@@ -497,7 +494,7 @@ class EmbeddingManager:
                     sparse_embeddings = await provider.generate_sparse_embeddings(texts)
                     logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
                 except Exception as e:
-                    logger.warning(f"Failed to generate sparse embeddings: {e}")
+                    logger.warning("Failed to generate sparse embeddings")
                     # Continue with dense embeddings only
 
             # Calculate metrics and update statistics
@@ -518,7 +515,7 @@ class EmbeddingManager:
                         )
                         logger.info("Cached embedding for future use")
                 except Exception as e:
-                    logger.warning(f"Failed to cache embedding: {e}")
+                    logger.warning("Failed to cache embedding")
 
             result = {
                 "embeddings": embeddings,
@@ -538,7 +535,7 @@ class EmbeddingManager:
 
             return result
         except Exception as e:
-            logger.exception(f"Embedding generation failed: {e}")
+            logger.exception("Embedding generation failed")
             raise
 
     async def rerank_results(

@@ -269,7 +269,7 @@ class SimilarityThresholdManager(BaseFilter):
             )
 
         except Exception as e:
-            error_msg = f"Failed to apply similarity threshold management: {e}"
+            error_msg = "Failed to apply similarity threshold management"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
                 error_msg,
@@ -308,7 +308,7 @@ class SimilarityThresholdManager(BaseFilter):
             )
 
         else:
-            self._logger.warning(f"Unknown strategy: {criteria.strategy}")
+            self._logger.warning("Unknown strategy")
             return criteria.base_threshold
 
     async def _adaptive_threshold(
@@ -676,7 +676,7 @@ class SimilarityThresholdManager(BaseFilter):
             )
 
         except Exception as e:
-            self._logger.exception(f"Clustering analysis failed: {e}")
+            self._logger.exception("Clustering analysis failed")
             return None
 
     def _get_recent_data(
@@ -766,7 +766,7 @@ class SimilarityThresholdManager(BaseFilter):
             SimilarityThresholdCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid similarity threshold criteria: {e}")
+            self._logger.warning("Invalid similarity threshold criteria")
             return False
 
     def get_supported_operators(self) -> list[str]:

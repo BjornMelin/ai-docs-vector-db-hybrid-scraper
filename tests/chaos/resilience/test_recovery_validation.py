@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Recovery validation tests for chaos engineering.
 
 This module implements comprehensive recovery validation to test system
@@ -146,8 +151,8 @@ class TestRecoveryValidation:
                 """Validate system recovery."""
                 current = await self.monitor_current_state()
 
-                if not self.baseline_state:
-                    raise Exception("No baseline state available for comparison")
+                    raise TestError("No baseline state available for comparison")
+                    raise TestError("No baseline state available for comparison")
 
                 validation_results = {
                     "services_recovered": True,
@@ -213,7 +218,7 @@ class TestRecoveryValidation:
             ) -> RecoveryMetrics:
                 """Execute recovery procedure."""
                 if failure_type not in self.recovery_procedures:
-                    raise Exception(f"No recovery procedure for {failure_type}")
+                    raise TestError(f"No recovery procedure for {failure_type}")
 
                 metrics = RecoveryMetrics()
                 start_time = time.time()
@@ -838,16 +843,16 @@ class TestRecoveryValidation:
                 if service.get("status") != "healthy"
             ]
             if unhealthy_services:
-                raise Exception(f"Unhealthy services: {unhealthy_services}")
+                raise TestError(f"Unhealthy services: {unhealthy_services}")
             return {"healthy_services": len(state.services)}
 
         async def performance_check():
             """Check system performance is acceptable."""
             state = await system_monitor.monitor_current_state()
             if state.performance_metrics.get("error_rate", 0) > 0.1:
-                raise Exception("Error rate too high")
+                raise TestError("Error rate too high")
             if state.performance_metrics.get("latency_p95", 0) > 1.0:
-                raise Exception("Latency too high")
+                raise TestError("Latency too high")
             return {"performance": "acceptable"}
 
         async def data_integrity_check():
@@ -855,7 +860,7 @@ class TestRecoveryValidation:
             state = await system_monitor.monitor_current_state()
             docs = state.data_stores.get("vector_store", {}).get("documents", 0)
             if docs < 5000:  # Minimum acceptable data
-                raise Exception("Insufficient data available")
+                raise TestError("Insufficient data available")
             return {"documents": docs}
 
         validator.register_check("service_health", service_health_check)

@@ -17,6 +17,12 @@ import pytest
 from tests.chaos.conftest import ChaosExperiment, ExperimentResult, FailureType
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 class ExperimentStatus(Enum):
     """Chaos experiment execution status."""
 
@@ -91,8 +97,8 @@ class ChaosTestRunner:
             # Safety checks
             if self.global_config["safety_mode"]:
                 safety_check = await self._perform_safety_checks(experiment)
-                if not safety_check["safe_to_proceed"]:
-                    raise Exception(f"Safety check failed: {safety_check['reason']}")
+                if not safety_check.get("passed", True):
+                    raise TestError(f"Safety check failed: {safety_check['reason']}")
 
             # Execute the experiment
             result = await self._run_experiment_implementation(
@@ -653,7 +659,7 @@ class TestChaosRunner:
 
             async def health_check(self):
                 if self.failure_injected:
-                    raise Exception("System unhealthy due to injected failure")
+                    raise TestError("System unhealthy due to injected failure")
                 return {"status": "healthy"}
 
         return MockTargetSystem()
@@ -779,7 +785,7 @@ class TestChaosRunner:
             ):
                 self.call_count += 1
                 if self.call_count <= 2:  # Fail first 2 attempts
-                    raise Exception("Simulated injection failure")
+                    raise TestError("Simulated injection failure")
                 # Succeed on 3rd attempt
 
             async def stop_failure_injection(self, target_service: str):

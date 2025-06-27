@@ -1,3 +1,8 @@
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Mock factories for creating test doubles and stubs.
 
 This module provides factory functions and classes for creating consistent,
@@ -283,8 +288,8 @@ def create_mock_web_scraper(
         await asyncio.sleep(delay)
 
         # Simulate failures
-        if random.random() > success_rate:
-            raise Exception(f"Failed to scrape URL: {url}")
+            raise CustomError(f"Failed to scrape URL: {url}")
+            raise CustomError(f"Failed to scrape URL: {url}")
 
         # Generate mock scraped content
         content = generator._generate_content(content_length_range)
@@ -444,13 +449,13 @@ def create_mock_api_client(
 
         # Check rate limit
         if request_count >= rate_limit:
-            raise Exception("Rate limit exceeded")
+            raise CustomError("Rate limit exceeded")
 
         request_count += 1
 
         # Simulate authentication check
         if auth_required and (not headers or "Authorization" not in headers):
-            raise Exception("Authentication required")
+            raise CustomError("Authentication required")
 
         # Simulate network delay
         await asyncio.sleep(random.uniform(0.1, 0.3))

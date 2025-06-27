@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Stress testing scenarios for system breaking point analysis.
 
 This module implements various stress testing scenarios to identify system
@@ -244,8 +249,8 @@ class TestStressScenarios:
                 """Simulate connection-intensive operations."""
                 # Try to acquire connection
                 if self.active_connections >= self.max_connections:
-                    self.connection_failures += 1
-                    raise Exception(
+                    raise TestError(
+                    raise TestError(
                         f"Connection pool exhausted ({self.active_connections}/{self.max_connections})"
                     )
 
@@ -349,7 +354,7 @@ class TestStressScenarios:
                 if self.circuit_breaker_open:
                     if self.consecutive_failures > 50:  # Stay open for a while
                         self.consecutive_failures -= 1
-                        raise Exception("Circuit breaker is OPEN - rejecting requests")
+                        raise TestError("Circuit breaker is OPEN - rejecting requests")
                     else:
                         # Try to close circuit breaker
                         self.circuit_breaker_open = False
@@ -373,7 +378,7 @@ class TestStressScenarios:
                     if self.consecutive_failures > 10:
                         self.circuit_breaker_open = True
 
-                    raise Exception(
+                    raise TestError(
                         f"Cascading failure (level {self.failure_cascade_level:.1f}, consecutive: {self.consecutive_failures})"
                     )
                 else:
@@ -475,7 +480,7 @@ class TestStressScenarios:
 
                 if self.resource_pool < resources_needed:
                     self.exhaustion_triggered = True
-                    raise Exception(
+                    raise TestError(
                         f"Resource exhaustion: {self.resource_pool}/{self.max_resources} available"
                     )
 

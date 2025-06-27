@@ -53,8 +53,8 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
             return health_status
 
         except Exception as e:
-            await ctx.error(f"Pipeline health check {request_id} failed: {e}")
-            logger.exception(f"Pipeline health check failed: {e}")
+            await ctx.error("Pipeline health check {request_id} failed")
+            logger.exception("Pipeline health check failed")
             return {
                 "pipeline_healthy": False,
                 "error": str(e),
@@ -88,8 +88,8 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
             return metrics
 
         except Exception as e:
-            await ctx.error(f"Pipeline metrics collection {request_id} failed: {e}")
-            logger.exception(f"Pipeline metrics collection failed: {e}")
+            await ctx.error("Pipeline metrics collection {request_id} failed")
+            logger.exception("Pipeline metrics collection failed")
             return {"error": str(e), "metrics_available": False}
 
 
@@ -119,9 +119,9 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
             return {"status": "success", "message": "Pipeline warmed up successfully"}
 
         except Exception as e:
-            await ctx.warning(f"Pipeline warm-up {request_id} had issues: {e}")
-            logger.warning(f"Pipeline warm-up failed: {e}")
+            await ctx.warning("Pipeline warm-up {request_id} had issues")
+            logger.warning("Pipeline warm-up failed")
             return {
                 "status": "partial_success",
-                "message": f"Pipeline warm-up completed with issues: {e}",
+                "message": "Pipeline warm-up completed with issues",
             }

@@ -9,7 +9,7 @@ import json
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import matplotlib.pyplot as plt
 from rich.console import Console
@@ -41,13 +41,13 @@ class ConfigPerformanceReporter:
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
         self.metrics_collector = get_reload_metrics_collector()
-        self.results: Dict[str, Any] = {
+        self.results: dict[str, Any] = {
             "timestamp": datetime.now(tz=UTC).isoformat(),
             "tests": {},
             "summary": {},
         }
 
-    async def run_all_benchmarks(self) -> Dict[str, Any]:
+    async def run_all_benchmarks(self) -> dict[str, Any]:
         """Run all performance benchmarks.
 
         Returns:
@@ -460,9 +460,7 @@ class ConfigPerformanceReporter:
         baseline_memory = process.memory_info().rss / 1024 / 1024  # MB
 
         # Create multiple configs
-        configs = []
-        for _i in range(100):
-            configs.append(Config())
+        configs = [Config() for _ in range(100)]
 
         gc.collect()
         with_configs = process.memory_info().rss / 1024 / 1024

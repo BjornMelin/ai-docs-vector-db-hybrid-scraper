@@ -6,7 +6,7 @@ including timing, success rates, and performance characteristics.
 
 import time
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import Any
 
 from prometheus_client import Counter, Gauge, Histogram, Summary
 
@@ -112,7 +112,7 @@ class ReloadMetricsCollector:
         """Initialize metrics collector."""
         self._reload_times = []  # Track last N reload times
         self._max_history = 100
-        self._listener_stats: Dict[str, Dict[str, int]] = {}
+        self._listener_stats: dict[str, dict[str, int]] = {}
 
     def record_reload_attempt(self, trigger: str, status: str) -> None:
         """Record a configuration reload attempt.
@@ -259,7 +259,7 @@ class ReloadMetricsCollector:
         """
         snapshot_memory_usage.labels(source=source).set(bytes_used)
 
-    def get_reload_statistics(self) -> Dict[str, Any]:
+    def get_reload_statistics(self) -> dict[str, Any]:
         """Get comprehensive reload statistics.
 
         Returns:
@@ -346,7 +346,7 @@ def track_reload_operation(trigger: str):
 
 
 @contextmanager
-def track_reload_phase(phase_name: str, trigger: str, metadata: Dict[str, Any]):
+def track_reload_phase(phase_name: str, trigger: str, metadata: dict[str, Any]):
     """Context manager to track a specific reload phase.
 
     Args:

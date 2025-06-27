@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Integration tests for service interactions and composition.
 
 Tests the integration between different service layers including:
@@ -832,8 +837,8 @@ class TestCircuitBreakerCoordination:
         )
 
         # Mock services
-        async def primary_service():
-            raise Exception("Primary service overloaded")
+            raise TestError("Primary service overloaded")
+            raise TestError("Primary service overloaded")
 
         async def fallback_service():
             return {"status": "fallback_success", "data": "fallback_data"}
@@ -914,7 +919,7 @@ class TestCircuitBreakerCoordination:
 
         async def degraded_operation():
             await asyncio.sleep(0.05)  # Slow
-            raise Exception("Service degraded")
+            raise TestError("Service degraded")
 
         # Test calls to different services
         healthy_result = await monitor.call_service_with_protection(

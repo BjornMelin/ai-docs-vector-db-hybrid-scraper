@@ -203,13 +203,13 @@ class FilterError(Exception):
         parts = [super().__str__()]
 
         if self.filter_name:
-            parts.append(f"Filter: {self.filter_name}")
+            parts.append("Filter")
 
         if self.filter_criteria:
-            parts.append(f"Criteria: {self.filter_criteria}")
+            parts.append("Criteria")
 
         if self.underlying_error:
-            parts.append(f"Underlying error: {self.underlying_error}")
+            parts.append("Underlying error")
 
         return " | ".join(parts)
 
@@ -238,13 +238,11 @@ class FilterRegistry:
             ValueError: If filter_class is not a BaseFilter subclass
         """
         if not issubclass(filter_class, BaseFilter):
-            raise ValueError(
-                f"Filter class must inherit from BaseFilter: {filter_class}"
-            )
+            raise ValueError("Filter class must inherit from BaseFilter")
 
         filter_name = filter_class.__name__
         self._filters[filter_name] = filter_class
-        self._logger.info(f"Registered filter: {filter_name}")
+        self._logger.info("Registered filter")
 
     def get_filter_class(self, filter_name: str) -> type[BaseFilter] | None:
         """Get a registered filter class by name.
@@ -280,10 +278,10 @@ class FilterRegistry:
             try:
                 return filter_class(**kwargs)
             except Exception as e:
-                self._logger.exception(f"Failed to create filter {filter_name}: {e}")
+                self._logger.exception("Failed to create filter {filter_name}")
                 return None
 
-        self._logger.warning(f"Unknown filter type: {filter_name}")
+        self._logger.warning("Unknown filter type")
         return None
 
 

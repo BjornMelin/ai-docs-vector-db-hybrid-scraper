@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Breaking point identification tests for AI Documentation Vector DB.
 
 This module implements tests to identify system breaking points through
@@ -217,8 +222,8 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                if error_probability > 0 and time.time() % 1.0 < error_probability:
-                    raise Exception(f"Service overloaded at {current_users} users")
+                    raise TestError(f"Service overloaded at {current_users} users")
+                    raise TestError(f"Service overloaded at {current_users} users")
 
                 await asyncio.sleep(latency)
 
@@ -302,7 +307,7 @@ class TestBreakingPoints:
                     break
 
             except Exception as e:
-                logger.exception(f"Step {i + 1} failed: {e}")
+                logger.exception("Step {i + 1} failed")
                 # Add failure point
                 point = PerformancePoint(
                     users=step["users"],
@@ -340,7 +345,7 @@ class TestBreakingPoints:
             f"Breaking point identified: {breaking_point.breaking_point_users} users"
         )
         logger.info(f"Maximum stable load: {breaking_point.max_stable_users} users")
-        logger.info(f"Graceful degradation: {breaking_point.graceful_degradation}")
+        logger.info("Graceful degradation")
 
     @pytest.mark.stress
     async def test_sudden_spike_breaking_point(self, load_test_runner):
@@ -387,7 +392,7 @@ class TestBreakingPoints:
                 # Higher error rate during spikes
                 spike_error_rate = max(0, (current_users - 300) / 2000)
                 if spike_error_rate > 0 and time.time() % 1.0 < spike_error_rate:
-                    raise Exception(f"Spike overload at {current_users} users")
+                    raise TestError(f"Spike overload at {current_users} users")
 
                 await asyncio.sleep(min(latency, 5.0))  # Cap at 5s
 
@@ -404,7 +409,7 @@ class TestBreakingPoints:
         spike_results = []
 
         for scenario in spike_scenarios:
-            logger.info(f"Testing spike scenario: {scenario['name']}")
+            logger.info("Testing spike scenario")
 
             # Create spike profile
             spike_profile = SpikeLoadProfile(
@@ -483,7 +488,7 @@ class TestBreakingPoints:
                 )
 
             except Exception as e:
-                logger.exception(f"Spike scenario {scenario['name']} failed: {e}")
+                logger.exception("Spike scenario {scenario['name']} failed")
                 # Record failure
                 spike_results.append(
                     {
@@ -514,11 +519,11 @@ class TestBreakingPoints:
         spike_success_rate = handled_spikes / total_spikes
 
         assert spike_success_rate > 0.3, (
-            f"System handled too few spikes: {spike_success_rate:.2%}"
+            "System handled too few spikes"
         )
 
         logger.info(f"Maximum handled spike: {max_handled_spike} users")
-        logger.info(f"Spike success rate: {spike_success_rate:.2%}")
+        logger.info("Spike success rate")
 
     @pytest.mark.stress
     async def test_recovery_time_measurement(self, load_test_runner):
@@ -543,7 +548,7 @@ class TestBreakingPoints:
                     # High latency and errors during overload
                     latency = self.base_latency * 10
                     if time.time() % 1.0 < 0.3:  # 30% error rate
-                        raise Exception("System overloaded")
+                        raise TestError("System overloaded")
 
                 elif phase == "recovery" and self.overload_start:
                     # Gradual recovery based on time since overload
@@ -556,7 +561,7 @@ class TestBreakingPoints:
                     error_probability = self.recovery_factor * 0.1  # Decreasing errors
 
                     if time.time() % 1.0 < error_probability:
-                        raise Exception("System still recovering")
+                        raise TestError("System still recovering")
 
                 else:
                     # Normal operation
@@ -587,7 +592,7 @@ class TestBreakingPoints:
         recovery_complete_time = None
 
         for phase_config in test_phases:
-            logger.info(f"Running recovery test phase: {phase_config['name']}")
+            logger.info("Running recovery test phase")
 
             if phase_config["name"] == "recovery":
                 recovery_start_time = time.time()
@@ -698,7 +703,7 @@ class TestBreakingPoints:
             else 0
         )
         assert recovery_efficiency > 0.7, (
-            f"Poor recovery efficiency: {recovery_efficiency:.2%}"
+            "Poor recovery efficiency"
         )
 
         # Verify error rate recovery
@@ -711,7 +716,7 @@ class TestBreakingPoints:
             if recovery_time
             else "Recovery time not measured"
         )
-        logger.info(f"Recovery efficiency: {recovery_efficiency:.2%}")
+        logger.info("Recovery efficiency")
         logger.info(
             f"Baseline vs Recovery - Errors: {baseline_performance['error_rate']:.2f}% -> {recovery_performance['error_rate']:.2f}%"
         )

@@ -90,8 +90,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Failed to estimate costs: {e}")
-            logger.exception(f"Failed to estimate costs: {e}")
+                await ctx.error("Failed to estimate costs")
+            logger.exception("Failed to estimate costs")
             raise
 
     @mcp.tool()
@@ -117,9 +117,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 client_manager.unified_config.qdrant.url
             )
             if ctx:
-                await ctx.debug(
-                    f"Qdrant URL configured: {client_manager.unified_config.qdrant.url}"
-                )
+                await ctx.debug("Qdrant URL configured")
 
             # Check API keys
             if not client_manager.unified_config.openai.api_key:
@@ -147,9 +145,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "l2_enabled": client_manager.unified_config.cache.redis_url is not None,
             }
             if ctx:
-                await ctx.debug(
-                    f"Cache configuration: L1 enabled, L2 enabled: {config_status['config']['cache']['l2_enabled']}"
-                )
+                await ctx.debug("Cache configuration: L1 enabled, L2 enabled")
 
             # Determine overall validity
             if config_status["errors"]:
@@ -157,7 +153,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Configuration validation completed. Valid: {config_status['valid']}, Warnings: {len(config_status['warnings'])}"
+                    "Configuration validation completed. Valid: {config_status['valid']}, Warnings"
                 )
 
             return ConfigValidationResponse(
@@ -168,6 +164,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Failed to validate configuration: {e}")
-            logger.exception(f"Failed to validate configuration: {e}")
+                await ctx.error("Failed to validate configuration")
+            logger.exception("Failed to validate configuration")
             raise

@@ -555,7 +555,7 @@ class QueryIntentClassifier:
                             intent_scores[intent] * 0.7 + semantic_scores[intent] * 0.3
                         )
             except Exception as e:
-                logger.warning(f"Semantic intent classification failed: {e}")
+                logger.warning("Semantic intent classification failed")
 
         # Determine complexity level
         complexity_level = self._assess_complexity(query_lower)
@@ -584,7 +584,7 @@ class QueryIntentClassifier:
         for intent, score in sorted_intents[:3]:
             if score > 0.1:
                 reasoning_parts.append(f"{intent.value}:{score:.2f}")
-        reasoning = f"Rule-based + semantic analysis: {', '.join(reasoning_parts)}"
+        reasoning = "Rule-based + semantic analysis"
 
         # Generate suggested follow-ups based on intent
         suggested_followups = self._generate_followups(primary_intent, query)
@@ -700,7 +700,7 @@ class QueryIntentClassifier:
             return scores
 
         except Exception as e:
-            logger.exception(f"Semantic intent classification failed: {e}")
+            logger.exception("Semantic intent classification failed")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

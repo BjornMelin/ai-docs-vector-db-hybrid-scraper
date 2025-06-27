@@ -97,10 +97,10 @@ class AutomationRouter(BaseService):
                     logger.info(f"Loaded routing rules from {config_file}")
                     return routing_rules
             else:
-                logger.warning(f"Routing rules file not found: {config_file}")
+                logger.warning("Routing rules file not found")
 
         except Exception as e:
-            logger.exception(f"Failed to load routing rules: {e}")
+            logger.exception("Failed to load routing rules")
 
         # Fallback to default rules if loading fails
         return self._get_default_routing_rules()
@@ -149,7 +149,7 @@ class AutomationRouter(BaseService):
             self.logger.info("Initialized Lightweight HTTP adapter")
 
         except Exception as e:
-            self.logger.warning(f"Failed to initialize Lightweight adapter: {e}")
+            self.logger.warning("Failed to initialize Lightweight adapter")
 
         # Initialize Tier 1: Crawl4AI Basic
         try:
@@ -161,7 +161,7 @@ class AutomationRouter(BaseService):
             self.logger.info("Initialized Crawl4AI adapter")
 
         except Exception as e:
-            self.logger.warning(f"Failed to initialize Crawl4AI adapter: {e}")
+            self.logger.warning("Failed to initialize Crawl4AI adapter")
 
         # Initialize Tier 2: BrowserUse (Enhanced)
         try:
@@ -173,7 +173,7 @@ class AutomationRouter(BaseService):
             self.logger.info("Initialized BrowserUse adapter")
 
         except Exception as e:
-            self.logger.warning(f"Failed to initialize BrowserUse adapter: {e}")
+            self.logger.warning("Failed to initialize BrowserUse adapter")
 
         # Initialize Tier 3: Playwright
         try:
@@ -185,7 +185,7 @@ class AutomationRouter(BaseService):
             self.logger.info("Initialized Playwright adapter")
 
         except Exception as e:
-            self.logger.warning(f"Failed to initialize Playwright adapter: {e}")
+            self.logger.warning("Failed to initialize Playwright adapter")
 
         # TODO: Initialize Tier 4: Firecrawl adapter when available
         # try:
@@ -195,7 +195,7 @@ class AutomationRouter(BaseService):
         #     self._adapters["firecrawl"] = adapter
         #     self.logger.info("Initialized Firecrawl adapter")
         # except Exception as e:
-        #     self.logger.warning(f"Failed to initialize Firecrawl adapter: {e}")
+        #     self.logger.warning("Failed to initialize Firecrawl adapter")
 
         if not self._adapters:
             raise CrawlServiceError("No automation adapters available")
@@ -212,7 +212,7 @@ class AutomationRouter(BaseService):
                 await adapter.cleanup()
                 self.logger.info(f"Cleaned up {name} adapter")
             except Exception as e:
-                self.logger.exception(f"Error cleaning up {name} adapter: {e}")
+                self.logger.exception("Error cleaning up {name} adapter")
 
         self._adapters.clear()
         self._initialized = False
@@ -290,7 +290,7 @@ class AutomationRouter(BaseService):
             return result
 
         except Exception as e:
-            self.logger.exception(f"{tool} failed for {url}: {e}")
+            self.logger.exception("{tool} failed for {url}")
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
@@ -331,7 +331,7 @@ class AutomationRouter(BaseService):
                 if can_handle:
                     return "lightweight"
             except Exception as e:
-                self.logger.debug(f"Lightweight adapter can_handle check failed: {e}")
+                self.logger.debug("Lightweight adapter can_handle check failed")
 
         # Check for JavaScript-heavy patterns that need higher tiers
         js_patterns = ["spa", "react", "vue", "angular", "app", "dashboard", "console"]
@@ -538,7 +538,7 @@ class AutomationRouter(BaseService):
                 return result
 
             except Exception as e:
-                self.logger.exception(f"Fallback {fallback_tool} also failed: {e}")
+                self.logger.exception("Fallback {fallback_tool} also failed")
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue

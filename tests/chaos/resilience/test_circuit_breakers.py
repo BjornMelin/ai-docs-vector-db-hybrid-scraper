@@ -5,6 +5,7 @@ failure detection, fast-fail behavior, and automatic recovery mechanisms.
 """
 
 import asyncio
+import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -12,6 +13,36 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class CircuitBreakerError(Exception):
+    """Base exception for circuit breaker errors."""
+
+    pass
+
+
+class CircuitOpenError(CircuitBreakerError):
+    """Raised when circuit breaker is open."""
+
+    pass
+
+
+class ServiceFailureError(CircuitBreakerError):
+    """Raised when service fails."""
+
+    pass
+
+
+class ResourceExhaustedError(CircuitBreakerError):
+    """Raised when resources are exhausted."""
+
+    pass
+
+
+class SystemOverloadError(CircuitBreakerError):
+    """Raised when system is overloaded."""
+
+    pass
 
 
 class CircuitState(Enum):
@@ -60,15 +91,16 @@ class CircuitBreaker:
 
         # Fast-fail if circuit is open
         if self.state == CircuitState.OPEN:
-            raise Exception("Circuit breaker is open")
+            raise CircuitOpenError("Circuit breaker is open")
 
         try:
             result = await func(*args, **kwargs)
             await self._on_success()
-            return result
         except self.config.expected_exception:
             await self._on_failure()
             raise
+        else:
+            return result
 
     async def _on_success(self):
         """Handle successful call."""
@@ -123,7 +155,7 @@ class TestCircuitBreakers:
         )
 
     async def test_circuit_breaker_state_transitions(
-        self, circuit_breaker_config, fault_injector
+        self, circuit_breaker_config, _fault_injector
     ):
         """Test circuit breaker state transitions."""
         circuit_breaker = CircuitBreaker(circuit_breaker_config)
@@ -135,7 +167,7 @@ class TestCircuitBreakers:
             nonlocal call_count
             call_count += 1
             if call_count <= 3:  # First 3 calls fail
-                raise Exception("Service failure")
+                raise ServiceFailureError("Service failure")
             return {"status": "success", "call": call_count}
 
         # Test CLOSED -> OPEN transition
@@ -143,7 +175,7 @@ class TestCircuitBreakers:
 
         # Make failing calls to trigger circuit breaker
         for _i in range(3):
-            with pytest.raises(Exception, match="Service failure"):
+            with pytest.raises(ServiceFailureError, match="Service failure"):
                 await circuit_breaker.call(failing_service)
 
         # Circuit should now be OPEN
@@ -151,7 +183,7 @@ class TestCircuitBreakers:
         assert circuit_breaker.failure_count == 3
 
         # Test fast-fail behavior
-        with pytest.raises(Exception, match="Circuit breaker is open"):
+        with pytest.raises(CircuitOpenError, match="Circuit breaker is open"):
             await circuit_breaker.call(failing_service)
 
         # Wait for timeout to test OPEN -> HALF_OPEN transition
@@ -180,10 +212,8 @@ class TestCircuitBreakers:
             nonlocal call_count
             call_count += 1
 
-            import random
-
             if random.random() < failure_rate:
-                raise Exception(f"Intermittent failure on call {call_count}")
+                raise ServiceFailureError(f"Intermittent failure on call {call_count}")
 
             return {"status": "success", "call": call_count}
 
@@ -223,19 +253,19 @@ class TestCircuitBreakers:
 
         async def recovering_service():
             if not service_recovered:
-                raise Exception("Service not yet recovered")
+                raise ServiceFailureError("Service not yet recovered")
             return {"status": "recovered"}
 
         # Trigger circuit breaker
         for _ in range(circuit_breaker_config.failure_threshold):
-            with pytest.raises(Exception, match="Service not yet recovered"):
+            with pytest.raises(ServiceFailureError, match="Service not yet recovered"):
                 await circuit_breaker.call(recovering_service)
 
         assert circuit_breaker.state == CircuitState.OPEN
 
         # Test fast-fail behavior
         fast_fail_start = time.time()
-        with pytest.raises(Exception, match="Circuit breaker is open"):
+        with pytest.raises(CircuitOpenError, match="Circuit breaker is open"):
             await circuit_breaker.call(recovering_service)
         fast_fail_duration = time.time() - fast_fail_start
 
@@ -246,7 +276,7 @@ class TestCircuitBreakers:
         await asyncio.sleep(circuit_breaker_config.timeout + 0.01)
 
         # Should transition to HALF_OPEN but still fail
-        with pytest.raises(Exception, match="Service not yet recovered"):
+        with pytest.raises(ServiceFailureError, match="Service not yet recovered"):
             await circuit_breaker.call(recovering_service)
 
         # Should be OPEN again after failure in HALF_OPEN
@@ -264,7 +294,7 @@ class TestCircuitBreakers:
         assert circuit_breaker.state == CircuitState.CLOSED
 
     async def test_circuit_breaker_with_different_exception_types(
-        self, circuit_breaker_config
+        self, _circuit_breaker_config
     ):
         """Test circuit breaker with different exception types."""
         # Configure circuit breaker for specific exception type
@@ -319,7 +349,7 @@ class TestCircuitBreakers:
         assert circuit_breaker.state == CircuitState.OPEN
 
         # Fourth call should fast-fail regardless of exception type
-        with pytest.raises(Exception, match="Circuit breaker is open"):
+        with pytest.raises(CircuitOpenError, match="Circuit breaker is open"):
             await circuit_breaker.call(service_with_different_errors)
 
     async def test_circuit_breaker_metrics_and_monitoring(self, circuit_breaker_config):
@@ -329,7 +359,7 @@ class TestCircuitBreakers:
         # Service with predictable behavior
         async def monitored_service(should_fail: bool = False):
             if should_fail:
-                raise Exception("Monitored failure")
+                raise ServiceFailureError("Monitored failure")
             return {"status": "success"}
 
         # Track initial stats
@@ -349,7 +379,7 @@ class TestCircuitBreakers:
 
         # Make failing calls
         for _ in range(circuit_breaker_config.failure_threshold):
-            with pytest.raises(Exception):
+            with pytest.raises(ServiceFailureError):
                 await circuit_breaker.call(monitored_service, should_fail=True)
 
         failure_stats = circuit_breaker.get_stats()
@@ -361,7 +391,7 @@ class TestCircuitBreakers:
         assert failure_stats["last_failure_time"] > 0
 
         # Test fast-fail metrics
-        with pytest.raises(Exception, match="Circuit breaker is open"):
+        with pytest.raises(CircuitOpenError, match="Circuit breaker is open"):
             await circuit_breaker.call(monitored_service, should_fail=False)
 
         fast_fail_stats = circuit_breaker.get_stats()
@@ -393,7 +423,7 @@ class TestCircuitBreakers:
             raise ConnectionError("Database connection failed")
 
         async def api_service():
-            raise Exception("API service failed")
+            raise ServiceFailureError("API service failed")
 
         async def cache_service():
             return {"cached": "data"}  # This one works
@@ -407,13 +437,13 @@ class TestCircuitBreakers:
 
         # Test API circuit breaker (higher threshold)
         for _ in range(2):
-            with pytest.raises(Exception):
+            with pytest.raises(ServiceFailureError):
                 await api_circuit.call(api_service)
 
         assert api_circuit.state == CircuitState.CLOSED  # Not reached threshold yet
 
         # One more failure should open API circuit
-        with pytest.raises(Exception):
+        with pytest.raises(ServiceFailureError):
             await api_circuit.call(api_service)
 
         assert api_circuit.state == CircuitState.OPEN
@@ -444,7 +474,7 @@ class TestCircuitBreakers:
 
             # Fail first 5 attempts, then succeed
             if call_attempts <= 5:
-                raise Exception(f"Service failure attempt {call_attempts}")
+                raise ServiceFailureError(f"Service failure attempt {call_attempts}")
 
             return {"status": "success", "attempts": call_attempts}
 
@@ -455,13 +485,14 @@ class TestCircuitBreakers:
             for attempt in range(max_retries + 1):
                 try:
                     result = await circuit_breaker.call(unreliable_service)
-                    return result
                 except Exception as e:
                     last_exception = e
 
                     # Don't retry if circuit breaker is open
                     if "Circuit breaker is open" in str(e):
                         break
+                else:
+                    return result
 
                     # Brief delay between retries
                     if attempt < max_retries:
@@ -470,7 +501,7 @@ class TestCircuitBreakers:
             raise last_exception
 
         # First retry attempt - should fail and open circuit breaker
-        with pytest.raises(Exception):
+        with pytest.raises(ServiceFailureError):
             await retry_with_circuit_breaker(max_retries=5)
 
         assert circuit_breaker.state == CircuitState.OPEN
@@ -478,7 +509,7 @@ class TestCircuitBreakers:
         # Subsequent attempts should fast-fail without calling service
         service_calls_before = call_attempts
 
-        with pytest.raises(Exception, match="Circuit breaker is open"):
+        with pytest.raises(CircuitOpenError, match="Circuit breaker is open"):
             await retry_with_circuit_breaker(max_retries=3)
 
         # Service should not have been called due to circuit breaker
@@ -513,7 +544,7 @@ class TestCircuitBreakers:
         async def critical_operation():
             """Operation using critical resource pool."""
             if critical_pool["used"] >= critical_pool["available"]:
-                raise Exception("Critical pool exhausted")
+                raise ResourceExhaustedError("Critical pool exhausted")
 
             critical_pool["used"] += 1
             try:
@@ -525,7 +556,7 @@ class TestCircuitBreakers:
         async def normal_operation():
             """Operation using normal resource pool."""
             if normal_pool["used"] >= normal_pool["available"]:
-                raise Exception("Normal pool exhausted")
+                raise ResourceExhaustedError("Normal pool exhausted")
 
             normal_pool["used"] += 1
             try:
@@ -535,9 +566,10 @@ class TestCircuitBreakers:
                 normal_pool["used"] -= 1
 
         # Overwhelm critical pool to trigger its circuit breaker
-        critical_tasks = []
-        for _ in range(5):  # More than critical pool capacity
-            critical_tasks.append(critical_pool_circuit.call(critical_operation))
+        critical_tasks = [
+            critical_pool_circuit.call(critical_operation)
+            for _ in range(5)  # More than critical pool capacity
+        ]
 
         critical_results = await asyncio.gather(*critical_tasks, return_exceptions=True)
 
@@ -591,7 +623,7 @@ class TestCircuitBreakers:
         )
 
         async def failing_service():
-            raise Exception("Service failure")
+            raise ServiceFailureError("Service failure")
 
         # Test with low system load (normal threshold)
         adaptive_circuit.system_load = 0.3
@@ -605,7 +637,7 @@ class TestCircuitBreakers:
 
         # Trigger circuit breaker with high load
         for _ in range(reduced_threshold):
-            with pytest.raises(Exception):
+            with pytest.raises(ServiceFailureError):
                 await adaptive_circuit.call(failing_service)
 
         # Should open with fewer failures due to high load

@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Cascade failure tests for chaos engineering.
 
 This module implements comprehensive cascade failure scenarios to test
@@ -87,8 +93,8 @@ class TestCascadeFailures:
 
             # Check if service itself has failed
             if service.state == ServiceState.FAILED:
-                failure_count[service_name] = failure_count.get(service_name, 0) + 1
-                raise Exception(f"Service {service_name} is failed")
+                raise TestError(f"Service {service_name} is failed")
+                raise TestError(f"Service {service_name} is failed")
 
             # Check dependencies
             for dep_name in service.dependencies:
@@ -102,7 +108,7 @@ class TestCascadeFailures:
                         service.circuit_breaker_open = True
                         service.state = ServiceState.CRITICAL
 
-                    raise Exception(
+                    raise TestError(
                         f"Service {service_name} failed due to dependency {dep_name}"
                     )
 
@@ -153,7 +159,7 @@ class TestCascadeFailures:
 
             # Check circuit breaker
             if circuit_breakers.get(service_name, False):
-                raise Exception(f"Circuit breaker open for {service_name}")
+                raise TestError(f"Circuit breaker open for {service_name}")
 
             # Simulate dependency failure
             for dep_name in service.dependencies:
@@ -173,7 +179,7 @@ class TestCascadeFailures:
                             "circuit_breaker": "open",
                         }
 
-                    raise Exception(f"Dependency {dep_name} failed")
+                    raise TestError(f"Dependency {dep_name} failed")
 
             return {"service": service_name, "status": "success"}
 
@@ -204,7 +210,7 @@ class TestCascadeFailures:
 
         async def search_operation():
             if search_pool["used"] >= search_pool["size"]:
-                raise Exception("Search pool exhausted")
+                raise TestError("Search pool exhausted")
 
             search_pool["used"] += 1
             try:
@@ -216,7 +222,7 @@ class TestCascadeFailures:
 
         async def admin_operation():
             if admin_pool["used"] >= admin_pool["size"]:
-                raise Exception("Admin pool exhausted")
+                raise TestError("Admin pool exhausted")
 
             admin_pool["used"] += 1
             try:
@@ -377,7 +383,7 @@ class TestCascadeFailures:
         async def failing_service():
             # Simulate service failure for 2 seconds
             if time.time() - failure_start_time < 2.0:
-                raise Exception("Service temporarily unavailable")
+                raise TestError("Service temporarily unavailable")
             return {"status": "recovered"}
 
         async def client_with_exponential_backoff(client_id: str):
@@ -447,7 +453,7 @@ class TestCascadeFailures:
                     n for n in nodes.values() if n["partition"] == "group_1"
                 ]
                 if len(accessible_nodes) < 2:  # Less than majority
-                    raise Exception(
+                    raise TestError(
                         "Cannot achieve strong consistency - insufficient nodes"
                     )
 

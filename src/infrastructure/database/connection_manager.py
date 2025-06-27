@@ -110,7 +110,7 @@ class DatabaseManager:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to initialize enterprise database manager: {e}")
+            logger.exception("Failed to initialize enterprise database manager")
             raise
 
     async def cleanup(self) -> None:
@@ -131,7 +131,7 @@ class DatabaseManager:
             logger.info("Enterprise database manager cleaned up")
 
         except Exception as e:
-            logger.exception(f"Error during database cleanup: {e}")
+            logger.exception("Error during database cleanup")
 
     @asynccontextmanager
     async def session(self) -> Any:

@@ -90,11 +90,9 @@ class SecurityTestRunner:
                 try:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
-                    self.logger.info(
-                        f"Completed {category} tests: {category_results.get('status', 'unknown')}"
-                    )
+                    self.logger.info("Completed {category} tests")
                 except Exception as e:
-                    self.logger.exception(f"Error in {category} tests: {e}")
+                    self.logger.exception("Error in {category} tests")
                     results["test_categories"][category] = {
                         "status": "error",
                         "error": str(e),
@@ -323,7 +321,7 @@ class SecurityTestRunner:
             if file_path.exists():
                 existing_files.append(str(file_path))
             else:
-                self.logger.warning(f"Test file not found: {test_file}")
+                self.logger.warning("Test file not found")
 
         if not existing_files:
             return {
@@ -663,12 +661,12 @@ def main():
 
     # Print summary
     print("\nSecurity Test Summary:")
-    print(f"Overall Status: {results['summary']['overall_status']}")
+    print("Overall Status")
     print(f"Success Rate: {results['summary']['success_rate']}%")
     print(
         f"Tests: {results['summary']['total_passed']}/{results['summary']['total_tests']} passed"
     )
-    print(f"Reports generated in: {args.output_dir}")
+    print("Reports generated in")
 
     # Exit with appropriate code
     sys.exit(0 if results["summary"]["overall_status"] == "PASS" else 1)

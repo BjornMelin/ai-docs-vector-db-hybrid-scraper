@@ -135,6 +135,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Similar search failed: {e}")
-            logger.exception(f"Similar search failed: {e}")
+                await ctx.error("Similar search failed")
+            logger.exception("Similar search failed")
             raise

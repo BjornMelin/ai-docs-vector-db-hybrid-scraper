@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Chaos engineering integration tests.
 
 This module implements comprehensive integration tests that combine all chaos
@@ -220,8 +225,8 @@ class TestChaosIntegration:
                     if service["status"] == "failed"
                 ]
 
-                if failed_services:
-                    raise Exception(
+                    raise TestError(
+                    raise TestError(
                         f"Health check failed - services down: {failed_services}"
                     )
 
@@ -423,7 +428,7 @@ class TestChaosIntegration:
 
             # Simulate vector_db failure
             if "vector_db" in integrated_system.active_failures:
-                raise Exception("Vector DB unavailable")
+                raise TestError("Vector DB unavailable")
 
             return {"status": "success", "data": "vector_search_results"}
 
@@ -464,7 +469,7 @@ class TestChaosIntegration:
             # Simulate search service issues
             if "search_service" in integrated_system.active_failures:
                 if call_count <= 3:  # Fail first 3 attempts
-                    raise Exception("Search service temporarily unavailable")
+                    raise TestError("Search service temporarily unavailable")
 
             return {"results": ["doc1", "doc2", "doc3"]}
 

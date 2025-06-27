@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Unit tests for ClientManager with proper dependency injection patterns.
 
 This test module demonstrates modern testing patterns including:
@@ -234,8 +239,8 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_opens_after_failures(self, circuit_breaker):
         """Test circuit breaker opens after threshold failures."""
 
-        async def failing_func():
-            raise Exception("Test failure")
+            raise TestError("Test failure")
+            raise TestError("Test failure")
 
         # Fail multiple times - circuit breaker should pass through the original exception
         for _ in range(3):  # Fixture failure threshold is 3

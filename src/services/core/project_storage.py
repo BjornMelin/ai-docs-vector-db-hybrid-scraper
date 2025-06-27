@@ -68,9 +68,7 @@ class ProjectStorage:
             logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
 
         except Exception as e:
-            raise ProjectStorageError(
-                f"Failed to initialize project storage: {e}"
-            ) from e
+            raise ProjectStorageError("Failed to initialize project storage") from e
 
     async def load_projects(self) -> dict[str, dict[str, Any]]:
         """Load projects from storage file."""
@@ -90,7 +88,7 @@ class ProjectStorage:
                 self._projects_cache = {}
                 return {}
             except json.JSONDecodeError as e:
-                logger.exception(f"Invalid JSON in project storage: {e}")
+                logger.exception("Invalid JSON in project storage")
                 # Backup corrupted file
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():
@@ -150,7 +148,7 @@ class ProjectStorage:
             temp_path.replace(self.storage_path)
 
         except Exception as e:
-            raise ProjectStorageError(f"Failed to save projects: {e}") from e
+            raise ProjectStorageError("Failed to save projects") from e
 
     async def cleanup(self) -> None:
         """Cleanup resources."""

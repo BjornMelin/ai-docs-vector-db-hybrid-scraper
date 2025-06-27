@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Circuit breaker and rate limiter stress tests for AI Documentation Vector DB.
 
 This module tests the effectiveness of circuit breakers and rate limiters
@@ -76,8 +82,8 @@ class MockCircuitBreaker:
                 self._transition_to_half_open()
             else:
                 # Reject request
-                self.metrics.rejection_count += 1
-                raise Exception("Circuit breaker is open - rejecting request")
+                raise TestError("Circuit breaker is open - rejecting request")
+                raise TestError("Circuit breaker is open - rejecting request")
 
         try:
             # Execute the function
@@ -260,7 +266,7 @@ class TestCircuitBreakers:
 
                 # Inject failures based on failure rate
                 if time.time() % 1.0 < self.failure_rate:
-                    raise Exception(f"Injected failure (rate: {self.failure_rate})")
+                    raise TestError(f"Injected failure (rate: {self.failure_rate})")
 
                 await asyncio.sleep(0.1)  # Simulate processing
                 return {"status": "success", "call_count": self.call_count}
@@ -402,7 +408,7 @@ class TestCircuitBreakers:
                 self.call_count += 1
 
                 if not self.is_healthy:
-                    raise Exception("Service is unhealthy")
+                    raise TestError("Service is unhealthy")
 
                 await asyncio.sleep(0.05)  # Fast processing when healthy
                 return {"status": "success", "call_count": self.call_count}
@@ -566,7 +572,7 @@ class TestRateLimiters:
         async def rate_limited_service(**_kwargs):
             """Service protected by rate limiter."""
             if not await rate_limiter.allow_request():
-                raise Exception("Rate limit exceeded")
+                raise TestError("Rate limit exceeded")
 
             await asyncio.sleep(0.1)  # Simulate processing
             return {"status": "processed", "timestamp": time.time()}
@@ -729,7 +735,7 @@ class TestRateLimiters:
         async def rate_limited_expensive_operation(**kwargs):
             """Expensive operation protected by rate limiter."""
             if not await rate_limiter.allow_request():
-                raise Exception("Rate limit exceeded - protecting expensive service")
+                raise TestError("Rate limit exceeded - protecting expensive service")
 
             return await expensive_service.expensive_operation(**kwargs)
 

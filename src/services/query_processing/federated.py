@@ -371,7 +371,7 @@ class FederatedSearchService:
             ):
                 raise ValueError(
                     f"Only {len(successful_results)} collections succeeded, "
-                    f"minimum required: {request.require_minimum_collections}"
+                    "minimum required"
                 )
 
             # Merge and deduplicate results
@@ -436,7 +436,7 @@ class FederatedSearchService:
 
         except Exception as e:
             total_search_time = (time.time() - start_time) * 1000
-            self._logger.error(f"Federated search failed: {e}", exc_info=True)
+            self._logger.error("Federated search failed", exc_info=True)
 
             # Return fallback result
             return FederatedSearchResult(
@@ -482,12 +482,10 @@ class FederatedSearchService:
 
             self.collection_load_scores[collection_name] = 0.0
 
-            self._logger.info(f"Registered collection: {collection_name}")
+            self._logger.info("Registered collection")
 
         except Exception as e:
-            self._logger.exception(
-                f"Failed to register collection {collection_name}: {e}"
-            )
+            self._logger.exception("Failed to register collection {collection_name}")
             raise
 
     async def unregister_collection(self, collection_name: str) -> None:
@@ -502,12 +500,10 @@ class FederatedSearchService:
             self.collection_performance_stats.pop(collection_name, None)
             self.collection_load_scores.pop(collection_name, None)
 
-            self._logger.info(f"Unregistered collection: {collection_name}")
+            self._logger.info("Unregistered collection")
 
         except Exception as e:
-            self._logger.exception(
-                f"Failed to unregister collection {collection_name}: {e}"
-            )
+            self._logger.exception("Failed to unregister collection {collection_name}")
 
     async def _select_collections(self, request: FederatedSearchRequest) -> list[str]:
         """Select collections to search based on strategy."""
@@ -716,9 +712,7 @@ class FederatedSearchService:
                     self._create_error_result("Collection timeout", collection_name)
                 )
             except Exception as e:
-                self._logger.exception(
-                    f"Search failed for collection {collection_name}: {e}"
-                )
+                self._logger.exception("Search failed for collection {collection_name}")
                 results.append(self._create_error_result(str(e), collection_name))
 
         return results

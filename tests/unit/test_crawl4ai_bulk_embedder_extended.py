@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -237,8 +242,8 @@ class TestBulkEmbedderExtended:
 
         # Mock process_url to raise exception
         async def mock_process(url):
-            if "exception" in url:
-                raise Exception("Processing failed")
+                raise TestError("Processing failed")
+                raise TestError("Processing failed")
             return {"url": url, "success": True, "chunks": 2, "error": None}
 
         with (

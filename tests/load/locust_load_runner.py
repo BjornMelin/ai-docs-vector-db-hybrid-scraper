@@ -77,7 +77,7 @@ class VectorDBSearchBehavior(TaskSet):
                 else:
                     response.failure("No search results returned")
             else:
-                response.failure(f"Search failed: {response.text}")
+                response.failure("Search failed")
 
     @task(2)
     def search_similar(self):
@@ -103,7 +103,7 @@ class VectorDBSearchBehavior(TaskSet):
                 # Document not found - not a failure for load testing
                 response.success()
             else:
-                response.failure(f"Similar search failed: {response.text}")
+                response.failure("Similar search failed")
 
     @task(1)
     def advanced_search(self):
@@ -137,7 +137,7 @@ class VectorDBSearchBehavior(TaskSet):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Advanced search failed: {response.text}")
+                response.failure("Advanced search failed")
 
     def _track_search_quality(self, data: dict[str, Any]):
         """Track search quality metrics."""
@@ -205,7 +205,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document already exists - not a failure
                 response.success()
             else:
-                response.failure(f"Document addition failed: {response.text}")
+                response.failure("Document addition failed")
 
     @task(1)
     def update_document(self):
@@ -234,7 +234,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document not found - create it
                 self.add_document()
             else:
-                response.failure(f"Document update failed: {response.text}")
+                response.failure("Document update failed")
 
     @task(1)
     def delete_document(self):
@@ -257,7 +257,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document not found - not a failure for load testing
                 response.success()
             else:
-                response.failure(f"Document deletion failed: {response.text}")
+                response.failure("Document deletion failed")
 
 
 class VectorDBEmbeddingBehavior(TaskSet):
@@ -312,7 +312,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 else:
                     response.failure("No embeddings returned")
             else:
-                response.failure(f"Embedding generation failed: {response.text}")
+                response.failure("Embedding generation failed")
 
     @task(2)
     def batch_generate_embeddings(self):
@@ -339,7 +339,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 else:
                     response.failure("Batch embedding count mismatch")
             else:
-                response.failure(f"Batch embedding generation failed: {response.text}")
+                response.failure("Batch embedding generation failed")
 
     def _track_embedding_metrics(self, data: dict[str, Any]):
         """Track embedding generation metrics."""
@@ -393,8 +393,8 @@ class VectorDBUser(HttpUser):
         """Cleanup user session."""
         session_duration = time.time() - self.start_time
         logger.info(f"User session completed. Duration: {session_duration:.2f}s")
-        logger.info(f"Search operations: {len(self.search_metrics)}")
-        logger.info(f"Embedding operations: {len(self.embedding_metrics)}")
+        logger.info("Search operations")
+        logger.info("Embedding operations")
 
 
 class AdminUser(HttpUser):
@@ -423,7 +423,7 @@ class AdminUser(HttpUser):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Health check failed: {response.text}")
+                response.failure("Health check failed")
 
     @task(2)
     def get_analytics(self):
@@ -436,7 +436,7 @@ class AdminUser(HttpUser):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Analytics failed: {response.text}")
+                response.failure("Analytics failed")
 
     @task(1)
     def cache_operations(self):
@@ -452,7 +452,7 @@ class AdminUser(HttpUser):
             if response.status_code in [200, 202]:
                 response.success()
             else:
-                response.failure(f"{operation} failed: {response.text}")
+                response.failure("{operation} failed")
 
 
 class LoadTestMetricsCollector:
@@ -644,7 +644,7 @@ def on_test_stop(environment: Environment, **_kwargs):
 
     # Generate final report
     summary = metrics_collector.get_performance_summary()
-    logger.info(f"Performance summary: {json.dumps(summary, indent=2)}")
+    logger.info("Performance summary")
 
     # Save detailed report
     save_load_test_report(summary, environment)
@@ -697,7 +697,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
             json.dump(full_report, f, indent=2)
         logger.info(f"Load test report saved to {report_file}")
     except Exception as e:
-        logger.exception(f"Failed to save load test report: {e}")
+        logger.exception("Failed to save load test report")
 
 
 def create_load_test_environment(

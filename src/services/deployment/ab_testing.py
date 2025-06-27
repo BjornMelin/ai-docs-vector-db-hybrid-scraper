@@ -498,9 +498,7 @@ class ABTestingManager:
                     and result.uplift_percentage
                     and abs(result.uplift_percentage) > 20.0
                 ):  # 20% uplift threshold
-                    await self.stop_test(
-                        test_id, f"Early winner detected: {result.variant_name}"
-                    )
+                    await self.stop_test(test_id, "Early winner detected")
                     return
 
         except Exception as e:

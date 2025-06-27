@@ -56,7 +56,7 @@ class LocalCache(CacheInterface[Any]):
         self.default_ttl = default_ttl
         self.max_memory_bytes = int(max_memory_mb * 1024 * 1024)
 
-        self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
+        self._cache: Ordereddict[str, CacheEntry] = OrderedDict()
         self._lock = asyncio.Lock()
         self._hits = 0
         self._misses = 0

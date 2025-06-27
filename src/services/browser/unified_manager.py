@@ -196,9 +196,9 @@ class UnifiedBrowserManager(BaseService):
             logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
+            logger.exception("Failed to initialize UnifiedBrowserManager")
             raise CrawlServiceError(
-                f"Failed to initialize unified browser manager: {e}"
+                "Failed to initialize unified browser manager"
             ) from e
 
     async def cleanup(self) -> None:
@@ -208,7 +208,7 @@ class UnifiedBrowserManager(BaseService):
             try:
                 await self._monitor.stop_monitoring()
             except Exception as e:
-                logger.warning(f"Failed to stop monitoring during cleanup: {e}")
+                logger.warning("Failed to stop monitoring during cleanup")
 
         if self._client_manager:
             await self._client_manager.cleanup()
@@ -292,7 +292,7 @@ class UnifiedBrowserManager(BaseService):
                             )
                         except Exception as e:
                             logger.warning(
-                                f"Failed to record cache hit monitoring metrics: {e}"
+                                "Failed to record cache hit monitoring metrics"
                             )
 
                     # Return cached response
@@ -317,7 +317,7 @@ class UnifiedBrowserManager(BaseService):
                     )
             except Exception as e:
                 logger.warning(
-                    f"Cache error for {request.url}, continuing with fresh scrape: {e}"
+                    "Cache error for {request.url}, continuing with fresh scrape"
                 )
 
         try:
@@ -353,7 +353,7 @@ class UnifiedBrowserManager(BaseService):
                         cache_hit=False,  # Fresh scrape
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to record monitoring metrics: {e}")
+                    logger.warning("Failed to record monitoring metrics")
 
             # Create unified response
             response = UnifiedScrapingResponse(
@@ -402,7 +402,7 @@ class UnifiedBrowserManager(BaseService):
                         f"Cached browser result for {request.url} (tier: {tier_used})"
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to cache result for {request.url}: {e}")
+                    logger.warning("Failed to cache result for {request.url}")
 
             logger.info(
                 f"Unified scraping completed: {request.url} via {tier_used} "
@@ -425,11 +425,9 @@ class UnifiedBrowserManager(BaseService):
                         error_type=type(e).__name__,
                     )
                 except Exception as monitor_error:
-                    logger.warning(
-                        f"Failed to record error monitoring metrics: {monitor_error}"
-                    )
+                    logger.warning("Failed to record error monitoring metrics")
 
-            logger.exception(f"Unified scraping failed for {request.url}: {e}")
+            logger.exception("Unified scraping failed for {request.url}")
 
             return UnifiedScrapingResponse(
                 success=False,
@@ -478,7 +476,7 @@ class UnifiedBrowserManager(BaseService):
             return analysis
 
         except Exception as e:
-            logger.exception(f"URL analysis failed for {url}: {e}")
+            logger.exception("URL analysis failed for {url}")
             return {
                 "url": url,
                 "error": str(e),
@@ -508,7 +506,7 @@ class UnifiedBrowserManager(BaseService):
             try:
                 router_metrics = self._automation_router.get_metrics()
             except Exception as e:
-                logger.warning(f"Failed to get router metrics: {e}")
+                logger.warning("Failed to get router metrics")
 
         # Calculate overall health
         total_requests = sum(
@@ -532,7 +530,7 @@ class UnifiedBrowserManager(BaseService):
             try:
                 monitoring_health = self._monitor.get_system_health()
             except Exception as e:
-                logger.warning(f"Failed to get monitoring health: {e}")
+                logger.warning("Failed to get monitoring health")
                 monitoring_health = {"error": str(e)}
 
         return {

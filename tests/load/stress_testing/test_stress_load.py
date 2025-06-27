@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Stress testing scenarios for beyond-capacity loads.
 
 This module implements stress tests to identify system breaking points
@@ -179,14 +185,14 @@ class TestStressLoad:
             async def call_service(self, service: str):
                 """Simulate service call with potential failure."""
                 if not self.service_health[service]:
-                    self.failure_counts[service] += 1
-                    raise Exception(f"{service} service unavailable")
+                    raise TestError(f"{service} service unavailable")
+                    raise TestError(f"{service} service unavailable")
 
                 # Simulate load-based failure probability
                 failure_chance = self.failure_counts[service] / 1000
                 if asyncio.create_task(asyncio.sleep(0)) and failure_chance > 0.5:
                     self.service_health[service] = False
-                    raise Exception(f"{service} service degraded")
+                    raise TestError(f"{service} service degraded")
 
                 await asyncio.sleep(0.1)
                 return f"{service} response"
@@ -207,7 +213,7 @@ class TestStressLoad:
                     1 for h in services.service_health.values() if not h
                 )
                 if failed_services > 1:
-                    raise Exception(
+                    raise TestError(
                         f"Cascading failure: {failed_services} services down"
                     )
                 raise

@@ -10,7 +10,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Dict, List
+from typing import Any, List
 
 from opentelemetry import metrics
 from opentelemetry.trace import get_current_span
@@ -70,7 +70,7 @@ class ConfigPerformanceStats:
 
     # Error statistics
     error_rate: float = 0.0
-    common_errors: Dict[str, int] = field(default_factory=dict)
+    common_errors: dict[str, int] = field(default_factory=dict)
 
     # Configuration size statistics
     avg_config_size_bytes: float = 0.0
@@ -103,8 +103,8 @@ class ConfigPerformanceMonitor:
         self.operation_history: deque[ConfigOperationMetrics] = deque(
             maxlen=max_history
         )
-        self.operation_counts: Dict[str, int] = defaultdict(int)
-        self.operation_durations: Dict[str, List[float]] = defaultdict(list)
+        self.operation_counts: dict[str, int] = defaultdict(int)
+        self.operation_durations: dict[str, list[float]] = defaultdict(list)
 
         # OpenTelemetry metrics
         self.meter = metrics.get_meter(__name__)
@@ -377,7 +377,7 @@ class ConfigPerformanceMonitor:
         self,
         threshold_ms: float = 1000.0,
         limit: int = 10,
-    ) -> List[ConfigOperationMetrics]:
+    ) -> list[ConfigOperationMetrics]:
         """Get slowest configuration operations above threshold.
 
         Args:
@@ -399,7 +399,7 @@ class ConfigPerformanceMonitor:
     def get_error_summary(
         self,
         time_window_hours: int = 24,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get error summary for configuration operations.
 
         Args:
@@ -453,7 +453,7 @@ class ConfigPerformanceMonitor:
         self.operation_counts.clear()
         self.operation_durations.clear()
 
-    def export_metrics_summary(self) -> Dict[str, Any]:
+    def export_metrics_summary(self) -> dict[str, Any]:
         """Export comprehensive metrics summary.
 
         Returns:
@@ -554,7 +554,7 @@ def get_config_performance_stats(
     return monitor.get_operation_stats(operation_type, time_window_hours)
 
 
-def get_config_error_summary(time_window_hours: int = 24) -> Dict[str, Any]:
+def get_config_error_summary(time_window_hours: int = 24) -> dict[str, Any]:
     """Get configuration error summary.
 
     Args:

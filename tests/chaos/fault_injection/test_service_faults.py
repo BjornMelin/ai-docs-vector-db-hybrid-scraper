@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Service fault injection tests for chaos engineering.
 
 This module implements service-level fault injection to test resilience
@@ -217,7 +223,7 @@ class TestServiceFaultInjection:
             nonlocal service_c_failures
             service_c_failures += 1
             if service_c_failures > 2:
-                raise Exception("Service C is overloaded")
+                raise TestError("Service C is overloaded")
             return {"service": "C", "data": "service_c_data"}
 
         async def service_b():
@@ -229,7 +235,7 @@ class TestServiceFaultInjection:
                 service_b_failures += 1
                 # Circuit breaker: fail fast after dependency failure
                 if service_b_failures > 1:
-                    raise Exception("Service B circuit breaker open")
+                    raise TestError("Service B circuit breaker open")
                 raise
 
         async def service_a():
@@ -319,7 +325,7 @@ class TestServiceFaultInjection:
                     "response_time": "slow",
                 }
             else:  # critical
-                raise Exception("Service in critical state")
+                raise TestError("Service in critical state")
 
         # Test healthy state
         result = await adaptive_service()
@@ -349,7 +355,7 @@ class TestServiceFaultInjection:
 
             if startup_attempts < max_startup_attempts:
                 # Simulate startup failure
-                raise Exception(f"Service startup failed (attempt {startup_attempts})")
+                raise TestError(f"Service startup failed (attempt {startup_attempts})")
 
             # Successful startup
             return {"status": "started", "attempts": startup_attempts}
@@ -446,7 +452,7 @@ class TestAdvancedServiceFaults:
                 cpu_pool["used"] + cpu_required > cpu_pool["available"]
                 or memory_pool["used"] + memory_required > memory_pool["available"]
             ):
-                raise Exception("Insufficient resources - operation rejected")
+                raise TestError("Insufficient resources - operation rejected")
 
             # Allocate resources
             cpu_pool["used"] += cpu_required

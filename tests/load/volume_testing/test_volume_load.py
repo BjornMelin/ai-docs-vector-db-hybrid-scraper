@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Volume testing scenarios for large dataset processing.
 
 This module implements volume tests to validate system behavior
@@ -394,8 +399,8 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        if random.random() < 0.02:  # 2% failure rate
-                            raise Exception(f"Processing failed for {doc['url']}")
+                            raise TestError(f"Processing failed for {doc['url']}")
+                            raise TestError(f"Processing failed for {doc['url']}")
 
                         processed_doc = {
                             "id": f"doc_{len(processed_docs)}",

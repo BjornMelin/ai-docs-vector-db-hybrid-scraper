@@ -65,8 +65,8 @@ class DependencyContainer:
             self._initialized = True
             logger.info("Dependency container initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize dependency container: {e}")
+        except Exception:
+            logger.exception("Failed to initialize dependency container")
             raise
 
     async def cleanup(self) -> None:
@@ -82,8 +82,8 @@ class DependencyContainer:
             self._initialized = False
             logger.info("Dependency container cleaned up")
 
-        except Exception as e:
-            logger.exception(f"Error during dependency cleanup: {e}")
+        except Exception:
+            logger.exception("Error during dependency cleanup")
 
     @property
     def is_initialized(self) -> bool:
@@ -187,6 +187,14 @@ def get_fastapi_config() -> Config:
     return get_config_dependency()
 
 
+def _raise_vector_service_unavailable() -> HTTPException:
+    """Helper to raise vector service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Vector service not available",
+    )
+
+
 async def get_vector_service() -> QdrantService:
     """FastAPI dependency for vector database service.
 
@@ -199,17 +207,23 @@ async def get_vector_service() -> QdrantService:
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Vector service not available",
-            )
-        return container.vector_service
-    except Exception as e:
-        logger.exception(f"Failed to get vector service: {e}")
+            _raise_vector_service_unavailable()
+        else:
+            return container.vector_service
+    except Exception:
+        logger.exception("Failed to get vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        ) from e
+        ) from None
+
+
+def _raise_embedding_service_unavailable() -> HTTPException:
+    """Helper to raise embedding service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Embedding service not available",
+    )
 
 
 async def get_embedding_manager_legacy() -> Any:
@@ -224,17 +238,23 @@ async def get_embedding_manager_legacy() -> Any:
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Embedding service not available",
-            )
-        return container.embedding_manager
-    except Exception as e:
-        logger.exception(f"Failed to get embedding manager: {e}")
+            _raise_embedding_service_unavailable()
+        else:
+            return container.embedding_manager
+    except Exception:
+        logger.exception("Failed to get embedding manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
-        ) from e
+        ) from None
+
+
+def _raise_cache_service_unavailable() -> HTTPException:
+    """Helper to raise cache service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Cache service not available",
+    )
 
 
 async def get_cache_manager_legacy() -> Any:
@@ -249,17 +269,23 @@ async def get_cache_manager_legacy() -> Any:
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Cache service not available",
-            )
-        return container.cache_manager
-    except Exception as e:
-        logger.exception(f"Failed to get cache manager: {e}")
+            _raise_cache_service_unavailable()
+        else:
+            return container.cache_manager
+    except Exception:
+        logger.exception("Failed to get cache manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
-        ) from e
+        ) from None
+
+
+def _raise_client_manager_unavailable() -> HTTPException:
+    """Helper to raise client manager unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Client manager not available",
+    )
 
 
 def get_client_manager() -> ClientManager:
@@ -274,17 +300,15 @@ def get_client_manager() -> ClientManager:
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Client manager not available",
-            )
-        return container.client_manager
-    except Exception as e:
-        logger.exception(f"Failed to get client manager: {e}")
+            _raise_client_manager_unavailable()
+        else:
+            return container.client_manager
+    except Exception:
+        logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
-        ) from e
+        ) from None
 
 
 def get_correlation_id_dependency(request: Request) -> str:

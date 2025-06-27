@@ -180,7 +180,7 @@ async def get_drift_events(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve drift events: {e!s}",
-        )
+        ) from e
 
 
 @router.get(
@@ -224,7 +224,7 @@ async def get_drift_summary():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve drift summary: {e!s}",
-        )
+        ) from e
 
 
 @router.get(
@@ -268,7 +268,7 @@ async def check_drift_health():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Health check failed: {e!s}",
-        )
+        ) from e
 
 
 @router.get(
@@ -306,4 +306,4 @@ async def get_drift_config():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve drift configuration: {e!s}",
-        )
+        ) from e

@@ -217,7 +217,7 @@ class FilterComposer(BaseFilter):
             )
 
         except Exception as e:
-            error_msg = f"Failed to apply filter composition: {e}"
+            error_msg = "Failed to apply filter composition"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
                 error_msg,
@@ -340,7 +340,7 @@ class FilterComposer(BaseFilter):
                         result = await task
                         results[name] = result
                     except Exception as e:
-                        self._logger.exception(f"Filter {name} failed: {e}")
+                        self._logger.exception("Filter {name} failed")
                         if criteria.fail_fast:
                             raise
                 else:
@@ -378,7 +378,7 @@ class FilterComposer(BaseFilter):
 
             except Exception as e:
                 self._logger.exception(
-                    f"Filter {filter_ref.filter_instance.name} failed: {e}"
+                    "Filter {filter_ref.filter_instance.name} failed"
                 )
                 if criteria.fail_fast and filter_ref.required:
                     raise
@@ -445,7 +445,7 @@ class FilterComposer(BaseFilter):
 
         except Exception as e:
             self._logger.exception(
-                f"Filter {filter_ref.filter_instance.name} execution failed: {e}"
+                "Filter {filter_ref.filter_instance.name} execution failed"
             )
             raise FilterError(
                 f"Filter {filter_ref.filter_instance.name} failed",
@@ -535,10 +535,10 @@ class FilterComposer(BaseFilter):
         )
 
         # Recursively optimize nested rules
-        optimized_nested = []
-        if rule.nested_rules:
-            for nested_rule in rule.nested_rules:
-                optimized_nested.append(self._optimize_composition_order(nested_rule))
+        optimized_nested = [
+            self._optimize_composition_order(nested_rule)
+            for nested_rule in (rule.nested_rules or [])
+        ]
 
         return CompositionRule(
             operator=rule.operator,
@@ -615,7 +615,7 @@ class FilterComposer(BaseFilter):
             FilterCompositionCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid composition criteria: {e}")
+            self._logger.warning("Invalid composition criteria")
             return False
 
     def get_supported_operators(self) -> list[str]:
@@ -702,7 +702,7 @@ class FilterComposer(BaseFilter):
             settings.append("weighted confidence")
 
         if settings:
-            base_explanation += f"\nSettings: {', '.join(settings)}"
+            base_explanation += "\nSettings"
 
         return base_explanation
 

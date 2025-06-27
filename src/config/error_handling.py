@@ -240,7 +240,7 @@ class SafeConfigLoader:
 
     def __init__(
         self,
-        config_class: Type[BaseSettings],
+        config_class: type[BaseSettings],
         fallback_config: BaseSettings | None = None,
     ):
         self.config_class = config_class

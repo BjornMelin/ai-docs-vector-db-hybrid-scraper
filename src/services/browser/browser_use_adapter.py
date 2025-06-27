@@ -24,7 +24,7 @@ try:
     BROWSER_USE_AVAILABLE = True
 except ImportError as e:
     BROWSER_USE_AVAILABLE = False
-    logger.warning(f"browser-use not available: {e}")
+    logger.warning("browser-use not available")
     Agent = None  # type: ignore
     Browser = None  # type: ignore
     BrowserConfig = None  # type: ignore
@@ -99,9 +99,7 @@ class BrowserUseAdapter(BaseService):
                 google_api_key=api_key,
             )
         else:
-            raise CrawlServiceError(
-                f"Unsupported LLM provider: {self.config.llm_provider}"
-            )
+            raise CrawlServiceError("Unsupported LLM provider")
 
     async def initialize(self) -> None:
         """Initialize browser-use instance."""
@@ -129,7 +127,7 @@ class BrowserUseAdapter(BaseService):
                 f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
             )
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize browser-use: {e}") from e
+            raise CrawlServiceError("Failed to initialize browser-use") from e
 
     async def cleanup(self) -> None:
         """Cleanup browser-use resources."""
@@ -137,7 +135,7 @@ class BrowserUseAdapter(BaseService):
             try:
                 await self._browser.close()
             except Exception as e:
-                self.logger.exception(f"Error cleaning up browser-use: {e}")
+                self.logger.exception("Error cleaning up browser-use")
             finally:
                 # Always reset state even if close() fails
                 self._browser = None
@@ -236,7 +234,7 @@ class BrowserUseAdapter(BaseService):
 
             except Exception as e:
                 retry_count += 1
-                error_msg = f"browser-use execution error: {e}"
+                error_msg = "browser-use execution error"
                 self.logger.warning(f"{error_msg} (attempt {retry_count})")
 
                 if retry_count >= self.config.max_retries:
@@ -331,11 +329,11 @@ class BrowserUseAdapter(BaseService):
 
             if action == "click":
                 selector = instruction.get("selector", "")
-                formatted_actions.append(f"{i}. Click on element: {selector}")
+                formatted_actions.append("{i}. Click on element")
             elif action == "type":
                 selector = instruction.get("selector", "")
                 text = instruction.get("text", "")
-                formatted_actions.append(f"{i}. Type '{text}' into element: {selector}")
+                formatted_actions.append("{i}. Type '{text}' into element")
             elif action == "scroll":
                 direction = instruction.get("direction", "")
                 formatted_actions.append(f"{i}. Scroll {direction}")
@@ -397,7 +395,7 @@ class BrowserUseAdapter(BaseService):
                 html = ""
                 title = ""
         except Exception as e:
-            self.logger.warning(f"Failed to extract page content: {e}")
+            self.logger.warning("Failed to extract page content")
             # Fallback to agent result
             content = str(result) if result else ""
             html = ""
@@ -448,7 +446,7 @@ class BrowserUseAdapter(BaseService):
             Standardized error result
         """
         processing_time = (time.time() - start_time) * 1000
-        self.logger.error(f"BrowserUse error for {url}: {error}")
+        self.logger.error("BrowserUse error for {url}")
 
         return {
             "success": False,
@@ -574,7 +572,7 @@ class BrowserUseAdapter(BaseService):
             return {
                 "healthy": False,
                 "status": "error",
-                "message": f"Health check failed: {e}",
+                "message": "Health check failed",
                 "available": True,
             }
 

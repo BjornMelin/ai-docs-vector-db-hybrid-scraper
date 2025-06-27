@@ -6,7 +6,7 @@ using Pydantic models and user-friendly error messages.
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import ValidationError
 from rich.console import Console

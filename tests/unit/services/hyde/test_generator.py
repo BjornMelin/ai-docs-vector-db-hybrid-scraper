@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Tests for HyDE hypothetical document generator."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -5,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.errors import EmbeddingServiceError
+from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.config import HyDEConfig, HyDEPromptConfig
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 
@@ -415,7 +421,7 @@ class TestHypotheticalDocumentGenerator:
 
         async def mock_generate_single(prompt):
             if "error" in prompt:
-                raise Exception("Generation error")
+                raise TestError("Generation error")
             elif "short" in prompt:
                 return "abc"  # Too short
             else:
@@ -444,7 +450,7 @@ class TestHypotheticalDocumentGenerator:
 
         async def mock_generate_single(prompt):
             if "error" in prompt:
-                raise Exception("Generation error")
+                raise TestError("Generation error")
             else:
                 return f"Document for: {prompt}"
 
@@ -593,7 +599,6 @@ class TestHypotheticalDocumentGenerator:
 
     async def test_generate_documents_not_initialized(self, generator):
         """Test document generation when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError) as exc_info:
             await generator.generate_documents("test query")

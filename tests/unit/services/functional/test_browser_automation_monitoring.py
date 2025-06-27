@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for 5-tier browser automation health monitoring.
 
 This module tests the comprehensive browser automation monitoring system
@@ -55,11 +60,11 @@ class MockBrowserTier:
 
     async def execute_request(self, request_type: str) -> dict[str, Any]:
         """Execute browser automation request."""
-        if not self.is_healthy:
-            raise Exception(f"Tier {self.name} is unhealthy")
+            raise TestError(f"Tier {self.name} is unhealthy")
+            raise TestError(f"Tier {self.name} is unhealthy")
 
         if self.active_sessions >= self.max_sessions:
-            raise Exception(f"Tier {self.name} at capacity")
+            raise TestError(f"Tier {self.name} at capacity")
 
         self.active_sessions += 1
         try:
@@ -185,7 +190,7 @@ class MockBrowserMonitoringSystem:
                 continue
 
         # All tiers failed
-        raise Exception(f"All tiers failed. Last error: {last_error}")
+        raise TestError(f"All tiers failed. Last error: {last_error}")
 
     def get_system_metrics(self) -> dict[str, Any]:
         """Get comprehensive system metrics."""

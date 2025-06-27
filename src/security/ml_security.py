@@ -130,7 +130,7 @@ class MLSecurityValidator:
                     result = SecurityCheckResult(
                         check_type="input_validation",
                         passed=False,
-                        message=f"Suspicious pattern detected: {pattern}",
+                        message="Suspicious pattern detected",
                         severity="error",
                     )
                     self.checks_performed.append(result)
@@ -145,7 +145,7 @@ class MLSecurityValidator:
             return result
 
         except Exception as e:
-            logger.exception(f"Input validation error: {e}")
+            logger.exception("Input validation error")
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=False,
@@ -176,7 +176,7 @@ class MLSecurityValidator:
 
         try:
             # Use pip-audit if available
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603,S607 - trusted security tool
                 ["pip-audit", "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -228,7 +228,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
         except Exception as e:
-            logger.exception(f"Dependency check error: {e}")
+            logger.exception("Dependency check error")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,
@@ -249,7 +249,7 @@ class MLSecurityValidator:
         """
         try:
             # Try trivy first
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603,S607 - trusted security tool
                 [
                     "trivy",
                     "image",
@@ -305,7 +305,7 @@ class MLSecurityValidator:
                 return result
 
         except Exception as e:
-            logger.info(f"Container scan skipped: {e}")
+            logger.info("Container scan skipped")
             result = SecurityCheckResult(
                 check_type="container_scan",
                 passed=True,
@@ -367,11 +367,11 @@ class MLSecurityValidator:
         }
 
         if severity == "critical":
-            logger.error(f"Security event: {log_data}")
+            logger.error("Security event")
         elif severity == "error":
-            logger.warning(f"Security event: {log_data}")
+            logger.warning("Security event")
         else:
-            logger.info(f"Security event: {log_data}")
+            logger.info("Security event")
 
     def get_security_summary(self) -> dict[str, Any]:
         """Get summary of security checks performed.

@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """Tests for HNSW parameter optimization utilities."""
 
 import asyncio
@@ -519,8 +525,8 @@ class TestHNSWOptimizer:
             call_count += 1
             if call_count <= 2:  # First 2 calls succeed
                 return MagicMock()
-            else:  # Subsequent calls fail
-                raise Exception("Query failed")
+                raise TestError("Query failed")
+                raise TestError("Query failed")
 
         mock_qdrant_service._client.query_points.side_effect = mock_query
 

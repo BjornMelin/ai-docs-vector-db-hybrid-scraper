@@ -1,3 +1,8 @@
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Load testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive load testing including
@@ -678,8 +683,8 @@ def mock_load_test_service():
             self.request_count += 1
 
             # Simulate failure
-            if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception(f"Simulated failure (rate: {self.failure_rate})")
+                raise CustomError(f"Simulated failure (rate: {self.failure_rate})")
+                raise CustomError(f"Simulated failure (rate: {self.failure_rate})")
 
             # Simulate latency based on load and data size
             latency = self.base_latency * self.load_factor * (1 + data_size_mb * 0.1)
@@ -703,7 +708,7 @@ def mock_load_test_service():
             await asyncio.sleep(latency)
 
             if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception("Search service temporarily unavailable")
+                raise CustomError("Search service temporarily unavailable")
 
             return {
                 "results": [
@@ -721,7 +726,7 @@ def mock_load_test_service():
             await asyncio.sleep(processing_time)
 
             if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception("Document processing failed")
+                raise CustomError("Document processing failed")
 
             return {
                 "id": f"doc_{self.request_count}",

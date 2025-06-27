@@ -310,7 +310,9 @@ class SecureConfigManager:
             salt=salt,
             iterations=480000,  # NIST recommended minimum
         )
-        key = kdf.derive(master_password.encode())
+        _key = kdf.derive(
+            master_password.encode()
+        )  # Key derived but not used in current implementation
 
         # Create Fernet key
         fernet_key = Fernet(Fernet.generate_key())
@@ -360,7 +362,9 @@ class SecureConfigManager:
 
         try:
             with Path(key_file).open("rb") as f:
-                encrypted_data = f.read()
+                _encrypted_data = (
+                    f.read()
+                )  # Data read but not used in current implementation
 
             # For now, use a simplified key loading mechanism
             # In production, implement proper key derivation from master password

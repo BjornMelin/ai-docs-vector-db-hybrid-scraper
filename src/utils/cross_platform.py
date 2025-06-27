@@ -176,7 +176,7 @@ def get_environment_variables(prefix: str = "AI_DOCS") -> dict[str, str]:
         prefix: Environment variable prefix
 
     Returns:
-        Dict[str, str]: Environment variables matching prefix
+        dict[str, str]: Environment variables matching prefix
     """
     env_vars = {}
     prefix_upper = prefix.upper()
@@ -223,7 +223,7 @@ def set_platform_environment_defaults() -> dict[str, str]:
     """Set platform-specific environment variable defaults.
 
     Returns:
-        Dict[str, str]: Environment variables to set
+        dict[str, str]: Environment variables to set
     """
     env_defaults = {}
 
@@ -292,7 +292,7 @@ def get_process_info() -> dict[str, Any]:
     """Get platform-specific process information.
 
     Returns:
-        Dict[str, Any]: Process information including platform details
+        dict[str, Any]: Process information including platform details
     """
     return {
         "platform": platform.system(),

@@ -71,6 +71,6 @@ class QueryProcessingPipelineFactory:
 
         except Exception as e:
             if ctx:
-                await ctx.error(f"Failed to initialize query processing pipeline: {e}")
-            logger.exception(f"Pipeline initialization failed: {e}")
+                await ctx.error("Failed to initialize query processing pipeline")
+            logger.exception("Pipeline initialization failed")
             raise

@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for crawling manager module."""
 
 from typing import Any
@@ -23,8 +28,8 @@ class MockCrawlProvider(CrawlProvider):
         self.crawl_calls = []
 
     async def initialize(self) -> None:
-        if self.should_fail:
-            raise Exception(f"Failed to initialize {self.name}")
+            raise TestError(f"Failed to initialize {self.name}")
+            raise TestError(f"Failed to initialize {self.name}")
         self.initialized = True
 
     async def cleanup(self) -> None:
@@ -413,7 +418,7 @@ class TestCrawlManager:
                 self.crawl_calls.append(
                     {"url": url, "max_pages": max_pages, "formats": formats}
                 )
-                raise Exception("Crawl4AI provider failed")
+                raise TestError("Crawl4AI provider failed")
 
         failing_provider = FailingCrawlProvider("crawl4ai", should_fail=True)
         working_provider = MockCrawlProvider("firecrawl")

@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Tests for OpenTelemetry initialization."""
 
 from unittest.mock import MagicMock, patch
@@ -168,8 +173,8 @@ class TestObservabilityInitialization:
         with patch("builtins.__import__") as mock_import:
 
             def side_effect(name, *args, **kwargs):
-                if "opentelemetry" in name:
-                    raise Exception("Initialization failed")
+                    raise TestError("Initialization failed")
+                    raise TestError("Initialization failed")
                 return __import__(name, *args, **kwargs)
 
             mock_import.side_effect = side_effect

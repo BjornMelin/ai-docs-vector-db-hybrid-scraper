@@ -6,7 +6,7 @@ with Pydantic integration for real-time validation.
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -28,8 +28,8 @@ class TemplateManager:
             templates_dir: Directory containing templates. Defaults to config/templates
         """
         self.templates_dir = templates_dir or Path("config/templates")
-        self._templates: dict[str, Dict[str, Any]] = {}
-        self._metadata: dict[str, Dict[str, str]] = {}
+        self._templates: dict[str, dict[str, Any]] = {}
+        self._metadata: dict[str, dict[str, str]] = {}
         self._load_templates()
 
     def _load_templates(self) -> None:
@@ -276,7 +276,7 @@ class TemplateManager:
         try:
             return Config(**template_data)
         except Exception as e:
-            raise ValueError(f"Failed to create config from template: {e}")
+            raise ValueError(f"Failed to create config from template: {e}") from e
 
     def save_template(self, name: str, config: Config, description: str = "") -> Path:
         """Save a Config object as a new template.

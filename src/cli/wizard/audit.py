@@ -116,7 +116,7 @@ class ConfigAuditor:
         try:
             with audit_file.open("w") as f:
                 json.dump(records, f, indent=2)
-        except OSError as e:
+        except OSError:
             self.logger.exception("Failed to save audit record")
 
     def get_recent_activity(self, days: int = 7) -> list[dict[str, Any]]:

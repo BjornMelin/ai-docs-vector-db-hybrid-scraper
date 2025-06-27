@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """System monitoring and metrics collection during stress testing.
 
 This module implements comprehensive monitoring of system resources,
@@ -739,8 +745,8 @@ class TestSystemMonitoring:
                     # Introduce errors as performance degrades
                     error_probability = max(0, (self.degradation_factor - 2.0) / 10)
                     if random.random() < error_probability:
-                        metrics_collector.record_error("PerformanceDegradation")
-                        raise Exception("Service degraded - operation failed")
+                        raise TestError("Service degraded - operation failed")
+                        raise TestError("Service degraded - operation failed")
 
                     return {
                         "status": "success",

@@ -1,14 +1,17 @@
 """Comprehensive tests for crawl4ai_bulk_embedder module."""
 
+import asyncio
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from click.testing import CliRunner
 
 from src.config import Config
 from src.crawl4ai_bulk_embedder import BulkEmbedder, ProcessingState, main
 from src.infrastructure.client_manager import ClientManager
+from src.models.document_processing import Chunk
 
 
 @pytest.fixture
@@ -343,9 +346,6 @@ https://example.com/page2,Page 2
         )
 
         # Mock chunking
-        from unittest.mock import MagicMock
-
-        from src.models.document_processing import Chunk
 
         mock_chunk_result = MagicMock()
         mock_chunk_result.chunks = [
@@ -529,8 +529,6 @@ class TestCLI:
         ):
             mock_config.return_value = MagicMock()
 
-            from click.testing import CliRunner
-
             runner = CliRunner()
 
             result = runner.invoke(
@@ -557,8 +555,6 @@ class TestCLI:
         ):
             mock_config.return_value = MagicMock()
 
-            from click.testing import CliRunner
-
             runner = CliRunner()
 
             result = runner.invoke(
@@ -580,8 +576,6 @@ class TestCLI:
         ):
             mock_config.return_value = MagicMock()
 
-            from click.testing import CliRunner
-
             runner = CliRunner()
 
             result = runner.invoke(
@@ -597,8 +591,6 @@ class TestCLI:
 
     def test_cli_no_input(self):
         """Test CLI with no input."""
-        from click.testing import CliRunner
-
         runner = CliRunner()
 
         result = runner.invoke(main, [])
@@ -619,8 +611,6 @@ class TestCLI:
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
-
-            from click.testing import CliRunner
 
             runner = CliRunner()
 

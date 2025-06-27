@@ -42,7 +42,7 @@ class TaskQueueManager(BaseService):
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Task queue monitoring enabled")
             except Exception as e:
-                logger.debug(f"Task queue monitoring disabled: {e}")
+                logger.debug("Task queue monitoring disabled")
 
     def _create_redis_settings(self) -> RedisSettings:
         """Create Redis settings from config."""
@@ -85,7 +85,7 @@ class TaskQueueManager(BaseService):
             logger.info("Task queue manager initialized")
             self._initialized = True
         except Exception as e:
-            logger.exception(f"Failed to initialize task queue: {e}")
+            logger.exception("Failed to initialize task queue")
             raise
 
     async def cleanup(self) -> None:
@@ -150,7 +150,7 @@ class TaskQueueManager(BaseService):
                 return None
 
         except Exception as e:
-            logger.exception(f"Error enqueueing task {task_name}: {e}")
+            logger.exception("Error enqueueing task {task_name}")
             return None
 
     async def get_job_status(self, job_id: str) -> dict[str, Any]:
@@ -186,7 +186,7 @@ class TaskQueueManager(BaseService):
             }
 
         except Exception as e:
-            logger.exception(f"Error getting job status: {e}")
+            logger.exception("Error getting job status")
             return {"status": "error", "message": str(e)}
 
     async def cancel_job(self, job_id: str) -> bool:
@@ -210,7 +210,7 @@ class TaskQueueManager(BaseService):
             return False
 
         except Exception as e:
-            logger.exception(f"Error cancelling job: {e}")
+            logger.exception("Error cancelling job")
             return False
 
     async def get_queue_stats(self, queue_name: str | None = None) -> dict[str, int]:
@@ -243,7 +243,7 @@ class TaskQueueManager(BaseService):
             return stats
 
         except Exception as e:
-            logger.exception(f"Error getting queue stats: {e}")
+            logger.exception("Error getting queue stats")
             return {"error": -1}
 
     def get_redis_settings(self) -> RedisSettings:

@@ -57,8 +57,8 @@ class CrawlManager:
             logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
-            raise CrawlServiceError(f"Failed to initialize crawl manager: {e}") from e
+            logger.exception("Failed to initialize UnifiedBrowserManager")
+            raise CrawlServiceError("Failed to initialize crawl manager") from e
 
     async def cleanup(self) -> None:
         """Cleanup the UnifiedBrowserManager."""
@@ -67,7 +67,7 @@ class CrawlManager:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
             except Exception as e:
-                logger.exception(f"Error cleaning up UnifiedBrowserManager: {e}")
+                logger.exception("Error cleaning up UnifiedBrowserManager")
 
             self._unified_browser_manager = None
 
@@ -136,10 +136,10 @@ class CrawlManager:
             }
 
         except Exception as e:
-            logger.exception(f"UnifiedBrowserManager failed for {url}: {e}")
+            logger.exception("UnifiedBrowserManager failed for {url}")
             return {
                 "success": False,
-                "error": f"UnifiedBrowserManager error: {e!s}",
+                "error": "UnifiedBrowserManager error",
                 "content": "",
                 "url": url,
                 "title": "",
@@ -255,9 +255,7 @@ class CrawlManager:
                                 ):
                                     urls_to_crawl.append(link_url)
                 else:
-                    logger.warning(
-                        f"Failed to scrape {current_url}: {result.get('error', 'Unknown error')}"
-                    )
+                    logger.warning("Failed to scrape {current_url}")
 
             return {
                 "success": len(pages) > 0,
@@ -268,10 +266,10 @@ class CrawlManager:
             }
 
         except Exception as e:
-            logger.exception(f"Site crawl failed for {url}: {e}")
+            logger.exception("Site crawl failed for {url}")
             return {
                 "success": False,
-                "error": f"Site crawl error: {e!s}",
+                "error": "Site crawl error",
                 "pages": [],
                 "total_pages": 0,
                 "provider": "none",

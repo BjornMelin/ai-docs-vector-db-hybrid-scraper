@@ -1,3 +1,9 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
 """CI/CD Pipeline Validation Tests.
 
 This module tests the entire CI/CD pipeline workflow including build processes,
@@ -532,13 +538,13 @@ class PipelineExecutor:
 
         try:
             if simulate_failure:
-                await asyncio.sleep(1)
-                raise Exception(f"Simulated failure in {stage_name} stage")
+                raise TestError(f"Simulated failure in {stage_name} stage")
+                raise TestError(f"Simulated failure in {stage_name} stage")
 
             # Execute stage-specific logic
             executor = self.stage_executors.get(stage_type)
             if not executor:
-                raise Exception(f"Unknown stage type: {stage_type}")
+                raise TestError(f"Unknown stage type: {stage_type}")
 
             stage_result = await asyncio.wait_for(
                 executor(stage_config), timeout=timeout

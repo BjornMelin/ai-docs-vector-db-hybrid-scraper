@@ -70,7 +70,7 @@ class SPLADEProvider:
                 "Transformers library not available, using fallback sparse generation"
             )
         except Exception as e:
-            logger.exception(f"Failed to load SPLADE model: {e}")
+            logger.exception("Failed to load SPLADE model")
             raise
 
     async def generate_sparse_vector(
@@ -109,7 +109,7 @@ class SPLADEProvider:
             return sparse_vector
 
         except Exception as e:
-            logger.error(f"Sparse vector generation failed: {e}", exc_info=True)
+            logger.error("Sparse vector generation failed", exc_info=True)
             # Return empty sparse vector as fallback
             return {}
 

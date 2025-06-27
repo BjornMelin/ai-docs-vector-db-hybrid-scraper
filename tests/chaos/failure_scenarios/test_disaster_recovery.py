@@ -1,3 +1,8 @@
+
+class TestError(Exception):
+    """Custom exception for this module."""
+    pass
+
 """Disaster recovery tests for chaos engineering.
 
 This module implements disaster recovery scenarios to test system resilience
@@ -78,15 +83,15 @@ class TestDisasterRecovery:
             async def restore_from_backup(
                 self, backup_id: str | None = None
             ) -> dict[str, Any]:
-                if not self.backups:
-                    raise Exception("No backups available")
+                    raise TestError("No backups available")
+                    raise TestError("No backups available")
 
                 if backup_id:
                     backup = next(
                         (b for b in self.backups if b.location == backup_id), None
                     )
                     if not backup:
-                        raise Exception(f"Backup {backup_id} not found")
+                        raise TestError(f"Backup {backup_id} not found")
                 else:
                     # Get latest backup
                     backup = max(self.backups, key=lambda b: b.timestamp)
@@ -128,11 +133,11 @@ class TestDisasterRecovery:
                 self, disaster_type: DisasterType
             ) -> dict[str, Any]:
                 if self.recovery_in_progress:
-                    raise Exception("Recovery already in progress")
+                    raise TestError("Recovery already in progress")
 
                 plan = self.recovery_plans.get(disaster_type)
                 if not plan:
-                    raise Exception(f"No recovery plan for {disaster_type}")
+                    raise TestError(f"No recovery plan for {disaster_type}")
 
                 self.recovery_in_progress = True
                 self.recovery_start_time = time.time()
@@ -205,7 +210,7 @@ class TestDisasterRecovery:
 
         async def check_datacenter_health():
             if not datacenter_healthy:
-                raise Exception("Primary datacenter is offline")
+                raise TestError("Primary datacenter is offline")
             return {"status": "healthy"}
 
         # Verify outage detected
@@ -352,7 +357,7 @@ class TestDisasterRecovery:
         async def distributed_write(key: str, value: str) -> bool:
             """Perform distributed write with quorum."""
             if not await check_quorum():
-                raise Exception("Cannot perform write - insufficient quorum")
+                raise TestError("Cannot perform write - insufficient quorum")
 
             # Write to accessible nodes
             success_count = 0
@@ -648,7 +653,7 @@ class TestDisasterRecovery:
             region_info = regions[region]
 
             if region_info["status"] == "failed":
-                raise Exception(f"Region {region} is offline")
+                raise TestError(f"Region {region} is offline")
 
             return {
                 "region": region,
@@ -660,7 +665,7 @@ class TestDisasterRecovery:
         async def failover_to_region(failed_region: str, target_region: str):
             """Failover traffic from failed region to target region."""
             if regions[failed_region]["status"] != "failed":
-                raise Exception(f"Region {failed_region} is not marked as failed")
+                raise TestError(f"Region {failed_region} is not marked as failed")
 
             # Redistribute traffic
             failed_weight = regions[failed_region]["traffic_weight"]

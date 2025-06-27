@@ -89,7 +89,7 @@ class HyDEQueryEngine(BaseService):
             logger.info("HyDE query engine initialized")
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize HyDE engine: {e}") from e
+            raise EmbeddingServiceError("Failed to initialize HyDE engine") from e
 
     async def cleanup(self) -> None:
         """Cleanup all components."""
@@ -159,7 +159,7 @@ class HyDEQueryEngine(BaseService):
                 )
                 if cached_results is not None:
                     self.cache_hit_count += 1
-                    logger.debug(f"Cache hit for HyDE search: {query}")
+                    logger.debug("Cache hit for HyDE search")
                     return cached_results
 
             # Generate or retrieve HyDE embedding
@@ -201,14 +201,12 @@ class HyDEQueryEngine(BaseService):
 
             # Log performance metrics
             if self.metrics_config.track_generation_time:
-                logger.debug(
-                    f"HyDE search completed in {search_time:.2f}s for query: {query}"
-                )
+                logger.debug("HyDE search completed in {search_time:.2f}s for query")
 
             return results
 
         except Exception as e:
-            logger.error(f"HyDE search failed: {e}", exc_info=True)
+            logger.error("HyDE search failed", exc_info=True)
 
             # Fallback to regular search if enabled
             if self.config.enable_fallback:
@@ -218,7 +216,7 @@ class HyDEQueryEngine(BaseService):
                     query, collection_name, limit, filters, search_accuracy
                 )
             else:
-                raise EmbeddingServiceError(f"HyDE search failed: {e}") from e
+                raise EmbeddingServiceError("HyDE search failed") from e
 
     async def _get_or_generate_hyde_embedding(
         self, query: str, domain: str | None, use_cache: bool
@@ -311,8 +309,8 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.exception(f"Query API search failed: {e}")
-            raise QdrantServiceError(f"HyDE search execution failed: {e}") from e
+            logger.exception("Query API search failed")
+            raise QdrantServiceError("HyDE search execution failed") from e
 
     async def _apply_reranking(
         self, query: str, results: list[dict[str, Any]]
@@ -332,7 +330,7 @@ class HyDEQueryEngine(BaseService):
                 return results
 
         except Exception as e:
-            logger.warning(f"Reranking failed, returning original results: {e}")
+            logger.warning("Reranking failed, returning original results")
             return results
 
     async def _fallback_search(
@@ -361,10 +359,8 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.exception(f"Fallback search failed: {e}")
-            raise EmbeddingServiceError(
-                f"Both HyDE and fallback search failed: {e}"
-            ) from e
+            logger.exception("Fallback search failed")
+            raise EmbeddingServiceError("Both HyDE and fallback search failed") from e
 
     async def _get_cached_results(
         self,
@@ -475,7 +471,7 @@ class HyDEQueryEngine(BaseService):
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"Batch search failed for query {i}: {result}")
+                logger.error("Batch search failed for query {i}")
                 processed_results.append([])
             else:
                 processed_results.append(result)

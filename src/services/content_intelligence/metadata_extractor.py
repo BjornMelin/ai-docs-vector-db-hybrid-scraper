@@ -246,14 +246,16 @@ class MetadataExtractor:
         entities = []
         for entity_type, pattern in self._entity_patterns.items():
             matches = re.findall(pattern, content, re.IGNORECASE)
-            for match in matches:
-                entities.append(
+            entities.extend(
+                [
                     {
                         "type": entity_type,
                         "value": match if isinstance(match, str) else match[0],
                         "text": match if isinstance(match, str) else "".join(match),
                     }
-                )
+                    for match in matches
+                ]
+            )
         metadata.entities = entities
 
         # Extract breadcrumbs

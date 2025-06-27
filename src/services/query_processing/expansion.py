@@ -578,10 +578,7 @@ class QueryExpansionService:
             "should",
         }
 
-        key_terms = []
-        for word in words:
-            if len(word) > 2 and word not in stop_words:
-                key_terms.append(word)
+        key_terms = [word for word in words if len(word) > 2 and word not in stop_words]
 
         # Remove duplicates while preserving order
         seen = set()
@@ -803,10 +800,12 @@ class QueryExpansionService:
             domain in self.domain_vocabularies
             and term in self.domain_vocabularies[domain]
         ):
-            for related_term in self.domain_vocabularies[domain][term]:
-                domain_terms.append(
-                    (related_term, 0.8)
-                )  # High relevance for domain terms
+            domain_terms.extend(
+                [
+                    (related_term, 0.8)  # High relevance for domain terms
+                    for related_term in self.domain_vocabularies[domain][term]
+                ]
+            )
 
         return domain_terms
 

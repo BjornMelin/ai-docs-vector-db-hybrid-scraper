@@ -9,7 +9,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 
 logger = logging.getLogger(__name__)
@@ -33,11 +33,11 @@ class ConfigurationValidator:
     """
 
     def __init__(self):
-        self.errors: List[ValidationError] = []
-        self.warnings: List[ValidationError] = []
+        self.errors: list[ValidationError] = []
+        self.warnings: list[ValidationError] = []
 
     def validate_config_schema(
-        self, config: Dict[str, Any], environment: str = "development"
+        self, config: dict[str, Any], environment: str = "development"
     ) -> bool:
         """
         Validate configuration schema and environment-specific requirements
@@ -71,7 +71,7 @@ class ConfigurationValidator:
 
         return len(self.errors) == 0
 
-    def _validate_required_sections(self, config: Dict[str, Any]) -> None:
+    def _validate_required_sections(self, config: dict[str, Any]) -> None:
         """Validate that all required configuration sections are present"""
         required_sections = [
             "environment",
@@ -91,7 +91,7 @@ class ConfigurationValidator:
                 )
 
     def _validate_environment_config(
-        self, config: Dict[str, Any], environment: str
+        self, config: dict[str, Any], environment: str
     ) -> None:
         """Validate environment-specific configuration"""
         config_env = config.get("environment")
@@ -122,7 +122,7 @@ class ConfigurationValidator:
                 )
             )
 
-    def _validate_cache_config(self, cache_config: Dict[str, Any]) -> None:
+    def _validate_cache_config(self, cache_config: dict[str, Any]) -> None:
         """Validate cache configuration"""
         if not cache_config:
             self.errors.append(
@@ -180,7 +180,7 @@ class ConfigurationValidator:
                 )
             )
 
-    def _validate_qdrant_config(self, qdrant_config: Dict[str, Any]) -> None:
+    def _validate_qdrant_config(self, qdrant_config: dict[str, Any]) -> None:
         """Validate Qdrant configuration"""
         if not qdrant_config:
             self.errors.append(
@@ -228,7 +228,7 @@ class ConfigurationValidator:
                     )
                 )
 
-    def _validate_openai_config(self, openai_config: Dict[str, Any]) -> None:
+    def _validate_openai_config(self, openai_config: dict[str, Any]) -> None:
         """Validate OpenAI configuration"""
         if not openai_config:
             self.warnings.append(
@@ -242,15 +242,18 @@ class ConfigurationValidator:
 
         # Validate API key format (but don't require actual key in config)
         api_key = openai_config.get("api_key", "")
-        if api_key and not api_key.startswith("sk-"):
-            if "template_placeholder" not in api_key:
-                self.warnings.append(
-                    ValidationError(
-                        path="openai.api_key",
-                        message="OpenAI API key should start with 'sk-' or be externalized",
-                        severity="warning",
-                    )
+        if (
+            api_key
+            and not api_key.startswith("sk-")
+            and "template_placeholder" not in api_key
+        ):
+            self.warnings.append(
+                ValidationError(
+                    path="openai.api_key",
+                    message="OpenAI API key should start with 'sk-' or be externalized",
+                    severity="warning",
                 )
+            )
 
         # Validate model
         model = openai_config.get("model")
@@ -263,45 +266,48 @@ class ConfigurationValidator:
             self.warnings.append(
                 ValidationError(
                     path="openai.model",
-                    message=f"OpenAI model '{model}' may not be supported. Recommended: {valid_models}",
+                    message="OpenAI model '{model}' may not be supported. Recommended",
                     severity="warning",
                 )
             )
 
         # Validate dimensions
         dimensions = openai_config.get("dimensions")
-        if dimensions is not None:
-            if not isinstance(dimensions, int) or dimensions <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="openai.dimensions",
-                        message="OpenAI dimensions must be a positive integer",
-                    )
+        if dimensions is not None and (
+            not isinstance(dimensions, int) or dimensions <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="openai.dimensions",
+                    message="OpenAI dimensions must be a positive integer",
                 )
+            )
 
         # Validate batch size
         batch_size = openai_config.get("batch_size")
-        if batch_size is not None:
-            if not isinstance(batch_size, int) or batch_size <= 0 or batch_size > 2000:
-                self.errors.append(
-                    ValidationError(
-                        path="openai.batch_size",
-                        message="OpenAI batch size must be between 1 and 2000",
-                    )
+        if batch_size is not None and (
+            not isinstance(batch_size, int) or batch_size <= 0 or batch_size > 2000
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="openai.batch_size",
+                    message="OpenAI batch size must be between 1 and 2000",
                 )
+            )
 
         # Validate budget settings
         budget_limit = openai_config.get("budget_limit")
-        if budget_limit is not None:
-            if not isinstance(budget_limit, int | float) or budget_limit < 0:
-                self.errors.append(
-                    ValidationError(
-                        path="openai.budget_limit",
-                        message="OpenAI budget limit must be a non-negative number",
-                    )
+        if budget_limit is not None and (
+            not isinstance(budget_limit, int | float) or budget_limit < 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="openai.budget_limit",
+                    message="OpenAI budget limit must be a non-negative number",
                 )
+            )
 
-    def _validate_performance_config(self, performance_config: Dict[str, Any]) -> None:
+    def _validate_performance_config(self, performance_config: dict[str, Any]) -> None:
         """Validate performance configuration"""
         if not performance_config:
             self.warnings.append(
@@ -315,52 +321,54 @@ class ConfigurationValidator:
 
         # Validate concurrent requests
         max_concurrent = performance_config.get("max_concurrent_requests")
-        if max_concurrent is not None:
-            if not isinstance(max_concurrent, int) or max_concurrent <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="performance.max_concurrent_requests",
-                        message="Max concurrent requests must be a positive integer",
-                    )
+        if max_concurrent is not None and (
+            not isinstance(max_concurrent, int) or max_concurrent <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="performance.max_concurrent_requests",
+                    message="Max concurrent requests must be a positive integer",
                 )
+            )
 
         # Validate timeout settings
         timeout_settings = ["request_timeout", "retry_base_delay", "retry_max_delay"]
         for setting in timeout_settings:
             value = performance_config.get(setting)
-            if value is not None:
-                if not isinstance(value, int | float) or value <= 0:
-                    self.errors.append(
-                        ValidationError(
-                            path=f"performance.{setting}",
-                            message=f"Performance {setting} must be a positive number",
-                        )
+            if value is not None and (not isinstance(value, int | float) or value <= 0):
+                self.errors.append(
+                    ValidationError(
+                        path=f"performance.{setting}",
+                        message=f"Performance {setting} must be a positive number",
                     )
+                )
 
         # Validate retry settings
         max_retries = performance_config.get("max_retries")
-        if max_retries is not None:
-            if not isinstance(max_retries, int) or max_retries < 0:
-                self.errors.append(
-                    ValidationError(
-                        path="performance.max_retries",
-                        message="Max retries must be a non-negative integer",
-                    )
+        if max_retries is not None and (
+            not isinstance(max_retries, int) or max_retries < 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="performance.max_retries",
+                    message="Max retries must be a non-negative integer",
                 )
+            )
 
         # Validate memory settings
         max_memory = performance_config.get("max_memory_usage_mb")
-        if max_memory is not None:
-            if not isinstance(max_memory, int | float) or max_memory <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="performance.max_memory_usage_mb",
-                        message="Max memory usage must be a positive number",
-                    )
+        if max_memory is not None and (
+            not isinstance(max_memory, int | float) or max_memory <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="performance.max_memory_usage_mb",
+                    message="Max memory usage must be a positive number",
                 )
+            )
 
     def _validate_security_config(
-        self, security_config: Dict[str, Any], environment: str
+        self, security_config: dict[str, Any], environment: str
     ) -> None:
         """Validate security configuration"""
         if not security_config:
@@ -385,14 +393,15 @@ class ConfigurationValidator:
 
         # Validate rate limiting
         rate_limit = security_config.get("rate_limit_requests")
-        if rate_limit is not None:
-            if not isinstance(rate_limit, int) or rate_limit <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="security.rate_limit_requests",
-                        message="Rate limit requests must be a positive integer",
-                    )
+        if rate_limit is not None and (
+            not isinstance(rate_limit, int) or rate_limit <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="security.rate_limit_requests",
+                    message="Rate limit requests must be a positive integer",
                 )
+            )
 
         # Environment-specific security validations
         if environment == "production":
@@ -413,7 +422,7 @@ class ConfigurationValidator:
                     )
                 )
 
-    def _validate_crawl4ai_config(self, crawl4ai_config: Dict[str, Any]) -> None:
+    def _validate_crawl4ai_config(self, crawl4ai_config: dict[str, Any]) -> None:
         """Validate Crawl4AI configuration"""
         if not crawl4ai_config:
             return  # Optional configuration
@@ -432,26 +441,28 @@ class ConfigurationValidator:
 
         # Validate numeric settings
         max_crawls = crawl4ai_config.get("max_concurrent_crawls")
-        if max_crawls is not None:
-            if not isinstance(max_crawls, int) or max_crawls <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="crawl4ai.max_concurrent_crawls",
-                        message="Max concurrent crawls must be a positive integer",
-                    )
+        if max_crawls is not None and (
+            not isinstance(max_crawls, int) or max_crawls <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="crawl4ai.max_concurrent_crawls",
+                    message="Max concurrent crawls must be a positive integer",
                 )
+            )
 
         page_timeout = crawl4ai_config.get("page_timeout")
-        if page_timeout is not None:
-            if not isinstance(page_timeout, int | float) or page_timeout <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="crawl4ai.page_timeout",
-                        message="Page timeout must be a positive number",
-                    )
+        if page_timeout is not None and (
+            not isinstance(page_timeout, int | float) or page_timeout <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="crawl4ai.page_timeout",
+                    message="Page timeout must be a positive number",
                 )
+            )
 
-    def _validate_chunking_config(self, chunking_config: Dict[str, Any]) -> None:
+    def _validate_chunking_config(self, chunking_config: dict[str, Any]) -> None:
         """Validate chunking configuration"""
         if not chunking_config:
             return  # Optional configuration
@@ -463,21 +474,22 @@ class ConfigurationValidator:
             self.warnings.append(
                 ValidationError(
                     path="chunking.strategy",
-                    message=f"Chunking strategy '{strategy}' may not be supported. Valid: {valid_strategies}",
+                    message="Chunking strategy '{strategy}' may not be supported. Valid",
                     severity="warning",
                 )
             )
 
         # Validate chunk size
         chunk_size = chunking_config.get("chunk_size")
-        if chunk_size is not None:
-            if not isinstance(chunk_size, int) or chunk_size <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="chunking.chunk_size",
-                        message="Chunk size must be a positive integer",
-                    )
+        if chunk_size is not None and (
+            not isinstance(chunk_size, int) or chunk_size <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="chunking.chunk_size",
+                    message="Chunk size must be a positive integer",
                 )
+            )
 
         # Validate chunk overlap
         chunk_overlap = chunking_config.get("chunk_overlap")
@@ -500,7 +512,7 @@ class ConfigurationValidator:
                     )
                 )
 
-    def _validate_production_requirements(self, config: Dict[str, Any]) -> None:
+    def _validate_production_requirements(self, config: dict[str, Any]) -> None:
         """Validate production-specific requirements"""
         # Debug mode should be disabled
         if config.get("debug", False):
@@ -543,7 +555,7 @@ class ConfigurationValidator:
                 )
             )
 
-    def _validate_staging_requirements(self, config: Dict[str, Any]) -> None:
+    def _validate_staging_requirements(self, config: dict[str, Any]) -> None:
         """Validate staging-specific requirements"""
         # Staging should have similar settings to production but allow some flexibility
 
@@ -558,7 +570,7 @@ class ConfigurationValidator:
                 )
             )
 
-    def get_validation_summary(self) -> Dict[str, Any]:
+    def get_validation_summary(self) -> dict[str, Any]:
         """Get a summary of validation results"""
         return {
             "passed": len(self.errors) == 0,
@@ -571,7 +583,7 @@ class ConfigurationValidator:
 
 # Convenience functions for backward compatibility
 def validate_config_schema(
-    config: Dict[str, Any], environment: str = "development"
+    config: dict[str, Any], environment: str = "development"
 ) -> bool:
     """
     Validate configuration schema
@@ -600,12 +612,12 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
     config_dir = Path(config_dir)
 
     if not config_dir.exists():
-        logger.error(f"Configuration directory not found: {config_dir}")
+        logger.error("Configuration directory not found")
         return False
 
     templates_dir = config_dir / "templates"
     if not templates_dir.exists():
-        logger.warning(f"Templates directory not found: {templates_dir}")
+        logger.warning("Templates directory not found")
         return True
 
     validator = ConfigurationValidator()
@@ -624,17 +636,17 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
             if not is_valid:
                 logger.error(f"Validation failed for {environment}")
                 summary = validator.get_validation_summary()
-                for error in summary["errors"]:
-                    logger.error(f"  {error['path']}: {error['message']}")
+                for _error in summary["errors"]:
+                    logger.error(f"  {_error['path']}")
                 all_valid = False
             else:
                 logger.info(f"Configuration valid for {environment}")
                 summary = validator.get_validation_summary()
-                for warning in summary["warnings"]:
-                    logger.warning(f"  {warning['path']}: {warning['message']}")
+                for _warning in summary["warnings"]:
+                    logger.warning(f"  {_warning['path']}")
 
-        except Exception as e:
-            logger.exception(f"Failed to validate {config_file}: {e}")
+        except Exception:
+            logger.exception(f"Failed to validate {config_file}")
             all_valid = False
 
     return all_valid
@@ -642,7 +654,7 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
 
 def validate_deployment_readiness(
     config_dir: Union[str, Path], environment: str
-) -> Tuple[bool, Dict[str, Any]]:
+) -> tuple[bool, dict[str, Any]]:
     """
     Validate deployment readiness for a specific environment
 
@@ -658,7 +670,7 @@ def validate_deployment_readiness(
 
     if not config_file.exists():
         return False, {
-            "error": f"Configuration file not found: {config_file}",
+            "error": "Configuration file not found",
             "passed": False,
             "error_count": 1,
             "warning_count": 0,
@@ -676,14 +688,14 @@ def validate_deployment_readiness(
         is_valid = validator.validate_config_schema(config, environment)
         summary = validator.get_validation_summary()
 
-        return is_valid, summary
-
     except Exception as e:
         return False, {
-            "error": f"Failed to load configuration: {e}",
+            "error": "Failed to load configuration",
             "passed": False,
             "error_count": 1,
             "warning_count": 0,
             "errors": [{"path": str(config_file), "message": str(e)}],
             "warnings": [],
         }
+    else:
+        return is_valid, summary
