@@ -465,7 +465,7 @@ class TestConfigurationIntegration:
                 "debug": False,
             }
 
-            with open(config_file, "w") as f:
+            with config_file.open("w") as f:
                 json.dump(updated_config, f)
 
             # Perform reload

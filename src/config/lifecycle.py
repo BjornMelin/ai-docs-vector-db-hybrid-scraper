@@ -159,10 +159,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Performance configuration changed")
                     # Placeholder for performance setting updates
                     # This could update request limits, timeouts, etc.
-                return True
             except Exception:
                 logger.exception("Failed to update performance configuration")
                 return False
+            else:
+                return True
 
         # Security configuration callback
         def update_security_config(old_config: Config, new_config: Config) -> bool:
@@ -172,10 +173,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Security configuration changed")
                     # Placeholder for security setting updates
                     # This could update API keys, rate limits, etc.
-                return True
             except Exception:
                 logger.exception("Failed to update security configuration")
                 return False
+            else:
+                return True
 
         # Global configuration update callback
         async def update_global_config(_old_config: Config, new_config: Config) -> bool:
@@ -184,10 +186,11 @@ class ConfigurationLifecycleManager:
                 # Update global configuration
                 set_config(new_config)
                 logger.info("Global configuration updated")
-                return True
             except Exception:
                 logger.exception("Failed to update global configuration")
                 return False
+            else:
+                return True
 
         # Register all callbacks
         if self.reloader:

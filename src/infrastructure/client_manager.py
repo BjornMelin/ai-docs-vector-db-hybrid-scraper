@@ -611,7 +611,7 @@ class ClientManager:
 
             async with self._service_locks["search_orchestrator"]:
                 if self._search_orchestrator is None:
-                    from src.services.query_processing import (
+                    from src.services.query_processing import (  # noqa: PLC0415
                         AdvancedSearchOrchestrator,
                     )
 
@@ -662,7 +662,7 @@ class ClientManager:
 
             async with self._service_locks["ab_testing_manager"]:
                 if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import (
+                    from src.services.deployment.ab_testing import (  # noqa: PLC0415
                         ABTestingManager,
                     )
 
@@ -692,7 +692,7 @@ class ClientManager:
 
             async with self._service_locks["blue_green_deployment"]:
                 if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import (
+                    from src.services.deployment.blue_green import (  # noqa: PLC0415
                         BlueGreenDeployment,
                     )
 
@@ -722,7 +722,7 @@ class ClientManager:
 
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
-                    from src.services.deployment.canary import (
+                    from src.services.deployment.canary import (  # noqa: PLC0415
                         CanaryDeployment,
                     )
 

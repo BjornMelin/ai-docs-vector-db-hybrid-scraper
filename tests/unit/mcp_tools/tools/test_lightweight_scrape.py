@@ -7,6 +7,9 @@ import pytest
 from src.services.errors import CrawlServiceError
 
 
+    # register_tools imported at top
+
+
 @pytest.fixture
 def mock_client_manager():
     """Create mock client manager."""
@@ -59,7 +62,7 @@ class TestLightweightScrapeRegistration:
 
     def test_register_tools(self, mock_mcp, mock_client_manager):
         """Test that lightweight_scrape tool is registered correctly."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         register_tools(mock_mcp, mock_client_manager)
 
@@ -75,7 +78,7 @@ class TestLightweightScrapeTool:
         self, mock_client_manager, mock_context
     ):
         """Test successful scraping with markdown format."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager to return successful result
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -131,7 +134,7 @@ class TestLightweightScrapeTool:
         self, mock_client_manager, mock_context
     ):
         """Test scraping with multiple output formats."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager to return successful result
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -177,7 +180,7 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_invalid_format_raises_error(self, mock_client_manager, mock_context):
         """Test that invalid formats raise ValueError."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Register and get tool
         mock_mcp = MagicMock()
@@ -202,7 +205,7 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_url_not_suitable_warning(self, mock_client_manager, mock_context):
         """Test warning when URL is not suitable for lightweight scraping."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock to return that URL is not suitable for lightweight tier
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -242,7 +245,7 @@ class TestLightweightScrapeTool:
         self, mock_client_manager, mock_context
     ):
         """Test handling of scraping failure that should escalate."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager to return failure
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -278,7 +281,7 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_crawl_manager_reuse(self, mock_client_manager, mock_context):
         """Test that crawl manager is reused across calls."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -313,7 +316,7 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_default_format_is_markdown(self, mock_client_manager, mock_context):
         """Test that default format is markdown when not specified."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -346,7 +349,7 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_performance_metrics_added(self, mock_client_manager, mock_context):
         """Test that performance metrics are added to successful results."""
-        from src.mcp_tools.tools.lightweight_scrape import register_tools
+    # register_tools imported at top
 
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()

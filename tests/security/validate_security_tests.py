@@ -22,7 +22,7 @@ def validate_test_file(file_path: Path) -> dict:
     }
 
     try:
-        with open(file_path) as f:
+        with file_path.open() as f:
             content = f.read()
 
         # Parse the AST

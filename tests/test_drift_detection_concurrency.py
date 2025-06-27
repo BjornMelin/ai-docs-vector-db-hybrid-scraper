@@ -96,7 +96,7 @@ class TestDriftDetectionConcurrency:
         detector.take_snapshot(str(temp_config_file))
 
         # Modify the config file
-        with open(temp_config_file, "w") as f:
+        with temp_config_file.open("w") as f:
             json.dump({"test_key": "modified_value", "version": 2}, f)
 
         detector.take_snapshot(str(temp_config_file))

@@ -212,7 +212,7 @@ class TestFileProcessing:
         """Test reading file content for processing."""
         # Test that files can be read
         for file_path in sample_batch_files:
-            with open(file_path) as f:
+            with file_path.open() as f:
                 content = f.read()
                 assert len(content) > 0
                 assert "test content" in content.lower()

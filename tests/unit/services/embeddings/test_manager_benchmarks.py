@@ -1,6 +1,7 @@
 """Tests for EmbeddingManager benchmark loading functionality."""
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -113,7 +114,7 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "custom_benchmarks.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load custom benchmarks
@@ -160,7 +161,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Create file with invalid JSON
         benchmark_file = tmp_path / "invalid.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             f.write("{ invalid json")
 
         with pytest.raises(json.JSONDecodeError):
@@ -181,7 +182,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Create file with invalid schema
         benchmark_file = tmp_path / "invalid_schema.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump({"invalid": "schema"}, f)
 
         # Try to load invalid benchmarks
@@ -236,7 +237,7 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "benchmarks.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load benchmarks
@@ -295,7 +296,7 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "custom.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load benchmarks

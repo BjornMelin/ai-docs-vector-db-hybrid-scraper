@@ -7,6 +7,9 @@ import pytest
 from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
 
 
+    # register_tools imported at top
+
+
 class TestCacheTools:
     """Test suite for cache MCP tools."""
 
@@ -41,7 +44,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_clear_cache_all(self, mock_client_manager, mock_context):
         """Test clearing all cache."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -68,7 +71,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_clear_cache_pattern(self, mock_client_manager, mock_context):
         """Test clearing cache with pattern."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -95,7 +98,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_get_cache_stats(self, mock_client_manager, mock_context):
         """Test getting cache statistics."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -122,7 +125,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_cache_error_handling(self, mock_client_manager, mock_context):
         """Test cache error handling."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         # Make cache manager raise an exception
         mock_cache = AsyncMock()
@@ -151,7 +154,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_cache_stats_error_handling(self, mock_client_manager, mock_context):
         """Test cache stats error handling."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         # Make cache manager raise an exception
         mock_cache = AsyncMock()
@@ -207,7 +210,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
         """Test that context logging is properly integrated."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -233,7 +236,7 @@ class TestCacheTools:
 
     def test_tool_registration(self, mock_client_manager):
         """Test that cache tools are properly registered."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)
@@ -244,7 +247,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_cache_manager_interactions(self, mock_client_manager, mock_context):
         """Test proper interaction with cache manager."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -271,7 +274,7 @@ class TestCacheTools:
     @pytest.mark.asyncio
     async def test_different_clear_patterns(self, mock_client_manager, mock_context):
         """Test clearing cache with different patterns."""
-        from src.mcp_tools.tools.cache import register_tools
+    # register_tools imported at top
 
         mock_mcp = MagicMock()
         registered_tools = {}
