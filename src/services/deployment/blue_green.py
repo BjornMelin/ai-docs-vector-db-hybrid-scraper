@@ -149,9 +149,7 @@ class BlueGreenDeployment:
             logger.info("Blue-green deployment manager initialized successfully")
 
         except Exception as e:
-            logger.exception(
-                "Failed to initialize blue-green deployment manager"
-            )
+            logger.exception("Failed to initialize blue-green deployment manager")
             self._initialized = False
             raise
 
@@ -507,9 +505,7 @@ class BlueGreenDeployment:
                 env.health.last_check = datetime.now(tz=UTC)
 
         except Exception as e:
-            logger.exception(
-                "Error checking health for %s environment", env.name
-            )
+            logger.exception("Error checking health for %s environment", env.name)
 
     async def _load_environment_state(self) -> None:
         """Load environment state from storage."""

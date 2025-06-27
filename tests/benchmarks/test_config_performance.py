@@ -179,7 +179,7 @@ class TestConfigurationPerformance:
         """Benchmark config loading from JSON file."""
 
         def load_from_file():
-            with open(temp_config_file) as f:
+            with temp_config_file.open() as f:
                 data = json.load(f)
             return OptimizedConfig(**data)
 

@@ -319,7 +319,7 @@ class LoadTestRunner:
             logger.exception("Failed to run regression test")
             return {
                 "status": "error",
-                "error": str(e),
+                "error": "Unknown error",
                 "baseline_file": baseline_file,
             }
 

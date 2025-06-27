@@ -1,12 +1,17 @@
 """Tests for MCP project management tools."""
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+import yaml
+from pydantic import ValidationError
 
 # Import the actual enums before any mocking happens
 from src.config.enums import QualityTier, SearchStrategy
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.responses import ProjectInfo
 from src.mcp_tools.tools.projects import register_tools
 
 

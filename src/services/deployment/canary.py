@@ -508,9 +508,7 @@ class CanaryDeployment:
         except asyncio.CancelledError:
             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
         except Exception as e:
-            logger.exception(
-                "Error monitoring canary deployment %s", deployment_id
-            )
+            logger.exception("Error monitoring canary deployment %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
 
     async def _update_deployment_metrics(self, deployment_id: str) -> None:
@@ -553,9 +551,7 @@ class CanaryDeployment:
             metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
 
         except Exception as e:
-            logger.exception(
-                "Error updating metrics for canary %s", deployment_id
-            )
+            logger.exception("Error updating metrics for canary %s", deployment_id)
 
     async def _evaluate_success_criteria(self, deployment_id: str) -> bool:
         """Evaluate if canary deployment meets success criteria."""
@@ -658,9 +654,7 @@ class CanaryDeployment:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to update traffic split for %s", deployment_id
-            )
+            logger.exception("Failed to update traffic split for %s", deployment_id)
             raise
 
     async def _complete_canary_deployment(
@@ -691,9 +685,7 @@ class CanaryDeployment:
             )  # 1 hour
 
         except Exception as e:
-            logger.exception(
-                "Error completing canary deployment %s", deployment_id
-            )
+            logger.exception("Error completing canary deployment %s", deployment_id)
 
     async def _cleanup_deployment(self, deployment_id: str, delay_seconds: int) -> None:
         """Clean up completed deployment after delay."""
@@ -708,9 +700,7 @@ class CanaryDeployment:
             logger.info("Cleaned up canary deployment: %s", deployment_id)
 
         except Exception as e:
-            logger.exception(
-                "Error cleaning up canary deployment %s", deployment_id
-            )
+            logger.exception("Error cleaning up canary deployment %s", deployment_id)
 
     async def _load_active_deployments(self) -> None:
         """Load active canary deployments from storage."""

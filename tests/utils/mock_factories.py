@@ -10,7 +10,7 @@ import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 from .data_generators import TestDataGenerator
@@ -429,9 +429,9 @@ def create_mock_api_client(
     async def mock_request(
         method: str,
         endpoint: str,
-        params: Dict | None = None,
-        json_data: Dict | None = None,
-        headers: Dict | None = None,
+        params: dict | None = None,
+        json_data: dict | None = None,
+        headers: dict | None = None,
     ) -> dict[str, Any]:
         """Mock API request."""
         nonlocal request_count, last_reset
