@@ -229,7 +229,7 @@ class TestCLICommandIntegration:
             # Test that setup command can access context
             with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard:
                 mock_wizard_instance = MagicMock()
-                mock_wizard_instance.run_setup.return_value = Path("/tmp/config.json")
+                mock_wizard_instance.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108 # test temp path
                 mock_wizard.return_value = mock_wizard_instance
 
                 with patch("src.cli.commands.setup.questionary") as mock_questionary:

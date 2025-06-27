@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Performance benchmarks for service layer using pytest-benchmark.
 
 Benchmarks service layer performance including:
@@ -21,9 +15,6 @@ import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-
-logger = logging.getLogger(__name__)
 
 from src.services.functional.circuit_breaker import (
     CircuitBreaker,

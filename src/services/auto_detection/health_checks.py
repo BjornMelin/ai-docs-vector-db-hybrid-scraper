@@ -13,6 +13,16 @@ import logging
 import time
 from typing import Any
 
+try:
+    import httpx
+except ImportError:
+    httpx = None
+
+try:
+    import redis.asyncio as redis
+except ImportError:
+    redis = None
+
 from pydantic import BaseModel
 
 from src.config.auto_detect import AutoDetectionConfig, DetectedService

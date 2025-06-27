@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Stress testing scenarios for beyond-capacity loads.
 
 This module implements stress tests to identify system breaking points
@@ -23,6 +17,12 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import BreakpointLoadProfile, create_custom_step_profile
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)

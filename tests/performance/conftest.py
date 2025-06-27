@@ -469,8 +469,6 @@ def network_latency_monitor():
                     }
                 )
 
-                return latency
-
             except Exception as e:
                 latency = time.perf_counter() - start_time
 

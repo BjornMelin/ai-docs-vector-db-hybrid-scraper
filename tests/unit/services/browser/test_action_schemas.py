@@ -261,8 +261,8 @@ class TestScreenshotAction:
 
     def test_screenshot_with_options(self):
         """Test screenshot with all options."""
-        action = ScreenshotAction(path="/tmp/screenshot.png", full_page=True)
-        assert action.path == "/tmp/screenshot.png"
+        action = ScreenshotAction(path="/tmp/screenshot.png", full_page=True)  # noqa: S108 # test temp path
+        assert action.path == "/tmp/screenshot.png"  # noqa: S108 # test temp path
         assert action.full_page is True
 
 
