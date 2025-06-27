@@ -446,7 +446,7 @@ class TestErrorMetrics:
                     elif error_type == "timeout_error":
                         raise TimeoutError("Request timeout")
             except Exception:
-                pass  # Errors are expected and tracked  # noqa: S110
+                pass  # Errors are expected and tracked
 
         # AI tracker should have recorded error metrics
         # Verification would be implementation-specific

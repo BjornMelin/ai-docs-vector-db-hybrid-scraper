@@ -183,7 +183,7 @@ class TestDatabaseConnectionPooling:
                 conn = await mock_pool.get_connection()
                 await mock_pool.release_connection(conn)
             except Exception:
-                pass  # noqa: S110
+                pass
 
         hit_rate = mock_pool.get_affinity_hit_rate()
         # Should be approximately 73% hit rate

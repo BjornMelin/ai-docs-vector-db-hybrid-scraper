@@ -101,10 +101,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Database configuration changed, marking for restart")
                     # Note: Database connections typically require restart
                     # This is a placeholder for actual database reconfiguration
-                return True
             except Exception:
                 logger.exception("Failed to update database configuration")
                 return False
+            else:
+                return True
 
         # Cache configuration callback
         def update_cache_config(old_config: Config, new_config: Config) -> bool:
@@ -114,10 +115,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Cache configuration changed")
                     # Placeholder for cache reconfiguration
                     # In a real implementation, this would update cache connections
-                return True
             except Exception:
                 logger.exception("Failed to update cache configuration")
                 return False
+            else:
+                return True
 
         # Observability configuration callback
         def update_observability_config(old_config: Config, new_config: Config) -> bool:
@@ -143,10 +145,11 @@ class ConfigurationLifecycleManager:
                             logger.warning("Failed to reconfigure observability")
                             return False
 
-                return True
             except Exception:
                 logger.exception("Failed to update observability configuration")
                 return False
+            else:
+                return True
 
         # Performance configuration callback
         def update_performance_config(old_config: Config, new_config: Config) -> bool:

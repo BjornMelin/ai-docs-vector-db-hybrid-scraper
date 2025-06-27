@@ -13,6 +13,7 @@ import resource
 import time
 import tracemalloc
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import psutil
@@ -457,7 +458,7 @@ class TestConfigurationLoadStress:
             try:
                 # Leave some FDs for the system
                 for i in range(new_limit - 50):
-                    f = open(stress_config_dir / f"dummy_{i}.txt", "w")
+                    f = (stress_config_dir / f"dummy_{i}.txt").open("w")
                     open_files.append(f)
 
                 # Now try reloading

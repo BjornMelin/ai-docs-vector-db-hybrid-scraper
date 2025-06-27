@@ -6,11 +6,18 @@ for FastMCP-based applications.
 
 import asyncio
 import logging
+import time
 
 from src.config import Config, MonitoringConfig
 
-from .health import HealthCheckManager
+from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
 from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
+
+
+try:
+    from fastapi.responses import JSONResponse
+except ImportError:
+    JSONResponse = None  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -46,8 +53,6 @@ async def initialize_monitoring(
     metrics_registry = MetricsRegistry(metrics_config)
 
     # Create health check config from monitoring config
-    from .health import HealthCheckConfig
-
     health_config = HealthCheckConfig(
         enabled=config.enabled, timeout=config.health_check_timeout
     )
@@ -257,9 +262,6 @@ def setup_fastmcp_monitoring(
             )
             async def health_endpoint():
                 """Health check endpoint for FastMCP."""
-                import time
-
-                from fastapi.responses import JSONResponse
 
                 if not health_manager:
                     return JSONResponse(
@@ -276,8 +278,6 @@ def setup_fastmcp_monitoring(
                 overall_status = health_manager.get_overall_status()
 
                 # Determine HTTP status code based on health
-                from .health import HealthStatus
-
                 if overall_status == HealthStatus.HEALTHY:
                     status_code = 200
                 elif overall_status == HealthStatus.DEGRADED:
@@ -297,9 +297,6 @@ def setup_fastmcp_monitoring(
             )
             async def liveness_endpoint():
                 """Kubernetes liveness probe endpoint."""
-                import time
-
-                from fastapi.responses import JSONResponse
 
                 return JSONResponse(
                     content={"status": "alive", "timestamp": time.time()},
@@ -314,11 +311,6 @@ def setup_fastmcp_monitoring(
             )
             async def readiness_endpoint():
                 """Kubernetes readiness probe endpoint."""
-                import time
-
-                from fastapi.responses import JSONResponse
-
-                from .health import HealthStatus
 
                 if not health_manager:
                     return JSONResponse(

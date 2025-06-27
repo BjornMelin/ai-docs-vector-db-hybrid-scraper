@@ -63,7 +63,7 @@ class ConfigDriftService:
             logger.info("Configuration drift detector initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize drift detector: {e}")
+            logger.exception("Failed to initialize drift detector")
             self.drift_detector = None
 
     async def start(self) -> None:
@@ -89,7 +89,7 @@ class ConfigDriftService:
             logger.info("Configuration drift monitoring service started successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to start drift monitoring service: {e}")
+            logger.exception("Failed to start drift monitoring service")
             self.is_running = False
             raise
 
@@ -115,7 +115,7 @@ class ConfigDriftService:
             logger.debug("Scheduled next configuration snapshot task")
 
         except Exception as e:
-            logger.exception(f"Failed to schedule snapshot task: {e}")
+            logger.exception("Failed to schedule snapshot task")
 
     async def _schedule_comparison_task(self) -> None:
         """Schedule the next configuration comparison task."""
@@ -134,7 +134,7 @@ class ConfigDriftService:
             logger.debug("Scheduled next configuration comparison task")
 
         except Exception as e:
-            logger.exception(f"Failed to schedule comparison task: {e}")
+            logger.exception("Failed to schedule comparison task")
 
     async def take_configuration_snapshot(self) -> dict[str, Any]:
         """Take snapshots of all monitored configuration sources.
@@ -345,7 +345,7 @@ class ConfigDriftService:
             return True
 
         except Exception as e:
-            logger.exception(f"Auto-remediation failed for event {event.id}: {e}")
+            logger.exception("Auto-remediation failed for event %s", event.id)
             return False
 
     async def get_service_status(self) -> dict[str, Any]:
@@ -405,7 +405,7 @@ class ConfigDriftService:
             }
 
         except Exception as e:
-            logger.exception(f"Manual detection failed: {e}")
+            logger.exception("Manual detection failed")
             raise
 
 

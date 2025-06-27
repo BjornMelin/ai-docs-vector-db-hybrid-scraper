@@ -195,7 +195,7 @@ class SecurityTestRunner:
             # Parse results
             bandit_report_file = self.output_dir / "bandit_report.json"
             if bandit_report_file.exists():
-                with open(bandit_report_file) as f:
+                with bandit_report_file.open() as f:
                     bandit_data = json.load(f)
 
                 return {
@@ -259,7 +259,7 @@ class SecurityTestRunner:
             # Parse results
             safety_report_file = self.output_dir / "safety_report.json"
             if safety_report_file.exists():
-                with open(safety_report_file) as f:
+                with safety_report_file.open() as f:
                     try:
                         safety_data = json.load(f)
                         vulnerabilities = (
@@ -485,7 +485,7 @@ class SecurityTestRunner:
         """Generate comprehensive security reports."""
         # JSON report
         json_report_file = self.output_dir / "security_test_results.json"
-        with open(json_report_file, "w") as f:
+        with json_report_file.open("w") as f:
             json.dump(results, f, indent=2, default=str)
 
         # HTML summary report
@@ -572,7 +572,7 @@ class SecurityTestRunner:
 </html>"""
 
         html_report_file = self.output_dir / "security_summary.html"
-        with open(html_report_file, "w") as f:
+        with html_report_file.open("w") as f:
             f.write(html_content)
 
     def _generate_executive_summary(self, results: dict[str, Any]) -> None:
@@ -615,7 +615,7 @@ For visual summary, see: security_summary.html
 """
 
         summary_file = self.output_dir / "executive_summary.txt"
-        with open(summary_file, "w") as f:
+        with summary_file.open("w") as f:
             f.write(summary_content)
 
 

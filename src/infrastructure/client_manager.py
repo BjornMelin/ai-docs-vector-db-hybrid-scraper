@@ -319,7 +319,7 @@ class ClientManager:
 
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
-                    from src.services.embeddings.manager import (
+                    from src.services.embeddings.manager import (  # noqa: PLC0415
                         EmbeddingManager,
                     )
 
@@ -341,7 +341,7 @@ class ClientManager:
 
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
-                    from src.services.cache.manager import (
+                    from src.services.cache.manager import (  # noqa: PLC0415
                         CacheManager,
                     )
 
@@ -381,7 +381,7 @@ class ClientManager:
 
             async with self._service_locks["crawl_manager"]:
                 if self._crawl_manager is None:
-                    from src.services.crawling.manager import (
+                    from src.services.crawling.manager import (  # noqa: PLC0415
                         CrawlManager,
                     )
 
@@ -408,7 +408,7 @@ class ClientManager:
                         HyDEMetricsConfig,
                         HyDEPromptConfig,
                     )
-                    from src.services.hyde.engine import (
+                    from src.services.hyde.engine import (  # noqa: PLC0415
                         HyDEQueryEngine,
                     )
 
@@ -445,7 +445,7 @@ class ClientManager:
 
             async with self._service_locks["project_storage"]:
                 if self._project_storage is None:
-                    from src.services.core.project_storage import (
+                    from src.services.core.project_storage import (  # noqa: PLC0415
                         ProjectStorage,
                     )
 
@@ -494,7 +494,7 @@ class ClientManager:
 
             async with self._service_locks["task_queue_manager"]:
                 if self._task_queue_manager is None:
-                    from src.services.task_queue.manager import (
+                    from src.services.task_queue.manager import (  # noqa: PLC0415
                         TaskQueueManager,
                     )
 

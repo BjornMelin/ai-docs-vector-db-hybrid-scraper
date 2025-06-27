@@ -613,7 +613,7 @@ class DeploymentTestReportGenerator:
 
         # Write report to file
         report_file = self.work_dir / f"deployment_report_{config['environment']}.json"
-        with open(report_file, "w") as f:
+        with report_file.open("w") as f:
             json.dump(report_content, f, indent=2)
 
         return {

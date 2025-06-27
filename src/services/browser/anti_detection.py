@@ -6,6 +6,7 @@ Designed to achieve 95%+ success rate on challenging sites while maintaining per
 """
 
 import json
+import logging
 import random
 import secrets
 import time
@@ -13,6 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+logger = logging.getLogger(__name__)
 
 from src.config import PlaywrightConfig
 
@@ -226,7 +230,7 @@ class SessionManager:
             with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
         except Exception as e:
-            logger.debug(f"Failed to save session {session_id}: {e}")
+            logger.debug(f"Failed to save session {session.session_id}: {e}")
 
     def update_session_data(
         self,

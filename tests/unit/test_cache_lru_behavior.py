@@ -251,7 +251,7 @@ class TestCacheIntegrationPatterns:
                     return cached_value
             except Exception:
                 # Gracefully handle cache failure
-                pass  # noqa: S110
+                pass
 
             # Fallback to direct computation
             computed_value = f"computed_value_for_{key}"
@@ -260,7 +260,7 @@ class TestCacheIntegrationPatterns:
                 await mock_cache.set(key, computed_value)
             except Exception:
                 # Cache set failure is non-fatal
-                pass  # noqa: S110
+                pass
 
             return computed_value
 

@@ -511,7 +511,7 @@ class TestLifespanContextManager:
             async with unified_mcp_server.lifespan():
                 pass
         except Exception:
-            pass  # noqa: S110
+            pass
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)
