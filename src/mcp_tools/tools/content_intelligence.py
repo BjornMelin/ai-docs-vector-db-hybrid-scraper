@@ -302,7 +302,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def get_adaptation_recommendations(
         url: str,
         content_patterns: list[str] | None = None,
-        quality_issues: list[str] | None = None,
+        _quality_issues: list[str] | None = None,
         ctx: Context | None = None,
     ) -> list[dict]:
         """

@@ -471,7 +471,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
     async def _build_intelligent_fallback_order(
         self,
-        failed_tier: str,
+        _failed_tier: str,
         tier_config: TierConfiguration,
         domain: str,
         error_message: str,

@@ -13,6 +13,7 @@ import asyncio
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List
 
 import httpx
@@ -269,11 +270,11 @@ class EnvironmentDetector:
             # Check multiple container indicators
             indicators = [
                 # Docker
-                os.path.exists("/.dockerenv"),
+                Path("/.dockerenv").exists(),
                 # Generic container
-                os.path.exists("/proc/1/cgroup") and self._check_cgroup_container(),
+                Path("/proc/1/cgroup").exists() and self._check_cgroup_container(),
                 # Kubernetes
-                os.path.exists("/var/run/secrets/kubernetes.io"),
+                Path("/var/run/secrets/kubernetes.io").exists(),
             ]
 
             return any(indicators)
@@ -300,7 +301,7 @@ class EnvironmentDetector:
         try:
             # Check Kubernetes service account
             k8s_indicators = [
-                os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount"),
+                Path("/var/run/secrets/kubernetes.io/serviceaccount").exists(),
                 os.getenv("KUBERNETES_SERVICE_HOST") is not None,
                 os.getenv("KUBERNETES_SERVICE_PORT") is not None,
             ]

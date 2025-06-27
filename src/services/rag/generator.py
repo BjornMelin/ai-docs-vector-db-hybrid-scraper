@@ -369,7 +369,7 @@ Based on the above information, please answer the following question:
 Provide a clear, accurate answer based solely on the information provided above."""
 
     def _calculate_confidence(
-        self, answer: str, context_info: dict[str, Any], request: RAGRequest
+        self, answer: str, context_info: dict[str, Any], _request: RAGRequest
     ) -> float:
         """Calculate confidence score for the generated answer."""
         confidence = 0.8  # Base confidence
@@ -454,7 +454,7 @@ Provide a clear, accurate answer based solely on the information provided above.
 
         return cost
 
-    def _generate_follow_up_questions(self, answer: str, query: str) -> list[str]:
+    def _generate_follow_up_questions(self, answer: str, _query: str) -> list[str]:
         """Generate relevant follow-up questions based on the answer."""
         # Simple rule-based follow-up generation for V1
         follow_ups = []
@@ -518,7 +518,7 @@ Provide a clear, accurate answer based solely on the information provided above.
         key_parts.extend(result_ids)
 
         cache_string = "|".join(key_parts)
-        return hashlib.md5(cache_string.encode()).hexdigest()
+        return hashlib.sha256(cache_string.encode()).hexdigest()
 
     def _cache_result(self, cache_key: str, result: RAGResult) -> None:
         """Cache result with TTL management."""

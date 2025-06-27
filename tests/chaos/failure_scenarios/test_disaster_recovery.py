@@ -321,7 +321,7 @@ class TestDisasterRecovery:
             "Should restore latest good version"
         )
 
-    async def test_network_partition_recovery(self, recovery_orchestrator):
+    async def test_network_partition_recovery(self, _recovery_orchestrator):
         """Test recovery from network partition (split-brain scenario)."""
         # Simulate distributed system nodes
         nodes = {
@@ -619,7 +619,7 @@ class TestDisasterRecovery:
             "No errors should remain after recovery"
         )
 
-    async def test_multi_region_failover(self, recovery_orchestrator):
+    async def test_multi_region_failover(self, _recovery_orchestrator):
         """Test multi-region failover and recovery."""
         # Setup multi-region deployment
         regions = {

@@ -265,7 +265,7 @@ class HybridSearchService:
             return None
 
     async def _select_model_with_timeout(
-        self, query_classification: Any, request: HybridSearchRequest
+        self, query_classification: Any, _request: HybridSearchRequest
     ) -> Any:
         """Select model with timeout protection."""
         try:
@@ -283,7 +283,7 @@ class HybridSearchService:
             return None
 
     async def _generate_sparse_vector_with_timeout(
-        self, query: str, splade_config: Any
+        self, query: str, _splade_config: Any
     ) -> dict[int, float] | None:
         """Generate sparse vector with timeout protection."""
         try:
@@ -404,7 +404,7 @@ class HybridSearchService:
             logger.error(f"Failed to store search for learning: {e}", exc_info=True)
 
     async def update_with_user_feedback(
-        self, query_id: str, user_feedback: dict[str, Any]
+        self, query_id: str, _user_feedback: dict[str, Any]
     ) -> None:
         """Update ML components with user feedback."""
         try:

@@ -6,7 +6,9 @@ Achieves 60% complexity reduction while maintaining full functionality.
 """
 
 import logging
+import time
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -14,7 +16,16 @@ from fastapi import Depends
 from pydantic import BaseModel
 
 from src.config import Config, get_config, get_config_with_auto_detection
+from src.config.auto_detect import AutoDetectedServices, DetectedEnvironment
+from src.config.enums import CacheType, Environment
 from src.infrastructure.client_manager import ClientManager
+from src.services.auto_detection import (
+    ConnectionPoolManager,
+    EnvironmentDetector,
+    HealthChecker,
+    ServiceDiscovery,
+)
+from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
     CrawlServiceError,
@@ -23,6 +34,8 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
+from src.services.rag import RAGGenerator
+from src.services.rag.models import RAGRequest as InternalRAGRequest
 
 
 logger = logging.getLogger(__name__)
@@ -85,13 +98,9 @@ async def get_auto_detected_services(
     and environment information. Protected by circuit breaker for
     external metadata API failures.
     """
-    from src.config.auto_detect import AutoDetectedServices
-
     auto_detected = config.get_auto_detected_services()
     if auto_detected is None:
         # Return empty services if auto-detection wasn't performed
-        from src.config.auto_detect import DetectedEnvironment
-        from src.config.enums import Environment
 
         return AutoDetectedServices(
             environment=DetectedEnvironment(
@@ -167,7 +176,7 @@ async def get_auto_detection_health_checker(
     Provides health monitoring for auto-detected services.
     Protected by circuit breaker for service health check failures.
     """
-    from src.services.auto_detection import HealthChecker
+    # HealthChecker imported at top-level
 
     health_checker = HealthChecker(config.auto_detection)
 
@@ -195,7 +204,7 @@ async def get_auto_detection_connection_pools(
     Provides optimized connection pools for discovered services.
     Protected by circuit breaker for connection pool initialization failures.
     """
-    from src.services.auto_detection import ConnectionPoolManager
+    # ConnectionPoolManager imported at top-level
 
     pool_manager = ConnectionPoolManager(config.auto_detection)
 
@@ -247,10 +256,7 @@ async def perform_auto_detection(
     Protected by Tenacity-powered circuit breaker with retry logic.
     """
     try:
-        import time
-
-        from src.config.auto_detect import AutoDetectedServices
-        from src.services.auto_detection import EnvironmentDetector, ServiceDiscovery
+        # All imports moved to top-level
 
         start_time = time.time()
 
@@ -277,22 +283,21 @@ async def perform_auto_detection(
         detection_time_ms = (time.time() - start_time) * 1000
 
         # Format services for response
-        formatted_services = []
-        for service in services:
-            formatted_services.append(
-                {
-                    "service_name": service.service_name,
-                    "service_type": service.service_type,
-                    "host": service.host,
-                    "port": service.port,
-                    "is_available": service.is_available,
-                    "connection_string": service.connection_string,
-                    "version": service.version,
-                    "supports_pooling": service.supports_pooling,
-                    "detection_time_ms": service.detection_time_ms,
-                    "metadata": service.metadata,
-                }
-            )
+        formatted_services = [
+            {
+                "service_name": service.service_name,
+                "service_type": service.service_type,
+                "host": service.host,
+                "port": service.port,
+                "is_available": service.is_available,
+                "connection_string": service.connection_string,
+                "version": service.version,
+                "supports_pooling": service.supports_pooling,
+                "detection_time_ms": service.detection_time_ms,
+                "metadata": service.metadata,
+            }
+            for service in services
+        ]
 
         return AutoDetectionResponse(
             services_found=len(services),
@@ -304,7 +309,7 @@ async def perform_auto_detection(
         )
 
     except Exception as e:
-        logger.exception(f"Auto-detection failed: {e}")
+        logger.exception("Auto-detection failed")
         return AutoDetectionResponse(
             services_found=0,
             environment_type="unknown",
@@ -382,7 +387,7 @@ async def generate_embeddings(
     Protected by Tenacity-powered circuit breaker with exponential backoff.
     """
     try:
-        from src.services.embeddings.manager import QualityTier
+        # QualityTier imported at top-level
 
         # Convert string to enum if provided
         quality_tier = None
@@ -402,7 +407,7 @@ async def generate_embeddings(
         return EmbeddingResponse(**result)
 
     except Exception as e:
-        logger.exception(f"Embedding generation failed: {e}")
+        logger.exception("Embedding generation failed")
         raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
 
@@ -446,12 +451,12 @@ async def cache_get(
     Function-based replacement for CacheManager.get().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
-    except Exception as e:
-        logger.exception(f"Cache get failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache get failed for key {key}")
         return None
 
 
@@ -467,12 +472,12 @@ async def cache_set(
     Function-based replacement for CacheManager.set().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
-    except Exception as e:
-        logger.exception(f"Cache set failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache set failed for key {key}")
         return False
 
 
@@ -486,12 +491,12 @@ async def cache_delete(
     Function-based replacement for CacheManager.delete().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
-    except Exception as e:
-        logger.exception(f"Cache delete failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache delete failed for key {key}")
         return False
 
 
@@ -565,7 +570,7 @@ async def scrape_url(
         )
         return CrawlResponse(**result)
     except Exception as e:
-        logger.exception(f"URL scraping failed for {request.url}: {e}")
+        logger.exception(f"URL scraping failed for {request.url}")
         raise CrawlServiceError(f"Failed to scrape URL: {e}") from e
 
 
@@ -585,7 +590,7 @@ async def crawl_site(
         )
         return result
     except Exception as e:
-        logger.exception(f"Site crawling failed for {request.url}: {e}")
+        logger.exception(f"Site crawling failed for {request.url}")
         raise CrawlServiceError(f"Failed to crawl site: {e}") from e
 
 
@@ -631,7 +636,7 @@ async def enqueue_task(
         )
         return job_id
     except Exception as e:
-        logger.exception(f"Task enqueue failed for {request.task_name}: {e}")
+        logger.exception(f"Task enqueue failed for {request.task_name}")
         raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
 
 
@@ -646,7 +651,7 @@ async def get_task_status(
     try:
         return await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.exception(f"Task status check failed for {job_id}: {e}")
+        logger.exception(f"Task status check failed for {job_id}")
         return {"status": "error", "message": str(e)}
 
 
@@ -774,7 +779,7 @@ async def get_rag_generator(
     Replaces RAGGenerator.initialize() pattern with dependency injection.
     Protected by circuit breaker for LLM API failures.
     """
-    from src.services.rag import RAGGenerator
+    # RAGGenerator imported at top-level
 
     generator = RAGGenerator(config.rag, client_manager)
     await generator.initialize()
@@ -803,7 +808,7 @@ async def generate_rag_answer(
     Protected by Tenacity-powered circuit breaker with exponential backoff.
     """
     try:
-        from src.services.rag.models import RAGRequest as InternalRAGRequest
+        # InternalRAGRequest imported at top-level
 
         # Convert external request to internal request
         internal_request = InternalRAGRequest(
@@ -860,7 +865,7 @@ async def generate_rag_answer(
         )
 
     except Exception as e:
-        logger.exception(f"RAG answer generation failed: {e}")
+        logger.exception("RAG answer generation failed")
         raise EmbeddingServiceError(f"Failed to generate RAG answer: {e}") from e
 
 
@@ -874,7 +879,7 @@ async def get_rag_metrics(
     try:
         return rag_generator.get_metrics()
     except Exception as e:
-        logger.exception(f"Failed to get RAG metrics: {e}")
+        logger.exception("Failed to get RAG metrics")
         return {"error": str(e)}
 
 
@@ -892,7 +897,7 @@ async def clear_rag_cache(
             "message": "RAG answer cache cleared successfully",
         }
     except Exception as e:
-        logger.exception(f"Failed to clear RAG cache: {e}")
+        logger.exception("Failed to clear RAG cache")
         return {"status": "error", "message": str(e)}
 
 
@@ -943,10 +948,10 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             1 for status in all_status.values() if status["state"] == "half_open"
         )
 
-        from datetime import datetime, timezone
+        # datetime imported at top-level
 
         return {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "summary": {
                 "total_circuits": total_circuits,
                 "open_circuits": open_circuits,
@@ -961,7 +966,7 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             "circuits": all_status,
         }
     except Exception as e:
-        logger.exception(f"Circuit breaker status check failed: {e}")
+        logger.exception("Circuit breaker status check failed")
         return {
             "error": str(e),
             "summary": {
@@ -1000,7 +1005,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.exception(f"Failed to reset circuit breaker for {service_name}: {e}")
+        logger.exception(f"Failed to reset circuit breaker for {service_name}")
         return {
             "success": False,
             "error": str(e),
@@ -1033,7 +1038,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
             "results": results,
         }
     except Exception as e:
-        logger.exception(f"Failed to reset all circuit breakers: {e}")
+        logger.exception("Failed to reset all circuit breakers")
         return {
             "success": False,
             "error": str(e),
@@ -1054,16 +1059,16 @@ async def get_service_health() -> dict[str, Any]:
         # Add circuit breaker status
         circuit_status = await get_circuit_breaker_status()
 
-        from datetime import datetime, timezone
+        # datetime imported at top-level
 
         return {
             "status": "healthy",
             "services": health_status,
             "circuit_breakers": circuit_status,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
     except Exception as e:
-        logger.exception(f"Health check failed: {e}")
+        logger.exception("Health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -1094,7 +1099,7 @@ async def get_auto_detected_service_health(
         # Get health trends
         trends = health_checker.get_health_trends()
 
-        from datetime import datetime, timezone
+        # datetime imported at top-level
 
         return {
             "status": "healthy"
@@ -1124,11 +1129,11 @@ async def get_auto_detected_service_health(
                 for result in health_summary.service_results
             },
             "trends": trends,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
     except Exception as e:
-        logger.exception(f"Auto-detected service health check failed: {e}")
+        logger.exception("Auto-detected service health check failed")
         return {
             "status": "error",
             "error": str(e),
@@ -1159,7 +1164,7 @@ async def get_auto_detection_pool_metrics(
         # Get individual pool health metrics
         all_pool_health = pool_manager.get_all_pool_health()
 
-        from datetime import datetime, timezone
+        # datetime imported at top-level
 
         return {
             "status": "active",
@@ -1177,11 +1182,11 @@ async def get_auto_detection_pool_metrics(
                 }
                 for pool_name, pool_info in pool_stats["pools"].items()
             },
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
     except Exception as e:
-        logger.exception(f"Auto-detection pool metrics failed: {e}")
+        logger.exception("Auto-detection pool metrics failed")
         return {
             "status": "error",
             "error": str(e),
@@ -1200,10 +1205,10 @@ async def get_auto_detection_summary(
     connection pools, and performance metrics.
     """
     try:
-        from datetime import datetime, timezone
+        # datetime imported at top-level
 
         summary = {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "auto_detection": {},
             "service_health": {},
             "connection_pools": {},
@@ -1268,9 +1273,9 @@ async def get_auto_detection_summary(
         return summary
 
     except Exception as e:
-        logger.exception(f"Auto-detection summary failed: {e}")
+        logger.exception("Auto-detection summary failed")
         return {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "overall_status": "error",
             "error": str(e),
             "auto_detection": {},
@@ -1301,21 +1306,21 @@ async def get_service_metrics() -> dict[str, Any]:
             cache_manager = await client_manager.get_cache_manager()
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Cache metrics unavailable", exc_info=e)
 
         # Get crawl metrics if available
         try:
             crawl_manager = await client_manager.get_crawl_manager()
             crawl_metrics = crawl_manager.get_tier_metrics()
             metrics["crawl_service"] = crawl_metrics
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Crawl metrics unavailable", exc_info=e)
 
         return metrics
 
     except Exception as e:
-        logger.exception(f"Metrics collection failed: {e}")
+        logger.exception("Metrics collection failed")
         return {"error": str(e)}
 
 
@@ -1329,6 +1334,6 @@ async def cleanup_services() -> None:
         client_manager = get_client_manager()
         await client_manager.cleanup()
         logger.info("All services cleaned up successfully")
-    except Exception as e:
-        logger.exception(f"Service cleanup failed: {e}")
+    except Exception:
+        logger.exception("Service cleanup failed")
         raise

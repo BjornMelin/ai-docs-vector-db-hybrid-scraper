@@ -191,8 +191,8 @@ class EmbeddingManager:
             try:
                 await provider.cleanup()
                 logger.info(f"Cleaned up {name} provider")
-            except Exception as e:
-                logger.exception(f"Error cleaning up {name} provider: {e}")
+            except Exception:
+                logger.exception(f"Error cleaning up {name} provider")
 
         self.providers.clear()
         self._initialized = False
@@ -537,7 +537,6 @@ class EmbeddingManager:
                 result["sparse_embeddings"] = sparse_embeddings
 
             return result
-
         except Exception as e:
             logger.exception(f"Embedding generation failed: {e}")
             raise
@@ -578,14 +577,13 @@ class EmbeddingManager:
 
             # Extract sorted results
             reranked = [result for result, _ in scored_results]
-
-            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
-            return reranked
-
-        except Exception as e:
-            logger.exception(f"Reranking failed: {e}")
+        except Exception:
+            logger.exception("Reranking failed")
             # Return original results on failure
             return results
+        else:
+            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
+            return reranked
 
     def load_custom_benchmarks(self, benchmark_file: Path | str) -> None:
         """Load custom benchmark configuration from file.
@@ -1016,7 +1014,7 @@ class EmbeddingManager:
         self,
         selection: dict[str, object],
         text_analysis: TextAnalysis,
-        quality_tier: QualityTier | None,
+        _quality_tier: QualityTier | None,
         speed_priority: bool,
     ) -> str:
         """Generate human-readable reasoning for selection.
@@ -1101,7 +1099,7 @@ class EmbeddingManager:
         return result
 
     def update_usage_stats(
-        self, provider: str, model: str, tokens: int, cost: float, tier: str
+        self, provider: str, _model: str, tokens: int, cost: float, tier: str
     ) -> None:
         """Update usage statistics.
 

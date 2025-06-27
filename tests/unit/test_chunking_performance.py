@@ -226,7 +226,7 @@ class TestTreeSitterImportErrors:
         config = ChunkingConfig(enable_ast_chunking=True)
 
         # Mock individual language imports to fail
-        def mock_import(name, *args, **kwargs):
+        def mock_import(name, *_args, **_kwargs):
             if "tree_sitter_python" in name:
                 raise ImportError("Parser not available")
             return Mock()

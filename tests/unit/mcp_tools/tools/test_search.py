@@ -35,7 +35,7 @@ def mock_client_manager():
 
 
 @pytest.mark.asyncio
-async def test_search_documents_tool_registration(mock_client_manager, mock_context):
+async def test_search_documents_tool_registration(mock_client_manager, _mock_context):
     """Test that search_documents tool is properly registered."""
     from src.mcp_tools.tools.search import register_tools
 

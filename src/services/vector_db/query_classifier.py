@@ -157,7 +157,7 @@ class QueryClassifier:
         ]
 
     async def classify_query(
-        self, query: str, context: dict[str, Any] | None = None
+        self, query: str, _context: dict[str, Any] | None = None
     ) -> QueryClassification:
         """Classify a query to determine optimal search strategy.
 
@@ -421,7 +421,7 @@ class QueryClassifier:
         return "general"
 
     def _detect_programming_language(
-        self, query: str, features: QueryFeatures
+        self, _query: str, features: QueryFeatures
     ) -> str | None:
         """Detect the primary programming language mentioned in the query."""
         if features.programming_language_indicators:
@@ -431,10 +431,10 @@ class QueryClassifier:
 
     def _calculate_confidence(
         self,
-        query: str,
+        _query: str,
         features: QueryFeatures,
-        query_type: QueryType,
-        complexity: QueryComplexity,
+        _query_type: QueryType,
+        _complexity: QueryComplexity,
     ) -> float:
         """Calculate confidence score for the classification."""
         confidence = 0.5  # Base confidence
@@ -457,7 +457,7 @@ class QueryClassifier:
 
         return min(max(confidence, 0.1), 1.0)  # Clamp between 0.1 and 1.0
 
-    def _detect_multimodal(self, query: str, features: QueryFeatures) -> bool:
+    def _detect_multimodal(self, query: str, _features: QueryFeatures) -> bool:
         """Detect if query involves multiple modalities."""
         query_lower = query.lower()
         multimodal_keywords = [
@@ -483,7 +483,7 @@ class QueryClassifier:
                 return question_type
         return None
 
-    def _assess_technical_depth(self, query_lower: str, tokens: list[str]) -> str:
+    def _assess_technical_depth(self, query_lower: str, _tokens: list[str]) -> str:
         """Assess the technical depth of the query."""
         advanced_terms = [
             "architecture",
@@ -539,7 +539,7 @@ class QueryClassifier:
         return entities
 
     def _calculate_semantic_complexity(
-        self, query_lower: str, tokens: list[str]
+        self, query_lower: str, _tokens: list[str]
     ) -> float:
         """Calculate semantic complexity of the query."""
         complexity_indicators = [
@@ -564,7 +564,7 @@ class QueryClassifier:
         )
         return min(complexity_score / 5.0, 1.0)  # Normalize to 0-1
 
-    def _calculate_keyword_density(self, query_lower: str, tokens: list[str]) -> float:
+    def _calculate_keyword_density(self, _query_lower: str, tokens: list[str]) -> float:
         """Calculate technical keyword density."""
         if not tokens:
             return 0.0

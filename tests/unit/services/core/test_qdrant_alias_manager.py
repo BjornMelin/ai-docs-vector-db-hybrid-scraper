@@ -720,7 +720,7 @@ class TestQdrantAliasManager:
         mock_points = [MagicMock() for _ in range(10)]
         mock_client.scroll.side_effect = [(mock_points, None)]
 
-        async def failing_callback(copied, total):
+        async def failing_callback(_copied, _total):
             raise Exception("Callback failed")
 
         # Should not raise exception, just log warning

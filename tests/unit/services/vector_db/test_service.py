@@ -725,7 +725,7 @@ class TestQdrantServiceHNSWOptimization:
         )
 
     def test_get_hnsw_configuration_info(
-        self, qdrant_service, mock_client_manager, mock_qdrant_client
+        self, qdrant_service, _mock_client_manager, mock_qdrant_client
     ):
         """Test get HNSW configuration info delegation."""
         # Mock the collections instance for the validation check

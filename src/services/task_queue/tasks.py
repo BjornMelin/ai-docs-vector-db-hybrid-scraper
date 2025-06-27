@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 async def delete_collection(
-    ctx: dict[str, Any],
+    _ctx: dict[str, Any],
     collection_name: str,
     grace_period_minutes: int = 60,
 ) -> dict[str, Any]:
@@ -96,7 +96,7 @@ async def delete_collection(
 
 
 async def persist_cache(
-    ctx: dict[str, Any],
+    _ctx: dict[str, Any],
     key: str,
     value: Any,
     persist_func_module: str,
@@ -156,7 +156,7 @@ async def persist_cache(
         }
 
 
-async def config_drift_snapshot(ctx: dict[str, Any]) -> dict[str, Any]:
+async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
     """Take configuration snapshots for drift detection.
 
     Args:
@@ -199,7 +199,7 @@ async def config_drift_snapshot(ctx: dict[str, Any]) -> dict[str, Any]:
         }
 
 
-async def config_drift_comparison(ctx: dict[str, Any]) -> dict[str, Any]:
+async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
     """Compare configurations to detect drift.
 
     Args:
@@ -244,7 +244,7 @@ async def config_drift_comparison(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 async def config_drift_remediation(
-    ctx: dict[str, Any],
+    _ctx: dict[str, Any],
     event_id: str,
     source: str,
     drift_type: str,

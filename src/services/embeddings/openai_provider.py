@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from openai import AsyncOpenAI
@@ -340,9 +341,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             raise EmbeddingServiceError(f"Failed to create batch job: {e}") from e
         finally:
             # Clean up temp file
-            if "temp_file" in locals() and temp_file and os.path.exists(temp_file):
+            if "temp_file" in locals() and temp_file and Path(temp_file).exists():
                 with contextlib.suppress(OSError):
-                    os.unlink(temp_file)
+                    Path(temp_file).unlink()
 
     async def _upload_file_with_rate_limit(self, file: Any, purpose: str) -> Any:
         """Upload file with rate limiting.

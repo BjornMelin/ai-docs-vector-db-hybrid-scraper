@@ -339,7 +339,7 @@ class CrawlManager:
         return {tier: metrics.dict() for tier, metrics in tier_metrics.items()}
 
     async def map_url(
-        self, url: str, include_subdomains: bool = False
+        self, _url: str, _include_subdomains: bool = False
     ) -> dict[str, object]:
         """Map a website to get list of URLs.
 

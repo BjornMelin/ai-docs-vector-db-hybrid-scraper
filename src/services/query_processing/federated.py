@@ -7,7 +7,7 @@ load balancing, and distributed query optimization.
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from enum import Enum
 from typing import Any
 
@@ -477,7 +477,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now(tz=timezone.utc),
+                "last_updated": datetime.now(tz=UTC),
             }
 
             self.collection_load_scores[collection_name] = 0.0
@@ -620,7 +620,7 @@ class FederatedSearchService:
 
         return selected_collections or list(self.collection_registry.keys())
 
-    def _select_by_performance(self, request: FederatedSearchRequest) -> list[str]:
+    def _select_by_performance(self, _request: FederatedSearchRequest) -> list[str]:
         """Select collections based on performance characteristics."""
         performance_ranked = []
 
@@ -956,9 +956,7 @@ class FederatedSearchService:
                 if timestamp:
                     enhanced_item["_sort_timestamp"] = timestamp
                 else:
-                    enhanced_item["_sort_timestamp"] = datetime.now(
-                        tz=timezone.utc
-                    ).isoformat()
+                    enhanced_item["_sort_timestamp"] = datetime.now(tz=UTC).isoformat()
 
                 all_results.append(enhanced_item)
 
@@ -1056,7 +1054,7 @@ class FederatedSearchService:
         self,
         collection_results: list[CollectionSearchResult],
         merged_results: list[dict[str, Any]],
-        request: FederatedSearchRequest,
+        _request: FederatedSearchRequest,
     ) -> dict[str, Any]:
         """Calculate quality metrics for federated search."""
         if not collection_results:
@@ -1146,7 +1144,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now(tz=timezone.utc),
+                "last_updated": datetime.now(tz=UTC),
             }
 
         stats = self.collection_performance_stats[collection_name]
@@ -1165,7 +1163,7 @@ class FederatedSearchService:
         else:
             stats["success_rate"] = (stats["success_rate"] * (total - 1) + 0.0) / total
 
-        stats["last_updated"] = datetime.now(tz=timezone.utc)
+        stats["last_updated"] = datetime.now(tz=UTC)
 
         # Update load balancing scores
         if self.enable_adaptive_load_balancing:
@@ -1225,7 +1223,7 @@ class FederatedSearchService:
 
     def _update_performance_stats(
         self,
-        request: FederatedSearchRequest,
+        _request: FederatedSearchRequest,
         result: FederatedSearchResult,
         search_time_ms: float,
     ) -> None:

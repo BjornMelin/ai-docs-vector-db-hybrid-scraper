@@ -7,7 +7,7 @@ drift monitoring and alerting using the application's task queue system.
 import asyncio
 import contextlib
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from typing import Any
 
 from ..config.core import get_config
@@ -151,7 +151,7 @@ class ConfigDriftService:
             performance_monitor = get_performance_monitor()
 
         snapshot_results = {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "snapshots_taken": 0,
             "errors": [],
             "sources": [],
@@ -226,7 +226,7 @@ class ConfigDriftService:
             performance_monitor = get_performance_monitor()
 
         comparison_results = {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "sources_compared": 0,
             "drift_events": [],
             "alerts_sent": 0,
@@ -400,7 +400,7 @@ class ConfigDriftService:
 
             return {
                 "manual_detection": True,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "snapshot_results": snapshot_results,
                 "comparison_results": comparison_results,
             }

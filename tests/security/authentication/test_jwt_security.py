@@ -250,7 +250,7 @@ class TestJWTSecurity:
         result = jwt_service.verify_token(manipulated_token)
         assert result["valid"] is False
 
-    def test_jwt_time_claims_validation(self, jwt_service, jwt_secret):
+    def test_jwt_time_claims_validation(self, _jwt_service, jwt_secret):
         """Test validation of JWT time-based claims."""
         current_time = int(time.time())
 
@@ -275,7 +275,7 @@ class TestJWTSecurity:
             # Expected behavior
             pass
 
-    def test_jwt_issuer_validation(self, jwt_service, jwt_secret):
+    def test_jwt_issuer_validation(self, _jwt_service, jwt_secret):
         """Test JWT issuer validation."""
         invalid_issuer_payload = {
             "user_id": "test_user",
@@ -299,7 +299,7 @@ class TestJWTSecurity:
             # Expected behavior
             pass
 
-    def test_jwt_audience_validation(self, jwt_service, jwt_secret):
+    def test_jwt_audience_validation(self, _jwt_service, jwt_secret):
         """Test JWT audience validation."""
         invalid_audience_payload = {
             "user_id": "test_user",

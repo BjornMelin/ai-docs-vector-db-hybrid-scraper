@@ -160,7 +160,7 @@ class FastEmbedProvider(EmbeddingProvider):
             return await self._execute_embedding_generation(texts, batch_size)
 
     async def _execute_embedding_generation(
-        self, texts: list[str], batch_size: int | None = None
+        self, texts: list[str], _batch_size: int | None = None
     ) -> list[list[float]]:
         """Execute the actual embedding generation."""
         if not self._initialized:

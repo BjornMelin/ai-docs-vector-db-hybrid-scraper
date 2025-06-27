@@ -10,14 +10,13 @@ import logging
 import traceback
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional, Type, TypeVar, Union
+from typing import Any, Type, TypeVar
 
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 from tenacity import (
-    RetryError,
     retry,
     retry_if_exception_type,
     stop_after_attempt,

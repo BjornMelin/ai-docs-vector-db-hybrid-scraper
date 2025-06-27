@@ -263,7 +263,7 @@ class TestValidateConfiguration:
         mock_get_config.return_value = mock_config
 
         # Mock streaming validation to add errors
-        def add_streaming_errors(errors, warnings):
+        def add_streaming_errors(errors, _warnings):
             errors.append("Streaming error")
 
         mock_validate_streaming.side_effect = add_streaming_errors
@@ -296,7 +296,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics,
         mock_update_system_metrics,
         mock_health_checks,
-        mock_setup_monitoring,
+        _mock_setup_monitoring,
         mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
@@ -335,7 +335,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **_kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -408,12 +408,12 @@ class TestLifespanContextManager:
         mock_update_cache_metrics,
         mock_update_system_metrics,
         mock_health_checks,
-        mock_setup_monitoring,
+        _mock_setup_monitoring,
         mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
-        mock_validate_config,
+        _mock_validate_config,
     ):
         """Test that cleanup is called even when exception occurs during operation."""
         # Mock config
@@ -446,7 +446,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **_kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -471,7 +471,7 @@ class TestLifespanContextManager:
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
-        mock_validate_config,
+        _mock_validate_config,
     ):
         """Test that cleanup exceptions are handled gracefully."""
         # Mock config
@@ -484,7 +484,7 @@ class TestLifespanContextManager:
         mock_client_manager_class.return_value = mock_client_manager
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **_kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -501,7 +501,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
     async def test_lifespan_without_client_manager(
-        self, mock_register_tools, mock_client_manager_class, mock_validate_config
+        self, _mock_register_tools, _mock_client_manager_class, mock_validate_config
     ):
         """Test lifespan cleanup when client manager was not created."""
         # Simulate failure before client manager creation

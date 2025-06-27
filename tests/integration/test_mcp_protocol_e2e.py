@@ -334,11 +334,11 @@ class TestMCPProtocolE2E:
                 embedding_tool = tool
 
         # Mock services with delays to simulate real processing
-        async def mock_search_with_delay(*args, **kwargs):
+        async def mock_search_with_delay(*_args, **_kwargs):
             await asyncio.sleep(0.1)  # Simulate processing time
             return [{"id": "concurrent-1", "content": "Search result", "score": 0.9}]
 
-        async def mock_embedding_with_delay(*args, **kwargs):
+        async def mock_embedding_with_delay(*_args, **_kwargs):
             await asyncio.sleep(0.15)  # Simulate processing time
             return {
                 "embeddings": [[0.1] * 384],
@@ -522,7 +522,7 @@ class TestMCPProtocolE2E:
             assert len(result) == 1
             assert result[0]["content"] == "Authenticated content"
 
-    async def test_transport_layer_compatibility(self, mcp_server_e2e):
+    async def test_transport_layer_compatibility(self, _mcp_server_e2e):
         """Test compatibility with different transport layers."""
         # Test HTTP transport simulation
         http_request = {

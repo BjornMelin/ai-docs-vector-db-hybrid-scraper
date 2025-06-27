@@ -193,7 +193,7 @@ class TestSecurityConfigurationEdgeCases:
             # Add extra bytes
             lambda d: d + b"extra_data",
             # Empty data
-            lambda d: b"",
+            lambda _d: b"",
         ]
 
         for corrupt_fn in corruption_tests:

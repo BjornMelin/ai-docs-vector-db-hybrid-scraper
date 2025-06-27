@@ -63,7 +63,7 @@ class TestObservabilitySystemIntegration:
 
             # Simulate LLM generation
             @instrument_function("llm_generation")
-            def generate_response(context, query):
+            def generate_response(context, _query):
                 return f"Based on {len(context)} documents: Machine learning is..."
 
             response = generate_response(["doc1", "doc2"], "What is ML?")
@@ -276,7 +276,7 @@ class TestObservabilitySystemIntegration:
 
                 # Async vector search
                 @instrument_function("async_vector_search")
-                async def async_search(embeddings):
+                async def async_search(_embeddings):
                     await asyncio.sleep(0.01)
                     return [{"id": "doc1", "score": 0.9}]
 

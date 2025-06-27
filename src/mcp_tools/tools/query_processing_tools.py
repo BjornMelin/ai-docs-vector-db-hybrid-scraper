@@ -386,7 +386,7 @@ async def orchestrated_search_tool(
         raise
 
 
-def register_query_processing_tools(mcp, client_manager: ClientManager):
+def register_query_processing_tools(mcp, _client_manager: ClientManager):
     """Register advanced query processing tools with the MCP server."""
 
     # Initialize the orchestrator

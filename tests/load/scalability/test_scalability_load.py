@@ -54,7 +54,7 @@ class TestScalabilityLoad:
         scaling_metrics = []
 
         @env.events.stats_reset.add_listener
-        def collect_scaling_metrics(**kwargs):
+        def collect_scaling_metrics(**_kwargs):
             """Collect metrics at each scaling stage."""
             stats = env.stats
             if stats and stats.total.num_requests > 0:
@@ -666,7 +666,7 @@ class TestScalabilityLoad:
 
         db_scaler = DatabaseScalingSimulator()
 
-        async def database_scaling_operation(**kwargs):
+        async def database_scaling_operation(**_kwargs):
             """Operation that stresses database scaling."""
             # Mix of read/write operations with varying complexity
             operations = [

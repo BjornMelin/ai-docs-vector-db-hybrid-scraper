@@ -292,7 +292,7 @@ class TestConfigurationLoadStress:
         listener_execution_times = []
 
         def create_stress_listener(name: str, processing_time: float):
-            def listener(old_config, new_config):
+            def listener(_old_config, _new_config):
                 start = time.time()
                 # Simulate processing
                 time.sleep(processing_time)
@@ -601,8 +601,8 @@ class TestConfigurationLoadStress:
         # Add random listeners
         for i in range(num_listeners):
 
-            def make_listener(idx):
-                def listener(old_cfg, new_cfg):
+            def make_listener(_idx):
+                def listener(_old_cfg, _new_cfg):
                     # Random processing time
                     time.sleep(random.uniform(0.001, 0.01))
                     # Random success

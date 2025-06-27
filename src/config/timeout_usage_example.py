@@ -132,31 +132,31 @@ class ServiceWithTimeouts:
 
 
 # Helper functions (stubs for the example)
-async def _perform_validation(config_data: dict) -> bool:
+async def _perform_validation(_config_data: dict) -> bool:
     """Stub validation function."""
     await asyncio.sleep(1)
     return True
 
 
-async def _perform_deployment(deployment_config: dict) -> bool:
+async def _perform_deployment(_deployment_config: dict) -> bool:
     """Stub deployment function."""
     await asyncio.sleep(2)
     return True
 
 
-async def _process_request(request) -> dict:
+async def _process_request(_request) -> dict:
     """Stub request processing."""
     await asyncio.sleep(0.5)
     return {"status": "ok"}
 
 
-async def _run_query(query: str) -> list:
+async def _run_query(_query: str) -> list:
     """Stub database query."""
     await asyncio.sleep(0.1)
     return []
 
 
-async def _execute_job(job_data: dict, timeout_ms: int) -> bool:
+async def _execute_job(_job_data: dict, _timeout_ms: int) -> bool:
     """Stub job execution."""
     await asyncio.sleep(1)
     return True

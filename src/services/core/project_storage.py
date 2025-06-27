@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -121,7 +121,7 @@ class ProjectStorage:
 
             self._projects_cache[project_id].update(updates)
             self._projects_cache[project_id]["updated_at"] = datetime.now(
-                tz=timezone.utc
+                tz=UTC
             ).isoformat()
             await self._save_projects(self._projects_cache)
 

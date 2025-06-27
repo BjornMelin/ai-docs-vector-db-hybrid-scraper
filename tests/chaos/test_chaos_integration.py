@@ -114,7 +114,7 @@ class TestChaosIntegration:
                 await self._handle_failure_cascade(failure_type, target_service)
 
             async def _handle_failure_cascade(
-                self, failure_type: FailureType, failed_service: str
+                self, _failure_type: FailureType, failed_service: str
             ):
                 """Handle cascading effects of failures."""
                 # Service dependencies
@@ -266,8 +266,8 @@ class TestChaosIntegration:
     async def test_comprehensive_chaos_scenario(
         self,
         integrated_system,
-        fault_injector,
-        resilience_validator,
+        _fault_injector,
+        _resilience_validator,
         chaos_experiment_runner,
     ):
         """Test comprehensive chaos scenario with multiple failure types."""
@@ -339,7 +339,7 @@ class TestChaosIntegration:
         assert final_health["status"] == "healthy"
 
     async def test_real_world_failure_simulation(
-        self, integrated_system, fault_injector, resilience_validator
+        self, integrated_system, _fault_injector, resilience_validator
     ):
         """Test realistic failure simulation combining multiple chaos types."""
         # Capture baseline metrics

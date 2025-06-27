@@ -3,7 +3,7 @@
 import json
 import tempfile
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -90,7 +90,7 @@ class TestConfigSnapshot:
         """Test creating a configuration snapshot."""
         config_data = {"key": "value", "number": 123}
         snapshot = ConfigSnapshot(
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             config_hash="test_hash",
             config_data=config_data,
             source="test.json",
@@ -109,7 +109,7 @@ class TestDriftEvent:
         """Test creating a drift event."""
         event = DriftEvent(
             id="test_event_1",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.MEDIUM,
             source="test.json",
@@ -159,7 +159,7 @@ class TestDriftDetectionConfig:
 class TestConfigDriftDetector:
     """Test ConfigDriftDetector functionality."""
 
-    def test_detector_initialization(self, drift_config, mock_metrics_bridge):
+    def test_detector_initialization(self, drift_config, _mock_metrics_bridge):
         """Test drift detector initialization."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -168,7 +168,7 @@ class TestConfigDriftDetector:
         assert isinstance(detector._drift_events, list)
         assert isinstance(detector._last_alert_times, dict)
 
-    def test_config_hash_calculation(self, drift_config, mock_metrics_bridge):
+    def test_config_hash_calculation(self, drift_config, _mock_metrics_bridge):
         """Test configuration hash calculation."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -197,7 +197,7 @@ class TestConfigDriftDetector:
         assert config["debug"] is False
         assert config["max_connections"] == 10
 
-    def test_load_config_env_file(self, drift_config, mock_metrics_bridge):
+    def test_load_config_env_file(self, drift_config, _mock_metrics_bridge):
         """Test loading environment file configuration."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -218,7 +218,7 @@ class TestConfigDriftDetector:
         finally:
             env_file.unlink(missing_ok=True)
 
-    def test_take_snapshot(self, drift_config, temp_config_file, mock_metrics_bridge):
+    def test_take_snapshot(self, drift_config, temp_config_file, _mock_metrics_bridge):
         """Test taking a configuration snapshot."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -249,7 +249,7 @@ class TestConfigDriftDetector:
 
         assert len(events) == 0  # No changes should result in no events
 
-    def test_compare_snapshots_with_changes(self, drift_config, mock_metrics_bridge):
+    def test_compare_snapshots_with_changes(self, drift_config, _mock_metrics_bridge):
         """Test comparing snapshots with configuration changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -262,13 +262,13 @@ class TestConfigDriftDetector:
 
         # Manually create snapshots
         snapshot1 = ConfigSnapshot(
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             config_hash=detector._calculate_config_hash(config1),
             config_data=config1,
             source="test.json",
         )
         snapshot2 = ConfigSnapshot(
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             config_hash=detector._calculate_config_hash(config2),
             config_data=config2,
             source="test.json",
@@ -286,7 +286,7 @@ class TestConfigDriftDetector:
         assert "removed" in event_types
         assert "added" in event_types
 
-    def test_classify_drift_type_security(self, drift_config, mock_metrics_bridge):
+    def test_classify_drift_type_security(self, drift_config, _mock_metrics_bridge):
         """Test drift type classification for security changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -300,7 +300,7 @@ class TestConfigDriftDetector:
         drift_type = detector._classify_drift_type(security_change, "test.json")
         assert drift_type == DriftType.SECURITY_DEGRADATION
 
-    def test_classify_drift_type_environment(self, drift_config, mock_metrics_bridge):
+    def test_classify_drift_type_environment(self, drift_config, _mock_metrics_bridge):
         """Test drift type classification for environment changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -314,7 +314,9 @@ class TestConfigDriftDetector:
         drift_type = detector._classify_drift_type(env_change, "test.json")
         assert drift_type == DriftType.ENVIRONMENT_MISMATCH
 
-    def test_calculate_drift_severity_critical(self, drift_config, mock_metrics_bridge):
+    def test_calculate_drift_severity_critical(
+        self, drift_config, _mock_metrics_bridge
+    ):
         """Test drift severity calculation for critical changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -328,7 +330,7 @@ class TestConfigDriftDetector:
         severity = detector._calculate_drift_severity(critical_change, "test.json")
         assert severity == DriftSeverity.CRITICAL
 
-    def test_calculate_drift_severity_high(self, drift_config, mock_metrics_bridge):
+    def test_calculate_drift_severity_high(self, drift_config, _mock_metrics_bridge):
         """Test drift severity calculation for high severity changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -342,7 +344,7 @@ class TestConfigDriftDetector:
         severity = detector._calculate_drift_severity(high_change, "test.json")
         assert severity == DriftSeverity.HIGH
 
-    def test_calculate_drift_severity_low(self, drift_config, mock_metrics_bridge):
+    def test_calculate_drift_severity_low(self, drift_config, _mock_metrics_bridge):
         """Test drift severity calculation for low severity changes."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -356,7 +358,7 @@ class TestConfigDriftDetector:
         severity = detector._calculate_drift_severity(low_change, "test.json")
         assert severity == DriftSeverity.LOW
 
-    def test_auto_remediation_detection(self, drift_config, mock_metrics_bridge):
+    def test_auto_remediation_detection(self, drift_config, _mock_metrics_bridge):
         """Test auto-remediation detection."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -378,7 +380,7 @@ class TestConfigDriftDetector:
         }
         assert detector._is_auto_remediable(simple_change)
 
-    def test_remediation_suggestions(self, drift_config, mock_metrics_bridge):
+    def test_remediation_suggestions(self, drift_config, _mock_metrics_bridge):
         """Test remediation suggestion generation."""
         detector = ConfigDriftDetector(drift_config)
 
@@ -400,13 +402,13 @@ class TestConfigDriftDetector:
         suggestion = detector._generate_remediation_suggestion(added_change)
         assert suggestion == "Remove newly added key: 'new_key'"
 
-    def test_should_alert_severity_threshold(self, drift_config, mock_metrics_bridge):
+    def test_should_alert_severity_threshold(self, drift_config, _mock_metrics_bridge):
         """Test alert threshold based on severity."""
         detector = ConfigDriftDetector(drift_config)
 
         high_severity_event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -418,7 +420,7 @@ class TestConfigDriftDetector:
 
         low_severity_event = DriftEvent(
             id="test_2",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.LOW,
             source="test.json",
@@ -431,7 +433,7 @@ class TestConfigDriftDetector:
         assert detector.should_alert(high_severity_event)
         assert not detector.should_alert(low_severity_event)
 
-    def test_should_alert_rate_limiting(self, drift_config, mock_metrics_bridge):
+    def test_should_alert_rate_limiting(self, drift_config, _mock_metrics_bridge):
         """Test alert rate limiting."""
         # Set low rate limit for testing
         drift_config.max_alerts_per_hour = 1
@@ -439,7 +441,7 @@ class TestConfigDriftDetector:
 
         event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -456,7 +458,7 @@ class TestConfigDriftDetector:
         event.id = "test_2"
         assert not detector.should_alert(event)
 
-    def test_cleanup_old_snapshots(self, drift_config, mock_metrics_bridge):
+    def test_cleanup_old_snapshots(self, drift_config, _mock_metrics_bridge):
         """Test cleanup of old snapshots."""
         # Set short retention for testing - use 0.5 days so recent snapshot stays
         drift_config.snapshot_retention_days = 0.5
@@ -464,14 +466,14 @@ class TestConfigDriftDetector:
 
         # Create old snapshots
         old_snapshot = ConfigSnapshot(
-            timestamp=datetime.now(tz=timezone.utc)
+            timestamp=datetime.now(tz=UTC)
             - timedelta(days=1),  # 1 day old - should be removed
             config_hash="old_hash",
             config_data={"old": "data"},
             source="test.json",
         )
         recent_snapshot = ConfigSnapshot(
-            timestamp=datetime.now(tz=timezone.utc)
+            timestamp=datetime.now(tz=UTC)
             - timedelta(minutes=1),  # 1 minute old - should stay
             config_hash="new_hash",
             config_data={"new": "data"},
@@ -486,14 +488,14 @@ class TestConfigDriftDetector:
         assert len(detector._snapshots["test.json"]) == 1
         assert detector._snapshots["test.json"][0].config_hash == "new_hash"
 
-    def test_get_drift_summary(self, drift_config, mock_metrics_bridge):
+    def test_get_drift_summary(self, drift_config, _mock_metrics_bridge):
         """Test drift summary generation."""
         detector = ConfigDriftDetector(drift_config)
 
         # Add some test events
         recent_event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -508,7 +510,7 @@ class TestConfigDriftDetector:
         # Add some snapshots
         detector._snapshots["test1.json"] = [
             ConfigSnapshot(
-                timestamp=datetime.now(tz=timezone.utc),
+                timestamp=datetime.now(tz=UTC),
                 config_hash="hash1",
                 config_data={},
                 source="test1.json",
@@ -516,7 +518,7 @@ class TestConfigDriftDetector:
         ]
         detector._snapshots["test2.json"] = [
             ConfigSnapshot(
-                timestamp=datetime.now(tz=timezone.utc),
+                timestamp=datetime.now(tz=UTC),
                 config_hash="hash2",
                 config_data={},
                 source="test2.json",
@@ -536,7 +538,7 @@ class TestConfigDriftDetector:
 class TestGlobalFunctions:
     """Test global drift detection functions."""
 
-    def test_initialize_and_get_detector(self, drift_config, mock_metrics_bridge):
+    def test_initialize_and_get_detector(self, drift_config, _mock_metrics_bridge):
         """Test global detector initialization and retrieval."""
         detector = initialize_drift_detector(drift_config)
 
@@ -559,7 +561,7 @@ class TestGlobalFunctions:
 
     @patch("src.config.drift_detection.get_drift_detector")
     def test_run_drift_detection(
-        self, mock_get_detector, drift_config, mock_metrics_bridge
+        self, mock_get_detector, _drift_config, mock_metrics_bridge
     ):
         """Test global drift detection run."""
         mock_detector = MagicMock()
@@ -573,7 +575,7 @@ class TestGlobalFunctions:
 
     @patch("src.config.drift_detection.get_drift_detector")
     def test_get_drift_summary_global(
-        self, mock_get_detector, drift_config, mock_metrics_bridge
+        self, mock_get_detector, _drift_config, mock_metrics_bridge
     ):
         """Test global drift summary."""
         mock_detector = MagicMock()

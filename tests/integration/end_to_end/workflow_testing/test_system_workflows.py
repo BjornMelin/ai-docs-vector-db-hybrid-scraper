@@ -56,7 +56,7 @@ class WorkflowOrchestrator:
         workflow_name: str,
         components: list[str],
         workflow_steps: list[dict[str, Any]],
-        success_criteria: dict[str, Any] | None = None,
+        _success_criteria: dict[str, Any] | None = None,
     ) -> WorkflowResult:
         """Execute a complete workflow with multiple components and steps."""
         start_time = time.perf_counter()

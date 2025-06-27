@@ -725,7 +725,7 @@ def mock_axe_core():
     axe = MagicMock()
 
     def mock_run_axe(
-        html_content: str, options: dict[str, Any] | None = None
+        _html_content: str, _options: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Mock axe-core analysis."""
         return {

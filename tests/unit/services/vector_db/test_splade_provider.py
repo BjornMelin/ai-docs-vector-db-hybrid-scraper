@@ -382,7 +382,7 @@ class TestSPLADEProvider:
         """Test error handling during sparse vector generation."""
         # Mock an error in the fallback generation
         original_method = provider._generate_with_fallback
-        provider._generate_with_fallback = lambda x: None.__getattribute__("error")
+        provider._generate_with_fallback = lambda _x: None.__getattribute__("error")
 
         try:
             vector = await provider.generate_sparse_vector("test")

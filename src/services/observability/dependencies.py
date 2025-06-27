@@ -12,7 +12,14 @@ from fastapi import Depends
 
 from .config import ObservabilityConfig, get_observability_config
 from .init import initialize_observability, is_observability_enabled
-from .tracking import get_meter, get_tracer
+from .tracking import (
+    get_meter,
+    get_tracer,
+    _NoOpTracer,
+    _NoOpMeter,
+    record_ai_operation,
+    track_cost,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +81,6 @@ def get_ai_tracer(
     if observability_service["enabled"] and observability_service["tracer"]:
         return get_tracer("ai-operations")
 
-    from .tracking import _NoOpTracer
-
     return _NoOpTracer()
 
 
@@ -95,8 +100,6 @@ def get_service_meter(
     """
     if observability_service["enabled"] and observability_service["meter"]:
         return get_meter("service-metrics")
-
-    from .tracking import _NoOpMeter
 
     return _NoOpMeter()
 
@@ -126,7 +129,7 @@ async def record_ai_operation_metrics(
     provider: str,
     success: bool,
     duration: float,
-    meter: ServiceMeterDep,
+    _meter: ServiceMeterDep,
     **kwargs,
 ) -> None:
     """Record metrics for AI operations using dependency injection.
@@ -140,8 +143,6 @@ async def record_ai_operation_metrics(
         **kwargs: Additional attributes
     """
     try:
-        from .tracking import record_ai_operation
-
         record_ai_operation(
             operation_type=operation_type,
             provider=provider,
@@ -158,7 +159,7 @@ async def track_ai_cost_metrics(
     operation_type: str,
     provider: str,
     cost_usd: float,
-    meter: ServiceMeterDep,
+    _meter: ServiceMeterDep,
     **kwargs,
 ) -> None:
     """Track AI operation costs using dependency injection.
@@ -171,8 +172,6 @@ async def track_ai_cost_metrics(
         **kwargs: Additional attributes
     """
     try:
-        from .tracking import track_cost
-
         track_cost(
             operation_type=operation_type,
             provider=provider,

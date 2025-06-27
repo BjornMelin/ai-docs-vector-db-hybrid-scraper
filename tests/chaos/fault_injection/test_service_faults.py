@@ -64,7 +64,7 @@ class TestServiceFaultInjection:
             fault_injector.remove_fault(fault_id)
 
     async def test_database_connection_failure(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, resilience_validator
     ):
         """Test database connection failure scenarios."""
         # Mock database service
@@ -96,7 +96,7 @@ class TestServiceFaultInjection:
         assert len(failures) > 0, "Expected some database connection failures"
         assert len(successes) <= max_connections, "Too many successful connections"
 
-    async def test_authentication_service_failure(self, fault_injector):
+    async def test_authentication_service_failure(self, _fault_injector):
         """Test authentication service failure scenarios."""
         auth_failure_modes = [
             "token_expired",
@@ -121,7 +121,7 @@ class TestServiceFaultInjection:
             with pytest.raises(Exception):
                 await auth_operation()
 
-    async def test_cache_service_failures(self, fault_injector, resilience_validator):
+    async def test_cache_service_failures(self, _fault_injector, _resilience_validator):
         """Test cache service failure scenarios."""
         cache_hit_count = 0
         cache_failure_rate = 0.3
@@ -160,7 +160,7 @@ class TestServiceFaultInjection:
             result.startswith(("cached_value", "db_value")) for result in results
         )
 
-    async def test_api_rate_limiting_failure(self, fault_injector):
+    async def test_api_rate_limiting_failure(self, _fault_injector):
         """Test API rate limiting scenarios."""
         request_count = 0
         rate_limit = 5  # requests per second
@@ -203,7 +203,7 @@ class TestServiceFaultInjection:
         assert failures > 0, "Expected some rate limit failures"
 
     async def test_microservice_cascade_failure(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, resilience_validator
     ):
         """Test cascade failure prevention in microservices."""
         # Service dependency chain: A -> B -> C
@@ -248,7 +248,7 @@ class TestServiceFaultInjection:
         fallback_results = [r for r in results if r.get("fallback")]
         assert len(fallback_results) > 0, "Expected some fallback responses"
 
-    async def test_data_corruption_simulation(self, fault_injector):
+    async def test_data_corruption_simulation(self, _fault_injector):
         """Test data corruption scenarios."""
         corruption_rate = 0.2
 
@@ -293,7 +293,7 @@ class TestServiceFaultInjection:
         assert successful_processing > 0, "Expected some successful processing"
 
     async def test_partial_service_degradation(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, resilience_validator
     ):
         """Test partial service degradation scenarios."""
         service_health = "healthy"  # healthy, degraded, critical
@@ -335,7 +335,7 @@ class TestServiceFaultInjection:
         with pytest.raises(Exception, match="Service in critical state"):
             await adaptive_service()
 
-    async def test_service_startup_failure(self, fault_injector):
+    async def test_service_startup_failure(self, _fault_injector):
         """Test service startup failure scenarios."""
         startup_attempts = 0
         max_startup_attempts = 3
@@ -368,7 +368,7 @@ class TestServiceFaultInjection:
         assert result["attempts"] == max_startup_attempts
 
     async def test_service_dependency_timeout(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, resilience_validator
     ):
         """Test service dependency timeout scenarios."""
 
@@ -403,7 +403,7 @@ class TestServiceFaultInjection:
 class TestAdvancedServiceFaults:
     """Test advanced service fault scenarios."""
 
-    async def test_split_brain_scenario(self, fault_injector):
+    async def test_split_brain_scenario(self, _fault_injector):
         """Test split-brain scenario prevention."""
         # Simulate distributed system with leader election
         leader = "node_a"
@@ -431,7 +431,7 @@ class TestAdvancedServiceFaults:
         result = await elect_leader("node_b")
         assert "split_brain" in result.get("warning", "")
 
-    async def test_resource_starvation(self, fault_injector):
+    async def test_resource_starvation(self, _fault_injector):
         """Test resource starvation scenarios."""
         # Simulate resource pools
         cpu_pool = {"available": 100, "used": 0}
@@ -481,7 +481,7 @@ class TestAdvancedServiceFaults:
         errors = [r for r in results if "error" in r]
         assert len(errors) > 0, "Expected resource exhaustion errors"
 
-    async def test_deadlock_detection(self, fault_injector):
+    async def test_deadlock_detection(self, _fault_injector):
         """Test deadlock detection and prevention."""
         # Simulate resource locks
         lock_a = asyncio.Lock()
@@ -518,7 +518,7 @@ class TestAdvancedServiceFaults:
         deadlock_detected = any(r.get("status") == "deadlock_detected" for r in results)
         assert deadlock_detected, "Deadlock detection should have been triggered"
 
-    async def test_byzantine_fault_tolerance(self, fault_injector):
+    async def test_byzantine_fault_tolerance(self, _fault_injector):
         """Test Byzantine fault tolerance scenarios."""
         # Simulate distributed consensus with Byzantine nodes
         nodes = {
@@ -554,7 +554,7 @@ class TestAdvancedServiceFaults:
         assert result["value"] == 42  # Correct value despite Byzantine node
         assert result["agreement_count"] >= 4  # 4 out of 5 nodes agree
 
-    async def test_jitter_injection(self, fault_injector):
+    async def test_jitter_injection(self, _fault_injector):
         """Test jitter injection for timing-based chaos."""
         import random
 

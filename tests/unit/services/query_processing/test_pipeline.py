@@ -34,7 +34,7 @@ def mock_orchestrator():
             "strategy_usage": {"semantic": orchestrator._call_count},
         }
 
-    def increment_calls(*args, **kwargs):
+    def increment_calls(*_args, **_kwargs):
         orchestrator._call_count += 1
         return QueryProcessingResponse(
             success=True,
@@ -290,7 +290,7 @@ class TestQueryProcessingPipeline:
         """Test error recovery mechanisms."""
 
         # Make orchestrator fail
-        def side_effect(*args, **kwargs):
+        def side_effect(*_args, **_kwargs):
             raise Exception("Temporary failure")
 
         mock_orchestrator.process_query.side_effect = side_effect
@@ -330,7 +330,7 @@ class TestQueryProcessingPipeline:
         await initialized_pipeline.cleanup()
         assert initialized_pipeline._initialized is False
 
-    async def test_configuration_validation(self, mock_orchestrator):
+    async def test_configuration_validation(self, _mock_orchestrator):
         """Test pipeline configuration validation."""
         # Test with None orchestrator
         with pytest.raises(ValueError):
@@ -343,7 +343,7 @@ class TestQueryProcessingPipeline:
         import asyncio
 
         # Mock a slow response
-        async def slow_process(*args, **kwargs):
+        async def slow_process(*_args, **_kwargs):
             await asyncio.sleep(0.1)  # Simulate slow processing
             return QueryProcessingResponse(
                 success=True,
@@ -623,7 +623,7 @@ class TestBatchProcessing:
         """Test batch processing when some requests fail in orchestrator."""
         call_count = 0
 
-        def side_effect(request):
+        def side_effect(_request):
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second request fails
@@ -851,7 +851,7 @@ class TestWarmUp:
         """Test warm-up with some processing failures."""
         call_count = 0
 
-        def side_effect(request):
+        def side_effect(_request):
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second warmup query fails
@@ -873,7 +873,7 @@ class TestWarmUp:
         """Test warm-up with complete processing failure."""
 
         # Mock process_batch to fail completely
-        async def failing_batch(*args, **kwargs):
+        async def failing_batch(*_args, **_kwargs):
             raise Exception("Complete failure")
 
         # Mock the process_batch method directly on the pipeline
@@ -966,7 +966,7 @@ class TestEdgeCasesAndErrorHandling:
     ):
         """Test processing when orchestrator takes too long."""
 
-        async def slow_process(*args, **kwargs):
+        async def slow_process(*_args, **_kwargs):
             await asyncio.sleep(0.1)
             return QueryProcessingResponse(success=True, results=[], total_results=0)
 
@@ -1050,7 +1050,7 @@ class TestCachingBehavior:
         """Test cache hit tracking in responses."""
 
         # Create a new mock function that returns the desired response
-        async def cache_hit_response(*args, **kwargs):
+        async def cache_hit_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "cached_result"}],
@@ -1068,7 +1068,7 @@ class TestCachingBehavior:
         """Test cache miss tracking in responses."""
 
         # Create a new mock function that returns the desired response
-        async def cache_miss_response(*args, **kwargs):
+        async def cache_miss_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "fresh_result"}],
@@ -1137,7 +1137,7 @@ class TestIntegrationBetweenStages:
         """Test data flow between pipeline stages."""
 
         # Create a new mock function that returns detailed stage information
-        async def detailed_stage_response(*args, **kwargs):
+        async def detailed_stage_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "result_1", "score": 0.9}],
@@ -1216,7 +1216,7 @@ class TestIntegrationBetweenStages:
         """Test error propagation between stages."""
 
         # Create a mock function that returns response with warnings
-        async def error_propagation_response(*args, **kwargs):
+        async def error_propagation_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],
@@ -1245,7 +1245,7 @@ class TestAdditionalEdgeCases:
     ):
         """Test analyze_query when intent classification returns None."""
 
-        async def null_classification_response(*args, **kwargs):
+        async def null_classification_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],
@@ -1326,7 +1326,7 @@ class TestAdditionalEdgeCases:
     ):
         """Test health check with various component status combinations."""
 
-        async def partial_health_response(*args, **kwargs):
+        async def partial_health_response(*_args, **_kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],

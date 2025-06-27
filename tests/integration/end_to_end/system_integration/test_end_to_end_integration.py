@@ -26,7 +26,7 @@ class IntegrationTestManager:
         self.error_recovery_logs = []
 
     async def execute_integration_scenario(
-        self, scenario_name: str, scenario_config: dict[str, Any]
+        self, scenario_name: str, _scenario_config: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a complete integration test scenario."""
         start_time = time.perf_counter()

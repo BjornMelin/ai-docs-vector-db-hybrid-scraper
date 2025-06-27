@@ -3,7 +3,7 @@
 import asyncio
 import json
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -437,7 +437,7 @@ class TestProjectStorage:
         # Project data with datetime-like string (common case)
         project_data = {
             "name": "Test Project",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
+            "created_at": datetime.now(tz=UTC).isoformat(),
             "custom_field": "value",
         }
 

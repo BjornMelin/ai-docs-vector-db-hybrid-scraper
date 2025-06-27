@@ -33,7 +33,7 @@ def reset_degradation():
 class TestRealWorldErrorScenarios:
     """Test real-world error scenarios."""
 
-    def test_corrupted_config_file_recovery(self, config_dir, reset_degradation):
+    def test_corrupted_config_file_recovery(self, config_dir, _reset_degradation):
         """Test recovery from corrupted configuration file."""
         config_file = config_dir / "config.json"
 
@@ -80,7 +80,7 @@ class TestRealWorldErrorScenarios:
         new_config = manager.get_config()
         assert new_config.openai.api_key == "sk-updated123"
 
-    def test_missing_required_fields_fallback(self, config_dir, reset_degradation):
+    def test_missing_required_fields_fallback(self, config_dir, _reset_degradation):
         """Test handling missing required fields with fallback."""
         config_file = config_dir / "config.yaml"
 
@@ -109,7 +109,7 @@ class TestRealWorldErrorScenarios:
         assert config.vector_db.url == "http://localhost:6333"  # From file
         assert config.openai.api_key is None  # Default, not fallback
 
-    def test_file_permission_error_handling(self, config_dir, reset_degradation):
+    def test_file_permission_error_handling(self, config_dir, _reset_degradation):
         """Test handling file permission errors."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
@@ -133,7 +133,7 @@ class TestRealWorldErrorScenarios:
         assert manager.get_config().openai.api_key == "sk-test"
 
     @pytest.mark.asyncio
-    async def test_concurrent_reload_handling(self, config_dir, reset_degradation):
+    async def test_concurrent_reload_handling(self, config_dir, _reset_degradation):
         """Test handling concurrent reload attempts."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-original"}}')
@@ -170,7 +170,7 @@ class TestRealWorldErrorScenarios:
         final_config = manager.get_config()
         assert final_config.openai.api_key.startswith("sk-update")
 
-    def test_graceful_degradation_activation(self, config_dir, reset_degradation):
+    def test_graceful_degradation_activation(self, config_dir, _reset_degradation):
         """Test graceful degradation activating after repeated failures."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
@@ -198,7 +198,7 @@ class TestRealWorldErrorScenarios:
         # Critical operations should still work
         assert not degradation.should_skip_operation("reload_config")
 
-    def test_validation_error_details(self, config_dir, reset_degradation):
+    def test_validation_error_details(self, config_dir, _reset_degradation):
         """Test detailed validation error reporting."""
         config_file = config_dir / "config.json"
 
@@ -229,7 +229,7 @@ class TestRealWorldErrorScenarios:
         status = manager.get_status()
         assert "recent_failures" in status
 
-    def test_backup_rotation(self, config_dir, reset_degradation):
+    def test_backup_rotation(self, config_dir, _reset_degradation):
         """Test configuration backup rotation."""
         config_file = config_dir / "config.json"
 
@@ -257,7 +257,7 @@ class TestRealWorldErrorScenarios:
         config = manager.get_config()
         assert config.openai.api_key == "sk-version5"
 
-    def test_change_listener_failure_isolation(self, config_dir, reset_degradation):
+    def test_change_listener_failure_isolation(self, config_dir, _reset_degradation):
         """Test that listener failures don't affect config reload."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-initial"}}')
@@ -278,7 +278,7 @@ class TestRealWorldErrorScenarios:
                 )
             )
 
-        def failing_listener(old, new):
+        def failing_listener(_old, _new):
             raise RuntimeError("Listener explosion!")
 
         # Add mixed listeners
@@ -298,7 +298,7 @@ class TestRealWorldErrorScenarios:
         assert all(call == ("sk-initial", "sk-updated") for call in listener_calls)
 
     @pytest.mark.asyncio
-    async def test_timeout_handling(self, config_dir, reset_degradation):
+    async def test_timeout_handling(self, config_dir, _reset_degradation):
         """Test handling of slow/hanging operations."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
@@ -329,7 +329,7 @@ class TestRealWorldErrorScenarios:
 class TestEnvironmentSpecificErrors:
     """Test environment-specific error scenarios."""
 
-    def test_signal_handler_error_recovery(self, config_dir, reset_degradation):
+    def test_signal_handler_error_recovery(self, config_dir, _reset_degradation):
         """Test signal handler error recovery."""
         if not hasattr(signal, "SIGHUP"):
             pytest.skip("SIGHUP not available on this platform")
@@ -355,7 +355,7 @@ class TestEnvironmentSpecificErrors:
         # Reloader should still be functional
         assert reloader._config is not None
 
-    def test_file_watcher_recovery(self, config_dir, reset_degradation, caplog):
+    def test_file_watcher_recovery(self, config_dir, _reset_degradation, caplog):
         """Test file watcher recovery after errors."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')

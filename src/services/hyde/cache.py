@@ -431,13 +431,13 @@ class HyDECache(BaseService):
     def _get_embedding_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for HyDE embedding."""
         key_data = f"{query}:{domain or 'general'}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.embedding_prefix}:{key_hash}"
 
     def _get_documents_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for hypothetical documents."""
         key_data = f"{query}:{domain or 'general'}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.documents_prefix}:{key_hash}"
 
     def _get_results_cache_key(
@@ -447,7 +447,7 @@ class HyDECache(BaseService):
         # Create deterministic key from parameters
         params_str = json.dumps(search_params, sort_keys=True)
         key_data = f"{query}:{collection_name}:{params_str}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.results_prefix}:{key_hash}"
 
     def get_cache_metrics(self) -> dict[str, Any]:

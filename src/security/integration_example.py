@@ -41,7 +41,7 @@ rate_limiter = SimpleRateLimiter()
 
 @security_router.post("/embed")
 async def secure_embed_endpoint(
-    request: Request, data: dict, api_key: str = Depends(verify_api_key)
+    request: Request, data: dict, _api_key: str = Depends(verify_api_key)
 ):
     """Example endpoint with minimal ML security.
 
@@ -76,7 +76,7 @@ async def secure_embed_endpoint(
 
 
 @security_router.get("/security/status")
-async def security_status(api_key: str = Depends(verify_api_key)):
+async def security_status(_api_key: str = Depends(verify_api_key)):
     """Get security status - useful for monitoring.
 
     This endpoint can be called by monitoring systems to check security health.

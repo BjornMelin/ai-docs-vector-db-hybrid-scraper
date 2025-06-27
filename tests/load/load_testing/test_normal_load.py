@@ -194,7 +194,7 @@ class TestNormalLoad:
             < cache_metrics["uncached_response_time"] * 0.5
         ), "Cache not providing expected performance benefit"
 
-    def _simulate_normal_traffic(self, **kwargs):
+    def _simulate_normal_traffic(self, **_kwargs):
         """Simulate normal traffic patterns."""
         import asyncio
         import random
@@ -238,7 +238,7 @@ class TestNormalLoad:
             / max(len(phase_response_times), 1),
         }
 
-    def _analyze_operation_mix(self, result) -> Dict:
+    def _analyze_operation_mix(self, _result) -> Dict:
         """Analyze the mix of operations performed."""
         # Simplified analysis - would parse actual operation types in real implementation
 

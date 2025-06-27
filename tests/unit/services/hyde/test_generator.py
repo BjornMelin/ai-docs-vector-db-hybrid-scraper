@@ -372,7 +372,9 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on timeout
 
-    async def test_generate_single_document_error(self, generator, mock_client_manager):
+    async def test_generate_single_document_error(
+        self, generator, _mock_client_manager
+    ):
         """Test document generation error handling."""
         generator._initialized = True
 
@@ -387,7 +389,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on error
 
-    async def test_generate_parallel(self, generator, mock_client_manager):
+    async def test_generate_parallel(self, generator, _mock_client_manager):
         """Test parallel document generation."""
         generator._initialized = True
         generator.config.max_concurrent_generations = 2
@@ -406,7 +408,7 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 3
         assert all("Document for:" in doc for doc in documents)
 
-    async def test_generate_parallel_with_errors(self, generator, mock_client_manager):
+    async def test_generate_parallel_with_errors(self, generator, _mock_client_manager):
         """Test parallel generation with some errors."""
         generator._initialized = True
         generator.config.min_generation_length = 5
@@ -435,7 +437,7 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 2
         assert all("Valid document content" in doc for doc in documents)
 
-    async def test_generate_sequential(self, generator, mock_client_manager):
+    async def test_generate_sequential(self, generator, _mock_client_manager):
         """Test sequential document generation."""
         generator._initialized = True
         generator.config.min_generation_length = 5
@@ -549,7 +551,7 @@ class TestHypotheticalDocumentGenerator:
         identical = ["same content", "same content"]
         assert generator._calculate_diversity_score(identical) == 0.0
 
-    async def test_generate_documents_success(self, generator, mock_client_manager):
+    async def test_generate_documents_success(self, generator, _mock_client_manager):
         """Test successful document generation."""
         generator._initialized = True
 
@@ -598,7 +600,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert "not initialized" in str(exc_info.value).lower()
 
-    async def test_generate_documents_failure(self, generator, mock_client_manager):
+    async def test_generate_documents_failure(self, generator, _mock_client_manager):
         """Test document generation failure handling."""
         generator._initialized = True
 

@@ -144,7 +144,7 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError, match="Failed to drop payload index"):
             await indexing_service.drop_payload_index("test_collection", "test_field")
 
-    async def test_reindex_collection_success(self, indexing_service, mock_client):
+    async def test_reindex_collection_success(self, indexing_service, _mock_client):
         """Test successful collection reindexing."""
         # Mock existing indexes
         existing_indexes = ["old_field1", "old_field2", "old_field3"]
@@ -163,7 +163,7 @@ class TestQdrantIndexing:
             mock_create.assert_called_once_with("test_collection")
 
     async def test_reindex_collection_drop_error(
-        self, indexing_service, mock_client, caplog
+        self, indexing_service, _mock_client, caplog
     ):
         """Test collection reindexing with drop error."""
         existing_indexes = ["field1", "field2"]
@@ -186,7 +186,7 @@ class TestQdrantIndexing:
             mock_create.assert_called_once()
             assert "Failed to drop index" in caplog.text
 
-    async def test_reindex_collection_error(self, indexing_service, mock_client):
+    async def test_reindex_collection_error(self, indexing_service, _mock_client):
         """Test collection reindexing error."""
         with (
             patch.object(

@@ -154,7 +154,7 @@ class TestWCAGCompliance:
             f"Keyboard navigation errors: {keyboard_errors}"
         )
 
-    def test_wcag_guideline_2_1_2_no_keyboard_trap(self, keyboard_navigation_tester):
+    def test_wcag_guideline_2_1_2_no_keyboard_trap(self, _keyboard_navigation_tester):
         """Test WCAG 2.1.2 - No Keyboard Trap (Level A).
 
         Keyboard focus is not trapped in any part of the content.
@@ -197,7 +197,7 @@ class TestWCAGCompliance:
         assert result["compliant"], f"Skip links validation failed: {result['issues']}"
         assert result["skip_links_found"] > 0, "Should have at least one skip link"
 
-    def test_wcag_guideline_2_4_2_page_titled(self, wcag_validator):
+    def test_wcag_guideline_2_4_2_page_titled(self, _wcag_validator):
         """Test WCAG 2.4.2 - Page Titled (Level A).
 
         Web pages have titles that describe topic or purpose.
@@ -581,7 +581,7 @@ class TestWCAGAutomatedValidation:
         return page
 
     @pytest.mark.asyncio
-    async def test_axe_core_integration(self, mock_axe_core, mock_browser_page):
+    async def test_axe_core_integration(self, _mock_axe_core, _mock_browser_page):
         """Test integration with axe-core accessibility engine."""
         # Mock axe-core execution
         with patch("axe_core_python.run") as mock_axe_run:

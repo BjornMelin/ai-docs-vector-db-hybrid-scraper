@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 from enum import Enum
 from typing import Any
 
@@ -316,7 +316,7 @@ class BackgroundTaskManager:
             result = self._results.get(task_id)
             if result and not result.is_complete:
                 result.status = TaskStatus.CANCELLED
-                result.end_time = datetime.now(tz=timezone.utc)
+                result.end_time = datetime.now(tz=UTC)
                 logger.debug(f"Task {task_id} cancelled")
                 return True
         return False
@@ -367,7 +367,7 @@ class BackgroundTaskManager:
 
         # Update task status
         result.status = TaskStatus.RUNNING
-        result.start_time = datetime.now(tz=timezone.utc)
+        result.start_time = datetime.now(tz=UTC)
 
         logger.debug(f"Worker {worker_name} executing task {task_id}")
 
@@ -397,7 +397,7 @@ class BackgroundTaskManager:
             # Task completed successfully
             result.status = TaskStatus.COMPLETED
             result.result = task_result
-            result.end_time = datetime.now(tz=timezone.utc)
+            result.end_time = datetime.now(tz=UTC)
 
             with self._task_lock:
                 self._completed_tasks += 1
@@ -408,7 +408,7 @@ class BackgroundTaskManager:
             # Task timeout
             result.status = TaskStatus.FAILED
             result.error = f"Task timeout after {task.timeout} seconds"
-            result.end_time = datetime.now(tz=timezone.utc)
+            result.end_time = datetime.now(tz=UTC)
 
             await self._handle_task_retry(task, result)
 
@@ -416,7 +416,7 @@ class BackgroundTaskManager:
             # Task failed
             result.status = TaskStatus.FAILED
             result.error = str(e)
-            result.end_time = datetime.now(tz=timezone.utc)
+            result.end_time = datetime.now(tz=UTC)
 
             logger.exception(f"Task {task_id} failed: {e}")
             await self._handle_task_retry(task, result)

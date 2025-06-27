@@ -205,7 +205,7 @@ class MetadataExtractor:
         metadata.tags.extend(tags_meta)
 
     async def _extract_content_metadata(
-        self, metadata: ContentMetadata, content: str, url: str
+        self, metadata: ContentMetadata, content: str, _url: str
     ) -> None:
         """Extract metadata from content analysis.
 

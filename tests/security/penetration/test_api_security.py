@@ -6,7 +6,7 @@ authentication bypass, authorization flaws, and injection attacks.
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Dict
 
 import pytest
 
@@ -34,7 +34,7 @@ class TestAPISecurity:
                 headers: Dict = None,
                 data: Any = None,
                 params: Dict = None,
-                cookies: Dict = None,
+                _cookies: Dict = None,
             ) -> dict[str, Any]:
                 """Mock API request."""
                 # Simulate request

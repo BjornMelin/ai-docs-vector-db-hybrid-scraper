@@ -5,7 +5,7 @@ Tests the minimalistic ML security approach with >90% coverage goal.
 
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -57,7 +57,7 @@ class TestSecurityCheckResult:
 
         assert result.severity == "info"
         assert result.details == {}
-        assert result.timestamp <= datetime.now(tz=timezone.utc)
+        assert result.timestamp <= datetime.now(tz=UTC)
 
 
 class TestMLSecurityValidator:

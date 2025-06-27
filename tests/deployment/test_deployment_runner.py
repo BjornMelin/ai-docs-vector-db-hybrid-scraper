@@ -7,7 +7,7 @@ post-deployment, disaster recovery, and blue-green deployment tests.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from pathlib import Path
 from typing import Any
 
@@ -293,7 +293,7 @@ class DeploymentTestOrchestrator:
         self, test_config: dict[str, Any], deployment_config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute comprehensive deployment test."""
-        start_time = datetime.now(tz=timezone.utc)
+        start_time = datetime.now(tz=UTC)
 
         category_results = {}
         failed_categories = []
@@ -334,7 +334,7 @@ class DeploymentTestOrchestrator:
                     "critical_issues": 0,  # Optional
                 }
 
-        end_time = datetime.now(tz=timezone.utc)
+        end_time = datetime.now(tz=UTC)
         duration = (end_time - start_time).total_seconds()
 
         return {
@@ -348,7 +348,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_environment_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute environment validation tests."""
         await asyncio.sleep(2)
@@ -362,7 +362,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_pipeline_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute pipeline validation tests."""
         await asyncio.sleep(3)
@@ -376,7 +376,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_infrastructure_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute infrastructure validation tests."""
         await asyncio.sleep(4)
@@ -390,7 +390,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_post_deployment_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute post-deployment validation tests."""
         await asyncio.sleep(2)
@@ -404,7 +404,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_blue_green_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute blue-green deployment tests."""
         await asyncio.sleep(3)
@@ -418,7 +418,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_disaster_recovery_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute disaster recovery tests."""
         await asyncio.sleep(5)
@@ -516,7 +516,7 @@ class DeploymentRollbackTester:
         }
 
     async def _test_rollback_scenario(
-        self, scenario: str, config: dict[str, Any]
+        self, scenario: str, _config: dict[str, Any]
     ) -> dict[str, Any]:
         """Test individual rollback scenario."""
         # Simulate rollback time based on scenario complexity
@@ -581,7 +581,7 @@ class DeploymentTestReportGenerator:
         """Generate deployment test report."""
         report_content = {
             "report_metadata": {
-                "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+                "generated_at": datetime.now(tz=UTC).isoformat(),
                 "environment": config["environment"],
                 "report_version": "1.0",
             },
@@ -661,5 +661,5 @@ class DeploymentMetricsCollector:
             "metrics_collected": True,
             "total_metrics": len(base_metrics),
             "metrics": base_metrics,
-            "collection_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "collection_timestamp": datetime.now(tz=UTC).isoformat(),
         }

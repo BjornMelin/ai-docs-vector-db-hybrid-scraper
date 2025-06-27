@@ -221,7 +221,7 @@ async def test_create_project_with_initial_urls(mock_client_manager, mock_contex
 
 
 @pytest.mark.asyncio
-async def test_create_project_invalid_quality_tier(mock_client_manager, mock_context):
+async def test_create_project_invalid_quality_tier(mock_client_manager, _mock_context):
     """Test project creation with invalid quality tier."""
     from src.mcp_tools.tools.projects import register_tools
 

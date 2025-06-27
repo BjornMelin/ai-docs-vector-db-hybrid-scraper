@@ -7,6 +7,7 @@ Uses property-based testing for edge cases and modern Pydantic V2 methods.
 import json
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 import yaml
@@ -635,7 +636,7 @@ class TestConfigFileLoadingModern:
             assert config.log_level == LogLevel.DEBUG
             assert config.openai.api_key == "sk-test123"
         finally:
-            os.unlink(json_file)
+            Path(json_file).unlink()
 
     @pytest.mark.asyncio
     async def test_load_from_yaml_file(self):
@@ -656,7 +657,7 @@ class TestConfigFileLoadingModern:
             assert config.environment == Environment.PRODUCTION
             assert config.chunking.chunk_size == 2000
         finally:
-            os.unlink(yaml_file)
+            Path(yaml_file).unlink()
 
     def test_load_from_unsupported_file(self):
         """Test loading from unsupported file format."""

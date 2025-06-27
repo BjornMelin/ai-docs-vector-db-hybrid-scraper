@@ -5,7 +5,7 @@ system, view drift events, manage alerting, and trigger manual drift checks.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -214,7 +214,7 @@ async def get_drift_summary():
                     ],
                 },
                 "drift_statistics": drift_summary,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
             return summary
@@ -250,7 +250,7 @@ async def check_drift_health():
                 "service_running": status["service_running"],
                 "detector_initialized": status["detector_initialized"],
                 "drift_detection_enabled": status["drift_detection_enabled"],
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
             if not healthy:

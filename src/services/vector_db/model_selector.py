@@ -246,7 +246,7 @@ class ModelSelector:
         candidates: list[str],
         query_classification: QueryClassification,
         optimization_strategy: OptimizationStrategy,
-        context: dict[str, Any] | None,
+        _context: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
         """Score candidate models based on multiple criteria."""
         scored_candidates = []

@@ -44,7 +44,7 @@ class AdaptiveFusionTuner:
         self,
         query_classification: QueryClassification,
         historical_performance: dict[str, float] | None = None,
-        context: dict[str, Any] | None = None,
+        _context: dict[str, Any] | None = None,
     ) -> dict[str, float]:
         """Compute adaptive weights for hybrid search fusion.
 
@@ -124,7 +124,7 @@ class AdaptiveFusionTuner:
     def _compute_performance_adjustment(
         self,
         historical_performance: dict[str, float],
-        query_classification: QueryClassification,
+        _query_classification: QueryClassification,
     ) -> float:
         """Compute adjustment based on historical performance."""
         try:

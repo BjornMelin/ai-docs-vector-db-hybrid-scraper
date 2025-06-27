@@ -207,7 +207,7 @@ class TestMCPEdgeCases:
                 break
 
         # Simulate timeout
-        async def timeout_after_delay(*args, **kwargs):
+        async def timeout_after_delay(*_args, **_kwargs):
             await asyncio.sleep(10)  # Long delay
             raise TimeoutError("Embedding generation timed out")
 
@@ -282,7 +282,7 @@ class TestMCPEdgeCases:
         # Simulate rate limiting
         call_count = 0
 
-        async def rate_limited_search(*args, **kwargs):
+        async def rate_limited_search(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count > 3:
@@ -424,7 +424,7 @@ class TestMCPEdgeCases:
         # Configure service to fail then succeed
         call_count = 0
 
-        async def flaky_search(*args, **kwargs):
+        async def flaky_search(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:
@@ -564,7 +564,7 @@ class TestMCPEdgeCases:
                 break
 
         # Configure to fail on specific inputs
-        async def selective_failure(texts, **kwargs):
+        async def selective_failure(texts, **_kwargs):
             if any("fail" in text for text in texts):
                 raise Exception("Cannot process texts containing 'fail'")
             return {

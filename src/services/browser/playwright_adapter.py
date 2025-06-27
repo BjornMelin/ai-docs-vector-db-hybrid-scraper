@@ -200,7 +200,7 @@ class PlaywrightAdapter(BaseService):
         return site_profile, stealth_config
 
     async def _create_browser_context_and_page(
-        self, site_profile: str, stealth_config: Any, timeout: int
+        self, site_profile: str, stealth_config: Any, _timeout: int
     ) -> tuple[Any, Any]:
         """Create browser context and page with appropriate configuration."""
         # Create browser context with enhanced settings

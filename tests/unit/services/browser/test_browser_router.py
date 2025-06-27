@@ -401,7 +401,7 @@ class TestCircuitBreakerIntegration:
 
     @patch("src.services.browser.enhanced_router.logger")
     async def test_circuit_breaker_prevents_tier_selection(
-        self, mock_logger, enhanced_router
+        self, _mock_logger, enhanced_router
     ):
         """Test open circuit breaker prevents tier selection."""
         # Open circuit for a tier
@@ -486,7 +486,7 @@ class TestScrapeWithEnhancements:
     """Test enhanced scraping functionality."""
 
     @patch("src.services.browser.enhanced_router.logger")
-    async def test_scrape_with_all_enhancements(self, mock_logger, enhanced_router):
+    async def test_scrape_with_all_enhancements(self, _mock_logger, enhanced_router):
         """Test scraping uses all enhanced features."""
         # Initialize router
         enhanced_router._initialized = True
@@ -502,7 +502,7 @@ class TestScrapeWithEnhancements:
         )
 
         # Mock execute method
-        async def mock_execute(tier, url, actions, timeout):
+        async def mock_execute(_tier, url, _actions, _timeout):
             return {
                 "success": True,
                 "content": "Test content",
@@ -538,7 +538,7 @@ class TestScrapeWithEnhancements:
         # Mock execute to fail first, succeed on fallback
         call_count = 0
 
-        async def mock_execute(tier, url, actions, timeout):
+        async def mock_execute(_tier, url, _actions, _timeout):
             nonlocal call_count
             call_count += 1
             if call_count == 1:

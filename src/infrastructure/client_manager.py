@@ -716,7 +716,7 @@ class ClientManager:
         self,
         name: str,
         create_func,
-        health_check_func,
+        _health_check_func,
     ) -> Any:
         """Get existing client or create new one with health checks.
 

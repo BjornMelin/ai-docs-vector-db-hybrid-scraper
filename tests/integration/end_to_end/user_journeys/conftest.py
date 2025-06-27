@@ -296,7 +296,7 @@ def journey_executor():
                 raise TimeoutError(f"Action '{action}' timed out after {timeout}s")
 
         async def _action_crawl_url(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock URL crawling action."""
             url = params["url"]
@@ -310,7 +310,7 @@ def journey_executor():
             }
 
         async def _action_process_document(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock document processing action."""
             content = params.get("content", "")
@@ -323,7 +323,7 @@ def journey_executor():
             }
 
         async def _action_generate_embeddings(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock embedding generation action."""
             chunks = params.get("chunks", [])
@@ -335,7 +335,7 @@ def journey_executor():
             }
 
         async def _action_store_vectors(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock vector storage action."""
             embeddings = params.get("embeddings", [])
@@ -348,7 +348,7 @@ def journey_executor():
             }
 
         async def _action_search_documents(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock document search action."""
             query = params.get("query", "")
@@ -370,7 +370,7 @@ def journey_executor():
             }
 
         async def _action_create_project(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock project creation action."""
             project_name = params.get("name", "test-project")
@@ -383,7 +383,7 @@ def journey_executor():
             }
 
         async def _action_add_to_collection(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock collection addition action."""
             collection = params.get("collection", "default")
@@ -396,7 +396,7 @@ def journey_executor():
             }
 
         async def _action_validate_api(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock API validation action."""
             endpoint = params.get("endpoint", "/health")
@@ -409,7 +409,7 @@ def journey_executor():
             }
 
         async def _action_check_health(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, _params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock health check action."""
             await asyncio.sleep(0.01)
@@ -420,7 +420,7 @@ def journey_executor():
             }
 
         async def _action_wait_processing(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock wait for processing action."""
             duration = params.get("duration_seconds", 1.0)
@@ -431,7 +431,7 @@ def journey_executor():
             }
 
         async def _action_browser_navigate(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock browser navigation action."""
             url = params.get("url", "")
@@ -444,7 +444,7 @@ def journey_executor():
             }
 
         async def _action_browser_interact(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock browser interaction action."""
             action_type = params.get("type", "click")
@@ -458,7 +458,7 @@ def journey_executor():
             }
 
         async def _action_validate_search_results(
-            self, params: dict[str, Any], context: dict[str, Any]
+            self, params: dict[str, Any], _context: dict[str, Any]
         ) -> dict[str, Any]:
             """Mock search results validation."""
             results = params.get("results", [])

@@ -444,9 +444,9 @@ class LightweightScraper(CrawlProvider):
 
     async def crawl_site(
         self,
-        url: str,
-        max_pages: int = 50,
-        formats: list[str] | None = None,
+        _url: str,
+        _max_pages: int = 50,
+        _formats: list[str] | None = None,
     ) -> dict[str, Any]:
         """Crawl an entire site (not implemented for lightweight tier).
 

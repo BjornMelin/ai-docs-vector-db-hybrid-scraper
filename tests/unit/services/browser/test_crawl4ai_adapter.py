@@ -149,7 +149,7 @@ class TestCrawl4AIAdapterInitialization:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_cleanup_no_provider(
-        self, mock_provider_class, basic_crawl4ai_config
+        self, _mock_provider_class, basic_crawl4ai_config
     ):
         """Test cleanup when provider is None."""
         adapter = Crawl4AIAdapter(basic_crawl4ai_config)
@@ -643,7 +643,7 @@ class TestCrawl4AIAdapterHealthCheck:
         adapter._initialized = True
 
         # Mock timeout
-        async def timeout_scrape(*args, **kwargs):
+        async def timeout_scrape(*_args, **_kwargs):
             await asyncio.sleep(15)  # Longer than timeout
 
         with patch.object(adapter, "scrape", side_effect=timeout_scrape):
@@ -742,7 +742,7 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider = AsyncMock()
 
         # Add delay to provider call
-        async def delayed_scrape(*args, **kwargs):
+        async def delayed_scrape(*_args, **_kwargs):
             await asyncio.sleep(0.1)  # 100ms delay
             return {"success": True, "content": "test"}
 
@@ -775,7 +775,7 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider = AsyncMock()
 
         # Add delay before failure
-        async def delayed_failure(*args, **kwargs):
+        async def delayed_failure(*_args, **_kwargs):
             await asyncio.sleep(0.1)
             raise Exception("Provider failed")
 
@@ -955,7 +955,7 @@ class TestCrawl4AIAdapterIntegration:
         assert result["success"] is False  # Should handle gracefully
 
         # Test scenario 2: Provider timeout
-        async def timeout_provider(*args, **kwargs):
+        async def timeout_provider(*_args, **_kwargs):
             await asyncio.sleep(2)
             return {"success": True, "content": "delayed"}
 
@@ -980,7 +980,7 @@ class TestCrawl4AIAdapterIntegration:
         mock_provider = AsyncMock()
 
         # Simulate varying response times
-        async def variable_response(url, **kwargs):
+        async def variable_response(url, **_kwargs):
             delay = 0.1 if "slow" in url else 0.01
             await asyncio.sleep(delay)
             return {"success": True, "content": f"Content for {url}"}

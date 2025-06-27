@@ -132,7 +132,7 @@ async def get_vector_db_client(
 
 # Rate limiter dependency (optional)
 async def get_rate_limiter(
-    config: Annotated[Config, Depends(get_config)],
+    _config: Annotated[Config, Depends(get_config)],
 ) -> object | None:
     """Get rate limiter if configured.
 

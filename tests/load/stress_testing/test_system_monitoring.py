@@ -159,8 +159,8 @@ class SystemMonitor:
 
     def _collect_system_metrics(
         self,
-        last_disk_io: tuple[float, float] | None,
-        last_network_io: tuple[float, float] | None,
+        _last_disk_io: tuple[float, float] | None,
+        _last_network_io: tuple[float, float] | None,
     ) -> SystemMetrics:
         """Collect system-level metrics."""
         # CPU and memory
@@ -250,7 +250,7 @@ class SystemMonitor:
         )
 
     def _check_alerts(
-        self, system_metrics: SystemMetrics, app_metrics: ApplicationMetrics
+        self, system_metrics: SystemMetrics, _app_metrics: ApplicationMetrics
     ):
         """Check for performance alerts."""
         current_time = time.time()
@@ -485,7 +485,7 @@ class TestSystemMonitoring:
                     self.memory_hogs = []
                     self.cpu_intensive_tasks = []
 
-                async def stress_system(self, stress_type: str = "mixed", **kwargs):
+                async def stress_system(self, stress_type: str = "mixed", **_kwargs):
                     """Generate different types of system stress."""
                     self.call_count += 1
                     start_time = time.perf_counter()
@@ -707,7 +707,7 @@ class TestSystemMonitoring:
                     self.degradation_factor = 1.0
                     self.base_latency = 0.1
 
-                async def degrading_operation(self, **kwargs):
+                async def degrading_operation(self, **_kwargs):
                     """Operation that gradually degrades over time."""
                     self.call_count += 1
 

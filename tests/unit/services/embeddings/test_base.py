@@ -39,7 +39,7 @@ class ConcreteEmbeddingProvider(EmbeddingProvider):
         self.cleanup_called = True
 
     async def generate_embeddings(
-        self, texts: list[str], batch_size: int | None = None
+        self, texts: list[str], _batch_size: int | None = None
     ) -> list[list[float]]:
         """Generate test embeddings."""
         if self.embedding_error:

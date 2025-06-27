@@ -367,7 +367,7 @@ class ContentIntelligenceService(BaseService):
     async def _perform_analysis(
         self,
         request: ContentAnalysisRequest,
-        existing_content: list[str] | None = None,
+        _existing_content: list[str] | None = None,
     ) -> EnrichedContent:
         """Perform comprehensive content analysis.
 
@@ -482,7 +482,7 @@ class ContentIntelligenceService(BaseService):
     def _generate_quality_recommendations(
         self,
         quality_score: QualityScore,
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on quality assessment.
 
@@ -541,7 +541,7 @@ class ContentIntelligenceService(BaseService):
     def _generate_pattern_recommendations(
         self,
         content_patterns: list[str],
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on detected patterns.
 
@@ -592,8 +592,8 @@ class ContentIntelligenceService(BaseService):
             str: Cache key for the request
         """
         # Create hash from content and key parameters
-        content_hash = hashlib.md5(request.content.encode()).hexdigest()
-        options_hash = hashlib.md5(
+        content_hash = hashlib.sha256(request.content.encode()).hexdigest()
+        options_hash = hashlib.sha256(
             f"{request.enable_classification}-{request.enable_quality_assessment}-"
             f"{request.enable_metadata_extraction}-{request.enable_adaptations}-"
             f"{request.confidence_threshold}".encode()

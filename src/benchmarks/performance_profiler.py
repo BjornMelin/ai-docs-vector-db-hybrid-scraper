@@ -8,7 +8,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 import psutil
@@ -117,7 +117,7 @@ class PerformanceProfiler:
         profiling_task = asyncio.create_task(self._monitor_resources())
 
         start_time = time.time()
-        start_datetime = datetime.now(tz=timezone.utc)
+        start_datetime = datetime.now(tz=UTC)
 
         try:
             # Execute test queries while monitoring
@@ -129,7 +129,7 @@ class PerformanceProfiler:
             await profiling_task
 
         end_time = time.time()
-        end_datetime = datetime.now(tz=timezone.utc)
+        end_datetime = datetime.now(tz=UTC)
         duration = end_time - start_time
 
         # Analyze results

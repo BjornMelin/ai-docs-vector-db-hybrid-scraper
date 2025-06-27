@@ -4,6 +4,7 @@
 import logging
 import os
 import re
+from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
 
@@ -190,7 +191,7 @@ class SecurityValidator:
             return "safe_filename"
 
         # Remove path traversal attempts
-        filename = os.path.basename(filename.strip())
+        filename = Path(filename.strip()).name
 
         # Remove dangerous characters
         filename = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", filename)

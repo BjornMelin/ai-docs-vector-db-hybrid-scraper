@@ -105,7 +105,7 @@ class TestRegisterAllTools:
         # Track call order
         for module_name, module in mock_tool_modules.items():
             module.register_tools.side_effect = (
-                lambda mcp, cm, name=module_name: call_order.append(name)
+                lambda _mcp, _cm, name=module_name: call_order.append(name)
             )
 
         # Patch individual tool modules
@@ -463,7 +463,7 @@ class TestModuleRegistrationPatterns:
         module = Mock()
 
         # Simulate a typical register_tools function
-        def register_tools(mcp, client_manager):
+        def register_tools(mcp, _client_manager):
             # Typical pattern: register multiple tools
             mcp.tool("search_documents")(Mock())
             mcp.tool("search_with_filters")(Mock())
@@ -563,7 +563,7 @@ class TestErrorScenarios:
         mock_tool_modules["cache"]
         bad_cache = Mock()
         bad_cache.register_tools = property(
-            lambda self: (_ for _ in ()).throw(AttributeError("No such attribute"))
+            lambda _self: (_ for _ in ()).throw(AttributeError("No such attribute"))
         )
         mock_tool_modules["cache"] = bad_cache
 

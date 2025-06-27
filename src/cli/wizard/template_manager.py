@@ -6,7 +6,7 @@ with Pydantic integration for real-time validation.
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from rich.console import Console
 from rich.table import Table

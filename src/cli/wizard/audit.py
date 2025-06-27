@@ -6,7 +6,7 @@ and security tracking for wizard-generated configurations.
 
 import json
 import logging
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 

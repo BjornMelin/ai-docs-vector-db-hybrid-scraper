@@ -204,11 +204,11 @@ class ConfigurationStateMachine(RuleBasedStateMachine):
     def add_change_listener(self, name: str, priority: int, async_callback: bool):
         """Add a configuration change listener."""
 
-        def sync_listener(old_cfg, new_cfg):
+        def sync_listener(_old_cfg, _new_cfg):
             time.sleep(0.01)  # Simulate work
             return True
 
-        async def async_listener(old_cfg, new_cfg):
+        async def async_listener(_old_cfg, _new_cfg):
             await asyncio.sleep(0.01)  # Simulate async work
             return True
 

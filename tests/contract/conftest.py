@@ -976,7 +976,7 @@ def mock_contract_service():
     """Mock service for contract testing."""
     service = AsyncMock()
 
-    async def mock_search(query: str, limit: int = 10):
+    async def mock_search(_query: str, _limit: int = 10):
         """Mock search endpoint."""
         return {
             "results": [
@@ -986,7 +986,7 @@ def mock_contract_service():
             "total": 2,
         }
 
-    async def mock_add_document(url: str, collection: str = "default"):
+    async def mock_add_document(_url: str, _collection: str = "default"):
         """Mock add document endpoint."""
         return {"id": "doc123", "status": "created"}
 

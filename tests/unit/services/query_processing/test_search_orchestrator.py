@@ -980,7 +980,7 @@ class TestEdgeCasesAndErrorHandling:
         assert isinstance(result, SearchResult)
         assert result.query_processed == long_query
 
-    async def test_zero_limit(self, orchestrator):
+    async def test_zero_limit(self, _orchestrator):
         """Test search with zero limit should fail validation."""
         with pytest.raises(ValueError):
             SearchRequest(query="test", limit=0)

@@ -752,7 +752,7 @@ class ResultClusteringService:
         results: list[SearchResult],
         cluster_labels: np.ndarray,
         embeddings: np.ndarray,
-        request: ResultClusteringRequest,
+        _request: ResultClusteringRequest,
     ) -> list[OutlierResult]:
         """Identify outlier results that don't fit into clusters."""
         outliers = []
@@ -815,7 +815,7 @@ class ResultClusteringService:
     def _calculate_cluster_confidence(
         self,
         cluster_embeddings: np.ndarray,
-        all_embeddings: np.ndarray,
+        _all_embeddings: np.ndarray,
         request: ResultClusteringRequest,
     ) -> float:
         """Calculate confidence score for a cluster."""
@@ -837,7 +837,7 @@ class ResultClusteringService:
         self,
         embeddings: np.ndarray,
         cluster_labels: np.ndarray,
-        request: ResultClusteringRequest,
+        _request: ResultClusteringRequest,
     ) -> dict[str, float]:
         """Calculate clustering quality metrics."""
         metrics = {}
@@ -879,7 +879,7 @@ class ResultClusteringService:
         return metrics
 
     def _generate_cluster_label(
-        self, results: list[SearchResult], query: str | None = None
+        self, results: list[SearchResult], _query: str | None = None
     ) -> str:
         """Generate human-readable label for a cluster."""
         # Simple implementation - extract common terms

@@ -135,7 +135,7 @@ class TestVectorSearchInstrumentation:
         """Test vector search instrumentation."""
 
         @instrument_vector_search("test_collection", "semantic")
-        def search_function(query, top_k=5):
+        def search_function(_query, top_k=5):
             return [{"id": i, "score": 0.9 - i * 0.1} for i in range(top_k)]
 
         results = search_function("test query", 3)
@@ -146,7 +146,7 @@ class TestVectorSearchInstrumentation:
         """Test vector search instrumentation with metadata collection."""
 
         @instrument_vector_search("test_collection", "hybrid")
-        def search_with_metadata(query):
+        def search_with_metadata(_query):
             # Simulate vector search results
             return {
                 "results": [{"id": "doc1", "score": 0.95}],
@@ -161,7 +161,7 @@ class TestVectorSearchInstrumentation:
         """Test vector search instrumentation with exceptions."""
 
         @instrument_vector_search("test_collection", "semantic")
-        def failing_search(query):
+        def failing_search(_query):
             raise ConnectionError("Vector database unavailable")
 
         with pytest.raises(ConnectionError):
@@ -225,7 +225,7 @@ class TestLLMInstrumentation:
         """Test LLM call instrumentation."""
 
         @instrument_llm_call("openai", "gpt-4")
-        def call_llm(prompt, max_tokens=100):
+        def call_llm(prompt, _max_tokens=100):
             return {
                 "response": f"Response to: {prompt}",
                 "usage": {
@@ -243,7 +243,7 @@ class TestLLMInstrumentation:
         """Test LLM instrumentation with cost attribution."""
 
         @instrument_llm_call("anthropic", "claude-3-sonnet")
-        def call_claude(messages):
+        def call_claude(_messages):
             return {
                 "response": "Claude's response",
                 "usage": {"input_tokens": 50, "output_tokens": 30},
@@ -257,7 +257,7 @@ class TestLLMInstrumentation:
         """Test LLM instrumentation with streaming responses."""
 
         @instrument_llm_call("openai", "gpt-4")
-        def streaming_llm(prompt):
+        def streaming_llm(_prompt):
             # Simulate streaming response
             chunks = ["Hello", " world", "!"]
             return {"response": "".join(chunks), "streaming": True, "chunks": chunks}

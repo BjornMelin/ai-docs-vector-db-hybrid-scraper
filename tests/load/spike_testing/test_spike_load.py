@@ -98,7 +98,7 @@ class TestSpikeLoad:
         inter_spike_metrics = []
 
         @env.events.stats_reset.add_listener
-        def track_inter_spike_performance(**kwargs):
+        def track_inter_spike_performance(**_kwargs):
             """Track performance between spikes."""
             stats = env.stats
             if stats and stats.total.num_requests > 0:
@@ -362,7 +362,7 @@ class TestSpikeLoad:
                     self.active_connections += 1
                     return f"conn_{self.active_connections}"
 
-            def release_connection(self, conn_id: str):
+            def release_connection(self, _conn_id: str):
                 """Release connection back to pool."""
                 self.active_connections = max(0, self.active_connections - 1)
 

@@ -355,7 +355,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     async def scrape_url(
         self,
         url: str,
-        formats: list[str] | None = None,
+        _formats: list[str] | None = None,
         extraction_type: str = "markdown",
         wait_for: str | None = None,
         js_code: str | None = None,
@@ -488,7 +488,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         url: str,
         run_config: CrawlerRunConfig,
         extraction_type: str,
-        session: object | None,
+        _session: object | None,
     ) -> dict[str, object]:
         """Process crawl with streaming for real-time results."""
         try:
@@ -637,7 +637,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         self,
         url: str,
         max_pages: int = 50,
-        formats: list[str] | None = None,
+        _formats: list[str] | None = None,
     ) -> dict[str, object]:
         """Crawl entire site using recursive URL discovery.
 

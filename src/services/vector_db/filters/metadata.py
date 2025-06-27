@@ -211,7 +211,7 @@ class MetadataFilter(BaseFilter):
         }
 
     async def apply(
-        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
+        self, filter_criteria: dict[str, Any], _context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply metadata filtering with boolean logic.
 
@@ -387,7 +387,7 @@ class MetadataFilter(BaseFilter):
         return conditions
 
     def _build_single_field_condition(
-        self, condition: FieldConditionModel, criteria: MetadataFilterCriteria
+        self, condition: FieldConditionModel, _criteria: MetadataFilterCriteria
     ) -> models.FieldCondition | None:
         """Build a single Qdrant field condition."""
         field = condition.field

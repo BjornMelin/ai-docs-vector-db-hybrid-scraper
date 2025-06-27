@@ -135,7 +135,7 @@ class TestInstrumentFunction:
         mock_get_tracer.return_value = mock_tracer
 
         @instrument_function(record_args=True)
-        def test_function(arg1: str, arg2: int, complex_arg: dict):
+        def test_function(_arg1: str, _arg2: int, _complex_arg: dict):
             return "success"
 
         test_function("simple", 42, {"complex": "data"})
@@ -237,7 +237,7 @@ class TestMetricsTracking:
         "src.services.observability.tracking._ai_operation_duration", new=MagicMock()
     )
     @patch("src.services.observability.tracking._ai_token_counter", new=MagicMock())
-    def test_record_ai_operation(self, mock_init_metrics):
+    def test_record_ai_operation(self, _mock_init_metrics):
         """Test recording AI operation metrics."""
         import src.services.observability.tracking as tracking_module
 
@@ -280,7 +280,7 @@ class TestMetricsTracking:
 
     @patch("src.services.observability.tracking._initialize_metrics")
     @patch("src.services.observability.tracking._ai_cost_counter", new=MagicMock())
-    def test_track_cost(self, mock_init_metrics):
+    def test_track_cost(self, _mock_init_metrics):
         """Test cost tracking."""
         import src.services.observability.tracking as tracking_module
 

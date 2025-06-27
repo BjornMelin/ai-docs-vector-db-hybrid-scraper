@@ -43,7 +43,7 @@ class ProductionMCPServer:
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _signal_handler(self, signum: int, frame) -> None:
+    def _signal_handler(self, signum: int, _frame) -> None:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         # Store task reference to avoid RUF006 warning
@@ -52,7 +52,7 @@ class ProductionMCPServer:
         task.set_name("graceful-shutdown")
 
     @asynccontextmanager
-    async def lifespan(self, app: Starlette):
+    async def lifespan(self, _app: Starlette):
         """Application lifespan manager with startup/shutdown."""
         try:
             # Startup
@@ -93,7 +93,7 @@ class ProductionMCPServer:
 
         logger.info("Production MCP server shutdown complete")
 
-    async def health_check(self, request) -> JSONResponse:
+    async def health_check(self, _request) -> JSONResponse:
         """Health check endpoint."""
         return JSONResponse(
             {

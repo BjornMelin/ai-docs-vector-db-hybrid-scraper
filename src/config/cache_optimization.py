@@ -48,7 +48,7 @@ class ConfigCache:
     def _generate_key(self, model_class: Type[T], data: Dict[str, Any]) -> str:
         """Generate cache key from model class and data."""
         class_name = model_class.__name__
-        data_hash = hashlib.md5(
+        data_hash = hashlib.sha256(
             json.dumps(data, sort_keys=True, default=str).encode()
         ).hexdigest()[:16]
         return f"{class_name}:{data_hash}"
@@ -346,7 +346,7 @@ class ConfigValidationCache:
 
     def _hash_data(self, data: Dict[str, Any]) -> str:
         """Generate hash key for validation data."""
-        return hashlib.md5(
+        return hashlib.sha256(
             json.dumps(data, sort_keys=True, default=str).encode()
         ).hexdigest()
 

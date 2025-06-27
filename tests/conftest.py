@@ -24,7 +24,7 @@ try:
     from dotenv import load_dotenv  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
-    def load_dotenv(*args, **kwargs):
+    def load_dotenv(*_args, **_kwargs):
         """Fallback no-op load_dotenv implementation."""
         return False
 
@@ -444,7 +444,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "performance: mark test as performance test")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(_config, items):
     """Modify test collection to handle CI environment constraints."""
     # Skip browser tests if browsers are not properly installed in CI
     if os.getenv("CI") and not _check_browser_availability():
@@ -530,7 +530,7 @@ def mock_multi_level_circuit_breaker():
     breaker._failure_count = 0
 
     # Configure async methods with realistic behavior
-    async def mock_call(func, *args, **kwargs):
+    async def mock_call(func, *_args, **_kwargs):
         """Mock call method for simple circuit breaker."""
         if callable(func):
             if asyncio.iscoroutinefunction(func):

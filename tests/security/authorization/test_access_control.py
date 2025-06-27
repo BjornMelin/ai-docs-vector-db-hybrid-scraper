@@ -4,6 +4,7 @@ This module tests role-based access control (RBAC), permission validation,
 and authorization boundary enforcement.
 """
 
+import time
 from typing import Any
 
 import pytest
@@ -252,7 +253,7 @@ class TestAccessControl:
                 is False
             )
 
-    def test_horizontal_privilege_escalation_prevention(self, rbac_system):
+    def test_horizontal_privilege_escalation_prevention(self, _rbac_system):
         """Test prevention of horizontal privilege escalation."""
         # Test that users cannot access other users' resources
 
@@ -376,7 +377,7 @@ class TestAccessControl:
             is True
         )
 
-    def test_api_key_based_authorization(self, rbac_system):
+    def test_api_key_based_authorization(self, _rbac_system):
         """Test API key-based authorization."""
 
         class APIKeyAuthz:
@@ -443,7 +444,7 @@ class TestAccessControl:
         # Test admin key
         assert api_authz.validate_api_key_access("admin_key", "admin", "all") is True
 
-    def test_resource_based_permissions(self, rbac_system):
+    def test_resource_based_permissions(self, _rbac_system):
         """Test resource-based permission validation."""
 
         class ResourcePermissions:
@@ -518,7 +519,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_permission_delegation(self, rbac_system):
+    def test_permission_delegation(self, _rbac_system):
         """Test permission delegation mechanisms."""
 
         class PermissionDelegation:
@@ -596,7 +597,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_access_control_bypass_prevention(self, rbac_system):
+    def test_access_control_bypass_prevention(self, _rbac_system):
         """Test prevention of access control bypasses."""
 
         # Test common bypass techniques
@@ -718,7 +719,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_attribute_based_access_control(self, rbac_system):
+    def test_attribute_based_access_control(self, _rbac_system):
         """Test attribute-based access control (ABAC)."""
 
         class ABACEngine:

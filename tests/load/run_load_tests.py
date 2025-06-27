@@ -385,7 +385,7 @@ class LoadTestRunner:
 
         return report
 
-    def _run_endpoint_benchmark(self, endpoint: str, config: Dict) -> Dict:
+    def _run_endpoint_benchmark(self, endpoint: str, _config: Dict) -> Dict:
         """Run benchmark for a specific endpoint."""
         # This would create a custom user class focused on the specific endpoint
         # For now, return a simplified result

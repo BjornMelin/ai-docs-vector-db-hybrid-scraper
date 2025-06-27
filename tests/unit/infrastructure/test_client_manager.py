@@ -90,17 +90,17 @@ class StubClientFactory(ClientFactoryInterface):
             )
         return self.qdrant_client
 
-    async def create_openai_client(self, config: Config) -> Any:
+    async def create_openai_client(self, _config: Config) -> Any:
         if self.openai_client is None:
             self.openai_client = MagicMock()
         return self.openai_client
 
-    async def create_redis_client(self, config: Config) -> Any:
+    async def create_redis_client(self, _config: Config) -> Any:
         if self.redis_client is None:
             self.redis_client = AsyncMock()
         return self.redis_client
 
-    async def create_firecrawl_client(self, config: Config) -> Any:
+    async def create_firecrawl_client(self, _config: Config) -> Any:
         if self.firecrawl_client is None:
             self.firecrawl_client = AsyncMock()
         return self.firecrawl_client
@@ -314,7 +314,7 @@ class TestClientManagerClientCreation:
     """Test client creation and management."""
 
     @pytest.mark.asyncio
-    async def test_get_qdrant_client(self, client_manager_with_stub, stub_factory):
+    async def test_get_qdrant_client(self, client_manager_with_stub, _stub_factory):
         """Test Qdrant client creation with stub."""
         client = await client_manager_with_stub.get_qdrant_client()
 
@@ -335,7 +335,7 @@ class TestClientManagerClientCreation:
         assert isinstance(client, MagicMock)
 
     @pytest.mark.asyncio
-    async def test_get_openai_client_without_api_key(self, config, stub_factory):
+    async def test_get_openai_client_without_api_key(self, config, _stub_factory):
         """Test OpenAI client returns None without API key."""
         config.openai.api_key = None
         ClientManager.reset_singleton()
@@ -468,7 +468,9 @@ class TestClientManagerCleanup:
     """Test cleanup and resource management."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_closes_clients(self, client_manager_with_stub, stub_factory):
+    async def test_cleanup_closes_clients(
+        self, client_manager_with_stub, _stub_factory
+    ):
         """Test cleanup properly closes all clients."""
         # Create clients
         qdrant_client = await client_manager_with_stub.get_qdrant_client()

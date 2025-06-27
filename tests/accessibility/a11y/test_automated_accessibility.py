@@ -1076,7 +1076,7 @@ class TestAutomatedAccessibilityTools:
         self,
         axe_result: dict[str, Any],
         pa11y_result: list[dict[str, Any]],
-        lighthouse_result: dict[str, Any],
+        _lighthouse_result: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Generate prioritized list of accessibility fixes."""
         fixes = []

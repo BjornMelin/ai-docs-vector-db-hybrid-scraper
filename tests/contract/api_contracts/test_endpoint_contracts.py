@@ -4,7 +4,7 @@ This module tests API endpoint contracts for request/response validation,
 backward compatibility, and breaking change detection.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 import pytest
 from fastapi.testclient import TestClient
@@ -52,7 +52,7 @@ class TestAPIEndpointContracts:
                         "query_time_ms": 50.0,
                         "search_strategy": "hybrid",
                         "cache_hit": False,
-                        "timestamp": datetime.now(tz=timezone.utc).timestamp(),
+                        "timestamp": datetime.now(tz=UTC).timestamp(),
                     }
                 )
 
@@ -85,7 +85,7 @@ class TestAPIEndpointContracts:
                         "chunks_created": 5,
                         "processing_time_ms": 1500.0,
                         "status": "processed",
-                        "timestamp": datetime.now(tz=timezone.utc).timestamp(),
+                        "timestamp": datetime.now(tz=UTC).timestamp(),
                     },
                 )
 
@@ -93,7 +93,7 @@ class TestAPIEndpointContracts:
                 status_code=405, content={"error": "Method not allowed"}
             )
 
-        async def health_endpoint(request):
+        async def health_endpoint(_request):
             """Mock health endpoint."""
             return JSONResponse(
                 {
@@ -102,7 +102,7 @@ class TestAPIEndpointContracts:
                     "services": {"qdrant": "healthy", "redis": "healthy"},
                     "uptime_seconds": 3600.0,
                     "version": "1.0.0",
-                    "timestamp": datetime.now(tz=timezone.utc).timestamp(),
+                    "timestamp": datetime.now(tz=UTC).timestamp(),
                 }
             )
 

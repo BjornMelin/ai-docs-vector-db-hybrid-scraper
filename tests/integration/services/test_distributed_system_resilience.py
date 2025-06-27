@@ -267,10 +267,10 @@ class TestNetworkPartitionTolerance:
 
         setup["cache_service"] = AsyncMock()
         setup["cache_service"].get.side_effect = (
-            lambda k: simulate_high_latency_response("get")
+            lambda _k: simulate_high_latency_response("get")
         )
         setup["cache_service"].set.side_effect = (
-            lambda k, v: simulate_high_latency_response("set")
+            lambda _k, _v: simulate_high_latency_response("set")
         )
 
         # Test operations under high latency
@@ -863,7 +863,7 @@ class TestDistributedConfigurationManagement:
         assert embedding_service_config["security.ssl_enabled"] is True
 
     @pytest.mark.asyncio
-    async def test_configuration_change_propagation(self, distributed_config_setup):
+    async def test_configuration_change_propagation(self, _distributed_config_setup):
         """Test configuration change propagation across services."""
 
         # Mock configuration change events
@@ -949,7 +949,9 @@ class TestDistributedConfigurationManagement:
         assert service_specific_notifications[0]["service"] == "vector_db"
 
     @pytest.mark.asyncio
-    async def test_configuration_consistency_validation(self, distributed_config_setup):
+    async def test_configuration_consistency_validation(
+        self, _distributed_config_setup
+    ):
         """Test configuration consistency validation across services."""
 
         # Mock configuration consistency rules

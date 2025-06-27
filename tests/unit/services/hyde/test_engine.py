@@ -149,7 +149,7 @@ class TestHyDEQueryEngine:
         assert engine.treatment_group_searches == 0
 
     async def test_initialize_success(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, _mock_embedding_manager, mock_qdrant_service
     ):
         """Test successful engine initialization."""
         # Mock successful initialization of components
@@ -744,7 +744,7 @@ class TestHyDEQueryEngine:
         engine._initialized = True
 
         # Mock enhanced_search
-        async def mock_enhanced_search(query, **kwargs):
+        async def mock_enhanced_search(query, **_kwargs):
             return [{"id": f"doc_{query}", "score": 0.8}]
 
         engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
@@ -764,7 +764,7 @@ class TestHyDEQueryEngine:
         engine._initialized = True
 
         # Mock enhanced_search with some errors
-        async def mock_enhanced_search(query, **kwargs):
+        async def mock_enhanced_search(query, **_kwargs):
             if "error" in query:
                 raise Exception("Search error")
             return [{"id": f"doc_{query}", "score": 0.8}]

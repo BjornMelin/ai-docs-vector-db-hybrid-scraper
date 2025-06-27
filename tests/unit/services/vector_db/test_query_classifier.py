@@ -380,7 +380,7 @@ class TestQueryClassifier:
         """Test error handling during classification."""
         # Mock an error in feature extraction
         original_extract = classifier._extract_features
-        classifier._extract_features = lambda x: None.__getattribute__("nonexistent")
+        classifier._extract_features = lambda _x: None.__getattribute__("nonexistent")
 
         try:
             result = await classifier.classify_query("test query")

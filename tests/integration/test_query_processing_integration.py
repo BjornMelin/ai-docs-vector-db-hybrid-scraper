@@ -22,7 +22,7 @@ def mock_embedding_manager():
     """Create a mock embedding manager."""
     manager = AsyncMock()
 
-    def mock_generate_embeddings(texts, **kwargs):
+    def mock_generate_embeddings(texts, **_kwargs):
         """Generate mock embeddings that help with intent classification."""
         # Create different embeddings for different intent types
         embeddings = []
@@ -126,7 +126,7 @@ def mock_hyde_engine():
 
 @pytest.fixture
 async def complete_pipeline(
-    mock_embedding_manager, mock_qdrant_service, mock_hyde_engine
+    _mock_embedding_manager, _mock_qdrant_service, mock_hyde_engine
 ):
     """Create a complete query processing pipeline with all components."""
     # Create orchestrator with correct constructor parameters

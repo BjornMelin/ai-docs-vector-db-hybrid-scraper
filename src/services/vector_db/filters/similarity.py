@@ -314,7 +314,7 @@ class SimilarityThresholdManager(BaseFilter):
     async def _adaptive_threshold(
         self,
         criteria: SimilarityThresholdCriteria,
-        query_info: dict[str, Any],
+        _query_info: dict[str, Any],
         historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate adaptive threshold based on recent performance."""
@@ -375,7 +375,7 @@ class SimilarityThresholdManager(BaseFilter):
     async def _cluster_based_threshold(
         self,
         criteria: SimilarityThresholdCriteria,
-        query_info: dict[str, Any],
+        _query_info: dict[str, Any],
         historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate threshold based on clustering analysis."""

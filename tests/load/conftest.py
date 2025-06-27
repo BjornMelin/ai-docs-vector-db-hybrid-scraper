@@ -673,7 +673,7 @@ def mock_load_test_service():
             """Set base latency for testing performance."""
             self.base_latency = max(0.01, latency_seconds)
 
-        async def process_request(self, data_size_mb: float = 1.0, **kwargs):
+        async def process_request(self, data_size_mb: float = 1.0, **_kwargs):
             """Process a request with simulated work."""
             self.request_count += 1
 
@@ -714,7 +714,7 @@ def mock_load_test_service():
                 "processing_time": latency,
             }
 
-        async def add_document(self, url: str, collection: str = "default", **kwargs):
+        async def add_document(self, url: str, collection: str = "default", **_kwargs):
             """Mock document addition with variable processing time."""
             # Simulate processing time based on URL complexity
             processing_time = self.base_latency * (1 + len(url) / 100)

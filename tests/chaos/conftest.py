@@ -652,7 +652,7 @@ def chaos_experiment_runner():
                     await target_system.simulate_memory_pressure()
 
         async def _stop_failure_injection(
-            self, experiment: ChaosExperiment, target_system: Any
+            self, _experiment: ChaosExperiment, target_system: Any
         ):
             """Stop failure injection."""
             if hasattr(target_system, "stop_failure_simulation"):
@@ -728,7 +728,7 @@ def mock_resilient_service():
             self.failure_count = 0
             self.last_failure_time = 0
 
-        def simulate_network_timeout(self, duration: float):
+        def simulate_network_timeout(self, _duration: float):
             """Simulate network timeout."""
             self.failure_mode = "network_timeout"
             self.last_failure_time = time.time()

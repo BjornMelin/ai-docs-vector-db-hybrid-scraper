@@ -210,7 +210,7 @@ class TestDistributedTracing:
         assert vector_span_found.tags["vector_db.results_count"] == 15
 
     @pytest.mark.asyncio
-    async def test_trace_sampling_and_propagation(self, tracing_infrastructure):
+    async def test_trace_sampling_and_propagation(self, _tracing_infrastructure):
         """Test trace sampling and context propagation."""
 
         class TraceSampler:

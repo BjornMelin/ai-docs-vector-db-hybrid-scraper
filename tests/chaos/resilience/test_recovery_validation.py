@@ -303,7 +303,7 @@ class TestRecoveryValidation:
         assert "service_search_service_unhealthy" in failure_detection["failure_types"]
 
         # Define recovery procedure
-        async def search_service_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def search_service_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for search service."""
             time.time()
 
@@ -400,7 +400,7 @@ class TestRecoveryValidation:
         }
 
         # Define data recovery procedure
-        async def data_corruption_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def data_corruption_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for data corruption."""
 
             # Step 1: Detect corruption
@@ -486,7 +486,7 @@ class TestRecoveryValidation:
         )
 
         # Define cascade recovery procedure
-        async def cascade_failure_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def cascade_failure_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for cascade failures."""
 
             # Step 1: Rapid detection
@@ -611,7 +611,7 @@ class TestRecoveryValidation:
         )
 
         # Define partial recovery procedure
-        async def partial_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def partial_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure that achieves partial recovery."""
 
             # Attempt recovery but some components remain degraded
@@ -659,14 +659,14 @@ class TestRecoveryValidation:
         assert final_state.performance_metrics["throughput"] > 0  # Still functional
 
     async def test_recovery_time_objectives(
-        self, system_monitor, recovery_orchestrator
+        self, _system_monitor, recovery_orchestrator
     ):
         """Test recovery time objectives (RTO) compliance."""
 
         # Define RTO requirements for different failure types
 
         # Mock fast recovery procedure
-        async def fast_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def fast_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Fast recovery procedure for RTO testing."""
             start_time = time.time()
 
@@ -685,7 +685,7 @@ class TestRecoveryValidation:
             }
 
         # Mock slow recovery procedure
-        async def slow_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def slow_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Slow recovery procedure for RTO testing."""
             start_time = time.time()
 
@@ -724,7 +724,7 @@ class TestRecoveryValidation:
         assert slow_metrics.service_availability_score >= 0.8
 
     async def test_recovery_point_objectives(
-        self, system_monitor, recovery_orchestrator
+        self, _system_monitor, recovery_orchestrator
     ):
         """Test recovery point objectives (RPO) compliance."""
 

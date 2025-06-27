@@ -196,7 +196,7 @@ class TestResourceExhaustion:
             large_documents = []
             memory_exhaustion_detected = False
 
-            async def process_large_document(size_mb: float = 10.0, **kwargs):
+            async def process_large_document(size_mb: float = 10.0, **_kwargs):
                 """Simulate processing of large documents."""
                 nonlocal memory_exhaustion_detected
 
@@ -288,7 +288,7 @@ class TestResourceExhaustion:
         try:
             cpu_saturation_detected = False
 
-            async def cpu_intensive_embedding_generation(**kwargs):
+            async def cpu_intensive_embedding_generation(**_kwargs):
                 """Simulate CPU-intensive embedding generation."""
                 nonlocal cpu_saturation_detected
 
@@ -471,7 +471,7 @@ class TestResourceExhaustion:
                         self.active_connections += 1
                         return f"connection_{self.active_connections}"
 
-                async def release_connection(self, connection: str):
+                async def release_connection(self, _connection: str):
                     async with self._lock:
                         self.active_connections = max(0, self.active_connections - 1)
 
@@ -562,7 +562,7 @@ class TestResourceExhaustion:
                 fd_exhaustion_detected = False
                 open_files = []
 
-                async def file_intensive_operation(**kwargs):
+                async def file_intensive_operation(**_kwargs):
                     """Simulate operations that create many file descriptors."""
                     nonlocal fd_exhaustion_detected
 
@@ -667,7 +667,7 @@ class TestResourceExhaustion:
             cascading_failure_detected = False
             memory_hogs = []
 
-            async def multi_resource_operation(**kwargs):
+            async def multi_resource_operation(**_kwargs):
                 """Operation that stresses multiple resources simultaneously."""
                 nonlocal cascading_failure_detected
 

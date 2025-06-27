@@ -192,7 +192,7 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         query: str,
         domain: str | None = None,
-        context: dict[str, object] | None = None,
+        _context: dict[str, object] | None = None,
     ) -> list[str]:
         """Build diverse prompts for the query.
 
@@ -260,7 +260,7 @@ class HypotheticalDocumentGenerator(BaseService):
         return prompt_map.get(query_type, self.prompt_config.general_prompt)
 
     def _generate_prompt_variations(
-        self, base_prompt: str, query: str, domain: str | None
+        self, _base_prompt: str, query: str, domain: str | None
     ) -> list[str]:
         """Generate variations of the base prompt for diversity."""
         variations = []
@@ -349,7 +349,7 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.warning(f"Failed to generate document: {e}")
             return ""
 
-    def _post_process_documents(self, documents: list[str], query: str) -> list[str]:
+    def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:
         """Post-process generated documents."""
 
         if not documents:
@@ -368,7 +368,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
             # Filter duplicates if enabled
             if self.config.filter_duplicates:
-                doc_hash = hashlib.md5(cleaned_doc.encode()).hexdigest()
+                doc_hash = hashlib.sha256(cleaned_doc.encode()).hexdigest()
                 if doc_hash in seen_hashes:
                     continue
                 seen_hashes.add(doc_hash)

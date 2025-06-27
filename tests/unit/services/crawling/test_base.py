@@ -90,15 +90,15 @@ class TestCrawlProvider:
             """Concrete implementation for testing."""
 
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {"success": True, "url": url, "content": "test"}
 
             async def crawl_site(
                 self,
-                url: str,
-                max_pages: int = 50,
-                formats: list[str] | None = None,
+                _url: str,
+                _max_pages: int = 50,
+                _formats: list[str] | None = None,
             ) -> dict[str, Any]:
                 return {"success": True, "pages": [], "total": 0}
 
@@ -137,7 +137,7 @@ class TestCrawlProvider:
                 self,
                 url: str,
                 max_pages: int = 50,
-                formats: list[str] | None = None,
+                _formats: list[str] | None = None,
             ) -> dict[str, Any]:
                 pages = [
                     {"url": f"{url}/page{i}", "content": f"Page {i}"}
@@ -201,7 +201,7 @@ class TestCrawlProvider:
         # Missing scrape_url
         class IncompleteProvider1(CrawlProvider):
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -217,7 +217,7 @@ class TestCrawlProvider:
         # Missing crawl_site
         class IncompleteProvider2(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -233,12 +233,12 @@ class TestCrawlProvider:
         # Missing initialize
         class IncompleteProvider3(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -251,12 +251,12 @@ class TestCrawlProvider:
         # Missing cleanup
         class IncompleteProvider4(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -296,7 +296,7 @@ class TestCrawlProvider:
                 self.operations.append("initialize")
 
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
                     raise RuntimeError("Provider not initialized")
@@ -304,7 +304,7 @@ class TestCrawlProvider:
                 return {"success": True, "url": url}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
                     raise RuntimeError("Provider not initialized")

@@ -83,7 +83,7 @@ def mock_penetration_tester():
     """Mock penetration testing framework."""
     tester = MagicMock()
 
-    async def mock_sql_injection_test(target_url: str) -> dict[str, Any]:
+    async def mock_sql_injection_test(_target_url: str) -> dict[str, Any]:
         """Mock SQL injection testing."""
         return {
             "vulnerable": False,
@@ -92,7 +92,7 @@ def mock_penetration_tester():
             "confidence": 0.95,
         }
 
-    async def mock_xss_test(target_url: str) -> dict[str, Any]:
+    async def mock_xss_test(_target_url: str) -> dict[str, Any]:
         """Mock XSS testing."""
         return {
             "vulnerable": False,
@@ -101,7 +101,7 @@ def mock_penetration_tester():
             "confidence": 0.90,
         }
 
-    async def mock_csrf_test(target_url: str) -> dict[str, Any]:
+    async def mock_csrf_test(_target_url: str) -> dict[str, Any]:
         """Mock CSRF testing."""
         return {
             "vulnerable": False,
@@ -160,7 +160,7 @@ def mock_auth_system():
             "expires_at": time.time() + 3600,
         }
 
-    async def mock_authorize(token: str, required_permission: str) -> bool:
+    async def mock_authorize(token: str, _required_permission: str) -> bool:
         """Mock authorization check."""
         # Simplified token validation for testing
         return not (not token or len(token) < 20)
@@ -188,7 +188,7 @@ def mock_encryption_service():
             "key_id": key or "test_key_001",
         }
 
-    async def mock_decrypt(encrypted_data: str, key: str | None = None) -> str:
+    async def mock_decrypt(encrypted_data: str, _key: str | None = None) -> str:
         """Mock decryption."""
         # Simple hex decode mock decryption for testing
         try:
@@ -480,7 +480,7 @@ def vulnerability_scanner(mock_security_scanner):
         def __init__(self, base_scanner):
             self._scanner = base_scanner
 
-        async def scan_for_sql_injection(self, target_url: str) -> dict[str, Any]:
+        async def scan_for_sql_injection(self, _target_url: str) -> dict[str, Any]:
             """Scan for SQL injection vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -489,7 +489,7 @@ def vulnerability_scanner(mock_security_scanner):
                 "details": "No SQL injection vulnerabilities detected",
             }
 
-        async def scan_for_xss(self, target_url: str) -> dict[str, Any]:
+        async def scan_for_xss(self, _target_url: str) -> dict[str, Any]:
             """Scan for XSS vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -557,7 +557,7 @@ def penetration_tester(mock_penetration_tester):
         def __init__(self, base_tester):
             self._tester = base_tester
 
-        async def test_authentication_bypass(self, target_url: str) -> dict[str, Any]:
+        async def test_authentication_bypass(self, _target_url: str) -> dict[str, Any]:
             """Test for authentication bypass vulnerabilities."""
             return {
                 "vulnerable": False,
@@ -567,7 +567,7 @@ def penetration_tester(mock_penetration_tester):
             }
 
         async def test_authorization_flaws(
-            self, target_url: str, user_role: str = "user"
+            self, _target_url: str, user_role: str = "user"
         ) -> dict[str, Any]:
             """Test for authorization bypass vulnerabilities."""
             return {

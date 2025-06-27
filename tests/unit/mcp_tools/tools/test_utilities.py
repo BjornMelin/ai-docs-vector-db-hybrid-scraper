@@ -53,7 +53,7 @@ def mock_client_manager():
 
 
 @pytest.mark.asyncio
-async def test_utility_tools_registration(mock_client_manager, mock_context):
+async def test_utility_tools_registration(mock_client_manager, _mock_context):
     """Test that utility tools are properly registered."""
     from src.mcp_tools.tools.utilities import register_tools
 

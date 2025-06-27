@@ -12,7 +12,7 @@ import contextlib
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 from enum import Enum
 from typing import Any
 
@@ -225,7 +225,7 @@ class ABTestingManager:
 
         # Use consistent hashing for deterministic assignment
         hash_input = f"{test_id}:{user_id}".encode()
-        hash_value = int(hashlib.md5(hash_input).hexdigest(), 16)
+        hash_value = int(hashlib.sha256(hash_input).hexdigest(), 16)
         percentage = (hash_value % 10000) / 100.0  # 0-99.99%
 
         # Assign to variant based on traffic allocation
@@ -315,7 +315,7 @@ class ABTestingManager:
                 "user_id": user_id,
                 "variant": variant_name,
                 "value": conversion_value,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "metadata": metadata or {},
             }
 
@@ -366,7 +366,7 @@ class ABTestingManager:
                 is_significant=is_significant,
                 uplift_percentage=uplift,
                 period_start=metrics.created_at,
-                period_end=datetime.now(tz=timezone.utc),
+                period_end=datetime.now(tz=UTC),
             )
 
             results.append(result)
@@ -486,9 +486,7 @@ class ABTestingManager:
             test_start = min(
                 metrics.created_at for metrics in self._test_metrics[test_id].values()
             )
-            if datetime.now(tz=timezone.utc) - test_start > timedelta(
-                days=config.duration_days
-            ):
+            if datetime.now(tz=UTC) - test_start > timedelta(days=config.duration_days):
                 await self.stop_test(test_id, "Duration completed")
                 return
 

@@ -4,10 +4,18 @@ Provides decorators and utilities for tracking AI operations, costs, and
 performance metrics that integrate with the existing function-based services.
 """
 
+import asyncio
 import functools
 import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
+
+# Optional OpenTelemetry imports - handled at runtime
+try:
+    from opentelemetry import trace, metrics
+except ImportError:
+    trace = None
+    metrics = None
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +39,8 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
         OpenTelemetry Tracer instance or NoOpTracer if not initialized
     """
     try:
-        from opentelemetry import trace
-
+        if trace is None:
+            raise ImportError("OpenTelemetry trace not available")
         return trace.get_tracer(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp tracer")
@@ -49,8 +57,8 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
         OpenTelemetry Meter instance or NoOpMeter if not initialized
     """
     try:
-        from opentelemetry import metrics
-
+        if metrics is None:
+            raise ImportError("OpenTelemetry metrics not available")
         return metrics.get_meter(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp meter")
@@ -200,8 +208,6 @@ def instrument_function(
                     raise
 
         # Return appropriate wrapper based on function type
-        import asyncio
-
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
     return decorator
@@ -310,7 +316,7 @@ def track_cost(
 class _NoOpTracer:
     """No-op tracer when OpenTelemetry is not available."""
 
-    def start_as_current_span(self, name: str, **kwargs):
+    def start_as_current_span(self, _name: str, **_kwargs):
         return _NoOpSpan()
 
 
@@ -333,10 +339,10 @@ class _NoOpSpan:
 class _NoOpMeter:
     """No-op meter when OpenTelemetry is not available."""
 
-    def create_histogram(self, name: str, **kwargs):
+    def create_histogram(self, _name: str, **_kwargs):
         return _NoOpHistogram()
 
-    def create_counter(self, name: str, **kwargs):
+    def create_counter(self, _name: str, **_kwargs):
         return _NoOpCounter()
 
 

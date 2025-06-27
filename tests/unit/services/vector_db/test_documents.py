@@ -225,7 +225,7 @@ class TestQdrantDocuments:
         call_args = mock_client.delete.call_args
         assert isinstance(call_args.kwargs["points_selector"], models.FilterSelector)
 
-    async def test_delete_points_no_criteria(self, documents_service, mock_client):
+    async def test_delete_points_no_criteria(self, documents_service, _mock_client):
         """Test point deletion with no criteria provided."""
         with pytest.raises(
             ValueError, match="Either point_ids or filter_condition must be provided"

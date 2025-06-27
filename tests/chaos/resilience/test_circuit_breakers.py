@@ -367,7 +367,7 @@ class TestCircuitBreakers:
         fast_fail_stats = circuit_breaker.get_stats()
         assert fast_fail_stats["call_count"] == 7  # Previous + 1 fast-fail
 
-    async def test_multiple_circuit_breakers(self, circuit_breaker_config):
+    async def test_multiple_circuit_breakers(self, _circuit_breaker_config):
         """Test multiple circuit breakers for different services."""
         # Create circuit breakers for different services
         db_circuit = CircuitBreaker(

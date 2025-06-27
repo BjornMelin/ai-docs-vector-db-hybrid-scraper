@@ -329,11 +329,11 @@ class TestConcurrentUsersLoad:
             def __init__(self, service):
                 self.service = service
 
-            async def search_workload(self, **kwargs):
+            async def search_workload(self, **_kwargs):
                 """Simulate search-heavy workload."""
                 return await self.service.search_documents(query="test query", limit=10)
 
-            async def document_workload(self, **kwargs):
+            async def document_workload(self, **_kwargs):
                 """Simulate document processing workload."""
                 return await self.service.add_document(
                     url="https://example.com/doc", collection="test"

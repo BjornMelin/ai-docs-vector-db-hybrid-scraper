@@ -200,7 +200,7 @@ class TestFastAPIIntegration:
         app = FastAPI()
 
         @asynccontextmanager
-        async def lifespan(app: FastAPI):
+        async def lifespan(_app: FastAPI):
             yield
 
         app.router.lifespan_context = lifespan
@@ -208,7 +208,7 @@ class TestFastAPIIntegration:
         @app.get("/health")
         async def health_check(
             config: Config = Depends(get_config),
-            client_manager=Depends(get_client_manager),
+            _client_manager=Depends(get_client_manager),
         ):
             return {"status": "healthy", "config_loaded": config is not None}
 

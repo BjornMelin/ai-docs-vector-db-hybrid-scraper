@@ -12,7 +12,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .tracking import get_tracer
+from .tracking import get_tracer, get_meter
+
+# Optional OpenTelemetry imports
+try:
+    from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    Status = None
+    StatusCode = None
 
 
 logger = logging.getLogger(__name__)
@@ -56,8 +63,6 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
     def _initialize_metrics(self) -> None:
         """Initialize request-level metrics."""
         try:
-            from .tracking import get_meter
-
             self.meter = get_meter(f"{self.service_name}.requests")
 
             self.request_duration = self.meter.create_histogram(
@@ -123,9 +128,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 span.set_attribute("http.status_code", response.status_code)
 
                 # Set span status based on response
-                if 400 <= response.status_code < 600:
-                    from opentelemetry.trace import Status, StatusCode
-
+                if 400 <= response.status_code < 600 and Status and StatusCode:
                     span.set_status(
                         Status(StatusCode.ERROR, f"HTTP {response.status_code}")
                     )
@@ -139,9 +142,8 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 # Record exception
                 span.record_exception(e)
-                from opentelemetry.trace import Status, StatusCode
-
-                span.set_status(Status(StatusCode.ERROR, str(e)))
+                if Status and StatusCode:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
 
                 # Record error metrics
                 if self.meter:

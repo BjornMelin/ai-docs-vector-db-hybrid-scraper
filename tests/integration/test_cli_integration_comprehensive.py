@@ -165,7 +165,7 @@ class TestCLIInteractiveFlows:
                         mock_select.assert_called()
                         mock_text.assert_called()
 
-    def test_keyboard_interrupt_handling(self, tmp_path):
+    def test_keyboard_interrupt_handling(self, _tmp_path):
         """Test keyboard interrupt handling during interactive flows."""
         runner = CliRunner()
 
@@ -236,7 +236,7 @@ class TestCLIRichIntegration:
                     assert result.exit_code == 0
                     # Rich console should be used for output
 
-    def test_rich_error_formatting(self, tmp_path):
+    def test_rich_error_formatting(self, _tmp_path):
         """Test Rich error message formatting."""
         runner = CliRunner()
 
@@ -363,7 +363,7 @@ class TestCLIConfigurationIntegration:
 class TestCLIAccessibilityAndUsability:
     """Tests for CLI accessibility and usability features."""
 
-    def test_cli_help_accessibility(self, tmp_path):
+    def test_cli_help_accessibility(self, _tmp_path):
         """Test CLI help accessibility and clarity."""
         runner = CliRunner()
 
@@ -383,7 +383,7 @@ class TestCLIAccessibilityAndUsability:
         lines = help_content.split("\n")
         assert len(lines) < 100  # Reasonable length
 
-    def test_error_message_helpfulness(self, tmp_path):
+    def test_error_message_helpfulness(self, _tmp_path):
         """Test that error messages are helpful and actionable."""
         runner = CliRunner()
 
@@ -407,7 +407,7 @@ class TestCLIAccessibilityAndUsability:
             # Should not show raw Python tracebacks to users
             assert "Traceback" not in result.output
 
-    def test_cli_progressive_disclosure(self, tmp_path):
+    def test_cli_progressive_disclosure(self, _tmp_path):
         """Test progressive disclosure of CLI features."""
         runner = CliRunner()
 
@@ -425,7 +425,7 @@ class TestCLIAccessibilityAndUsability:
         assert detailed_help_length > basic_help_length
         assert detailed_help_length < basic_help_length * 3  # Not too overwhelming
 
-    def test_cli_consistent_patterns(self, tmp_path):
+    def test_cli_consistent_patterns(self, _tmp_path):
         """Test that CLI follows consistent patterns across commands."""
         runner = CliRunner()
 
@@ -504,7 +504,7 @@ class TestCLIPerformanceIntegration:
             assert result.exit_code == 0
             # Should handle large configs without issues
 
-    def test_concurrent_cli_operations(self, tmp_path):
+    def test_concurrent_cli_operations(self, _tmp_path):
         """Test concurrent CLI operations don't interfere."""
         import queue
         import threading

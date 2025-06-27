@@ -450,7 +450,7 @@ class ChaosTestRunner:
             "criteria_success_rate": success_rate,
         }
 
-    async def _perform_cleanup(self, suite_name: str):
+    async def _perform_cleanup(self, _suite_name: str):
         """Perform cleanup after suite execution."""
         # Mock cleanup operations
         await asyncio.sleep(0.1)
@@ -646,7 +646,7 @@ class TestChaosRunner:
                 self.failure_type = failure_type
                 self.target_service = target_service
 
-            async def stop_failure_injection(self, target_service: str):
+            async def stop_failure_injection(self, _target_service: str):
                 self.failure_injected = False
                 self.failure_type = None
                 self.target_service = None
@@ -766,7 +766,7 @@ class TestChaosRunner:
         assert execution.status == ExperimentStatus.FAILED
         assert "Safety check failed" in execution.error
 
-    async def test_experiment_retry_mechanism(self, chaos_runner, mock_target_system):
+    async def test_experiment_retry_mechanism(self, chaos_runner, _mock_target_system):
         """Test experiment retry mechanism."""
 
         # Create experiment that will fail initially
@@ -775,7 +775,7 @@ class TestChaosRunner:
                 self.call_count = 0
 
             async def inject_failure(
-                self, failure_type: FailureType, target_service: str
+                self, _failure_type: FailureType, _target_service: str
             ):
                 self.call_count += 1
                 if self.call_count <= 2:  # Fail first 2 attempts

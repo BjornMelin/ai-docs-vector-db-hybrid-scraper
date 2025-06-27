@@ -34,7 +34,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "performance: mark test as performance test")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(_config, items):
     """Modify test collection for CLI tests."""
     for item in items:
         # Auto-mark CLI tests

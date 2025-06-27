@@ -207,7 +207,7 @@ class TestBreakingPoints:
                 self.base_latency = 0.1
                 self.error_threshold = 300  # Start failing after 300 users
 
-            async def process_request(self, current_users: int = 0, **kwargs):
+            async def process_request(self, current_users: int = 0, **_kwargs):
                 # Increase latency based on load
                 load_factor = max(1.0, current_users / 100)
                 latency = self.base_latency * load_factor
@@ -361,7 +361,7 @@ class TestBreakingPoints:
                 self.spike_penalty = 2.0
                 self.users_history = []
 
-            async def process_request(self, current_users: int = 0, **kwargs):
+            async def process_request(self, current_users: int = 0, **_kwargs):
                 self.users_history.append(current_users)
 
                 # Detect spike (rapid increase in users)
@@ -533,7 +533,7 @@ class TestBreakingPoints:
                 self.recovery_factor = 1.0
                 self.base_latency = 0.1
 
-            async def process_request(self, phase: str = "normal", **kwargs):
+            async def process_request(self, phase: str = "normal", **_kwargs):
                 current_time = time.time()
 
                 if phase == "overload":

@@ -539,7 +539,7 @@ class QueryExpansionService:
 
         return query
 
-    def _extract_key_terms(self, query: str, context: dict[str, Any]) -> list[str]:
+    def _extract_key_terms(self, query: str, _context: dict[str, Any]) -> list[str]:
         """Extract key terms from the query for expansion."""
         # Simple term extraction - in production would use NLP
         words = query.split()
@@ -637,7 +637,7 @@ class QueryExpansionService:
         self,
         original_query: str,
         expanded_terms: list[ExpandedTerm],
-        request: QueryExpansionRequest,
+        _request: QueryExpansionRequest,
     ) -> str:
         """Build the final expanded query."""
         if not expanded_terms:
@@ -667,7 +667,7 @@ class QueryExpansionService:
         return expanded_query
 
     def _calculate_expansion_confidence(
-        self, expanded_terms: list[ExpandedTerm], request: QueryExpansionRequest
+        self, expanded_terms: list[ExpandedTerm], _request: QueryExpansionRequest
     ) -> float:
         """Calculate overall expansion confidence."""
         if not expanded_terms:
@@ -757,7 +757,7 @@ class QueryExpansionService:
         return list(set(synonyms))  # Remove duplicates
 
     def _get_semantically_related_terms(
-        self, term: str, context: dict[str, Any]
+        self, term: str, _context: dict[str, Any]
     ) -> list[tuple[str, float]]:
         """Get semantically related terms using embeddings."""
         # Simplified implementation - in production would use actual embeddings
@@ -776,7 +776,7 @@ class QueryExpansionService:
         return related_terms
 
     def _get_context_specific_terms(
-        self, term: str, domain_hints: list[str], user_intent: str
+        self, term: str, domain_hints: list[str], _user_intent: str
     ) -> list[str]:
         """Get context-specific term expansions."""
         context_terms = []
@@ -811,7 +811,7 @@ class QueryExpansionService:
         return domain_terms
 
     def _get_learned_expansions(
-        self, term: str, context: dict[str, Any]
+        self, term: str, _context: dict[str, Any]
     ) -> list[tuple[str, float]]:
         """Get expansions based on learned patterns."""
         # Simplified implementation - would use actual ML model
@@ -824,7 +824,7 @@ class QueryExpansionService:
 
         return learned_terms
 
-    def _calculate_synonym_confidence(self, original: str, synonym: str) -> float:
+    def _calculate_synonym_confidence(self, _original: str, _synonym: str) -> float:
         """Calculate confidence for synonym relationships."""
         # Simple confidence calculation - in production would be more sophisticated
         base_confidence = 0.7
@@ -849,7 +849,7 @@ class QueryExpansionService:
         return relevance
 
     def _calculate_context_confidence(
-        self, original: str, context_term: str, context: dict[str, Any]
+        self, _original: str, context_term: str, context: dict[str, Any]
     ) -> float:
         """Calculate confidence for context-based expansion."""
         base_confidence = 0.6

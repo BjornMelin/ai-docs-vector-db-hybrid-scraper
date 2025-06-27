@@ -471,12 +471,12 @@ def sample_document_data() -> dict[str, Any]:
 # Example functions being tested (would normally be imported)
 
 
-async def some_async_service_function(data: dict[str, Any]) -> dict[str, Any]:
+async def some_async_service_function(_data: dict[str, Any]) -> dict[str, Any]:
     """Example async function for testing."""
     return quick_success_response({"processed": True})
 
 
-async def search_function(**kwargs) -> dict[str, Any]:
+async def search_function(**_kwargs) -> dict[str, Any]:
     """Example search function for testing."""
     return {"results": [], "total": 0}
 
@@ -486,7 +486,7 @@ def process_document_sync(document: dict[str, Any]) -> list[dict[str, Any]]:
     return [ChunkFactory.create_chunk(content=document["content"])]
 
 
-async def batch_process_vectors(vectors: list[list[float]]) -> dict[str, Any]:
+async def batch_process_vectors(_vectors: list[list[float]]) -> dict[str, Any]:
     """Example batch vector processing function."""
     return quick_success_response()
 
@@ -496,18 +496,20 @@ async def failing_service_operation() -> None:
     raise ServiceError("Operation failed", error_code="CONNECTION_ERROR")
 
 
-async def api_service_call(data: dict[str, Any]) -> dict[str, Any]:
+async def api_service_call(_data: dict[str, Any]) -> dict[str, Any]:
     """Example API service call function."""
     return quick_success_response()
 
 
-async def save_document_to_db(document: dict[str, Any], session: Any) -> dict[str, Any]:
+async def save_document_to_db(
+    document: dict[str, Any], _session: Any
+) -> dict[str, Any]:
     """Example database save function."""
     document["id"] = "saved-123"
     return document
 
 
-async def get_document_from_db(doc_id: str, session: Any) -> dict[str, Any]:
+async def get_document_from_db(doc_id: str, _session: Any) -> dict[str, Any]:
     """Example database retrieval function."""
     return {"id": doc_id, "title": "Retrieved Document"}
 
@@ -526,7 +528,7 @@ async def validate_user_input(user_input: str) -> dict[str, Any]:
     return quick_success_response()
 
 
-def scan_for_accessibility_issues(url: str) -> dict[str, Any]:
+def scan_for_accessibility_issues(_url: str) -> dict[str, Any]:
     """Example accessibility scanning function."""
     return {"violations": [], "passes": ["All checks passed"]}
 

@@ -403,7 +403,7 @@ class SiteAdapter:
     def _generate_pattern_recommendations(
         self,
         patterns: list[str],
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on detected patterns.
 
@@ -510,7 +510,7 @@ class SiteAdapter:
     def _generate_issue_recommendations(
         self,
         quality_issues: list[str],
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on quality issues.
 

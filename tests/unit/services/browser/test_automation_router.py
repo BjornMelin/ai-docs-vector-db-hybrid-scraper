@@ -76,7 +76,7 @@ class TestAutomationRouterInit:
     @patch("builtins.open", new_callable=mock_open)
     @patch("pathlib.Path.exists", return_value=True)
     def test_load_routing_rules_from_file(
-        self, mock_exists, mock_file, sample_routing_rules
+        self, _mock_exists, mock_file, sample_routing_rules
     ):
         """Test loading routing rules from file."""
         mock_file.return_value.read.return_value = json.dumps(sample_routing_rules)
@@ -87,7 +87,7 @@ class TestAutomationRouterInit:
             assert router.routing_rules == sample_routing_rules["routing_rules"]
 
     @patch("pathlib.Path.exists", return_value=False)
-    def test_load_routing_rules_file_not_found(self, mock_exists):
+    def test_load_routing_rules_file_not_found(self, _mock_exists):
         """Test routing rules fallback when file not found."""
         router = AutomationRouter(MagicMock())
 
@@ -98,7 +98,7 @@ class TestAutomationRouterInit:
 
     @patch("builtins.open", side_effect=Exception("File read error"))
     @patch("pathlib.Path.exists", return_value=True)
-    def test_load_routing_rules_file_error(self, mock_exists, mock_file):
+    def test_load_routing_rules_file_error(self, _mock_exists, _mock_file):
         """Test routing rules fallback on file error."""
         router = AutomationRouter(MagicMock())
 

@@ -6,9 +6,18 @@ and cost tracking that integrates seamlessly with the existing configuration.
 
 import logging
 from functools import lru_cache
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from src.config import ConfigModel
+
+# Try to import config function - may not be available in all contexts
+try:
+    from src.config import get_config
+except ImportError:
+    get_config = None
 
 
 logger = logging.getLogger(__name__)
@@ -104,7 +113,8 @@ def get_observability_config() -> ObservabilityConfig:
     """
     try:
         # Try to get from main config if available
-        from src.config import get_config
+        if get_config is None:
+            raise ImportError("Config system not available")
 
         main_config = get_config()
 

@@ -93,7 +93,7 @@ class MockFilter(BaseFilter):
         self.should_fail = False
 
     async def apply(
-        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
+        self, _filter_criteria: dict[str, Any], _context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply mock filter."""
         self.apply_called = True
@@ -396,7 +396,7 @@ class TestFilterRegistry:
         """Test error handling in filter creation."""
 
         class ErrorFilter(BaseFilter):
-            def __init__(self, name: str):
+            def __init__(self, _name: str):
                 # Simulate error in initialization
                 raise ValueError("Initialization error")
 

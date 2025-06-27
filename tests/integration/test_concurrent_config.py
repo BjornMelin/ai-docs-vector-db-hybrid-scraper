@@ -128,7 +128,7 @@ class TestConcurrentConfigurationAccess:
         def create_listener(name: str, delay: float = 0.0):
             """Create a test listener with configurable delay."""
 
-            def listener(old_config: Config, new_config: Config) -> bool:
+            def listener(_old_config: Config, _new_config: Config) -> bool:
                 with listener_lock:
                     listener_calls.append(
                         {
@@ -187,7 +187,7 @@ class TestConcurrentConfigurationAccess:
             assert duration >= listener_delays[listener_name]
 
     @pytest.mark.asyncio
-    async def test_concurrent_drift_detection(self, temp_config_dir):
+    async def test_concurrent_drift_detection(self, _temp_config_dir):
         """Test concurrent drift detection operations."""
         # Create drift detector
         config = DriftDetectionConfig(
@@ -424,7 +424,7 @@ class TestConcurrentConfigurationAccess:
             reload_events = []
             event_lock = asyncio.Lock()
 
-            async def track_reload(old_config, new_config):
+            async def track_reload(_old_config, _new_config):
                 async with event_lock:
                     reload_events.append(
                         {

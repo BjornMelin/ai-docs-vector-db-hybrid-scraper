@@ -10,7 +10,7 @@ import json
 import random
 import statistics
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from typing import Any
 
 import pytest
@@ -269,7 +269,7 @@ def data_quality_validator():
                 record_hashes = []
                 for record in data:
                     record_str = json.dumps(record, sort_keys=True)
-                    record_hash = hashlib.md5(record_str.encode()).hexdigest()
+                    record_hash = hashlib.sha256(record_str.encode()).hexdigest()
                     record_hashes.append(record_hash)
 
                 unique_hashes = set(record_hashes)
@@ -453,7 +453,7 @@ def data_quality_validator():
                 "dataset_name": dataset_name,
                 "total_records": total_records,
                 "total_fields": len(all_fields),
-                "profiling_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "profiling_timestamp": datetime.now(tz=UTC).isoformat(),
                 "field_profiles": field_profiles,
                 "schema_consistency": {
                     "all_records_same_fields": all(
@@ -666,9 +666,9 @@ def mock_data_generator():
                     "title": f"Document {i}",
                     "content": f"This is the content of document {i}. "
                     * random.randint(5, 20),
-                    "created_at": datetime.now(tz=timezone.utc)
+                    "created_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 365)),
-                    "updated_at": datetime.now(tz=timezone.utc)
+                    "updated_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 30)),
                     "collection": random.choice(
                         ["tech", "science", "business", "general"]
@@ -723,9 +723,9 @@ def mock_data_generator():
                     "email": f"user{i}@example.com",
                     "name": f"User {i}",
                     "role": random.choice(["admin", "user", "viewer"]),
-                    "created_at": datetime.now(tz=timezone.utc)
+                    "created_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(30, 730)),
-                    "last_login": datetime.now(tz=timezone.utc)
+                    "last_login": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 30)),
                     "active": random.choice([True, False]),
                     "preferences": {

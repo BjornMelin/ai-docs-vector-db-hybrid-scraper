@@ -36,6 +36,7 @@ from src.config.reload import (
     ReloadTrigger,
 )
 from src.config.security import SecureConfigManager
+from datetime import UTC
 
 
 class TestConfigReloadPerformance:
@@ -80,12 +81,12 @@ class TestConfigReloadPerformance:
         fast_listener.__name__ = "fast_service"
 
         # Medium listener (simulates typical service)
-        async def medium_service(old_config, new_config):
+        async def medium_service(_old_config, _new_config):
             await asyncio.sleep(0.01)  # 10ms
             return True
 
         # Slow listener (simulates complex service)
-        async def slow_service(old_config, new_config):
+        async def slow_service(_old_config, _new_config):
             await asyncio.sleep(0.05)  # 50ms
             return True
 
@@ -412,7 +413,7 @@ class TestDriftDetectionPerformance:
         # Create test drift event
         drift_event = DriftEvent(
             id="test_event_1",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.SECURITY_DEGRADATION,
             severity=DriftSeverity.CRITICAL,
             source="test.env",
@@ -639,7 +640,7 @@ class TestWatchdogOptimization:
             )
 
 
-def test_performance_summary(capsys):
+def test_performance_summary(_capsys):
     """Summary of all performance achievements."""
     print("\n" + "=" * 60)
     print("🚀 CONFIGURATION PERFORMANCE VALIDATION SUMMARY")

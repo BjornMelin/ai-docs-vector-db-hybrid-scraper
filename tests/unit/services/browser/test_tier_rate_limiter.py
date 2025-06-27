@@ -318,7 +318,7 @@ class TestTierRateLimiter:
         """Test rate limiter handles concurrent requests safely."""
         tier = "crawl4ai"  # 30 requests per minute, 3 concurrent
 
-        async def make_request(i):
+        async def make_request(_i):
             allowed = await rate_limiter.acquire(tier, timeout=1.0)
             if allowed:
                 await asyncio.sleep(0.1)  # Simulate work

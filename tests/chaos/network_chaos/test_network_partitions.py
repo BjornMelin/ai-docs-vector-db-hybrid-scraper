@@ -97,7 +97,7 @@ class NetworkPartitionSimulator:
         return to_node in self.communication_matrix.get(from_node, set())
 
     async def send_message(
-        self, from_node: str, to_node: str, message: dict[str, Any]
+        self, from_node: str, to_node: str, _message: dict[str, Any]
     ) -> bool:
         """Send message between nodes if they can communicate."""
         if await self.can_communicate(from_node, to_node):
@@ -181,7 +181,7 @@ class TestNetworkPartitions:
 
         return simulator
 
-    async def test_simple_network_partition(self, network_simulator, fault_injector):
+    async def test_simple_network_partition(self, network_simulator, _fault_injector):
         """Test basic network partition scenario."""
         # Verify initial connectivity
         assert await network_simulator.can_communicate("node_1", "node_3")
@@ -453,7 +453,9 @@ class TestNetworkPartitions:
         assert not minority_write["write_successful"]
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
-    async def test_network_partition_detection(self, network_simulator, fault_injector):
+    async def test_network_partition_detection(
+        self, network_simulator, _fault_injector
+    ):
         """Test network partition detection mechanisms."""
 
         class PartitionDetector:

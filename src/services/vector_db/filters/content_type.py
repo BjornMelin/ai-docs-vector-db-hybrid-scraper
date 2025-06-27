@@ -593,7 +593,7 @@ class ContentTypeFilter(BaseFilter):
         return conditions
 
     def _build_semantic_filters(
-        self, criteria: ContentTypeCriteria, context: dict[str, Any] | None = None
+        self, criteria: ContentTypeCriteria, _context: dict[str, Any] | None = None
     ) -> list[models.FieldCondition]:
         """Build semantic similarity filters."""
         conditions = []
@@ -770,7 +770,7 @@ class ContentTypeFilter(BaseFilter):
         return DocumentType.UNKNOWN
 
     def _classify_category(
-        self, content_lower: str, metadata: dict[str, Any] | None = None
+        self, content_lower: str, _metadata: dict[str, Any] | None = None
     ) -> ContentCategory:
         """Classify content category."""
         # Check for programming/development indicators

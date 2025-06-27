@@ -5,7 +5,17 @@ service architecture while following OpenTelemetry best practices.
 """
 
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import ObservabilityConfig
+
+# Optional imports for OpenTelemetry - handled at runtime
+try:
+    from .config import get_observability_config, get_resource_attributes
+except ImportError:
+    get_observability_config = None
+    get_resource_attributes = None
 
 
 logger = logging.getLogger(__name__)
@@ -30,8 +40,9 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     global _tracer_provider, _meter_provider
 
     if config is None:
-        from .config import get_observability_config
-
+        if get_observability_config is None:
+            logger.error("Config system not available")
+            return False
         config = get_observability_config()
 
     if not config.enabled:
@@ -39,25 +50,26 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         return False
 
     try:
-        # Import OpenTelemetry components
-        from opentelemetry import metrics, trace
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        # Import OpenTelemetry components - must be inside try/except for optional dependency
+        from opentelemetry import metrics, trace  # noqa: PLC0415
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (  # noqa: PLC0415
             OTLPMetricExporter,
         )
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415
             OTLPSpanExporter,
         )
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        from .config import get_resource_attributes
+        from opentelemetry.sdk.metrics import MeterProvider  # noqa: PLC0415
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader  # noqa: PLC0415
+        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415
+        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415
 
         logger.info("Initializing OpenTelemetry observability...")
 
         # Create resource with service metadata
+        if get_resource_attributes is None:
+            logger.error("Resource attributes function not available")
+            return False
         resource = Resource.create(get_resource_attributes(config))
 
         # Initialize tracing
@@ -83,7 +95,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
         # Add console exporter for development
         if config.console_exporter:
-            from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+            from opentelemetry.sdk.trace.export import ConsoleSpanExporter  # noqa: PLC0415
 
             console_processor = BatchSpanProcessor(ConsoleSpanExporter())
             _tracer_provider.add_span_processor(console_processor)
@@ -139,7 +151,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # FastAPI instrumentation
         if config.instrument_fastapi:
             try:
-                from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+                from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # noqa: PLC0415
 
                 FastAPIInstrumentor().instrument()
                 logger.info("FastAPI auto-instrumentation enabled")
@@ -149,7 +161,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # HTTP client instrumentation
         if config.instrument_httpx:
             try:
-                from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+                from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor  # noqa: PLC0415
 
                 HTTPXClientInstrumentor().instrument()
                 logger.info("HTTPX client auto-instrumentation enabled")
@@ -159,7 +171,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # Redis instrumentation
         if config.instrument_redis:
             try:
-                from opentelemetry.instrumentation.redis import RedisInstrumentor
+                from opentelemetry.instrumentation.redis import RedisInstrumentor  # noqa: PLC0415
 
                 RedisInstrumentor().instrument()
                 logger.info("Redis auto-instrumentation enabled")
@@ -169,7 +181,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         # SQLAlchemy instrumentation
         if config.instrument_sqlalchemy:
             try:
-                from opentelemetry.instrumentation.sqlalchemy import (
+                from opentelemetry.instrumentation.sqlalchemy import (  # noqa: PLC0415
                     SQLAlchemyInstrumentor,
                 )
 

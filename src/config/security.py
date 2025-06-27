@@ -45,7 +45,7 @@ class ConfigDataClassification(str, Enum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
-    SECRET = "secret"
+    SECRET = "secret"  # noqa: S105  # This is an enum, not a hardcoded password
 
 
 class ConfigAccessLevel(str, Enum):
@@ -586,7 +586,7 @@ class SecureConfigManager:
         config_path: str,
         user_id: str | None = None,
         client_ip: str | None = None,
-        required_access_level: ConfigAccessLevel = ConfigAccessLevel.READ_ONLY,
+        _required_access_level: ConfigAccessLevel = ConfigAccessLevel.READ_ONLY,
     ) -> dict[str, Any] | None:
         """Decrypt and retrieve configuration data.
 

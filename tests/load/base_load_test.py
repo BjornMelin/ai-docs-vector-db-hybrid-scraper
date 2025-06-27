@@ -276,14 +276,14 @@ metrics_collector = PerformanceMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(environment: Environment, **kwargs):
+def on_test_start(_environment: Environment, **_kwargs):
     """Handle test start event."""
     logger.info("Load test started")
     metrics_collector.start_collection()
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):
+def on_test_stop(_environment: Environment, **_kwargs):
     """Handle test stop event."""
     logger.info("Load test stopped")
     metrics_collector.stop_collection()
@@ -295,16 +295,16 @@ def on_test_stop(environment: Environment, **kwargs):
 
 @events.request.add_listener
 def on_request(
-    request_type: str,
-    name: str,
+    _request_type: str,
+    _name: str,
     response_time: float,
-    response_length: int,
+    _response_length: int,
     response: Any,
-    context: dict[str, Any],
+    _context: dict[str, Any],
     exception: Exception | None,
-    start_time: float,
-    url: str,
-    **kwargs,
+    _start_time: float,
+    _url: str,
+    **_kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_response_time(response_time)
@@ -315,7 +315,7 @@ def on_request(
 
 
 @events.report_to_master.add_listener
-def on_report_to_master(client_id: str, data: dict[str, Any]):
+def on_report_to_master(_client_id: str, data: dict[str, Any]):
     """Handle reporting to master in distributed mode."""
     # Add custom metrics to report
     data["custom_metrics"] = {

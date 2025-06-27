@@ -8,7 +8,7 @@ type hints, and builder patterns.
 import random
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Any
 from uuid import uuid4
 
@@ -46,7 +46,7 @@ class DocumentFactory:
             "content": content,
             "metadata": metadata
             or {"language": "en", "content_type": "documentation", "source": "test"},
-            "timestamp": timestamp or datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": timestamp or datetime.now(tz=UTC).isoformat(),
             "processed": True,
             "error": None,
         }
@@ -196,7 +196,7 @@ class ResponseFactory:
             "data": data,
             "message": message,
             "metadata": metadata or {},
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "request_id": str(uuid4()),
         }
 
@@ -226,7 +226,7 @@ class ResponseFactory:
                 "details": details or {},
                 "status_code": status_code,
             },
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "request_id": str(uuid4()),
         }
 

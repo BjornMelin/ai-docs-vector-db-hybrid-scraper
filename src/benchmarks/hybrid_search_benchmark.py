@@ -7,7 +7,7 @@ performance testing of the hybrid search implementation.
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 

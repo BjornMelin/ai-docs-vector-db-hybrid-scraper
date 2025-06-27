@@ -47,7 +47,7 @@ class TestHNSWOptimizer:
         assert optimizer.adaptive_ef_cache == {}
         assert optimizer._initialized is False
 
-    async def test_initialize_success(self, optimizer, mock_qdrant_service):
+    async def test_initialize_success(self, optimizer, _mock_qdrant_service):
         """Test successful optimizer initialization."""
         await optimizer.initialize()
 
@@ -140,7 +140,7 @@ class TestHNSWOptimizer:
         optimizer._initialized = True
 
         # Mock slow query that exceeds budget
-        async def slow_query(*args, **kwargs):
+        async def slow_query(*_args, **_kwargs):
             await asyncio.sleep(0.1)  # Simulate 100ms query
             mock_result = MagicMock()
             mock_result.points = [{"id": "doc1", "score": 0.9}]
@@ -385,7 +385,7 @@ class TestHNSWOptimizer:
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 16
 
         # Simulate missing attributes by making getattr return None for missing ones
-        def mock_getattr(obj, attr, default=None):
+        def mock_getattr(_obj, attr, default=None):
             if attr == "m":
                 return 16
             else:
@@ -514,7 +514,7 @@ class TestHNSWOptimizer:
         # Mock some successful and some failing queries
         call_count = 0
 
-        async def mock_query(*args, **kwargs):
+        async def mock_query(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:  # First 2 calls succeed
@@ -597,7 +597,7 @@ class TestHNSWOptimizer:
         # Mock query results with different timing patterns
         call_count = 0
 
-        async def mock_query_with_timing(*args, **kwargs):
+        async def mock_query_with_timing(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
 

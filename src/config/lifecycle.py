@@ -5,10 +5,9 @@ application lifecycle events, ensuring proper initialization, cleanup,
 and service registration for zero-downtime configuration reloading.
 """
 
-import asyncio
 import logging
 from collections.abc import Callable
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import FastAPI
 
@@ -17,7 +16,7 @@ from ..services.observability.init import (
     shutdown_observability,
 )
 from .core import Config, get_config, set_config
-from .reload import ConfigReloader, get_config_reloader, set_config_reloader
+from .reload import ConfigReloader, set_config_reloader
 
 
 logger = logging.getLogger(__name__)

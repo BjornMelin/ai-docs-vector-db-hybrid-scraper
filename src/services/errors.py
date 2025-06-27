@@ -26,7 +26,7 @@ import functools
 import logging
 import time
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
 
@@ -341,7 +341,7 @@ class CircuitBreakerMetrics:
         self.circuit_closes = 0
         self.state_transitions = []
         self.response_times = []
-        self.last_reset = datetime.now(tz=timezone.utc)
+        self.last_reset = datetime.now(tz=UTC)
 
     def record_call(self, success: bool, response_time: float | None = None):
         """Record a service call."""
@@ -358,7 +358,7 @@ class CircuitBreakerMetrics:
         """Record a circuit state transition."""
         self.state_transitions.append(
             {
-                "timestamp": datetime.now(tz=timezone.utc),
+                "timestamp": datetime.now(tz=UTC),
                 "from_state": old_state.value,
                 "to_state": new_state.value,
             }
@@ -432,7 +432,7 @@ class AdvancedCircuitBreaker:
         if not self.last_failure_time:
             return True
 
-        time_since_failure = datetime.now(tz=timezone.utc) - self.last_failure_time
+        time_since_failure = datetime.now(tz=UTC) - self.last_failure_time
         return time_since_failure.total_seconds() >= self.adaptive_timeout
 
     def _update_adaptive_timeout(self, success: bool):
@@ -479,9 +479,7 @@ class AdvancedCircuitBreaker:
             else:
                 wait_time = (
                     self.adaptive_timeout
-                    - (
-                        datetime.now(tz=timezone.utc) - self.last_failure_time
-                    ).total_seconds()
+                    - (datetime.now(tz=UTC) - self.last_failure_time).total_seconds()
                     if self.last_failure_time
                     else self.adaptive_timeout
                 )
@@ -530,7 +528,7 @@ class AdvancedCircuitBreaker:
 
     def _record_success(self, response_time: float):
         """Record a successful call."""
-        self.last_success_time = datetime.now(tz=timezone.utc)
+        self.last_success_time = datetime.now(tz=UTC)
         self._update_adaptive_timeout(success=True)
 
         if self.metrics:
@@ -553,7 +551,7 @@ class AdvancedCircuitBreaker:
     def _record_failure(self, exception: Exception, response_time: float):
         """Record a failed call."""
         self.failure_count += 1
-        self.last_failure_time = datetime.now(tz=timezone.utc)
+        self.last_failure_time = datetime.now(tz=UTC)
         self._update_adaptive_timeout(success=False)
 
         if self.metrics:
@@ -760,9 +758,7 @@ def tenacity_circuit_breaker(
             ):
                 wait_time = (
                     breaker.adaptive_timeout
-                    - (
-                        datetime.now(tz=timezone.utc) - breaker.last_failure_time
-                    ).total_seconds()
+                    - (datetime.now(tz=UTC) - breaker.last_failure_time).total_seconds()
                     if breaker.last_failure_time
                     else breaker.adaptive_timeout
                 )

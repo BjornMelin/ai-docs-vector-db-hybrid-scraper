@@ -218,7 +218,7 @@ class ConfigManager:
     def cleanup_temp_directories(self):
         """Clean up all temporary directories created during testing."""
         for temp_dir in self._temp_dirs:
-            if os.path.exists(temp_dir):
+            if Path(temp_dir).exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
         self._temp_dirs.clear()
 
@@ -367,7 +367,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
             ]
 
         # Clean up temporary files
-        if os.path.exists(env.temp_dir):
+        if Path(env.temp_dir).exists():
             temp_files_count = len(list(Path(env.temp_dir).rglob("*")))
             shutil.rmtree(env.temp_dir, ignore_errors=True)
             cleanup_results["temp_files_removed"] = True
@@ -544,7 +544,7 @@ def validate_test_environment(environment_name: str) -> dict[str, Any]:
 
     # Check temp directory
     if hasattr(env, "temp_dir") and env.temp_dir:
-        if not os.path.exists(env.temp_dir):
+        if not Path(env.temp_dir).exists():
             validation_results["warnings"].append(
                 f"Temp directory does not exist: {env.temp_dir}"
             )

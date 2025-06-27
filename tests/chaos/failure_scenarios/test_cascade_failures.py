@@ -67,7 +67,7 @@ class TestCascadeFailures:
         }
 
     async def test_downstream_failure_propagation(
-        self, service_topology, fault_injector, resilience_validator
+        self, service_topology, _fault_injector, resilience_validator
     ):
         """Test how downstream failures propagate upstream."""
         # Simulate storage failure (bottom of dependency chain)
@@ -135,7 +135,7 @@ class TestCascadeFailures:
         )
 
     async def test_circuit_breaker_cascade_prevention(
-        self, service_topology, fault_injector, resilience_validator
+        self, service_topology, _fault_injector, resilience_validator
     ):
         """Test circuit breakers preventing cascade failures."""
         failure_counts = {}
@@ -192,7 +192,7 @@ class TestCascadeFailures:
             "Expected degraded service from circuit breaker"
         )
 
-    async def test_bulkhead_pattern_isolation(self, fault_injector):
+    async def test_bulkhead_pattern_isolation(self, _fault_injector):
         """Test bulkhead pattern for failure isolation."""
         # Simulate thread/resource pools for different operations
         search_pool = {"size": 10, "used": 0}
@@ -241,7 +241,9 @@ class TestCascadeFailures:
             "Admin operations should succeed despite search failures"
         )
 
-    async def test_graceful_degradation_cascade(self, service_topology, fault_injector):
+    async def test_graceful_degradation_cascade(
+        self, service_topology, _fault_injector
+    ):
         """Test graceful degradation preventing total system failure."""
         # Service capabilities matrix
         service_capabilities = {
@@ -310,7 +312,7 @@ class TestCascadeFailures:
         assert text_search_result["status"] == "success"
         assert text_search_result["level"] == "degraded"
 
-    async def test_timeout_cascade_prevention(self, fault_injector):
+    async def test_timeout_cascade_prevention(self, _fault_injector):
         """Test timeout configuration preventing cascade failures."""
         # Service timeout configuration
         timeouts = {
@@ -363,7 +365,7 @@ class TestCascadeFailures:
         assert result["status"] == "timeout"
         assert "fallback" in result
 
-    async def test_retry_storm_prevention(self, fault_injector):
+    async def test_retry_storm_prevention(self, _fault_injector):
         """Test prevention of retry storms during failures."""
         failure_start_time = time.time()
         request_counts = {}
@@ -421,7 +423,7 @@ class TestCascadeFailures:
             "Some clients should succeed after service recovery"
         )
 
-    async def test_distributed_system_partition(self, fault_injector):
+    async def test_distributed_system_partition(self, _fault_injector):
         """Test distributed system behavior during network partitions."""
         # Simulate 3-node distributed system
         nodes = {
@@ -474,7 +476,7 @@ class TestCascadeFailures:
         with pytest.raises(KeyError):
             await distributed_read("key3", "eventual")
 
-    async def test_memory_leak_cascade(self, fault_injector):
+    async def test_memory_leak_cascade(self, _fault_injector):
         """Test cascade failures due to memory leaks."""
         # Simulate memory usage tracking
         memory_usage = {"current": 0, "limit": 1000}
@@ -524,7 +526,7 @@ class TestCascadeFailures:
         )
 
     async def test_dependency_health_monitoring(
-        self, service_topology, fault_injector, resilience_validator
+        self, service_topology, _fault_injector, resilience_validator
     ):
         """Test dependency health monitoring and automatic recovery."""
         health_status = {}

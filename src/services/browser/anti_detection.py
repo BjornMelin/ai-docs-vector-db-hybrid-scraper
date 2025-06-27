@@ -6,6 +6,7 @@ Designed to achieve 95%+ success rate on challenging sites while maintaining per
 """
 
 import json
+import random
 import secrets
 import time
 from pathlib import Path
@@ -438,7 +439,7 @@ class EnhancedAntiDetection:
             is_mobile=profile.is_mobile,
         )
 
-    def _generate_realistic_headers(self, profile: SiteProfile) -> dict[str, str]:
+    def _generate_realistic_headers(self, _profile: SiteProfile) -> dict[str, str]:
         """Generate realistic HTTP headers."""
         # Language preferences weighted by global usage
         languages = [

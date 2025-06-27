@@ -19,7 +19,7 @@ class TestInfrastructureAsCode:
 
     @pytest.mark.infrastructure
     def test_terraform_configuration_validation(
-        self, mock_infrastructure_config: dict[str, Any], temp_deployment_dir: Path
+        self, _mock_infrastructure_config: dict[str, Any], temp_deployment_dir: Path
     ):
         """Test Terraform configuration validation."""
         terraform_validator = TerraformValidator(temp_deployment_dir)
@@ -501,7 +501,7 @@ class TestNetworkConfiguration:
     @pytest.mark.infrastructure
     @pytest.mark.asyncio
     async def test_service_connectivity(
-        self, deployment_environment: DeploymentEnvironment
+        self, _deployment_environment: DeploymentEnvironment
     ):
         """Test connectivity between services."""
         connectivity_tester = ConnectivityTester()
@@ -933,7 +933,7 @@ class ConnectivityTester:
     """Tester for service connectivity."""
 
     async def test_connectivity(
-        self, services: dict[str, dict[str, Any]], expected_connections: list[tuple]
+        self, _services: dict[str, dict[str, Any]], expected_connections: list[tuple]
     ) -> dict[str, Any]:
         """Test connectivity between services."""
         successful_connections = []

@@ -46,7 +46,7 @@ class TestModernAsyncPatterns:
         async def mock_initialize():
             service._initialized = True
 
-        async def mock_search(query: str, collection_name: str, limit: int):
+        async def mock_search(query: str, _collection_name: str, limit: int):
             return {"points": [], "query": query, "limit": limit}
 
         service.initialize = mock_initialize
@@ -99,7 +99,7 @@ class TestModernAsyncPatterns:
         """Test async timeout handling patterns."""
 
         # Mock a slow operation
-        async def slow_search(*args, **kwargs):
+        async def slow_search(*_args, **_kwargs):
             await asyncio.sleep(2.0)
             return {"points": []}
 

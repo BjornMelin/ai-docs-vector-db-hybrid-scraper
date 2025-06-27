@@ -21,7 +21,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test complete document processing workflow from URL to searchable vectors."""
@@ -58,7 +58,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test complete search and discovery workflow."""
@@ -93,7 +93,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test complete project management workflow."""
@@ -130,7 +130,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test complete API client workflow with endpoint validation."""
@@ -170,7 +170,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test complete administrative monitoring workflow."""
@@ -206,7 +206,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test multiple user journeys running concurrently."""
@@ -254,7 +254,7 @@ class TestCompleteUserJourneys:
     async def test_error_recovery_journey(
         self,
         journey_executor,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test journey behavior when encountering errors and recovery scenarios."""
@@ -324,7 +324,7 @@ class TestCompleteUserJourneys:
         self,
         journey_executor,
         sample_user_journeys,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test performance benchmarks for user journeys."""
@@ -379,7 +379,7 @@ class TestCompleteUserJourneys:
     async def test_data_flow_validation_journey(
         self,
         journey_executor,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test end-to-end data flow validation across system components."""
@@ -498,9 +498,9 @@ class TestCompleteUserJourneys:
     async def test_browser_automation_journey(
         self,
         journey_executor,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
-        mock_browser_config,
+        _mock_browser_config,
     ):
         """Test browser automation user journey with real browser interactions."""
         # Create a browser-based journey
@@ -578,7 +578,7 @@ class TestCrossSystemIntegration:
     async def test_multi_service_workflow(
         self,
         journey_executor,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test workflow spanning multiple services and components."""
@@ -665,7 +665,7 @@ class TestCrossSystemIntegration:
     async def test_load_resilience_journey(
         self,
         journey_executor,
-        journey_test_config,
+        _journey_test_config,
         journey_data_manager,
     ):
         """Test system resilience under simulated load conditions."""

@@ -605,7 +605,7 @@ class TestMCPToolsIntegration:
                     limit=10,
                 )
 
-    async def test_tool_error_handling_invalid_request(self, mcp_server):
+    async def test_tool_error_handling_invalid_request(self, _mcp_server):
         """Test error handling for invalid request parameters."""
         # Test invalid search request
         with pytest.raises(ValidationError):

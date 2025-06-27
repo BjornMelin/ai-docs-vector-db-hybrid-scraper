@@ -10,7 +10,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from typing import Any, Dict, List, Optional
 
 from opentelemetry import metrics
@@ -478,7 +478,7 @@ class ConfigPerformanceMonitor:
         slow_operations = self.get_slow_operations()
 
         return {
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "total_operations": len(self.operation_history),
             "overall_stats": overall_stats.__dict__,
             "per_type_stats": {

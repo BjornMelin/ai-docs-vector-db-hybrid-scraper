@@ -53,7 +53,7 @@ class TestEnduranceLoad:
         memory_samples = []
 
         @env.events.stats_reset.add_listener
-        def collect_time_series_metrics(**kwargs):
+        def collect_time_series_metrics(**_kwargs):
             """Collect metrics at regular intervals."""
             import os
 
@@ -264,7 +264,7 @@ class TestEnduranceLoad:
 
             # Generate cache key from operation parameters
             query = kwargs.get("query", f"query_{random.randint(1, 100)}")
-            cache_key = hashlib.md5(query.encode()).hexdigest()[:8]
+            cache_key = hashlib.sha256(query.encode()).hexdigest()[:8]
 
             # Try cache first
             cached_result = cache.get(cache_key)
@@ -488,7 +488,7 @@ class TestEnduranceLoad:
         assert pool_analysis["pool_stability"] > 0.9, "Unstable pool behavior"
         assert pool_analysis["cleanup_effectiveness"] > 0.8, "Poor connection cleanup"
 
-    def _stable_operation(self, **kwargs):
+    def _stable_operation(self, **_kwargs):
         """Stable operation for endurance testing."""
         import asyncio
         import random

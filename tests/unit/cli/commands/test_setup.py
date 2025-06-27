@@ -308,7 +308,7 @@ class TestConfigurationWizard:
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.dump")
     @patch("rich.prompt.Prompt.ask")
-    def test_save_configuration_yaml(self, mock_prompt, mock_yaml_dump, mock_file):
+    def test_save_configuration_yaml(self, mock_prompt, mock_yaml_dump, _mock_file):
         """Test saving configuration in YAML format."""
         wizard = ConfigurationWizard()
 
@@ -329,7 +329,7 @@ class TestConfigurationWizard:
     @patch("builtins.open", new_callable=mock_open)
     @patch("tomli_w.dump")
     @patch("rich.prompt.Prompt.ask")
-    def test_save_configuration_toml(self, mock_prompt, mock_toml_dump, mock_file):
+    def test_save_configuration_toml(self, mock_prompt, mock_toml_dump, _mock_file):
         """Test saving configuration in TOML format."""
         wizard = ConfigurationWizard()
 
@@ -494,7 +494,7 @@ class TestSetupCommand:
         mock_confirm,
         mock_config_loader,
         mock_wizard_class,
-        mock_validate,
+        _mock_validate,
         cli_runner,
         mock_config,
     ):

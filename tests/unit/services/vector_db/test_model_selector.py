@@ -399,7 +399,7 @@ class TestModelSelector:
         # Mock an error in candidate selection
         original_method = selector._get_candidate_models
 
-        def raise_index_error(x):
+        def raise_index_error(_x):
             raise IndexError("Test error")
 
         selector._get_candidate_models = raise_index_error
@@ -472,7 +472,7 @@ class TestModelSelector:
         """Test handling when no candidates are found."""
         # Mock empty candidates
         original_method = selector._get_candidate_models
-        selector._get_candidate_models = lambda x: []
+        selector._get_candidate_models = lambda _x: []
 
         try:
             selection = await selector.select_optimal_model(sample_query_classification)

@@ -63,7 +63,7 @@ def mock_security_validator():
 
 
 @pytest.mark.asyncio
-async def test_advanced_search_tools_registration(mock_client_manager, mock_context):
+async def test_advanced_search_tools_registration(mock_client_manager, _mock_context):
     """Test that advanced search tools are properly registered."""
     from src.mcp_tools.tools.search_tools import register_tools
 

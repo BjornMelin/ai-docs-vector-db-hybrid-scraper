@@ -5,7 +5,7 @@ switching, traffic routing, health checks, and zero-downtime deployment validati
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Any
 
 import pytest
@@ -494,7 +494,7 @@ class BlueGreenTester:
         }
 
     async def check_switch_readiness(
-        self, bg_manager: BlueGreenDeploymentManager
+        self, _bg_manager: BlueGreenDeploymentManager
     ) -> dict[str, Any]:
         """Check if environment is ready for traffic switch."""
         await asyncio.sleep(0.5)
@@ -529,7 +529,7 @@ class ZeroDowntimeTester:
             "successful_requests": 0,
             "failed_requests": 0,
             "downtime_periods": [],
-            "start_time": datetime.now(tz=timezone.utc),
+            "start_time": datetime.now(tz=UTC),
         }
 
     async def monitor_service_availability(self) -> dict[str, Any]:
@@ -552,7 +552,7 @@ class ZeroDowntimeTester:
     def get_availability_report(self) -> dict[str, Any]:
         """Get availability report."""
         total_time = (
-            datetime.now(tz=timezone.utc) - self.availability_data["start_time"]
+            datetime.now(tz=UTC) - self.availability_data["start_time"]
         ).total_seconds()
 
         return {
@@ -621,7 +621,7 @@ class GradualTrafficRouter:
 class LoadBalancerConfigurator:
     """Configurator for load balancer in blue-green deployments."""
 
-    async def reconfigure_for_switch(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def reconfigure_for_switch(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Reconfigure load balancer for environment switch."""
         await asyncio.sleep(2)
 
@@ -649,7 +649,7 @@ class StatefulServiceManager:
     """Manager for stateful service coordination."""
 
     async def coordinate_stateful_services(
-        self, services: list, source_env: str, target_env: str
+        self, services: list, _source_env: str, _target_env: str
     ) -> dict[str, Any]:
         """Coordinate stateful services during deployment."""
         await asyncio.sleep(3)
@@ -674,7 +674,7 @@ class DatabaseMigrationCoordinator:
     """Coordinator for database migrations in blue-green deployments."""
 
     async def coordinate_migration(
-        self, migration_config: dict[str, Any], source_env: str, target_env: str
+        self, migration_config: dict[str, Any], _source_env: str, _target_env: str
     ) -> dict[str, Any]:
         """Coordinate database migration."""
         await asyncio.sleep(4)
@@ -689,7 +689,7 @@ class DatabaseMigrationCoordinator:
         }
 
     async def test_rollback_capability(
-        self, migration_config: dict[str, Any]
+        self, _migration_config: dict[str, Any]
     ) -> dict[str, Any]:
         """Test migration rollback capability."""
         await asyncio.sleep(2)

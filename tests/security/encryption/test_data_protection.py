@@ -344,7 +344,7 @@ class TestDataProtection:
         assert current_key["version"] == 2
         assert current_key["key_material"] == key2["key_material"]
 
-    def test_data_at_rest_encryption(self, encryption_service, key_management_service):
+    def test_data_at_rest_encryption(self, _encryption_service, key_management_service):
         """Test data at rest encryption."""
         # Simulate database encryption
         sensitive_data = {
@@ -702,7 +702,7 @@ class TestDataProtection:
                 self.recovery_log = []
 
             def create_backup(
-                self, keys: list[dict[str, Any]], backup_password: str
+                self, keys: list[dict[str, Any]], _backup_password: str
             ) -> str:
                 """Create encrypted backup of keys."""
                 # In real implementation, this would:
@@ -725,7 +725,7 @@ class TestDataProtection:
                 return backup_id
 
             def restore_backup(
-                self, backup_id: str, backup_password: str
+                self, backup_id: str, _backup_password: str
             ) -> list[dict[str, Any]]:
                 """Restore keys from backup."""
                 if backup_id not in self.backup_storage:

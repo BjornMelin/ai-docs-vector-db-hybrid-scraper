@@ -1,7 +1,7 @@
 """Tests for federated search service."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -84,7 +84,7 @@ class TestCollectionMetadata:
 
     def test_full_initialization(self):
         """Test initialization with all fields."""
-        test_time = datetime.now(tz=timezone.utc)
+        test_time = datetime.now(tz=UTC)
         metadata = CollectionMetadata(
             collection_name="docs",
             display_name="Documentation Collection",
@@ -1048,7 +1048,7 @@ class TestFederatedSearchService:
 
         with patch.object(service, "_search_single_collection") as mock_search:
             # Make search take longer than timeout
-            async def slow_search(*args, **kwargs):
+            async def slow_search(*_args, **_kwargs):
                 await asyncio.sleep(0.1)
                 return CollectionSearchResult(
                     collection_name="test",
@@ -1778,7 +1778,7 @@ class TestSearchModeIntegration:
                 service_with_collections, "_search_single_collection"
             ) as mock_search:
                 # Make search take longer than timeout
-                async def slow_search(*args, **kwargs):
+                async def slow_search(*_args, **_kwargs):
                     await asyncio.sleep(0.1)
                     return CollectionSearchResult(
                         collection_name="test",

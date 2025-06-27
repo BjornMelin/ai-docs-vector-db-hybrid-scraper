@@ -34,7 +34,7 @@ class MockConnectionPool:
             return Mock()
         raise Exception("No connections available")
 
-    async def release_connection(self, conn):
+    async def release_connection(self, _conn):
         """Release connection back to pool."""
         if self.used_connections > 0:
             self.used_connections -= 1
@@ -350,7 +350,7 @@ class TestAdvancedPoolingFeatures:
         pool = MockConnectionPool()
 
         # Simulate health check
-        def health_check(conn):
+        def health_check(_conn):
             return True  # Assume healthy
 
         # All connections should be healthy initially

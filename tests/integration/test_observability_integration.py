@@ -64,11 +64,11 @@ class TestObservabilityIntegration:
     @patch("src.services.observability.init._setup_auto_instrumentation")
     def test_full_observability_initialization(
         self,
-        mock_auto_instrumentation,
+        _mock_auto_instrumentation,
         mock_resource,
         mock_metric_reader,
-        mock_metric_exporter,
-        mock_span_exporter,
+        _mock_metric_exporter,
+        _mock_span_exporter,
         mock_span_processor,
         mock_meter_provider,
         mock_tracer_provider,
@@ -512,16 +512,16 @@ class TestEndToEndObservabilityFlow:
     @patch("src.services.observability.init._setup_auto_instrumentation")
     def test_complete_observability_flow(
         self,
-        mock_auto_instrumentation,
+        _mock_auto_instrumentation,
         mock_resource,
         mock_metric_reader,
-        mock_metric_exporter,
-        mock_span_exporter,
+        _mock_metric_exporter,
+        _mock_span_exporter,
         mock_span_processor,
         mock_meter_provider,
         mock_tracer_provider,
-        mock_metrics,
-        mock_trace,
+        _mock_metrics,
+        _mock_trace,
     ):
         """Test complete observability flow from configuration to shutdown."""
         # Setup comprehensive mocks

@@ -199,7 +199,7 @@ class TestBatchGenerateEmbeddings:
         mock_client = AsyncMock()
 
         # Mock successful responses for each batch
-        def mock_generate(texts, **kwargs):
+        def mock_generate(texts, **_kwargs):
             return {
                 "embeddings": [[0.1, 0.2, 0.3] for _ in texts],
                 "provider": "openai",
@@ -232,7 +232,7 @@ class TestBatchGenerateEmbeddings:
         # Mock one success and one failure
         call_count = 0
 
-        def mock_generate(texts, **kwargs):
+        def mock_generate(_texts, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:

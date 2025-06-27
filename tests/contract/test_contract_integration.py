@@ -26,7 +26,7 @@ class TestContractIntegration:
     @pytest.mark.integration
     async def test_full_contract_validation_pipeline(
         self,
-        client_manager,
+        _client_manager,
         api_contract_validator,
         json_schema_validator,
         openapi_contract_manager,
@@ -475,7 +475,7 @@ class TestContractPerformanceValidation:
     @pytest.mark.integration
     @pytest.mark.performance
     def test_contract_validation_performance(
-        self, api_contract_validator, json_schema_validator
+        self, _api_contract_validator, json_schema_validator
     ):
         """Test performance of contract validation at scale."""
         import time

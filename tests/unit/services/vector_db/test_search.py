@@ -221,14 +221,16 @@ class TestQdrantSearch:
         assert result[0]["id"] == "point1"
         mock_client.query_points.assert_called_once()
 
-    async def test_multi_stage_search_empty_stages(self, search_service, mock_client):
+    async def test_multi_stage_search_empty_stages(self, search_service, _mock_client):
         """Test multi-stage search with empty stages."""
         with pytest.raises(ValueError, match="Stages list cannot be empty"):
             await search_service.multi_stage_search(
                 collection_name="test_collection", stages=[], limit=10
             )
 
-    async def test_multi_stage_search_invalid_stages(self, search_service, mock_client):
+    async def test_multi_stage_search_invalid_stages(
+        self, search_service, _mock_client
+    ):
         """Test multi-stage search with invalid stages."""
         # Test non-list stages
         with pytest.raises(ValueError, match="Stages must be a list"):
@@ -261,7 +263,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=stages, limit=10
             )
 
-    async def test_multi_stage_search_missing_limit(self, search_service, mock_client):
+    async def test_multi_stage_search_missing_limit(self, search_service, _mock_client):
         """Test multi-stage search with missing limit."""
         stages = [{"query_vector": [0.1, 0.2], "vector_name": "dense"}]
 
@@ -334,7 +336,7 @@ class TestQdrantSearch:
         assert len(result) == 3
         assert result[0]["id"] == "point1"
 
-    async def test_filtered_search_invalid_vector(self, search_service, mock_client):
+    async def test_filtered_search_invalid_vector(self, search_service, _mock_client):
         """Test filtered search with invalid query vector."""
         # Test non-list vector
         with pytest.raises(ValueError, match="query_vector must be a list"):
@@ -358,7 +360,7 @@ class TestQdrantSearch:
                 filters={},
             )
 
-    async def test_filtered_search_invalid_filters(self, search_service, mock_client):
+    async def test_filtered_search_invalid_filters(self, search_service, _mock_client):
         """Test filtered search with invalid filters."""
         query_vector = [0.1] * 1536
 

@@ -10,7 +10,7 @@ import concurrent.futures
 import json
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from pathlib import Path
 from threading import Thread
 from typing import Any
@@ -137,7 +137,7 @@ class TestDriftDetectionConcurrency:
         # Create a test event
         test_event = DriftEvent(
             id="test_event",
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test_source",
@@ -182,7 +182,7 @@ class TestDriftDetectionConcurrency:
         with detector._snapshots_lock:
             detector._snapshots[test_source] = [
                 ConfigSnapshot(
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     config_hash=f"hash_{i}",
                     config_data={"test": i},
                     source=test_source,
@@ -194,7 +194,7 @@ class TestDriftDetectionConcurrency:
             detector._drift_events = [
                 DriftEvent(
                     id=f"event_{i}",
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     drift_type=DriftType.MANUAL_CHANGE,
                     severity=DriftSeverity.LOW,
                     source=test_source,
@@ -247,7 +247,7 @@ class TestDriftDetectionConcurrency:
             detector._drift_events = [
                 DriftEvent(
                     id=f"event_{i}",
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     drift_type=DriftType.MANUAL_CHANGE,
                     severity=DriftSeverity.HIGH if i % 2 == 0 else DriftSeverity.LOW,
                     source=f"source_{i}",

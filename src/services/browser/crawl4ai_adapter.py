@@ -65,7 +65,7 @@ class Crawl4AIAdapter(BaseService):
         url: str,
         wait_for_selector: str | None = None,
         js_code: str | None = None,
-        timeout: int = 30000,
+        _timeout: int = 30000,
     ) -> dict[str, Any]:
         """Scrape URL using Crawl4AI.
 

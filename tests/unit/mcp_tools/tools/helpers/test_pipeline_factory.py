@@ -82,7 +82,7 @@ class TestPipelineFactoryBasics:
         assert factory.client_manager is mock_client_manager
 
     async def test_service_dependency_gathering(
-        self, pipeline_factory, mock_context, mock_services
+        self, pipeline_factory, _mock_context, mock_services
     ):
         """Test that factory correctly gathers required service dependencies."""
         # This test focuses on the real-world functionality of dependency gathering
@@ -104,7 +104,7 @@ class TestPipelineFactoryBasics:
 class TestPipelineFactoryErrorHandling:
     """Test error handling scenarios in pipeline factory."""
 
-    async def test_cache_manager_unavailable(self, pipeline_factory, mock_context):
+    async def test_cache_manager_unavailable(self, pipeline_factory, _mock_context):
         """Test graceful handling when cache manager is unavailable."""
         # Configure cache manager to fail
         pipeline_factory.client_manager.get_cache_manager.side_effect = RuntimeError(
@@ -121,7 +121,7 @@ class TestPipelineFactoryErrorHandling:
         # This test verifies the error condition is detectable
         assert pipeline_factory.client_manager.get_cache_manager.side_effect
 
-    async def test_critical_service_failure(self, pipeline_factory, mock_context):
+    async def test_critical_service_failure(self, pipeline_factory, _mock_context):
         """Test behavior when critical services fail."""
         # Configure embedding manager to fail (critical service)
         pipeline_factory.client_manager.get_embedding_manager.side_effect = Exception(
@@ -138,7 +138,7 @@ class TestPipelineFactoryErrorHandling:
 class TestPipelineFactoryIntegration:
     """Test integration scenarios that focus on real-world usage patterns."""
 
-    async def test_factory_interface_contract(self, pipeline_factory, mock_context):
+    async def test_factory_interface_contract(self, pipeline_factory, _mock_context):
         """Test that factory provides the expected interface contract."""
         # This test verifies the factory has the expected public interface
         # without testing implementation details
@@ -154,7 +154,7 @@ class TestPipelineFactoryIntegration:
         params = list(sig.parameters.keys())
         assert "ctx" in params or len(params) >= 1
 
-    async def test_logging_behavior(self, pipeline_factory, mock_context):
+    async def test_logging_behavior(self, _pipeline_factory, mock_context):
         """Test that factory provides appropriate logging when context is available."""
         # Test logging behavior without full pipeline creation
 

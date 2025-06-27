@@ -6,7 +6,7 @@ result rankings optimized for individual users and contexts.
 """
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from enum import Enum
 from typing import Any
 
@@ -449,7 +449,7 @@ class PersonalizedRankingService:
             self.interaction_history[user_id].append(interaction)
 
             # Cleanup old interactions
-            cutoff_date = datetime.now(tz=timezone.utc) - timedelta(
+            cutoff_date = datetime.now(tz=UTC) - timedelta(
                 days=self.interaction_retention_days
             )
             self.interaction_history[user_id] = [
@@ -891,13 +891,16 @@ class PersonalizedRankingService:
         return min(0.5, boost)  # Cap boost at 0.5
 
     def _calculate_behavioral_boost(
-        self, result: dict[str, Any], user_profile: UserProfile, context: dict[str, Any]
+        self,
+        result: dict[str, Any],
+        user_profile: UserProfile,
+        _context: dict[str, Any],
     ) -> float:
         """Calculate boost based on behavioral patterns."""
         boost = 0.0
 
         # Time-based preferences
-        current_hour = datetime.now(tz=timezone.utc).hour
+        current_hour = datetime.now(tz=UTC).hour
         if current_hour in user_profile.active_hours:
             time_preference = user_profile.active_hours[current_hour]
             boost += time_preference * 0.1
@@ -921,7 +924,10 @@ class PersonalizedRankingService:
         return min(0.4, boost)
 
     def _calculate_contextual_boost(
-        self, result: dict[str, Any], user_profile: UserProfile, context: dict[str, Any]
+        self,
+        result: dict[str, Any],
+        _user_profile: UserProfile,
+        context: dict[str, Any],
     ) -> float:
         """Calculate boost based on current context."""
         boost = 0.0
@@ -978,7 +984,7 @@ class PersonalizedRankingService:
 
         try:
             published_date = datetime.fromisoformat(result["published_date"])
-            age_days = (datetime.now(tz=timezone.utc) - published_date).days
+            age_days = (datetime.now(tz=UTC) - published_date).days
 
             # Boost fresher content
             if age_days <= 7:
@@ -1074,7 +1080,7 @@ class PersonalizedRankingService:
         return features
 
     def _apply_ranking_model(
-        self, features: dict[str, float], user_profile: UserProfile
+        self, features: dict[str, float], _user_profile: UserProfile
     ) -> float:
         """Apply ML ranking model (simplified linear model)."""
         # Simplified linear model weights
@@ -1095,7 +1101,7 @@ class PersonalizedRankingService:
 
     def _get_time_preference_boost(self, user_profile: UserProfile) -> float:
         """Get boost based on time-of-day preferences."""
-        current_hour = datetime.now(tz=timezone.utc).hour
+        current_hour = datetime.now(tz=UTC).hour
         if current_hour in user_profile.active_hours:
             return user_profile.active_hours[current_hour] * 0.1
         return 0.0
@@ -1125,19 +1131,19 @@ class PersonalizedRankingService:
 
         return boost
 
-    def _get_temporal_context_boost(self, context: dict[str, Any]) -> float:
+    def _get_temporal_context_boost(self, _context: dict[str, Any]) -> float:
         """Get boost based on temporal context."""
         boost = 0.0
 
         # Time of day
-        hour = datetime.now(tz=timezone.utc).hour
+        hour = datetime.now(tz=UTC).hour
         if 9 <= hour <= 17:  # Business hours
             boost += 0.05
         elif 18 <= hour <= 22:  # Evening
             boost += 0.03
 
         # Day of week
-        weekday = datetime.now(tz=timezone.utc).weekday()
+        weekday = datetime.now(tz=UTC).weekday()
         if weekday < 5:  # Weekday
             boost += 0.02
 
@@ -1186,10 +1192,10 @@ class PersonalizedRankingService:
         # Update confidence score
         profile.confidence_score = min(1.0, profile.total_interactions / 50.0)
 
-        profile.last_updated = datetime.now(tz=timezone.utc)
+        profile.last_updated = datetime.now(tz=UTC)
 
     async def _build_profile_from_interactions(
-        self, profile: UserProfile, user_id: str
+        self, _profile: UserProfile, user_id: str
     ) -> None:
         """Build user profile from historical interactions."""
         if user_id not in self.interaction_history:
@@ -1272,7 +1278,7 @@ class PersonalizedRankingService:
         return avg_position_change
 
     def _generate_content_explanation(
-        self, content_boost: float, user_profile: UserProfile
+        self, content_boost: float, _user_profile: UserProfile
     ) -> str:
         """Generate explanation for content-based ranking."""
         if content_boost > 0.2:

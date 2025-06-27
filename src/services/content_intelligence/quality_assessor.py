@@ -7,7 +7,7 @@ readability, and duplicate detection with similarity thresholds.
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from .models import QualityScore
@@ -364,7 +364,7 @@ class QualityAssessor:
         Returns:
             float: Freshness score (0-1)
         """
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         # Try to extract date from metadata first
         if extraction_metadata:

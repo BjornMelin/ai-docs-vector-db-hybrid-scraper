@@ -119,7 +119,7 @@ class TestScreenReaderCompliance:
         ]
         assert len(main_errors) > 0, "Should detect missing main landmark"
 
-    def test_heading_structure_hierarchy(self, screen_reader_validator):
+    def test_heading_structure_hierarchy(self, _screen_reader_validator):
         """Test proper heading hierarchy for screen readers."""
         # Good heading hierarchy
         good_headings_html = """
@@ -777,7 +777,7 @@ class TestScreenReaderCompliance:
             ("treeitem", "should expand/collapse tree node"),
         ],
     )
-    def test_widget_roles_screen_reader_behavior(self, role, expected_behavior):
+    def test_widget_roles_screen_reader_behavior(self, role, _expected_behavior):
         """Test ARIA widget roles for screen reader behavior."""
         # This test documents expected screen reader behavior for different roles
         widget_examples = {

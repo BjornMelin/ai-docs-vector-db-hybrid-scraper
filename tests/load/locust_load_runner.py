@@ -629,14 +629,14 @@ metrics_collector = LoadTestMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(environment: Environment, **kwargs):
+def on_test_start(_environment: Environment, **_kwargs):
     """Handle test start event."""
     logger.info("Locust load test started")
     metrics_collector.start_test()
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):
+def on_test_stop(environment: Environment, **_kwargs):
     """Handle test stop event."""
     logger.info("Locust load test stopped")
     metrics_collector.stop_test()
@@ -655,10 +655,10 @@ def on_request(
     name: str,
     response_time: float,
     response_length: int,
-    response: Any,
-    context: dict[str, Any],
+    _response: Any,
+    _context: dict[str, Any],
     exception: Exception | None,
-    **kwargs,
+    **_kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_request_metric(

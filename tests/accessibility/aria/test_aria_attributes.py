@@ -935,7 +935,7 @@ class TestAriaAttributeCompliance:
             ),
         ],
     )
-    def test_role_attribute_requirements(self, role, required_attrs, optional_attrs):
+    def test_role_attribute_requirements(self, _role, required_attrs, optional_attrs):
         """Test that ARIA roles have required and appropriate optional attributes."""
         # This test documents the attribute requirements for different roles
         # In a real implementation, this would validate actual HTML

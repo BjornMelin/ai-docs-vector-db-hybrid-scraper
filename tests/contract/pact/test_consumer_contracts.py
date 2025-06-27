@@ -466,7 +466,7 @@ class TestConsumerContractEvolution:
         assert "search_strategy" in v2_response
 
     @pytest.mark.pact
-    async def test_contract_compatibility_matrix(self, pact_contract_builder):
+    async def test_contract_compatibility_matrix(self, _pact_contract_builder):
         """Test compatibility matrix between different contract versions."""
         compatibility_matrix = {
             "consumer_v1_provider_v1": True,  # Same version

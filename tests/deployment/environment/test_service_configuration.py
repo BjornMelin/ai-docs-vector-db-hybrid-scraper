@@ -212,7 +212,7 @@ class TestServiceIntegration:
     async def test_service_discovery(
         self,
         deployment_environment: DeploymentEnvironment,
-        deployment_health_checker: DeploymentHealthChecker,
+        _deployment_health_checker: DeploymentHealthChecker,
     ):
         """Test that services can discover and communicate with each other."""
         service_discovery = ServiceDiscoveryValidator()
@@ -236,7 +236,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_health_endpoints(
         self,
-        deployment_environment: DeploymentEnvironment,
+        _deployment_environment: DeploymentEnvironment,
         deployment_health_checker: DeploymentHealthChecker,
     ):
         """Test that all services have working health endpoints."""
@@ -659,7 +659,7 @@ class ServiceConfigurationConsistencyValidator:
     """Validator for service configuration consistency."""
 
     async def validate_consistency(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Validate configuration consistency across services."""
         # Simulate consistency validation

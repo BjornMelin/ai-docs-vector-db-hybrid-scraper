@@ -554,7 +554,7 @@ class AutomationRouter(BaseService):
             "failed_tools": [failed_tool, *fallback_tools],
         }
 
-    def _get_basic_js(self, url: str) -> str:
+    def _get_basic_js(self, _url: str) -> str:
         """Get basic JavaScript for common scenarios.
 
         Args:
@@ -823,8 +823,8 @@ class AutomationRouter(BaseService):
 
     async def _try_firecrawl(
         self,
-        url: str,
-        timeout: int = 30000,
+        _url: str,
+        _timeout: int = 30000,
     ) -> dict[str, Any]:
         """Try scraping with Firecrawl API (Tier 4).
 
@@ -840,7 +840,7 @@ class AutomationRouter(BaseService):
         raise CrawlServiceError("Firecrawl adapter not yet implemented")
 
     def _get_enhanced_js(
-        self, url: str, custom_actions: list[dict] | None = None
+        self, _url: str, custom_actions: list[dict] | None = None
     ) -> str:
         """Get enhanced JavaScript for Crawl4AI enhanced mode.
 

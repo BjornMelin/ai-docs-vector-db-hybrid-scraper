@@ -91,7 +91,7 @@ class TestMemoryAdaptiveDispatcherInitialization:
             max_session_permit=15,
         )
 
-    def test_dispatcher_creation(self, dispatcher_config):
+    def test_dispatcher_creation(self, _dispatcher_config):
         """Test Memory-Adaptive Dispatcher creation with mocked dependencies."""
         # Create provider with dispatcher disabled first, then manually set it up
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -118,7 +118,7 @@ class TestMemoryAdaptiveDispatcherInitialization:
         assert provider.semaphore is not None
         assert provider.semaphore._value == dispatcher_config.max_concurrent_crawls
 
-    async def test_dispatcher_initialization(self, dispatcher_config):
+    async def test_dispatcher_initialization(self, _dispatcher_config):
         """Test dispatcher initialization during provider setup."""
         # Create provider with dispatcher disabled, then set up mocks
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -141,7 +141,7 @@ class TestMemoryAdaptiveDispatcherInitialization:
         # verify that the provider is ready for use
         assert provider._initialized is True
 
-    async def test_dispatcher_cleanup(self, dispatcher_config):
+    async def test_dispatcher_cleanup(self, _dispatcher_config):
         """Test dispatcher cleanup during provider teardown."""
         # Create provider with mocked components
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -311,7 +311,7 @@ class TestStreamingMode:
             ),
         ]
 
-        async def mock_stream(*args, **kwargs):
+        async def mock_stream(*_args, **_kwargs):
             for chunk in chunks:
                 yield chunk
 
@@ -344,7 +344,7 @@ class TestStreamingMode:
         # Mock streaming chunks
         chunks = [MagicMock(success=False), MagicMock(success=True, markdown="Content")]
 
-        async def mock_stream(*args, **kwargs):
+        async def mock_stream(*_args, **_kwargs):
             for chunk in chunks:
                 yield chunk
 
@@ -537,7 +537,7 @@ class TestBulkCrawlingWithDispatcher:
         provider = bulk_provider
 
         # Mock scrape_url to return success
-        async def mock_scrape(url, **kwargs):
+        async def mock_scrape(url, **_kwargs):
             return {
                 "success": True,
                 "url": url,
@@ -565,7 +565,7 @@ class TestBulkCrawlingWithDispatcher:
         provider = bulk_provider
 
         # Mock scrape_url to raise exception for some URLs
-        async def mock_scrape(url, **kwargs):
+        async def mock_scrape(url, **_kwargs):
             if "error" in url:
                 raise RuntimeError(f"Failed to crawl {url}")
             return {"success": True, "url": url, "content": f"Content for {url}"}

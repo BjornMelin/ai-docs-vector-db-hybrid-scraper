@@ -99,7 +99,7 @@ class TestVolumeLoad:
         )
 
     @pytest.mark.volume
-    def test_bulk_embedding_generation(self, load_test_runner, mock_load_test_service):
+    def test_bulk_embedding_generation(self, load_test_runner, _mock_load_test_service):
         """Test bulk embedding generation for large text batches."""
 
         # Simulate bulk embedding service
@@ -109,7 +109,7 @@ class TestVolumeLoad:
                 self.total_embeddings_generated = 0
                 self.total_processing_time = 0
 
-            async def process_batch(self, texts: list[str], **kwargs):
+            async def process_batch(self, texts: list[str], **_kwargs):
                 """Process a batch of texts for embedding generation."""
                 batch_start = time.time()
                 batch_size = len(texts)
@@ -376,7 +376,9 @@ class TestVolumeLoad:
                 self.processing_queue = []
                 self.failed_documents = []
 
-            async def ingest_document_batch(self, document_batch: list[Dict], **kwargs):
+            async def ingest_document_batch(
+                self, document_batch: list[Dict], **_kwargs
+            ):
                 """Ingest a batch of documents."""
                 batch_start = time.time()
                 batch_size = len(document_batch)

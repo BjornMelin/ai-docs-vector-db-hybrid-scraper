@@ -22,7 +22,7 @@ import tracemalloc
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Any
 
 
@@ -35,9 +35,7 @@ class PerformanceMetrics:
     memory_current_mb: float = 0.0
     cpu_percent: float = 0.0
     operation_name: str = ""
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     additional_metrics: dict[str, Any] = field(default_factory=dict)
 
 
@@ -212,7 +210,7 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
                         {
                             "operation": operation_name,
                             "execution_time": execution_time,
-                            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                            "timestamp": datetime.now(tz=UTC).isoformat(),
                         }
                     )
 
@@ -236,7 +234,7 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
                         {
                             "operation": operation_name,
                             "execution_time": execution_time,
-                            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                            "timestamp": datetime.now(tz=UTC).isoformat(),
                         }
                     )
 
@@ -277,7 +275,7 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
                         "operation": f.__name__,
                         "memory_current_mb": current / 1024 / 1024,
                         "memory_peak_mb": peak / 1024 / 1024,
-                        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                     }
 
                     if detailed:
@@ -313,7 +311,7 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
                         "operation": f.__name__,
                         "memory_current_mb": current / 1024 / 1024,
                         "memory_peak_mb": peak / 1024 / 1024,
-                        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                     }
 
                     if detailed:

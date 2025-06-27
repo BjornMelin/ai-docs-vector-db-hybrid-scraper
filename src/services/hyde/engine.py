@@ -290,7 +290,7 @@ class HyDEQueryEngine(BaseService):
         hyde_embedding: list[float],
         collection_name: str,
         limit: int,
-        filters: dict[str, Any] | None,
+        _filters: dict[str, Any] | None,
         search_accuracy: str,
     ) -> list[dict[str, Any]]:
         """Perform search using Query API with HyDE prefetch."""
@@ -421,7 +421,7 @@ class HyDEQueryEngine(BaseService):
         # Simple hash-based assignment for consistent user experience
         import hashlib
 
-        query_hash = int(hashlib.md5(query.encode()).hexdigest(), 16)
+        query_hash = int(hashlib.sha256(query.encode()).hexdigest(), 16)
 
         # Use control group percentage from config
         threshold = self.metrics_config.control_group_percentage

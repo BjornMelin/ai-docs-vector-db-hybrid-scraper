@@ -395,7 +395,7 @@ class QdrantSearch:
     async def _execute_hyde_search(
         self,
         collection_name: str,
-        query: str,
+        _query: str,
         query_embedding: list[float],
         hypothetical_embeddings: list[list[float]],
         limit: int = 10,

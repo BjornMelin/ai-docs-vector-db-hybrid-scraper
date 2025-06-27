@@ -432,7 +432,7 @@ class TestAPIEndpointContracts:
             def check_integration_compatibility(
                 self,
                 producer_contract: ServiceContract,
-                consumer_contract: ServiceContract,
+                _consumer_contract: ServiceContract,
                 integration_points: list[Dict],
             ) -> Dict:
                 """Check compatibility between service contracts."""
@@ -765,7 +765,7 @@ class TestDataSchemaValidation:
         )  # timestamp and source_service missing
 
     @pytest.mark.asyncio
-    async def test_cross_service_data_transformation(self, data_schemas):
+    async def test_cross_service_data_transformation(self, _data_schemas):
         """Test data transformation between service schemas."""
 
         # Mock data transformation between services
@@ -933,7 +933,7 @@ class TestVersionCompatibility:
                 self.api_version = api_version
                 self.supported_versions = ["1.0", "1.1", "2.0"]
 
-            async def search(self, query_data: Dict) -> Dict:
+            async def search(self, _query_data: Dict) -> Dict:
                 """Perform search with version-specific handling."""
                 if self.api_version == "1.0":
                     # Legacy format

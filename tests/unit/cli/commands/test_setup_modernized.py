@@ -300,7 +300,7 @@ class TestModernConfigurationWizard:
             assert result == {"debug": True, "log_level": "DEBUG"}
 
     @patch("builtins.open", new_callable=mock_open)
-    def test_save_configuration_success(self, mock_file, rich_output_capturer):
+    def test_save_configuration_success(self, _mock_file, rich_output_capturer):
         """Test successful configuration saving."""
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console

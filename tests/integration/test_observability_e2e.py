@@ -181,7 +181,7 @@ class TestObservabilityE2E:
                 )
 
                 @instrument_function("token_validation")
-                def validate_token(token):
+                def validate_token(_token):
                     time.sleep(0.005)  # Simulate auth check
                     return {"user_id": "user123", "valid": True}
 
@@ -197,7 +197,7 @@ class TestObservabilityE2E:
                 )
 
                 @instrument_function("search_execution")
-                def execute_search(query):
+                def execute_search(_query):
                     time.sleep(0.015)  # Simulate search
                     return [{"id": "doc1", "score": 0.95}]
 
@@ -374,7 +374,7 @@ class TestObservabilityE2E:
 
                 # Async vector search simulation
                 @instrument_function("async_vector_search")
-                async def async_vector_search(embeddings):
+                async def async_vector_search(_embeddings):
                     await asyncio.sleep(0.01)  # Simulate async DB query
                     return [{"id": "doc1", "score": 0.9}]
 

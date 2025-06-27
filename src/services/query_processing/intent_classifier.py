@@ -512,7 +512,7 @@ class QueryIntentClassifier:
         )
 
     async def classify_query_advanced(
-        self, query: str, context: dict[str, Any] | None = None
+        self, query: str, _context: dict[str, Any] | None = None
     ) -> QueryIntentClassification:
         """Perform advanced multi-label query intent classification.
 
@@ -766,7 +766,7 @@ class QueryIntentClassifier:
 
         return max(domain_scores, key=domain_scores.get)
 
-    def _generate_followups(self, intent: QueryIntent, query: str) -> list[str]:
+    def _generate_followups(self, intent: QueryIntent, _query: str) -> list[str]:
         """Generate suggested follow-up questions based on intent."""
         followup_templates = {
             QueryIntent.CONCEPTUAL: [

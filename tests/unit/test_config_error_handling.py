@@ -410,7 +410,7 @@ class TestConfigManager:
         def good_listener(old, new):
             successful_calls.append((old.api_key, new.api_key))
 
-        def bad_listener(old, new):
+        def bad_listener(_old, _new):
             raise RuntimeError("Listener error")
 
         manager.add_change_listener(good_listener)

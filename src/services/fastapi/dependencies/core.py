@@ -19,6 +19,7 @@ from src.infrastructure.client_manager import ClientManager
 from src.services.dependencies import get_cache_manager, get_embedding_manager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import QdrantService
+from datetime import datetime, UTC
 
 
 logger = logging.getLogger(__name__)
@@ -351,9 +352,7 @@ class ServiceHealthChecker:
         """
         health = {"status": "healthy", "services": {}, "timestamp": None}
 
-        from datetime import datetime, timezone
-
-        health["timestamp"] = datetime.now(tz=timezone.utc).isoformat()
+        health["timestamp"] = datetime.now(tz=UTC).isoformat()
 
         # Check container initialization
         if not self.container.is_initialized:

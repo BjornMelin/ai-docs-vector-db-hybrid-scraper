@@ -429,7 +429,7 @@ async def composite_filter_tool(
         raise
 
 
-def register_filtering_tools(mcp, client_manager: ClientManager):
+def register_filtering_tools(mcp, _client_manager: ClientManager):
     """Register advanced filtering tools with the MCP server."""
 
     # Initialize the orchestrator

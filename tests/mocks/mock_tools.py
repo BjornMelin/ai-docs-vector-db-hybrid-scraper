@@ -30,7 +30,7 @@ class MockMCPServer:
         self._resources = []
         self._prompts = []
 
-    def tool(self, *args, **kwargs):
+    def tool(self, *_args, **_kwargs):
         """Mock tool decorator."""
 
         def decorator(func):
@@ -43,7 +43,7 @@ class MockMCPServer:
 
         return decorator
 
-    def resource(self, *args, **kwargs):
+    def resource(self, *_args, **_kwargs):
         """Mock resource decorator."""
 
         def decorator(func):
@@ -52,7 +52,7 @@ class MockMCPServer:
 
         return decorator
 
-    def prompt(self, *args, **kwargs):
+    def prompt(self, *_args, **_kwargs):
         """Mock prompt decorator."""
 
         def decorator(func):
@@ -72,7 +72,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         limit: int = 10,
         strategy: str = "hybrid",
         enable_reranking: bool = True,
-        **kwargs,
+        **_kwargs,
     ) -> list[dict[str, Any]]:
         """Mock search documents tool."""
         result = await client_manager.vector_service.search_documents(
@@ -108,7 +108,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         url: str,
         collection: str = "documentation",
         chunk_strategy: str = "enhanced",
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Mock add document tool."""
         # First crawl the URL
@@ -122,7 +122,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         )
 
     # Mock collections tool
-    async def mock_list_collections(**kwargs) -> list[dict[str, Any]]:
+    async def mock_list_collections(**_kwargs) -> list[dict[str, Any]]:
         """Mock list collections tool."""
         return await client_manager.vector_service.list_collections()
 
@@ -131,7 +131,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         name: str,
         description: str | None = None,
         quality_tier: str = "balanced",
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Mock create project tool."""
         return await client_manager.project_service.create_project(
@@ -145,7 +145,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         collection: str | None = None,
         include_performance: bool = True,
         include_costs: bool = True,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Mock get analytics tool."""
         return await client_manager.analytics_service.get_analytics(
@@ -155,28 +155,28 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         )
 
     # Mock cache tools
-    async def mock_get_cache_stats(**kwargs) -> dict[str, Any]:
+    async def mock_get_cache_stats(**_kwargs) -> dict[str, Any]:
         """Mock get cache stats tool."""
         return await client_manager.cache_service.get_stats()
 
-    async def mock_clear_cache(pattern: str | None = None, **kwargs) -> dict[str, Any]:
+    async def mock_clear_cache(pattern: str | None = None, **_kwargs) -> dict[str, Any]:
         """Mock clear cache tool."""
         return await client_manager.cache_service.clear(pattern=pattern)
 
     # Mock deployment tool
-    async def mock_list_aliases(**kwargs) -> dict[str, Any]:
+    async def mock_list_aliases(**_kwargs) -> dict[str, Any]:
         """Mock list aliases tool."""
         result = await client_manager.deployment_service.list_aliases()
         return {"aliases": result}
 
     # Mock utilities tool
-    async def mock_validate_configuration(**kwargs) -> dict[str, Any]:
+    async def mock_validate_configuration(**_kwargs) -> dict[str, Any]:
         """Mock validate configuration tool."""
         # This would normally validate the actual config
         return {"status": "success", "message": "Configuration is valid"}
 
     # Mock payload indexing tool
-    async def mock_reindex_collection(collection: str, **kwargs) -> dict[str, Any]:
+    async def mock_reindex_collection(collection: str, **_kwargs) -> dict[str, Any]:
         """Mock reindex collection tool."""
         return await client_manager.vector_service.reindex_collection(
             collection=collection
@@ -187,7 +187,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         query: str,
         collection: str = "documentation",
         num_generations: int = 5,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Mock HyDE search tool."""
         return await client_manager.hyde_service.search(

@@ -164,12 +164,8 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
 
 def get_platform_temp_dir() -> Path:
     """Get platform-appropriate temporary directory."""
-    if is_windows():
-        temp_dir = Path(os.getenv("TEMP", os.getenv("TMP", "C:\\temp")))
-    else:
-        temp_dir = Path("/tmp")
-
-    return temp_dir
+    import tempfile
+    return Path(tempfile.gettempdir())
 
 
 def get_environment_variables(prefix: str = "AI_DOCS") -> dict[str, str]:
@@ -196,16 +192,16 @@ def get_playwright_browser_path() -> str | None:
     if is_windows():
         return os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH",
-            os.path.expanduser("~\\AppData\\Local\\ms-playwright"),
+            str(Path("~\\AppData\\Local\\ms-playwright").expanduser()),
         )
     elif is_macos():
         return os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH",
-            os.path.expanduser("~/Library/Caches/ms-playwright"),
+            str(Path("~/Library/Caches/ms-playwright").expanduser()),
         )
     else:  # Linux
         return os.getenv(
-            "PLAYWRIGHT_BROWSERS_PATH", os.path.expanduser("~/.cache/ms-playwright")
+            "PLAYWRIGHT_BROWSERS_PATH", str(Path("~/.cache/ms-playwright").expanduser())
         )
 
 

@@ -9,8 +9,8 @@ import random
 import time
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime, UTC
+from typing import Any, Dict
 from unittest.mock import AsyncMock, Mock
 
 from .data_generators import TestDataGenerator
@@ -294,7 +294,7 @@ def create_mock_web_scraper(
             "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),  # noqa: S311
             "content": content,
             "metadata": {
-                "scraped_at": datetime.now(tz=timezone.utc).isoformat(),
+                "scraped_at": datetime.now(tz=UTC).isoformat(),
                 "content_type": "text/html",
                 "word_count": len(content.split()),
                 "char_count": len(content),

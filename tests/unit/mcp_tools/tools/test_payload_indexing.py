@@ -61,7 +61,7 @@ def mock_index_stats():
 
 
 @pytest.mark.asyncio
-async def test_payload_indexing_tools_registration(mock_client_manager, mock_context):
+async def test_payload_indexing_tools_registration(mock_client_manager, _mock_context):
     """Test that payload indexing tools are properly registered."""
     from src.mcp_tools.tools.payload_indexing import register_tools
 

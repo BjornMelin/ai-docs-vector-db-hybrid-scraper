@@ -51,7 +51,7 @@ class TestStressLoad:
         breaking_point = None
 
         @env.events.stats_reset.add_listener
-        def on_stats_reset(**kwargs):
+        def on_stats_reset(**_kwargs):
             """Capture metrics at each step."""
             nonlocal breaking_point
 
@@ -192,7 +192,7 @@ class TestStressLoad:
 
         services = DependentServices()
 
-        async def test_with_dependencies(**kwargs):
+        async def test_with_dependencies(**_kwargs):
             """Test operation with service dependencies."""
             try:
                 # Call multiple services
@@ -345,7 +345,7 @@ class TestStressLoad:
             f"Excessive memory usage: {memory_analysis['max_memory_mb']} MB"
         )
 
-    def _high_load_operation(self, **kwargs):
+    def _high_load_operation(self, **_kwargs):
         """Simulate high-load operation."""
         import asyncio
         import random

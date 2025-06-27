@@ -5,7 +5,7 @@ operations, failover mechanisms, and business continuity validation.
 """
 
 import asyncio
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from pathlib import Path
 from typing import Any
 
@@ -193,7 +193,7 @@ class TestDataRestoration:
         # Simulate existing backup
         backup_info = {
             "backup_file": "test_backup_20241223_020000.sql.gz",
-            "backup_date": datetime.now(tz=timezone.utc) - timedelta(hours=6),
+            "backup_date": datetime.now(tz=UTC) - timedelta(hours=6),
             "backup_size_mb": 150,
             "database_type": deployment_environment.database_type,
         }
@@ -234,7 +234,7 @@ class TestDataRestoration:
 
         # Configure recovery point
         recovery_config = {
-            "target_time": datetime.now(tz=timezone.utc) - timedelta(hours=2),
+            "target_time": datetime.now(tz=UTC) - timedelta(hours=2),
             "database_name": f"ai_docs_{deployment_environment.name}",
             "recovery_mode": "immediate",
         }
@@ -274,7 +274,7 @@ class TestDataRestoration:
             "backup_path": temp_deployment_dir / "vector_backup_20241223.tar.gz",
             "collections": ["documents", "embeddings"],
             "total_vectors": 10000,
-            "backup_timestamp": datetime.now(tz=timezone.utc) - timedelta(hours=4),
+            "backup_timestamp": datetime.now(tz=UTC) - timedelta(hours=4),
         }
 
         # Execute vector restoration
@@ -639,14 +639,14 @@ class DatabaseBackupManager:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
 
-    async def create_backup(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def create_backup(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Create database backup."""
         # Simulate backup creation
         await asyncio.sleep(2)
 
         backup_file = (
             self.work_dir
-            / f"backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.sql.gz"
+            / f"backup_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.sql.gz"
         )
 
         return {
@@ -658,7 +658,7 @@ class DatabaseBackupManager:
             "compression_ratio": 0.3,
         }
 
-    async def verify_backup_integrity(self, backup_file: str) -> dict[str, Any]:
+    async def verify_backup_integrity(self, _backup_file: str) -> dict[str, Any]:
         """Verify backup integrity."""
         await asyncio.sleep(1)
 
@@ -682,7 +682,7 @@ class VectorDatabaseBackupManager:
 
         backup_path = (
             self.work_dir
-            / f"vector_backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+            / f"vector_backup_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}"
         )
 
         return {
@@ -694,7 +694,7 @@ class VectorDatabaseBackupManager:
             "backup_size_mb": 500,
         }
 
-    async def verify_backup_content(self, backup_path: str) -> dict[str, Any]:
+    async def verify_backup_content(self, _backup_path: str) -> dict[str, Any]:
         """Verify backup content."""
         await asyncio.sleep(1)
 
@@ -713,14 +713,14 @@ class ConfigurationBackupManager:
         self.work_dir = work_dir
 
     async def backup_configurations(
-        self, config_files: list[str], environment: DeploymentEnvironment
+        self, config_files: list[str], _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Backup configuration files."""
         await asyncio.sleep(1)
 
         backup_archive = (
             self.work_dir
-            / f"config_backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.tar.gz"
+            / f"config_backup_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.tar.gz"
         )
 
         return {
@@ -730,7 +730,7 @@ class ConfigurationBackupManager:
             "secrets_handled_securely": True,
         }
 
-    async def scan_backup_for_secrets(self, backup_path: str) -> dict[str, Any]:
+    async def scan_backup_for_secrets(self, _backup_path: str) -> dict[str, Any]:
         """Scan backup for sensitive data."""
         await asyncio.sleep(0.5)
 
@@ -744,7 +744,7 @@ class ConfigurationBackupManager:
 class BackupScheduler:
     """Scheduler for automated backups."""
 
-    async def configure_schedule(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def configure_schedule(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Configure backup schedule."""
         await asyncio.sleep(1)
 
@@ -755,7 +755,7 @@ class BackupScheduler:
             "notification_configured": True,
         }
 
-    async def test_schedule_execution(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def test_schedule_execution(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Test schedule execution."""
         await asyncio.sleep(0.5)
 
@@ -773,7 +773,7 @@ class DatabaseRestorationManager:
         self.work_dir = work_dir
 
     async def restore_from_backup(
-        self, backup_info: dict[str, Any], environment: DeploymentEnvironment
+        self, _backup_info: dict[str, Any], _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Restore database from backup."""
         await asyncio.sleep(5)
@@ -786,7 +786,7 @@ class DatabaseRestorationManager:
         }
 
     async def verify_restored_data(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Verify restored data integrity."""
         await asyncio.sleep(2)
@@ -805,7 +805,7 @@ class PointInTimeRecoveryManager:
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
 
-    async def perform_pitr(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def perform_pitr(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Perform point-in-time recovery."""
         await asyncio.sleep(7)
 
@@ -816,7 +816,7 @@ class PointInTimeRecoveryManager:
             "database_consistent": True,
         }
 
-    async def validate_recovery_point(self, target_time: datetime) -> dict[str, Any]:
+    async def validate_recovery_point(self, _target_time: datetime) -> dict[str, Any]:
         """Validate recovery point accuracy."""
         await asyncio.sleep(1)
 
@@ -834,7 +834,7 @@ class VectorDatabaseRestorationManager:
         self.work_dir = work_dir
 
     async def restore_vector_database(
-        self, backup_info: dict[str, Any], environment: DeploymentEnvironment
+        self, backup_info: dict[str, Any], _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Restore vector database."""
         await asyncio.sleep(4)
@@ -864,7 +864,7 @@ class SelectiveRestorationManager:
         self.work_dir = work_dir
 
     async def restore_selective(
-        self, config: dict[str, Any], environment: DeploymentEnvironment
+        self, config: dict[str, Any], _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Perform selective restoration."""
         await asyncio.sleep(3)
@@ -881,7 +881,7 @@ class SelectiveRestorationManager:
         }
 
     async def verify_selective_restoration(
-        self, config: dict[str, Any]
+        self, _config: dict[str, Any]
     ) -> dict[str, Any]:
         """Verify selective restoration accuracy."""
         await asyncio.sleep(1)
@@ -921,7 +921,7 @@ class DatabaseFailoverManager:
 class ServiceFailoverManager:
     """Manager for service failover operations."""
 
-    async def simulate_service_failure(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def simulate_service_failure(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Simulate service failure and test failover."""
         await asyncio.sleep(3)
 
@@ -932,7 +932,7 @@ class ServiceFailoverManager:
             "zero_downtime_achieved": True,
         }
 
-    async def test_service_recovery(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def test_service_recovery(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Test service recovery."""
         await asyncio.sleep(2)
 
@@ -946,7 +946,7 @@ class ServiceFailoverManager:
 class MultiRegionFailoverManager:
     """Manager for multi-region failover operations."""
 
-    async def simulate_region_failure(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def simulate_region_failure(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Simulate region failure."""
         await asyncio.sleep(10)
 
@@ -976,7 +976,7 @@ class RTOTester:
     """Tester for Recovery Time Objectives."""
 
     async def simulate_failure_and_recovery(
-        self, scenario: str, environment: DeploymentEnvironment
+        self, scenario: str, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Simulate failure scenario and measure recovery time."""
         # Simulate different recovery times based on scenario
@@ -1002,7 +1002,7 @@ class RPOTester:
     """Tester for Recovery Point Objectives."""
 
     async def simulate_data_loss_and_recovery(
-        self, scenario: str, environment: DeploymentEnvironment
+        self, scenario: str, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Simulate data loss scenario and measure data recovery."""
         # Simulate different data loss amounts based on scenario
@@ -1030,7 +1030,7 @@ class BusinessContinuityTester:
         self,
         scenario: str,
         function: dict[str, Any],
-        environment: DeploymentEnvironment,
+        _environment: DeploymentEnvironment,
     ) -> dict[str, Any]:
         """Test business function continuity during disaster."""
         # Simulate different impacts based on scenario and function

@@ -145,7 +145,7 @@ class TestEmbeddingManagerInitialization:
             ):
                 await manager.initialize()
 
-    async def test_double_initialization(self, embedding_manager, mock_openai_client):
+    async def test_double_initialization(self, embedding_manager, _mock_openai_client):
         """Test that double initialization is safe."""
         # Create proper async mock providers
         mock_openai_provider = AsyncMock()

@@ -98,10 +98,10 @@ class TestConfigReloader:
     async def test_callback_failure_handling(self, reloader: ConfigReloader):
         """Test handling of callback failures during reload."""
 
-        def failing_callback(old_config: Config, new_config: Config) -> bool:
+        def failing_callback(_old_config: Config, _new_config: Config) -> bool:
             return False
 
-        def success_callback(old_config: Config, new_config: Config) -> bool:
+        def success_callback(_old_config: Config, _new_config: Config) -> bool:
             return True
 
         reloader.add_change_listener("failing_service", failing_callback)
@@ -121,7 +121,7 @@ class TestConfigReloader:
     async def test_callback_timeout_handling(self, reloader: ConfigReloader):
         """Test handling of callback timeouts."""
 
-        async def slow_callback(old_config: Config, new_config: Config) -> bool:
+        async def slow_callback(_old_config: Config, _new_config: Config) -> bool:
             await asyncio.sleep(2.0)  # Longer than timeout
             return True
 
@@ -156,7 +156,7 @@ class TestConfigReloader:
         assert operation.status == ReloadStatus.ROLLED_BACK
 
     @pytest.mark.asyncio
-    async def test_file_watching(self, reloader: ConfigReloader):
+    async def test_file_watching(self, _reloader: ConfigReloader):
         """Test automatic file watching for configuration changes."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("AI_DOCS_APP_NAME=Original App\n")
@@ -197,7 +197,7 @@ class TestConfigReloader:
     def test_listener_management(self, reloader: ConfigReloader):
         """Test configuration change listener management."""
 
-        def test_callback(old_config: Config, new_config: Config) -> bool:
+        def test_callback(_old_config: Config, _new_config: Config) -> bool:
             return True
 
         # Add listener

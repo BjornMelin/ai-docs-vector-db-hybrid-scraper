@@ -255,7 +255,7 @@ class TestCircuitBreakers:
             def set_failure_rate(self, rate: float):
                 self.failure_rate = max(0.0, min(1.0, rate))
 
-            async def process_request(self, **kwargs):
+            async def process_request(self, **_kwargs):
                 self.call_count += 1
 
                 # Inject failures based on failure rate
@@ -398,7 +398,7 @@ class TestCircuitBreakers:
                     self.recovery_time = time.time()
                 self.is_healthy = healthy
 
-            async def process_request(self, **kwargs):
+            async def process_request(self, **_kwargs):
                 self.call_count += 1
 
                 if not self.is_healthy:
@@ -563,7 +563,7 @@ class TestRateLimiters:
         rate_limiter = MockRateLimiter(rl_config)
 
         # Mock service protected by rate limiter
-        async def rate_limited_service(**kwargs):
+        async def rate_limited_service(**_kwargs):
             """Service protected by rate limiter."""
             if not await rate_limiter.allow_request():
                 raise Exception("Rate limit exceeded")
@@ -698,7 +698,7 @@ class TestRateLimiters:
                 self.total_executions = 0
                 self.execution_times = []
 
-            async def expensive_operation(self, **kwargs):
+            async def expensive_operation(self, **_kwargs):
                 """Simulate expensive operation that shouldn't be overwhelmed."""
                 self.concurrent_executions += 1
                 self.max_concurrent = max(

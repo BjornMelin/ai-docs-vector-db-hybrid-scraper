@@ -425,7 +425,7 @@ class TestAddDocumentBatch:
                 assert response.collection == "batch_collection"
 
     async def test_partial_batch_failure(
-        self, mock_mcp, mock_context, mock_client_manager, sample_batch_request
+        self, mock_mcp, mock_context, _mock_client_manager, sample_batch_request
     ):
         """Test batch processing with some failures."""
         tool_func = mock_mcp.tools["add_documents_batch"]

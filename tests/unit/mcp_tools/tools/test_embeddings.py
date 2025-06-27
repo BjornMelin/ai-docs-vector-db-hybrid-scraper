@@ -21,7 +21,7 @@ class TestEmbeddingsTools:
 
         # Create a smart mock that returns different results based on inputs
         async def mock_generate_embeddings(
-            texts, model=None, batch_size=32, generate_sparse=False
+            texts, model=None, _batch_size=32, generate_sparse=False
         ):
             mock_result = MagicMock()
             # Generate embeddings based on number of input texts

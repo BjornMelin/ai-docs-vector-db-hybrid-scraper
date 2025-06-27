@@ -14,7 +14,7 @@ import logging
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -361,7 +361,7 @@ class MLSecurityValidator:
         # Use existing logging infrastructure
         log_data = {
             "event_type": event_type,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "severity": severity,
             **details,
         }
@@ -402,7 +402,7 @@ class SimpleRateLimiter:
         """Initialize using existing config."""
         self.config = get_config()
 
-    def is_allowed(self, identifier: str) -> bool:
+    def is_allowed(self, _identifier: str) -> bool:
         """Check if request is allowed.
 
         This is a placeholder - actual rate limiting should be done
