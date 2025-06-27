@@ -298,7 +298,7 @@ class ClientManager:
 
             async with self._service_locks["qdrant_service"]:
                 if self._qdrant_service is None:
-                    from src.services.vector_db.service import QdrantService
+                    from src.services.vector_db.service import QdrantService  # noqa: PLC0415
 
                     self._qdrant_service = QdrantService(
                         self.config, client_manager=self
@@ -316,7 +316,7 @@ class ClientManager:
 
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
-                    from src.services.embeddings.manager import EmbeddingManager
+                    from src.services.embeddings.manager import EmbeddingManager  # noqa: PLC0415
 
                     # Pass ClientManager to EmbeddingManager
                     self._embedding_manager = EmbeddingManager(
@@ -336,7 +336,7 @@ class ClientManager:
 
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
-                    from src.services.cache.manager import CacheManager
+                    from src.services.cache.manager import CacheManager  # noqa: PLC0415
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -491,8 +491,6 @@ class ClientManager:
                             f"Using auto-detected Redis for task queue: {auto_detected_redis.connection_string}"
                         )
                         # Create modified config with auto-detected Redis
-                        from copy import deepcopy
-
                         config = deepcopy(self.config)
                         config.task_queue.redis_url = (
                             auto_detected_redis.connection_string

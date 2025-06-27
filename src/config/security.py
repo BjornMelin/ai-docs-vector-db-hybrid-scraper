@@ -359,7 +359,7 @@ class SecureConfigManager:
         logger.info("Loading existing encryption keys")
 
         try:
-            with open(key_file, "rb") as f:
+            with Path(key_file).open("rb") as f:
                 encrypted_data = f.read()
 
             # For now, use a simplified key loading mechanism
@@ -466,7 +466,7 @@ class SecureConfigManager:
 
         # Write to audit log file
         try:
-            with open(self.audit_log_file, "a", encoding="utf-8") as f:
+            with Path(self.audit_log_file).open("a", encoding="utf-8") as f:
                 f.write(audit_event.model_dump_json() + "\n")
         except Exception as e:
             logger.exception(f"Failed to write audit log: {e}")
