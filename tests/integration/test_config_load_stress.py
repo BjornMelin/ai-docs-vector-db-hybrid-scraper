@@ -8,28 +8,20 @@ large configuration files, and system resource constraints.
 import asyncio
 import gc
 import json
-import os
 import random
 import resource
-import tempfile
 import time
 import tracemalloc
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import psutil
 import pytest
-import yaml
 from hypothesis import given, settings, strategies as st
 
-from src.config.core import Config, get_config
+from src.config.core import Config
 from src.config.reload import (
     ConfigReloader,
-    ReloadOperation,
-    ReloadStatus,
     ReloadTrigger,
 )
 
