@@ -9,9 +9,6 @@ from src.mcp_tools.models.responses import EmbeddingGenerationResponse
 from src.mcp_tools.tools.embeddings import register_tools
 
 
-
-
-
 class TestEmbeddingsTools:
     """Test suite for embeddings MCP tools."""
 
@@ -74,7 +71,6 @@ class TestEmbeddingsTools:
     async def test_generate_embeddings_basic(self, mock_client_manager, mock_context):
         """Test basic embedding generation."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -112,7 +108,6 @@ class TestEmbeddingsTools:
     ):
         """Test embedding generation with sparse embeddings."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -148,7 +143,6 @@ class TestEmbeddingsTools:
     async def test_list_embedding_providers(self, mock_client_manager, mock_context):
         """Test getting available embedding providers."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -172,7 +166,6 @@ class TestEmbeddingsTools:
     @pytest.mark.asyncio
     async def test_embeddings_error_handling(self, mock_client_manager, mock_context):
         """Test embeddings error handling."""
-
 
         # Make embedding manager raise an exception
         mock_embedding = AsyncMock()
@@ -209,7 +202,6 @@ class TestEmbeddingsTools:
     @pytest.mark.asyncio
     async def test_empty_texts_list(self, mock_client_manager, mock_context):
         """Test handling empty texts list."""
-
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -273,7 +265,6 @@ class TestEmbeddingsTools:
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
         """Test that context logging is properly integrated."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -300,7 +291,6 @@ class TestEmbeddingsTools:
     def test_tool_registration(self, mock_client_manager):
         """Test that embedding tools are properly registered."""
 
-
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)
 
@@ -312,7 +302,6 @@ class TestEmbeddingsTools:
         self, mock_client_manager, mock_context
     ):
         """Test proper interaction with embedding manager."""
-
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -340,7 +329,6 @@ class TestEmbeddingsTools:
     async def test_batch_size_handling(self, mock_client_manager, mock_context):
         """Test different batch sizes."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -365,7 +353,6 @@ class TestEmbeddingsTools:
     @pytest.mark.asyncio
     async def test_custom_model_specification(self, mock_client_manager, mock_context):
         """Test embedding generation with custom model."""
-
 
         mock_mcp = MagicMock()
         registered_tools = {}

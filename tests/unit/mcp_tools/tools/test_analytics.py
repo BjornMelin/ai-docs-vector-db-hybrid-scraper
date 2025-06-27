@@ -9,9 +9,6 @@ from src.mcp_tools.models.responses import AnalyticsResponse, SystemHealthRespon
 from src.mcp_tools.tools.analytics import register_tools
 
 
-
-
-
 class TestAnalyticsTools:
     """Test suite for analytics MCP tools."""
 
@@ -63,7 +60,6 @@ class TestAnalyticsTools:
     async def test_get_analytics_basic(self, mock_client_manager, mock_context):
         """Test basic analytics retrieval."""
 
-
         # Create a mock MCP server
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -102,7 +98,6 @@ class TestAnalyticsTools:
     ):
         """Test analytics with performance metrics."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -132,7 +127,6 @@ class TestAnalyticsTools:
     async def test_get_analytics_with_costs(self, mock_client_manager, mock_context):
         """Test analytics with cost estimates."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -161,7 +155,6 @@ class TestAnalyticsTools:
     ):
         """Test analytics for a specific collection."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -187,7 +180,6 @@ class TestAnalyticsTools:
     async def test_get_system_health(self, mock_client_manager, mock_context):
         """Test system health check."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -211,7 +203,6 @@ class TestAnalyticsTools:
     @pytest.mark.asyncio
     async def test_analytics_error_handling(self, mock_client_manager, mock_context):
         """Test analytics error handling."""
-
 
         # Make qdrant service raise an exception
         mock_qdrant = AsyncMock()
@@ -290,7 +281,6 @@ class TestAnalyticsTools:
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
         """Test that context logging is properly integrated."""
 
-
         mock_mcp = MagicMock()
         registered_tools = {}
 
@@ -319,7 +309,6 @@ class TestAnalyticsTools:
 
     def test_tool_registration(self, mock_client_manager):
         """Test that tools are properly registered with the MCP server."""
-
 
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)

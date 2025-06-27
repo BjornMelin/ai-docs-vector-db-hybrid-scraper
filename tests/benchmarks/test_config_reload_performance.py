@@ -227,7 +227,7 @@ class TestConfigReloadPerformance:
 
         def modify_and_reload():
             # Modify the file
-            with open(temp_env_file, "a") as f:
+            with temp_env_file.open("a") as f:
                 f.write(f"\nNEW_SETTING=value_{time.time()}\n")
 
             # Reload configuration
@@ -335,7 +335,7 @@ class TestDriftDetectionPerformance:
         drift_detector.take_snapshot(config_file)
 
         # Modify file
-        with open(config_file, "a") as f:
+        with config_file.open("a") as f:
             f.write("NEW_SETTING=value\n")
 
         # Take second snapshot
@@ -364,7 +364,7 @@ class TestDriftDetectionPerformance:
 
             # Modify config
             large_config["setting_500"] = "modified_value"
-            with open(config_file, "w") as f:
+            with config_file.open("w") as f:
                 json.dump(large_config, f)
 
             # Take second snapshot

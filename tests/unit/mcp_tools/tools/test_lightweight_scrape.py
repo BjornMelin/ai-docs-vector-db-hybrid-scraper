@@ -4,11 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.services.errors import CrawlServiceError
 from src.mcp_tools.tools.lightweight_scrape import register_tools
-
-
-
+from src.services.errors import CrawlServiceError
 
 
 @pytest.fixture
@@ -64,7 +61,6 @@ class TestLightweightScrapeRegistration:
     def test_register_tools(self, mock_mcp, mock_client_manager):
         """Test that lightweight_scrape tool is registered correctly."""
 
-
         register_tools(mock_mcp, mock_client_manager)
 
         # Verify tool decorator was called
@@ -79,7 +75,6 @@ class TestLightweightScrapeTool:
         self, mock_client_manager, mock_context
     ):
         """Test successful scraping with markdown format."""
-
 
         # Set up mock crawl manager to return successful result
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -136,7 +131,6 @@ class TestLightweightScrapeTool:
     ):
         """Test scraping with multiple output formats."""
 
-
         # Set up mock crawl manager to return successful result
         crawl_manager = await mock_client_manager.get_crawl_manager()
         crawl_manager.scrape_url.return_value = {
@@ -182,7 +176,6 @@ class TestLightweightScrapeTool:
     async def test_invalid_format_raises_error(self, mock_client_manager, mock_context):
         """Test that invalid formats raise ValueError."""
 
-
         # Register and get tool
         mock_mcp = MagicMock()
         tool_func = None
@@ -206,7 +199,6 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_url_not_suitable_warning(self, mock_client_manager, mock_context):
         """Test warning when URL is not suitable for lightweight scraping."""
-
 
         # Set up mock to return that URL is not suitable for lightweight tier
         crawl_manager = await mock_client_manager.get_crawl_manager()
@@ -247,7 +239,6 @@ class TestLightweightScrapeTool:
     ):
         """Test handling of scraping failure that should escalate."""
 
-
         # Set up mock crawl manager to return failure
         crawl_manager = await mock_client_manager.get_crawl_manager()
         crawl_manager.scrape_url.return_value = {
@@ -283,7 +274,6 @@ class TestLightweightScrapeTool:
     async def test_crawl_manager_reuse(self, mock_client_manager, mock_context):
         """Test that crawl manager is reused across calls."""
 
-
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()
         crawl_manager.scrape_url.return_value = {
@@ -318,7 +308,6 @@ class TestLightweightScrapeTool:
     async def test_default_format_is_markdown(self, mock_client_manager, mock_context):
         """Test that default format is markdown when not specified."""
 
-
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()
         crawl_manager.scrape_url.return_value = {
@@ -350,7 +339,6 @@ class TestLightweightScrapeTool:
     @pytest.mark.asyncio
     async def test_performance_metrics_added(self, mock_client_manager, mock_context):
         """Test that performance metrics are added to successful results."""
-
 
         # Set up mock crawl manager
         crawl_manager = await mock_client_manager.get_crawl_manager()
