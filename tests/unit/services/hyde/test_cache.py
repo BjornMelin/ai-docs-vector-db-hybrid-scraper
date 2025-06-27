@@ -1,6 +1,6 @@
 """Tests for HyDE caching implementation."""
 
-import time
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
@@ -222,7 +222,7 @@ class TestHyDECache:
 
     async def test_get_hyde_embedding_not_initialized(self, cache):
         """Test getting HyDE embedding when not initialized."""
-        from src.services.errors import APIError
+        from src.services.errors import APIError  # noqa: PLC0415
 
         with pytest.raises(APIError):
             await cache.get_hyde_embedding("test query")

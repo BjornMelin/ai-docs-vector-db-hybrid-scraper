@@ -46,7 +46,7 @@ class TestSecurityEnhancements:
         manager = SecureConfigManager(config)
 
         # Add mock cache attributes for testing
-        from unittest.mock import MagicMock
+        from unittest.mock import MagicMock  # noqa: PLC0415
 
         mock_cache = MagicMock()
         mock_cache.maxsize = settings.encryption_cache_size

@@ -4,10 +4,10 @@ This module provides comprehensive background task management including
 task scheduling, monitoring, and lifecycle management for production environments.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import threading
-import time
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field

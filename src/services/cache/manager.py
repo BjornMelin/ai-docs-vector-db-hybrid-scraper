@@ -1,9 +1,9 @@
 import typing
 """Simplified cache manager using DragonflyDB with specialized cache layers."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

@@ -5,7 +5,7 @@ Prometheus-based monitoring, enabling dual export and correlation between
 trace and metric data while maintaining backward compatibility.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from opentelemetry import metrics

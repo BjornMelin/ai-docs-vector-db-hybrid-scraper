@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Security utilities for MCP server with unified configuration integration."""
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from pathlib import Path
 from typing import ClassVar

@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Disaster recovery tests for chaos engineering.
 
@@ -9,8 +10,8 @@ This module implements disaster recovery scenarios to test system resilience
 against major outages, data loss, and catastrophic failures.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict

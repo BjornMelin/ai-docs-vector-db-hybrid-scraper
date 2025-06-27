@@ -4,7 +4,7 @@ This module tests the abstract base service class that provides common patterns
 for service lifecycle management, error handling, and configuration.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import Mock
 
 import pytest

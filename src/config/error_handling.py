@@ -4,9 +4,9 @@ This module provides comprehensive error handling, retry logic, and graceful
 degradation for all async configuration operations.
 """
 
-import asyncio
-import json
-import logging
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import traceback
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -264,7 +264,7 @@ class SafeConfigLoader:
                         return json.load(f)
 
                 elif suffix in [".yaml", ".yml"]:
-                    import yaml
+                    import yaml  # noqa: PLC0415
 
                     with file_path.open() as f:
                         data = yaml.safe_load(f)
@@ -278,7 +278,7 @@ class SafeConfigLoader:
                         return data
 
                 elif suffix == ".toml":
-                    import tomli
+                    import tomli  # noqa: PLC0415
 
                     with file_path.open("rb") as f:
                         return tomli.load(f)

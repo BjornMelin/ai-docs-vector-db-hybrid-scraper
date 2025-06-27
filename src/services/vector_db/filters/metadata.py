@@ -5,7 +5,7 @@ complex boolean logic (AND, OR, NOT), nested expressions, flexible field matchin
 and integration with custom metadata schemas.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from enum import Enum
 from typing import Any
 

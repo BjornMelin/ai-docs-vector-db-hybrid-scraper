@@ -6,10 +6,10 @@ Demonstrates the 10-100x performance improvement achieved through
 payload indexing on metadata fields.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
-import time
+import time  # noqa: PLC0415
 from datetime import datetime, timezone
 from typing import Any
 

@@ -1,6 +1,6 @@
 """Tests for the base filter architecture."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from datetime import datetime
 from typing import Any
 

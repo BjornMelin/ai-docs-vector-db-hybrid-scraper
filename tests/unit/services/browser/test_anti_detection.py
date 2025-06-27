@@ -460,7 +460,7 @@ class TestPlaywrightAdapterIntegration:
     @pytest.mark.asyncio
     async def test_playwright_adapter_with_anti_detection(self):
         """Test Playwright adapter with anti-detection enabled."""
-        from src.services.browser.playwright_adapter import PlaywrightAdapter
+        from src.services.browser.playwright_adapter import PlaywrightAdapter  # noqa: PLC0415
 
         config = PlaywrightConfig()
 
@@ -478,7 +478,7 @@ class TestPlaywrightAdapterIntegration:
     @patch("src.services.browser.playwright_adapter.async_playwright")
     async def test_playwright_stealth_initialization(self, mock_playwright):
         """Test Playwright initialization with stealth configuration."""
-        from src.services.browser.playwright_adapter import PlaywrightAdapter
+        from src.services.browser.playwright_adapter import PlaywrightAdapter  # noqa: PLC0415
 
         # Mock Playwright components
         mock_playwright_instance = AsyncMock()
@@ -512,7 +512,7 @@ class TestPlaywrightAdapterIntegration:
     @pytest.mark.asyncio
     async def test_stealth_script_injection(self):
         """Test stealth script injection."""
-        from src.services.browser.playwright_adapter import PlaywrightAdapter
+        from src.services.browser.playwright_adapter import PlaywrightAdapter  # noqa: PLC0415
 
         config = PlaywrightConfig()
         adapter = PlaywrightAdapter(config, enable_anti_detection=True)

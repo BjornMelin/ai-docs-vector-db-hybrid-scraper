@@ -772,7 +772,7 @@ class TestHyDEQueryEngine:
         async def mock_enhanced_search(query, **_kwargs):
                 raise TestError("Search error")
                 raise TestError("Search error")
-            return [{"id": f"doc_{query}", "score": 0.8}]
+            return [{"id": f"doc_{query}", "score": 0.8}] # noqa: PLC0415
 
         engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
 

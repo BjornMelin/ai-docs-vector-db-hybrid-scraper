@@ -5,8 +5,8 @@ categories, orchestrating the execution of environment, pipeline, infrastructure
 post-deployment, disaster recovery, and blue-green deployment tests.
 """
 
-import asyncio
-import json
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

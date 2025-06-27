@@ -4,7 +4,7 @@ This module tests JWT token validation, manipulation resistance,
 and authentication bypass prevention.
 """
 
-import time
+import time  # noqa: PLC0415
 from unittest.mock import MagicMock
 
 import jwt
@@ -168,8 +168,8 @@ class TestJWTSecurity:
         header = {"alg": "none", "typ": "JWT"}
         payload = valid_jwt_payload
 
-        import base64
-        import json
+        import base64  # noqa: PLC0415
+        import json  # noqa: PLC0415
 
         header_b64 = (
             base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
@@ -199,8 +199,8 @@ class TestJWTSecurity:
         header, payload, signature = token.split(".")
 
         # Decode payload
-        import base64
-        import json
+        import base64  # noqa: PLC0415
+        import json  # noqa: PLC0415
 
         payload_data = json.loads(base64.urlsafe_b64decode(payload + "==").decode())
 
@@ -228,8 +228,8 @@ class TestJWTSecurity:
         header, payload, signature = token.split(".")
 
         # Decode and manipulate header
-        import base64
-        import json
+        import base64  # noqa: PLC0415
+        import json  # noqa: PLC0415
 
         header_data = json.loads(base64.urlsafe_b64decode(header + "==").decode())
 

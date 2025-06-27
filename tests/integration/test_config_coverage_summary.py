@@ -10,7 +10,7 @@ class TestConfigurationCoverageSummary:
 
     def test_concurrent_operations_coverage(self):
         """Verify concurrent operation tests exist."""
-        from tests.integration.test_concurrent_config import (
+        from tests.integration.test_concurrent_config import (  # noqa: PLC0415
             TestConcurrentConfigurationAccess,
         )
 
@@ -35,7 +35,7 @@ class TestConfigurationCoverageSummary:
 
     def test_load_stress_coverage(self):
         """Verify load stress tests exist."""
-        from tests.integration.test_config_load_stress import (
+        from tests.integration.test_config_load_stress import (  # noqa: PLC0415
             TestConfigurationLoadStress,
         )
 
@@ -60,7 +60,7 @@ class TestConfigurationCoverageSummary:
 
     def test_security_edge_cases_coverage(self):
         """Verify security edge case tests exist."""
-        from tests.integration.test_security_config_edge_cases import (
+        from tests.integration.test_security_config_edge_cases import (  # noqa: PLC0415
             TestSecurityConfigurationEdgeCases,
         )
 
@@ -93,7 +93,7 @@ class TestConfigurationCoverageSummary:
 
     def test_property_based_transitions_coverage(self):
         """Verify property-based transition tests exist."""
-        from tests.property.test_config_transitions import (
+        from tests.property.test_config_transitions import (  # noqa: PLC0415
             ConfigurationStateMachine,
             TestConfigurationTransitionProperties,
         )
@@ -131,12 +131,12 @@ class TestConfigurationCoverageSummary:
         # Count total test methods across all new test files
         total_tests = 0
 
-        from tests.integration import (
+        from tests.integration import (  # noqa: PLC0415
             test_concurrent_config,
             test_config_load_stress,
             test_security_config_edge_cases,
         )
-        from tests.property import test_config_transitions
+        from tests.property import test_config_transitions  # noqa: PLC0415
 
         for module in [
             test_concurrent_config,

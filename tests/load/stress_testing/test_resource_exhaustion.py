@@ -11,13 +11,13 @@ system behavior under various resource constraints including memory, CPU,
 network bandwidth, database connections, and file descriptors.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import gc
-import logging
+import logging  # noqa: PLC0415
 import resource
 import tempfile
 import threading
-import time
+import time  # noqa: PLC0415
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field

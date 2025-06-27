@@ -10,9 +10,9 @@ This module implements stress tests to identify system breaking points
 and behavior under extreme load conditions.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Dict
 
 import pytest
@@ -257,7 +257,7 @@ class TestStressLoad:
             {"duration": 180, "users": 50, "spawn_rate": 10, "name": "recovery"},
         ]
 
-        from ..load_profiles import create_custom_step_profile
+        from ..load_profiles import create_custom_step_profile  # noqa: PLC0415
 
         profile = create_custom_step_profile(stages)
 
@@ -304,9 +304,9 @@ class TestStressLoad:
 
         async def memory_tracking_operation(**kwargs):
             """Operation that tracks memory usage."""
-            import os
+            import os  # noqa: PLC0415
 
-            import psutil
+            import psutil  # noqa: PLC0415
 
             process = psutil.Process(os.getpid())
             memory_before = process.memory_info().rss / 1024 / 1024  # MB
@@ -354,8 +354,8 @@ class TestStressLoad:
 
     def _high_load_operation(self, **_kwargs):
         """Simulate high-load operation."""
-        import asyncio
-        import random
+        import asyncio  # noqa: PLC0415
+        import random  # noqa: PLC0415
 
         # Simulate CPU-intensive operation
         start = time.time()

@@ -4,7 +4,7 @@ This module provides utilities for consistent behavior across Windows, macOS, an
 platforms, especially for file paths, environment variables, and system dependencies.
 """
 
-import os
+import os  # noqa: PLC0415
 import platform
 import sys
 from pathlib import Path
@@ -164,7 +164,7 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
 
 def get_platform_temp_dir() -> Path:
     """Get platform-appropriate temporary directory."""
-    import tempfile
+    import tempfile  # noqa: PLC0415
 
     return Path(tempfile.gettempdir())
 

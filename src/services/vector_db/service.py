@@ -4,7 +4,7 @@ This module provides a clean facade over the modularized Qdrant functionality,
 using the centralized ClientManager for all client operations.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 from src.config import Config

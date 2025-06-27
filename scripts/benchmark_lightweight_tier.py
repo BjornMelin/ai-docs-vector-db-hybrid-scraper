@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Benchmark script to demonstrate Lightweight HTTP Tier performance improvements."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 
 # Configure logging
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from statistics import mean
 from statistics import stdev
 

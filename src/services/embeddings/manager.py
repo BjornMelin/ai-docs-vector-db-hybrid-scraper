@@ -1,7 +1,7 @@
 """Embedding manager with smart provider selection."""
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
@@ -97,7 +97,7 @@ class EmbeddingManager:
         # Initialize cache manager if caching is enabled
         self.cache_manager: object | None = None
         if config.cache.enable_caching:
-            from ..cache import CacheManager
+            from ..cache import CacheManager  # noqa: PLC0415
 
             self.cache_manager = CacheManager(
                 dragonfly_url=config.cache.dragonfly_url,
@@ -596,10 +596,10 @@ class EmbeddingManager:
             json.JSONDecodeError: If file contains invalid JSON
             pydantic.ValidationError: If data doesn't match expected schema
         """
-        import json
-        from pathlib import Path
+        import json  # noqa: PLC0415
+        from pathlib import Path  # noqa: PLC0415
 
-        from src.config import Config
+        from src.config import Config  # noqa: PLC0415
 
         # Load and validate benchmark configuration
         benchmark_path = Path(benchmark_file)

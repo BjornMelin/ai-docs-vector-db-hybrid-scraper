@@ -4,9 +4,9 @@ This module provides the primary benchmarking interface for comprehensive
 performance testing of the hybrid search implementation.
 """
 
-import json
-import logging
-import time
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from datetime import datetime
 from pathlib import Path
 from typing import Any

@@ -14,10 +14,10 @@ Performance Features:
 - Memory usage under 50MB
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import json
-import time
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Any, Type, TypeVar, Union

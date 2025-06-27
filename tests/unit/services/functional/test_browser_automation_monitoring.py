@@ -10,8 +10,8 @@ including tier health metrics, performance optimization, failover mechanisms,
 and monitoring for lightweight, playwright, crawl4ai, browser_use, and firecrawl tiers.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 import pytest
@@ -60,7 +60,7 @@ class MockBrowserTier:
 
     async def execute_request(self, request_type: str) -> dict[str, Any]:
         """Execute browser automation request."""
-            raise TestError(f"Tier {self.name} is unhealthy")
+            raise TestError(f"Tier {self.name} is unhealthy") # noqa: PLC0415
             raise TestError(f"Tier {self.name} is unhealthy")
 
         if self.active_sessions >= self.max_sessions:
@@ -97,7 +97,7 @@ class MockBrowserTier:
         }
 
 
-class MockBrowserMonitoringSystem:
+class MockBrowserMonitoringSystem: # noqa: PLC0415
     """Mock 5-tier browser monitoring system."""
 
     def __init__(self):

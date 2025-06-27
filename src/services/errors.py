@@ -21,10 +21,10 @@ Error Hierarchy:
     └── ConfigurationError: Configuration and environment errors
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import functools
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
@@ -867,7 +867,7 @@ def validate_input(**validators) -> Callable[[F], F]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Get function signature
-            import inspect
+            import inspect  # noqa: PLC0415
 
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)

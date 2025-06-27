@@ -5,9 +5,9 @@ memory usage tracking, and slow request identification for production environmen
 """
 
 import gc
-import logging
+import logging  # noqa: PLC0415
 import threading
-import time
+import time  # noqa: PLC0415
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field

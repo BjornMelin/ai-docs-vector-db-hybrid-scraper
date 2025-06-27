@@ -5,7 +5,7 @@ performance metrics during testing, enabling performance regression detection
 and benchmarking.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import functools
 import gc
 
@@ -17,7 +17,7 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 import statistics
-import time
+import time  # noqa: PLC0415
 import tracemalloc
 from collections.abc import Callable
 from contextlib import contextmanager

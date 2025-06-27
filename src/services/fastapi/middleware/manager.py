@@ -4,7 +4,7 @@ This module provides basic middleware management following KISS principles.
 Only includes essential middleware for V1 release.
 """
 
-import logging
+import logging  # noqa: PLC0415
 
 from starlette.applications import Starlette
 from starlette.middleware import Middleware

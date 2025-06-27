@@ -4,7 +4,7 @@ This module tests MCP tool contracts from the consumer perspective,
 ensuring compatibility and proper behavior.
 """
 
-import json
+import json  # noqa: PLC0415
 from unittest.mock import AsyncMock
 
 import pytest

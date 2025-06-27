@@ -1,6 +1,6 @@
 """Tests for federated search service."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 

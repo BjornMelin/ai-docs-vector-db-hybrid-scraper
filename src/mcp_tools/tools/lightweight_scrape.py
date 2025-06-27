@@ -1,6 +1,6 @@
 """Lightweight HTTP scraping tool for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING, Literal
 
 
@@ -72,7 +72,7 @@ def _convert_content_formats(
             content_dict["html"] = result.get("metadata", {}).get("raw_html", content)
         elif fmt == "text":
             # Strip markdown formatting for plain text
-            import re
+            import re  # noqa: PLC0415
 
             text_content = re.sub(r"[*_`#\[\]()]", "", content)
             content_dict["text"] = text_content
@@ -190,7 +190,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         # Perform the scrape using UnifiedBrowserManager with forced lightweight tier
         try:
-            import time
+            import time  # noqa: PLC0415
 
             start_time = time.time()
 

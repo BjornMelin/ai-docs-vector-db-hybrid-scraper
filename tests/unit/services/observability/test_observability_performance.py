@@ -1,7 +1,7 @@
 """Tests for performance monitoring module."""
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import Mock, patch
 
 import pytest
@@ -515,7 +515,7 @@ class TestGlobalMonitorInstance:
     def test_get_performance_monitor_not_initialized(self):
         """Test getting monitor when not initialized."""
         # Reset global instance
-        import src.services.observability.performance as perf_module
+        import src.services.observability.performance as perf_module  # noqa: PLC0415
 
         perf_module._performance_monitor = None
 

@@ -4,7 +4,7 @@ This module provides MCP tools for AI-powered content analysis, quality assessme
 and adaptive extraction recommendations using the Content Intelligence Service.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 
@@ -28,13 +28,13 @@ from ...services.content_intelligence.models import (
     ContentMetadata,
     QualityScore,
 )
-from ..models.requests import (
+from ..models.requests import (  # noqa: PLC0415
     ContentIntelligenceAnalysisRequest,
     ContentIntelligenceClassificationRequest,
     ContentIntelligenceMetadataRequest,
     ContentIntelligenceQualityRequest,
 )
-from ..models.responses import ContentIntelligenceResult
+from ..models.responses import ContentIntelligenceResult  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)
@@ -145,7 +145,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
-                from ...services.content_intelligence.models import ContentType
+                from ...services.content_intelligence.models import ContentType  # noqa: PLC0415
 
                 return ContentClassification(
                     primary_type=ContentType.UNKNOWN,
@@ -170,7 +170,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception as e:
             await ctx.error(f"Content classification failed: {e}")
-            from ...services.content_intelligence.models import ContentType
+            from ...services.content_intelligence.models import ContentType  # noqa: PLC0415
 
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,

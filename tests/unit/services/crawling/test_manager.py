@@ -30,7 +30,7 @@ class MockCrawlProvider(CrawlProvider):
     async def initialize(self) -> None:
             raise TestError(f"Failed to initialize {self.name}")
             raise TestError(f"Failed to initialize {self.name}")
-        self.initialized = True
+        self.initialized = True # noqa: PLC0415
 
     async def cleanup(self) -> None:
         self.cleanup_called = True

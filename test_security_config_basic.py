@@ -6,8 +6,8 @@ This script demonstrates and validates the core features of the enhanced securit
 configuration management system without complex import dependencies.
 """
 
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import tempfile
 from pathlib import Path
 
@@ -146,7 +146,7 @@ def test_audit_event_model():
     """Test audit event model."""
     logger.info("Testing ConfigurationAuditEvent model...")
 
-    from src.config.security import ConfigurationAuditEvent
+    from src.config.security import ConfigurationAuditEvent  # noqa: PLC0415
 
     # Create audit event
     event = ConfigurationAuditEvent(
@@ -185,7 +185,7 @@ def test_encrypted_config_item_model():
     """Test encrypted configuration item model."""
     logger.info("Testing EncryptedConfigItem model...")
 
-    from src.config.security import EncryptedConfigItem
+    from src.config.security import EncryptedConfigItem  # noqa: PLC0415
 
     # Create encrypted config item
     test_data = b"encrypted_data_bytes"
@@ -266,7 +266,7 @@ def main():
 
     except Exception as e:  # noqa: F841
         logger.exception("Tests failed with error")
-        import traceback
+        import traceback  # noqa: PLC0415
 
         traceback.print_exc()
         return False

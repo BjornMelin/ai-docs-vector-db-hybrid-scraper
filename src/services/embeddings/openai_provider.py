@@ -1,9 +1,9 @@
 """OpenAI embedding provider with batch support."""
 
 import contextlib
-import json
-import logging
-import os
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar

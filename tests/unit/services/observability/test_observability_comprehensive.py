@@ -1,7 +1,7 @@
 """Comprehensive observability testing demonstrating full system coverage."""
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import Mock, patch
 
 import pytest
@@ -126,7 +126,7 @@ class TestObservabilitySystemCoverage:
 
         # Test performance monitoring initialization
         try:
-            from src.services.observability.performance import (
+            from src.services.observability.performance import (  # noqa: PLC0415
                 PerformanceThresholds,
                 initialize_performance_monitor,
                 monitor_operation,
@@ -185,7 +185,7 @@ class TestObservabilitySystemCoverage:
                 try:
                     raise error
                 except Exception as e:
-                    from src.services.observability.correlation import record_error
+                    from src.services.observability.correlation import record_error  # noqa: PLC0415
 
                     error_id = record_error(
                         error=e,
@@ -210,7 +210,7 @@ class TestObservabilitySystemCoverage:
         meter.create_up_down_counter.return_value = Mock()
 
         try:
-            from src.services.observability.metrics_bridge import (
+            from src.services.observability.metrics_bridge import (  # noqa: PLC0415
                 initialize_metrics_bridge,
             )
 
@@ -630,7 +630,7 @@ class TestObservabilityDocumentationExamples:
                 # Simulate an error scenario
                 raise ValueError("Example error for documentation")
             except ValueError as e:
-                from src.services.observability.correlation import record_error
+                from src.services.observability.correlation import record_error  # noqa: PLC0415
 
                 error_id = record_error(
                     error=e,

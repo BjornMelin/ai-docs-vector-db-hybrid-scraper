@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Resource exhaustion tests for chaos engineering.
 
@@ -10,8 +11,8 @@ under extreme resource constraints including memory, CPU, disk, and connection
 pool exhaustion.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -166,8 +167,7 @@ class ResourceExhaustionSimulator:
         if monitor.is_critical():
             # Simulate disk operations becoming slow/failing
             await asyncio.sleep(0.1)  # Simulate slow disk I/O
-                raise TestError("Disk full - cannot write data")
-                raise TestError("Disk full - cannot write data")
+            raise TestError("Disk full - cannot write data")
 
         return {
             "available_space": monitor.max_capacity - target_usage,

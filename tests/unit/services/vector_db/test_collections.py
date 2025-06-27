@@ -442,7 +442,7 @@ class TestQdrantCollections:
 
     async def test_validate_hnsw_configuration_error(self, collections_service):
         """Test HNSW configuration validation with error."""
-        from unittest.mock import PropertyMock
+        from unittest.mock import PropertyMock  # noqa: PLC0415
 
         mock_collection_info = MagicMock()
         # Create a property that raises an exception when accessed
@@ -497,7 +497,7 @@ class TestQdrantCollections:
 
     async def test_inheritance_from_base_service(self, collections_service):
         """Test that QdrantCollections inherits from BaseService."""
-        from src.services.base import BaseService
+        from src.services.base import BaseService  # noqa: PLC0415
 
         assert isinstance(collections_service, BaseService)
 
@@ -506,7 +506,7 @@ class TestQdrantCollections:
         service = QdrantCollections(mock_config, mock_client)
         service._initialized = False
 
-        from src.services.errors import APIError
+        from src.services.errors import APIError  # noqa: PLC0415
 
         with pytest.raises(APIError, match="not initialized"):
             await service.create_collection("test", 1536)

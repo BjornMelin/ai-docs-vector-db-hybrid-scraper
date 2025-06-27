@@ -4,7 +4,7 @@ This module provides the main unified interface for the advanced query
 processing system, orchestrating all components through a single entry point.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from ..base import BaseService
@@ -132,7 +132,7 @@ class QueryProcessingPipeline(BaseService):
         """
         self._validate_initialized()
 
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -305,7 +305,7 @@ class QueryProcessingPipeline(BaseService):
         """
         self._validate_initialized()
 
-        import time
+        import time  # noqa: PLC0415
 
         start_time = time.time()
 

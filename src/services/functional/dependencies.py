@@ -4,7 +4,7 @@ Provides centralized dependency management with resource lifecycle handling.
 Uses yield dependencies for proper cleanup and circuit breaker patterns.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from collections.abc import AsyncGenerator
 from typing import Annotated
 

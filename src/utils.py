@@ -1,6 +1,6 @@
 """Shared utility functions for the AI documentation vector database system."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar

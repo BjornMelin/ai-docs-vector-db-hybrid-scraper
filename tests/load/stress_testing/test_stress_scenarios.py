@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Stress testing scenarios for system breaking point analysis.
 
@@ -10,8 +11,8 @@ breaking points, resource exhaustion conditions, and failure modes under
 extreme load conditions.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 import pytest
 
@@ -250,7 +251,6 @@ class TestStressScenarios:
                 # Try to acquire connection
                 if self.active_connections >= self.max_connections:
                     raise TestError(
-                    raise TestError(
                         f"Connection pool exhausted ({self.active_connections}/{self.max_connections})"
                     )
 
@@ -361,7 +361,7 @@ class TestStressScenarios:
                         self.consecutive_failures = 0
 
                 # Simulate failure probability that increases with load
-                import random
+                import random  # noqa: PLC0415
 
                 current_load = self.service.request_count / 100.0  # Normalize load
                 failure_probability = min(

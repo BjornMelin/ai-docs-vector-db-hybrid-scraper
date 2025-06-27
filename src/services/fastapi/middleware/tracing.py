@@ -4,8 +4,8 @@ This middleware provides request correlation IDs, distributed tracing support,
 and comprehensive request/response logging for production monitoring.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 import uuid
 from collections.abc import Callable
 
@@ -320,8 +320,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
         # Try to import OpenTelemetry
         try:
-            from opentelemetry import trace
-            from opentelemetry.trace import Status, StatusCode
+            from opentelemetry import trace  # noqa: PLC0415
+            from opentelemetry.trace import Status, StatusCode  # noqa: PLC0415
 
             self.tracer = trace.get_tracer(__name__)
             self.Status = Status

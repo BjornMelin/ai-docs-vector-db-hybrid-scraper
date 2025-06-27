@@ -131,7 +131,7 @@ class TestCacheWarmer:
     async def test_all_methods_are_async(self, cache_warmer):
         """Test that all cache warming methods are properly async."""
         # Verify methods return coroutines and can be awaited
-        import inspect
+        import inspect  # noqa: PLC0415
 
         # track_query
         assert inspect.iscoroutinefunction(cache_warmer.track_query)
@@ -187,7 +187,7 @@ class TestCacheWarmer:
     @pytest.mark.asyncio
     async def test_concurrent_operations(self, cache_warmer):
         """Test concurrent cache warming operations."""
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         # Test concurrent track_query calls
         track_tasks = [
@@ -210,7 +210,7 @@ class TestCacheWarmer:
     @pytest.mark.asyncio
     async def test_mixed_concurrent_operations(self, cache_warmer):
         """Test mixed concurrent cache warming operations."""
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         # Mix different types of operations
         tasks = []

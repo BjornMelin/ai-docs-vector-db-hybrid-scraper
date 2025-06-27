@@ -5,8 +5,8 @@ This module provides workflow-level integration tests that validate
 system behavior across multiple components and scenarios.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from typing import Any
 

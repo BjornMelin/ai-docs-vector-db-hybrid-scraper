@@ -4,11 +4,11 @@ Tests thread safety, race conditions, and concurrent access patterns
 for the configuration system using asyncio and threading.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import concurrent.futures
 import random
 import threading
-import time
+import time  # noqa: PLC0415
 
 import pytest
 from hypothesis import given, strategies as st

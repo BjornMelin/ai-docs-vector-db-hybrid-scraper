@@ -11,7 +11,7 @@ connection affinity management, and multi-level circuit breaker patterns
 for 99.9% uptime SLA requirements.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from typing import Any
 from unittest.mock import Mock
 

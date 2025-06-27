@@ -1,6 +1,6 @@
 """Collection management tools for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register collection management tools with the MCP server."""
 
-    from ..models.responses import CollectionInfo, CollectionOperationResponse
+    from ..models.responses import CollectionInfo, CollectionOperationResponse  # noqa: PLC0415
 
     @mcp.tool()
     async def list_collections(ctx: Context = None) -> list[CollectionInfo]:

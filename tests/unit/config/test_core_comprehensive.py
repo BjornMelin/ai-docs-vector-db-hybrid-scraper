@@ -5,8 +5,8 @@ following 2025 standardized patterns with proper type annotations, standardized
 assertions, and modern test patterns.
 """
 
-import json
-import os
+import json  # noqa: PLC0415
+import os  # noqa: PLC0415
 from unittest.mock import patch
 
 import pytest
@@ -478,7 +478,7 @@ class TestConfigPerformance:
 
     def test_config_creation_performance(self):
         """Test that Config creation is reasonably fast."""
-        import time
+        import time  # noqa: PLC0415
 
         start_time = time.perf_counter()
         for _ in range(10):  # Reduced from 100 for realistic testing
@@ -490,7 +490,7 @@ class TestConfigPerformance:
 
     def test_config_access_performance(self):
         """Test that Config property access is fast."""
-        import time
+        import time  # noqa: PLC0415
 
         config = Config()
 

@@ -9,8 +9,8 @@ This script tests:
 4. CI environment compatibility
 """
 
-import asyncio
-import os
+import asyncio  # noqa: PLC0415
+import os  # noqa: PLC0415
 import subprocess
 import sys
 from pathlib import Path

@@ -2,8 +2,8 @@ import typing
 """Specialized cache for search results with intelligent invalidation."""
 
 import hashlib
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from typing import Any
 
 from .dragonfly_cache import DragonflyCache

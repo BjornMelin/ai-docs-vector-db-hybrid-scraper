@@ -1,6 +1,6 @@
 """Integration tests for OpenTelemetry observability."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import importlib
 from unittest.mock import MagicMock, patch
 

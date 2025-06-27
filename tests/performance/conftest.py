@@ -5,10 +5,10 @@ memory profiling, CPU utilization, network latency, database performance,
 API response times, and throughput measurement.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import gc
 import resource
-import time
+import time  # noqa: PLC0415
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any

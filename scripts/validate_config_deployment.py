@@ -6,16 +6,16 @@ This script provides comprehensive validation for configuration deployments,
 supporting the GitOps configuration management workflow.
 """
 
-import json
+import json  # noqa: PLC0415
 import sys
 import yaml
 import argparse
-import logging
+import logging  # noqa: PLC0415
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 import subprocess
-import time
+import time  # noqa: PLC0415
 
 # Import existing project modules
 sys.path.append(str(Path(__file__).parent.parent / "src"))

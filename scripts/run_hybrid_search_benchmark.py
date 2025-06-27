@@ -6,8 +6,8 @@ performance benchmarks of the Advanced Hybrid Search system.
 """
 
 import argparse
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
 from pathlib import Path
 

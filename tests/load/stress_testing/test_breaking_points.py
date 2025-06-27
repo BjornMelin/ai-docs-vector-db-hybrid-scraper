@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Breaking point identification tests for AI Documentation Vector DB.
 
@@ -10,10 +11,10 @@ gradual load increases, sudden traffic spikes, and performance degradation
 analysis with recovery time measurement.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import statistics
-import time
+import time  # noqa: PLC0415
 from dataclasses import dataclass, field
 
 import pytest
@@ -222,7 +223,9 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                    raise TestError(f"Service overloaded at {current_users} users")
+                import random  # noqa: PLC0415
+
+                if random.random() < error_probability:
                     raise TestError(f"Service overloaded at {current_users} users")
 
                 await asyncio.sleep(latency)
@@ -518,9 +521,7 @@ class TestBreakingPoints:
         total_spikes = len(spike_results)
         spike_success_rate = handled_spikes / total_spikes
 
-        assert spike_success_rate > 0.3, (
-            "System handled too few spikes"
-        )
+        assert spike_success_rate > 0.3, "System handled too few spikes"
 
         logger.info(f"Maximum handled spike: {max_handled_spike} users")
         logger.info("Spike success rate")
@@ -702,9 +703,7 @@ class TestBreakingPoints:
             if recovery_performance["throughput"] > 0
             else 0
         )
-        assert recovery_efficiency > 0.7, (
-            "Poor recovery efficiency"
-        )
+        assert recovery_efficiency > 0.7, "Poor recovery efficiency"
 
         # Verify error rate recovery
         assert (

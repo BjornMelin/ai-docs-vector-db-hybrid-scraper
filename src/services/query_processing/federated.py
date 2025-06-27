@@ -5,8 +5,8 @@ search across multiple Qdrant collections with intelligent routing, result mergi
 load balancing, and distributed query optimization.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
@@ -333,7 +333,7 @@ class FederatedSearchService:
         Returns:
             FederatedSearchResult with merged results and metadata
         """
-        import time
+        import time  # noqa: PLC0415
 
         start_time = time.time()
 
@@ -771,7 +771,7 @@ class FederatedSearchService:
         self, collection_name: str, request: FederatedSearchRequest
     ) -> CollectionSearchResult:
         """Search a single collection."""
-        import time
+        import time  # noqa: PLC0415
 
         start_time = time.time()
 

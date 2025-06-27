@@ -6,10 +6,10 @@ for storage in Qdrant vector database. It supports concurrent processing, resuma
 and various input formats.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import csv
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
 from datetime import UTC, datetime
 from pathlib import Path

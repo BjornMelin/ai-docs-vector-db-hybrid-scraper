@@ -7,9 +7,9 @@ This module provides enterprise-grade canary deployment capabilities including:
 - Integration with feature flags for controlled rollouts
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
+import logging  # noqa: PLC0415
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum

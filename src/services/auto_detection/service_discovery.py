@@ -7,9 +7,9 @@ Implements modern async service discovery patterns with:
 - Graceful fallback to manual configuration
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 from urllib.parse import urlparse
 
@@ -310,7 +310,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Redis connection and get server info using redis-py."""
         try:
-            import redis.asyncio as redis
+            import redis.asyncio as redis  # noqa: PLC0415
 
             # Use redis-py for reliable connection testing
             client = redis.Redis(
@@ -348,7 +348,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Qdrant connection using AsyncQdrantClient directly."""
         try:
-            from qdrant_client import AsyncQdrantClient
+            from qdrant_client import AsyncQdrantClient  # noqa: PLC0415
 
             # Use AsyncQdrantClient for native connection testing
             client = AsyncQdrantClient(url=f"http://{host}:{port}", timeout=3.0)
@@ -397,7 +397,7 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test PostgreSQL connection using asyncpg directly."""
         try:
-            import asyncpg
+            import asyncpg  # noqa: PLC0415
 
             # Use asyncpg for native connection testing with common credentials
             connection_params = [
@@ -458,7 +458,7 @@ class ServiceDiscovery:
         candidates = []
 
         # Check for Redis URL in environment
-        import os
+        import os  # noqa: PLC0415
 
         redis_url = os.getenv("REDIS_URL")
         if redis_url:

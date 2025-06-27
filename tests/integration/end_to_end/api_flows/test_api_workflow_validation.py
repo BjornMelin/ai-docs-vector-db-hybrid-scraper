@@ -4,8 +4,8 @@ This module contains comprehensive API workflow tests that validate
 complete API client journeys and endpoint interactions.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 from unittest.mock import MagicMock
 

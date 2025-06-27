@@ -1,8 +1,8 @@
 """Playwright adapter for maximum control browser automation."""
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 from urllib.parse import urlparse
 

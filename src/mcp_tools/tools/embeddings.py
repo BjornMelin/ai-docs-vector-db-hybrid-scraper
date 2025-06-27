@@ -1,6 +1,6 @@
 """Embedding management tools for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 
@@ -18,7 +18,7 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
-from ..models.requests import EmbeddingRequest
+from ..models.requests import EmbeddingRequest  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register embedding management tools with the MCP server."""
 
-    from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo
+    from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo  # noqa: PLC0415
 
     @mcp.tool()
     async def generate_embeddings(

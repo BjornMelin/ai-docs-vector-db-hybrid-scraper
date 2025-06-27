@@ -5,18 +5,19 @@ anomaly detection infrastructure and observability systems to monitor configurat
 changes, detect unauthorized modifications, and alert on compliance violations.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import threading
-import time
+import time  # noqa: PLC0415
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import BaseModel, Field
 
 from ..services.observability.metrics_bridge import get_metrics_bridge
@@ -233,8 +234,6 @@ class ConfigDriftDetector:
                 with source_path.open() as f:
                     return json.load(f)
             elif source_path.suffix in [".yaml", ".yml"]:
-                import yaml
-
                 with source_path.open() as f:
                     return yaml.safe_load(f) or {}
             elif source_path.suffix in [".env"]:

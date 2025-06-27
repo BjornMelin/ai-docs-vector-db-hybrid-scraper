@@ -1,7 +1,7 @@
 """HNSW parameter optimization and adaptive ef_retrieve implementation."""
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 from src.config import Config
@@ -70,7 +70,7 @@ class HNSWOptimizer(BaseService):
         Returns:
             Search results with optimal ef value used
         """
-        from qdrant_client import models
+        from qdrant_client import models  # noqa: PLC0415
 
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
@@ -446,7 +446,7 @@ class HNSWOptimizer(BaseService):
         Returns:
             Performance metrics
         """
-        from qdrant_client import models
+        from qdrant_client import models  # noqa: PLC0415
 
         search_times = []
 
@@ -472,7 +472,7 @@ class HNSWOptimizer(BaseService):
                 continue
 
         if search_times:
-            import numpy as np
+            import numpy as np  # noqa: PLC0415
 
             return {
                 "avg_search_time_ms": float(np.mean(search_times)),

@@ -1,10 +1,10 @@
 import typing
 """Local in-memory LRU cache implementation with TTL support."""
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
-import time
+import time  # noqa: PLC0415
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any

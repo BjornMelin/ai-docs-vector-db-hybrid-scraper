@@ -2,7 +2,7 @@ import typing
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
 import hashlib
-import logging
+import logging  # noqa: PLC0415
 
 from .dragonfly_cache import DragonflyCache
 

@@ -244,7 +244,7 @@ class TestBulkEmbedderExtended:
         async def mock_process(url):
                 raise TestError("Processing failed")
                 raise TestError("Processing failed")
-            return {"url": url, "success": True, "chunks": 2, "error": None}
+            return {"url": url, "success": True, "chunks": 2, "error": None} # noqa: PLC0415
 
         with (
             patch.object(embedder, "process_url", side_effect=mock_process),

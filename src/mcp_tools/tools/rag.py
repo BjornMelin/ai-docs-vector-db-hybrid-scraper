@@ -5,7 +5,7 @@ using Large Language Models. Portfolio-worthy implementation showcasing advanced
 AI integration patterns.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from fastmcp import FastMCP

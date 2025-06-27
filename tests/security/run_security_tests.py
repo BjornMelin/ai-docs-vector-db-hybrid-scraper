@@ -6,11 +6,11 @@ for vulnerability assessment and compliance validation.
 """
 
 import argparse
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import subprocess
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 
@@ -398,7 +398,7 @@ class SecurityTestRunner:
 
     def _extract_count(self, text: str, keyword: str) -> int:
         """Extract test count from pytest summary line."""
-        import re
+        import re  # noqa: PLC0415
 
         pattern = rf"(\d+)\s+{keyword}"
         match = re.search(pattern, text)

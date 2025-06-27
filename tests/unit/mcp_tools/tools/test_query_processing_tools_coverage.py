@@ -290,7 +290,7 @@ class TestQueryProcessingTools:
 
     def test_request_validation(self):
         """Test request model validation."""
-        from pydantic import ValidationError
+        from pydantic import ValidationError  # noqa: PLC0415
 
         # Test QueryExpansionRequest validation
         with pytest.raises(ValidationError):

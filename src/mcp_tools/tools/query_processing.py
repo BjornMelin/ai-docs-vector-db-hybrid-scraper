@@ -1,6 +1,6 @@
 """Advanced Query Processing tools for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 
 from ...infrastructure.client_manager import ClientManager
 from .helpers import (

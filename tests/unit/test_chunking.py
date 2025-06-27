@@ -215,7 +215,7 @@ let y = 2;
 
         # Python patterns
         python_content = """
-import os
+import os  # noqa: PLC0415
 from pathlib import Path
 
 def main():

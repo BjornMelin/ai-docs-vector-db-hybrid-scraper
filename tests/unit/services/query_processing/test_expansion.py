@@ -870,7 +870,7 @@ class TestQueryExpansionService:
             strategy=ExpansionStrategy.SEMANTIC_BASED,
         )
 
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         result = asyncio.run(service._semantic_expansion(key_terms, request))
         assert result == []
@@ -887,7 +887,7 @@ class TestQueryExpansionService:
             target_domains=["programming"],
         )
 
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         result = asyncio.run(service._domain_specific_expansion(key_terms, request))
         assert result == []

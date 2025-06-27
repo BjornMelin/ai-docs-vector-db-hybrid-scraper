@@ -282,7 +282,7 @@ class TestConcurrentUsersLoad:
                 response_times = result.metrics.response_times
                 if response_times:
                     # Check for response time stability (coefficient of variation)
-                    import statistics
+                    import statistics  # noqa: PLC0415
 
                     mean_rt = statistics.mean(response_times)
                     stdev_rt = (
@@ -341,7 +341,7 @@ class TestConcurrentUsersLoad:
 
             async def mixed_workload(self, **kwargs):
                 """Simulate mixed workload."""
-                import random
+                import random  # noqa: PLC0415
 
                 if random.random() < 0.7:  # 70% search operations
                     return await self.search_workload(**kwargs)

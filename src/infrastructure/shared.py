@@ -4,9 +4,9 @@ This module contains classes that are used by multiple infrastructure components
 to prevent circular import dependencies.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from enum import Enum
 

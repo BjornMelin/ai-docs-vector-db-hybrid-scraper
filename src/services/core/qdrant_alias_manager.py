@@ -1,6 +1,6 @@
 """Qdrant alias manager for zero-downtime collection updates."""
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from collections.abc import Callable
 

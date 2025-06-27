@@ -1,6 +1,6 @@
 """FastEmbed provider for local embedding generation."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any, ClassVar
 
 import numpy as np

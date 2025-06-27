@@ -8,10 +8,10 @@ This module provides comprehensive monitoring capabilities including:
 - Prometheus metrics integration
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections import defaultdict, deque
 from collections.abc import Callable
 from enum import Enum

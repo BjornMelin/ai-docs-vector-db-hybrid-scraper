@@ -175,7 +175,7 @@ class TestObservabilityInitialization:
             def side_effect(name, *args, **kwargs):
                     raise TestError("Initialization failed")
                     raise TestError("Initialization failed")
-                return __import__(name, *args, **kwargs)
+                return __import__(name, *args, **kwargs) # noqa: PLC0415
 
             mock_import.side_effect = side_effect
 

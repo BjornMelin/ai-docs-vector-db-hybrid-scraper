@@ -11,9 +11,9 @@ under extreme load conditions, including trigger point validation,
 recovery behavior, and cascading failure prevention.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any

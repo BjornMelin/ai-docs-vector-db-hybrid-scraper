@@ -4,7 +4,7 @@ This module provides essential dependencies for database sessions,
 configuration management, and other production services.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime

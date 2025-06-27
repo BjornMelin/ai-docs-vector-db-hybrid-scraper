@@ -4,8 +4,8 @@ This module tests API endpoints for security vulnerabilities including
 authentication bypass, authorization flaws, and injection attacks.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any, Dict
 
 import pytest

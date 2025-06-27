@@ -10,9 +10,9 @@ This module implements spike tests to validate system behavior
 under sudden traffic spikes and auto-scaling scenarios.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Dict
 
 import pytest
@@ -424,8 +424,8 @@ class TestSpikeLoad:
 
     def _spike_aware_operation(self, **kwargs):
         """Operation that adapts to spike conditions."""
-        import asyncio
-        import random
+        import asyncio  # noqa: PLC0415
+        import random  # noqa: PLC0415
 
         # Simulate different behavior during spikes
         concurrent_users = kwargs.get("concurrent_users", 50)

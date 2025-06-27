@@ -5,9 +5,9 @@ including HDBSCAN, DBSCAN, K-means, and agglomerative clustering to semantically
 group search results for better organization and presentation.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import re
-import time
+import time  # noqa: PLC0415
 import warnings
 from enum import Enum
 from typing import Any

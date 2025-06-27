@@ -5,12 +5,12 @@ under various stress conditions including high frequency reloads,
 large configuration files, and system resource constraints.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import gc
-import json
+import json  # noqa: PLC0415
 import random
 import resource
-import time
+import time  # noqa: PLC0415
 import tracemalloc
 from dataclasses import dataclass
 from pathlib import Path

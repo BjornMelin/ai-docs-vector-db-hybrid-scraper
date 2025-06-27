@@ -11,9 +11,9 @@ fault injection, failure scenarios, network chaos, dependency failures, resource
 and resilience validation.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import random
-import time
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass

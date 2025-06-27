@@ -3,7 +3,7 @@
 Batch fix TRY violations across the codebase.
 """
 
-import json
+import json  # noqa: PLC0415
 import re
 import subprocess
 from pathlib import Path

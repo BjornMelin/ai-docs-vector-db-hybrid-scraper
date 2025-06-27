@@ -4,7 +4,7 @@ This module tests the comprehensive error hierarchy and utility functions
 for all services and MCP server error handling.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import Mock, patch
 
 import pytest

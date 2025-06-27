@@ -5,7 +5,7 @@ Tests the security configuration components in isolation to verify
 core functionality without complex import dependencies.
 """
 
-import json
+import json  # noqa: PLC0415
 
 # Import components directly to avoid config system dependencies
 import sys
@@ -449,7 +449,7 @@ class TestConfigEnumerations:
 
     def test_config_access_level_enum(self):
         """Test ConfigAccessLevel enum."""
-        from src.config.security import ConfigAccessLevel
+        from src.config.security import ConfigAccessLevel  # noqa: PLC0415
 
         expected_levels = {
             ConfigAccessLevel.READ_ONLY,

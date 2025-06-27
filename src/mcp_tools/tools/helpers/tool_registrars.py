@@ -1,6 +1,6 @@
 """Tool registration functions for query processing MCP tools."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 from uuid import uuid4
 

@@ -4,9 +4,9 @@ Integrates with existing Task 20 infrastructure to provide automated configurati
 drift monitoring and alerting using the application's task queue system.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
+import logging  # noqa: PLC0415
 from datetime import UTC, datetime, timedelta
 from typing import Any
 

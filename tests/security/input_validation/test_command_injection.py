@@ -4,7 +4,7 @@ This module tests protection against command injection attacks across all
 system command interfaces and subprocess calls.
 """
 
-import os
+import os  # noqa: PLC0415
 from unittest.mock import patch
 
 import pytest
@@ -450,7 +450,7 @@ class TestCommandInjectionPrevention:
         security_validator = SecurityValidator()
 
         # Use timeout to detect if commands are actually executed
-        import time
+        import time  # noqa: PLC0415
 
         for payload in time_based_payloads:
             start_time = time.time()

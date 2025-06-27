@@ -1,6 +1,6 @@
 """Comprehensive tests for monitoring metrics functionality."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -1,6 +1,6 @@
 """Tests for UnifiedBrowserManager with browser caching integration."""
 
-import time
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

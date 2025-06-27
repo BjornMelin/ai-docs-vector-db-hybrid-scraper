@@ -1,7 +1,8 @@
-
 class CustomError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Load testing fixtures and configuration.
 
@@ -10,9 +11,9 @@ normal load testing, stress testing, spike testing, endurance testing,
 volume testing, and scalability testing.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import statistics
-import time
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -683,7 +684,9 @@ def mock_load_test_service():
             self.request_count += 1
 
             # Simulate failure
-                raise CustomError(f"Simulated failure (rate: {self.failure_rate})")
+            import random  # noqa: PLC0415
+
+            if random.random() < self.failure_rate:
                 raise CustomError(f"Simulated failure (rate: {self.failure_rate})")
 
             # Simulate latency based on load and data size

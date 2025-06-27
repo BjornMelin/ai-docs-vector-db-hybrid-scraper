@@ -5,7 +5,7 @@ following 2025 standardized patterns with proper type annotations, standardized
 assertions, and modern test patterns.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -548,7 +548,7 @@ class TestQdrantService:
             qdrant_service: QdrantService instance for testing
         """
         # Import BaseService to check inheritance
-        from src.services.base import BaseService
+        from src.services.base import BaseService  # noqa: PLC0415
 
         assert isinstance(qdrant_service, BaseService)
         assert hasattr(qdrant_service, "_initialized")
@@ -729,7 +729,7 @@ class TestQdrantServicePerformance:
             mock_client_manager: Mock ClientManager instance
             mock_qdrant_client: Mock Qdrant client
         """
-        import time
+        import time  # noqa: PLC0415
 
         mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
 

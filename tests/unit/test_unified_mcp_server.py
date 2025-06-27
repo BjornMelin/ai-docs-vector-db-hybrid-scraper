@@ -1,6 +1,6 @@
 """Unit tests for unified_mcp_server module."""
 
-import os
+import os  # noqa: PLC0415
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -560,13 +560,13 @@ class TestServerConfiguration:
     def test_logging_configuration(self):
         """Test that logging is configured on import."""
         # Since we mocked the import, we just verify the mock exists
-        import sys
+        import sys  # noqa: PLC0415
 
         assert "src.services.logging_config" in sys.modules
 
     def test_sys_path_setup(self):
         """Test that sys path is properly configured."""
-        import sys
+        import sys  # noqa: PLC0415
 
         # The path should be in sys.path (added during import)
         # We can't assert exact position due to import order
@@ -579,9 +579,9 @@ class TestImportAndModuleStructure:
     def test_all_required_imports(self):
         """Test that all required modules can be imported."""
         # These imports should work without errors
-        from src.infrastructure.client_manager import ClientManager
-        from src.mcp_tools.tool_registry import register_all_tools
-        from src.services.logging_config import configure_logging
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+        from src.mcp_tools.tool_registry import register_all_tools  # noqa: PLC0415
+        from src.services.logging_config import configure_logging  # noqa: PLC0415
 
         assert ClientManager is not None
         assert register_all_tools is not None
@@ -589,7 +589,7 @@ class TestImportAndModuleStructure:
 
     def test_fastmcp_import(self):
         """Test that FastMCP can be imported."""
-        from fastmcp import FastMCP
+        from fastmcp import FastMCP  # noqa: PLC0415
 
         assert FastMCP is not None
 

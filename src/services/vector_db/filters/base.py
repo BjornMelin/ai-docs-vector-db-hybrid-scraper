@@ -4,7 +4,7 @@ This module provides the abstract base class and common interfaces for all
 filtering operations in the vector database system.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any

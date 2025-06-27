@@ -1,6 +1,6 @@
 """Payload indexing management tools for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -21,7 +21,7 @@ else:
 
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
-from ..models.responses import GenericDictResponse
+from ..models.responses import GenericDictResponse  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ def register_tools(mcp, client_manager: ClientManager):
             logger.exception("Failed to list payload indexes")
             raise
 
-    from ..models.responses import ReindexCollectionResponse
+    from ..models. # noqa: PLC0415responses import ReindexCollectionResponse # noqa: PLC0415
 
     @mcp.tool()
     async def reindex_collection(
@@ -209,7 +209,7 @@ def register_tools(mcp, client_manager: ClientManager):
             query_vector = embedding_result["embeddings"][0]
 
             # Run filtered search with timing
-            import time
+            import time  # noqa: PLC0415
 
             start_time = time.time()
 

@@ -6,10 +6,10 @@ This script provides automated rollback capabilities for configuration deploymen
 supporting the GitOps configuration management workflow.
 """
 
-import json
+import json  # noqa: PLC0415
 import sys
 import argparse
-import logging
+import logging  # noqa: PLC0415
 import shutil
 import subprocess
 from pathlib import Path

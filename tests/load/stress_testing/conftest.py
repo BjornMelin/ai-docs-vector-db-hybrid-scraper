@@ -4,14 +4,14 @@ This module provides specialized fixtures and configuration for stress testing,
 including resource monitoring, chaos injection, and failure simulation utilities.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import gc
-import logging
-import os
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import resource
 import tempfile
 import threading
-import time
+import time  # noqa: PLC0415
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path

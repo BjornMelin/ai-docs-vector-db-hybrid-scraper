@@ -1,8 +1,8 @@
 """Intelligent browser automation router with three-tier hierarchy."""
 
-import json
-import logging
-import time
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlparse

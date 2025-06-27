@@ -4,7 +4,7 @@ Provides REST API endpoints to interact with the configuration drift detection
 system, view drift events, manage alerting, and trigger manual drift checks.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from datetime import UTC, datetime
 from typing import Any
 

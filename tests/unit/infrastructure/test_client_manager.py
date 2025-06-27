@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Unit tests for ClientManager with proper dependency injection patterns.
 
@@ -12,8 +13,8 @@ This test module demonstrates modern testing patterns including:
 - Clear test organization and naming
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
@@ -239,7 +240,7 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_opens_after_failures(self, circuit_breaker):
         """Test circuit breaker opens after threshold failures."""
 
-            raise TestError("Test failure")
+        async def failing_func():
             raise TestError("Test failure")
 
         # Fail multiple times - circuit breaker should pass through the original exception
@@ -281,7 +282,7 @@ class TestCircuitBreaker:
         assert circuit_breaker._state == ClientState.HEALTHY
 
 
-class TestClientManagerInitialization:
+class TestClientManagerInitialization:  # noqa: PLC0415
     """Test ClientManager initialization and singleton pattern."""
 
     @pytest.mark.asyncio

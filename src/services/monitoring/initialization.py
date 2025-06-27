@@ -4,9 +4,9 @@ This module provides utilities to initialize and configure monitoring
 for FastMCP-based applications.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 from src.config import Config, MonitoringConfig
 
@@ -175,7 +175,7 @@ def initialize_monitoring_system(
     metrics_registry = initialize_metrics(metrics_config)
 
     # Create health check manager
-    from .health import HealthCheckConfig
+    from .health import HealthCheckConfig  # noqa: PLC0415
 
     health_config = HealthCheckConfig(
         enabled=config.monitoring.enabled,

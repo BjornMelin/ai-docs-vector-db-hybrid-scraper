@@ -5,8 +5,8 @@ intelligently routes requests to the most appropriate tier based on content
 complexity, requirements, and performance characteristics.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any, Literal
 from urllib.parse import urlparse
 
@@ -163,7 +163,7 @@ class UnifiedBrowserManager(BaseService):
 
             # Initialize browser cache if enabled
             if self._cache_enabled:
-                from ...services.cache.browser_cache import (
+                from ...services.cache.browser_cache import (  # noqa: PLC0415
                     BrowserCache,
                 )
 
@@ -256,7 +256,7 @@ class UnifiedBrowserManager(BaseService):
             and self._browser_cache
             and not request.interaction_required
         ):
-            from ...services.cache.browser_cache import (
+            from ...services.cache.browser_cache import (  # noqa: PLC0415
                 BrowserCacheEntry,
             )
 
@@ -379,7 +379,7 @@ class UnifiedBrowserManager(BaseService):
                 and response.content_length > 0
             ):
                 try:
-                    from ...services.cache.browser_cache import (
+                    from ...services.cache.browser_cache import (  # noqa: PLC0415
                         BrowserCacheEntry,
                     )
 

@@ -8,8 +8,8 @@ Clean 2025 implementation of production monitoring features:
 Performance validated through BJO-134 benchmarking.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from typing import Any
 

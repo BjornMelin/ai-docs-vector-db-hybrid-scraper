@@ -354,7 +354,7 @@ class TestAsyncTestPatterns:
         Demonstrates testing concurrent behavior with
         proper async patterns.
         """
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         async def mock_async_operation(delay: float, value: str) -> str:
             await asyncio.sleep(delay)
@@ -382,7 +382,7 @@ class TestAsyncTestPatterns:
         Demonstrates proper testing of async exception
         handling and error propagation.
         """
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         async def failing_operation():
             await asyncio.sleep(0.01)  # Simulate async work

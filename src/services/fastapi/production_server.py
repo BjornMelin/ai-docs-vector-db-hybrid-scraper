@@ -4,9 +4,9 @@ This module provides a basic production wrapper around FastMCP server,
 following KISS principles with only essential middleware for V1.
 """
 
-import asyncio
-import logging
-import os
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import signal
 import sys
 from contextlib import asynccontextmanager
@@ -130,7 +130,7 @@ class ProductionMCPServer:
     ) -> None:
         """Run the production server asynchronously."""
         try:
-            import uvicorn
+            import uvicorn  # noqa: PLC0415
 
             # Create app
             app = self.create_app()

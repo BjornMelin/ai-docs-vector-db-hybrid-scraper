@@ -8,10 +8,10 @@ This module provides a configuration manager with:
 - Simple drift detection using configuration hashing
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -62,13 +62,13 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
                     self._config_data = json.load(f)
 
             elif suffix in [".yaml", ".yml"]:
-                import yaml
+                import yaml  # noqa: PLC0415
 
                 with self.config_file.open() as f:
                     self._config_data = yaml.safe_load(f) or {}
 
             elif suffix == ".toml":
-                import tomli
+                import tomli  # noqa: PLC0415
 
                 with self.config_file.open("rb") as f:
                     self._config_data = tomli.load(f)
@@ -229,7 +229,7 @@ class ConfigManager:
 
     def _mask_secrets(self, data: dict[str, Any]) -> None:
         """Recursively mask SecretStr values in dictionary."""
-        import hashlib
+        import hashlib  # noqa: PLC0415
 
         for key, value in data.items():
             if isinstance(value, dict):

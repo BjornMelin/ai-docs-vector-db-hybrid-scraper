@@ -4,8 +4,8 @@ This module provides a clean, focused implementation of indexing functionality
 extracted from QdrantService, focusing specifically on payload index management.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient, models

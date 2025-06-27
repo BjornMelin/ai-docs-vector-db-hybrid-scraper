@@ -4,7 +4,7 @@ This module validates that the contract testing framework is properly
 integrated and working correctly with all components.
 """
 
-import json
+import json  # noqa: PLC0415
 from datetime import UTC, datetime
 
 import pytest

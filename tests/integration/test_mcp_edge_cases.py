@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Edge case and error handling tests for MCP server.
 
@@ -14,7 +15,7 @@ Comprehensive testing of:
 - Security edge cases
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -290,7 +291,7 @@ class TestMCPEdgeCases:
         async def rate_limited_search(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
-                raise TestError("Rate limit exceeded: 429 Too Many Requests")
+            if call_count > 3:  # Rate limit after 3 calls
                 raise TestError("Rate limit exceeded: 429 Too Many Requests")
             return [{"id": f"doc-{call_count}", "content": "Result", "score": 0.9}]
 

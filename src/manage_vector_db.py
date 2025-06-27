@@ -5,7 +5,7 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations
 Provides comprehensive database management, search, and maintenance utilities
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 import click

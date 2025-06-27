@@ -12,7 +12,7 @@ Usage:
 """
 
 import argparse
-import json
+import json  # noqa: PLC0415
 import re
 import sys
 from pathlib import Path

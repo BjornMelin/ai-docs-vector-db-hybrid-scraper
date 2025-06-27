@@ -1,6 +1,6 @@
 """Configuration models for browser automation tiers."""
 
-import logging
+import logging  # noqa: PLC0415
 from dataclasses import dataclass, field
 from enum import Enum
 

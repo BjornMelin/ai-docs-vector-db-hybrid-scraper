@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Chaos engineering integration tests.
 
@@ -10,9 +11,9 @@ engineering components to validate system resilience under real-world failure
 scenarios.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 import pytest
 
@@ -225,7 +226,7 @@ class TestChaosIntegration:
                     if service["status"] == "failed"
                 ]
 
-                    raise TestError(
+                if failed_services:
                     raise TestError(
                         f"Health check failed - services down: {failed_services}"
                     )

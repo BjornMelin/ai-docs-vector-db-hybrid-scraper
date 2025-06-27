@@ -117,7 +117,7 @@ class TestAdvancedHybridSearchService:
 
     async def test_basic_hybrid_search(self, service, sample_request):
         """Test basic advanced hybrid search functionality."""
-        from src.services.query_processing.orchestrator import AdvancedSearchResult
+        from src.services.query_processing.orchestrator import AdvancedSearchResult  # noqa: PLC0415
 
         # Mock all components including the orchestrator
         with (
@@ -141,7 +141,7 @@ class TestAdvancedHybridSearchService:
                 confidence=0.85,
                 features={},
             )
-            from src.models.vector_search import ModelSelectionStrategy
+            from src.models.vector_search import ModelSelectionStrategy  # noqa: PLC0415
 
             mock_model.return_value = ModelSelectionStrategy(
                 primary_model="text-embedding-3-small",
@@ -160,7 +160,7 @@ class TestAdvancedHybridSearchService:
             )
 
             # Mock orchestrator response
-            from src.services.query_processing.orchestrator import (
+            from src.services.query_processing.orchestrator import (  # noqa: PLC0415
                 SearchMode,
                 SearchPipeline,
             )
@@ -471,7 +471,7 @@ class TestAdvancedHybridSearchService:
 
     async def test_empty_results_handling(self, service, sample_request):
         """Test handling of empty search results."""
-        from src.services.query_processing.orchestrator import (
+        from src.services.query_processing.orchestrator import (  # noqa: PLC0415
             AdvancedSearchResult,
             SearchMode,
             SearchPipeline,
@@ -503,7 +503,7 @@ class TestAdvancedHybridSearchService:
 
     async def test_large_result_set_handling(self, service, sample_request):
         """Test handling of large result sets."""
-        from src.services.query_processing.orchestrator import (
+        from src.services.query_processing.orchestrator import (  # noqa: PLC0415
             AdvancedSearchResult,
             SearchMode,
             SearchPipeline,

@@ -1,6 +1,6 @@
 """Comprehensive tests for Firecrawl provider with Pydantic configuration."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

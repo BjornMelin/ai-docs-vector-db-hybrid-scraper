@@ -5,8 +5,8 @@ This shows how to replace hardcoded timeouts with the new centralized
 timeout configuration system.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from contextlib import asynccontextmanager, suppress
 
 from .timeouts import get_timeout_config, get_timeout_settings

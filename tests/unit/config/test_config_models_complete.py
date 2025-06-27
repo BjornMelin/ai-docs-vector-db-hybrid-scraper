@@ -622,7 +622,7 @@ class TestEmbeddingConfig:
 
     def test_provider_configuration(self):
         """Test embedding provider configuration."""
-        from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
+        from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy  # noqa: PLC0415
 
         config = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,

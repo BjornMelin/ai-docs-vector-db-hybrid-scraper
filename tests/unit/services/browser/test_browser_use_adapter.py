@@ -1,7 +1,7 @@
 """Comprehensive tests for BrowserUse AI-powered browser adapter."""
 
-import asyncio
-import os
+import asyncio  # noqa: PLC0415
+import os  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

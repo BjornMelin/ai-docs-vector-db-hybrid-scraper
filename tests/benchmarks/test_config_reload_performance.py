@@ -9,10 +9,10 @@ This module benchmarks the configuration hot reload system to validate:
 Run with: pytest tests/benchmarks/test_config_reload_performance.py --benchmark-only
 """
 
-import asyncio
-import json
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
 import tempfile
-import time
+import time  # noqa: PLC0415
 from datetime import UTC
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -403,9 +403,9 @@ class TestDriftDetectionPerformance:
 
     def test_drift_alert_performance(self, benchmark, drift_detector):
         """Benchmark drift alert generation performance."""
-        from datetime import datetime
+        from datetime import datetime  # noqa: PLC0415
 
-        from src.config.drift_detection import DriftEvent
+        from src.config.drift_detection import DriftEvent  # noqa: PLC0415
 
         # Create test drift event
         drift_event = DriftEvent(
@@ -443,7 +443,7 @@ class TestEncryptionPerformance:
     @pytest.fixture
     def config_encryption(self, encryption_key):
         """Create config encryption instance."""
-        from src.config.security import SecurityConfig
+        from src.config.security import SecurityConfig  # noqa: PLC0415
 
         security_config = SecurityConfig()
         encryption = SecureConfigManager(security_config)

@@ -2,11 +2,11 @@
 """Test performance profiler for identifying slow tests and optimization opportunities."""
 
 import argparse
-import json
-import os
+import json  # noqa: PLC0415
+import os  # noqa: PLC0415
 import re
 import subprocess
-import time
+import time  # noqa: PLC0415
 from collections import defaultdict
 from pathlib import Path
 

@@ -2,10 +2,10 @@
 """Fast test execution script for optimized CI/CD and development feedback loops."""
 
 import argparse
-import os
+import os  # noqa: PLC0415
 import subprocess
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 
 

@@ -1,9 +1,9 @@
 import typing
 """Advanced caching patterns for high-performance data access."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import logging
+import logging  # noqa: PLC0415
 from collections.abc import Callable
 from typing import Any
 

@@ -828,7 +828,7 @@ class TestUnifiedBrowserManagerMonitoring:
         # Mock cache and monitoring
         mock_cache = AsyncMock()
         mock_monitor = AsyncMock()
-        from src.services.cache.browser_cache import BrowserCacheEntry
+        from src.services.cache.browser_cache import BrowserCacheEntry  # noqa: PLC0415
 
         # Create cache entry
         cache_entry = BrowserCacheEntry(

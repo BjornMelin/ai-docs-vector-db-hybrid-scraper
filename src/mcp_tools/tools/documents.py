@@ -1,7 +1,7 @@
 """Document management tools for MCP server."""
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -24,7 +24,7 @@ from src.config import ChunkingConfig, ChunkingStrategy
 from ...chunking import DocumentChunker
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import BatchRequest, DocumentRequest
+from ..models.requests import BatchRequest, DocumentRequest  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register document management tools with the MCP server."""
 
-    from ..models.responses import AddDocumentResponse, DocumentBatchResponse
+    from ..models.responses import AddDocumentResponse, DocumentBatchResponse  # noqa: PLC0415
 
     @mcp.tool()
     async def add_document(

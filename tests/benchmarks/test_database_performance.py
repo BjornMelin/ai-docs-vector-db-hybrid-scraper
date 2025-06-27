@@ -9,8 +9,8 @@ These benchmarks test actual database operations to validate our BJO-134 perform
 Run with: pytest tests/benchmarks/ --benchmark-only
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 
 import pytest
 

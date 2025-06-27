@@ -7,7 +7,7 @@ Clean 2025 implementation of enterprise features:
 - Multi-level circuit breaker for 99.9% uptime
 """
 
-import logging
+import logging  # noqa: PLC0415
 from contextlib import asynccontextmanager
 from typing import Any
 

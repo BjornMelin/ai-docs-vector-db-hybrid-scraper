@@ -1,8 +1,8 @@
 """ARQ task definitions for background processing."""
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 from arq import func
@@ -127,7 +127,7 @@ async def persist_cache(
 
         # Import and call the persist function dynamically
         # This allows different persist functions to be used
-        import importlib
+        import importlib  # noqa: PLC0415
 
         module = importlib.import_module(persist_func_module)
         persist_func = getattr(module, persist_func_name)
@@ -170,7 +170,7 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import here to avoid circular imports
-        from ..config_drift_service import get_drift_service
+        from ..config_drift_service import get_drift_service  # noqa: PLC0415
 
         service = get_drift_service()
         result = await service.take_configuration_snapshot()
@@ -213,7 +213,7 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import here to avoid circular imports
-        from ..config_drift_service import get_drift_service
+        from ..config_drift_service import get_drift_service  # noqa: PLC0415
 
         service = get_drift_service()
         result = await service.compare_configurations()

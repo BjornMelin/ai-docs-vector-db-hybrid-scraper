@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Mutation testing for service logic validation.
 
@@ -11,7 +12,7 @@ logic paths including circuit breakers, dependency injection, and
 error handling patterns.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -38,7 +39,7 @@ class TestCircuitBreakerMutationTesting:
         config.failure_threshold = 3
         circuit_breaker = CircuitBreaker(config)
 
-            raise TestError("Test failure")
+        async def failing_service():
             raise TestError("Test failure")
 
         # Test normal behavior (baseline)
@@ -474,7 +475,7 @@ class TestServiceCachingMutationTesting:
     async def test_cache_expiration_mutations(self):
         """Test mutations in cache expiration logic."""
 
-        import time
+        import time  # noqa: PLC0415
 
         class MockCache:
             def __init__(self):

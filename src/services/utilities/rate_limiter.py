@@ -1,8 +1,8 @@
 """Rate limiting utilities for API calls."""
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import TypeVar
 
 from src.config import Config

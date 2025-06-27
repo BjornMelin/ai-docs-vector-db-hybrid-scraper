@@ -1,6 +1,6 @@
 """Query Processing Pipeline Factory for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 
@@ -52,7 +52,7 @@ class QueryProcessingPipelineFactory:
                     )
 
             # Create orchestrator
-            from ....services.query_processing.orchestrator import (
+            from ....services.query_processing.orchestrator import (  # noqa: PLC0415
                 QueryProcessingOrchestrator,
             )
 

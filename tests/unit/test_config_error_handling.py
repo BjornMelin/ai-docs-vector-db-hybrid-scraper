@@ -1,7 +1,7 @@
 """Tests for enhanced configuration error handling."""
 
-import json
-import time
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -503,7 +503,7 @@ class TestFileWatchingErrorHandling:
 
     def test_file_watch_error_callback(self, tmp_path):
         """Test file watch error callback."""
-        from src.config.config_manager import (
+        from src.config.config_manager import (  # noqa: PLC0415
             ConfigFileWatcher as EnhancedConfigFileWatcher,
         )
 

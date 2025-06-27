@@ -5,10 +5,10 @@ loading, validation, auto-detection, template application, and runtime updates.
 Follows OpenTelemetry semantic conventions for configuration management.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import functools
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path

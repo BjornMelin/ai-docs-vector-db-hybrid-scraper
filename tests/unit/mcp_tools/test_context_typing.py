@@ -4,7 +4,7 @@ Verifies that all MCP tools properly handle the Context type using TYPE_CHECKING
 """
 
 import importlib
-import inspect
+import inspect  # noqa: PLC0415
 
 import pytest
 
@@ -107,7 +107,7 @@ class TestContextTyping:
 
     def test_tool_registry_imports_all_tools(self):
         """Verify tool registry can import all tool modules."""
-        from src.mcp_tools import tool_registry
+        from src.mcp_tools import tool_registry  # noqa: PLC0415
 
         # Check that tool_registry has register_all_tools function
         assert hasattr(tool_registry, "register_all_tools"), (
@@ -121,7 +121,7 @@ class TestContextTyping:
 
     def test_models_have_proper_validation(self):
         """Verify request models have proper field validation."""
-        from src.mcp_tools.models.requests import DocumentRequest, SearchRequest
+        from src.mcp_tools.models.requests import DocumentRequest, SearchRequest  # noqa: PLC0415
 
         # Test SearchRequest validation
         with pytest.raises(ValueError):

@@ -4,7 +4,7 @@ Tests for the modernized configuration system using pydantic-settings
 instead of custom configuration management.
 """
 
-import os
+import os  # noqa: PLC0415
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -292,7 +292,7 @@ class TestPydanticSettingsPatterns:
         Verifies that dynamic defaults work correctly with
         pydantic-settings.
         """
-        from datetime import datetime
+        from datetime import datetime  # noqa: PLC0415
 
         class DynamicSettings(BaseSettings):
             created_at: datetime = Field(default_factory=datetime.now)
@@ -310,7 +310,7 @@ class TestPydanticSettingsPatterns:
         Verifies that custom validators work properly with
         pydantic-settings.
         """
-        from pydantic import field_validator
+        from pydantic import field_validator  # noqa: PLC0415
 
         class CustomValidatedSettings(BaseSettings):
             email: str = Field(description="User email address")
@@ -391,7 +391,7 @@ class TestConfigurationIntegrationPatterns:
                 """Simulate loading config from remote source."""
                 # In real implementation, this would make HTTP requests
                 # or database queries
-                import asyncio
+                import asyncio  # noqa: PLC0415
 
                 await asyncio.sleep(0.01)  # Simulate network delay
                 return {

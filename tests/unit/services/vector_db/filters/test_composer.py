@@ -1,6 +1,6 @@
 """Tests for the filter composer implementation."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from typing import Any
 
 import pytest

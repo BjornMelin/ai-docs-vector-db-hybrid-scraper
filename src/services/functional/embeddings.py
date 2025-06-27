@@ -4,8 +4,8 @@ Transforms the complex EmbeddingManager class into pure functions with
 dependency injection. Maintains all functionality while improving testability.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException

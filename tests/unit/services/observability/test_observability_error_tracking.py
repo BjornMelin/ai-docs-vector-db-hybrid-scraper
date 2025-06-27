@@ -1,6 +1,6 @@
 """Tests for error tracking and correlation across observability systems."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import Mock, patch
 
 import pytest

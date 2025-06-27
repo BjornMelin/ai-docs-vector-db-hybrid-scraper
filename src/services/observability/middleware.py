@@ -4,8 +4,8 @@ Provides middleware that enhances the existing tracing middleware with
 OpenTelemetry integration while maintaining compatibility with existing patterns.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware

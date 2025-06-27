@@ -5,9 +5,9 @@ This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
 """
 
-import asyncio
-import logging
-import os
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 from contextlib import asynccontextmanager, suppress
 
 from fastmcp import FastMCP
@@ -97,7 +97,7 @@ def validate_configuration():
 
     Checks for required API keys and validates critical settings.
     """
-    from src.config import get_config
+    from src.config import get_config  # noqa: PLC0415
 
     config = get_config()
     warnings = []
@@ -142,7 +142,7 @@ async def lifespan():
 
         # Initialize client manager with unified config
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
-        from src.config import get_config
+        from src.config import get_config  # noqa: PLC0415
 
         config = get_config()
         lifespan.client_manager = ClientManager(config)

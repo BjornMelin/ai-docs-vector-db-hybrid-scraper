@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Performance benchmarks for service layer using pytest-benchmark.
 
@@ -13,10 +14,10 @@ Benchmarks service layer performance including:
 - Memory usage patterns
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -65,7 +66,7 @@ class TestDependencyInjectionPerformance:
 
     def test_dependency_caching_performance(self, benchmark):
         """Benchmark dependency caching effectiveness."""
-        from functools import lru_cache
+        from functools import lru_cache  # noqa: PLC0415
 
         @lru_cache(maxsize=128)
         def cached_expensive_operation(param):
@@ -172,7 +173,7 @@ class TestCircuitBreakerPerformance:
         config.failure_threshold = 1
         circuit_breaker = CircuitBreaker(config)
 
-            raise TestError("Simulated failure")
+        async def failing_service():
             raise TestError("Simulated failure")
 
         async def state_transition_test():
@@ -337,7 +338,7 @@ class TestMemoryUsagePatterns:
 
     def test_dependency_memory_overhead(self, benchmark):
         """Benchmark memory overhead of dependency injection."""
-        import sys
+        import sys  # noqa: PLC0415
 
         def measure_dependency_memory():
             # Get initial memory usage
@@ -356,7 +357,7 @@ class TestMemoryUsagePatterns:
 
         # Import gc if available
         try:
-            import gc
+            import gc  # noqa: PLC0415
         except ImportError:
             gc = None
 
@@ -393,7 +394,7 @@ class TestMemoryUsagePatterns:
 
     def test_service_cache_memory_efficiency(self, benchmark):
         """Benchmark service cache memory efficiency."""
-        from functools import lru_cache
+        from functools import lru_cache  # noqa: PLC0415
 
         @lru_cache(maxsize=1000)
         def cached_service_operation(data_id):

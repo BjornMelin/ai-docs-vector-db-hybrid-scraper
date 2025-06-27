@@ -4,9 +4,9 @@ This module provides comprehensive tests for the configuration reloading
 system including validation, rollback, observability, and API integration.
 """
 
-import asyncio
-import json
-import tempfile
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import tempfile  # noqa: PLC0415
 from pathlib import Path
 from unittest.mock import Mock, patch
 

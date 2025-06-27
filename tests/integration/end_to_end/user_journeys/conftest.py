@@ -4,9 +4,9 @@ This module provides comprehensive fixtures for testing complete user workflows
 across the entire AI Documentation Vector DB Hybrid Scraper system.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import tempfile
-import time
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -852,7 +852,7 @@ def journey_data_manager():
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
-            import shutil
+            import shutil  # noqa: PLC0415
 
             for temp_dir in self.temp_dirs:
                 try:

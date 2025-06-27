@@ -4,9 +4,9 @@ This module provides shared configuration and fixtures for deployment testing,
 including environment setup, pipeline validation, and infrastructure testing.
 """
 
-import asyncio
-import json
-import os
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import os  # noqa: PLC0415
 import tempfile
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass

@@ -3,7 +3,7 @@
 Tests the minimalistic ML security approach with >90% coverage goal.
 """
 
-import json
+import json  # noqa: PLC0415
 import subprocess
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch

@@ -1,7 +1,7 @@
 """Enhanced Crawl4AI provider with Memory-Adaptive Dispatcher for intelligent concurrency control."""
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 

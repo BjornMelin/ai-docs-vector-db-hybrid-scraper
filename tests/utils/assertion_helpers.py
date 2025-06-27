@@ -5,9 +5,9 @@ validation patterns across all test categories. These helpers ensure
 consistent error messages and validation logic throughout the test suite.
 """
 
-import asyncio
-import json
-import time
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar

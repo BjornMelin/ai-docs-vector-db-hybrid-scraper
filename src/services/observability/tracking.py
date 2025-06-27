@@ -4,9 +4,9 @@ Provides decorators and utilities for tracking AI operations, costs, and
 performance metrics that integrate with the existing function-based services.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import functools
-import logging
+import logging  # noqa: PLC0415
 from collections.abc import Callable
 from typing import Any, TypeVar
 

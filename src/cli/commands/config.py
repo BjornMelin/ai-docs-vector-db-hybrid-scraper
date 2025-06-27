@@ -3,7 +3,7 @@
 Core configuration management functionality for V1 release.
 """
 
-import json
+import json  # noqa: PLC0415
 from pathlib import Path
 
 import click

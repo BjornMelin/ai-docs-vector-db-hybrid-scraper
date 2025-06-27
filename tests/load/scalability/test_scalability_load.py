@@ -4,10 +4,10 @@ This module implements scalability tests to validate horizontal scaling,
 vertical scaling, and auto-scaling capabilities of the system.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import math
-import time
+import time  # noqa: PLC0415
 from typing import Dict
 
 import pytest
@@ -677,7 +677,7 @@ class TestScalabilityLoad:
             ]
 
             # Select operation based on probabilities
-            import random
+            import random  # noqa: PLC0415
 
             rand = random.random()
             cumulative = 0

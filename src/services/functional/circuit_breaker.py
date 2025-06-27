@@ -4,9 +4,9 @@ Provides configurable circuit breaker patterns with simple/enterprise modes.
 Based on modern async patterns with FastAPI integration.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum

@@ -7,7 +7,7 @@ and compliance validation.
 
 import hashlib
 import secrets
-import time
+import time  # noqa: PLC0415
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -526,7 +526,7 @@ def input_validator(input_sanitizer):
 
             threats_found = []
             for pattern in dangerous_patterns:
-                import re
+                import re  # noqa: PLC0415
 
                 if re.search(pattern, user_input):
                     threats_found.append(pattern)

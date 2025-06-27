@@ -5,8 +5,8 @@ This module provides comprehensive validation for configuration schemas
 and deployment environments, supporting the GitOps configuration management workflow.
 """
 
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Union

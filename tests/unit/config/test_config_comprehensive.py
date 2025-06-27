@@ -4,7 +4,7 @@ Tests all 20+ configuration models with field constraints, validators, and integ
 Uses property-based testing for edge cases and modern Pydantic V2 methods.
 """
 
-import json
+import json  # noqa: PLC0415
 import tempfile
 from pathlib import Path
 

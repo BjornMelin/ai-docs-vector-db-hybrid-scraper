@@ -4,7 +4,7 @@ This module tests disaster recovery procedures including backup/restore
 operations, failover mechanisms, and business continuity validation.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any

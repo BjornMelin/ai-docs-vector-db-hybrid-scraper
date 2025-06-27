@@ -5,7 +5,7 @@ adaptive threshold adjustment, cluster-based optimization, performance-based tun
 and context-aware threshold selection for optimal search results.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import statistics
 from datetime import UTC, datetime, timedelta
 from enum import Enum

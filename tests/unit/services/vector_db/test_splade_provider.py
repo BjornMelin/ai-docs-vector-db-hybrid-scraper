@@ -110,7 +110,7 @@ class TestSPLADEProvider:
         assert normalized != unnormalized
 
         # Check that normalized vector has L2 norm ≈ 1
-        import math
+        import math  # noqa: PLC0415
 
         norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance

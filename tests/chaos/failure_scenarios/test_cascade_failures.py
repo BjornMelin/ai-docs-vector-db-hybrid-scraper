@@ -10,9 +10,9 @@ This module implements comprehensive cascade failure scenarios to test
 system resilience against failure propagation and system-wide outages.
 """
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from enum import Enum
 

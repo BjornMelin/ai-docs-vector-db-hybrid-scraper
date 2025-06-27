@@ -5,7 +5,7 @@ users through setting up their AI Documentation Scraper instance.
 Modern template-driven approach with real-time validation.
 """
 
-import json
+import json  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 

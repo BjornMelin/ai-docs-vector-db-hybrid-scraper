@@ -6,9 +6,9 @@ and data protection mechanisms.
 
 import base64
 import hashlib
-import os
+import os  # noqa: PLC0415
 import secrets
-import time
+import time  # noqa: PLC0415
 from typing import Any
 
 import pytest
@@ -263,7 +263,7 @@ class TestDataProtection:
         assert len(token_custom) >= 64
 
         # Tokens should be URL-safe
-        import string
+        import string  # noqa: PLC0415
 
         allowed_chars = string.ascii_letters + string.digits + "-_"
         assert all(c in allowed_chars for c in token1)
@@ -285,7 +285,7 @@ class TestDataProtection:
         assert encryption_service.constant_time_compare(secret, "") is False
 
         # Test timing attack resistance (simplified test)
-        import time
+        import time  # noqa: PLC0415
 
         # Compare similar length strings
         start_time = time.perf_counter()
@@ -570,7 +570,7 @@ class TestDataProtection:
         assert unique_values > 200  # Should have good variety
 
         # Check that no single value dominates
-        from collections import Counter
+        from collections import Counter  # noqa: PLC0415
 
         value_counts = Counter(random_values)
         max_count = max(value_counts.values())

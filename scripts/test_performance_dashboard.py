@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Test performance monitoring dashboard and regression detection."""
 
-import json
+import json  # noqa: PLC0415
 import sqlite3
-import time
+import time  # noqa: PLC0415
 from datetime import datetime, timezone
 from datetime import timedelta
 from pathlib import Path

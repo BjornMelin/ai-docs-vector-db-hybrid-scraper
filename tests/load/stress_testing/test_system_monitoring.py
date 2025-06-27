@@ -11,14 +11,14 @@ application metrics, and performance indicators during stress tests
 to identify bottlenecks and performance degradation patterns.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
 import gc
-import logging
-import os
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import statistics
 import threading
-import time
+import time  # noqa: PLC0415
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any
@@ -509,7 +509,7 @@ class TestSystemMonitoring:
                                 return sum(i**2 for i in range(100000))
 
                             # Run CPU work in thread pool
-                            import concurrent.futures
+                            import concurrent.futures  # noqa: PLC0415
 
                             with concurrent.futures.ThreadPoolExecutor(
                                 max_workers=2
@@ -520,7 +520,7 @@ class TestSystemMonitoring:
 
                         elif stress_type == "io":
                             # I/O stress (file operations)
-                            import tempfile
+                            import tempfile  # noqa: PLC0415
 
                             with tempfile.NamedTemporaryFile(delete=True) as tmp:
                                 data = b"x" * (1024 * 1024)  # 1MB
@@ -728,7 +728,7 @@ class TestSystemMonitoring:
                     current_latency = self.base_latency * self.degradation_factor
 
                     # Add some randomness
-                    import random
+                    import random  # noqa: PLC0415
 
                     actual_latency = current_latency * random.uniform(0.8, 1.5)
 

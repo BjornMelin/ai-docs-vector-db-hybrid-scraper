@@ -4,7 +4,7 @@ This module implements ML-based query classification to determine optimal
 search strategies based on query characteristics and complexity.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from typing import Any
 

@@ -4,11 +4,11 @@ This module provides comprehensive load testing capabilities with
 concurrent user simulation and realistic query patterns.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import random
 import statistics
-import time
+import time  # noqa: PLC0415
 from typing import Any
 
 from pydantic import BaseModel, Field

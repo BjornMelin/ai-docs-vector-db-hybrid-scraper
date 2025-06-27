@@ -5,8 +5,8 @@ This module provides comprehensive integration tests that validate the entire sy
 workflow from data ingestion through search and retrieval.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 import pytest

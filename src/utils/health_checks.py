@@ -4,6 +4,7 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
+import asyncio  # noqa: PLC0415
 import httpx
 from openai import OpenAI
 from qdrant_client import QdrantClient
@@ -39,9 +40,6 @@ class ServiceHealthChecker:
         result = {"service": "qdrant", "connected": False, "error": None, "details": {}}
 
         try:
-            from qdrant_client import QdrantClient
-            from qdrant_client.http.exceptions import UnexpectedResponse
-
             client = QdrantClient(
                 url=config.qdrant.url, api_key=config.qdrant.api_key, timeout=5.0
             )
@@ -82,8 +80,6 @@ class ServiceHealthChecker:
             return result
 
         try:
-            import redis
-
             r = redis.from_url(config.cache.dragonfly_url, socket_connect_timeout=5)
             r.ping()
             result["connected"] = True
@@ -124,7 +120,6 @@ class ServiceHealthChecker:
         try:
             if client_manager:
                 # Use modern service layer pattern through ClientManager
-                import asyncio
 
                 async def _check_async():
                     client = await client_manager.get_openai_client()
@@ -142,7 +137,6 @@ class ServiceHealthChecker:
                     loop.close()
             else:
                 # Fallback to direct client instantiation (legacy pattern)
-                from openai import OpenAI
 
                 client = OpenAI(api_key=config.openai.api_key, timeout=5.0)
                 models = list(client.models.list())
@@ -185,8 +179,6 @@ class ServiceHealthChecker:
             return result
 
         try:
-            import httpx
-
             headers = {"Authorization": f"Bearer {config.firecrawl.api_key}"}
             response = httpx.get(
                 f"{config.firecrawl.api_url}/health", headers=headers, timeout=5.0

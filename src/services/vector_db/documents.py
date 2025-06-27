@@ -4,7 +4,7 @@ This module provides a clean, focused implementation of document operations
 extracted from QdrantService, focusing specifically on point CRUD operations.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient, models

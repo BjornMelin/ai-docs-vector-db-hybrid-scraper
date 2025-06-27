@@ -4,7 +4,7 @@ This module tests compliance with OWASP Top 10 security vulnerabilities
 and ensures proper security controls are in place.
 """
 
-import time
+import time  # noqa: PLC0415
 from typing import Any
 
 import pytest

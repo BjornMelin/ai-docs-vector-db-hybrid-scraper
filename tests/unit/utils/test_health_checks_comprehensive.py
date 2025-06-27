@@ -45,7 +45,7 @@ class TestQdrantHealthCheck:
         """Test Qdrant authentication failure."""
         config = Config()
 
-        from qdrant_client.http.exceptions import UnexpectedResponse
+        from qdrant_client.http.exceptions import UnexpectedResponse  # noqa: PLC0415
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = UnexpectedResponse(
@@ -62,7 +62,7 @@ class TestQdrantHealthCheck:
         """Test Qdrant HTTP error responses."""
         config = Config()
 
-        from qdrant_client.http.exceptions import UnexpectedResponse
+        from qdrant_client.http.exceptions import UnexpectedResponse  # noqa: PLC0415
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = UnexpectedResponse(
@@ -133,7 +133,7 @@ class TestDragonflyHealthCheck:
         config = Config()
         config.cache.enable_dragonfly_cache = True
 
-        import redis
+        import redis  # noqa: PLC0415
 
         with patch("redis.from_url") as mock_redis:
             mock_redis.side_effect = redis.ConnectionError("Connection refused")

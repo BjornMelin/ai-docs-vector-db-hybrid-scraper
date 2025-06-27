@@ -5,7 +5,7 @@ and step patterns for comprehensive performance testing.
 """
 
 import math
-import time
+import time  # noqa: PLC0415
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 

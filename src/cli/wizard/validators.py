@@ -312,7 +312,7 @@ class WizardValidator:
             return False, "JSON string cannot be empty", None
 
         try:
-            import json
+            import json  # noqa: PLC0415
 
             parsed = json.loads(json_str)
             return True, None, parsed

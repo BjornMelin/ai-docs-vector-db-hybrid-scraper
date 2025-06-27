@@ -4,7 +4,7 @@ This module tests the logging configuration system for service layer,
 including custom formatters, log contexts, and configuration management.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import tempfile
 from io import StringIO
 from pathlib import Path

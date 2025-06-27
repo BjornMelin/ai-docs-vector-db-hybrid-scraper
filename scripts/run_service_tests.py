@@ -13,11 +13,11 @@ Provides detailed reporting and coverage analysis.
 """
 
 import argparse
-import asyncio
-import os
+import asyncio  # noqa: PLC0415
+import os  # noqa: PLC0415
 import subprocess
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 

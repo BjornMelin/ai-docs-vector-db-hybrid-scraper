@@ -1,9 +1,9 @@
 """Browser-use adapter for AI-powered browser automation."""
 
-import asyncio
-import logging
-import os
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 from src.config import BrowserUseConfig

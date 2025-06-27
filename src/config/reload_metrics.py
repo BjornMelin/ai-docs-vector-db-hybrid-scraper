@@ -4,7 +4,7 @@ This module provides detailed metrics collection for configuration reload operat
 including timing, success rates, and performance characteristics.
 """
 
-import time
+import time  # noqa: PLC0415
 from contextlib import contextmanager
 from typing import Any
 

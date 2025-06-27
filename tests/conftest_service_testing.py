@@ -5,8 +5,8 @@ circuit breaker patterns, database connection pooling, browser automation
 monitoring, and performance benchmarking.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -372,7 +372,7 @@ def generate_test_embeddings():
     """Generate test embeddings for various scenarios."""
 
     def _generate(count=10, dimension=384):
-        import random
+        import random  # noqa: PLC0415
 
         embeddings = []
         for _i in range(count):

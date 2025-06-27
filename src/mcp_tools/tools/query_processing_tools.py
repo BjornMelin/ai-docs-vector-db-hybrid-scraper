@@ -4,7 +4,7 @@ This module exposes advanced query processing capabilities through the Model Con
 including query expansion, clustering, federated search, personalization, and orchestration.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -32,7 +32,7 @@ from ...services.query_processing import (
     SearchPipeline,
     SearchRequest,
 )
-from ..models.responses import SearchResult
+from ..models.responses import SearchResult  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)

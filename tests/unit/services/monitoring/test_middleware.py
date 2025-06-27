@@ -1,7 +1,7 @@
 """Comprehensive tests for monitoring middleware functionality."""
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -370,7 +370,7 @@ class TestMiddlewareIntegration:
 
     def test_concurrent_request_monitoring(self, full_monitoring_app):
         """Test monitoring under concurrent load."""
-        import threading
+        import threading  # noqa: PLC0415
 
         client = TestClient(full_monitoring_app)
         results = []

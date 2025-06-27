@@ -4,9 +4,9 @@ This module generates comprehensive performance reports comparing the old and ne
 configuration implementations, validating all performance claims.
 """
 
-import asyncio
-import json
-import time
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -286,7 +286,7 @@ class ConfigPerformanceReporter:
         detector = ConfigDriftDetector(drift_config)
 
         # Create test file
-        import tempfile
+        import tempfile  # noqa: PLC0415
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("TEST_SETTING=value1\n")
@@ -395,7 +395,7 @@ class ConfigPerformanceReporter:
         console.print("\n[bold yellow]4. File Watching Performance[/bold yellow]")
 
         # Create test files
-        import tempfile
+        import tempfile  # noqa: PLC0415
 
         test_files = []
         for i in range(5):
@@ -449,9 +449,9 @@ class ConfigPerformanceReporter:
         """Benchmark memory usage."""
         console.print("\n[bold yellow]5. Memory Usage Analysis[/bold yellow]")
 
-        import gc
+        import gc  # noqa: PLC0415
 
-        import psutil
+        import psutil  # noqa: PLC0415
 
         process = psutil.Process()
 

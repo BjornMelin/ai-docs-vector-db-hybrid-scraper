@@ -4,7 +4,7 @@ Implements research-backed chunking strategies for optimal RAG performance.
 Supports semantic boundary detection, code-aware chunking, and Tree-sitter AST parsing.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from typing import Any, ClassVar
 

@@ -8,10 +8,10 @@ This script provides optimized test execution strategies for:
 - Performance benchmarking
 """
 
-import os
+import os  # noqa: PLC0415
 import subprocess
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 
 

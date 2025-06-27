@@ -5,7 +5,7 @@ rule-based patterns and semantic analysis to categorize queries into 14
 distinct intent categories for optimal search strategy selection.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from typing import Any
 

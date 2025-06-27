@@ -5,8 +5,8 @@ including load times, validation performance, auto-detection latency, and
 configuration change impact analysis.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime

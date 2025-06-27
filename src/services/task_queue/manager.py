@@ -1,6 +1,6 @@
 """Task queue manager for ARQ integration."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from arq import ArqRedis, create_pool

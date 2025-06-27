@@ -9,13 +9,13 @@ This script validates the 4-6x performance improvement claims by:
 5. Generating detailed performance comparison report
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
-import os
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import platform
 import statistics
-import time
+import time  # noqa: PLC0415
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any

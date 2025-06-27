@@ -9,11 +9,11 @@ This is intentional and not cryptographically sensitive.
 """
 # ruff: noqa: S311  # Standard random is acceptable for anti-detection purposes
 
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import random
 import secrets
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 

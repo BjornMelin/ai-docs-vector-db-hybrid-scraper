@@ -4,9 +4,9 @@ Tests for the modernized configuration system that uses
 watchdog for file monitoring instead of custom reload mechanisms.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import tempfile
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

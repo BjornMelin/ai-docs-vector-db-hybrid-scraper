@@ -5,7 +5,7 @@ application lifecycle events, ensuring proper initialization, cleanup,
 and service registration for zero-downtime configuration reloading.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from collections.abc import Callable
 from typing import Any, List
 

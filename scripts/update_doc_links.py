@@ -5,7 +5,7 @@ Update Documentation Links After Restructuring
 Updates all internal documentation links based on the changes log from restructuring.
 """
 
-import json
+import json  # noqa: PLC0415
 import re
 from pathlib import Path
 

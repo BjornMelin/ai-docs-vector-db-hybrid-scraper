@@ -8,7 +8,7 @@ and UI component validation.
 import base64
 import contextlib
 import hashlib
-import json
+import json  # noqa: PLC0415
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path

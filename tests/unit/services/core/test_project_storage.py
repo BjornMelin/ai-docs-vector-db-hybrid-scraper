@@ -1,7 +1,7 @@
 """Tests for project storage service."""
 
-import asyncio
-import json
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path

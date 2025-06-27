@@ -633,7 +633,7 @@ class TestFastEmbedProviderIntegration:
         def mock_embed_response(texts):
             nonlocal call_count
             call_count += 1
-                raise TestError("Temporary failure")
+                raise TestError("Temporary failure") # noqa: PLC0415
                 raise TestError("Temporary failure")
             # Success on second call
             return iter([np.array([0.1, 0.2, 0.3]) for _ in texts])
@@ -672,7 +672,7 @@ class TestFastEmbedProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_embedding_generation(self):
         """Test concurrent embedding generation."""
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         provider = FastEmbedProvider()
         provider._initialized = True

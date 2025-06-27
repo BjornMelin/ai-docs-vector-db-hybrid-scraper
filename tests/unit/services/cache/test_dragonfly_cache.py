@@ -1,6 +1,6 @@
 """Tests for dragonfly cache module."""
 
-import json
+import json  # noqa: PLC0415
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch

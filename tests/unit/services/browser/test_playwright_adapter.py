@@ -1,6 +1,6 @@
 """Comprehensive tests for Playwright browser adapter."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

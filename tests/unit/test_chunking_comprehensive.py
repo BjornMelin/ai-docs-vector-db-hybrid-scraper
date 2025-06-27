@@ -158,7 +158,7 @@ class TestDocumentChunker:
             chunker: DocumentChunker instance for testing
         """
         # Test Python pattern detection
-        python_code = """import os
+        python_code = """import os  # noqa: PLC0415
 from pathlib import Path
 
 def hello_world():

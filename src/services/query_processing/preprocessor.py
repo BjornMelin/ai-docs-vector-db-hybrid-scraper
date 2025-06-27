@@ -4,7 +4,7 @@ This module provides comprehensive query preprocessing including normalization,
 spell correction, expansion, and context extraction for optimal query processing.
 """
 
-import logging
+import logging  # noqa: PLC0415
 import re
 import string
 from typing import Any
@@ -147,7 +147,7 @@ class QueryPreprocessor:
         if not self._initialized:
             raise RuntimeError("QueryPreprocessor not initialized")
 
-        import time
+        import time  # noqa: PLC0415
 
         start_time = time.time()
 

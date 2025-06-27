@@ -8,7 +8,7 @@ This test module demonstrates:
 - Testing error scenarios
 """
 
-import logging
+import logging  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -407,12 +407,12 @@ class TestToolRegistryIntegration:
     async def test_type_checking_compatibility(self):
         """Test that function signature is compatible with type hints."""
         # This test verifies the function can be called with properly typed arguments
-        from typing import TYPE_CHECKING
+        from typing import TYPE_CHECKING  # noqa: PLC0415
 
         if TYPE_CHECKING:
-            from fastmcp import FastMCP
+            from fastmcp import FastMCP  # noqa: PLC0415
 
-            from src.infrastructure.client_manager import ClientManager
+            from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
 
             # This should not raise type errors
             async def type_check():

@@ -14,10 +14,10 @@ Tests include:
 - System recovery validation
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import random
-import time
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock

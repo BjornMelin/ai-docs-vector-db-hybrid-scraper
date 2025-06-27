@@ -1,6 +1,6 @@
 """Tests for MCP project management tools."""
 
-import json
+import json  # noqa: PLC0415
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 

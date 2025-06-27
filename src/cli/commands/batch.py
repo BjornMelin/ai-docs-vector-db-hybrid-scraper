@@ -4,7 +4,7 @@ This module provides comprehensive batch processing capabilities with
 Rich progress visualization, operation queuing, and interactive confirmations.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from dataclasses import dataclass
 from pathlib import Path
 

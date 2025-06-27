@@ -4,7 +4,7 @@ Script to systematically fix TRY violations in the codebase.
 Focuses on the four main violation types: TRY300, TRY401, TRY002, TRY301
 """
 
-import json
+import json  # noqa: PLC0415
 import re
 import subprocess
 import sys

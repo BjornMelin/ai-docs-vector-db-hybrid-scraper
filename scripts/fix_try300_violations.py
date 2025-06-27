@@ -3,7 +3,7 @@
 Fix TRY300 violations by moving statements to else blocks.
 """
 
-import json
+import json  # noqa: PLC0415
 import subprocess
 from pathlib import Path
 from typing import Dict, List

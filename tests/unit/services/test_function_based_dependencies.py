@@ -5,6 +5,7 @@ provides equivalent functionality to the original Manager classes
 while achieving the target 60% complexity reduction.
 """
 
+import asyncio  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -506,7 +507,7 @@ class TestComplexityReduction:
     def test_function_signature_simplicity(self):
         """Test that function signatures are simpler than class methods."""
         # Function-based approach has simple, focused signatures
-        from inspect import signature
+        from inspect import signature  # noqa: PLC0415
 
         # Check generate_embeddings function signature
         sig = signature(generate_embeddings)
@@ -521,7 +522,7 @@ class TestComplexityReduction:
     def test_dependency_injection_clarity(self):
         """Test that dependency injection is explicit and clear."""
         # All dependencies are explicitly typed with Annotated
-        from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
+        from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep  # noqa: PLC0415
 
         # Dependencies use clear naming convention
         assert str(EmbeddingManagerDep).startswith("typing.Annotated")
@@ -530,7 +531,7 @@ class TestComplexityReduction:
     def test_error_handling_consistency(self):
         """Test that error handling is consistent across functions."""
         # All service functions use consistent error types
-        from src.services.errors import (
+        from src.services.errors import (  # noqa: PLC0415
             CrawlServiceError,
             EmbeddingServiceError,
             TaskQueueServiceError,
@@ -556,11 +557,11 @@ class TestIntegrationWithFastAPI:
     @pytest.mark.asyncio
     async def test_fastapi_dependency_resolution(self):
         """Test that FastAPI can resolve dependencies correctly."""
-        from fastapi import FastAPI
+        from fastapi import FastAPI  # noqa: PLC0415
 
         app = FastAPI()
 
-        from src.services.dependencies import ConfigDep
+        from src.services.dependencies import ConfigDep  # noqa: PLC0415
 
         @app.get("/test-config")
         async def test_config_endpoint(config: ConfigDep):
@@ -572,7 +573,7 @@ class TestIntegrationWithFastAPI:
 
     def test_pydantic_integration(self):
         """Test that Pydantic models integrate well with FastAPI."""
-        from fastapi import FastAPI
+        from fastapi import FastAPI  # noqa: PLC0415
 
         app = FastAPI()
 
@@ -585,7 +586,7 @@ class TestIntegrationWithFastAPI:
 
     def test_response_model_integration(self):
         """Test that response models work with FastAPI."""
-        from fastapi import FastAPI
+        from fastapi import FastAPI  # noqa: PLC0415
 
         app = FastAPI()
 

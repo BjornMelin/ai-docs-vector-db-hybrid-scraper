@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Recovery validation tests for chaos engineering.
 
@@ -10,8 +11,8 @@ ability to recover from failures, maintain data consistency, and resume
 normal operations after chaos events.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -151,7 +152,7 @@ class TestRecoveryValidation:
                 """Validate system recovery."""
                 current = await self.monitor_current_state()
 
-                    raise TestError("No baseline state available for comparison")
+                if not self.baseline_state:
                     raise TestError("No baseline state available for comparison")
 
                 validation_results = {

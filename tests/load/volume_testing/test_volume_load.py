@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Volume testing scenarios for large dataset processing.
 
@@ -9,10 +10,10 @@ This module implements volume tests to validate system behavior
 with large datasets, bulk operations, and high-throughput scenarios.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import random
-import time
+import time  # noqa: PLC0415
 from typing import Dict
 
 import pytest
@@ -399,7 +400,9 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                            raise TestError(f"Processing failed for {doc['url']}")
+                        import random  # noqa: PLC0415
+
+                        if random.random() < 0.01:  # 1% failure rate
                             raise TestError(f"Processing failed for {doc['url']}")
 
                         processed_doc = {

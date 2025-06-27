@@ -16,9 +16,9 @@ that complements the existing security monitoring and compliance logging.
 """
 
 import hashlib
-import json
-import logging
-import os
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import secrets
 from datetime import UTC, datetime
 from enum import Enum
@@ -792,7 +792,7 @@ class SecureConfigManager:
 
             # Create backup (simplified implementation)
             # In production, use tar/gzip or similar
-            import shutil
+            import shutil  # noqa: PLC0415
 
             backup_dir = self.config_dir / "backup_temp"
             backup_dir.mkdir(exist_ok=True)

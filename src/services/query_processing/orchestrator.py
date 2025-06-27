@@ -4,8 +4,8 @@ This module provides a streamlined search orchestrator that maintains core funct
 and valuable V2 features. Includes query expansion, clustering, personalization, and federation.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from enum import Enum
 from typing import Any
 
@@ -211,7 +211,7 @@ class SearchOrchestrator(BaseService):
     def rag_generator(self) -> RAGGenerator:
         """Lazy load RAG generator service."""
         if self._rag_generator is None:
-            from src.config import get_config
+            from src.config import get_config  # noqa: PLC0415
 
             config = get_config()
             self._rag_generator = RAGGenerator(config.rag)
@@ -327,7 +327,7 @@ class SearchOrchestrator(BaseService):
 
             if request.enable_rag and search_results:
                 try:
-                    from src.config import get_config
+                    from src.config import get_config  # noqa: PLC0415
 
                     config = get_config()
 
@@ -458,7 +458,7 @@ class SearchOrchestrator(BaseService):
         # Check if federated search is enabled
         if request.enable_federation:
             try:
-                from .federated import (
+                from .federated import (  # noqa: PLC0415
                     CollectionSelectionStrategy,
                     FederatedSearchRequest,
                     ResultMergingStrategy,

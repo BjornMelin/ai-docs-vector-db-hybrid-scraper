@@ -6,7 +6,7 @@ and all components are working correctly.
 """
 
 import sys
-import json
+import json  # noqa: PLC0415
 from pathlib import Path
 from datetime import datetime, timezone
 

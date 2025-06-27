@@ -4,12 +4,12 @@ This module implements endurance tests to detect memory leaks,
 performance degradation over time, and system stability issues.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import logging
-import os
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import random
-import time
+import time  # noqa: PLC0415
 from typing import Dict
 
 import psutil

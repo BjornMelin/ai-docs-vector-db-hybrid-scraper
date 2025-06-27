@@ -4,7 +4,7 @@ This module tests the ProfileManager class with focus on Rich console output,
 profile management operations, and user interaction flows.
 """
 
-import json
+import json  # noqa: PLC0415
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

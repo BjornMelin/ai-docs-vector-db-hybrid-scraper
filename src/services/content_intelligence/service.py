@@ -6,8 +6,8 @@ metadata enrichment, and adaptation recommendations.
 """
 
 import hashlib
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from typing import Any
 
 from src.config import Config
@@ -263,7 +263,7 @@ class ContentIntelligenceService(BaseService):
         except Exception as e:
             logger.exception("Content classification failed")
             # Return unknown classification on failure
-            from .models import ContentType
+            from .models import ContentType  # noqa: PLC0415
 
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,

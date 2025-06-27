@@ -10,7 +10,7 @@ This module tests the entire CI/CD pipeline workflow including build processes,
 test execution, deployment automation, and rollback procedures.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

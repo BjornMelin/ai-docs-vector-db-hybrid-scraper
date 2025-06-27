@@ -6,12 +6,12 @@ Extends the existing payload indexing benchmark to include comprehensive
 HNSW parameter testing and optimization capabilities.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
-import time
+import time  # noqa: PLC0415
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any

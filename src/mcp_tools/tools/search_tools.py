@@ -1,6 +1,6 @@
 """Advanced search tools for MCP server."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -22,13 +22,13 @@ from src.config import SearchStrategy
 
 from ...infrastructure.client_manager import ClientManager
 from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import (
+from ..models.requests import (  # noqa: PLC0415
     FilteredSearchRequest,
     HyDESearchRequest,
     MultiStageSearchRequest,
     SearchRequest,
 )
-from ..models.responses import HyDEAdvancedResponse, SearchResult
+from ..models.responses import HyDEAdvancedResponse, SearchResult  # noqa: PLC0415
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ async def _perform_ab_test_search(
     ctx: "Context | None",
 ) -> tuple[list, dict]:
     """Perform A/B test comparing HyDE vs regular search."""
-    import asyncio
+    import asyncio  # noqa: PLC0415
 
     # Get services
     hyde_engine = await client_manager.get_hyde_engine()
@@ -115,7 +115,7 @@ def register_tools(mcp, client_manager: ClientManager):
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Direct access to search_documents functionality without mock MCP."""
-        from ._search_utils import search_documents_core
+        from ._search_utils import search_documents_core  # noqa: PLC0415
 
         return await search_documents_core(request, client_manager, ctx)
 
@@ -406,7 +406,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "ab_test_results": None,
             }
 
-            import time
+            import time  # noqa: PLC0415
 
             start_time = time.time()
 

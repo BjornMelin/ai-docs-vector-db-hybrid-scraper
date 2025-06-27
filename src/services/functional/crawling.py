@@ -4,7 +4,7 @@ Transforms the CrawlManager class into pure functions with dependency injection.
 Provides crawling operations with circuit breaker patterns.
 """
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 from fastapi import Depends, HTTPException
@@ -281,7 +281,7 @@ async def batch_crawl_urls(
         HTTPException: If batch crawling fails
     """
     try:
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         if not urls:
             return []
@@ -349,8 +349,8 @@ async def validate_url(url: str) -> dict[str, Any]:
         Validation result with status and details
     """
     try:
-        import re
-        from urllib.parse import urlparse
+        import re  # noqa: PLC0415
+        from urllib.parse import urlparse  # noqa: PLC0415
 
         if not url:
             return {"valid": False, "error": "URL is required", "details": {}}

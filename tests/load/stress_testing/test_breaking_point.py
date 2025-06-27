@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Breaking point analysis tests for stress testing.
 
@@ -463,11 +464,10 @@ class TestBreakingPointAnalysis:
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
 
-                import random
+                import random  # noqa: PLC0415
 
                 if random.random() < total_error_rate:
                     # Increase cascade level on error
-                    raise TestError(
                     raise TestError(
                         f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
                     )

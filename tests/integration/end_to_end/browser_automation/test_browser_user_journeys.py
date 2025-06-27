@@ -4,8 +4,8 @@ This module contains comprehensive browser automation tests that validate
 user workflows through real browser interactions using Playwright.
 """
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 import pytest
 

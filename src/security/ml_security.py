@@ -10,7 +10,7 @@ Philosophy: Use existing, proven security infrastructure rather than building ML
 """
 
 import importlib.util
-import logging
+import logging  # noqa: PLC0415
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
@@ -185,7 +185,7 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json
+                import json  # noqa: PLC0415
 
                 audit_data = json.loads(result.stdout)
                 vulnerabilities = audit_data.get("vulnerabilities", [])
@@ -267,7 +267,7 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json
+                import json  # noqa: PLC0415
 
                 scan_data = json.loads(result.stdout)
 

@@ -7,12 +7,12 @@ with different configurations, profiles, and reporting options.
 
 import argparse
 import contextlib
-import json
-import logging
-import os
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import subprocess
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 
 from locust import main as locust_main

@@ -14,8 +14,8 @@ Usage:
     python examples/config_drift_demo.py
 """
 
-import asyncio
-import json
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
 import tempfile
 from pathlib import Path
 

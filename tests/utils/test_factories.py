@@ -6,7 +6,7 @@ type hints, and builder patterns.
 """
 
 import random
-import time
+import time  # noqa: PLC0415
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any

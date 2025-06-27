@@ -1,7 +1,8 @@
-
 class TestError(Exception):
     """Custom exception for this module."""
+
     pass
+
 
 """Integration tests for service interactions and composition.
 
@@ -13,9 +14,9 @@ Tests the integration between different service layers including:
 - Circuit breaker coordination across services
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import time
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -812,7 +813,7 @@ class TestCircuitBreakerCoordination:
                 await embedding_circuit.call(embedding_operation)
 
         # Now embedding circuit should be open
-        from src.services.functional.circuit_breaker import CircuitBreakerError
+        from src.services.functional.circuit_breaker import CircuitBreakerError  # noqa: PLC0415
 
         try:
             await embedding_circuit.call(embedding_operation)
@@ -837,7 +838,7 @@ class TestCircuitBreakerCoordination:
         )
 
         # Mock services
-            raise TestError("Primary service overloaded")
+        async def primary_service():
             raise TestError("Primary service overloaded")
 
         async def fallback_service():

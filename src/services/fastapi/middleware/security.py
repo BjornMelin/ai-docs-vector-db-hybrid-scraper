@@ -4,8 +4,8 @@ This middleware adds essential security headers and provides basic protection
 against common web vulnerabilities in production deployments.
 """
 
-import logging
-import time
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 from collections import defaultdict
 from collections.abc import Callable
 

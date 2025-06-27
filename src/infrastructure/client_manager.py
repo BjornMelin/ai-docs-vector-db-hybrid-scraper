@@ -1,10 +1,10 @@
 """Centralized API client management with singleton pattern and health checks."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
+import logging  # noqa: PLC0415
 import threading
-import time
+import time  # noqa: PLC0415
 import typing
 from contextlib import asynccontextmanager
 from copy import deepcopy

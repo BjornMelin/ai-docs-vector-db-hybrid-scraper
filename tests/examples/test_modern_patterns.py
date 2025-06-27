@@ -4,8 +4,8 @@ This file demonstrates best practices for testing async code, property-based tes
 and modern pytest patterns following 2025 standards.
 """
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -147,7 +147,7 @@ class TestPropertyBasedPatterns:
     )
     def test_redis_url_parsing(self, redis_url: str):
         """Property-based test for Redis URL parsing robustness."""
-        from src.services.task_queue.worker import WorkerSettings
+        from src.services.task_queue.worker import WorkerSettings  # noqa: PLC0415
 
         try:
             config = Config()
@@ -171,7 +171,7 @@ class TestPropertyBasedPatterns:
     )
     def test_chunking_config_properties(self, chunk_size: int, chunk_overlap: int):
         """Property-based test for chunking configuration invariants."""
-        from src.config.core import ChunkingConfig
+        from src.config.core import ChunkingConfig  # noqa: PLC0415
 
         # Ensure chunk_overlap is always less than chunk_size
         if chunk_overlap >= chunk_size:
@@ -207,7 +207,7 @@ class TestModernFixturePatterns:
     def isolated_config(self, app_config: Config) -> Config:
         """Function-scoped config that inherits from session config."""
         # Create a copy for isolation
-        import copy
+        import copy  # noqa: PLC0415
 
         return copy.deepcopy(app_config)
 
@@ -321,7 +321,7 @@ class TestErrorHandlingPatterns:
 )
 def test_embedding_provider_defaults(provider: str, expected_model: str):
     """Test embedding provider defaults with parametrization."""
-    from src.config.enums import EmbeddingProvider
+    from src.config.enums import EmbeddingProvider  # noqa: PLC0415
 
     config = Config()
     if provider == "openai":

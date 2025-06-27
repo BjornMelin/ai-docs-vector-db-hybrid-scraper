@@ -16,7 +16,7 @@ def hypothesis_settings():
     settings.register_profile("dev", max_examples=100)
 
     # Use appropriate profile based on environment
-    import os
+    import os  # noqa: PLC0415
 
     profile = os.getenv("HYPOTHESIS_PROFILE", "dev")
     settings.load_profile(profile)

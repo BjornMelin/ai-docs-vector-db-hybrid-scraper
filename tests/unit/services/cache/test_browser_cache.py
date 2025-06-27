@@ -1,8 +1,8 @@
 """Comprehensive tests for browser caching functionality."""
 
-import asyncio
-import json
-import time
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 

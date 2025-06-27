@@ -108,7 +108,7 @@ class TestObservabilityDependencies:
 
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations, not None
-        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
+        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer  # noqa: PLC0415
 
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)
@@ -153,7 +153,7 @@ class TestObservabilityDependencies:
         tracer = get_ai_tracer(observability_service)
 
         # Should return NoOp tracer
-        from src.services.observability.tracking import _NoOpTracer
+        from src.services.observability.tracking import _NoOpTracer  # noqa: PLC0415
 
         assert isinstance(tracer, _NoOpTracer)
 
@@ -166,7 +166,7 @@ class TestObservabilityDependencies:
 
         tracer = get_ai_tracer(observability_service)
 
-        from src.services.observability.tracking import _NoOpTracer
+        from src.services.observability.tracking import _NoOpTracer  # noqa: PLC0415
 
         assert isinstance(tracer, _NoOpTracer)
 
@@ -195,7 +195,7 @@ class TestObservabilityDependencies:
 
         meter = get_service_meter(observability_service)
 
-        from src.services.observability.tracking import _NoOpMeter
+        from src.services.observability.tracking import _NoOpMeter  # noqa: PLC0415
 
         assert isinstance(meter, _NoOpMeter)
 

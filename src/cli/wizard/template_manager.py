@@ -4,7 +4,7 @@ Handles loading, validating, and managing configuration templates
 with Pydantic integration for real-time validation.
 """
 
-import json
+import json  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 

@@ -1,6 +1,6 @@
 """ARQ worker for processing background tasks."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any, ClassVar
 
 from arq.connections import RedisSettings

@@ -1,6 +1,6 @@
 """Lightweight HTTP scraper using httpx and BeautifulSoup for simple static pages."""
 
-import logging
+import logging  # noqa: PLC0415
 import re
 from typing import Any
 from urllib.parse import urlparse

@@ -6,7 +6,7 @@ and migration validation.
 """
 
 import hashlib
-import json
+import json  # noqa: PLC0415
 import random
 import statistics
 from dataclasses import dataclass, field
@@ -199,7 +199,7 @@ def data_quality_validator():
 
                     # Pattern validation
                     if rule.pattern and isinstance(value, str):
-                        import re
+                        import re  # noqa: PLC0415
 
                         if not re.match(rule.pattern, value):
                             failed_records += 1
@@ -580,7 +580,7 @@ def data_integrity_checker():
             if not pattern:
                 return {"error": "Pattern not specified in constraint"}
 
-            import re
+            import re  # noqa: PLC0415
 
             violations = []
 
