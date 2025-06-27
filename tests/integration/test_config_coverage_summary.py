@@ -5,7 +5,6 @@ test scenarios are properly covered.
 """
 
 
-
 class TestConfigurationCoverageSummary:
     """Verify that all required configuration test scenarios are covered."""
 

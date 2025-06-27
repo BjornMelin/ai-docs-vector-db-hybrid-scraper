@@ -347,7 +347,7 @@ class TestCommandInjectionPrevention:
             # Argument list instead of shell string
             ["ls", "-la", "/safe/directory"],
             ["grep", "pattern", "file.txt"],
-            ["find", "/tmp", "-name", "*.log"],
+            ["find", "$TMPDIR", "-name", "*.log"],
         ]
 
         for pattern in safe_patterns:

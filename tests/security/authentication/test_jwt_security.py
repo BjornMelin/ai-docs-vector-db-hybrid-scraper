@@ -131,7 +131,7 @@ class TestJWTSecurity:
         token = jwt_service.generate_token(valid_jwt_payload)
 
         # Try to verify with wrong secret
-        wrong_secret = "wrong_secret_key"
+        wrong_secret = "wrong_secret_key"  # noqa: S105
         try:
             jwt.decode(token, wrong_secret, algorithms=["HS256"])
             raise AssertionError("Should have raised InvalidSignatureError")
@@ -324,7 +324,7 @@ class TestJWTSecurity:
     def test_jwt_key_confusion_prevention(self, valid_jwt_payload):
         """Test prevention of key confusion attacks."""
         # Generate token with HMAC secret
-        hmac_secret = "hmac_secret_key"
+        hmac_secret = "hmac_secret_key"  # noqa: S105
         hmac_token = jwt.encode(valid_jwt_payload, hmac_secret, algorithm="HS256")
 
         # Try to verify with RSA public key (should fail)
@@ -421,7 +421,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 2. CSRF token validation for state-changing operations
         # 3. SameSite cookie attributes
 
-        csrf_token = "csrf_token_123"
+        csrf_token = "csrf_token_123"  # noqa: S105
 
         # Simulate CSRF token validation
         def validate_csrf_token(request_csrf, session_csrf):
@@ -444,7 +444,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         # 4. Error messages
 
         sample_token = (
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdCJ9.signature"
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdCJ9.signature"  # noqa: S105
         )
 
         # URLs should not contain tokens
@@ -503,7 +503,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         result = jwt_service.verify_token(refresh_token)
 
         assert result["valid"] is True
-        assert result["payload"]["token_type"] == "refresh"
+        assert result["payload"]["token_type"] == "refresh"  # noqa: S105
         assert result["payload"]["user_id"] == "test_user"
 
         # Simulate refresh token rotation

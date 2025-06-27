@@ -65,7 +65,7 @@ def optimized_async_loop():
 
         loop.close()
     except Exception:
-        pass  # Ignore cleanup errors
+        pass  # Ignore cleanup errors  # noqa: S110
 
 
 @pytest.fixture(scope="session")
@@ -351,7 +351,7 @@ async def fast_async_context():
                         else:
                             resource.close()
                     except Exception:
-                        pass  # Ignore cleanup errors
+                        pass  # Ignore cleanup errors  # noqa: S110
 
         def add_resource(self, resource):
             """Add resource for cleanup."""

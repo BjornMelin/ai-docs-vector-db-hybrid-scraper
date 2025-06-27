@@ -7,6 +7,7 @@ and behavior under extreme load conditions.
 import asyncio
 import logging
 import time
+from typing import Dict
 
 import pytest
 

@@ -288,7 +288,7 @@ class TestConfigurationWizard:
         # Mock user responses
         mock_prompt.side_effect = [
             "json",  # format
-            "/tmp/test_config.json",  # path
+            "/tmp/test_config.json",  # path  # noqa: S108
         ]
 
         config_data = {"test": "data"}
@@ -296,10 +296,10 @@ class TestConfigurationWizard:
         result = wizard.save_configuration(config_data)
 
         # Verify return path
-        assert result == Path("/tmp/test_config.json")
+        assert result == Path("/tmp/test_config.json")  # noqa: S108
 
         # Verify file was opened for writing
-        mock_file.assert_called_once_with(Path("/tmp/test_config.json"), "w")
+        mock_file.assert_called_once_with(Path("/tmp/test_config.json"), "w")  # noqa: S108
 
         # Verify Rich output
         rich_output_capturer.assert_contains("💾 Saving Configuration")
@@ -315,7 +315,7 @@ class TestConfigurationWizard:
         # Mock user responses
         mock_prompt.side_effect = [
             "yaml",  # format
-            "/tmp/test_config.yaml",  # path
+            "/tmp/test_config.yaml",  # path  # noqa: S108
         ]
 
         config_data = {"test": "data"}
@@ -324,7 +324,7 @@ class TestConfigurationWizard:
 
         # Verify YAML dump was called
         mock_yaml_dump.assert_called_once()
-        assert result == Path("/tmp/test_config.yaml")
+        assert result == Path("/tmp/test_config.yaml")  # noqa: S108
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("tomli_w.dump")
@@ -336,7 +336,7 @@ class TestConfigurationWizard:
         # Mock user responses
         mock_prompt.side_effect = [
             "toml",  # format
-            "/tmp/test_config.toml",  # path
+            "/tmp/test_config.toml",  # path  # noqa: S108
         ]
 
         config_data = {"test": "data"}
@@ -345,7 +345,7 @@ class TestConfigurationWizard:
 
         # Verify TOML dump was called
         mock_toml_dump.assert_called_once()
-        assert result == Path("/tmp/test_config.toml")
+        assert result == Path("/tmp/test_config.toml")  # noqa: S108
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("rich.prompt.Prompt.ask")
@@ -359,7 +359,7 @@ class TestConfigurationWizard:
         # Mock user responses
         mock_prompt.side_effect = [
             "json",  # format
-            "/tmp/test_config.json",  # path
+            "/tmp/test_config.json",  # path  # noqa: S108
         ]
 
         # Mock file operation error
@@ -403,7 +403,7 @@ class TestConfigurationWizard:
         mock_embed.return_value = {"openai": {"api_key": "test"}}
         mock_browser.return_value = {"browser": {"headless": True}}
         mock_perf.return_value = {"cache": {"enabled": True}}
-        mock_save.return_value = Path("/tmp/config.json")
+        mock_save.return_value = Path("/tmp/config.json")  # noqa: S108
 
         result = wizard.run_setup()
 
@@ -419,7 +419,7 @@ class TestConfigurationWizard:
         mock_save.assert_called_once()
 
         # Verify return value
-        assert result == Path("/tmp/config.json")
+        assert result == Path("/tmp/config.json")  # noqa: S108
 
         # Verify success message
         rich_output_capturer.assert_contains("🎉 Setup Complete!")
@@ -451,7 +451,7 @@ class TestSetupCommand:
         """Test basic setup command execution."""
         # Mock wizard instance
         mock_wizard = MagicMock()
-        mock_wizard.run_setup.return_value = Path("/tmp/config.json")
+        mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
         mock_wizard_class.return_value = mock_wizard
 
         # Mock user declining validation
@@ -471,14 +471,15 @@ class TestSetupCommand:
         """Test setup command with output and format options."""
         # Mock wizard instance
         mock_wizard = MagicMock()
-        mock_wizard.run_setup.return_value = Path("/tmp/custom_config.yaml")
+        mock_wizard.run_setup.return_value = Path("/tmp/custom_config.yaml")  # noqa: S108
         mock_wizard_class.return_value = mock_wizard
 
         # Mock user declining validation
         mock_confirm.return_value = False
 
         result = cli_runner.invoke(
-            setup, ["--output", "/tmp/custom_config.yaml", "--format", "yaml"]
+            setup,
+            ["--output", "/tmp/custom_config.yaml", "--format", "yaml"],  # noqa: S108
         )
 
         assert result.exit_code == 0
@@ -503,7 +504,7 @@ class TestSetupCommand:
 
         # Mock wizard instance
         mock_wizard = MagicMock()
-        mock_wizard.run_setup.return_value = Path("/tmp/config.json")
+        mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
         mock_wizard_class.return_value = mock_wizard
 
         # Mock user responses: first for wizard, then for validation
@@ -524,7 +525,7 @@ class TestSetupCommand:
         """Test setup command without validation."""
         # Mock wizard instance
         mock_wizard = MagicMock()
-        mock_wizard.run_setup.return_value = Path("/tmp/config.json")
+        mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108
         mock_wizard_class.return_value = mock_wizard
 
         # Mock user declining validation

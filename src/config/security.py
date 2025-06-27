@@ -713,7 +713,7 @@ class SecureConfigManager:
                 logger.warning("No integrity records found")
                 return results
 
-            with open(self.integrity_file, encoding="utf-8") as f:
+            with self.integrity_file.open(encoding="utf-8") as f:
                 integrity_data = json.load(f)
 
             # Validate specific configuration or all configurations

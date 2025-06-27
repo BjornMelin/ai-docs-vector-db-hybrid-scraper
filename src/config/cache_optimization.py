@@ -230,7 +230,7 @@ class AsyncConfigLoader:
 
                 if config_path.exists():
                     if config_path.suffix == ".json":
-                        with open(config_path) as f:
+                        with config_path.open() as f:
                             file_data = json.load(f)
                         kwargs.update(file_data)
 

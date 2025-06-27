@@ -6,23 +6,22 @@ with different configurations, profiles, and reporting options.
 """
 
 import argparse
+import contextlib
 import json
 import logging
-import os
+import subprocess
 import sys
 import time
 from pathlib import Path
+
+from locust import main as locust_main
+from locust.env import Environment
+from locust.log import setup_logging
 
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-import contextlib
-
-from locust import main as locust_main
-from locust.env import Environment
-from locust.log import setup_logging
 
 from tests.load.load_profiles import LOAD_PROFILES, get_load_profile
 from tests.load.locust_load_runner import (
@@ -73,11 +72,11 @@ class LoadTestRunner:
 
     def run_locust_test(
         self,
-        config: Dict,
+        config: dict,
         profile: str | None = None,
         headless: bool = True,
         web_port: int = 8089,
-    ) -> Dict:
+    ) -> dict:
         """Run load test using Locust."""
         logger.info(f"Starting Locust load test with config: {config}")
 
@@ -127,7 +126,6 @@ class LoadTestRunner:
                 logger.info(f"Test report saved to: {report_file}")
 
                 return report
-
         else:
             # Run with web UI
             logger.info(f"Starting Locust web UI on port {web_port}")
@@ -159,11 +157,9 @@ class LoadTestRunner:
 
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
-    ) -> Dict:
+    ) -> dict:
         """Run load tests using pytest."""
         logger.info(f"Running pytest load tests: {test_type}")
-
-        import subprocess
 
         # Build pytest command
         cmd = ["uv", "run", "pytest", "tests/load/", "-v"]
@@ -207,26 +203,27 @@ class LoadTestRunner:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to run pytest tests: {e}")
+            logger.exception("Failed to run pytest tests")
             return {
                 "status": "error",
                 "error": str(e),
                 "command": " ".join(cmd),
             }
 
-    def run_custom_scenario(self, scenario_file: str) -> Dict:
+    def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
         logger.info(f"Running custom scenario: {scenario_file}")
 
         try:
-            with open(scenario_file) as f:
+            with Path(scenario_file).open() as f:
                 scenario = json.load(f)
 
             # Validate scenario format
             required_fields = ["name", "description", "config"]
             for field in required_fields:
                 if field not in scenario:
-                    raise ValueError(f"Missing required field: {field}")
+                    msg = f"Missing required field: {field}"
+                    raise ValueError(msg)
 
             config = scenario["config"]
             profile = scenario.get("profile")
@@ -305,7 +302,7 @@ class LoadTestRunner:
             return regression_analysis
 
         except Exception as e:
-            logger.exception(f"Failed to run regression test: {e}")
+            logger.exception("Failed to run regression test")
             return {
                 "status": "error",
                 "error": str(e),
@@ -313,8 +310,8 @@ class LoadTestRunner:
             }
 
     def _generate_test_report(
-        self, env: Environment, config: Dict, profile: str | None
-    ) -> Dict:
+        self, env: Environment, config: dict, profile: str | None
+    ) -> dict:
         """Generate comprehensive test report."""
         stats = env.stats
 
@@ -385,7 +382,7 @@ class LoadTestRunner:
 
         return report
 
-    def _run_endpoint_benchmark(self, endpoint: str, _config: Dict) -> Dict:
+    def _run_endpoint_benchmark(self, endpoint: str, _config: dict) -> dict:
         """Run benchmark for a specific endpoint."""
         # This would create a custom user class focused on the specific endpoint
         # For now, return a simplified result
@@ -396,7 +393,7 @@ class LoadTestRunner:
             "success_rate_percent": 99.5,  # Placeholder
         }
 
-    def _generate_endpoint_comparison(self, results: Dict) -> Dict:
+    def _generate_endpoint_comparison(self, results: dict) -> dict:
         """Generate comparative analysis of endpoint performance."""
         comparison = {
             "timestamp": time.time(),
@@ -419,7 +416,7 @@ class LoadTestRunner:
 
         return comparison
 
-    def _analyze_performance_regression(self, baseline: Dict, current: Dict) -> Dict:
+    def _analyze_performance_regression(self, baseline: dict, current: dict) -> dict:
         """Analyze performance regression between baseline and current results."""
         analysis = {
             "timestamp": time.time(),
@@ -571,13 +568,13 @@ class LoadTestRunner:
         index = int(len(data) * percentile / 100)
         return data[min(index, len(data) - 1)]
 
-    def _save_report(self, report: Dict, report_type: str = "load_test") -> str:
+    def _save_report(self, report: dict, report_type: str = "load_test") -> str:
         """Save test report to file."""
         timestamp = int(time.time())
         filename = f"{report_type}_report_{timestamp}.json"
         filepath = self.results_dir / filename
 
-        with open(filepath, "w") as f:
+        with Path(filepath).open("w") as f:
             json.dump(report, f, indent=2)
 
         return str(filepath)
@@ -773,18 +770,19 @@ def main():
         print("=" * 60)
 
         # Exit with appropriate code
-        if isinstance(result, dict):
-            if result.get("status") == "failed" or result.get("regression_detected"):
-                sys.exit(1)
+        if isinstance(result, dict) and (
+            result.get("status") == "failed" or result.get("regression_detected")
+        ):
+            sys.exit(1)
 
     except KeyboardInterrupt:
         logger.info("Test interrupted by user")
         sys.exit(1)
 
     except Exception as e:
-        logger.exception(f"Test execution failed: {e}")
+        logger.exception("Test execution failed")
         if args.verbose:
-            import traceback
+            import traceback  # noqa: PLC0415
 
             traceback.print_exc()
         sys.exit(1)

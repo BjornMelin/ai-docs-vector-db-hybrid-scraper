@@ -203,7 +203,7 @@ class SessionManager:
         # Look for stored sessions
         for session_file in self.session_dir.glob(f"{domain}_*.json"):
             try:
-                with open(session_file) as f:
+                with session_file.open() as f:
                     session_data = json.load(f)
                 session = SessionData(**session_data)
 
@@ -223,7 +223,7 @@ class SessionManager:
         """Save session to disk."""
         session_file = self._get_session_file(session.session_id)
         try:
-            with open(session_file, "w") as f:
+            with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
         except Exception as e:
             logger.debug(f"Failed to save session {session_id}: {e}")
@@ -261,7 +261,7 @@ class SessionManager:
         # Clean up session files
         for session_file in self.session_dir.glob("*.json"):
             try:
-                with open(session_file) as f:
+                with session_file.open() as f:
                     session_data = json.load(f)
                 session = SessionData(**session_data)
 

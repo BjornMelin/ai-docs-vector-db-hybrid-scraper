@@ -150,36 +150,35 @@ class ConfigurationValidator:
         ttl_settings = ["ttl_embeddings", "ttl_crawl", "ttl_queries"]
         for setting in ttl_settings:
             value = cache_config.get(setting)
-            if value is not None:
-                if not isinstance(value, int) or value <= 0:
-                    self.errors.append(
-                        ValidationError(
-                            path=f"cache.{setting}",
-                            message=f"Cache TTL '{setting}' must be a positive integer",
-                        )
+            if value is not None and (not isinstance(value, int) or value <= 0):
+                self.errors.append(
+                    ValidationError(
+                        path=f"cache.{setting}",
+                        message=f"Cache TTL '{setting}' must be a positive integer",
                     )
+                )
 
         # Validate memory settings
         max_memory = cache_config.get("local_max_memory_mb")
-        if max_memory is not None:
-            if not isinstance(max_memory, int | float) or max_memory <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="cache.local_max_memory_mb",
-                        message="Cache max memory must be a positive number",
-                    )
+        if max_memory is not None and (
+            not isinstance(max_memory, int | float) or max_memory <= 0
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="cache.local_max_memory_mb",
+                    message="Cache max memory must be a positive number",
                 )
+            )
 
         # Validate pool size
         pool_size = cache_config.get("redis_pool_size")
-        if pool_size is not None:
-            if not isinstance(pool_size, int) or pool_size <= 0:
-                self.errors.append(
-                    ValidationError(
-                        path="cache.redis_pool_size",
-                        message="Redis pool size must be a positive integer",
-                    )
+        if pool_size is not None and (not isinstance(pool_size, int) or pool_size <= 0):
+            self.errors.append(
+                ValidationError(
+                    path="cache.redis_pool_size",
+                    message="Redis pool size must be a positive integer",
                 )
+            )
 
     def _validate_qdrant_config(self, qdrant_config: Dict[str, Any]) -> None:
         """Validate Qdrant configuration"""
@@ -615,7 +614,7 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
         environment = config_file.stem
 
         try:
-            with open(config_file) as f:
+            with config_file.open() as f:
                 config = json.load(f)
 
             logger.info(f"Validating configuration for {environment}")

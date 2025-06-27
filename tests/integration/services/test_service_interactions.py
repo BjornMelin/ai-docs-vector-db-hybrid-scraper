@@ -926,7 +926,7 @@ class TestCircuitBreakerCoordination:
             await monitor.call_service_with_protection(
                 "vector_db_service", degraded_operation
             )
-        except Exception:
+        except Exception as e:
             pass  # Expected failure
 
         # Verify different circuit breaker configurations

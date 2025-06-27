@@ -547,7 +547,7 @@ class TestEncryptionPerformance:
 
         result = benchmark(load_config_with_encryption)
         assert result["app_name"] == "encrypted-app"
-        assert result["database_password"] == "db_password"
+        assert result["database_password"] == "db_password"  # noqa: S105
 
         print("\n✅ Config with encryption: Minimal overhead for secure configuration")
 

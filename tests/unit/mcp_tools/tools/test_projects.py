@@ -600,7 +600,7 @@ async def test_export_project_success(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test export
-    with patch.object(json, 'dumps') as mock_json_dumps:
+    with patch.object(json, "dumps") as mock_json_dumps:
         mock_json_dumps.return_value = '{"project_data": "exported"}'
 
         result = await registered_tools["export_project"](
@@ -640,7 +640,7 @@ async def test_export_project_yaml_format(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test YAML export
-    with patch.object(yaml, 'dump') as mock_yaml_dump:
+    with patch.object(yaml, "dump") as mock_yaml_dump:
         mock_yaml_dump.return_value = "project_data: exported"
 
         result = await registered_tools["export_project"](
@@ -708,14 +708,12 @@ async def test_error_handling_collection_creation_failure(
     register_tools(mock_mcp, mock_client_manager)
 
     # Mock uuid4 to return predictable UUID
-    with patch('src.mcp_tools.tools.projects.uuid4') as mock_uuid:
+    with patch("src.mcp_tools.tools.projects.uuid4") as mock_uuid:
         mock_uuid.return_value = Mock()
         mock_uuid.return_value.__str__ = Mock(return_value="proj_123")
 
         # Test that exception is propagated
         with pytest.raises(Exception, match="Collection creation failed"):
-            from src.mcp_tools.models.requests import ProjectRequest
-
             request = ProjectRequest(name="Test Project", quality_tier="balanced")
 
             await registered_tools["create_project"](request, mock_context)

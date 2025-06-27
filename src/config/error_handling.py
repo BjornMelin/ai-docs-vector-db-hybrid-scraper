@@ -260,13 +260,13 @@ class SafeConfigLoader:
                 suffix = file_path.suffix.lower()
 
                 if suffix == ".json":
-                    with open(file_path) as f:
+                    with file_path.open() as f:
                         return json.load(f)
 
                 elif suffix in [".yaml", ".yml"]:
                     import yaml
 
-                    with open(file_path) as f:
+                    with file_path.open() as f:
                         data = yaml.safe_load(f)
                         if data is None:
                             return {}
@@ -280,7 +280,7 @@ class SafeConfigLoader:
                 elif suffix == ".toml":
                     import tomli
 
-                    with open(file_path, "rb") as f:
+                    with file_path.open("rb") as f:
                         return tomli.load(f)
 
                 else:

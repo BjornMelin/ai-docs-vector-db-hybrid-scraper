@@ -28,6 +28,7 @@ from .chunking import DocumentChunker
 from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
+from .services.logging_config import configure_logging
 
 
 class ScrapingError(Exception):
@@ -40,9 +41,6 @@ class ContentExtractionError(Exception):
 
 class ChunkGenerationError(Exception):
     """Exception raised when chunk generation fails."""
-
-
-from .services.logging_config import configure_logging
 
 
 logger = logging.getLogger(__name__)

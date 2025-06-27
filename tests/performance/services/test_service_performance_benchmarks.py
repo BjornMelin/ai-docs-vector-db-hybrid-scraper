@@ -544,8 +544,8 @@ class TestServiceScalabilityBenchmarks:
                         await asyncio.sleep(0.0001)  # Simulate work
                         await pool.release(conn)
                         successful_acquisitions += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Exception suppressed during cleanup/testing")
 
                 tasks.append(asyncio.create_task(acquire_and_release()))
 

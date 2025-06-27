@@ -499,9 +499,9 @@ class TestChaosIntegration:
         try:
             await integrated_system.health_check()
             raise AssertionError("Health check should fail with multiple failures")
-        except Exception:
+        except Exception as e:
             # Expected failure
-            pass
+            logger.debug("Exception suppressed during cleanup/testing")
 
         # Measure recovery time
         recovery_result = await resilience_validator.measure_system_recovery(

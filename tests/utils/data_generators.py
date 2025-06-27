@@ -12,7 +12,6 @@ from typing import Any
 
 
 try:
-
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     HYPOTHESIS_AVAILABLE = False

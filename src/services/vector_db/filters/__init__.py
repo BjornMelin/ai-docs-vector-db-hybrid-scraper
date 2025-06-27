@@ -1,5 +1,3 @@
-
-
 """Advanced filtering system for vector database operations.
 
 This module provides comprehensive filtering capabilities including temporal filtering,

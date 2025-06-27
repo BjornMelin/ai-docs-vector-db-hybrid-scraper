@@ -310,7 +310,7 @@ class ConfigPerformanceReporter:
                     results["snapshot_times"].append((end - start) * 1000)
 
                 # Modify file for comparison
-                with open(test_file, "a") as f:
+                with test_file.open("a") as f:
                     f.write("NEW_SETTING=value2\n")
 
                 # Take another snapshot
@@ -555,7 +555,7 @@ class ConfigPerformanceReporter:
             self.output_dir
             / f"performance_report_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.json"
         )
-        with open(output_file, "w") as f:
+        with output_file.open("w") as f:
             json.dump(self.results, f, indent=2)
         console.print(f"\n[green]Results saved to: {output_file}[/green]")
 

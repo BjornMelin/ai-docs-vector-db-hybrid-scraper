@@ -49,7 +49,7 @@ class TemplateManager:
 
         for template_file in template_files:
             try:
-                with open(template_file) as f:
+                with template_file.open() as f:
                     template_data = json.load(f)
 
                 template_name = template_file.stem
@@ -170,11 +170,13 @@ class TemplateManager:
         ]
 
         # Add any templates not in the order
-        ordered_templates.extend([
-            template_name
-            for template_name in self._templates
-            if template_name not in ordered_templates
-        ])
+        ordered_templates.extend(
+            [
+                template_name
+                for template_name in self._templates
+                if template_name not in ordered_templates
+            ]
+        )
 
         for template_name in ordered_templates:
             template_data = self._templates[template_name]
@@ -293,7 +295,7 @@ class TemplateManager:
         self.templates_dir.mkdir(parents=True, exist_ok=True)
 
         # Save template data
-        with open(template_file, "w") as f:
+        with template_file.open("w") as f:
             json.dump(config.model_dump(), f, indent=2)
 
         # Update internal cache

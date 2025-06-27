@@ -182,9 +182,9 @@ class TestCascadeFailures:
             try:
                 result = await resilient_service_call("api_gateway", service_topology)
                 results.append(result)
-            except Exception:
+            except Exception as e:
                 # Count failed attempts
-                pass
+                logger.debug("Exception suppressed during cleanup/testing")
 
         # Verify circuit breaker provided degraded service
         degraded_responses = [r for r in results if r.get("status") == "degraded"]

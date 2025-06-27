@@ -111,19 +111,18 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.debug(f"Hybrid search returned {len(results)} results")
 
             # Convert to response format, excluding the source document
-            search_results = []
-            for result in results:
-                if str(result["id"]) != query_id:
-                    search_results.append(
-                        SearchResult(
-                            id=str(result["id"]),
-                            content=result["payload"].get("content", ""),
-                            score=result["score"],
-                            url=result["payload"].get("url"),
-                            title=result["payload"].get("title"),
-                            metadata=result["payload"],
-                        )
-                    )
+            search_results = [
+                SearchResult(
+                    id=str(result["id"]),
+                    content=result["payload"].get("content", ""),
+                    score=result["score"],
+                    url=result["payload"].get("url"),
+                    title=result["payload"].get("title"),
+                    metadata=result["payload"],
+                )
+                for result in results
+                if str(result["id"]) != query_id
+            ]
 
             final_results = search_results[
                 :limit

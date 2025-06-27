@@ -91,8 +91,6 @@ def instrument_function(
                         if isinstance(result, dict) and "status" in result:
                             span.set_attribute("result.status", result["status"])
 
-                    return result
-
                 except Exception as e:
                     # Record exception in span
                     span.record_exception(e)

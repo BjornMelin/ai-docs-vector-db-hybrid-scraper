@@ -219,7 +219,7 @@ class TestDataProtection:
 
     def test_password_hashing_security(self, encryption_service):
         """Test password hashing security."""
-        password = "strong_password_123!"
+        password = "strong_password_123!"  # noqa: S105
 
         # Hash password
         result = encryption_service.hash_password(password)
@@ -271,7 +271,7 @@ class TestDataProtection:
 
     def test_constant_time_comparison(self, encryption_service):
         """Test constant time comparison for timing attack prevention."""
-        secret = "secret_token_123"
+        secret = "secret_token_123"  # noqa: S105
 
         # Valid comparison
         assert encryption_service.constant_time_compare(secret, secret) is True

@@ -15,13 +15,17 @@ Tests include:
 """
 
 import asyncio
+import logging
 import random
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 
 from src.config import Config
 
@@ -744,8 +748,8 @@ class TestServiceDiscoveryAndRegistration:
                 result = await primary_service_discovery.discover_services(service_name)
                 if result:
                     return {"source": "primary", "services": result}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Exception suppressed during cleanup/testing")
 
             # Fallback to backup service discovery
             try:

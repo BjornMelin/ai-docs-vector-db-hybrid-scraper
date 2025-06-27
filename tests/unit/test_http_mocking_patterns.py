@@ -4,7 +4,6 @@ Demonstrates proper boundary mocking for HTTP services using respx
 instead of implementation detail mocking.
 """
 
-
 import httpx
 import pytest
 import respx

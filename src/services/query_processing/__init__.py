@@ -1,5 +1,3 @@
-
-
 """Advanced Query Processing Services.
 
 This module provides a centralized query processing pipeline with advanced

@@ -197,7 +197,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "postgresql://localhost/test"
-            assert settings.api_secret == "super-secret-key"
+            assert settings.api_secret == "super-secret-key"  # noqa: S105
 
         # Test with field names
         with patch.dict(
@@ -210,7 +210,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "mysql://localhost/app"
-            assert settings.api_secret == "another-secret"
+            assert settings.api_secret == "another-secret"  # noqa: S105
 
     def test_configuration_from_multiple_sources(self):
         """Test configuration loading from multiple sources.
@@ -339,7 +339,7 @@ class TestPydanticSettingsPatterns:
             email="USER@EXAMPLE.COM", password="SecurePass123"
         )
         assert settings.email == "user@example.com"  # Lowercased
-        assert settings.password == "SecurePass123"
+        assert settings.password == "SecurePass123"  # noqa: S105
 
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:

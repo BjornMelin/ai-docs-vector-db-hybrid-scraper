@@ -14,7 +14,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field, computed_field
@@ -40,7 +40,7 @@ class DetectedEnvironment(BaseModel):
     container_runtime: str | None = Field(None, description="Container runtime")
     detection_confidence: float = Field(description="Confidence score 0.0-1.0")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -58,12 +58,12 @@ class DetectedService(BaseModel):
     supports_pooling: bool = Field(
         default=False, description="Supports connection pooling"
     )
-    pool_config: Dict[str, Any] = Field(
+    pool_config: dict[str, Any] = Field(
         default_factory=dict, description="Pool configuration"
     )
     health_check_url: str | None = Field(None, description="Health check endpoint")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -286,7 +286,7 @@ class EnvironmentDetector:
     def _check_cgroup_container(self) -> bool:
         """Check cgroup for container indicators."""
         try:
-            with open("/proc/1/cgroup") as f:
+            with Path("/proc/1/cgroup").open() as f:
                 content = f.read()
                 container_patterns = ["docker", "containerd", "lxc", "kubepods"]
                 return any(pattern in content for pattern in container_patterns)
@@ -312,7 +312,7 @@ class EnvironmentDetector:
             self.logger.debug(f"Kubernetes detection failed: {e}")
             return False
 
-    async def _detect_cloud_provider(self) -> Dict[str, Any]:
+    async def _detect_cloud_provider(self) -> dict[str, Any]:
         """Detect cloud provider via metadata APIs."""
         if not self.config.cloud_detection_enabled:
             return {}
@@ -341,7 +341,7 @@ class EnvironmentDetector:
 
         return cloud_info
 
-    async def _detect_aws(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_aws(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect AWS via IMDSv2."""
         try:
             # Get IMDSv2 token first
@@ -374,7 +374,7 @@ class EnvironmentDetector:
 
         return {}
 
-    async def _detect_gcp(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_gcp(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect GCP via metadata API."""
         try:
             response = await client.get(
@@ -398,7 +398,7 @@ class EnvironmentDetector:
 
         return {}
 
-    async def _detect_azure(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_azure(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect Azure via IMDS."""
         try:
             response = await client.get(
@@ -416,7 +416,7 @@ class EnvironmentDetector:
         return {}
 
     def _determine_environment_type(
-        self, is_containerized: bool, is_kubernetes: bool, cloud_info: Dict[str, Any]
+        self, is_containerized: bool, is_kubernetes: bool, cloud_info: dict[str, Any]
     ) -> Environment:
         """Determine environment type based on detection results."""
         if cloud_info.get("provider"):
@@ -429,7 +429,7 @@ class EnvironmentDetector:
             return Environment.DEVELOPMENT
 
     def _calculate_confidence(
-        self, is_containerized: bool, is_kubernetes: bool, cloud_info: Dict[str, Any]
+        self, is_containerized: bool, is_kubernetes: bool, cloud_info: dict[str, Any]
     ) -> float:
         """Calculate confidence score based on detection indicators."""
         confidence = 0.0

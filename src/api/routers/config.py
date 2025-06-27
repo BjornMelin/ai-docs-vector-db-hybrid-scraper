@@ -155,7 +155,7 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration reload failed: {e!s}",
-        )
+        ) from e
     else:
         return response
 

@@ -70,13 +70,13 @@ async def generate_embeddings(
             f"using {result.get('provider', 'unknown')} provider"
         )
 
-        return result
-
     except Exception as e:
         logger.exception("Embedding generation failed")
         raise HTTPException(
             status_code=500, detail=f"Embedding generation failed: {e!s}"
         )
+    else:
+        return result
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -106,14 +106,14 @@ async def rerank_results(
             return results
 
         reranked = await embedding_client.rerank_results(query, results)
-
         logger.info(f"Reranked {len(results)} results")
-        return reranked
 
     except Exception as e:
         logger.exception("Reranking failed")
         # Return original results on failure (graceful degradation)
         return results
+    else:
+        return reranked
 
 
 async def analyze_text_characteristics(
@@ -148,11 +148,11 @@ async def analyze_text_characteristics(
             f"complexity={analysis.complexity_score:.2f}"
         )
 
-        return analysis
-
     except Exception as e:
         logger.exception("Text analysis failed")
         raise HTTPException(status_code=500, detail=f"Text analysis failed: {e!s}")
+    else:
+        return analysis
 
 
 async def estimate_embedding_cost(
@@ -182,13 +182,13 @@ async def estimate_embedding_cost(
             )
 
         costs = embedding_client.estimate_cost(texts, provider_name)
-
         logger.debug(f"Estimated costs for {len(texts)} texts")
-        return costs
 
     except Exception as e:
         logger.exception("Cost estimation failed")
         raise HTTPException(status_code=500, detail=f"Cost estimation failed: {e!s}")
+    else:
+        return costs
 
 
 async def get_provider_info(
@@ -212,15 +212,15 @@ async def get_provider_info(
             return {}
 
         info = embedding_client.get_provider_info()
-
         logger.debug(f"Retrieved info for {len(info)} providers")
-        return info
 
     except Exception as e:
         logger.exception("Provider info retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Provider info retrieval failed: {e!s}"
         )
+    else:
+        return info
 
 
 async def get_smart_recommendation(
@@ -269,13 +269,13 @@ async def get_smart_recommendation(
             f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}"
         )
 
-        return recommendation
-
     except Exception as e:
         logger.exception("Smart recommendation failed")
         raise HTTPException(
             status_code=500, detail=f"Smart recommendation failed: {e!s}"
         )
+    else:
+        return recommendation
 
 
 async def get_usage_report(
@@ -304,15 +304,15 @@ async def get_usage_report(
             }
 
         report = embedding_client.get_usage_report()
-
         logger.debug("Retrieved usage report")
-        return report
 
     except Exception as e:
         logger.exception("Usage report retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Usage report retrieval failed: {e!s}"
         )
+    else:
+        return report
 
 
 # Batch processing function (new functionality)
@@ -376,8 +376,8 @@ async def batch_generate_embeddings(
             f"{sum(1 for r in processed_results if r.get('success', True))} successes"
         )
 
-        return processed_results
-
     except Exception as e:
         logger.exception("Batch embedding generation failed")
         raise HTTPException(status_code=500, detail=f"Batch processing failed: {e!s}")
+    else:
+        return processed_results

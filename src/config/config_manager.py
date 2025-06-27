@@ -58,19 +58,19 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
             suffix = self.config_file.suffix.lower()
 
             if suffix == ".json":
-                with open(self.config_file) as f:
+                with self.config_file.open() as f:
                     self._config_data = json.load(f)
 
             elif suffix in [".yaml", ".yml"]:
                 import yaml
 
-                with open(self.config_file) as f:
+                with self.config_file.open() as f:
                     self._config_data = yaml.safe_load(f) or {}
 
             elif suffix == ".toml":
                 import tomli
 
-                with open(self.config_file, "rb") as f:
+                with self.config_file.open("rb") as f:
                     self._config_data = tomli.load(f)
 
             else:

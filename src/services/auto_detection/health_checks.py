@@ -247,7 +247,9 @@ class HealthChecker:
                         health_data = response.json()
                         metadata.update(health_data)
                     except Exception as e:
-                        logger.debug(f"Failed to parse health data from {service.service_name}: {e}")
+                        logger.debug(
+                            f"Failed to parse health data from {service.service_name}: {e}"
+                        )
 
                 return HealthCheckResult(
                     service_name=service.service_name,

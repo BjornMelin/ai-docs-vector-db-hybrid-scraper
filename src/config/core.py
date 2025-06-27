@@ -717,19 +717,19 @@ class Config(BaseSettings):
         if config_path.suffix == ".json":
             import json
 
-            with open(config_path) as f:
+            with config_path.open() as f:
                 data = json.load(f)
             return cls(**data)
         elif config_path.suffix in [".yaml", ".yml"]:
             import yaml
 
-            with open(config_path) as f:
+            with config_path.open() as f:
                 data = yaml.safe_load(f)
             return cls(**data)
         elif config_path.suffix == ".toml":
             import tomllib
 
-            with open(config_path, "rb") as f:
+            with config_path.open("rb") as f:
                 data = tomllib.load(f)
             return cls(**data)
         else:

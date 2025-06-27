@@ -91,7 +91,7 @@ class AutomationRouter(BaseService):
             config_file = project_root / "config" / "browser-routing-rules.json"
 
             if config_file.exists():
-                with open(config_file) as f:
+                with config_file.open() as f:
                     config = json.load(f)
                     routing_rules = config.get("routing_rules", {})
                     logger.info(f"Loaded routing rules from {config_file}")

@@ -14,13 +14,17 @@ Tests include:
 """
 
 import asyncio
+import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict
 from unittest.mock import AsyncMock
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 
 
 # from src.services.observability.tracking import TrackingManager  # Not implemented yet
@@ -766,9 +770,9 @@ class TestMetricsCollection:
                             }
                             triggered_alerts.append(alert)
                             self.alerts.append(alert)
-                    except Exception:
+                    except Exception as e:
                         # Handle errors in alert evaluation
-                        pass
+                        logger.debug("Exception suppressed during cleanup/testing")
 
                 return triggered_alerts
 

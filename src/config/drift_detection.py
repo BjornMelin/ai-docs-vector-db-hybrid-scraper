@@ -230,17 +230,17 @@ class ConfigDriftDetector:
 
         try:
             if source_path.suffix in [".json"]:
-                with open(source_path) as f:
+                with source_path.open() as f:
                     return json.load(f)
             elif source_path.suffix in [".yaml", ".yml"]:
                 import yaml
 
-                with open(source_path) as f:
+                with source_path.open() as f:
                     return yaml.safe_load(f) or {}
             elif source_path.suffix in [".env"]:
                 # Parse environment file
                 config = {}
-                with open(source_path) as f:
+                with source_path.open() as f:
                     for line in f:
                         line = line.strip()
                         if line and not line.startswith("#") and "=" in line:
@@ -453,17 +453,19 @@ class ConfigDriftDetector:
         )
 
         # Find modified keys
-        changes.extend([
-            {
-                "type": "modified",
-                "path": key,
-                "old_value": old_config[key],
-                "new_value": new_config[key],
-                "description": f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
-            }
-            for key in old_config.keys() & new_config.keys()
-            if old_config[key] != new_config[key]
-        ])
+        changes.extend(
+            [
+                {
+                    "type": "modified",
+                    "path": key,
+                    "old_value": old_config[key],
+                    "new_value": new_config[key],
+                    "description": f"Configuration key '{key}' changed from '{old_config[key]}' to '{new_config[key]}'",
+                }
+                for key in old_config.keys() & new_config.keys()
+                if old_config[key] != new_config[key]
+            ]
+        )
 
         return changes
 

@@ -296,7 +296,7 @@ class TestAPIWorkflowValidation:
             )
 
             assert "access_token" in login_response, "Login should return access token"
-            assert login_response["token_type"] == "bearer", (
+            assert login_response["token_type"] == "bearer", (  # noqa: S105
                 "Token type should be bearer"
             )
 
