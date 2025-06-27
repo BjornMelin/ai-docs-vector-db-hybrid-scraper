@@ -262,12 +262,12 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             await ctx.info(completion_msg)
 
-            return result
-
         except Exception as e:
             await ctx.error(f"Failed to process document {doc_id}: {e}")
-            logger.exception(f"Failed to add document: {e}")
+            logger.exception("Failed to add document")
             raise
+        else:
+            return result
 
     @mcp.tool()
     async def add_documents_batch(

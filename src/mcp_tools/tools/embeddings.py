@@ -83,7 +83,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Embedding generation failed: {e}")
-            logger.exception(f"Embedding generation failed: {e}")
+            logger.exception("Embedding generation failed")
             raise
 
     @mcp.tool()
@@ -176,5 +176,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list embedding providers: {e}")
-            logger.exception(f"Failed to list embedding providers: {e}")
+            logger.exception("Failed to list embedding providers")
             raise
