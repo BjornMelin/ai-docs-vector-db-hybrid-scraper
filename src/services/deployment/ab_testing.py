@@ -12,7 +12,7 @@ import contextlib
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any
 
@@ -315,7 +315,7 @@ class ABTestingManager:
                 "user_id": user_id,
                 "variant": variant_name,
                 "value": conversion_value,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                 "metadata": metadata or {},
             }
 
@@ -366,7 +366,7 @@ class ABTestingManager:
                 is_significant=is_significant,
                 uplift_percentage=uplift,
                 period_start=metrics.created_at,
-                period_end=datetime.utcnow(),
+                period_end=datetime.now(tz=timezone.utc),
             )
 
             results.append(result)
@@ -486,7 +486,9 @@ class ABTestingManager:
             test_start = min(
                 metrics.created_at for metrics in self._test_metrics[test_id].values()
             )
-            if datetime.utcnow() - test_start > timedelta(days=config.duration_days):
+            if datetime.now(tz=timezone.utc) - test_start > timedelta(
+                days=config.duration_days
+            ):
                 await self.stop_test(test_id, "Duration completed")
                 return
 

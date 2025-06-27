@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -319,7 +319,7 @@ class BlueGreenDeployment:
                     if env.health
                     else 0.0,
                     error_rate=env.health.error_rate if env.health else 0.0,
-                    created_at=env.last_deployment or datetime.utcnow(),
+                    created_at=env.last_deployment or datetime.now(tz=timezone.utc),
                 )
 
         return metrics
@@ -385,11 +385,11 @@ class BlueGreenDeployment:
             # Update environment metadata
             env.deployment_id = config.deployment_id
             env.version = config.target_version
-            env.last_deployment = datetime.utcnow()
+            env.last_deployment = datetime.now(tz=timezone.utc)
             env.metadata.update(
                 {
                     "deployment_config": config.__dict__,
-                    "deployment_start": datetime.utcnow().isoformat(),
+                    "deployment_start": datetime.now(tz=timezone.utc).isoformat(),
                 }
             )
 
@@ -426,7 +426,7 @@ class BlueGreenDeployment:
                     error_rate=0.0,
                     success_count=100,
                     error_count=0,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(tz=timezone.utc),
                     details={"environment": env.name, "version": env.version},
                 )
 
@@ -456,7 +456,7 @@ class BlueGreenDeployment:
             error_rate=100.0,
             success_count=0,
             error_count=config.health_check_retries,
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(tz=timezone.utc),
         )
 
         return False
@@ -504,7 +504,7 @@ class BlueGreenDeployment:
             # In production, perform actual health checks
             # For now, maintain existing health status
             if env.health:
-                env.health.last_check = datetime.utcnow()
+                env.health.last_check = datetime.now(tz=timezone.utc)
 
         except Exception as e:
             logger.exception(

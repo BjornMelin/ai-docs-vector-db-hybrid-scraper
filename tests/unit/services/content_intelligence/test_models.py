@@ -1,6 +1,6 @@
 """Simple tests for content intelligence models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.services.content_intelligence.models import (
     AdaptationStrategy,
@@ -84,7 +84,7 @@ class TestContentIntelligenceModels:
 
     def test_content_metadata_temporal_fields(self):
         """Test ContentMetadata with temporal fields."""
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
         metadata = ContentMetadata(
             published_date=now, last_modified=now, crawled_at=now
         )

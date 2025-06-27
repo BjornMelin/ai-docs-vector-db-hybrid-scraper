@@ -156,6 +156,8 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration reload failed: {e!s}",
         )
+    else:
+        return response
 
 
 @router.post("/rollback", response_model=ReloadResponse)
@@ -201,6 +203,8 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration rollback failed: {e!s}",
         )
+    else:
+        return response
 
 
 @router.get("/history", response_model=ReloadHistoryResponse)
@@ -297,6 +301,8 @@ async def get_config_status() -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve configuration status: {e!s}",
         )
+    else:
+        return status_info
 
 
 @router.post("/file-watch/enable")
@@ -352,6 +358,11 @@ async def disable_file_watching() -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable file watching: {e!s}",
         )
+    else:
+        return {
+            "file_watching_enabled": False,
+            "message": "Configuration file watching disabled",
+        }
 
 
 @router.get("/backups")

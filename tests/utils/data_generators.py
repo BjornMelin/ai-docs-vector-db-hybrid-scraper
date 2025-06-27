@@ -7,7 +7,7 @@ that covers edge cases, realistic scenarios, and property-based testing patterns
 import random
 import string
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -82,10 +82,8 @@ except ImportError:
         @staticmethod
         def date_time_between(start_date, end_date):
             # Simple date generation
-            from datetime import datetime, timedelta
-
-            start = datetime.now() - timedelta(days=365)
-            end = datetime.now()
+            start = datetime.now(tz=timezone.utc) - timedelta(days=365)
+            end = datetime.now(tz=timezone.utc)
             return start + timedelta(
                 seconds=random.randint(0, int((end - start).total_seconds()))
             )
@@ -406,7 +404,7 @@ class TestDataGenerator:
         if success:
             response = {
                 "status": "success",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(tz=timezone.utc).isoformat() + "Z",
                 "request_id": str(uuid.uuid4()),
             }
 
@@ -453,7 +451,7 @@ class TestDataGenerator:
                 "status": "error",
                 "error": error_type,
                 "message": self._generate_error_message(error_type),
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(tz=timezone.utc).isoformat() + "Z",
                 "request_id": str(uuid.uuid4()),
             }
 

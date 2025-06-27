@@ -12,7 +12,7 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -422,7 +422,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         """
         logger.info("Starting comprehensive HNSW optimization benchmark")
 
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         try:
             # 1. Test different HNSW build configurations
@@ -437,7 +437,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
             self.hnsw_results["comparison_summary"] = self._create_comparison_summary()
 
             # 4. Add metadata
-            end_time = datetime.now()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             self.hnsw_results["metadata"] = {

@@ -6,7 +6,7 @@ time-based content relevance analysis.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -72,7 +72,7 @@ class TemporalCriteria(BaseModel):
     @classmethod
     def validate_before_dates(cls, v, info):
         """Ensure 'before' dates are not in the future."""
-        if v and v > datetime.utcnow():
+        if v and v > datetime.now(tz=timezone.utc):
             raise ValueError(f"Date cannot be in the future: {v}")
         return v
 
@@ -80,7 +80,7 @@ class TemporalCriteria(BaseModel):
     @classmethod
     def validate_after_dates(cls, v, info):
         """Validate 'after' dates are reasonable."""
-        if v and v > datetime.utcnow():
+        if v and v > datetime.now(tz=timezone.utc):
             raise ValueError(f"Date cannot be in the future: {v}")
         return v
 
@@ -149,7 +149,7 @@ class TemporalFilter(BaseFilter):
             criteria = TemporalCriteria.model_validate(filter_criteria)
 
             # Get current time from context or use UTC now
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=timezone.utc)
             if context and "current_time" in context:
                 current_time = context["current_time"]
 
@@ -432,7 +432,7 @@ class TemporalFilter(BaseFilter):
             FreshnessScore with calculated score and metadata
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=timezone.utc)
 
         if half_life_days is None:
             half_life_days = self.default_half_life_days
@@ -485,7 +485,7 @@ class TemporalFilter(BaseFilter):
         import re
 
         relative_date_str = relative_date_str.lower().strip()
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=timezone.utc)
 
         # Pattern matching for common relative dates
         patterns = [

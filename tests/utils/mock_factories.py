@@ -9,7 +9,7 @@ import random
 import time
 import uuid
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -80,7 +80,7 @@ class MockFactory:
             Configured AsyncMock
         """
 
-        async def mock_coroutine(*args, **kwargs):
+        async def mock_coroutine(*_args, **_kwargs):
             # Simulate processing delay
             delay = random.uniform(*delay_range)
             await asyncio.sleep(delay)
@@ -158,7 +158,7 @@ def create_mock_vector_db(
     mock_db.dimension = dimension
     mock_db._documents = mock_documents
 
-    def mock_search(query_vector: list[float], limit: int = 10, **kwargs):
+    def mock_search(_query_vector: list[float], limit: int = 10, **_kwargs):
         """Mock search implementation."""
         # Simple similarity based on random scoring
         results = []
@@ -230,7 +230,7 @@ def create_mock_embedding_service(
     """
     generator = TestDataGenerator()
 
-    async def mock_embed_text(text: str) -> list[float]:
+    async def mock_embed_text(_text: str) -> list[float]:
         """Mock text embedding."""
         await asyncio.sleep(processing_delay)
         return generator._generate_normalized_vector(dimension)
@@ -276,7 +276,7 @@ def create_mock_web_scraper(
     """
     generator = TestDataGenerator()
 
-    async def mock_scrape_url(url: str, **kwargs) -> dict[str, Any]:
+    async def mock_scrape_url(url: str, **_kwargs) -> dict[str, Any]:
         """Mock URL scraping."""
         # Simulate processing delay
         delay = random.uniform(*processing_delay_range)  # noqa: S311
@@ -294,7 +294,7 @@ def create_mock_web_scraper(
             "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),  # noqa: S311
             "content": content,
             "metadata": {
-                "scraped_at": datetime.utcnow().isoformat(),
+                "scraped_at": datetime.now(tz=timezone.utc).isoformat(),
                 "content_type": "text/html",
                 "word_count": len(content.split()),
                 "char_count": len(content),
@@ -355,7 +355,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
             return cache_storage[key]
         return None
 
-    def mock_set(key: str, value: Any, ttl: int | None = None) -> bool:
+    def mock_set(key: str, value: Any, _ttl: int | None = None) -> bool:
         """Mock cache set."""
         # Simulate storage limit by evicting oldest items
         if len(cache_storage) >= storage_limit:
@@ -453,7 +453,7 @@ def create_mock_api_client(
             raise Exception("Authentication required")
 
         # Simulate network delay
-        await asyncio.sleep(random.uniform(0.1, 0.3))
+        await asyncio.sleep(random.uniform(0.1, 0.3))  # noqa: S311
 
         # Return mock response based on endpoint
         if endpoint.startswith("/search"):
@@ -464,9 +464,9 @@ def create_mock_api_client(
                         "title": f"Result {i}",
                         "score": 0.9 - i * 0.1,
                     }
-                    for i in range(random.randint(1, 10))
+                    for i in range(random.randint(1, 10))  # noqa: S311
                 ],
-                "total": random.randint(10, 100),
+                "total": random.randint(10, 100),  # noqa: S311
                 "query": params.get("q", "") if params else "",
             }
         elif endpoint.startswith("/documents"):
@@ -480,7 +480,7 @@ def create_mock_api_client(
                 return {
                     "documents": [
                         {"id": str(uuid.uuid4()), "title": f"Document {i}"}
-                        for i in range(random.randint(1, 5))
+                        for i in range(random.randint(1, 5))  # noqa: S311
                     ]
                 }
         else:

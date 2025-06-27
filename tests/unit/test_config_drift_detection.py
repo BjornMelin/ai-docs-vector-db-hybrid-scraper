@@ -3,7 +3,7 @@
 import json
 import tempfile
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -90,7 +90,7 @@ class TestConfigSnapshot:
         """Test creating a configuration snapshot."""
         config_data = {"key": "value", "number": 123}
         snapshot = ConfigSnapshot(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             config_hash="test_hash",
             config_data=config_data,
             source="test.json",
@@ -109,7 +109,7 @@ class TestDriftEvent:
         """Test creating a drift event."""
         event = DriftEvent(
             id="test_event_1",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.MEDIUM,
             source="test.json",
@@ -262,13 +262,13 @@ class TestConfigDriftDetector:
 
         # Manually create snapshots
         snapshot1 = ConfigSnapshot(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             config_hash=detector._calculate_config_hash(config1),
             config_data=config1,
             source="test.json",
         )
         snapshot2 = ConfigSnapshot(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             config_hash=detector._calculate_config_hash(config2),
             config_data=config2,
             source="test.json",
@@ -406,7 +406,7 @@ class TestConfigDriftDetector:
 
         high_severity_event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -418,7 +418,7 @@ class TestConfigDriftDetector:
 
         low_severity_event = DriftEvent(
             id="test_2",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.LOW,
             source="test.json",
@@ -439,7 +439,7 @@ class TestConfigDriftDetector:
 
         event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -464,14 +464,14 @@ class TestConfigDriftDetector:
 
         # Create old snapshots
         old_snapshot = ConfigSnapshot(
-            timestamp=datetime.now()
+            timestamp=datetime.now(tz=timezone.utc)
             - timedelta(days=1),  # 1 day old - should be removed
             config_hash="old_hash",
             config_data={"old": "data"},
             source="test.json",
         )
         recent_snapshot = ConfigSnapshot(
-            timestamp=datetime.now()
+            timestamp=datetime.now(tz=timezone.utc)
             - timedelta(minutes=1),  # 1 minute old - should stay
             config_hash="new_hash",
             config_data={"new": "data"},
@@ -493,7 +493,7 @@ class TestConfigDriftDetector:
         # Add some test events
         recent_event = DriftEvent(
             id="test_1",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.MANUAL_CHANGE,
             severity=DriftSeverity.HIGH,
             source="test.json",
@@ -508,7 +508,7 @@ class TestConfigDriftDetector:
         # Add some snapshots
         detector._snapshots["test1.json"] = [
             ConfigSnapshot(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
                 config_hash="hash1",
                 config_data={},
                 source="test1.json",
@@ -516,7 +516,7 @@ class TestConfigDriftDetector:
         ]
         detector._snapshots["test2.json"] = [
             ConfigSnapshot(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
                 config_hash="hash2",
                 config_data={},
                 source="test2.json",

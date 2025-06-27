@@ -26,7 +26,7 @@ console = Console()
 
 
 def complete_collection_name(
-    ctx: click.Context, param: click.Parameter, incomplete: str
+    ctx: click.Context, _param: click.Parameter, incomplete: str
 ) -> list[CompletionItem]:
     """Auto-complete collection names from the database."""
     try:

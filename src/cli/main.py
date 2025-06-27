@@ -9,11 +9,14 @@ import sys
 from pathlib import Path
 
 import click
+from click.shell_completion import get_completion_class
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from src.config import Config, get_config
+from src.utils.health_checks import ServiceHealthChecker
 
 # Import command groups
 from .commands import (
@@ -177,11 +180,7 @@ def completion(shell: str):
     Add the above line to your shell's configuration file (.bashrc, .zshrc, etc.)
     to make completion persistent across sessions.
     """
-    import sys
-
     # Generate completion script using Click's built-in support
-    from click.shell_completion import get_completion_class
-
     comp_cls = get_completion_class(shell)
     if comp_cls is None:
         rich_cli.show_error(f"Shell '{shell}' is not supported for completion")
@@ -210,10 +209,6 @@ def completion(shell: str):
 @click.pass_context
 def status(ctx: click.Context):
     """Show system status and health check."""
-    from rich.table import Table
-
-    from src.utils.health_checks import ServiceHealthChecker
-
     rich_cli = ctx.obj["rich_cli"]
     config = ctx.obj["config"]
 

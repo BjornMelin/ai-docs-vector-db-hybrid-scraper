@@ -9,7 +9,7 @@ This module tests the advanced circuit breaker implementation including:
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -238,7 +238,7 @@ class TestAdvancedCircuitBreaker:
         # Simulate failures and open circuit
         breaker.failure_count = 3
         breaker._change_state(CircuitState.OPEN)
-        breaker.last_failure_time = datetime.now()
+        breaker.last_failure_time = datetime.now(tz=timezone.utc)
 
         assert breaker.state == CircuitState.OPEN
 

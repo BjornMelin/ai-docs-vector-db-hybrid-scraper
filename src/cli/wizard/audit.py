@@ -6,7 +6,7 @@ and security tracking for wizard-generated configurations.
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +96,10 @@ class ConfigAuditor:
 
     def _save_audit_record(self, record: dict[str, Any]) -> None:
         """Save detailed audit record to JSON file."""
-        audit_file = self.audit_dir / f"audit_{datetime.now(tz=timezone.utc).strftime('%Y%m%d')}.json"
+        audit_file = (
+            self.audit_dir
+            / f"audit_{datetime.now(tz=timezone.utc).strftime('%Y%m%d')}.json"
+        )
 
         # Load existing records
         records = []
@@ -129,8 +132,6 @@ class ConfigAuditor:
         recent_records = []
 
         # Check audit files from the last N days
-        from datetime import timedelta
-
         end_date = datetime.now(tz=timezone.utc)
         start_date = end_date - timedelta(days=days)
 
@@ -190,8 +191,6 @@ class ConfigAuditor:
         Args:
             keep_days: Number of days of audit history to keep
         """
-        from datetime import timedelta
-
         cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=keep_days)
 
         audit_files = list(self.audit_dir.glob("audit_*.json"))

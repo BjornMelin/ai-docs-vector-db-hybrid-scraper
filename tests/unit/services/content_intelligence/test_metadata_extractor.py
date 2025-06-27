@@ -1,6 +1,6 @@
 """Simple tests for metadata extractor functionality."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 

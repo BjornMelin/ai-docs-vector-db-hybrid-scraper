@@ -13,16 +13,15 @@ import hashlib
 import json
 import logging
 from collections.abc import Callable
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
-    SettingsConfigDict,
 )
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer

@@ -5,7 +5,7 @@ for content classification, quality assessment, metadata enrichment, and
 adaptive extraction recommendations.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 

@@ -293,7 +293,7 @@ class TestPydanticSettingsPatterns:
         Verifies that dynamic defaults work correctly with
         pydantic-settings.
         """
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         class DynamicSettings(BaseSettings):
             created_at: datetime = Field(default_factory=datetime.now)

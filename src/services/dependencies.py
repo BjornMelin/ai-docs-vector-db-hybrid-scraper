@@ -943,10 +943,10 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             1 for status in all_status.values() if status["state"] == "half_open"
         )
 
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "summary": {
                 "total_circuits": total_circuits,
                 "open_circuits": open_circuits,
@@ -1054,13 +1054,13 @@ async def get_service_health() -> dict[str, Any]:
         # Add circuit breaker status
         circuit_status = await get_circuit_breaker_status()
 
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         return {
             "status": "healthy",
             "services": health_status,
             "circuit_breakers": circuit_status,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         }
     except Exception as e:
         logger.exception(f"Health check failed: {e}")
@@ -1094,7 +1094,7 @@ async def get_auto_detected_service_health(
         # Get health trends
         trends = health_checker.get_health_trends()
 
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         return {
             "status": "healthy"
@@ -1124,7 +1124,7 @@ async def get_auto_detected_service_health(
                 for result in health_summary.service_results
             },
             "trends": trends,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1159,7 +1159,7 @@ async def get_auto_detection_pool_metrics(
         # Get individual pool health metrics
         all_pool_health = pool_manager.get_all_pool_health()
 
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         return {
             "status": "active",
@@ -1177,7 +1177,7 @@ async def get_auto_detection_pool_metrics(
                 }
                 for pool_name, pool_info in pool_stats["pools"].items()
             },
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1200,10 +1200,10 @@ async def get_auto_detection_summary(
     connection pools, and performance metrics.
     """
     try:
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         summary = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "auto_detection": {},
             "service_health": {},
             "connection_pools": {},
@@ -1270,7 +1270,7 @@ async def get_auto_detection_summary(
     except Exception as e:
         logger.exception(f"Auto-detection summary failed: {e}")
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "overall_status": "error",
             "error": str(e),
             "auto_detection": {},

@@ -7,7 +7,7 @@ post-deployment, disaster recovery, and blue-green deployment tests.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -293,7 +293,7 @@ class DeploymentTestOrchestrator:
         self, test_config: dict[str, Any], deployment_config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute comprehensive deployment test."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=timezone.utc)
 
         category_results = {}
         failed_categories = []
@@ -334,7 +334,7 @@ class DeploymentTestOrchestrator:
                     "critical_issues": 0,  # Optional
                 }
 
-        end_time = datetime.utcnow()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         return {
@@ -581,7 +581,7 @@ class DeploymentTestReportGenerator:
         """Generate deployment test report."""
         report_content = {
             "report_metadata": {
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(tz=timezone.utc).isoformat(),
                 "environment": config["environment"],
                 "report_version": "1.0",
             },
@@ -661,5 +661,5 @@ class DeploymentMetricsCollector:
             "metrics_collected": True,
             "total_metrics": len(base_metrics),
             "metrics": base_metrics,
-            "collection_timestamp": datetime.utcnow().isoformat(),
+            "collection_timestamp": datetime.now(tz=timezone.utc).isoformat(),
         }

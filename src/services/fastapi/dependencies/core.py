@@ -351,9 +351,9 @@ class ServiceHealthChecker:
         """
         health = {"status": "healthy", "services": {}, "timestamp": None}
 
-        from datetime import datetime
+        from datetime import datetime, timezone
 
-        health["timestamp"] = datetime.utcnow().isoformat()
+        health["timestamp"] = datetime.now(tz=timezone.utc).isoformat()
 
         # Check container initialization
         if not self.container.is_initialized:

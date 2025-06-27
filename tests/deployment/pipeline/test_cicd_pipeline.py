@@ -5,7 +5,7 @@ test execution, deployment automation, and rollback procedures.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -493,7 +493,7 @@ class PipelineExecutor:
             "pipeline_id": pipeline_id,
             "environment": environment,
             "stage_results": [],
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(tz=timezone.utc).isoformat(),
             "rollback_executed": False,
         }
 
@@ -518,7 +518,7 @@ class PipelineExecutor:
             result["success"] = False
             result["error"] = str(e)
 
-        result["end_time"] = datetime.utcnow().isoformat()
+        result["end_time"] = datetime.now(tz=timezone.utc).isoformat()
         return result
 
     async def _execute_stage(self, stage_config: dict[str, Any]) -> dict[str, Any]:
@@ -528,7 +528,7 @@ class PipelineExecutor:
         timeout = stage_config.get("timeout", 300)
         simulate_failure = stage_config.get("simulate_failure", False)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=timezone.utc)
 
         try:
             if simulate_failure:
@@ -544,7 +544,7 @@ class PipelineExecutor:
                 executor(stage_config), timeout=timeout
             )
 
-            end_time = datetime.utcnow()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             return {
@@ -558,7 +558,7 @@ class PipelineExecutor:
             }
 
         except Exception as e:
-            end_time = datetime.utcnow()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             return {
@@ -614,7 +614,7 @@ class PipelineExecutor:
 
         return {
             "artifacts": {
-                "deployment_id": f"deploy-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                "deployment_id": f"deploy-{datetime.now(tz=timezone.utc).strftime('%Y%m%d-%H%M%S')}",
                 "version": "1.0.0",
                 "environment": config.get("environment", "staging"),
             }
@@ -641,7 +641,7 @@ class PipelineExecutor:
         return {
             "success": True,
             "rollback_type": "automatic",
-            "rollback_time": datetime.utcnow().isoformat(),
+            "rollback_time": datetime.now(tz=timezone.utc).isoformat(),
             "previous_deployment_restored": True,
         }
 
@@ -712,13 +712,13 @@ class DockerBuildManager:
 
     async def build_image(self, config: dict[str, Any]) -> dict[str, Any]:
         """Build Docker image."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=timezone.utc)
 
         try:
             # Simulate build process
             await asyncio.sleep(3)
 
-            end_time = datetime.utcnow()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             image_tag = f"{config['registry']}/{config['image_name']}:{config['tag']}"
@@ -746,7 +746,7 @@ class DockerBuildManager:
                 "success": False,
                 "error": str(e),
                 "build_duration_seconds": (
-                    datetime.utcnow() - start_time
+                    datetime.now(tz=timezone.utc) - start_time
                 ).total_seconds(),
             }
 
@@ -788,7 +788,7 @@ class PipelineTestExecutor:
         test_type = config["test_type"]
         config.get("timeout_seconds", 600)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=timezone.utc)
 
         try:
             # Simulate test execution based on type
@@ -804,7 +804,7 @@ class PipelineTestExecutor:
             else:
                 raise ValueError(f"Unknown test type: {test_type}")
 
-            end_time = datetime.utcnow()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             return {
@@ -819,7 +819,9 @@ class PipelineTestExecutor:
                 "success": False,
                 "test_type": test_type,
                 "error": str(e),
-                "duration_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "duration_seconds": (
+                    datetime.now(tz=timezone.utc) - start_time
+                ).total_seconds(),
             }
 
     def _simulate_unit_test_results(self) -> dict[str, Any]:

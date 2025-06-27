@@ -18,15 +18,12 @@ import asyncio
 import hashlib
 import json
 import time
-import weakref
 from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Type, TypeVar, Union
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
-
-from .core import Config
 
 
 T = TypeVar("T", bound=BaseModel)

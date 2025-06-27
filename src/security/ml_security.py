@@ -14,7 +14,7 @@ import logging
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -361,7 +361,7 @@ class MLSecurityValidator:
         # Use existing logging infrastructure
         log_data = {
             "event_type": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "severity": severity,
             **details,
         }

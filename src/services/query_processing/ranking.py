@@ -6,7 +6,7 @@ result rankings optimized for individual users and contexts.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any
 
@@ -449,7 +449,7 @@ class PersonalizedRankingService:
             self.interaction_history[user_id].append(interaction)
 
             # Cleanup old interactions
-            cutoff_date = datetime.now() - timedelta(
+            cutoff_date = datetime.now(tz=timezone.utc) - timedelta(
                 days=self.interaction_retention_days
             )
             self.interaction_history[user_id] = [
@@ -897,7 +897,7 @@ class PersonalizedRankingService:
         boost = 0.0
 
         # Time-based preferences
-        current_hour = datetime.now().hour
+        current_hour = datetime.now(tz=timezone.utc).hour
         if current_hour in user_profile.active_hours:
             time_preference = user_profile.active_hours[current_hour]
             boost += time_preference * 0.1
@@ -978,7 +978,7 @@ class PersonalizedRankingService:
 
         try:
             published_date = datetime.fromisoformat(result["published_date"])
-            age_days = (datetime.now() - published_date).days
+            age_days = (datetime.now(tz=timezone.utc) - published_date).days
 
             # Boost fresher content
             if age_days <= 7:
@@ -1095,7 +1095,7 @@ class PersonalizedRankingService:
 
     def _get_time_preference_boost(self, user_profile: UserProfile) -> float:
         """Get boost based on time-of-day preferences."""
-        current_hour = datetime.now().hour
+        current_hour = datetime.now(tz=timezone.utc).hour
         if current_hour in user_profile.active_hours:
             return user_profile.active_hours[current_hour] * 0.1
         return 0.0
@@ -1130,14 +1130,14 @@ class PersonalizedRankingService:
         boost = 0.0
 
         # Time of day
-        hour = datetime.now().hour
+        hour = datetime.now(tz=timezone.utc).hour
         if 9 <= hour <= 17:  # Business hours
             boost += 0.05
         elif 18 <= hour <= 22:  # Evening
             boost += 0.03
 
         # Day of week
-        weekday = datetime.now().weekday()
+        weekday = datetime.now(tz=timezone.utc).weekday()
         if weekday < 5:  # Weekday
             boost += 0.02
 
@@ -1186,7 +1186,7 @@ class PersonalizedRankingService:
         # Update confidence score
         profile.confidence_score = min(1.0, profile.total_interactions / 50.0)
 
-        profile.last_updated = datetime.now()
+        profile.last_updated = datetime.now(tz=timezone.utc)
 
     async def _build_profile_from_interactions(
         self, profile: UserProfile, user_id: str

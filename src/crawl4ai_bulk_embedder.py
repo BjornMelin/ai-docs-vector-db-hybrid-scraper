@@ -11,7 +11,7 @@ import csv
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -94,7 +94,7 @@ class BulkEmbedder:
 
     def _save_state(self) -> None:
         """Save current processing state."""
-        self.state.last_checkpoint = datetime.now()
+        self.state.last_checkpoint = datetime.now(tz=timezone.utc)
         with open(self.state_file, "w") as f:
             json.dump(self.state.model_dump(mode="json"), f, indent=2, default=str)
 
@@ -249,7 +249,7 @@ class BulkEmbedder:
             for i, (chunk, embedding) in enumerate(
                 zip(chunks, dense_embeddings, strict=False)
             ):
-                point_id = f"{urlparse(url).netloc}_{datetime.now().timestamp()}_{i}"
+                point_id = f"{urlparse(url).netloc}_{datetime.now(tz=timezone.utc).timestamp()}_{i}"
 
                 payload = {
                     "url": url,
@@ -262,7 +262,7 @@ class BulkEmbedder:
                     "end_char": chunk.end_pos,
                     "chunk_type": chunk.chunk_type,
                     "has_code": chunk.has_code,
-                    "scraped_at": datetime.now().isoformat(),
+                    "scraped_at": datetime.now(tz=timezone.utc).isoformat(),
                     "provider": scrape_result.get("provider", "unknown"),
                 }
 
@@ -408,7 +408,7 @@ class BulkEmbedder:
         table.add_row("Total Chunks", str(self.state.total_chunks_processed))
         table.add_row("Total Embeddings", str(self.state.total_embeddings_generated))
 
-        duration = datetime.now() - self.state.start_time
+        duration = datetime.now(tz=timezone.utc) - self.state.start_time
         table.add_row("Duration", str(duration).split(".")[0])
 
         console.print(table)

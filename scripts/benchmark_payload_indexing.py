@@ -10,7 +10,7 @@ import asyncio
 import logging
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ..config import Config
@@ -343,7 +343,7 @@ class PayloadIndexingBenchmark:
         """Run complete benchmark suite."""
         logger.info("Starting comprehensive payload indexing benchmark")
 
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         try:
             # Benchmark 1: Index creation performance
@@ -364,7 +364,7 @@ class PayloadIndexingBenchmark:
             ] = await self.benchmark_comparison()
 
             # Add summary
-            end_time = datetime.now()
+            end_time = datetime.now(tz=timezone.utc)
             duration = (end_time - start_time).total_seconds()
 
             self.benchmark_results["setup_info"] = {

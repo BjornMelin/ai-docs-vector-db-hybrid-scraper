@@ -5,7 +5,7 @@ switching, traffic routing, health checks, and zero-downtime deployment validati
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -529,7 +529,7 @@ class ZeroDowntimeTester:
             "successful_requests": 0,
             "failed_requests": 0,
             "downtime_periods": [],
-            "start_time": datetime.utcnow(),
+            "start_time": datetime.now(tz=timezone.utc),
         }
 
     async def monitor_service_availability(self) -> dict[str, Any]:
@@ -552,7 +552,7 @@ class ZeroDowntimeTester:
     def get_availability_report(self) -> dict[str, Any]:
         """Get availability report."""
         total_time = (
-            datetime.utcnow() - self.availability_data["start_time"]
+            datetime.now(tz=timezone.utc) - self.availability_data["start_time"]
         ).total_seconds()
 
         return {

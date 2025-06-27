@@ -4,7 +4,7 @@
 import json
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from datetime import timedelta
 from pathlib import Path
 
@@ -269,7 +269,7 @@ class PerformanceDashboard:
         # Insert data
         html_content = html_content.replace("{{TRENDS_DATA}}", json.dumps(trends))
         html_content = html_content.replace("{{RECENT_RUNS}}", json.dumps(recent_runs))
-        html_content = html_content.replace("{{LAST_UPDATED}}", datetime.now().isoformat())
+        html_content = html_content.replace("{{LAST_UPDATED}}", datetime.now(tz=timezone.utc).isoformat())
         
         Path(output_file).write_text(html_content)
         print(f"📊 Dashboard generated: {output_file}")
@@ -491,7 +491,7 @@ class PerformanceDashboard:
         report = []
         report.append("🚀 Test Performance Report")
         report.append("=" * 50)
-        report.append(f"Generated: {datetime.now().isoformat()}")
+        report.append(f"Generated: {datetime.now(tz=timezone.utc).isoformat()}")
         report.append("")
         
         # Overall trends
@@ -571,7 +571,7 @@ def main():
         print(report)
         
         # Save report to file
-        report_file = f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        report_file = f"performance_report_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
         Path(report_file).write_text(report)
         print(f"\n📄 Report saved to: {report_file}")
     

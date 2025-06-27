@@ -5,7 +5,7 @@ integrated and working correctly with all components.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -114,7 +114,7 @@ class TestContractFrameworkValidation:
 
         valid_response = {
             "success": True,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "results": [
                 {
                     "id": "doc1",
@@ -144,7 +144,7 @@ class TestContractFrameworkValidation:
         # Valid error response
         valid_error = {
             "success": False,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "error": "Invalid query parameter",
             "error_type": "validation_error",
             "context": {
@@ -160,7 +160,7 @@ class TestContractFrameworkValidation:
         # Test that success=True is invalid for ErrorResponse
         {
             "success": True,  # This should be False for ErrorResponse
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "error": "This shouldn't work",
             "error_type": "test_error",
         }

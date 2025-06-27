@@ -159,7 +159,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_api_keys(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_api_keys(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize API key settings."""
         customizations = {}
 
@@ -197,7 +197,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_database(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_database(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize database connection settings."""
         customizations = {}
 
@@ -234,7 +234,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_performance(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_performance(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize performance settings."""
         customizations = {}
 
@@ -494,7 +494,7 @@ def setup(
 
         if validate_choice:
             try:
-                from .config import validate_config
+                from .config import validate_config  # noqa: PLC0415 - avoid circular import
 
                 ctx.invoke(validate_config, config_file=config_path)
             except ImportError:

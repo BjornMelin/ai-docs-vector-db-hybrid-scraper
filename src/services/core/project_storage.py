@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -120,9 +120,9 @@ class ProjectStorage:
                 raise ProjectStorageError(f"Project {project_id} not found")
 
             self._projects_cache[project_id].update(updates)
-            self._projects_cache[project_id]["updated_at"] = (
-                datetime.utcnow().isoformat()
-            )
+            self._projects_cache[project_id]["updated_at"] = datetime.now(
+                tz=timezone.utc
+            ).isoformat()
             await self._save_projects(self._projects_cache)
 
     async def delete_project(self, project_id: str) -> None:

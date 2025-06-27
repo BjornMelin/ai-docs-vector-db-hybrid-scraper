@@ -10,7 +10,7 @@ import os
 import tempfile
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -252,14 +252,14 @@ class DeploymentHealthChecker:
                 "endpoint": endpoint,
                 "status": "healthy",
                 "response_time_ms": 50.0,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
         except Exception as e:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
     async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
@@ -298,7 +298,7 @@ class DeploymentRollbackManager:
 
     def record_deployment(self, deployment_info: dict[str, Any]) -> None:
         """Record a deployment for rollback capability."""
-        deployment_info["timestamp"] = datetime.utcnow().isoformat()
+        deployment_info["timestamp"] = datetime.now(tz=timezone.utc).isoformat()
         deployment_info["rollback_available"] = True
 
         self.deployment_history.append(deployment_info)
@@ -329,7 +329,7 @@ class DeploymentRollbackManager:
             rollback_info = {
                 "success": True,
                 "rolled_back_to": rollback_target["deployment_id"],
-                "rollback_time": datetime.utcnow().isoformat(),
+                "rollback_time": datetime.now(tz=timezone.utc).isoformat(),
                 "previous_deployment": self.current_deployment["deployment_id"]
                 if self.current_deployment
                 else None,
@@ -345,7 +345,7 @@ class DeploymentRollbackManager:
             return {
                 "success": False,
                 "error": str(e),
-                "rollback_time": datetime.utcnow().isoformat(),
+                "rollback_time": datetime.now(tz=timezone.utc).isoformat(),
             }
 
     def get_deployment_history(self) -> list[dict[str, Any]]:
@@ -376,7 +376,7 @@ class BlueGreenDeploymentManager:
                     "healthy": True,
                     "deployment_id": deployment_info["deployment_id"],
                     "version": deployment_info["version"],
-                    "deployment_time": datetime.utcnow().isoformat(),
+                    "deployment_time": datetime.now(tz=timezone.utc).isoformat(),
                 }
             )
 
@@ -425,7 +425,7 @@ class BlueGreenDeploymentManager:
                 "success": True,
                 "switched_from": active_env["name"],
                 "switched_to": inactive_env["name"],
-                "switch_time": datetime.utcnow().isoformat(),
+                "switch_time": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             return result

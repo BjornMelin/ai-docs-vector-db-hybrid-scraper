@@ -4,7 +4,7 @@ This module tests JSON schema validation for all request/response models
 and ensures data structure compliance.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -81,7 +81,7 @@ class TestPydanticModelValidation:
         # Valid response
         valid_data = {
             "success": True,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "results": [
                 {
                     "id": "doc1",
@@ -184,7 +184,7 @@ class TestPydanticModelValidation:
         # Valid error response
         valid_data = {
             "success": False,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "error": "Invalid query parameter",
             "error_type": "validation_error",
             "context": {"parameter": "limit", "value": -1},
@@ -202,7 +202,7 @@ class TestPydanticModelValidation:
         # Valid health response
         valid_data = {
             "success": True,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "status": "healthy",
             "services": {
                 "qdrant": "healthy",
@@ -272,7 +272,7 @@ class TestJSONSchemaGeneration:
         # Test valid nested data
         valid_data = {
             "success": True,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "results": [
                 {
                     "id": "doc1",
@@ -293,7 +293,7 @@ class TestJSONSchemaGeneration:
         # Test invalid nested data (missing required field in result item)
         invalid_data = {
             "success": True,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(tz=timezone.utc).timestamp(),
             "results": [
                 {
                     "score": 0.95,  # Missing 'id' field

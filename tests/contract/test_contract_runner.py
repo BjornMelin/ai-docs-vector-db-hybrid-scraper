@@ -6,7 +6,7 @@ and managing contract validation results.
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -63,12 +63,12 @@ class ContractTestRunner:
 
     def start_test_session(self):
         """Start a contract testing session."""
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(tz=timezone.utc)
         self.results = []
 
     def end_test_session(self):
         """End a contract testing session."""
-        self.end_time = datetime.now()
+        self.end_time = datetime.now(tz=timezone.utc)
 
     def add_result(self, result: ContractValidationResult):
         """Add a test result to the session."""
@@ -197,7 +197,7 @@ class TestContractRunner:
             errors=[],
             warnings=[],
             execution_time_ms=45.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
         )
 
         result2 = ContractValidationResult(
@@ -208,7 +208,7 @@ class TestContractRunner:
             errors=["Missing required field: id"],
             warnings=[],
             execution_time_ms=12.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
         )
 
         runner.add_result(result1)
@@ -254,7 +254,7 @@ class TestContractRunner:
             errors=[],
             warnings=["Deprecated field used"],
             execution_time_ms=25.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
         )
 
         runner.add_result(result)
@@ -311,7 +311,7 @@ class TestContractRunner:
                 errors=[f"Error in {contract_type}"] if i % 2 == 1 else [],
                 warnings=[],
                 execution_time_ms=float(10 + i * 5),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
             )
             runner.add_result(result)
 
@@ -343,7 +343,7 @@ class TestContractRunner:
                 errors=[],
                 warnings=[],
                 execution_time_ms=exec_time,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
             )
             runner.add_result(result)
 
@@ -390,7 +390,7 @@ class TestContractRunner:
                 errors=case["errors"],
                 warnings=case["warnings"],
                 execution_time_ms=20.0,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
             )
             runner.add_result(result)
 
@@ -414,7 +414,7 @@ class TestContractRunner:
         runner.start_test_session()
 
         # Test 1: JSON Schema validation
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         search_schema = contract_test_data["json_schemas"]["search_result"]
         json_schema_validator.register_schema("search_result", search_schema)
@@ -425,7 +425,7 @@ class TestContractRunner:
             valid_data, "search_result"
         )
 
-        exec_time = (datetime.now() - start_time).total_seconds() * 1000
+        exec_time = (datetime.now(tz=timezone.utc) - start_time).total_seconds() * 1000
 
         schema_result = ContractValidationResult(
             test_name="json_schema_integration_test",
@@ -437,13 +437,13 @@ class TestContractRunner:
             errors=schema_validation.get("errors", []),
             warnings=[],
             execution_time_ms=exec_time,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
         )
 
         runner.add_result(schema_result)
 
         # Test 2: API Contract validation
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         api_contract_validator.register_contract(
             "/api/search", contract_test_data["api_contracts"]["/api/search"]
@@ -453,7 +453,7 @@ class TestContractRunner:
             "/api/search", "GET", params={"q": "test query", "limit": 10}
         )
 
-        exec_time = (datetime.now() - start_time).total_seconds() * 1000
+        exec_time = (datetime.now(tz=timezone.utc) - start_time).total_seconds() * 1000
 
         api_result = ContractValidationResult(
             test_name="api_contract_integration_test",
@@ -465,7 +465,7 @@ class TestContractRunner:
             errors=api_validation.get("errors", []),
             warnings=[],
             execution_time_ms=exec_time,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
         )
 
         runner.add_result(api_result)

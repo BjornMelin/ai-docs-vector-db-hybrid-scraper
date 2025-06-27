@@ -8,7 +8,7 @@ possible state changes.
 import asyncio
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Optional
 from unittest.mock import MagicMock, patch

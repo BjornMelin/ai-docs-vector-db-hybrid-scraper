@@ -1,6 +1,6 @@
 """Unit tests for document processing models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -148,9 +148,9 @@ class TestDocumentMetadata:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now()
+        before = datetime.now(tz=timezone.utc)
         metadata = DocumentMetadata(url="https://example.com")
-        after = datetime.now()
+        after = datetime.now(tz=timezone.utc)
 
         assert metadata.title is None
         assert metadata.doc_type is None
@@ -170,8 +170,8 @@ class TestDocumentMetadata:
 
     def test_custom_values(self):
         """Test custom field values."""
-        crawled_at = datetime.now()
-        last_modified = datetime.now()
+        crawled_at = datetime.now(tz=timezone.utc)
+        last_modified = datetime.now(tz=timezone.utc)
         metadata = DocumentMetadata(
             title="Python Tutorial",
             url="https://example.com/tutorial.py",
@@ -448,8 +448,8 @@ class TestScrapingStats:
 
     def test_with_timing_data(self):
         """Test stats with timing data."""
-        start_time = datetime.now()
-        end_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
+        end_time = datetime.now(tz=timezone.utc)
 
         stats = ScrapingStats(
             total_processed=50,
@@ -536,9 +536,9 @@ class TestDocumentBatch:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now()
+        before = datetime.now(tz=timezone.utc)
         batch = DocumentBatch(id="batch123")
-        after = datetime.now()
+        after = datetime.now(tz=timezone.utc)
 
         assert batch.documents == []
         assert batch.batch_size == 0

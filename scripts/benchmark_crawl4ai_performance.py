@@ -16,7 +16,7 @@ import os
 import platform
 import statistics
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -412,7 +412,7 @@ class CrawlerBenchmark:
         """Generate comprehensive benchmark report."""
         report_lines = [
             "# Crawl4AI vs Firecrawl Performance Benchmark Report",
-            f"\nGenerated: {datetime.now().isoformat()}",
+            f"\nGenerated: {datetime.now(tz=timezone.utc).isoformat()}",
             f"Platform: {platform.system()} {platform.release()}",
             f"Python: {platform.python_version()}",
             "\n## Executive Summary\n",
@@ -598,7 +598,7 @@ class CrawlerBenchmark:
         report_dir = Path("benchmark_results")
         report_dir.mkdir(exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
         report_file = report_dir / f"crawl4ai_benchmark_{timestamp}.md"
 
         with open(report_file, "w") as f:

@@ -8,7 +8,7 @@ import asyncio
 import json
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -46,7 +46,7 @@ class ConfigPerformanceReporter:
         self.output_dir.mkdir(exist_ok=True)
         self.metrics_collector = get_reload_metrics_collector()
         self.results: Dict[str, Any] = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "tests": {},
             "summary": {},
         }
@@ -557,7 +557,7 @@ class ConfigPerformanceReporter:
         """Save results to JSON file."""
         output_file = (
             self.output_dir
-            / f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            / f"performance_report_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
         )
         with open(output_file, "w") as f:
             json.dump(self.results, f, indent=2)
@@ -626,7 +626,7 @@ class ConfigPerformanceReporter:
         plt.tight_layout()
         chart_file = (
             self.output_dir
-            / f"performance_charts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            / f"performance_charts_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
         )
         plt.savefig(chart_file)
         console.print(f"[green]Charts saved to: {chart_file}[/green]")

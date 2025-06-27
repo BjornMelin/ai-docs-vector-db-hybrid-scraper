@@ -5,7 +5,7 @@ operations, failover mechanisms, and business continuity validation.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -193,7 +193,7 @@ class TestDataRestoration:
         # Simulate existing backup
         backup_info = {
             "backup_file": "test_backup_20241223_020000.sql.gz",
-            "backup_date": datetime.utcnow() - timedelta(hours=6),
+            "backup_date": datetime.now(tz=timezone.utc) - timedelta(hours=6),
             "backup_size_mb": 150,
             "database_type": deployment_environment.database_type,
         }
@@ -234,7 +234,7 @@ class TestDataRestoration:
 
         # Configure recovery point
         recovery_config = {
-            "target_time": datetime.utcnow() - timedelta(hours=2),
+            "target_time": datetime.now(tz=timezone.utc) - timedelta(hours=2),
             "database_name": f"ai_docs_{deployment_environment.name}",
             "recovery_mode": "immediate",
         }
@@ -274,7 +274,7 @@ class TestDataRestoration:
             "backup_path": temp_deployment_dir / "vector_backup_20241223.tar.gz",
             "collections": ["documents", "embeddings"],
             "total_vectors": 10000,
-            "backup_timestamp": datetime.utcnow() - timedelta(hours=4),
+            "backup_timestamp": datetime.now(tz=timezone.utc) - timedelta(hours=4),
         }
 
         # Execute vector restoration
@@ -646,7 +646,7 @@ class DatabaseBackupManager:
 
         backup_file = (
             self.work_dir
-            / f"backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sql.gz"
+            / f"backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.sql.gz"
         )
 
         return {
@@ -682,7 +682,7 @@ class VectorDatabaseBackupManager:
 
         backup_path = (
             self.work_dir
-            / f"vector_backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            / f"vector_backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         )
 
         return {
@@ -720,7 +720,7 @@ class ConfigurationBackupManager:
 
         backup_archive = (
             self.work_dir
-            / f"config_backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.tar.gz"
+            / f"config_backup_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.tar.gz"
         )
 
         return {

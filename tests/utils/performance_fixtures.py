@@ -278,7 +278,7 @@ def fast_vector_search(cached_vector_db, minimal_test_data):
             self.db = cached_vector_db
             self.embeddings = minimal_test_data["embeddings"]
 
-        async def search(self, query: str, limit: int = 5):
+        async def search(self, _query: str, limit: int = 5):
             """Fast mock search."""
             return [
                 {

@@ -12,7 +12,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -279,7 +279,7 @@ class ConfigDriftDetector:
 
             # Create snapshot
             snapshot = ConfigSnapshot(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=timezone.utc),
                 config_hash=config_hash,
                 config_data=config_data,
                 source=source,
@@ -621,7 +621,7 @@ class ConfigDriftDetector:
             if source not in self._snapshots:
                 return
 
-            cutoff_time = datetime.now() - timedelta(
+            cutoff_time = datetime.now(tz=timezone.utc) - timedelta(
                 days=self.config.snapshot_retention_days
             )
             original_count = len(self._snapshots[source])
@@ -639,7 +639,7 @@ class ConfigDriftDetector:
     def _cleanup_old_events(self) -> None:
         """Clean up old drift events based on retention policy."""
         with self._events_lock:
-            cutoff_time = datetime.now() - timedelta(
+            cutoff_time = datetime.now(tz=timezone.utc) - timedelta(
                 days=self.config.events_retention_days
             )
             original_count = len(self._drift_events)
@@ -667,7 +667,7 @@ class ConfigDriftDetector:
 
         # Check rate limiting with thread safety
         alert_key = f"{event.source}_{event.drift_type.value}"
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
 
         with self._alerts_lock:
             if alert_key in self._last_alert_times:
@@ -765,7 +765,7 @@ class ConfigDriftDetector:
             recent_events = [
                 event
                 for event in self._drift_events
-                if event.timestamp > datetime.now() - timedelta(hours=24)
+                if event.timestamp > datetime.now(tz=timezone.utc) - timedelta(hours=24)
             ]
 
         severity_counts = {}

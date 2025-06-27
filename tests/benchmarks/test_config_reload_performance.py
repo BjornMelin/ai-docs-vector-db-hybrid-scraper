@@ -405,14 +405,14 @@ class TestDriftDetectionPerformance:
 
     def test_drift_alert_performance(self, benchmark, drift_detector):
         """Benchmark drift alert generation performance."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         from src.config.drift_detection import DriftEvent
 
         # Create test drift event
         drift_event = DriftEvent(
             id="test_event_1",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             drift_type=DriftType.SECURITY_DEGRADATION,
             severity=DriftSeverity.CRITICAL,
             source="test.env",

@@ -1,7 +1,7 @@
 """Comprehensive tests for the personalized ranking service."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -133,7 +133,7 @@ class TestUserPreference:
             weight=0.8,
             confidence=0.9,
             learned_from=["click", "bookmark"],
-            last_updated=datetime.now(),
+            last_updated=datetime.now(tz=timezone.utc),
         )
 
         assert preference.attribute == "content_type"
@@ -205,7 +205,7 @@ class TestInteractionEvent:
             session_id="session456",
             result_id="result789",
             interaction_type=InteractionType.CLICK,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             value=None,
             query="python tutorial",
             result_position=1,
@@ -1232,7 +1232,7 @@ class TestPersonalizedRankingService:
             session_id="session456",
             result_id="result789",
             interaction_type=InteractionType.CLICK,
-            timestamp=datetime.now()
+            timestamp=datetime.now(tz=timezone.utc)
             - timedelta(days=40),  # Older than retention period
         )
 
@@ -1242,7 +1242,8 @@ class TestPersonalizedRankingService:
             session_id="session456",
             result_id="result790",
             interaction_type=InteractionType.VIEW,
-            timestamp=datetime.now() - timedelta(days=5),  # Within retention period
+            timestamp=datetime.now(tz=timezone.utc)
+            - timedelta(days=5),  # Within retention period
         )
 
         # Add old interaction first
@@ -1270,7 +1271,7 @@ class TestPersonalizedRankingService:
                 result_id="result1",
                 interaction_type=InteractionType.CLICK,
                 query="python tutorial",
-                timestamp=datetime.now().replace(hour=9),
+                timestamp=datetime.now(tz=timezone.utc).replace(hour=9),
             ),
             InteractionEvent(
                 user_id="user123",
@@ -1278,7 +1279,7 @@ class TestPersonalizedRankingService:
                 result_id="result2",
                 interaction_type=InteractionType.BOOKMARK,
                 query="flask guide",
-                timestamp=datetime.now().replace(hour=14),
+                timestamp=datetime.now(tz=timezone.utc).replace(hour=14),
             ),
             InteractionEvent(
                 user_id="user123",
@@ -1286,7 +1287,7 @@ class TestPersonalizedRankingService:
                 result_id="result3",
                 interaction_type=InteractionType.RATING,
                 value=4.5,
-                timestamp=datetime.now().replace(hour=9),
+                timestamp=datetime.now(tz=timezone.utc).replace(hour=9),
             ),
         ]
 
@@ -1591,41 +1592,51 @@ class TestPersonalizedRankingService:
     def test_freshness_boost_calculation(self, service):
         """Test freshness boost calculation."""
         # Very fresh content
-        fresh_result = {"published_date": datetime.now().isoformat()}
+        fresh_result = {"published_date": datetime.now(tz=timezone.utc).isoformat()}
         boost = service._calculate_freshness_boost(fresh_result)
         assert boost == 0.1
 
         # Week-old content (exactly 7 days should still get the fresh boost)
         week_old_result = {
-            "published_date": (datetime.now() - timedelta(days=6)).isoformat()
+            "published_date": (
+                datetime.now(tz=timezone.utc) - timedelta(days=6)
+            ).isoformat()
         }
         boost = service._calculate_freshness_boost(week_old_result)
         assert boost == 0.1  # Still within 7 days
 
         # Content older than 7 days but within 30 days
         older_result = {
-            "published_date": (datetime.now() - timedelta(days=15)).isoformat()
+            "published_date": (
+                datetime.now(tz=timezone.utc) - timedelta(days=15)
+            ).isoformat()
         }
         boost = service._calculate_freshness_boost(older_result)
         assert boost == 0.05
 
         # Month-old content (exactly 30 days still gets 0.05)
         month_old_result = {
-            "published_date": (datetime.now() - timedelta(days=30)).isoformat()
+            "published_date": (
+                datetime.now(tz=timezone.utc) - timedelta(days=30)
+            ).isoformat()
         }
         boost = service._calculate_freshness_boost(month_old_result)
         assert boost == 0.05
 
         # 3-month-old content
         three_month_old_result = {
-            "published_date": (datetime.now() - timedelta(days=60)).isoformat()
+            "published_date": (
+                datetime.now(tz=timezone.utc) - timedelta(days=60)
+            ).isoformat()
         }
         boost = service._calculate_freshness_boost(three_month_old_result)
         assert boost == 0.02
 
         # Very old content
         old_result = {
-            "published_date": (datetime.now() - timedelta(days=200)).isoformat()
+            "published_date": (
+                datetime.now(tz=timezone.utc) - timedelta(days=200)
+            ).isoformat()
         }
         boost = service._calculate_freshness_boost(old_result)
         assert boost == 0.0

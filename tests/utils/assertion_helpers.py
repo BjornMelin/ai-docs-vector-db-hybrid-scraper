@@ -9,7 +9,7 @@ import asyncio
 import json
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, TypeVar
 from unittest.mock import AsyncMock, MagicMock
 
@@ -243,7 +243,7 @@ class AssertionHelpers:
             timestamp: Timestamp to validate (ISO string, datetime, or Unix timestamp)
             max_age_seconds: Maximum age in seconds (default: 60.0)
         """
-        now = datetime.utcnow()
+        now = datetime.now(tz=timezone.utc)
 
         if isinstance(timestamp, str):
             # Parse ISO format timestamp

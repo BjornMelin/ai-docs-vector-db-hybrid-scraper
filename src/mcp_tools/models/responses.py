@@ -1,7 +1,7 @@
 import typing
 """Response models for MCP server tools."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel
@@ -42,7 +42,7 @@ class CrawlResult(BaseModel):
     site_name: str = Field(default="", description="Site name")
     depth: int = Field(default=0, description="Crawl depth")
     crawl_timestamp: str = Field(
-        default_factory=lambda: datetime.now().isoformat(),
+        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat(),
         description="Crawl timestamp",
     )
     links: list[str] = Field(default_factory=list, description="Extracted links")

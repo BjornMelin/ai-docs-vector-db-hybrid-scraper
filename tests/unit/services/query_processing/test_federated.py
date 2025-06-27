@@ -1,7 +1,7 @@
 """Tests for federated search service."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -84,7 +84,7 @@ class TestCollectionMetadata:
 
     def test_full_initialization(self):
         """Test initialization with all fields."""
-        test_time = datetime.now()
+        test_time = datetime.now(tz=timezone.utc)
         metadata = CollectionMetadata(
             collection_name="docs",
             display_name="Documentation Collection",

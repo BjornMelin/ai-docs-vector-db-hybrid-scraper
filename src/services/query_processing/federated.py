@@ -7,7 +7,7 @@ load balancing, and distributed query optimization.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -477,7 +477,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now(),
+                "last_updated": datetime.now(tz=timezone.utc),
             }
 
             self.collection_load_scores[collection_name] = 0.0
@@ -956,7 +956,9 @@ class FederatedSearchService:
                 if timestamp:
                     enhanced_item["_sort_timestamp"] = timestamp
                 else:
-                    enhanced_item["_sort_timestamp"] = datetime.now().isoformat()
+                    enhanced_item["_sort_timestamp"] = datetime.now(
+                        tz=timezone.utc
+                    ).isoformat()
 
                 all_results.append(enhanced_item)
 
@@ -1144,7 +1146,7 @@ class FederatedSearchService:
                 "total_searches": 0,
                 "avg_response_time": 0.0,
                 "success_rate": 1.0,
-                "last_updated": datetime.now(),
+                "last_updated": datetime.now(tz=timezone.utc),
             }
 
         stats = self.collection_performance_stats[collection_name]
@@ -1163,7 +1165,7 @@ class FederatedSearchService:
         else:
             stats["success_rate"] = (stats["success_rate"] * (total - 1) + 0.0) / total
 
-        stats["last_updated"] = datetime.now()
+        stats["last_updated"] = datetime.now(tz=timezone.utc)
 
         # Update load balancing scores
         if self.enable_adaptive_load_balancing:

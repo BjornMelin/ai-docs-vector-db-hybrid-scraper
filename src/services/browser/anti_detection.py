@@ -6,7 +6,7 @@ Designed to achieve 95%+ success rate on challenging sites while maintaining per
 """
 
 import json
-import random
+import secrets
 import time
 from pathlib import Path
 from typing import Any
@@ -177,7 +177,7 @@ class SessionManager:
         self, domain: str, user_agent: str, viewport: dict[str, int]
     ) -> SessionData:
         """Create a new session for a domain."""
-        session_id = f"{domain}_{int(time.time())}_{random.randint(1000, 9999)}"
+        session_id = f"{domain}_{int(time.time())}_{secrets.randbelow(9000) + 1000}"
 
         session = SessionData(
             session_id=session_id,

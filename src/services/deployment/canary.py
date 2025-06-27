@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any
 
@@ -87,7 +87,9 @@ class CanaryMetrics(BaseModel):
     @property
     def stage_duration_minutes(self) -> float:
         """Calculate current stage duration in minutes."""
-        return (datetime.utcnow() - self.stage_start_time).total_seconds() / 60.0
+        return (
+            datetime.now(tz=timezone.utc) - self.stage_start_time
+        ).total_seconds() / 60.0
 
 
 @dataclass
@@ -339,8 +341,8 @@ class CanaryDeployment:
 
             # Update metrics
             metrics.canary_traffic_percentage = next_percentage
-            metrics.stage_start_time = datetime.utcnow()
-            metrics.next_stage_time = datetime.utcnow() + timedelta(
+            metrics.stage_start_time = datetime.now(tz=timezone.utc)
+            metrics.next_stage_time = datetime.now(tz=timezone.utc) + timedelta(
                 minutes=config.stage_duration_minutes
             )
             metrics.success_criteria_met = False  # Reset for new stage

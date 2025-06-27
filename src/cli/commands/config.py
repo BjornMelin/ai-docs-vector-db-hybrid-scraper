@@ -62,7 +62,9 @@ def export(ctx: click.Context, output: str, format: str):
                 json.dump(config_obj.model_dump(), f, indent=2)
         elif format == "yaml":
             if yaml is None:
-                console.print("❌ YAML support not available. Please install PyYAML", style="red")
+                console.print(
+                    "❌ YAML support not available. Please install PyYAML", style="red"
+                )
                 return
             with open(output_path, "w") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
@@ -178,9 +180,11 @@ def _show_config_json(config_obj: Config):
 def _show_config_yaml(config_obj: Config):
     """Display configuration as YAML."""
     if yaml is None:
-        console.print("❌ YAML support not available. Please install PyYAML", style="red")
+        console.print(
+            "❌ YAML support not available. Please install PyYAML", style="red"
+        )
         return
-    
+
     config_yaml = yaml.dump(config_obj.model_dump(), default_flow_style=False)
     syntax = Syntax(config_yaml, "yaml", theme="monokai", line_numbers=True)
 

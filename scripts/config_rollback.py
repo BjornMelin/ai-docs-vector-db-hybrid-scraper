@@ -15,7 +15,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 import tarfile
 
 @dataclass
@@ -130,7 +130,7 @@ class ConfigurationRollback:
     
     def create_current_backup(self, environment: str) -> str:
         """Create a backup of current configuration before rollback"""
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
         backup_id = f"pre-rollback-{environment}-{timestamp}"
         
         # Create backup archive
@@ -302,7 +302,7 @@ class ConfigurationRollback:
     
     def generate_rollback_report(self, snapshot: DeploymentSnapshot, success: bool) -> str:
         """Generate a rollback report"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
         report_lines = [
             "# Configuration Rollback Report",

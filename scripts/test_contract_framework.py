@@ -8,7 +8,7 @@ and all components are working correctly.
 import sys
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -150,13 +150,13 @@ def test_api_contract_models():
         
         search_resp = SearchResponse(
             success=True,
-            timestamp=datetime.now().timestamp()
+            timestamp=datetime.now(tz=timezone.utc).timestamp()
         )
         print(f"✓ SearchResponse model works: {search_resp.success}")
         
         error_resp = ErrorResponse(
             success=False,
-            timestamp=datetime.now().timestamp(),
+            timestamp=datetime.now(tz=timezone.utc).timestamp(),
             error="Test error"
         )
         print(f"✓ ErrorResponse model works: {error_resp.error}")
