@@ -8,7 +8,6 @@ import asyncio
 import logging
 import random
 import time
-from typing import Any
 
 import pytest
 
@@ -292,7 +291,7 @@ class TestVolumeLoad:
                     "result_size_kb": result_size_kb,
                 }
 
-            def get_search_stats(self) -> Dict:
+            def get_search_stats(self) -> dict:
                 """Get search performance statistics."""
                 if not self.search_metrics:
                     return {"no_data": True}
@@ -382,7 +381,7 @@ class TestVolumeLoad:
                 self.failed_documents = []
 
             async def ingest_document_batch(
-                self, document_batch: list[Dict], **_kwargs
+                self, document_batch: list[dict], **_kwargs
             ):
                 """Ingest a batch of documents."""
                 batch_start = time.time()
@@ -443,7 +442,7 @@ class TestVolumeLoad:
                     "processing_time_ms": batch_processing_time * 1000,
                 }
 
-            def get_ingestion_stats(self) -> Dict:
+            def get_ingestion_stats(self) -> dict:
                 """Get ingestion performance statistics."""
                 if not self.ingestion_metrics:
                     return {"no_data": True}
@@ -521,7 +520,7 @@ class TestVolumeLoad:
             "Insufficient document volume processed"
         )
 
-    def _analyze_document_processing(self, metrics: list[Dict]) -> Dict:
+    def _analyze_document_processing(self, metrics: list[dict]) -> dict:
         """Analyze document processing performance."""
         if not metrics:
             return {"avg_throughput_mb_per_second": 0, "processing_consistency": 0}
@@ -548,7 +547,7 @@ class TestVolumeLoad:
             "total_mb_processed": sum(m["document_size_mb"] for m in metrics),
         }
 
-    def _analyze_batch_processing(self, metrics: list[Dict]) -> Dict:
+    def _analyze_batch_processing(self, metrics: list[dict]) -> dict:
         """Analyze batch processing efficiency."""
         if not metrics:
             return {"batch_efficiency": 0}
@@ -573,7 +572,7 @@ class TestVolumeLoad:
             "total_batches": len(metrics),
         }
 
-    def _analyze_large_search_results(self, metrics: list[Dict]) -> Dict:
+    def _analyze_large_search_results(self, metrics: list[dict]) -> dict:
         """Analyze large search result handling."""
         if not metrics:
             return {"memory_efficiency": 0}
@@ -598,7 +597,7 @@ class TestVolumeLoad:
             "avg_processing_time": sum(processing_times) / len(processing_times),
         }
 
-    def _analyze_batch_ingestion(self, metrics: list[Dict]) -> Dict:
+    def _analyze_batch_ingestion(self, metrics: list[dict]) -> dict:
         """Analyze batch ingestion performance."""
         if not metrics:
             return {"ingestion_stability": 0, "error_rate": 0}

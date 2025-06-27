@@ -9,7 +9,6 @@ import logging
 import os
 import random
 import time
-from typing import Any
 
 import psutil
 import pytest
@@ -207,8 +206,9 @@ class TestStressLoad:
             try:
                 # Call multiple services
                 await services.call_service("cache")
-            except Exception:
+            except Exception as e:
                 # Check if failure is cascading
+                logger.warning(f"Service failure: {e}")
                 pass
             else:
                 await services.call_service("embedding")
@@ -221,7 +221,6 @@ class TestStressLoad:
                     raise TestError(
                         f"Cascading failure: {failed_services} services down"
                     ) from None
-                raise
 
         # Run stress test
         config = LoadTestConfig(
@@ -361,7 +360,7 @@ class TestStressLoad:
         # Simulate I/O wait
         return asyncio.sleep(random.uniform(0.05, 0.5))
 
-    def _analyze_degradation(self, step_metrics: list[Dict]) -> Dict:
+    def _analyze_degradation(self, step_metrics: list[dict]) -> dict:
         """Analyze system degradation pattern."""
         if len(step_metrics) < 3:
             return {"is_gradual": False, "failure_point": None}
@@ -395,7 +394,7 @@ class TestStressLoad:
             "degradation_steps": len(step_metrics),
         }
 
-    def _analyze_recovery(self, phase_metrics: Dict) -> Dict:
+    def _analyze_recovery(self, phase_metrics: dict) -> dict:
         """Analyze system recovery after stress."""
         baseline_avg = sum(phase_metrics["baseline"]["response_times"]) / max(
             len(phase_metrics["baseline"]["response_times"]), 1
@@ -414,7 +413,7 @@ class TestStressLoad:
             "recovery_avg_response": recovery_avg,
         }
 
-    def _analyze_memory_usage(self, memory_samples: list[Dict]) -> Dict:
+    def _analyze_memory_usage(self, memory_samples: list[dict]) -> dict:
         """Analyze memory usage for leak detection."""
         if len(memory_samples) < 10:
             return {"leak_detected": False, "insufficient_data": True}

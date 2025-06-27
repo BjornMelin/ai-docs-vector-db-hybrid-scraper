@@ -562,8 +562,8 @@ class TestSystemMonitoring:
                         }
                         response_time = time.perf_counter() - start_time
                         metrics_collector.record_response_time(response_time)
-                        metrics_collector.record_error(type(e).__name__)
-                        raise
+                        metrics_collector.record_error("StressError")
+                        raise TestError("Stress operation failed") from None
 
             stressing_service = SystemStressingService()
 
