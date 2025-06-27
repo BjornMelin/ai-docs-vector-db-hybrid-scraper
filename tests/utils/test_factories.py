@@ -8,7 +8,7 @@ type hints, and builder patterns.
 import random
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -46,7 +46,7 @@ class DocumentFactory:
             "content": content,
             "metadata": metadata
             or {"language": "en", "content_type": "documentation", "source": "test"},
-            "timestamp": timestamp or datetime.utcnow().isoformat() + "Z",
+            "timestamp": timestamp or datetime.now(tz=timezone.utc).isoformat(),
             "processed": True,
             "error": None,
         }
@@ -100,7 +100,7 @@ class VectorFactory:
             List of float values representing the vector
         """
         vector = [
-            random.uniform(value_range[0], value_range[1]) for _ in range(dimension)
+            random.uniform(value_range[0], value_range[1]) for _ in range(dimension)  # noqa: S311
         ]
 
         if normalize:
@@ -195,7 +195,7 @@ class ResponseFactory:
             "data": data,
             "message": message,
             "metadata": metadata or {},
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "request_id": str(uuid4()),
         }
 
@@ -225,7 +225,7 @@ class ResponseFactory:
                 "details": details or {},
                 "status_code": status_code,
             },
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             "request_id": str(uuid4()),
         }
 

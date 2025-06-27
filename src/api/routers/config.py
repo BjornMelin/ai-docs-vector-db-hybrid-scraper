@@ -150,8 +150,6 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
             # This allows clients to get full operation details
             logger.warning(f"Configuration reload failed: {operation.error_message}")
 
-        return response
-
     except Exception as e:
         logger.exception("Unexpected error during configuration reload")
         raise HTTPException(
@@ -194,8 +192,6 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Configuration rollback failed: {operation.error_message}",
             )
-
-        return response
 
     except HTTPException:
         raise
@@ -295,8 +291,6 @@ async def get_config_status() -> dict[str, Any]:
             },
         }
 
-        return status_info
-
     except Exception as e:
         logger.exception("Error retrieving configuration status")
         raise HTTPException(
@@ -351,11 +345,6 @@ async def disable_file_watching() -> dict[str, Any]:
     try:
         reloader = get_config_reloader()
         await reloader.disable_file_watching()
-
-        return {
-            "file_watching_enabled": False,
-            "message": "Configuration file watching disabled",
-        }
 
     except Exception as e:
         logger.exception("Error disabling file watching")

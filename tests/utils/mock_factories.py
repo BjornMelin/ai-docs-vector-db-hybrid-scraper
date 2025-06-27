@@ -279,11 +279,11 @@ def create_mock_web_scraper(
     async def mock_scrape_url(url: str, **kwargs) -> dict[str, Any]:
         """Mock URL scraping."""
         # Simulate processing delay
-        delay = random.uniform(*processing_delay_range)
+        delay = random.uniform(*processing_delay_range)  # noqa: S311
         await asyncio.sleep(delay)
 
         # Simulate failures
-        if random.random() > success_rate:
+        if random.random() > success_rate:  # noqa: S311
             raise Exception(f"Failed to scrape URL: {url}")
 
         # Generate mock scraped content
@@ -291,7 +291,7 @@ def create_mock_web_scraper(
 
         return {
             "url": url,
-            "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),
+            "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),  # noqa: S311
             "content": content,
             "metadata": {
                 "scraped_at": datetime.utcnow().isoformat(),
@@ -301,8 +301,8 @@ def create_mock_web_scraper(
                 "language": "en",
                 "status_code": 200,
             },
-            "links": [generator.fake.url() for _ in range(random.randint(0, 10))],
-            "images": [generator.fake.image_url() for _ in range(random.randint(0, 5))],
+            "links": [generator.fake.url() for _ in range(random.randint(0, 10))],  # noqa: S311
+            "images": [generator.fake.image_url() for _ in range(random.randint(0, 5))],  # noqa: S311
         }
 
     async def mock_scrape_batch(urls: list[str], **kwargs) -> list[dict[str, Any]]:
@@ -347,7 +347,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
     def mock_get(key: str) -> Any | None:
         """Mock cache get."""
         # Simulate cache misses
-        if random.random() > hit_rate:
+        if random.random() > hit_rate:  # noqa: S311
             return None
 
         if key in cache_storage:

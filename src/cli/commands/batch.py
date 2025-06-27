@@ -31,7 +31,7 @@ console = Console()
 
 
 def complete_collection_name(
-    ctx: click.Context, param: click.Parameter, incomplete: str
+    ctx: click.Context, _param: click.Parameter, incomplete: str
 ) -> list[CompletionItem]:
     """Auto-complete collection names from the database."""
     try:
@@ -181,7 +181,7 @@ def index_documents(
     collection_name: str,
     documents: tuple,
     batch_size: int,
-    parallel: int,
+    _parallel: int,
     dry_run: bool,
 ):
     """Batch index documents into a collection.
@@ -300,7 +300,7 @@ def _show_indexing_preview(
 @click.option("--force", is_flag=True, help="Recreate collections if they exist")
 @click.pass_context
 def create_collections(
-    ctx: click.Context, collections: tuple, dimension: int, distance: str, force: bool
+    ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
     config = ctx.obj["config"]

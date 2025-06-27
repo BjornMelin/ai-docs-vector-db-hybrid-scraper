@@ -19,6 +19,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import aiofiles
+
 from src.config.drift_detection import (
     DriftDetectionConfig,
     DriftSeverity,
@@ -119,13 +121,13 @@ async def demo_basic_drift_detection():
 
     try:
         for config_name, config_data in configs.items():
-            temp_file = tempfile.NamedTemporaryFile(
+            with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False, prefix=f"{config_name}_"
-            )
-            json.dump(config_data, temp_file, indent=2)
-            temp_file.flush()
-            temp_files.append(Path(temp_file.name))
-            print(f"📝 Created sample config: {config_name} -> {temp_file.name}")
+            ) as temp_file:
+                json.dump(config_data, temp_file, indent=2)
+                temp_file.flush()
+                temp_files.append(Path(temp_file.name))
+                print(f"📝 Created sample config: {config_name} -> {temp_file.name}")
 
         print("\n" + "=" * 60)
         print("🔄 Taking Initial Configuration Snapshots")
@@ -158,8 +160,8 @@ async def demo_basic_drift_detection():
             print("-" * 40)
 
             # Update the original file with new content
-            with Path(original_file).open("w") as f:
-                json.dump(config_data, f, indent=2)
+            async with aiofiles.open(original_file, "w") as f:
+                await f.write(json.dumps(config_data, indent=2))
 
             # Take a new snapshot of the modified file
             new_snapshot = detector.take_snapshot(str(original_file))

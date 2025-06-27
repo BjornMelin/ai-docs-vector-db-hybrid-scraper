@@ -300,7 +300,7 @@ class DocumentChunker:
         return blocks
 
     def _semantic_chunking(
-        self, content: str, language: str | None = None
+        self, content: str, _language: str | None = None
     ) -> list[Chunk]:
         """Semantic chunking with code awareness but without AST parsing.
 
@@ -462,7 +462,7 @@ class DocumentChunker:
         return best_boundary
 
     def _chunk_text_content(
-        self, content: str, global_start: int, global_end: int
+        self, content: str, global_start: int, _global_end: int
     ) -> list[Chunk]:
         """Chunk text content with overlap"""
         chunks = []
@@ -825,7 +825,7 @@ class DocumentChunker:
             )
 
     def _traverse_js_ts(
-        self, node: Any, content: str, code_units: list[dict[str, Any]], language: str
+        self, node: Any, content: str, code_units: list[dict[str, Any]], _language: str
     ):
         """Helper for traversing JavaScript/TypeScript AST nodes and extracting code units.
 
@@ -1076,7 +1076,7 @@ class DocumentChunker:
         return methods
 
     def _extract_function_blocks(
-        self, node: Any, content: str, language: str
+        self, node: Any, _content: str, language: str
     ) -> list[dict[str, Any]]:
         """Extract logical blocks from a function AST node.
 

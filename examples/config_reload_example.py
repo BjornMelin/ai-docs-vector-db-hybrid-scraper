@@ -9,9 +9,14 @@ import logging
 import time
 from pathlib import Path
 
+from src.api.routers.config import (
+    ReloadRequest,
+    get_config_status,
+    get_reload_stats,
+    reload_configuration,
+)
 from src.config import Config, get_config
-from src.config.lifecycle import register_config_callback
-from src.config.reload import ConfigReloader, ReloadTrigger
+from src.config.reload import ConfigReloader, ReloadTrigger, set_config_reloader
 from src.services.observability.init import initialize_observability
 
 
@@ -53,11 +58,11 @@ class ExampleService:
 
             self.config_version = new_config.version
             logger.info(f"{self.name} configuration updated successfully")
-            return True
-
         except Exception as e:
-            logger.exception(f"{self.name} configuration update failed: {e}")
+            logger.exception(f"{self.name} configuration update failed")
             return False
+        else:
+            return True
 
     def stop(self) -> None:
         """Stop the service."""
@@ -217,20 +222,11 @@ async def demonstrate_api_integration():
     # This would typically be done through HTTP requests to the API
     # Here we demonstrate the underlying functionality
 
-    from src.api.routers.config import (
-        ReloadRequest,
-        get_config_status,
-        get_reload_stats,
-        reload_configuration,
-    )
-
     # Initialize reloader
     reloader = ConfigReloader()
     reloader.set_current_config(get_config())
 
     # Set global reloader for API access
-    from src.config.reload import set_config_reloader
-
     set_config_reloader(reloader)
 
     # Simulate API reload request
@@ -244,7 +240,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Duration: {response.total_duration_ms:.1f}ms")
 
     except Exception as e:
-        logger.exception(f"API reload failed: {e}")
+        logger.exception("API reload failed")
 
     # Get stats via API
     try:
@@ -254,7 +250,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Success rate: {stats_response.success_rate:.2%}")
 
     except Exception as e:
-        logger.exception(f"API stats failed: {e}")
+        logger.exception("API stats failed")
 
     # Get status via API
     try:
@@ -266,7 +262,7 @@ async def demonstrate_api_integration():
         )
 
     except Exception as e:
-        logger.exception(f"API status failed: {e}")
+        logger.exception("API status failed")
 
     await reloader.shutdown()
 
@@ -280,7 +276,7 @@ async def main():
     except KeyboardInterrupt:
         logger.info("Demonstration interrupted by user")
     except Exception as e:
-        logger.exception(f"Demonstration failed: {e}")
+        logger.exception("Demonstration failed")
 
 
 if __name__ == "__main__":

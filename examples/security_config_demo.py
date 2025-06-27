@@ -22,7 +22,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from src.config.security import (
     ConfigDataClassification,
@@ -447,7 +446,7 @@ def main():
         logger.info("✓ Real-time security event correlation")
 
     except Exception as e:
-        logger.exception(f"Demo failed with error: {e}")
+        logger.exception("Demo failed with error")
         raise
 
 

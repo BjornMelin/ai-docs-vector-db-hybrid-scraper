@@ -10,7 +10,7 @@ import contextlib
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
@@ -45,7 +45,7 @@ class Screenshot:
     width: int
     height: int
     format: str = "png"
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -272,7 +272,7 @@ def screenshot_manager():
                 format=metadata.get("format", "png"),
                 timestamp=datetime.fromisoformat(metadata["timestamp"])
                 if "timestamp" in metadata
-                else datetime.now(),
+                else datetime.now(tz=timezone.utc),
                 metadata=metadata.get("metadata", {}),
             )
 
@@ -355,7 +355,7 @@ def visual_comparator():
                 metadata={
                     "baseline_size": len(baseline.data),
                     "current_size": len(current.data),
-                    "comparison_timestamp": datetime.now().isoformat(),
+                    "comparison_timestamp": datetime.now(tz=timezone.utc).isoformat(),
                     "comparison_algorithm": "hash_based_mock",
                 },
             )
@@ -364,7 +364,7 @@ def visual_comparator():
             return result
 
         def generate_diff_image(
-            self, baseline: Screenshot, current: Screenshot
+            self, _baseline: Screenshot, _current: Screenshot
         ) -> bytes:
             """Generate difference image (mock implementation)."""
             # In real implementation, this would create an actual diff image
@@ -478,7 +478,7 @@ def responsive_tester():
             return results
 
         async def _check_layout_issues(
-            self, page, width: int, height: int
+            self, page, _width: int, _height: int
         ) -> list[dict[str, Any]]:
             """Check for common responsive layout issues."""
             issues = []

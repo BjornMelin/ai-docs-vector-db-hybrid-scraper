@@ -5,6 +5,7 @@ indicators, beautiful table displays, and interactive features.
 """
 
 import asyncio
+import json
 from typing import Any
 
 import click
@@ -13,6 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
@@ -169,10 +171,6 @@ def _display_collections_table(collections: list[dict[str, Any]], rich_cli):
 
 def _display_collections_json(collections: list[dict[str, Any]], rich_cli):
     """Display collections as JSON."""
-    import json
-
-    from rich.syntax import Syntax
-
     json_str = json.dumps(collections, indent=2, default=str)
     syntax = Syntax(json_str, "json", theme="monokai", line_numbers=True)
 

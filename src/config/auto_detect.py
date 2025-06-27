@@ -13,14 +13,12 @@ import asyncio
 import logging
 import os
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from urllib.parse import urlparse
+from typing import Any, Dict, List
 
 import httpx
 from pydantic import BaseModel, Field, computed_field
 
-from src.config.enums import DeploymentTier, Environment
+from src.config.enums import Environment
 
 
 # Delayed import to avoid circular dependency

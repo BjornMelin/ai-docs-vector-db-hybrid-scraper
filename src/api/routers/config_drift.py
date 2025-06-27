@@ -5,7 +5,7 @@ system, view drift events, manage alerting, and trigger manual drift checks.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -110,7 +110,7 @@ async def get_drift_status():
     summary="Run manual configuration drift detection",
     description="Trigger manual configuration drift detection and return results",
 )
-async def run_drift_detection(request: DriftDetectionRequest = DriftDetectionRequest()):
+async def run_drift_detection(_request: DriftDetectionRequest = DriftDetectionRequest()):
     """Run manual configuration drift detection."""
     try:
         with monitor_operation("api_config_drift_detect", category="api"):
@@ -142,10 +142,10 @@ async def run_drift_detection(request: DriftDetectionRequest = DriftDetectionReq
     description="Retrieve recent configuration drift events with filtering options",
 )
 async def get_drift_events(
-    limit: int = 50,
-    severity: str | None = None,
-    source: str | None = None,
-    hours: int = 24,
+    _limit: int = 50,
+    _severity: str | None = None,
+    _source: str | None = None,
+    _hours: int = 24,
 ):
     """Get recent configuration drift events.
 
@@ -212,7 +212,7 @@ async def get_drift_summary():
                     ],
                 },
                 "drift_statistics": drift_summary,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             return summary
@@ -248,7 +248,7 @@ async def check_drift_health():
                 "service_running": status["service_running"],
                 "detector_initialized": status["detector_initialized"],
                 "drift_detection_enabled": status["drift_detection_enabled"],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             if not healthy:

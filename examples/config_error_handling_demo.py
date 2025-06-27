@@ -165,11 +165,11 @@ def demonstrate_change_listeners():
             new_key = new_cfg.openai.api_key if new_cfg.openai.api_key else "None"
             print(f"Good listener: {old_key} -> {new_key}")
 
-        def bad_listener(old_cfg, new_cfg):
+        def bad_listener(_old_cfg, _new_cfg):
             print("Bad listener: about to fail...")
             raise RuntimeError("Listener failure!")
 
-        def another_good_listener(old_cfg, new_cfg):
+        def another_good_listener(_old_cfg, _new_cfg):
             print("Another good listener: still working!")
 
         manager.add_change_listener(good_listener)
