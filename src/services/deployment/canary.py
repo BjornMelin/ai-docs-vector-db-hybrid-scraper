@@ -199,7 +199,7 @@ class CanaryDeployment:
             logger.info("Canary deployment manager initialized successfully")
 
         except Exception as e:
-            logger.exception("Failed to initialize canary deployment manager: %s", e)
+            logger.exception("Failed to initialize canary deployment manager")
             self._initialized = False
             raise
 
@@ -368,7 +368,7 @@ class CanaryDeployment:
             return True
 
         except Exception as e:
-            logger.exception("Failed to promote canary %s: %s", deployment_id, e)
+            logger.exception("Failed to promote canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
 
@@ -406,7 +406,7 @@ class CanaryDeployment:
             return True
 
         except Exception as e:
-            logger.exception("Failed to rollback canary %s: %s", deployment_id, e)
+            logger.exception("Failed to rollback canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
 
@@ -509,7 +509,7 @@ class CanaryDeployment:
             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
         except Exception as e:
             logger.exception(
-                "Error monitoring canary deployment %s: %s", deployment_id, e
+                "Error monitoring canary deployment %s", deployment_id
             )
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
 
@@ -554,7 +554,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error updating metrics for canary %s: %s", deployment_id, e
+                "Error updating metrics for canary %s", deployment_id
             )
 
     async def _evaluate_success_criteria(self, deployment_id: str) -> bool:
@@ -586,7 +586,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error evaluating success criteria for canary %s: %s", deployment_id, e
+                "Error evaluating success criteria for canary %s", deployment_id
             )
             return False
 
@@ -633,7 +633,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error checking rollback conditions for canary %s: %s", deployment_id, e
+                "Error checking rollback conditions for canary %s", deployment_id
             )
             return False
 
@@ -659,7 +659,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Failed to update traffic split for %s: %s", deployment_id, e
+                "Failed to update traffic split for %s", deployment_id
             )
             raise
 
@@ -692,7 +692,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error completing canary deployment %s: %s", deployment_id, e
+                "Error completing canary deployment %s", deployment_id
             )
 
     async def _cleanup_deployment(self, deployment_id: str, delay_seconds: int) -> None:
@@ -709,7 +709,7 @@ class CanaryDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error cleaning up canary deployment %s: %s", deployment_id, e
+                "Error cleaning up canary deployment %s", deployment_id
             )
 
     async def _load_active_deployments(self) -> None:

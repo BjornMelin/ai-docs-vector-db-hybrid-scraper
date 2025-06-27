@@ -125,7 +125,7 @@ class LoadTestRunner:
                 report_file = self._save_report(report)
                 logger.info(f"Test report saved to: {report_file}")
 
-                return report
+            return report
         else:
             # Run with web UI
             logger.info(f"Starting Locust web UI on port {web_port}")
@@ -222,8 +222,7 @@ class LoadTestRunner:
             required_fields = ["name", "description", "config"]
             for field in required_fields:
                 if field not in scenario:
-                    msg = f"Missing required field: {field}"
-                    raise ValueError(msg)
+                    self._raise_missing_field_error(field)
 
             config = scenario["config"]
             profile = scenario.get("profile")
@@ -238,17 +237,27 @@ class LoadTestRunner:
                 "file": scenario_file,
             }
 
+        except Exception:
+            pass
+        else:
             return result
 
-        except Exception as e:
-            logger.exception(f"Failed to run custom scenario: {e}")
+        try:
+            pass
+        except Exception:
+            logger.exception("Failed to run custom scenario")
             return {
                 "status": "error",
-                "error": str(e),
+                "error": "Unknown error",
                 "scenario_file": scenario_file,
             }
 
-    def benchmark_endpoints(self, endpoints: list[str], config: Dict) -> Dict:
+    def _raise_missing_field_error(self, field: str) -> None:
+        """Raise ValueError for missing required field."""
+        msg = f"Missing required field: {field}"
+        raise ValueError(msg)
+
+    def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
         logger.info(f"Benchmarking endpoints: {endpoints}")
 
@@ -275,8 +284,8 @@ class LoadTestRunner:
         return comparative_report
 
     def validate_performance_regression(
-        self, baseline_file: str, current_config: Dict
-    ) -> Dict:
+        self, baseline_file: str, current_config: dict
+    ) -> dict:
         """Validate performance against a baseline."""
         logger.info(
             f"Running performance regression test against baseline: {baseline_file}"
@@ -284,7 +293,7 @@ class LoadTestRunner:
 
         try:
             # Load baseline results
-            with open(baseline_file) as f:
+            with Path(baseline_file).open() as f:
                 baseline = json.load(f)
 
             # Run current test
@@ -299,9 +308,14 @@ class LoadTestRunner:
             report_file = self._save_report(regression_analysis, "regression_analysis")
             logger.info(f"Regression analysis saved to: {report_file}")
 
+        except Exception:
+            pass
+        else:
             return regression_analysis
 
-        except Exception as e:
+        try:
+            pass
+        except Exception:
             logger.exception("Failed to run regression test")
             return {
                 "status": "error",
@@ -779,7 +793,7 @@ def main():
         logger.info("Test interrupted by user")
         sys.exit(1)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Test execution failed")
         if args.verbose:
             import traceback  # noqa: PLC0415

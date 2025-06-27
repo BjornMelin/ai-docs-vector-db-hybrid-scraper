@@ -668,7 +668,7 @@ def validate_deployment_readiness(
         }
 
     try:
-        with open(config_file) as f:
+        with config_file.open() as f:
             config = json.load(f)
 
         validator = ConfigurationValidator()

@@ -81,7 +81,7 @@ class ProjectStorage:
                         content = await f.read()
                 else:
                     # Fallback to synchronous read
-                    with open(self.storage_path) as f:
+                    with self.storage_path.open() as f:
                         content = f.read()
 
                 self._projects_cache = json.loads(content) if content else {}
@@ -143,7 +143,7 @@ class ProjectStorage:
                     await f.write(json.dumps(projects, indent=2, default=str))
             else:
                 # Fallback to synchronous write
-                with open(temp_path, "w") as f:
+                with temp_path.open("w") as f:
                     f.write(json.dumps(projects, indent=2, default=str))
 
             # Atomically replace the old file

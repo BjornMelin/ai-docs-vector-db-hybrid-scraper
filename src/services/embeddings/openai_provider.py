@@ -326,7 +326,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 os.fsync(f.fileno())
 
             # Upload file with rate limiting
-            with open(temp_file, "rb") as f:
+            with temp_file.open("rb") as f:
                 file_response = await self._upload_file_with_rate_limit(f, "batch")
 
             # Create batch with rate limiting

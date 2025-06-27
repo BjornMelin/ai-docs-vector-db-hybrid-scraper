@@ -101,7 +101,7 @@ async def get_drift_status():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve drift service status: {e!s}",
-        )
+        ) from e
 
 
 @router.post(
@@ -134,7 +134,7 @@ async def run_drift_detection(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to run drift detection: {e!s}",
-        )
+        ) from e
 
 
 @router.get(

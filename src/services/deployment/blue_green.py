@@ -150,7 +150,7 @@ class BlueGreenDeployment:
 
         except Exception as e:
             logger.exception(
-                "Failed to initialize blue-green deployment manager: %s", e
+                "Failed to initialize blue-green deployment manager"
             )
             self._initialized = False
             raise
@@ -262,7 +262,7 @@ class BlueGreenDeployment:
             return True
 
         except Exception as e:
-            logger.exception("Failed to switch environments: %s", e)
+            logger.exception("Failed to switch environments")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -291,7 +291,7 @@ class BlueGreenDeployment:
                 return False
 
         except Exception as e:
-            logger.exception("Error during rollback: %s", e)
+            logger.exception("Error during rollback")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -370,7 +370,7 @@ class BlueGreenDeployment:
                 logger.info("Automatic switch disabled, manual intervention required")
 
         except Exception as e:
-            logger.exception("Deployment failed: %s", e)
+            logger.exception("Deployment failed")
             self._deployment_status = BlueGreenStatus.FAILED
 
             # Automatic rollback on failure
@@ -407,7 +407,7 @@ class BlueGreenDeployment:
             )
 
         except Exception as e:
-            logger.exception("Failed to deploy to %s environment: %s", env.name, e)
+            logger.exception("Failed to deploy to %s environment", env.name)
             raise
 
     async def _perform_health_checks(
@@ -478,7 +478,7 @@ class BlueGreenDeployment:
             logger.info("Traffic switch completed")
 
         except Exception as e:
-            logger.exception("Failed to switch traffic: %s", e)
+            logger.exception("Failed to switch traffic")
             raise
 
     async def _health_check_loop(self) -> None:
@@ -495,7 +495,7 @@ class BlueGreenDeployment:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception("Error in health check loop: %s", e)
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(30)
 
     async def _check_environment_health(self, env: BlueGreenEnvironment) -> None:
@@ -508,7 +508,7 @@ class BlueGreenDeployment:
 
         except Exception as e:
             logger.exception(
-                "Error checking health for %s environment: %s", env.name, e
+                "Error checking health for %s environment", env.name
             )
 
     async def _load_environment_state(self) -> None:

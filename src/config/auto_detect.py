@@ -126,7 +126,7 @@ class AutoDetectedServices(BaseModel):
     """Container for all auto-detected services and environment."""
 
     environment: DetectedEnvironment = Field(description="Detected environment")
-    services: List[DetectedService] = Field(
+    services: list[DetectedService] = Field(
         default_factory=list, description="Detected services"
     )
     detection_started_at: float = Field(
@@ -138,7 +138,7 @@ class AutoDetectedServices(BaseModel):
     total_detection_time_ms: float | None = Field(
         None, description="Total detection time"
     )
-    errors: List[str] = Field(default_factory=list, description="Detection errors")
+    errors: list[str] = Field(default_factory=list, description="Detection errors")
 
     @computed_field
     @property

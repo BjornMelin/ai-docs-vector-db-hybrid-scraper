@@ -207,7 +207,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration rollback failed: {e!s}",
-        )
+        ) from e
     else:
         return response
 
@@ -246,7 +246,7 @@ async def get_reload_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve reload history: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/stats", response_model=ReloadStatsResponse)
@@ -270,7 +270,7 @@ async def get_reload_stats() -> ReloadStatsResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve reload statistics: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/status")
@@ -305,7 +305,7 @@ async def get_config_status() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve configuration status: {e!s}",
-        )
+        ) from e
     else:
         return status_info
 
@@ -343,7 +343,7 @@ async def enable_file_watching(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to enable file watching: {e!s}",
-        )
+        ) from e
 
 
 @router.post("/file-watch/disable")
@@ -362,7 +362,7 @@ async def disable_file_watching() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable file watching: {e!s}",
-        )
+        ) from e
     else:
         return {
             "file_watching_enabled": False,
@@ -411,4 +411,4 @@ async def list_config_backups() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve configuration backups: {e!s}",
-        )
+        ) from e
