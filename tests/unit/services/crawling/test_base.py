@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from src.services.crawling.base import CrawlProvider
+import inspect
 
 
 class TestCrawlProvider:
@@ -269,7 +270,6 @@ class TestCrawlProvider:
     def test_method_parameter_defaults(self):
         """Test default parameter values are correctly defined."""
         # Check crawl_site default parameters
-        import inspect
 
         sig = inspect.signature(CrawlProvider.crawl_site)
 

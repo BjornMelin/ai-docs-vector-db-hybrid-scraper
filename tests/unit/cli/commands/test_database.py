@@ -7,6 +7,9 @@ auto-completion, async operations, and Rich console output.
 from unittest.mock import MagicMock
 
 from src.cli.commands.database import complete_collection_name, database
+from src.cli.commands.database import complete_collection_name
+from src.cli.commands.database import complete_collection_name, database
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 
 class TestDatabaseCommandGroup:
@@ -27,7 +30,6 @@ class TestCollectionAutoCompletion:
 
     def test_complete_collection_name_function_exists(self):
         """Test that collection name completion function exists."""
-        from src.cli.commands.database import complete_collection_name
 
         assert complete_collection_name is not None
         assert callable(complete_collection_name)
@@ -208,7 +210,6 @@ class TestDatabaseIntegration:
 
     def test_database_imports(self):
         """Test that database module can be imported."""
-        from src.cli.commands.database import complete_collection_name, database
 
         assert database is not None
         assert complete_collection_name is not None
@@ -220,7 +221,6 @@ class TestProgressIndicators:
 
     def test_progress_imports_available(self):
         """Test that progress tracking modules can be imported."""
-        from rich.progress import Progress, SpinnerColumn, TextColumn
 
         assert Progress is not None
         assert SpinnerColumn is not None

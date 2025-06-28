@@ -15,6 +15,7 @@ import pytest
 
 from src.mcp_tools import tools
 from src.mcp_tools.tool_registry import register_all_tools
+from typing import TYPE_CHECKING
 
 
 class TestRegisterAllTools:
@@ -407,7 +408,6 @@ class TestToolRegistryIntegration:
     async def test_type_checking_compatibility(self):
         """Test that function signature is compatible with type hints."""
         # This test verifies the function can be called with properly typed arguments
-        from typing import TYPE_CHECKING
 
         if TYPE_CHECKING:
             from fastmcp import FastMCP

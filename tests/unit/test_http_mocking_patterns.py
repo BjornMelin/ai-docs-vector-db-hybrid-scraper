@@ -9,6 +9,7 @@ import pytest
 import respx
 
 from src.config import Config
+import asyncio
 
 
 class MockLightweightScraper:
@@ -354,7 +355,6 @@ class TestAsyncTestPatterns:
         Demonstrates testing concurrent behavior with
         proper async patterns.
         """
-        import asyncio
 
         async def mock_async_operation(delay: float, value: str) -> str:
             await asyncio.sleep(delay)
@@ -382,7 +382,6 @@ class TestAsyncTestPatterns:
         Demonstrates proper testing of async exception
         handling and error propagation.
         """
-        import asyncio
 
         async def failing_operation():
             await asyncio.sleep(0.01)  # Simulate async work

@@ -63,9 +63,9 @@ async def crawl_url(
                 f"Failed to crawl {url}: {result.get('error', 'Unknown error')}"
             )
 
-    except HTTPException:
+    except HTTPException as e:
         raise
-    except Exception:
+    except Exception as e:
         logger.exception(f"URL crawling failed for {url}")
         raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}") from e
     else:
@@ -121,9 +121,9 @@ async def crawl_site(
                 f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}"
             )
 
-    except HTTPException:
+    except HTTPException as e:
         raise
-    except Exception:
+    except Exception as e:
         logger.exception(f"Site crawling failed for {url}")
         raise HTTPException(
             status_code=500, detail=f"Site crawling failed: {e!s}"
@@ -327,9 +327,9 @@ async def batch_crawl_urls(
             f"using max {max_parallel} parallel operations"
         )
 
-    except HTTPException:
+    except HTTPException as e:
         raise
-    except Exception:
+    except Exception as e:
         logger.exception("Batch URL crawling failed")
         raise HTTPException(
             status_code=500, detail=f"Batch crawling failed: {e!s}"
@@ -383,7 +383,7 @@ async def validate_url(url: str) -> dict[str, Any]:
                 "details": {"domain": parsed.netloc},
             }
 
-    except Exception:
+    except Exception as e:
         logger.exception(f"URL validation failed for {url}")
         return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
     else:
@@ -455,7 +455,7 @@ async def estimate_crawl_cost(
             },
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Crawl cost estimation failed")
         return {
             "total_urls": len(urls),

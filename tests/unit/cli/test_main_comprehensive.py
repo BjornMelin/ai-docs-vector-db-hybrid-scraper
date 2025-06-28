@@ -11,6 +11,9 @@ import click
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
+import time
+import queue
+import threading
 
 
 class TestRichCLI:
@@ -346,7 +349,6 @@ class TestCLIPerformanceAndReliability:
 
     def test_cli_startup_performance(self, interactive_cli_runner):
         """Test that CLI starts up quickly."""
-        import time
 
         start_time = time.time()
 
@@ -393,8 +395,6 @@ class TestCLIPerformanceAndReliability:
 
     def test_concurrent_cli_usage(self, interactive_cli_runner):
         """Test that multiple CLI instances can run without conflicts."""
-        import queue
-        import threading
 
         results = queue.Queue()
 

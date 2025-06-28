@@ -194,7 +194,7 @@ class TestMCPPerformanceBenchmarks:
                         result = await operation_func(idx)
                         op_time = time.time() - op_start
                         return op_time, result
-                    except Exception:
+                    except Exception as e:
                         return None, e
 
                 batch_tasks.append(timed_operation(batch_start + i))

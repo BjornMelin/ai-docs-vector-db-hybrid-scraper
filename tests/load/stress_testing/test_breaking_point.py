@@ -1,3 +1,6 @@
+import random
+
+
 class TestError(Exception):
     """Custom exception for this module."""
 
@@ -463,8 +466,6 @@ class TestBreakingPointAnalysis:
                 total_error_rate = min(
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
-
-                import random
 
                 if random.random() < total_error_rate:
                     # Increase cascade level on error

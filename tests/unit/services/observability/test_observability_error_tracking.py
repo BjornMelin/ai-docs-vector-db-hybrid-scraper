@@ -475,7 +475,7 @@ class TestErrorMetrics:
                         _raise_value_error("Invalid API response")
                     elif error_type == "timeout_error":
                         _raise_timeout_error("Request timeout")
-            except Exception:
+            except Exception as e:
                 # Errors are expected and tracked by observability system
                 logger.debug(f"Expected error for observability tracking: {e}")
 

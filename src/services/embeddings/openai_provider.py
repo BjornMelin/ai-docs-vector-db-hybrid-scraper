@@ -109,7 +109,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
             self._initialized = True
             logger.info(f"OpenAI client initialized with model {self.model_name}")
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(
                 f"Failed to initialize OpenAI client: {e}"
             ) from e
@@ -202,7 +202,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
             return embeddings
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to generate embeddings for {len(texts)} texts: {e}",
                 exc_info=True,
@@ -337,7 +337,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")
             return batch_response.id
 
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(f"Failed to create batch job: {e}") from e
         finally:
             # Clean up temp file

@@ -141,7 +141,7 @@ def get_observability_config() -> ObservabilityConfig:
 
         return ObservabilityConfig(**config_dict)
 
-    except Exception:
+    except Exception as e:
         logger.warning(f"Could not load from main config, using defaults: {e}")
         return ObservabilityConfig()
 

@@ -44,7 +44,7 @@ class Crawl4AIAdapter(BaseService):
             await self._provider.initialize()
             self._initialized = True
             self.logger.info("Crawl4AI adapter initialized successfully")
-        except Exception:
+        except Exception as e:
             raise CrawlServiceError("Failed to initialize Crawl4AI adapter") from e
 
     async def cleanup(self) -> None:
@@ -121,7 +121,7 @@ class Crawl4AIAdapter(BaseService):
                     },
                 }
 
-        except Exception:
+        except Exception as e:
             self.logger.exception("Crawl4AI adapter error for {url}")
             return {
                 "success": False,

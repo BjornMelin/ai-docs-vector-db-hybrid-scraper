@@ -688,7 +688,7 @@ def validate_deployment_readiness(
         is_valid = validator.validate_config_schema(config, environment)
         summary = validator.get_validation_summary()
 
-    except Exception:
+    except Exception as e:
         return False, {
             "error": "Failed to load configuration",
             "passed": False,

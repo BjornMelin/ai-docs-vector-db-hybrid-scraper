@@ -168,7 +168,7 @@ class DatabaseManager:
                 self.query_monitor.record_success(query_start)
                 # Circuit breaker success is handled automatically in the call method
 
-            except Exception:
+            except Exception as e:
                 await session.rollback()
 
                 # Record failure for monitoring

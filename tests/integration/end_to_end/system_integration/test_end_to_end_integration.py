@@ -61,7 +61,7 @@ class IntegrationTestManager:
 
             return scenario_result
 
-        except Exception:
+        except Exception as e:
             scenario_result["total_duration_s"] = time.perf_counter() - start_time
             scenario_result["overall_success"] = False
             scenario_result["errors"].append(f"Scenario execution failed: {e!s}")

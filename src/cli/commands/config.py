@@ -71,7 +71,7 @@ def export(ctx: click.Context, output: str, format: str):
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")
-    except Exception:
+    except Exception as e:
         console.print(f"❌ Export failed: {e}", style="red")
 
 
@@ -90,7 +90,7 @@ def load(config_file: str, validate_only: bool):
             console.print(f"✅ Configuration loaded from {config_path}", style="green")
             _show_config_table(config_obj)
 
-    except Exception:
+    except Exception as e:
         console.print(f"❌ Failed to load configuration: {e}", style="red")
 
 
@@ -117,7 +117,7 @@ def validate(ctx: click.Context):
 
         console.print(table)
 
-    except Exception:
+    except Exception as e:
         console.print(f"❌ Configuration validation failed: {e}", style="red")
 
 

@@ -412,7 +412,7 @@ class BackgroundTaskManager:
 
             await self._handle_task_retry(task, result)
 
-        except Exception:
+        except Exception as e:
             # Task failed
             result.status = TaskStatus.FAILED
             result.error = str(e)

@@ -64,7 +64,7 @@ async def generate_answer(
         response = await generate_rag_answer(request)
         return response
 
-    except Exception:
+    except Exception as e:
         logger.exception("RAG answer generation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -96,7 +96,7 @@ async def get_metrics(
             "status": "success",
             "metrics": metrics,
         }
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to get RAG metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -125,7 +125,7 @@ async def clear_cache(
     try:
         result = await clear_rag_cache(rag_generator)
         return result
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to clear RAG cache")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -198,7 +198,7 @@ async def health_check(
         health_status["status"] = "healthy"
         health_status["connectivity_test"] = True
 
-    except Exception:
+    except Exception as e:
         health_status["status"] = "unhealthy"
         health_status["error"] = str(e)
         logger.warning("RAG health check failed")

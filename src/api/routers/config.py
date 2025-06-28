@@ -150,7 +150,7 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
             # This allows clients to get full operation details
             logger.warning(f"Configuration reload failed: {operation.error_message}")
 
-    except Exception:
+    except Exception as e:
         logger.exception("Unexpected error during configuration reload")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -200,9 +200,9 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         if not operation.success:
             _raise_rollback_error(operation)
 
-    except HTTPException:
+    except HTTPException as e:
         raise
-    except Exception:
+    except Exception as e:
         logger.exception("Unexpected error during configuration rollback")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -241,7 +241,7 @@ async def get_reload_history(
             limit=limit,
         )
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error retrieving reload history")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -265,7 +265,7 @@ async def get_reload_stats() -> ReloadStatsResponse:
 
         return ReloadStatsResponse(**stats)
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error retrieving reload statistics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -300,7 +300,7 @@ async def get_config_status() -> dict[str, Any]:
             },
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error retrieving configuration status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -338,7 +338,7 @@ async def enable_file_watching(
             "message": "Configuration file watching enabled",
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error enabling file watching")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -357,7 +357,7 @@ async def disable_file_watching() -> dict[str, Any]:
         reloader = get_config_reloader()
         await reloader.disable_file_watching()
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error disabling file watching")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -406,7 +406,7 @@ async def list_config_backups() -> dict[str, Any]:
             "max_backup_count": reloader.backup_count,
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Error retrieving configuration backups")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

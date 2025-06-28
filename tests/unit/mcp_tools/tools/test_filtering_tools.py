@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.mcp_tools.tools.filtering_tools import (
+from src.mcp_tools.tools.filtering_tools import register_filtering_tools
     CompositeFilterRequest,
     ContentTypeFilterRequest,
     MetadataFilterRequest,
@@ -419,7 +420,6 @@ class TestFilteringTools:
 
     def test_register_filtering_tools(self):
         """Test registration of filtering tools."""
-        from src.mcp_tools.tools.filtering_tools import register_filtering_tools
 
         mock_mcp = Mock()
         mock_client_manager = Mock()

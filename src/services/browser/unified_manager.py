@@ -17,8 +17,18 @@ from src.config import Config
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
-from ...services.cache.browser_cache import (
 
+# Optional imports that may not be available in all configurations
+try:
+    from ...infrastructure.client_manager import ClientManager
+except ImportError:
+    ClientManager = None
+
+try:
+    from ...services.cache.browser_cache import BrowserCache, BrowserCacheEntry
+except ImportError:
+    BrowserCache = None
+    BrowserCacheEntry = None
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +105,11 @@ class TierMetrics(BaseModel):
     success_rate: float = 0.0
 
 
+def _raise_client_manager_unavailable() -> None:
+    """Raise ImportError for ClientManager not available."""
+    raise ImportError("ClientManager not available")
+
+
 class UnifiedBrowserManager(BaseService):
     """Unified browser automation manager providing single interface to all 5 tiers.
 
@@ -152,7 +167,8 @@ class UnifiedBrowserManager(BaseService):
 
         try:
             # Get client manager and automation router
-            from ...infrastructure.client_manager import ClientManager
+            if ClientManager is None:
+                _raise_client_manager_unavailable()
 
             self._client_manager = ClientManager(self.config)
             await self._client_manager.initialize()
@@ -164,28 +180,30 @@ class UnifiedBrowserManager(BaseService):
 
             # Initialize browser cache if enabled
             if self._cache_enabled:
-                from ...services.cache.browser_cache import (
-                    BrowserCache,
-                )
+                if BrowserCache is None:
+                    logger.warning("BrowserCache not available, disabling cache")
+                    self._cache_enabled = False
+                else:
+                    # Get cache manager for underlying caches
+                    cache_manager = await self._client_manager.get_cache_manager()
 
-                # Get cache manager for underlying caches
-                cache_manager = await self._client_manager.get_cache_manager()
-
-                self._browser_cache = BrowserCache(
-                    local_cache=cache_manager.local_cache
-                    if hasattr(cache_manager, "local_cache")
-                    else None,
-                    distributed_cache=cache_manager.distributed_cache
-                    if hasattr(cache_manager, "distributed_cache")
-                    else None,
-                    default_ttl=getattr(self.config.cache, "browser_cache_ttl", 3600),
-                    dynamic_content_ttl=getattr(
-                        self.config.cache, "browser_dynamic_ttl", 300
-                    ),
-                    static_content_ttl=getattr(
-                        self.config.cache, "browser_static_ttl", 86400
-                    ),
-                )
+                    self._browser_cache = BrowserCache(
+                        local_cache=cache_manager.local_cache
+                        if hasattr(cache_manager, "local_cache")
+                        else None,
+                        distributed_cache=cache_manager.distributed_cache
+                        if hasattr(cache_manager, "distributed_cache")
+                        else None,
+                        default_ttl=getattr(
+                            self.config.cache, "browser_cache_ttl", 3600
+                        ),
+                        dynamic_content_ttl=getattr(
+                            self.config.cache, "browser_dynamic_ttl", 300
+                        ),
+                        static_content_ttl=getattr(
+                            self.config.cache, "browser_static_ttl", 86400
+                        ),
+                    )
                 logger.info("Browser caching enabled for UnifiedBrowserManager")
 
             # Start monitoring if enabled
@@ -196,7 +214,7 @@ class UnifiedBrowserManager(BaseService):
             self._initialized = True
             logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to initialize UnifiedBrowserManager")
             raise CrawlServiceError(
                 "Failed to initialize unified browser manager"
@@ -257,9 +275,6 @@ class UnifiedBrowserManager(BaseService):
             and self._browser_cache
             and not request.interaction_required
         ):
-                BrowserCacheEntry,
-            )
-
             try:
                 # Generate cache key
                 cache_key = self._browser_cache._generate_cache_key(
@@ -379,9 +394,11 @@ class UnifiedBrowserManager(BaseService):
                 and response.content_length > 0
             ):
                 try:
-                    from ...services.cache.browser_cache import (
-                        BrowserCacheEntry,
-                    )
+                    if BrowserCacheEntry is None:
+                        logger.warning(
+                            "BrowserCacheEntry not available, skipping cache"
+                        )
+                        return response
 
                     cache_entry = BrowserCacheEntry(
                         url=request.url,
@@ -409,9 +426,7 @@ class UnifiedBrowserManager(BaseService):
                 f"({execution_time:.1f}ms, quality: {quality_score:.2f})"
             )
 
-            return response
-
-        except Exception:
+        except Exception as e:
             execution_time = (time.time() - start_time) * 1000
             self._update_tier_metrics("unknown", False, execution_time)
 
@@ -438,6 +453,8 @@ class UnifiedBrowserManager(BaseService):
                 content_length=0,
                 error=str(e),
             )
+        else:
+            return response
 
     async def analyze_url(self, url: str) -> dict[str, Any]:
         """Analyze URL to determine optimal tier and provide insights.
@@ -473,15 +490,15 @@ class UnifiedBrowserManager(BaseService):
                 },
             }
 
-            return analysis
-
-        except Exception:
+        except Exception as e:
             logger.exception("URL analysis failed for {url}")
             return {
                 "url": url,
                 "error": str(e),
                 "recommended_tier": "crawl4ai",  # Safe default
             }
+        else:
+            return analysis
 
     def get_tier_metrics(self) -> dict[str, TierMetrics]:
         """Get performance metrics for all tiers.
@@ -529,7 +546,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 monitoring_health = self._monitor.get_system_health()
-            except Exception:
+            except Exception as e:
                 logger.warning("Failed to get monitoring health")
                 monitoring_health = {"error": str(e)}
 

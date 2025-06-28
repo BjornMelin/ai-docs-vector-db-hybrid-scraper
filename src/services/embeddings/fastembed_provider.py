@@ -125,7 +125,7 @@ class FastEmbedProvider(EmbeddingProvider):
                 f"FastEmbed initialized with model {self.model_name} "
                 f"({self._description})"
             )
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(f"Failed to initialize FastEmbed: {e}") from e
 
     async def cleanup(self) -> None:
@@ -184,7 +184,7 @@ class FastEmbedProvider(EmbeddingProvider):
             logger.debug(f"Generated {len(embeddings)} embeddings locally")
             return embeddings
 
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
     async def generate_sparse_embeddings(
@@ -220,7 +220,7 @@ class FastEmbedProvider(EmbeddingProvider):
                 sparse_embeddings.append(sparse_data)
 
             return sparse_embeddings
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(
                 f"Sparse embedding generation failed: {e}"
             ) from e

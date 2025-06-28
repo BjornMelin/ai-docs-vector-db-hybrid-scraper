@@ -813,7 +813,7 @@ class TestDisasterRecovery:
                     "test_duration": test_duration,
                     "timestamp": test_start,
                 }
-            except Exception:
+            except Exception as e:
                 return {
                     "test_successful": False,
                     "error": str(e),

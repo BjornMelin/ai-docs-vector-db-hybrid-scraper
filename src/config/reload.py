@@ -414,7 +414,7 @@ class ConfigReloader:
                     error_type="apply_failure",
                 )
 
-        except Exception:
+        except Exception as e:
             error_msg = f"Configuration reload failed: {e!s}"
             logger.exception(error_msg)
             operation.complete(False, error_msg)
@@ -430,7 +430,7 @@ class ConfigReloader:
             else:
                 # Load with environment variables (typical .env file)
                 return Config()
-        except Exception:
+        except Exception as e:
             raise ValueError(
                 f"Failed to load configuration from {config_source}: {e}"
             ) from e
@@ -472,7 +472,7 @@ class ConfigReloader:
 
         except ValidationError as e:
             errors.extend([f"Validation error: {error['msg']}" for error in e.errors()])
-        except Exception:
+        except Exception as e:
             errors.append(f"Unexpected validation error: {e!s}")
 
         return {"errors": errors, "warnings": warnings}
@@ -597,7 +597,7 @@ class ConfigReloader:
                 else:
                     operation.complete(False, "Failed to apply rollback configuration")
 
-            except Exception:
+            except Exception as e:
                 error_msg = f"Configuration rollback failed: {e!s}"
                 logger.exception(error_msg)
                 operation.complete(False, error_msg)

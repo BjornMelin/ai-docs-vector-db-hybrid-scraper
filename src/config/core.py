@@ -692,7 +692,7 @@ class Config(BaseSettings):
 
             return updated_config
 
-        except Exception:
+        except Exception as e:
             # Log error but don't fail configuration loading
 
             logger = logging.getLogger(__name__)

@@ -6,6 +6,7 @@ import pytest
 
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools.query_processing_tools import (
+from pydantic import ValidationError
     ClusteredSearchRequest,
     FederatedSearchRequest,
     OrchestrationRequest,
@@ -290,7 +291,6 @@ class TestQueryProcessingTools:
 
     def test_request_validation(self):
         """Test request model validation."""
-        from pydantic import ValidationError
 
         # Test QueryExpansionRequest validation
         with pytest.raises(ValidationError):

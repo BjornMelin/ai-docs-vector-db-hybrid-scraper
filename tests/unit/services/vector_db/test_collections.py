@@ -9,6 +9,9 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.collections import QdrantCollections
+from unittest.mock import PropertyMock
+from src.services.base import BaseService
+from src.services.errors import APIError
 
 
 class TestQdrantCollections:
@@ -442,7 +445,6 @@ class TestQdrantCollections:
 
     async def test_validate_hnsw_configuration_error(self, collections_service):
         """Test HNSW configuration validation with error."""
-        from unittest.mock import PropertyMock
 
         mock_collection_info = MagicMock()
         # Create a property that raises an exception when accessed
@@ -497,7 +499,6 @@ class TestQdrantCollections:
 
     async def test_inheritance_from_base_service(self, collections_service):
         """Test that QdrantCollections inherits from BaseService."""
-        from src.services.base import BaseService
 
         assert isinstance(collections_service, BaseService)
 
@@ -505,8 +506,6 @@ class TestQdrantCollections:
         """Test validation when service is not initialized."""
         service = QdrantCollections(mock_config, mock_client)
         service._initialized = False
-
-        from src.services.errors import APIError
 
         with pytest.raises(APIError, match="not initialized"):
             await service.create_collection("test", 1536)

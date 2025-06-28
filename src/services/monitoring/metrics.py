@@ -625,7 +625,7 @@ class MetricsRegistry:
                 # This is a placeholder for future implementation
                 pass
 
-        except Exception:
+        except Exception as e:
             # Log error but don't raise to avoid breaking monitoring
 
             logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")

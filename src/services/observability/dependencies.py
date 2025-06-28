@@ -218,7 +218,7 @@ async def get_observability_health(
 
         return health
 
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to get observability health")
         return {
             "enabled": False,

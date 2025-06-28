@@ -16,6 +16,7 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SpikeLoadProfile
+import random
 
 
 class TestError(Exception):
@@ -222,8 +223,6 @@ class TestBreakingPoints:
                 error_probability = max(
                     0, (current_users - self.error_threshold) / 1000
                 )
-
-                import random
 
                 if random.random() < error_probability:
                     raise TestError(f"Service overloaded at {current_users} users")

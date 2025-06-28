@@ -12,6 +12,7 @@ import yaml
 from src.config.config_manager import ConfigManager
 from src.config.core import Config
 from src.config.error_handling import get_degradation_handler
+from src.config.error_handling import ConfigLoadError
 
 
 @pytest.fixture
@@ -412,7 +413,6 @@ class TestAsyncErrorPropagation:
     @pytest.mark.asyncio
     async def test_async_error_context_preservation(self, config_dir):
         """Test that error context is preserved across async boundaries."""
-        from src.config.error_handling import ConfigLoadError
 
         config_file = config_dir / "missing.json"
 

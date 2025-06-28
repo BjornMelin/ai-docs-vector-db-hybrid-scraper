@@ -13,6 +13,7 @@ import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools.helpers.pipeline_factory import QueryProcessingPipelineFactory
+import inspect
 
 
 class MockContext:
@@ -148,7 +149,6 @@ class TestPipelineFactoryIntegration:
         assert hasattr(pipeline_factory, "client_manager")
 
         # Verify the create_pipeline method accepts the expected parameters
-        import inspect
 
         sig = inspect.signature(pipeline_factory.create_pipeline)
         params = list(sig.parameters.keys())
@@ -194,7 +194,6 @@ class TestPipelineFactoryRealWorld:
 
         # The factory should be able to handle None context
         # This is tested by verifying the method signature allows it
-        import inspect
 
         sig = inspect.signature(pipeline_factory.create_pipeline)
 

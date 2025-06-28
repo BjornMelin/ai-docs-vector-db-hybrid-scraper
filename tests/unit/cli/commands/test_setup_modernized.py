@@ -12,6 +12,7 @@ import pytest
 from rich.console import Console
 
 from src.cli.commands.setup import ConfigurationWizard, setup
+import tempfile
 
 
 @pytest.fixture
@@ -306,7 +307,6 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Create secure temporary files
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix="_profile_config.json", delete=False
@@ -378,7 +378,6 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Create secure temporary file
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix="_config.json", delete=False
@@ -466,7 +465,6 @@ class TestModernConfigurationWizard:
         wizard.profile_manager.profile_templates = {"personal": "personal-use"}
 
         # Create secure temporary file for display test
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix="_config.json", delete=False

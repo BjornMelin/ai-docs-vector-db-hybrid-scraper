@@ -157,7 +157,7 @@ def journey_executor():
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
 
-                    except Exception:
+                    except Exception as e:
                         error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
                         step_results.append(
@@ -856,7 +856,7 @@ def journey_data_manager():
                         await cleanup_func()
                     else:
                         cleanup_func()
-                except Exception:
+                except Exception as e:
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
@@ -865,7 +865,7 @@ def journey_data_manager():
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception:
+                except Exception as e:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
 
             # Clear artifacts

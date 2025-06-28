@@ -1340,7 +1340,7 @@ class TestHealthMonitoring:
 
                             health_results[service] = health_result
 
-                        except Exception:
+                        except Exception as e:
                             check_config["status"] = "error"
                             health_results[service] = {
                                 "status": "error",

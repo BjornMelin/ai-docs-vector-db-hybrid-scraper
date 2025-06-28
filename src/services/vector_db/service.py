@@ -79,7 +79,7 @@ class QdrantService(BaseService):
             self._initialized = True
             logger.info("QdrantService initialized with modular architecture")
 
-        except Exception:
+        except Exception as e:
             self._initialized = False
             raise QdrantServiceError(f"Failed to initialize QdrantService: {e}") from e
 
@@ -126,7 +126,7 @@ class QdrantService(BaseService):
 
                 logger.info("Initialized deployment services for QdrantService routing")
 
-        except Exception:
+        except Exception as e:
             logger.warning(
                 f"Failed to initialize deployment services: {e}. Continuing with standard mode."
             )
@@ -198,7 +198,7 @@ class QdrantService(BaseService):
                 logger.info(
                     f"Payload indexes created for collection: {collection_name}"
                 )
-            except Exception:
+            except Exception as e:
                 logger.warning(
                     f"Failed to create payload indexes for {collection_name}: {e}. "
                     "Collection created successfully but filtering may be slower."

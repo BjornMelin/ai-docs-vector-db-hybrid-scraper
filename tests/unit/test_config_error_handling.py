@@ -11,6 +11,7 @@ from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from src.config.config_manager import (
+from src.config.config_manager import (
     ConfigManager,
     create_and_load_config_async,
 )
@@ -502,7 +503,6 @@ class TestFileWatchingErrorHandling:
 
     def test_file_watch_error_callback(self, tmp_path):
         """Test file watch error callback."""
-        from src.config.config_manager import (
             ConfigFileWatcher as EnhancedConfigFileWatcher,
         )
 

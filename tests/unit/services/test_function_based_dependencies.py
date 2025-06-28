@@ -10,6 +10,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.services.dependencies import (
+from inspect import signature
+from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
+from src.services.errors import (
+from fastapi import FastAPI
+from src.services.dependencies import ConfigDep
     CrawlRequest,
     CrawlResponse,
     EmbeddingRequest,  # Pydantic Models
@@ -506,7 +511,6 @@ class TestComplexityReduction:
     def test_function_signature_simplicity(self):
         """Test that function signatures are simpler than class methods."""
         # Function-based approach has simple, focused signatures
-        from inspect import signature
 
         # Check generate_embeddings function signature
         sig = signature(generate_embeddings)
@@ -521,7 +525,6 @@ class TestComplexityReduction:
     def test_dependency_injection_clarity(self):
         """Test that dependency injection is explicit and clear."""
         # All dependencies are explicitly typed with Annotated
-        from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
 
         # Dependencies use clear naming convention
         assert str(EmbeddingManagerDep).startswith("typing.Annotated")
@@ -530,7 +533,6 @@ class TestComplexityReduction:
     def test_error_handling_consistency(self):
         """Test that error handling is consistent across functions."""
         # All service functions use consistent error types
-        from src.services.errors import (
             CrawlServiceError,
             EmbeddingServiceError,
             TaskQueueServiceError,
@@ -556,11 +558,9 @@ class TestIntegrationWithFastAPI:
     @pytest.mark.asyncio
     async def test_fastapi_dependency_resolution(self):
         """Test that FastAPI can resolve dependencies correctly."""
-        from fastapi import FastAPI
 
         app = FastAPI()
 
-        from src.services.dependencies import ConfigDep
 
         @app.get("/test-config")
         async def test_config_endpoint(config: ConfigDep):
@@ -572,7 +572,6 @@ class TestIntegrationWithFastAPI:
 
     def test_pydantic_integration(self):
         """Test that Pydantic models integrate well with FastAPI."""
-        from fastapi import FastAPI
 
         app = FastAPI()
 
@@ -585,7 +584,6 @@ class TestIntegrationWithFastAPI:
 
     def test_response_model_integration(self):
         """Test that response models work with FastAPI."""
-        from fastapi import FastAPI
 
         app = FastAPI()
 

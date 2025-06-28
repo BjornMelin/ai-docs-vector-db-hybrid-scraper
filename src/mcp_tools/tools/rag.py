@@ -168,7 +168,7 @@ def register_tools(app: FastMCP) -> None:
                 follow_up_questions=result.follow_up_questions,
             )
 
-        except Exception:
+        except Exception as e:
             logger.exception("RAG answer generation failed")
             raise RuntimeError("Failed to generate RAG answer") from e
 
@@ -208,7 +208,7 @@ def register_tools(app: FastMCP) -> None:
                 ),
             )
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to get RAG metrics")
             raise RuntimeError("Failed to get RAG metrics") from e
 
@@ -252,7 +252,7 @@ def register_tools(app: FastMCP) -> None:
             # Cleanup
             await rag_generator.cleanup()
 
-        except Exception:
+        except Exception as e:
             results["error"] = str(e)
             logger.exception("RAG configuration test failed")
 
@@ -286,7 +286,7 @@ def register_tools(app: FastMCP) -> None:
                 "message": "RAG answer cache cleared successfully",
             }
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to clear RAG cache")
             raise RuntimeError("Failed to clear RAG cache") from e
 

@@ -111,7 +111,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 error=result.error,
             )
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Content intelligence analysis failed: {e}")
             return ContentIntelligenceResult(
                 success=False,
@@ -170,7 +170,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Content classification failed: {e}")
 
             return ContentClassification(
@@ -233,7 +233,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Quality assessment failed: {e}")
             return QualityScore(
                 overall_score=0.1,
@@ -292,7 +292,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
                 word_count=len(request.content.split()),
@@ -353,7 +353,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Convert to serializable format
             return [rec.model_dump() for rec in recommendations]
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Adaptation recommendation failed: {e}")
             return []
 
@@ -398,7 +398,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return metrics
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Failed to retrieve metrics: {e}")
             return {
                 "service_available": False,

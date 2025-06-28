@@ -469,7 +469,7 @@ def network_latency_monitor():
                     }
                 )
 
-            except Exception:
+            except Exception as e:
                 latency = time.perf_counter() - start_time
 
                 if endpoint not in self.latency_measurements:

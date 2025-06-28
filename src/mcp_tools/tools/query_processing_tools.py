@@ -168,7 +168,7 @@ async def query_expansion_tool(
 
         return converted_results
 
-    except Exception:
+    except Exception as e:
         await ctx.error(f"Query expansion search failed: {e!s}")
         logger.error(f"Query expansion error: {e}", exc_info=True)
         raise
@@ -219,7 +219,7 @@ async def clustered_search_tool(
 
         return converted_results
 
-    except Exception:
+    except Exception as e:
         await ctx.error(f"Clustered search failed: {e!s}")
         logger.error(f"Clustered search error: {e}", exc_info=True)
         raise
@@ -270,7 +270,7 @@ async def federated_search_tool(
 
         return converted_results
 
-    except Exception:
+    except Exception as e:
         await ctx.error(f"Federated search failed: {e!s}")
         logger.error(f"Federated search error: {e}", exc_info=True)
         raise
@@ -324,7 +324,7 @@ async def personalized_search_tool(
 
         return converted_results
 
-    except Exception:
+    except Exception as e:
         await ctx.error(f"Personalized search failed: {e!s}")
         logger.error(f"Personalized search error: {e}", exc_info=True)
         raise
@@ -380,7 +380,7 @@ async def orchestrated_search_tool(
 
         return converted_results
 
-    except Exception:
+    except Exception as e:
         await ctx.error(f"Orchestrated search failed: {e!s}")
         logger.error(f"Orchestrated search error: {e}", exc_info=True)
         raise

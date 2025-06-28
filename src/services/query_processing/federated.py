@@ -711,7 +711,7 @@ class FederatedSearchService:
                 results.append(
                     self._create_error_result("Collection timeout", collection_name)
                 )
-            except Exception:
+            except Exception as e:
                 self._logger.exception("Search failed for collection {collection_name}")
                 results.append(self._create_error_result(str(e), collection_name))
 
@@ -813,7 +813,7 @@ class FederatedSearchService:
                 has_errors=False,
             )
 
-        except Exception:
+        except Exception as e:
             search_time = (time.time() - start_time) * 1000
             self._update_collection_performance(collection_name, search_time, False)
 

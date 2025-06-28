@@ -207,7 +207,7 @@ class EnhancedAutomationRouter(AutomationRouter):
             result["automation_time_ms"] = elapsed * 1000
             return result
 
-        except Exception:
+        except Exception as e:
             elapsed = time.time() - start_time
             logger.exception("{selected_tier} failed for {url}")
 
@@ -437,7 +437,7 @@ class EnhancedAutomationRouter(AutomationRouter):
                 result["automation_time_ms"] = elapsed * 1000
                 return result
 
-            except Exception:
+            except Exception as e:
                 elapsed = time.time() - start_time
                 logger.exception("Fallback {fallback_tier} also failed")
 

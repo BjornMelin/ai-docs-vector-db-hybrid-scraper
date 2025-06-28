@@ -138,7 +138,7 @@ class TestStressLoad:
             """Monitor for resource exhaustion indicators."""
             try:
                 return await mock_load_test_service.process_request(**kwargs)
-            except Exception:
+            except Exception as e:
                 error_msg = str(e).lower()
                 if "timeout" in error_msg:
                     resource_metrics["timeout_errors"] += 1
@@ -204,7 +204,7 @@ class TestStressLoad:
             try:
                 # Call multiple services
                 await services.call_service("cache")
-            except Exception:
+            except Exception as e:
                 # Check if failure is cascading
                 logger.warning(f"Service failure: {e}")
                 pass

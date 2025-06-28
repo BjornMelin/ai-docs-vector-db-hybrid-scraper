@@ -179,7 +179,7 @@ class HealthChecker:
             else:
                 return await self._check_generic_health(service, start_time)
 
-        except Exception:
+        except Exception as e:
             response_time_ms = (time.time() - start_time) * 1000
 
             self.logger.warning("Health check failed for {service.service_name}")
@@ -227,7 +227,7 @@ class HealthChecker:
 
         except ImportError:
             raise RuntimeError("redis package not available") from None
-        except Exception:
+        except Exception as e:
             raise RuntimeError("Redis health check failed") from e
 
     async def _check_qdrant_health(
@@ -272,7 +272,7 @@ class HealthChecker:
                     metadata=metadata,
                 )
 
-        except Exception:
+        except Exception as e:
             raise RuntimeError("Qdrant health check failed") from e
 
     async def _check_postgresql_health(
@@ -301,7 +301,7 @@ class HealthChecker:
                 },
             )
 
-        except Exception:
+        except Exception as e:
             raise RuntimeError("PostgreSQL health check failed") from e
 
     async def _check_generic_health(
@@ -350,7 +350,7 @@ class HealthChecker:
                     },
                 )
 
-        except Exception:
+        except Exception as e:
             raise RuntimeError("Generic health check failed") from e
 
     async def _monitor_loop(self) -> None:

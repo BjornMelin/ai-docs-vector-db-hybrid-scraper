@@ -331,7 +331,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception:
+        except Exception as e:
             await ctx.error("HyDE search {request_id} failed")
             logger.exception("HyDE search failed")
             # Fallback to regular search on error
@@ -387,7 +387,7 @@ def register_tools(mcp, client_manager: ClientManager):
             try:
                 hyde_engine = await client_manager.get_hyde_engine()
                 embedding_manager = await client_manager.get_embedding_manager()
-            except Exception:
+            except Exception as e:
                 if ctx:
                     await ctx.error("HyDE engine not available")
                 raise ValueError("HyDE engine not initialized") from e

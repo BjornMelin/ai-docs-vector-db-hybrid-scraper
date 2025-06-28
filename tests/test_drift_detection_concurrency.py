@@ -18,6 +18,8 @@ from typing import Any
 import pytest
 
 from src.config.drift_detection import (
+from src.config.drift_detection import DriftEvent, DriftType
+from src.config.drift_detection import ConfigSnapshot, DriftEvent, DriftType
     ConfigDriftDetector,
     DriftDetectionConfig,
     DriftSeverity,
@@ -132,7 +134,6 @@ class TestDriftDetectionConcurrency:
 
     def test_concurrent_alert_rate_limiting(self, detector: ConfigDriftDetector):
         """Test concurrent access to alert rate limiting."""
-        from src.config.drift_detection import DriftEvent, DriftType
 
         # Create a test event
         test_event = DriftEvent(
@@ -175,7 +176,6 @@ class TestDriftDetectionConcurrency:
 
     def test_concurrent_cleanup_operations(self, detector: ConfigDriftDetector):
         """Test concurrent cleanup operations don't corrupt data."""
-        from src.config.drift_detection import ConfigSnapshot, DriftEvent, DriftType
 
         # Add test data
         test_source = "test_cleanup"
@@ -240,7 +240,6 @@ class TestDriftDetectionConcurrency:
 
     def test_concurrent_summary_generation(self, detector: ConfigDriftDetector):
         """Test concurrent access to drift summary doesn't cause issues."""
-        from src.config.drift_detection import DriftEvent, DriftType
 
         # Add some test events
         with detector._events_lock:

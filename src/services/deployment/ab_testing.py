@@ -160,7 +160,7 @@ class ABTestingManager:
             self._initialized = True
             logger.info("A/B testing manager initialized successfully")
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to initialize A/B testing manager: %s", e)
             self._initialized = False
             raise
@@ -459,7 +459,7 @@ class ABTestingManager:
 
             return uplift, is_significant
 
-        except Exception:
+        except Exception as e:
             logger.exception("Error calculating statistical significance: %s", e)
             return None, False
 
@@ -475,7 +475,7 @@ class ABTestingManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception as e:
                 logger.exception("Error in A/B testing monitoring loop: %s", e)
                 await asyncio.sleep(60)
 
@@ -501,7 +501,7 @@ class ABTestingManager:
                     await self.stop_test(test_id, "Early winner detected")
                     return
 
-        except Exception:
+        except Exception as e:
             logger.exception("Error checking test completion for %s: %s", test_id, e)
 
     async def _load_active_tests(self) -> None:

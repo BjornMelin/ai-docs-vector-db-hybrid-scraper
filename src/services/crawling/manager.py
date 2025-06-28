@@ -56,7 +56,7 @@ class CrawlManager:
             self._initialized = True
             logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to initialize UnifiedBrowserManager")
             raise CrawlServiceError("Failed to initialize crawl manager") from e
 

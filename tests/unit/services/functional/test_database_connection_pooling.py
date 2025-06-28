@@ -188,7 +188,7 @@ class TestDatabaseConnectionPooling:
             try:
                 conn = await mock_pool.get_connection()
                 await mock_pool.release_connection(conn)
-            except Exception:
+            except Exception as e:
                 # Expected exception in stress test
                 logger.debug(f"Expected connection pool exception: {e}")
 

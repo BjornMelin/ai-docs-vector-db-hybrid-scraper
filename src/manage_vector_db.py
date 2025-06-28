@@ -120,7 +120,7 @@ class VectorDBManager:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
             return await qdrant_service.list_collections()
-        except Exception:
+        except Exception as e:
             console.print(f"❌ Error listing collections: {e}", style="red")
             return []
 
@@ -140,7 +140,7 @@ class VectorDBManager:
                 f"✅ Successfully created collection: {collection_name}", style="green"
             )
             return True
-        except Exception:
+        except Exception as e:
             console.print(
                 f"❌ Error creating collection {collection_name}: {e}", style="red"
             )
@@ -156,7 +156,7 @@ class VectorDBManager:
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
             return True
-        except Exception:
+        except Exception as e:
             console.print(
                 f"❌ Error deleting collection {collection_name}: {e}", style="red"
             )
@@ -177,7 +177,7 @@ class VectorDBManager:
                 vector_count=collection_info.vector_count,
                 vector_size=collection_info.vector_size,
             )
-        except Exception:
+        except Exception as e:
             console.print(
                 f"❌ Error getting collection info for {collection_name}: {e}",
                 style="red",
@@ -217,7 +217,7 @@ class VectorDBManager:
                 )
 
             return results
-        except Exception:
+        except Exception as e:
             console.print(f"❌ Error searching vectors: {e}", style="red")
             return []
 
@@ -249,7 +249,7 @@ class VectorDBManager:
                 total_vectors=total_vectors,
                 collections=collections,
             )
-        except Exception:
+        except Exception as e:
             console.print(f"❌ Error getting database stats: {e}", style="red")
             return None
 
@@ -279,7 +279,7 @@ class VectorDBManager:
                 f"✅ Successfully cleared collection: {collection_name}", style="green"
             )
             return True
-        except Exception:
+        except Exception as e:
             console.print(
                 f"❌ Error clearing collection {collection_name}: {e}", style="red"
             )
@@ -295,7 +295,7 @@ async def create_embeddings(text: str, embedding_manager) -> list[float]:
     try:
         embeddings = await embedding_manager.generate_embeddings([text])
         return embeddings[0] if embeddings else []
-    except Exception:
+    except Exception as e:
         console.print(f"❌ Error creating embeddings: {e}", style="red")
         return []
 

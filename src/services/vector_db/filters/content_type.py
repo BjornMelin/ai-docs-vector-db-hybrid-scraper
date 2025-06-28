@@ -352,7 +352,7 @@ class ContentTypeFilter(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception:
+        except Exception as e:
             error_msg = f"Failed to apply content type filter: {e}"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -635,7 +635,7 @@ class ContentTypeFilter(BaseFilter):
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
             return True
-        except Exception:
+        except Exception as e:
             self._logger.warning(f"Invalid content type criteria: {e}")
             return False
 

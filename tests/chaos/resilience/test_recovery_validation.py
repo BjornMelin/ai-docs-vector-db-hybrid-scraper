@@ -265,7 +265,7 @@ class TestRecoveryValidation:
 
                     return metrics
 
-                except Exception:
+                except Exception as e:
                     # Record failed recovery
                     self.recovery_history.append(
                         {
@@ -817,7 +817,7 @@ class TestRecoveryValidation:
                     try:
                         result = await check_func()
                         results[check_name] = {"status": "pass", "result": result}
-                    except Exception:
+                    except Exception as e:
                         results[check_name] = {"status": "fail", "error": str(e)}
 
                 # Calculate overall health score

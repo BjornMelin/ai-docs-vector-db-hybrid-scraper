@@ -27,6 +27,83 @@ except ImportError:
     get_config = None
     get_config_with_auto_detection = None
 
+# Optional service imports to avoid circular imports and missing dependencies
+try:
+    from src.services.vector_db.service import QdrantService
+except ImportError:
+    QdrantService = None
+
+try:
+    from src.services.embeddings.manager import EmbeddingManager
+except ImportError:
+    EmbeddingManager = None
+
+try:
+    from src.services.cache.manager import CacheManager
+except ImportError:
+    CacheManager = None
+
+try:
+    from src.services.crawling.manager import CrawlingManager
+except ImportError:
+    CrawlingManager = None
+
+try:
+    from src.services.hyde.config import HyDEConfig, create_default_hyde_config
+except ImportError:
+    HyDEConfig = None
+    create_default_hyde_config = None
+
+try:
+    from src.services.core.project_storage import ProjectStorageService
+except ImportError:
+    ProjectStorageService = None
+
+try:
+    from src.services.browser.browser_router import EnhancedAutomationRouter
+except ImportError:
+    EnhancedAutomationRouter = None
+
+try:
+    from src.services.task_queue.manager import TaskQueueManager
+except ImportError:
+    TaskQueueManager = None
+
+try:
+    from src.services.content_intelligence.service import ContentIntelligenceService
+except ImportError:
+    ContentIntelligenceService = None
+
+try:
+    from src.services.rag import RAGGenerator
+except ImportError:
+    RAGGenerator = None
+
+try:
+    from src.services.query_processing import QueryProcessor
+except ImportError:
+    QueryProcessor = None
+
+try:
+    from src.services.deployment.feature_flags import FeatureFlagManager
+except ImportError:
+    FeatureFlagManager = None
+
+try:
+    from src.services.deployment.ab_testing import ABTestingManager
+except ImportError:
+    ABTestingManager = None
+
+try:
+    from src.services.deployment.blue_green import BlueGreenDeploymentManager
+except ImportError:
+    BlueGreenDeploymentManager = None
+
+try:
+    from src.services.deployment.canary import CanaryDeploymentManager
+except ImportError:
+    CanaryDeploymentManager = None
+
 
 if TYPE_CHECKING:
     pass
@@ -299,9 +376,8 @@ class ClientManager:
 
             async with self._service_locks["qdrant_service"]:
                 if self._qdrant_service is None:
-                    from src.services.vector_db.service import (
-                        QdrantService,
-                    )
+                    if QdrantService is None:
+                        raise ImportError("QdrantService not available")
 
                     self._qdrant_service = QdrantService(
                         self.config, client_manager=self
@@ -810,7 +886,7 @@ class ClientManager:
 
                         logger.info(f"Created {name} client")
 
-                    except Exception:
+                    except Exception as e:
                         logger.exception(f"Failed to create {name} client")
                         raise APIError(f"Failed to create {name} client: {e}") from e
 
@@ -967,7 +1043,7 @@ class ClientManager:
                 await breaker.call(client.get_collections)
             else:
                 await client.get_collections()
-        except Exception:
+        except Exception as e:
             logger.warning(f"Qdrant health check failed: {e}")
             return False
         else:
@@ -986,7 +1062,7 @@ class ClientManager:
                 await breaker.call(client.models.list)
             else:
                 await client.models.list()
-        except Exception:
+        except Exception as e:
             logger.warning(f"OpenAI health check failed: {e}")
             return False
         else:
@@ -999,7 +1075,7 @@ class ClientManager:
             # Firecrawl doesn't have a direct health endpoint
             # We'll assume it's healthy if client exists
             return bool(client)
-        except Exception:
+        except Exception as e:
             logger.warning(f"Firecrawl health check failed: {e}")
             return False
 
@@ -1016,7 +1092,7 @@ class ClientManager:
                 await breaker.call(client.ping)
             else:
                 await client.ping()
-        except Exception:
+        except Exception as e:
             logger.warning(f"Redis health check failed: {e}")
             return False
         else:
@@ -1069,7 +1145,7 @@ class ClientManager:
         except TimeoutError:
             logger.exception(f"{name} health check timed out")
             self._update_health_failure(name, "Health check timeout")
-        except Exception:
+        except Exception as e:
             logger.exception(f"{name} health check error")
             self._update_health_failure(name, str(e))
 
@@ -1098,7 +1174,7 @@ class ClientManager:
 
             logger.info(f"Recreated {name} client after recovery")
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Failed to recreate {name} client: {e}")
 
     async def _health_check_loop(self) -> None:

@@ -14,6 +14,8 @@ from typing import Any, List
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
+from locust.env import Environment
+from locust.log import setup_logging
 
 
 logger = logging.getLogger(__name__)
@@ -714,8 +716,6 @@ def create_load_test_environment(
     Returns:
         Configured Locust environment
     """
-    from locust.env import Environment
-    from locust.log import setup_logging
 
     setup_logging("INFO", None)
 

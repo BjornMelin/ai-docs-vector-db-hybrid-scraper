@@ -14,6 +14,7 @@ from ..vector_db.service import QdrantService
 from .cache import HyDECache
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from .generator import HypotheticalDocumentGenerator
+import hashlib
 
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,7 @@ class HyDEQueryEngine(BaseService):
             self._initialized = True
             logger.info("HyDE query engine initialized")
 
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError("Failed to initialize HyDE engine") from e
 
     async def cleanup(self) -> None:
@@ -205,7 +206,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception:
+        except Exception as e:
             logger.error("HyDE search failed", exc_info=True)
 
             # Fallback to regular search if enabled
@@ -308,7 +309,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception:
+        except Exception as e:
             logger.exception("Query API search failed")
             raise QdrantServiceError("HyDE search execution failed") from e
 
@@ -358,7 +359,7 @@ class HyDEQueryEngine(BaseService):
 
             return results
 
-        except Exception:
+        except Exception as e:
             logger.exception("Fallback search failed")
             raise EmbeddingServiceError("Both HyDE and fallback search failed") from e
 
@@ -415,7 +416,6 @@ class HyDEQueryEngine(BaseService):
         """Determine if query should use HyDE for A/B testing."""
 
         # Simple hash-based assignment for consistent user experience
-        import hashlib
 
         query_hash = int(hashlib.sha256(query.encode()).hexdigest(), 16)
 

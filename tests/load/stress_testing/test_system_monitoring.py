@@ -161,7 +161,7 @@ class SystemMonitor:
                     m for m in self.application_metrics if m.timestamp > cutoff_time
                 ]
 
-            except Exception:
+            except Exception as e:
                 logger.warning(f"Error during monitoring: {e}")
 
             time.sleep(self.collection_interval)
@@ -549,7 +549,7 @@ class TestSystemMonitoring:
                             "cpu_tasks", len(self.cpu_intensive_tasks)
                         )
 
-                    except Exception:
+                    except Exception as e:
                         # Handle stress operation errors
                         logger.warning(f"Stress operation failed: {e}")
                         raise

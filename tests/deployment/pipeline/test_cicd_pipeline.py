@@ -520,7 +520,7 @@ class PipelineExecutor:
 
                     break
 
-        except Exception:
+        except Exception as e:
             result["success"] = False
             result["error"] = str(e)
 
@@ -563,7 +563,7 @@ class PipelineExecutor:
                 **stage_result,
             }
 
-        except Exception:
+        except Exception as e:
             end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time).total_seconds()
 
@@ -747,7 +747,7 @@ class DockerBuildManager:
 
             return result
 
-        except Exception:
+        except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -820,7 +820,7 @@ class PipelineTestExecutor:
                 **result,
             }
 
-        except Exception:
+        except Exception as e:
             return {
                 "success": False,
                 "test_type": test_type,

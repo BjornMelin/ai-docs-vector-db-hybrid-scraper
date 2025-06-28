@@ -11,6 +11,7 @@ import pytest
 from src.config import Config
 from src.models.vector_search import SPLADEConfig
 from src.services.vector_db.splade_provider import SPLADEProvider
+import math
 
 
 class TestSPLADEProvider:
@@ -110,7 +111,6 @@ class TestSPLADEProvider:
         assert normalized != unnormalized
 
         # Check that normalized vector has L2 norm ≈ 1
-        import math
 
         norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance

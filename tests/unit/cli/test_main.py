@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
+from src.cli.main import RichCLI
+from src.cli.main import main
 
 
 class TestRichCLI:
@@ -373,7 +375,6 @@ class TestCLIUtilities:
 
     def test_rich_cli_module_import(self):
         """Test that RichCLI can be imported and instantiated."""
-        from src.cli.main import RichCLI
 
         rich_cli = RichCLI()
         assert rich_cli is not None
@@ -383,7 +384,6 @@ class TestCLIUtilities:
 
     def test_main_command_import(self):
         """Test that main command can be imported."""
-        from src.cli.main import main
 
         assert main is not None
         assert hasattr(main, "invoke")
@@ -391,7 +391,6 @@ class TestCLIUtilities:
 
     def test_command_registration(self):
         """Test that all commands are properly registered."""
-        from src.cli.main import main
 
         # Verify expected commands are registered
         command_names = list(main.commands.keys())

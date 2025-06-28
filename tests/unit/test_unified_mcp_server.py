@@ -5,6 +5,11 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import sys
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.tool_registry import register_all_tools
+from src.services.logging_config import configure_logging
+from fastmcp import FastMCP
 
 
 # Mock problematic imports before importing the module
@@ -511,7 +516,7 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 pass
-        except Exception:
+        except Exception as e:
             # Exception expected during lifespan test
             logger.debug(f"Expected lifespan test exception: {e}")
 
@@ -562,13 +567,11 @@ class TestServerConfiguration:
     def test_logging_configuration(self):
         """Test that logging is configured on import."""
         # Since we mocked the import, we just verify the mock exists
-        import sys
 
         assert "src.services.logging_config" in sys.modules
 
     def test_sys_path_setup(self):
         """Test that sys path is properly configured."""
-        import sys
 
         # The path should be in sys.path (added during import)
         # We can't assert exact position due to import order
@@ -581,9 +584,6 @@ class TestImportAndModuleStructure:
     def test_all_required_imports(self):
         """Test that all required modules can be imported."""
         # These imports should work without errors
-        from src.infrastructure.client_manager import ClientManager
-        from src.mcp_tools.tool_registry import register_all_tools
-        from src.services.logging_config import configure_logging
 
         assert ClientManager is not None
         assert register_all_tools is not None
@@ -591,7 +591,6 @@ class TestImportAndModuleStructure:
 
     def test_fastmcp_import(self):
         """Test that FastMCP can be imported."""
-        from fastmcp import FastMCP
 
         assert FastMCP is not None
 

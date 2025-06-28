@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.query_processing.models import (
+import asyncio
     MatryoshkaDimension,
     QueryComplexity,
     QueryIntent,
@@ -511,7 +512,6 @@ class TestQueryProcessingIntegration:
 
     async def test_concurrent_processing_integration(self, complete_pipeline):
         """Test concurrent processing with integrated system."""
-        import asyncio
 
         requests = [
             QueryProcessingRequest(

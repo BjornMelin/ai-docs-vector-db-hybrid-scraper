@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
+from src.config.security import ConfigAccessLevel
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -449,7 +450,6 @@ class TestConfigEnumerations:
 
     def test_config_access_level_enum(self):
         """Test ConfigAccessLevel enum."""
-        from src.config.security import ConfigAccessLevel
 
         expected_levels = {
             ConfigAccessLevel.READ_ONLY,

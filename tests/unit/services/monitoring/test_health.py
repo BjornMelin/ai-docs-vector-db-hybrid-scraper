@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.services.monitoring.health import (
+from src.services.monitoring.health import HTTPHealthCheck
     HealthCheckConfig,
     HealthCheckManager,
     HealthCheckResult,
@@ -380,7 +381,6 @@ class TestHealthCheckManager:
     async def test_health_check_timeout(self, manager):
         """Test health check timeout handling."""
         # Create a real health check instance that will timeout
-        from src.services.monitoring.health import HTTPHealthCheck
 
         # Use a slow/invalid URL that will timeout
         slow_check = HTTPHealthCheck(

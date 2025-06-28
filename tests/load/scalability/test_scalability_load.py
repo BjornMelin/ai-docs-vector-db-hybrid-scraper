@@ -15,6 +15,7 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import LoadStage, StepLoadProfile
+import random
 
 
 logger = logging.getLogger(__name__)
@@ -677,7 +678,6 @@ class TestScalabilityLoad:
             ]
 
             # Select operation based on probabilities
-            import random
 
             rand = random.random()
             cumulative = 0

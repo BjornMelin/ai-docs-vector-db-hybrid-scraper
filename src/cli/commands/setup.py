@@ -312,7 +312,7 @@ class ConfigurationWizard:
 
             return config_path
 
-        except Exception:
+        except Exception as e:
             self.console.print(f"❌ Error saving configuration: [red]{e}[/red]")
             raise
 
@@ -380,7 +380,7 @@ class ConfigurationWizard:
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
             raise click.Abort() from None
-        except Exception:
+        except Exception as e:
             self.console.print(f"\n[red]Setup failed: {e}[/red]")
             raise
 
@@ -510,9 +510,9 @@ def setup(
                 config_data = json.loads(config_path.read_text())
                 wizard.validator.validate_and_show_errors(config_data)
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")
         raise click.Abort() from None
-    except Exception:
+    except Exception as e:
         console.print(f"\n[red]Setup failed: {e}[/red]")
         raise click.Abort() from e

@@ -175,7 +175,7 @@ class PerformanceProfiler:
                 # Small delay between queries
                 await asyncio.sleep(0.1)
 
-            except Exception:
+            except Exception as e:
                 logger.debug(f"Query execution failed during profiling: {e}")
 
     async def _monitor_resources(self) -> None:
@@ -232,7 +232,7 @@ class PerformanceProfiler:
 
                 self.resource_snapshots.append(snapshot)
 
-            except Exception:
+            except Exception as e:
                 logger.warning(f"Error collecting resource snapshot: {e}")
 
             await asyncio.sleep(self.sampling_interval)

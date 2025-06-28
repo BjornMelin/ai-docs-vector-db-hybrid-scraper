@@ -294,7 +294,7 @@ class QualityAssessor:
 
             return relevance_score
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Relevance assessment failed: {e}")
             return 0.5
 
@@ -387,7 +387,7 @@ class QualityAssessor:
                     elif isinstance(last_modified, datetime):
                         days_old = (now - last_modified).days
                         return self._calculate_freshness_score(days_old)
-                except Exception:
+                except Exception as e:
                     logger.debug(f"Failed to parse last_modified date: {e}")
 
         # Try to extract dates from content
@@ -675,7 +675,7 @@ class QualityAssessor:
 
             return max_similarity
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Duplicate similarity assessment failed: {e}")
             return 0.0
 

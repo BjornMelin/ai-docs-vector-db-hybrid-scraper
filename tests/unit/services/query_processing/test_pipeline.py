@@ -1,3 +1,8 @@
+import asyncio
+from src.services.errors import APIError
+import time
+
+
 class TestError(Exception):
     """Custom exception for this module."""
 
@@ -317,7 +322,6 @@ class TestQueryProcessingPipeline:
 
     async def test_concurrent_processing(self, initialized_pipeline):
         """Test concurrent query processing."""
-        import asyncio
 
         requests = [
             QueryProcessingRequest(
@@ -350,7 +354,6 @@ class TestQueryProcessingPipeline:
         self, initialized_pipeline, mock_orchestrator
     ):
         """Test handling of processing timeouts."""
-        import asyncio
 
         # Mock a slow response
         async def slow_process(*_args, **_kwargs):
@@ -589,7 +592,6 @@ class TestAdvancedProcessing:
 
     async def test_process_advanced_uninitialized_raises_error(self, pipeline):
         """Test process_advanced with uninitialized pipeline."""
-        from src.services.errors import APIError
 
         request = QueryProcessingRequest(query="test")
 
@@ -671,7 +673,6 @@ class TestBatchProcessing:
 
     async def test_batch_processing_uninitialized_raises_error(self, pipeline):
         """Test batch processing with uninitialized pipeline."""
-        from src.services.errors import APIError
 
         requests = [QueryProcessingRequest(query="test")]
 
@@ -736,7 +737,6 @@ class TestQueryAnalysis:
 
     async def test_analyze_query_uninitialized_raises_error(self, pipeline):
         """Test query analysis with uninitialized pipeline."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await pipeline.analyze_query("test query")
@@ -902,7 +902,6 @@ class TestWarmUp:
 
     async def test_warm_up_uninitialized_raises_error(self, pipeline):
         """Test warm-up with uninitialized pipeline."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await pipeline.warm_up()
@@ -1367,7 +1366,6 @@ class TestAdditionalEdgeCases:
 
     async def test_warmup_timing_measurement(self, initialized_pipeline):
         """Test that warmup properly measures timing."""
-        import time
 
         start_time = time.time()
         result = await initialized_pipeline.warm_up()

@@ -203,7 +203,7 @@ class LoadTestRunner:
                 "command": " ".join(cmd),
             }
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to run pytest tests")
             return {
                 "status": "error",

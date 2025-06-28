@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.services.query_processing.expansion import (
+import asyncio
     ExpandedTerm,
     ExpansionScope,
     ExpansionStrategy,
@@ -870,7 +871,6 @@ class TestQueryExpansionService:
             strategy=ExpansionStrategy.SEMANTIC_BASED,
         )
 
-        import asyncio
 
         result = asyncio.run(service._semantic_expansion(key_terms, request))
         assert result == []
@@ -887,7 +887,6 @@ class TestQueryExpansionService:
             target_domains=["programming"],
         )
 
-        import asyncio
 
         result = asyncio.run(service._domain_specific_expansion(key_terms, request))
         assert result == []

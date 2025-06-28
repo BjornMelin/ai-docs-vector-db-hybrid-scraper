@@ -185,7 +185,7 @@ class TaskQueueManager(BaseService):
                 "error": str(job.error) if job.error else None,
             }
 
-        except Exception:
+        except Exception as e:
             logger.exception("Error getting job status")
             return {"status": "error", "message": str(e)}
 

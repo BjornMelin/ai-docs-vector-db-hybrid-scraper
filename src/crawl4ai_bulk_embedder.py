@@ -302,7 +302,7 @@ class BulkEmbedder:
             result["success"] = True
             result["chunks"] = len(chunks)
 
-        except Exception:
+        except Exception as e:
             result["error"] = str(e)
             logger.exception("Failed to process {url}")
 

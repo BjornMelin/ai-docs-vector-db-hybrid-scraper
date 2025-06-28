@@ -113,7 +113,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception:
+        except Exception as e:
             # Calculate processing time for error case
             end_time = time.perf_counter()
             duration = end_time - start_time
@@ -158,7 +158,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body = await self._get_request_body(request)
                 if body:
                     log_data["request_body"] = body
-            except Exception:
+            except Exception as e:
                 log_data["request_body_error"] = str(e)
 
         logger.info("Incoming request", extra=log_data)
@@ -194,7 +194,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body = self._get_response_body(response)
                 if body:
                     log_data["response_body"] = body
-            except Exception:
+            except Exception as e:
                 log_data["response_body_error"] = str(e)
 
         # Choose log level based on status code
@@ -381,7 +381,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
                 return response
 
-            except Exception:
+            except Exception as e:
                 # Record exception in span
                 span.record_exception(e)
                 span.set_status(self.Status(self.StatusCode.ERROR, str(e)))

@@ -134,7 +134,7 @@ class OperationQueue:
                 try:
                     op.function(*op.args, **op.kwargs)
                     progress.console.print(f"✅ {op.name}")
-                except Exception:
+                except Exception as e:
                     progress.console.print(f"❌ {op.name}: {e}")
                     return False
 
@@ -251,7 +251,7 @@ def index_documents(
         )
         rich_cli.console.print(panel)
 
-    except Exception:
+    except Exception as e:
         rich_cli.show_error("Batch indexing failed", str(e))
         raise click.Abort() from e
 

@@ -76,7 +76,7 @@ class TestAsyncConfigurationLoading:
             try:
                 config = Config.model_validate(config_data)
                 return config, None
-            except Exception:
+            except Exception as e:
                 return None, str(e)
 
         # Valid config

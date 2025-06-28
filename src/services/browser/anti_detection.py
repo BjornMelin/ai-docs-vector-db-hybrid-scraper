@@ -233,7 +233,7 @@ class SessionManager:
         try:
             with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
-        except Exception:
+        except Exception as e:
             logger.debug(f"Failed to save session {session.session_id}: {e}")
 
     def update_session_data(

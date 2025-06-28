@@ -316,7 +316,7 @@ class TestAPIWorkflowValidation:
 
             assert "projects" in projects_response, "Should return projects list"
 
-        except Exception:
+        except Exception as e:
             auth_steps.append(
                 {
                     "step": "error",
@@ -461,7 +461,7 @@ class TestAPIWorkflowValidation:
 
             assert "stats" in stats_response, "Should return analytics stats"
 
-        except Exception:
+        except Exception as e:
             doc_mgmt_steps.append(
                 {
                     "step": "error",
@@ -603,7 +603,7 @@ class TestAPIWorkflowValidation:
                 }
             )
 
-        except Exception:
+        except Exception as e:
             search_steps.append(
                 {
                     "step": "error",
@@ -697,7 +697,7 @@ class TestAPIWorkflowValidation:
                         }
                     )
 
-                except Exception:
+                except Exception as e:
                     # Request failed
                     error_test_results.append(
                         {
@@ -758,7 +758,7 @@ class TestAPIWorkflowValidation:
                 "Core functionality should work during partial failures"
             )
 
-        except Exception:
+        except Exception as e:
             error_handling_steps.append(
                 {
                     "step": "error",
@@ -924,7 +924,7 @@ class TestAPIWorkflowValidation:
                             "success": True,
                         }
                     )
-                except Exception:
+                except Exception as e:
                     rate_test_results.append(
                         {
                             "request_index": i,
@@ -957,7 +957,7 @@ class TestAPIWorkflowValidation:
                 }
             )
 
-        except Exception:
+        except Exception as e:
             performance_steps.append(
                 {
                     "step": "error",
@@ -1163,7 +1163,7 @@ class TestAPIWorkflowValidation:
                 }
             )
 
-        except Exception:
+        except Exception as e:
             integration_steps.append(
                 {
                     "step": "error",

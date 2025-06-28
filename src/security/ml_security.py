@@ -144,7 +144,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
 
-        except Exception:
+        except Exception as e:
             logger.exception("Input validation error")
             result = SecurityCheckResult(
                 check_type="input_validation",
@@ -188,6 +188,10 @@ class MLSecurityValidator:
                 )
                 self.checks_performed.append(result)
                 return result
+
+            # Validate executable path for security
+            if not pip_audit_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
+                logger.warning(f"pip-audit found in unexpected location: {pip_audit_path}")
 
             result = subprocess.run(
                 [pip_audit_path, "--format", "json"],
@@ -274,6 +278,10 @@ class MLSecurityValidator:
                 )
                 self.checks_performed.append(result)
                 return result
+
+            # Validate executable path for security
+            if not trivy_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
+                logger.warning(f"trivy found in unexpected location: {trivy_path}")
 
             # Validate image name for security
             if not image_name or ".." in image_name or "/" not in image_name:

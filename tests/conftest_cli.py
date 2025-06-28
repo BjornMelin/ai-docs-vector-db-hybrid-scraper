@@ -9,6 +9,10 @@ import sys
 from pathlib import Path
 
 import pytest
+import time
+from click.testing import CliRunner
+import re
+from unittest.mock import patch
 
 
 # Add src to Python path for testing
@@ -114,7 +118,6 @@ def mock_questionary_dependencies():
 @pytest.fixture
 def performance_timer():
     """Timer for performance testing."""
-    import time
 
     class Timer:
         def __init__(self):
@@ -231,7 +234,6 @@ def cli_error_scenarios():
 @pytest.fixture
 def cli_command_tester():
     """Helper for testing CLI commands."""
-    from click.testing import CliRunner
 
     class CLICommandTester:
         def __init__(self):
@@ -268,7 +270,6 @@ def rich_testing_utils():
         def extract_text_content(rich_output):
             """Extract plain text from Rich output."""
             # Remove ANSI escape codes
-            import re
 
             ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
             return ansi_escape.sub("", rich_output)
@@ -304,7 +305,6 @@ def questionary_testing_utils():
         @staticmethod
         def simulate_user_flow(responses_dict):
             """Simulate a complete user interaction flow."""
-            from unittest.mock import patch
 
             patches = []
 

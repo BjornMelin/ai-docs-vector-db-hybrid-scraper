@@ -309,7 +309,7 @@ class DeploymentTestOrchestrator:
                     failed_categories.append(category)
                     overall_success = False
 
-            except Exception:
+            except Exception as e:
                 category_results[category] = {
                     "success": False,
                     "error": str(e),
@@ -326,7 +326,7 @@ class DeploymentTestOrchestrator:
                 category_results[category] = category_result
                 # Optional categories don't affect overall success
 
-            except Exception:
+            except Exception as e:
                 category_results[category] = {
                     "success": False,
                     "error": str(e),

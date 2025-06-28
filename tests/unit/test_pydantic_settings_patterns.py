@@ -14,6 +14,9 @@ from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config import Config
+from datetime import datetime
+from pydantic import field_validator
+import asyncio
 
 
 class TestPydanticSettingsPatterns:
@@ -292,7 +295,6 @@ class TestPydanticSettingsPatterns:
         Verifies that dynamic defaults work correctly with
         pydantic-settings.
         """
-        from datetime import datetime
 
         class DynamicSettings(BaseSettings):
             created_at: datetime = Field(default_factory=datetime.now)
@@ -310,7 +312,6 @@ class TestPydanticSettingsPatterns:
         Verifies that custom validators work properly with
         pydantic-settings.
         """
-        from pydantic import field_validator
 
         class CustomValidatedSettings(BaseSettings):
             email: str = Field(description="User email address")
@@ -391,7 +392,6 @@ class TestConfigurationIntegrationPatterns:
                 """Simulate loading config from remote source."""
                 # In real implementation, this would make HTTP requests
                 # or database queries
-                import asyncio
 
                 await asyncio.sleep(0.01)  # Simulate network delay
                 return {

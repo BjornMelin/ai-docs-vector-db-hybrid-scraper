@@ -63,7 +63,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.debug(
                             f"Retrieved info for collection {collection_name}: {info.vectors_count} vectors"
                         )
-                except Exception:
+                except Exception as e:
                     logger.exception(
                         f"Failed to get info for collection {collection_name}"
                     )
@@ -80,7 +80,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return [CollectionInfo(**c) for c in collection_info]
 
-        except Exception:
+        except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to list collections: {e}")
             logger.exception("Failed to list collections")
@@ -119,7 +119,7 @@ def register_tools(mcp, client_manager: ClientManager):
             return CollectionOperationResponse(
                 status="deleted", collection=collection_name
             )
-        except Exception:
+        except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to delete collection {collection_name}: {e}")
             logger.exception(f"Failed to delete collection {collection_name}")
@@ -161,7 +161,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     "indexed_vectors_count": info.indexed_vectors_count,
                 },
             )
-        except Exception:
+        except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to optimize collection {collection_name}: {e}")
             logger.exception(f"Failed to optimize collection {collection_name}")

@@ -13,6 +13,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+import re
 
 
 class SecurityTestRunner:
@@ -91,7 +92,7 @@ class SecurityTestRunner:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
                     self.logger.info("Completed {category} tests")
-                except Exception:
+                except Exception as e:
                     self.logger.exception("Error in {category} tests")
                     results["test_categories"][category] = {
                         "status": "error",
@@ -228,7 +229,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Bandit analysis timed out"}
-        except Exception:
+        except Exception as e:
             return {"status": "error", "error": str(e)}
 
     def _run_dependency_scan(self) -> dict[str, Any]:
@@ -283,7 +284,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Safety scan timed out"}
-        except Exception:
+        except Exception as e:
             return {"status": "error", "error": str(e)}
 
     def _run_pytest_category(
@@ -387,7 +388,7 @@ class SecurityTestRunner:
                 "tests_passed": 0,
                 "tests_failed": 1,
             }
-        except Exception:
+        except Exception as e:
             return {
                 "status": "error",
                 "error": str(e),
@@ -398,7 +399,6 @@ class SecurityTestRunner:
 
     def _extract_count(self, text: str, keyword: str) -> int:
         """Extract test count from pytest summary line."""
-        import re
 
         pattern = rf"(\d+)\s+{keyword}"
         match = re.search(pattern, text)

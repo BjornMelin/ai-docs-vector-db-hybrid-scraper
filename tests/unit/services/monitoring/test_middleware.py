@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from src.services.monitoring.middleware import (
+import threading
     CustomMetricsMiddleware,
     PrometheusMiddleware,
 )
@@ -370,7 +371,6 @@ class TestMiddlewareIntegration:
 
     def test_concurrent_request_monitoring(self, full_monitoring_app):
         """Test monitoring under concurrent load."""
-        import threading
 
         client = TestClient(full_monitoring_app)
         results = []

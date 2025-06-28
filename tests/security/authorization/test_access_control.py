@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from src.security import SecurityError
+import time
 
 
 @pytest.mark.security
@@ -564,7 +565,6 @@ class TestAccessControl:
         delegation_system = PermissionDelegation()
 
         # Admin delegates write permission to user
-        import time
 
         current_time = int(time.time())
         expiry_time = current_time + 3600  # 1 hour

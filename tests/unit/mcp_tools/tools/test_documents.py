@@ -231,7 +231,7 @@ class TestAddDocument:
             try:
                 await tool_func(sample_document_request, mock_context)
                 raise AssertionError("Expected ValueError to be raised")
-            except Exception:
+            except Exception as e:
                 # Verify error is propagated correctly
                 assert "URL not allowed" in str(e)
 
@@ -329,7 +329,7 @@ class TestAddDocument:
             try:
                 await tool_func(sample_document_request, mock_context)
                 raise AssertionError("Expected Exception to be raised")
-            except Exception:
+            except Exception as e:
                 # Verify error relates to embedding failure
                 assert "Embedding service error" in str(e)
 
@@ -372,7 +372,7 @@ class TestAddDocument:
             try:
                 await tool_func(sample_document_request, mock_context)
                 raise AssertionError("Expected Exception to be raised")
-            except Exception:
+            except Exception as e:
                 # Verify error relates to vector DB failure
                 assert "Vector DB storage error" in str(e)
 

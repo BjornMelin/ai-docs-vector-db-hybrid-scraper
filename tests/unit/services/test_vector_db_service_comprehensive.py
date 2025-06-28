@@ -15,6 +15,8 @@ from src.config.core import Config
 from src.config.enums import Environment, LogLevel
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService
+from src.services.base import BaseService
+import time
 
 
 @contextmanager
@@ -548,7 +550,6 @@ class TestQdrantService:
             qdrant_service: QdrantService instance for testing
         """
         # Import BaseService to check inheritance
-        from src.services.base import BaseService
 
         assert isinstance(qdrant_service, BaseService)
         assert hasattr(qdrant_service, "_initialized")
@@ -729,7 +730,6 @@ class TestQdrantServicePerformance:
             mock_client_manager: Mock ClientManager instance
             mock_qdrant_client: Mock Qdrant client
         """
-        import time
 
         mock_client_manager.get_qdrant_client.return_value = mock_qdrant_client
 

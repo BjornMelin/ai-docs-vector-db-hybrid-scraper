@@ -182,7 +182,7 @@ class ConfigDriftService:
                         )
                         logger.debug(f"Took snapshot for {source}")
 
-                    except Exception:
+                    except Exception as e:
                         error_msg = f"Failed to snapshot {source}: {e}"
                         snapshot_results["errors"].append(error_msg)
                         logger.warning(error_msg)
@@ -200,7 +200,7 @@ class ConfigDriftService:
                             snapshot_results["errors"]
                         )
 
-        except Exception:
+        except Exception as e:
             error_msg = f"Snapshot batch operation failed: {e}"
             snapshot_results["errors"].append(error_msg)
             logger.exception(error_msg)
@@ -281,7 +281,7 @@ class ConfigDriftService:
                                 f"Detected {len(events)} drift events for {source}"
                             )
 
-                    except Exception:
+                    except Exception as e:
                         error_msg = f"Failed to compare {source}: {e}"
                         comparison_results["errors"].append(error_msg)
                         logger.warning(error_msg)
@@ -302,7 +302,7 @@ class ConfigDriftService:
                             comparison_results["errors"]
                         )
 
-        except Exception:
+        except Exception as e:
             error_msg = f"Comparison batch operation failed: {e}"
             comparison_results["errors"].append(error_msg)
             logger.exception(error_msg)
@@ -371,7 +371,7 @@ class ConfigDriftService:
             try:
                 drift_summary = self.drift_detector.get_drift_summary()
                 status["drift_summary"] = drift_summary
-            except Exception:
+            except Exception as e:
                 status["drift_summary_error"] = str(e)
 
         return status

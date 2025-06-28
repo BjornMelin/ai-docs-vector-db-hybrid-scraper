@@ -200,7 +200,7 @@ class QueryClassifier:
                 features=features.model_dump(),
             )
 
-        except Exception:
+        except Exception as e:
             logger.error(f"Query classification failed: {e}", exc_info=True)
             # Return default classification
             return QueryClassification(

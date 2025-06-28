@@ -239,7 +239,7 @@ class EnvironmentDetector:
                 f"in {detection_time_ms:.1f}ms"
             )
 
-        except Exception:
+        except Exception as e:
             self.logger.exception("Environment detection failed")
             # Return default environment on failure
             return DetectedEnvironment(
@@ -279,7 +279,7 @@ class EnvironmentDetector:
 
             return any(indicators)
 
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"Container detection failed: {e}")
             return False
 
@@ -308,7 +308,7 @@ class EnvironmentDetector:
 
             return any(k8s_indicators)
 
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"Kubernetes detection failed: {e}")
             return False
 
@@ -369,7 +369,7 @@ class EnvironmentDetector:
                     "runtime": "ec2",
                 }
 
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"AWS detection failed: {e}")
 
         return {}
@@ -393,7 +393,7 @@ class EnvironmentDetector:
                     "runtime": "gce",
                 }
 
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"GCP detection failed: {e}")
 
         return {}
@@ -410,7 +410,7 @@ class EnvironmentDetector:
             if response.status_code == 200:
                 return {"provider": "azure", "region": response.text, "runtime": "vm"}
 
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"Azure detection failed: {e}")
 
         return {}

@@ -308,7 +308,7 @@ async def perform_auto_detection(
             is_cached=False,
         )
 
-    except Exception:
+    except Exception as e:
         logger.exception("Auto-detection failed")
         return AutoDetectionResponse(
             services_found=0,
@@ -406,7 +406,7 @@ async def generate_embeddings(
 
         return EmbeddingResponse(**result)
 
-    except Exception:
+    except Exception as e:
         logger.exception("Embedding generation failed")
         raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
@@ -569,7 +569,7 @@ async def scrape_url(
             preferred_provider=request.preferred_provider,
         )
         return CrawlResponse(**result)
-    except Exception:
+    except Exception as e:
         logger.exception(f"URL scraping failed for {request.url}")
         raise CrawlServiceError(f"Failed to scrape URL: {e}") from e
 
@@ -588,7 +588,7 @@ async def crawl_site(
             max_pages=request.max_pages,
             preferred_provider=request.preferred_provider,
         )
-    except Exception:
+    except Exception as e:
         logger.exception(f"Site crawling failed for {request.url}")
         raise CrawlServiceError(f"Failed to crawl site: {e}") from e
     else:
@@ -635,7 +635,7 @@ async def enqueue_task(
             _queue_name=request.queue_name,
             **request.kwargs,
         )
-    except Exception:
+    except Exception as e:
         logger.exception(f"Task enqueue failed for {request.task_name}")
         raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
     else:
@@ -652,7 +652,7 @@ async def get_task_status(
     """
     try:
         status = await task_manager.get_job_status(job_id)
-    except Exception:
+    except Exception as e:
         logger.exception(f"Task status check failed for {job_id}")
         return {"status": "error", "message": str(e)}
     else:
@@ -868,7 +868,7 @@ async def generate_rag_answer(
             reasoning_trace=result.reasoning_trace,
         )
 
-    except Exception:
+    except Exception as e:
         logger.exception("RAG answer generation failed")
         raise EmbeddingServiceError(f"Failed to generate RAG answer: {e}") from e
 
@@ -882,7 +882,7 @@ async def get_rag_metrics(
     """
     try:
         metrics = rag_generator.get_metrics()
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to get RAG metrics")
         return {"error": str(e)}
     else:
@@ -898,7 +898,7 @@ async def clear_rag_cache(
     """
     try:
         rag_generator.clear_cache()
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to clear RAG cache")
         return {"status": "error", "message": str(e)}
     else:
@@ -972,7 +972,7 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             },
             "circuits": all_status,
         }
-    except Exception:
+    except Exception as e:
         logger.exception("Circuit breaker status check failed")
         return {
             "error": str(e),
@@ -1011,7 +1011,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "message": f"Circuit breaker for {service_name} has been reset",
             "new_status": breaker.get_status(),
         }
-    except Exception:
+    except Exception as e:
         logger.exception(f"Failed to reset circuit breaker for {service_name}")
         return {
             "success": False,
@@ -1044,7 +1044,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
             },
             "results": results,
         }
-    except Exception:
+    except Exception as e:
         logger.exception("Failed to reset all circuit breakers")
         return {
             "success": False,
@@ -1074,7 +1074,7 @@ async def get_service_health() -> dict[str, Any]:
             "circuit_breakers": circuit_status,
             "timestamp": datetime.now(tz=UTC).isoformat(),
         }
-    except Exception:
+    except Exception as e:
         logger.exception("Health check failed")
         return {
             "status": "unhealthy",
@@ -1139,7 +1139,7 @@ async def get_auto_detected_service_health(
             "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Auto-detected service health check failed")
         return {
             "status": "error",
@@ -1192,7 +1192,7 @@ async def get_auto_detection_pool_metrics(
             "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Auto-detection pool metrics failed")
         return {
             "status": "error",
@@ -1277,7 +1277,7 @@ async def get_auto_detection_summary(
         else:
             summary["overall_status"] = "unknown"
 
-    except Exception:
+    except Exception as e:
         logger.exception("Auto-detection summary failed")
         return {
             "timestamp": datetime.now(tz=UTC).isoformat(),
@@ -1313,7 +1313,7 @@ async def get_service_metrics() -> dict[str, Any]:
             cache_manager = await client_manager.get_cache_manager()
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
-        except Exception:
+        except Exception as e:
             logger.debug("Cache metrics unavailable", exc_info=e)
 
         # Get crawl metrics if available
@@ -1321,10 +1321,10 @@ async def get_service_metrics() -> dict[str, Any]:
             crawl_manager = await client_manager.get_crawl_manager()
             crawl_metrics = crawl_manager.get_tier_metrics()
             metrics["crawl_service"] = crawl_metrics
-        except Exception:
+        except Exception as e:
             logger.debug("Crawl metrics unavailable", exc_info=e)
 
-    except Exception:
+    except Exception as e:
         logger.exception("Metrics collection failed")
         return {"error": str(e)}
     else:

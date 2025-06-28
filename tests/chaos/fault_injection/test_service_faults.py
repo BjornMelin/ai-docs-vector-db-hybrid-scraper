@@ -488,7 +488,7 @@ class TestAdvancedServiceFaults:
             try:
                 result = await resource_intensive_operation(cpu, memory)
                 results.append(result)
-            except Exception:
+            except Exception as e:
                 results.append({"error": str(e)})
 
         # Some operations should fail due to resource exhaustion

@@ -91,7 +91,7 @@ def instrument_function(
                         if isinstance(result, dict) and "status" in result:
                             span.set_attribute("result.status", result["status"])
 
-                except Exception:
+                except Exception as e:
                     # Record exception in span
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -139,7 +139,7 @@ def instrument_function(
                         if isinstance(result, dict) and "status" in result:
                             span.set_attribute("result.status", result["status"])
 
-                except Exception:
+                except Exception as e:
                     # Record exception in span
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -215,7 +215,7 @@ def instrument_vector_search(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -246,7 +246,7 @@ def instrument_vector_search(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -320,7 +320,7 @@ def instrument_embedding_generation(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -351,7 +351,7 @@ def instrument_embedding_generation(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -429,7 +429,7 @@ def instrument_llm_call(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -460,7 +460,7 @@ def instrument_llm_call(
 
                     span.set_status(Status(StatusCode.OK))
 
-                except Exception:
+                except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
@@ -501,7 +501,7 @@ def trace_operation(operation_name: str, operation_type: str = "custom", **attri
         try:
             yield span
             span.set_status(Status(StatusCode.OK))
-        except Exception:
+        except Exception as e:
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
@@ -534,7 +534,7 @@ async def trace_async_operation(
         try:
             yield span
             span.set_status(Status(StatusCode.OK))
-        except Exception:
+        except Exception as e:
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR, str(e)))
             raise

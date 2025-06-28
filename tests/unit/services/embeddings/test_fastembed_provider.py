@@ -1,3 +1,7 @@
+import asyncio
+from src.services.embeddings.base import EmbeddingProvider
+
+
 class TestError(Exception):
     """Custom exception for this module."""
 
@@ -673,7 +677,6 @@ class TestFastEmbedProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_embedding_generation(self):
         """Test concurrent embedding generation."""
-        import asyncio
 
         provider = FastEmbedProvider()
         provider._initialized = True
@@ -696,7 +699,6 @@ class TestFastEmbedProviderIntegration:
 
     def test_provider_inheritance_and_interface(self):
         """Test provider properly implements base interface."""
-        from src.services.embeddings.base import EmbeddingProvider
 
         provider = FastEmbedProvider()
 

@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import re
 
 
 @pytest.fixture(scope="session")
@@ -526,8 +527,6 @@ def input_validator(input_sanitizer):
 
             threats_found = []
             for pattern in dangerous_patterns:
-                import re
-
                 if re.search(pattern, user_input):
                     threats_found.append(pattern)
 

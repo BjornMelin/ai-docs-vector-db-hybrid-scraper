@@ -115,7 +115,7 @@ class TestMCPEdgeCases:
             )
             # If it processes, verify it returns valid result
             assert isinstance(result, list)
-        except Exception:
+        except Exception as e:
             # If it rejects, should be a meaningful error
             assert "too long" in str(e).lower() or "size" in str(e).lower()
 
@@ -554,7 +554,7 @@ class TestMCPEdgeCases:
                 )
                 # If it handles gracefully, verify result is valid
                 assert isinstance(result, list)
-            except Exception:
+            except Exception as e:
                 # If it raises, should be a meaningful error
                 assert "invalid" in str(e).lower() or "corrupt" in str(e).lower()
 

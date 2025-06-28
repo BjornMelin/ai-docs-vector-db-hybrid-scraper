@@ -29,11 +29,11 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
+import inspect
 
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
 from tenacity import (
-import inspect
     AsyncRetrying,
     retry_if_exception_type,
     stop_after_attempt,

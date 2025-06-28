@@ -2,6 +2,7 @@
 
 import pytest
 from hypothesis import Verbosity, settings
+import os
 
 
 # Configure Hypothesis settings for property-based tests
@@ -16,7 +17,6 @@ def hypothesis_settings():
     settings.register_profile("dev", max_examples=100)
 
     # Use appropriate profile based on environment
-    import os
 
     profile = os.getenv("HYPOTHESIS_PROFILE", "dev")
     settings.load_profile(profile)

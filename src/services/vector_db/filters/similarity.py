@@ -268,7 +268,7 @@ class SimilarityThresholdManager(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception:
+        except Exception as e:
             error_msg = "Failed to apply similarity threshold management"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(

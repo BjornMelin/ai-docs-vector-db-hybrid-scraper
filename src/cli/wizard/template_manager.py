@@ -58,7 +58,7 @@ class TemplateManager:
                     template_data, template_name
                 )
 
-            except Exception:
+            except Exception as e:
                 console.print(f"[red]Error loading template {template_file}: {e}[/red]")
 
     def _extract_metadata(
@@ -131,7 +131,7 @@ class TemplateManager:
         try:
             Config(**template_data)
             return True, None
-        except Exception:
+        except Exception as e:
             return False, str(e)
 
     def show_template_comparison(self) -> None:
@@ -275,7 +275,7 @@ class TemplateManager:
         # Validate and create config
         try:
             return Config(**template_data)
-        except Exception:
+        except Exception as e:
             raise ValueError(f"Failed to create config from template: {e}") from e
 
     def save_template(self, name: str, config: Config, description: str = "") -> Path:

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.services.dependencies import (
+from src.config import get_config
     RAGRequest,
     RAGResponse,
     clear_rag_cache,
@@ -282,7 +283,6 @@ class TestRAGIntegration:
 
     def test_rag_config_integration(self):
         """Test RAG configuration integration with core config."""
-        from src.config import get_config
 
         config = get_config()
 

@@ -404,7 +404,7 @@ class TestDocumentIngestionDataFlow:
                             "points_upserted"
                         ]
 
-        except Exception:
+        except Exception as e:
             pipeline_result["errors"].append(str(e))
 
         # Verify error handling and partial success

@@ -381,7 +381,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
             cleanup_results["cache_cleared"] = True
             cleanup_results["cache_keys_removed"] = 0  # Mock count
 
-    except Exception:
+    except Exception as e:
         cleanup_results["errors"].append(str(e))
 
     return cleanup_results

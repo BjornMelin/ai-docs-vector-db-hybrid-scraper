@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 from src.config.core import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
+import src.services.observability.middleware
+from src.services.observability.middleware import (
     get_ai_tracer,
     get_observability_health,
     get_observability_service,
@@ -275,11 +277,9 @@ class TestFastAPIObservabilityIntegration:
                 ),
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 
@@ -333,11 +333,9 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 
@@ -387,11 +385,9 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
 
-                from src.services.observability.middleware import (
                     FastAPIObservabilityMiddleware,
                 )
 

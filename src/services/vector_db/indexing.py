@@ -119,7 +119,7 @@ class QdrantIndexing:
                 f"payload indexes for collection: {collection_name}"
             )
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to create payload indexes for collection {collection_name}: {e}",
                 exc_info=True,
@@ -157,7 +157,7 @@ class QdrantIndexing:
             )
             return indexed_fields
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to list payload indexes for collection {collection_name}: {e}",
                 exc_info=True,
@@ -180,7 +180,7 @@ class QdrantIndexing:
             )
             logger.info(f"Dropped payload index for field: {field_name}")
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to drop payload index for field {field_name}: {e}",
                 exc_info=True,
@@ -208,7 +208,7 @@ class QdrantIndexing:
             for field_name in existing_indexes:
                 try:
                     await self.drop_payload_index(collection_name, field_name)
-                except Exception:
+                except Exception as e:
                     logger.warning(f"Failed to drop index for {field_name}: {e}")
 
             # Recreate all indexes
@@ -216,7 +216,7 @@ class QdrantIndexing:
 
             logger.info(f"Successfully reindexed collection: {collection_name}")
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to reindex collection {collection_name}: {e}", exc_info=True
             )
@@ -259,7 +259,7 @@ class QdrantIndexing:
 
             return stats
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to get payload index stats for collection {collection_name}: {e}",
                 exc_info=True,
@@ -361,7 +361,7 @@ class QdrantIndexing:
 
             return health_report
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to validate index health for collection {collection_name}: {e}",
                 exc_info=True,
@@ -485,7 +485,7 @@ class QdrantIndexing:
 
             return usage_stats
 
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Failed to get index usage stats for collection {collection_name}: {e}",
                 exc_info=True,

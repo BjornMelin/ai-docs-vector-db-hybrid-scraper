@@ -774,7 +774,7 @@ class TestOWASPTop10Compliance:
                                 "execution_time": "0.5s",
                                 "last_run": time.strftime("%Y-%m-%d %H:%M:%S"),
                             }
-                        except Exception:
+                        except Exception as e:
                             results[check["name"]] = {
                                 "status": "error",
                                 "error": str(e),

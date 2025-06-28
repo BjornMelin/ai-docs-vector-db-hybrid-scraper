@@ -12,6 +12,9 @@ import pytest
 from rich.console import Console
 
 from src.cli.commands.setup import ConfigurationWizard, setup
+import tempfile
+from src.cli.commands.setup import ConfigurationWizard
+from src.cli.commands.setup import setup
 
 
 class TestConfigurationWizard:
@@ -286,7 +289,6 @@ class TestConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Create secure temporary file
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False
@@ -321,7 +323,6 @@ class TestConfigurationWizard:
         wizard = ConfigurationWizard()
 
         # Create secure temporary file
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False
@@ -373,7 +374,6 @@ class TestConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Create secure temporary file
-        import tempfile
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False
@@ -605,7 +605,6 @@ class TestSetupIntegration:
 
     def test_configuration_wizard_import(self):
         """Test that ConfigurationWizard can be imported."""
-        from src.cli.commands.setup import ConfigurationWizard
 
         wizard = ConfigurationWizard()
         assert wizard is not None
@@ -617,7 +616,6 @@ class TestSetupIntegration:
 
     def test_setup_command_import(self):
         """Test that setup command can be imported."""
-        from src.cli.commands.setup import setup
 
         assert setup is not None
         assert hasattr(setup, "invoke")

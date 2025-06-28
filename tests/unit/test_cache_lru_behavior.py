@@ -249,7 +249,7 @@ class TestCacheIntegrationPatterns:
                 cached_value = await mock_cache.get(key)
                 if cached_value:
                     return cached_value
-            except Exception:
+            except Exception as e:
                 # Gracefully handle cache failure
                 logger.debug(f"Cache read failure (graceful fallback): {e}")
 
@@ -258,7 +258,7 @@ class TestCacheIntegrationPatterns:
 
             try:
                 await mock_cache.set(key, computed_value)
-            except Exception:
+            except Exception as e:
                 # Cache set failure is non-fatal
                 logger.debug(f"Cache set failure (non-fatal): {e}")
 

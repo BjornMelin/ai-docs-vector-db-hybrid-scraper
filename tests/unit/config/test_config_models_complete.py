@@ -8,6 +8,7 @@ from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from src.config.core import (
+from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
     BrowserUseConfig,
     Crawl4AIConfig,
     EmbeddingConfig,
@@ -622,7 +623,6 @@ class TestEmbeddingConfig:
 
     def test_provider_configuration(self):
         """Test embedding provider configuration."""
-        from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
 
         config = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,

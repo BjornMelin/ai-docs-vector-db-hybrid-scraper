@@ -75,7 +75,7 @@ class SecurityValidator:
         # Parse URL
         try:
             parsed = urlparse(url.strip())
-        except Exception:
+        except Exception as e:
             raise SecurityError(f"Invalid URL format: {e}") from e
 
         # Check scheme

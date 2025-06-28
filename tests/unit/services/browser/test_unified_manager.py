@@ -6,6 +6,7 @@ import pytest
 
 from src.config import Config
 from src.services.browser.unified_manager import (
+from src.services.cache.browser_cache import BrowserCacheEntry
     UnifiedBrowserManager,
     UnifiedScrapingRequest,
     UnifiedScrapingResponse,
@@ -828,7 +829,6 @@ class TestUnifiedBrowserManagerMonitoring:
         # Mock cache and monitoring
         mock_cache = AsyncMock()
         mock_monitor = AsyncMock()
-        from src.services.cache.browser_cache import BrowserCacheEntry
 
         # Create cache entry
         cache_entry = BrowserCacheEntry(

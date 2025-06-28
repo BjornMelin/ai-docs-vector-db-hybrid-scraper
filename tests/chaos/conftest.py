@@ -620,7 +620,7 @@ def chaos_experiment_runner():
                     experiment, target_system
                 )
 
-            except Exception:
+            except Exception as e:
                 result.errors.append(str(e))
 
             finally:

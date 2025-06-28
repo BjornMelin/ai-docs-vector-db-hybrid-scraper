@@ -142,7 +142,7 @@ class QueryProcessingPipeline(BaseService):
             async with semaphore:
                 try:
                     return await self.process(request)
-                except Exception:
+                except Exception as e:
                     logger.exception("Batch processing failed for query '{request}'")
                     return QueryProcessingResponse(
                         success=False, results=[], total_results=0, error=str(e)
@@ -285,7 +285,7 @@ class QueryProcessingPipeline(BaseService):
                 ):
                     health_status["status"] = "degraded"
 
-            except Exception:
+            except Exception as e:
                 logger.exception("Health check failed")
                 health_status["status"] = "unhealthy"
                 health_status["components"] = {
@@ -359,7 +359,7 @@ class QueryProcessingPipeline(BaseService):
                 ],
             }
 
-        except Exception:
+        except Exception as e:
             end_time = time.time()
             warmup_time_ms = (end_time - start_time) * 1000
 

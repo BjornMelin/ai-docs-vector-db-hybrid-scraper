@@ -110,7 +110,7 @@ class PlaywrightAdapter(BaseService):
                 f"(anti-detection: {anti_detection_status})"
             )
 
-        except Exception:
+        except Exception as e:
             raise CrawlServiceError("Failed to initialize Playwright") from e
 
     async def cleanup(self) -> None:
@@ -179,7 +179,7 @@ class PlaywrightAdapter(BaseService):
 
             return result
 
-        except Exception:
+        except Exception as e:
             return await self._build_error_result(e, url, start_time, site_profile)
 
         finally:
@@ -274,7 +274,7 @@ class PlaywrightAdapter(BaseService):
             try:
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
-            except Exception:
+            except Exception as e:
                 self.logger.warning(f"Action {i} failed")
                 action_results.append(
                     {
@@ -510,7 +510,7 @@ class PlaywrightAdapter(BaseService):
 
             return self._create_success_result(index, action_type, start_time)
 
-        except Exception:
+        except Exception as e:
             return self._create_error_result(index, action_type, start_time, str(e))
 
     async def _perform_action(
@@ -937,7 +937,7 @@ class PlaywrightAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception:
+        except Exception as e:
             return {
                 "success": False,
                 "error": str(e),

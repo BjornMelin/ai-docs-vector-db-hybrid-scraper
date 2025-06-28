@@ -11,6 +11,7 @@ from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptCo
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 from src.services.vector_db.service import QdrantService
+from src.services.errors import APIError
 
 
 class TestError(Exception):
@@ -430,7 +431,6 @@ class TestHyDEQueryEngine:
 
     async def test_enhanced_search_not_initialized(self, engine):
         """Test enhanced search when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await engine.enhanced_search("test query")
@@ -787,7 +787,6 @@ class TestHyDEQueryEngine:
 
     async def test_batch_search_not_initialized(self, engine):
         """Test batch search when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await engine.batch_search(["query1", "query2"])

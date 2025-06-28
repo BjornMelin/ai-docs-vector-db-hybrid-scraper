@@ -176,7 +176,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 f"Crawl4AI crawler initialized {strategy_info} and {dispatcher_info}"
             )
 
-        except Exception:
+        except Exception as e:
             raise CrawlServiceError("Failed to initialize Crawl4AI") from e
 
     async def cleanup(self) -> None:
@@ -441,7 +441,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     error_msg = getattr(result, "error_message", "Crawl failed")
                     return self._build_error_result(url, error_msg, extraction_type)
 
-        except Exception:
+        except Exception as e:
             error_result = self._build_error_result(url, e, extraction_type)
             error_result["metadata"]["dispatcher_stats"] = self._get_dispatcher_stats()
             return error_result
@@ -478,7 +478,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     error_msg = getattr(result, "error_message", "Crawl failed")
                     return self._build_error_result(url, error_msg, extraction_type)
 
-            except Exception:
+            except Exception as e:
                 return self._build_error_result(url, e, extraction_type)
 
     async def _process_streaming_crawl(
@@ -521,7 +521,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 error_msg = "Streaming crawl failed to produce valid results"
                 return self._build_error_result(url, error_msg, extraction_type)
 
-        except Exception:
+        except Exception as e:
             self.logger.exception("Streaming crawl failed for {url}")
             return self._build_error_result(url, e, extraction_type)
 
@@ -544,7 +544,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 stats.update(runtime_stats)
 
             return stats
-        except Exception:
+        except Exception as e:
             self.logger.warning("Could not get dispatcher stats")
             return {"dispatcher_type": "memory_adaptive", "stats_error": str(e)}
 
@@ -594,7 +594,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                         "streaming": True,
                     }
 
-        except Exception:
+        except Exception as e:
             yield self._build_error_result(url, e, extraction_type)
 
     async def crawl_bulk(
@@ -717,7 +717,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "provider": "crawl4ai",
             }
 
-        except Exception:
+        except Exception as e:
             # Enhanced error context for site crawling
             error_context = {
                 "starting_url": url,

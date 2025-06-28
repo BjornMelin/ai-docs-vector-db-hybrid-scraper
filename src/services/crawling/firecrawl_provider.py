@@ -46,7 +46,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             )
             self._initialized = True
             logger.info("Firecrawl client initialized")
-        except Exception:
+        except Exception as e:
             raise CrawlServiceError("Failed to initialize Firecrawl") from e
 
     async def cleanup(self) -> None:
@@ -94,7 +94,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "url": url,
                 }
 
-        except Exception:
+        except Exception as e:
             logger.error("Failed to scrape {url}", exc_info=True)
 
             error_msg = str(e).lower()
@@ -203,7 +203,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 "crawl_id": crawl_id,
             }
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to crawl {url}")
             return {
                 "success": False,
@@ -266,7 +266,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "total": 0,
                 }
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to map {url}")
             return {
                 "success": False,

@@ -66,7 +66,7 @@ class HyDECache(BaseService):
             self._initialized = True
             logger.info("HyDE cache initialized")
 
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(f"Failed to initialize HyDE cache: {e}") from e
 
     async def cleanup(self) -> None:
@@ -120,7 +120,7 @@ class HyDECache(BaseService):
                 self.cache_misses += 1
                 return None
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache get error for HyDE embedding: {e}")
             return None
@@ -179,7 +179,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache set error for HyDE embedding: {e}")
             return False
@@ -213,7 +213,7 @@ class HyDECache(BaseService):
                 self.cache_misses += 1
                 return None
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache get error for hypothetical documents: {e}")
             return None
@@ -264,7 +264,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache set error for hypothetical documents: {e}")
             return False
@@ -298,7 +298,7 @@ class HyDECache(BaseService):
                 self.cache_misses += 1
                 return None
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache get error for search results: {e}")
             return None
@@ -350,7 +350,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception:
+        except Exception as e:
             self.cache_errors += 1
             logger.warning(f"Cache set error for search results: {e}")
             return False
@@ -381,7 +381,7 @@ class HyDECache(BaseService):
                 else:
                     results[query] = False  # Needs generation
 
-            except Exception:
+            except Exception as e:
                 logger.warning(f"Cache warm-up error for query '{query}': {e}")
                 results[query] = False
 
@@ -424,7 +424,7 @@ class HyDECache(BaseService):
 
             return success_count > 0
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Cache invalidation error for query '{query}': {e}")
             return False
 

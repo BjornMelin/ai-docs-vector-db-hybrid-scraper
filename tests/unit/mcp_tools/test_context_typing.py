@@ -7,6 +7,7 @@ import importlib
 import inspect
 
 import pytest
+from src.mcp_tools.models.requests import DocumentRequest, SearchRequest
 
 
 # List of all MCP tool modules
@@ -121,7 +122,6 @@ class TestContextTyping:
 
     def test_models_have_proper_validation(self):
         """Verify request models have proper field validation."""
-        from src.mcp_tools.models.requests import DocumentRequest, SearchRequest
 
         # Test SearchRequest validation
         with pytest.raises(ValueError):

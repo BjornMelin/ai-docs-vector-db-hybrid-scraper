@@ -405,6 +405,10 @@ class SecureConfigManager:
         else:
             return MultiFernet(self._encryption_keys)
 
+    def _raise_integrity_check_failed(self) -> None:
+        """Raise ValueError for configuration integrity check failure."""
+        raise ValueError("Configuration integrity check failed")
+
     def _calculate_checksum(self, data: bytes, algorithm: str | None = None) -> str:
         """Calculate checksum for data integrity validation.
 
@@ -566,9 +570,8 @@ class SecureConfigManager:
             )
 
             logger.debug(f"Configuration encrypted successfully: {config_path}")
-            return True
 
-        except Exception:
+        except Exception as e:
             logger.exception(f"Failed to encrypt configuration {config_path}")
 
             # Log audit event for failure
@@ -583,6 +586,8 @@ class SecureConfigManager:
             )
 
             return False
+        else:
+            return True
 
     def decrypt_configuration(
         self,
@@ -629,7 +634,7 @@ class SecureConfigManager:
             if self.config.enable_config_integrity_checks:
                 current_checksum = self._calculate_checksum(decrypted_data)
                 if current_checksum != config_item.checksum:
-                    raise ValueError("Configuration integrity check failed")
+                    self._raise_integrity_check_failed()
 
             # Parse decrypted data
             config_data = json.loads(decrypted_data.decode("utf-8"))
@@ -647,9 +652,8 @@ class SecureConfigManager:
             )
 
             logger.debug(f"Configuration decrypted successfully: {config_path}")
-            return config_data
 
-        except Exception:
+        except Exception as e:
             logger.exception(f"Failed to decrypt configuration {config_path}")
 
             # Log audit event for failure
@@ -664,6 +668,8 @@ class SecureConfigManager:
             )
 
             return None
+        else:
+            return config_data
 
     def _update_integrity_record(self, config_path: str, checksum: str) -> None:
         """Update integrity tracking record.
@@ -761,10 +767,11 @@ class SecureConfigManager:
                     results[path] = False
 
             logger.info(f"Configuration integrity validation completed: {results}")
-            return results
 
         except Exception:
             logger.exception("Configuration integrity validation failed")
+            return results
+        else:
             return results
 
     def backup_configurations(
@@ -823,9 +830,8 @@ class SecureConfigManager:
             )
 
             logger.info(f"Configuration backup created successfully: {backup_path}")
-            return True
 
-        except Exception:
+        except Exception as e:
             logger.exception("Configuration backup failed")
 
             # Log backup failure
@@ -839,6 +845,8 @@ class SecureConfigManager:
             )
 
             return False
+        else:
+            return True
 
     def get_audit_events(
         self,
@@ -928,11 +936,11 @@ class SecureConfigManager:
                 "config_dir": str(self.config_dir),
             }
 
-            return status
-
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to get security status")
             return {"error": str(e)}
+        else:
+            return status
 
 
 # Export main classes

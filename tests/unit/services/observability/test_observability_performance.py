@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.services.observability.performance import (
+import src.services.observability.performance as perf_module
     PerformanceMetrics,
     PerformanceMonitor,
     PerformanceThresholds,
@@ -515,7 +516,6 @@ class TestGlobalMonitorInstance:
     def test_get_performance_monitor_not_initialized(self):
         """Test getting monitor when not initialized."""
         # Reset global instance
-        import src.services.observability.performance as perf_module
 
         perf_module._performance_monitor = None
 

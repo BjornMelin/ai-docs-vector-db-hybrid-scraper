@@ -146,7 +146,7 @@ class TestBrowserUserJourneys:
                     )
                     if search_element:
                         break
-                except Exception:
+                except Exception as e:
                     # Try next selector pattern
                     logger.debug(f"Selector pattern failed, trying next: {e}")
                     continue
@@ -229,7 +229,7 @@ class TestBrowserUserJourneys:
             assert metadata["url"], "URL should be extracted"
             assert metadata["links_count"] >= 0, "Links count should be non-negative"
 
-        except Exception:
+        except Exception as e:
             journey_steps.append(
                 {
                     "step": "error_occurred",
@@ -326,7 +326,7 @@ class TestBrowserUserJourneys:
                 # Small delay between pages
                 await asyncio.sleep(0.5)
 
-            except Exception:
+            except Exception as e:
                 crawled_pages.append(
                     {
                         "url": url,
@@ -577,7 +577,7 @@ class TestBrowserUserJourneys:
                 }
             )
 
-        except Exception:
+        except Exception as e:
             journey_steps.append(
                 {
                     "step": "error_in_form_journey",
@@ -693,7 +693,7 @@ class TestBrowserUserJourneys:
                     f"Page load too slow: {total_load_time}ms"
                 )
 
-            except Exception:
+            except Exception as e:
                 performance_data.append(
                     {
                         "scenario": scenario["name"],
@@ -811,7 +811,7 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-            except Exception:
+            except Exception as e:
                 # Navigation failed
                 error_scenarios.append(
                     {

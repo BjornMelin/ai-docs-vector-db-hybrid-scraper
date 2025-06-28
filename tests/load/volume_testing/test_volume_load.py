@@ -413,7 +413,7 @@ class TestVolumeLoad:
                         }
                         processed_docs.append(processed_doc)
 
-                    except Exception:
+                    except Exception as e:
                         failed_doc = {"url": doc["url"], "error": str(e)}
                         failed_docs.append(failed_doc)
                         self.failed_documents.append(failed_doc)

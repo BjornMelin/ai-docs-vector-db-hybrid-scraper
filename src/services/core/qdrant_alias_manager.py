@@ -127,7 +127,7 @@ class QdrantAliasManager(BaseService):
 
             logger.info(f"Created alias {alias_name} -> {collection_name}")
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to create alias")
             raise QdrantServiceError(f"Failed to create alias: {e}") from e
         else:
@@ -195,7 +195,7 @@ class QdrantAliasManager(BaseService):
             if delete_old and old_collection:
                 await self.safe_delete_collection(old_collection)
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to switch alias")
             raise QdrantServiceError(f"Failed to switch alias: {e}") from e
         else:
@@ -367,11 +367,12 @@ class QdrantAliasManager(BaseService):
                     )
 
             logger.info(f"Cloned collection schema from {source} to {target}")
-            return True
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to clone collection schema")
             raise QdrantServiceError(f"Failed to clone collection schema: {e}") from e
+        else:
+            return True
 
     async def copy_collection_data(
         self,
@@ -436,7 +437,7 @@ class QdrantAliasManager(BaseService):
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
-                    except Exception:
+                    except Exception as e:
                         logger.warning(f"Progress callback failed: {e}")
 
                 # Check limit
@@ -449,11 +450,12 @@ class QdrantAliasManager(BaseService):
                     break
 
             logger.info(f"Copied {total_copied} points from {source} to {target}")
-            return total_copied
 
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to copy collection data")
             raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
+        else:
+            return total_copied
 
     async def validate_collection_compatibility(
         self, collection1: str, collection2: str
@@ -509,8 +511,8 @@ class QdrantAliasManager(BaseService):
             if (quant1 is None) != (quant2 is None):
                 return False, "Quantization configuration mismatch"
 
-            return True, "Collections are compatible"
-
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to validate collection compatibility")
             return False, f"Validation error: {e!s}"
+        else:
+            return True, "Collections are compatible"

@@ -22,6 +22,9 @@ from cryptography.fernet import Fernet
 
 from src.config.core import Config
 from src.config.drift_detection import (
+from datetime import datetime
+from src.config.drift_detection import DriftEvent
+from src.config.security import SecurityConfig
     ConfigDriftDetector,
     DriftDetectionConfig,
     DriftSeverity,
@@ -403,9 +406,7 @@ class TestDriftDetectionPerformance:
 
     def test_drift_alert_performance(self, benchmark, drift_detector):
         """Benchmark drift alert generation performance."""
-        from datetime import datetime
 
-        from src.config.drift_detection import DriftEvent
 
         # Create test drift event
         drift_event = DriftEvent(
@@ -443,7 +444,6 @@ class TestEncryptionPerformance:
     @pytest.fixture
     def config_encryption(self, encryption_key):
         """Create config encryption instance."""
-        from src.config.security import SecurityConfig
 
         security_config = SecurityConfig()
         encryption = SecureConfigManager(security_config)

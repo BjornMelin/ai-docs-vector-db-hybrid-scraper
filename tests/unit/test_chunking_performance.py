@@ -216,7 +216,7 @@ class TestTreeSitterImportErrors:
                 config = ChunkingConfig()
                 chunker = DocumentChunker(config)
                 assert chunker.parsers == {}
-        except Exception:
+        except Exception as e:
             # If we can't test the import error due to module caching,
             # that's acceptable - the important thing is the code handles it
             logger.debug(f"Module import test limitation (acceptable): {e}")

@@ -109,7 +109,7 @@ class PerformanceMonitor:
                 "network_recv_mb": net_recv_mb,
             }
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Failed to get system metrics: {e}")
             return {}
 
@@ -181,7 +181,7 @@ class PerformanceMonitor:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception:
+            except Exception as e:
                 # Record error metrics
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = PerformanceMetrics(
@@ -252,7 +252,7 @@ class PerformanceMonitor:
 
                 span.set_status(Status(StatusCode.OK))
 
-            except Exception:
+            except Exception as e:
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = PerformanceMetrics(
                     operation_name=operation_name,
@@ -314,7 +314,7 @@ class PerformanceMonitor:
                     }
                 )
 
-        except Exception:
+        except Exception as e:
             logger.warning(f"Failed to record performance metrics: {e}")
 
     def _check_thresholds(self, metrics: PerformanceMetrics, span: trace.Span) -> None:

@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from src.security import SecurityError, SecurityValidator
+import time
 
 
 @pytest.mark.security
@@ -450,7 +451,6 @@ class TestCommandInjectionPrevention:
         security_validator = SecurityValidator()
 
         # Use timeout to detect if commands are actually executed
-        import time
 
         for payload in time_based_payloads:
             start_time = time.time()

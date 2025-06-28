@@ -218,7 +218,7 @@ class FilterComposer(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception:
+        except Exception as e:
             error_msg = "Failed to apply filter composition"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -281,7 +281,7 @@ class FilterComposer(BaseFilter):
                 total_execution_time_ms=execution_time_ms,
             )
 
-        except Exception:
+        except Exception as e:
             execution_time_ms = (time.time() - start_time) * 1000
 
             return CompositionResult(
@@ -443,7 +443,7 @@ class FilterComposer(BaseFilter):
 
             return await filter_ref.filter_instance.apply(filter_ref.criteria, context)
 
-        except Exception:
+        except Exception as e:
             self._logger.exception(
                 "Filter {filter_ref.filter_instance.name} execution failed"
             )

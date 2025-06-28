@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from tests.deployment.conftest import DeploymentEnvironment
+import yaml
 
 
 class TestInfrastructureAsCode:
@@ -104,7 +105,6 @@ class TestInfrastructureAsCode:
 
         # Write Docker Compose file
         compose_file = temp_deployment_dir / "docker-compose.yml"
-        import yaml
 
         with compose_file.open("w") as f:
             yaml.safe_dump(compose_config, f, default_flow_style=False)
@@ -188,8 +188,6 @@ class TestInfrastructureAsCode:
         # Write Kubernetes manifests
         namespace_file = temp_deployment_dir / "namespace.yaml"
         deployment_file = temp_deployment_dir / "deployment.yaml"
-
-        import yaml
 
         with namespace_file.open("w") as f:
             yaml.safe_dump(namespace_manifest, f, default_flow_style=False)
@@ -661,7 +659,6 @@ class DockerComposeValidator:
 
     def validate_configuration(self, compose_file: Path) -> dict[str, Any]:
         """Validate Docker Compose configuration."""
-        import yaml
 
         with compose_file.open() as f:
             config = yaml.safe_load(f)
@@ -695,7 +692,6 @@ class KubernetesValidator:
 
     def validate_manifests(self, manifest_files: list[Path]) -> dict[str, Any]:
         """Validate Kubernetes manifest files."""
-        import yaml
 
         manifests = []
         all_valid = True

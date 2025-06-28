@@ -91,7 +91,7 @@ class TestConcurrentConfigurationAccess:
                     reload_results.append((version_idx, result))
 
                 return result
-            except Exception:
+            except Exception as e:
                 pytest.fail(f"Reload failed: {e}")
 
         # Execute concurrent reloads
@@ -269,7 +269,7 @@ class TestConcurrentConfigurationAccess:
                 )
                 with result_lock:
                     operation_results.append(("write", config_key, True, None))
-            except Exception:
+            except Exception as e:
                 with result_lock:
                     operation_results.append(("write", config_key, False, str(e)))
 
@@ -279,7 +279,7 @@ class TestConcurrentConfigurationAccess:
                 data = secure_config_manager.read_encrypted_config(config_key)
                 with result_lock:
                     operation_results.append(("read", config_key, True, data))
-            except Exception:
+            except Exception as e:
                 with result_lock:
                     operation_results.append(("read", config_key, False, str(e)))
 
@@ -378,7 +378,7 @@ class TestConcurrentConfigurationAccess:
 
                 result["duration_ms"] = (time.time() - start_time) * 1000
 
-            except Exception:
+            except Exception as e:
                 result["error"] = str(e)
 
             async with operation_lock:
@@ -517,7 +517,7 @@ class TestConcurrentConfigurationAccess:
                         }
                     )
 
-            except Exception:
+            except Exception as e:
                 async with result_lock:
                     rollback_results.append(
                         {

@@ -112,7 +112,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.warning(
                             f"Content intelligence analysis failed for {doc_id}"
                         )
-                except Exception:
+                except Exception as e:
                     await ctx.warning(
                         f"Content intelligence analysis error for {doc_id}: {e}"
                     )
@@ -266,7 +266,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             await ctx.info(completion_msg)
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Failed to process document {doc_id}: {e}")
             logger.exception("Failed to add document")
             raise

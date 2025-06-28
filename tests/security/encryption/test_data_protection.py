@@ -16,6 +16,9 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import string
+import time
+from collections import Counter
 
 
 @pytest.mark.security
@@ -263,7 +266,6 @@ class TestDataProtection:
         assert len(token_custom) >= 64
 
         # Tokens should be URL-safe
-        import string
 
         allowed_chars = string.ascii_letters + string.digits + "-_"
         assert all(c in allowed_chars for c in token1)
@@ -285,7 +287,6 @@ class TestDataProtection:
         assert encryption_service.constant_time_compare(secret, "") is False
 
         # Test timing attack resistance (simplified test)
-        import time
 
         # Compare similar length strings
         start_time = time.perf_counter()
@@ -570,7 +571,6 @@ class TestDataProtection:
         assert unique_values > 200  # Should have good variety
 
         # Check that no single value dominates
-        from collections import Counter
 
         value_counts = Counter(random_values)
         max_count = max(value_counts.values())

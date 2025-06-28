@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.services.observability.metrics_bridge import (
+import src.services.observability.metrics_bridge as bridge_module
     OpenTelemetryMetricsBridge,
     get_metrics_bridge,
     initialize_metrics_bridge,
@@ -581,7 +582,6 @@ class TestGlobalMetricsBridge:
     def test_get_metrics_bridge_not_initialized(self):
         """Test getting bridge when not initialized."""
         # Reset global instance
-        import src.services.observability.metrics_bridge as bridge_module
 
         bridge_module._metrics_bridge = None
 

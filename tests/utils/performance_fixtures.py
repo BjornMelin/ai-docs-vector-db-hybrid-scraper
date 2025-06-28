@@ -64,7 +64,7 @@ def optimized_async_loop():
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
 
         loop.close()
-    except Exception:
+    except Exception as e:
         logger.debug(
             f"Event loop cleanup error (ignored): {e}"
         )  # Ignore cleanup errors
@@ -352,7 +352,7 @@ async def fast_async_context():
                             await resource.close()
                         else:
                             resource.close()
-                    except Exception:
+                    except Exception as e:
                         logger.debug(
                             f"Resource cleanup error (ignored): {e}"
                         )  # Ignore cleanup errors

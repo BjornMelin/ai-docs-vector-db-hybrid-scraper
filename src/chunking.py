@@ -182,7 +182,7 @@ class DocumentChunker:
                 self.parsers[lang] = parser
                 self.logger.debug(f"Successfully loaded parser for '{lang}'")
 
-            except Exception:
+            except Exception as e:
                 self.logger.warning(
                     f"Failed to initialize parser for '{lang}': {e}. "
                     f"Will fall back to semantic chunking for this language."
@@ -1010,7 +1010,7 @@ class DocumentChunker:
                         if chunks:
                             return chunks
 
-            except Exception:
+            except Exception as e:
                 self.logger.debug(
                     f"AST-based splitting failed: {e}, falling back to line-based"
                 )

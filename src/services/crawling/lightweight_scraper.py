@@ -242,7 +242,7 @@ class LightweightScraper(CrawlProvider):
                 "error": f"HTTP {e.response.status_code}",
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
-        except Exception:
+        except Exception as e:
             logger.exception("Error scraping {url} with lightweight tier")
             return {
                 "success": False,

@@ -7,6 +7,7 @@ behavior under different concurrency levels and user interaction patterns.
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
+import random
 
 
 @pytest.mark.load
@@ -341,7 +342,6 @@ class TestConcurrentUsersLoad:
 
             async def mixed_workload(self, **kwargs):
                 """Simulate mixed workload."""
-                import random
 
                 if random.random() < 0.7:  # 70% search operations
                     return await self.search_workload(**kwargs)

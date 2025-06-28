@@ -14,6 +14,8 @@ import pytest
 
 # Import standardized helpers
 from tests.utils.assertion_helpers import (
+from tests.utils.test_factories import TestDataBuilder
+from tests.utils.assertion_helpers import assert_accessibility_compliant
     assert_async_operation_completes,
     assert_error_response_standardized,
     assert_mock_called_with_pattern,
@@ -287,7 +289,6 @@ class TestStandardizedPatterns:
         - Complex data construction
         - Fluent interface patterns
         """
-        from tests.utils.test_factories import TestDataBuilder
 
         # Arrange - Build complex test data
         complex_data = (
@@ -353,7 +354,6 @@ class TestStandardizedPatterns:
         Args:
             mock_accessibility_scanner: Mocked accessibility scanner
         """
-        from tests.utils.assertion_helpers import assert_accessibility_compliant
 
         # Arrange
         accessibility_report = {

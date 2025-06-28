@@ -115,7 +115,7 @@ def register_advanced_query_processing_tool(
 
             return mcp_response
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Advanced query processing {request_id} failed: {e}")
             logger.error(f"Advanced query processing failed: {e}", exc_info=True)
 
@@ -206,7 +206,7 @@ def register_query_analysis_tool(
 
             return response
 
-        except Exception:
+        except Exception as e:
             await ctx.error(f"Query analysis {request_id} failed: {e}")
             logger.error(f"Query analysis failed: {e}", exc_info=True)
             raise

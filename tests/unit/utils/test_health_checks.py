@@ -6,6 +6,7 @@ import pytest
 
 from src.config import Config
 from src.utils.health_checks import ServiceHealthChecker
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 
 @pytest.fixture
@@ -49,7 +50,6 @@ class TestServiceHealthChecker:
 
     def test_check_qdrant_connection_auth_failure(self, sample_config):
         """Test Qdrant connection check with authentication failure."""
-        from qdrant_client.http.exceptions import UnexpectedResponse
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client = Mock()

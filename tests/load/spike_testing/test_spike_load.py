@@ -14,6 +14,8 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import DoubleSpike, SpikeLoadProfile
+import asyncio
+import random
 
 
 class TestError(Exception):
@@ -424,8 +426,6 @@ class TestSpikeLoad:
 
     def _spike_aware_operation(self, **kwargs):
         """Operation that adapts to spike conditions."""
-        import asyncio
-        import random
 
         # Simulate different behavior during spikes
         concurrent_users = kwargs.get("concurrent_users", 50)

@@ -1,3 +1,6 @@
+import time
+
+
 class TestError(Exception):
     """Custom exception for this module."""
 
@@ -474,8 +477,6 @@ class TestServiceCachingMutationTesting:
     @pytest.mark.asyncio
     async def test_cache_expiration_mutations(self):
         """Test mutations in cache expiration logic."""
-
-        import time
 
         class MockCache:
             def __init__(self):

@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 
 from src.services.task_queue.worker import WorkerSettings
+from src.services.task_queue.worker import (
 
 
 class TestWorkerSettings:
@@ -128,7 +129,6 @@ class TestWorkerSettings:
     def test_module_level_settings(self):
         """Test module-level settings for ARQ worker."""
         # These are imported and used by ARQ directly
-        from src.services.task_queue.worker import (
             cron_jobs,
             functions,
             job_timeout,

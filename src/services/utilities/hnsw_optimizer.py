@@ -151,7 +151,7 @@ class HNSWOptimizer(BaseService):
                     # Moderate time usage, try smaller increment
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
-            except Exception:
+            except Exception as e:
                 self.logger.warning(f"Search failed at EF {current_ef}: {e}")
                 break
 
@@ -350,7 +350,7 @@ class HNSWOptimizer(BaseService):
                             hnsw_config, "full_scan_threshold", 10000
                         ),
                     }
-        except Exception:
+        except Exception as e:
             self.logger.debug(f"Could not extract HNSW config: {e}")
 
         # Return defaults if extraction fails
@@ -467,7 +467,7 @@ class HNSWOptimizer(BaseService):
                 search_time_ms = (time.time() - start_time) * 1000
                 search_times.append(search_time_ms)
 
-            except Exception:
+            except Exception as e:
                 self.logger.warning(f"Performance test query failed: {e}")
                 continue
 

@@ -10,6 +10,7 @@ import pytest
 
 from src.config.reload import ConfigReloader
 from src.config.security import (
+from unittest.mock import MagicMock
     SecureConfigManager,
     SecurityConfig,
 )
@@ -46,7 +47,6 @@ class TestSecurityEnhancements:
         manager = SecureConfigManager(config)
 
         # Add mock cache attributes for testing
-        from unittest.mock import MagicMock
 
         mock_cache = MagicMock()
         mock_cache.maxsize = settings.encryption_cache_size

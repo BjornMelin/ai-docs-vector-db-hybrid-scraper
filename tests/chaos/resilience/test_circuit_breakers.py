@@ -226,7 +226,7 @@ class TestCircuitBreakers:
             try:
                 await circuit_breaker.call(intermittent_service)
                 successes += 1
-            except Exception:
+            except Exception as e:
                 if "Circuit breaker is open" in str(e):
                     circuit_breaker_activations += 1
                 else:
@@ -485,7 +485,7 @@ class TestCircuitBreakers:
             for attempt in range(max_retries + 1):
                 try:
                     result = await circuit_breaker.call(unreliable_service)
-                except Exception:
+                except Exception as e:
                     last_exception = e
 
                     # Don't retry if circuit breaker is open

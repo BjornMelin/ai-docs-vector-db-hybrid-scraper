@@ -12,6 +12,10 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from src.cli.main import main
+import questionary
+import time
+import queue
+import threading
 
 
 class TestCLIEndToEndWorkflows:
@@ -149,7 +153,6 @@ class TestCLIInteractiveFlows:
                         # Mock wizard to use these questionary calls
                         def mock_run_setup():
                             # Simulate questionary usage
-                            import questionary
 
                             questionary.confirm("Test question?").ask()
                             questionary.select("Choose:", choices=["a", "b"]).ask()
@@ -463,8 +466,6 @@ class TestCLIPerformanceIntegration:
         }
         config_file.write_text(json.dumps(config_data, indent=2))
 
-        import time
-
         start_time = time.time()
 
         with patch("src.cli.main.get_config") as mock_get_config:
@@ -506,8 +507,6 @@ class TestCLIPerformanceIntegration:
 
     def test_concurrent_cli_operations(self, _tmp_path):
         """Test concurrent CLI operations don't interfere."""
-        import queue
-        import threading
 
         results = queue.Queue()
 

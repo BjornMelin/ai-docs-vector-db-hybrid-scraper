@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config.drift_detection import (
+import src.config.drift_detection
     ConfigDriftDetector,
     ConfigSnapshot,
     DriftDetectionConfig,
@@ -552,7 +553,6 @@ class TestGlobalFunctions:
     def test_get_detector_not_initialized(self):
         """Test getting detector when not initialized."""
         # Reset global state
-        import src.config.drift_detection
 
         src.config.drift_detection._drift_detector = None
 

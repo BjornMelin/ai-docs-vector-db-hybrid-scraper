@@ -84,7 +84,7 @@ class RAGGenerator(BaseService):
             self._initialized = True
             logger.info("RAG generator initialized")
 
-        except Exception:
+        except Exception as e:
             raise EmbeddingServiceError(
                 f"Failed to initialize RAG generator: {e}"
             ) from e
@@ -180,7 +180,7 @@ class RAGGenerator(BaseService):
 
             return result
 
-        except Exception:
+        except Exception as e:
             logger.error(f"Failed to generate RAG answer: {e}", exc_info=True)
             raise EmbeddingServiceError(f"RAG generation failed: {e}") from e
 
@@ -330,10 +330,10 @@ class RAGGenerator(BaseService):
 
             return answer, reasoning_trace
 
-        except TimeoutError:
+        except TimeoutError as e:
             logger.warning("RAG answer generation timed out")
             raise EmbeddingServiceError("Answer generation timed out") from None
-        except Exception:
+        except Exception as e:
             logger.warning(f"Failed to generate answer: {e}")
             raise EmbeddingServiceError(f"Answer generation failed: {e}") from e
 

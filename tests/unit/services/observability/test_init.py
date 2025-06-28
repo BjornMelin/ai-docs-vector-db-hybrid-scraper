@@ -1,3 +1,6 @@
+import src.services.observability.init as init_module
+
+
 class TestError(Exception):
     """Custom exception for this module."""
 
@@ -23,7 +26,6 @@ class TestObservabilityInitialization:
     def setup_method(self):
         """Setup for each test."""
         # Reset global state
-        import src.services.observability.init as init_module
 
         init_module._tracer_provider = None
         init_module._meter_provider = None
@@ -188,7 +190,6 @@ class TestObservabilityInitialization:
     def test_shutdown_observability(self):
         """Test observability shutdown."""
         # Setup providers
-        import src.services.observability.init as init_module
 
         mock_tracer_provider = MagicMock()
         mock_meter_provider = MagicMock()
@@ -209,7 +210,6 @@ class TestObservabilityInitialization:
     def test_shutdown_observability_with_exceptions(self):
         """Test shutdown handles exceptions gracefully."""
         # Setup providers that raise exceptions
-        import src.services.observability.init as init_module
 
         mock_tracer_provider = MagicMock()
         mock_tracer_provider.shutdown.side_effect = Exception("Shutdown failed")
@@ -230,7 +230,6 @@ class TestObservabilityInitialization:
 
     def test_is_observability_enabled(self):
         """Test observability enabled check."""
-        import src.services.observability.init as init_module
 
         # Initially disabled
         assert is_observability_enabled() is False

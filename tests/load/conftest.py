@@ -14,6 +14,7 @@ from enum import Enum
 from typing import Any
 
 import pytest
+import random
 
 
 class CustomError(Exception):
@@ -416,7 +417,7 @@ def load_test_runner():
                     metrics.successful_requests += 1
                     metrics.response_times.append(response_time)
 
-                except Exception:
+                except Exception as e:
                     response_time = time.perf_counter() - start_time
 
                     metrics.total_requests += 1
@@ -684,7 +685,6 @@ def mock_load_test_service():
             self.request_count += 1
 
             # Simulate failure
-            import random
 
             if random.random() < self.failure_rate:
                 raise CustomError(f"Simulated failure (rate: {self.failure_rate})")

@@ -14,6 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from click.testing import CliRunner
 from rich.console import Console
+from click.shell_completion import CompletionItem
+from rich.console import Console
 
 
 @pytest.fixture
@@ -206,7 +208,6 @@ def sample_batch_files(tmp_path):
 @pytest.fixture
 def mock_completion_items():
     """Mock completion items for auto-completion testing."""
-    from click.shell_completion import CompletionItem
 
     return [
         CompletionItem("collection1", help="Collection: collection1"),
@@ -246,7 +247,6 @@ def rich_output_capturer():
 
         def get_plain_output(self) -> str:
             """Get output without ANSI escape codes."""
-            from rich.console import Console
 
             plain_console = Console(file=StringIO(), no_color=True, width=80)
             plain_console.file.write(self.get_output())

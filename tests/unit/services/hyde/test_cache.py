@@ -10,6 +10,7 @@ from src.services.errors import EmbeddingServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig
 from src.services.hyde.generator import GenerationResult
+from src.services.errors import APIError
 
 
 class TestHyDECache:
@@ -222,7 +223,6 @@ class TestHyDECache:
 
     async def test_get_hyde_embedding_not_initialized(self, cache):
         """Test getting HyDE embedding when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await cache.get_hyde_embedding("test query")

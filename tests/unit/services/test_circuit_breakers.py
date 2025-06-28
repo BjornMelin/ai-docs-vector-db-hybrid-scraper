@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from src.services.errors import (
+from src.services.dependencies import (
+from src.services.dependencies import get_service_health
     AdvancedCircuitBreaker,
     CircuitBreakerRegistry,
     CircuitState,
@@ -365,7 +367,6 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_service_dependency_protection(self):
         """Test that service dependencies are protected by circuit breakers."""
-        from src.services.dependencies import (
             get_circuit_breaker_status,
             reset_all_circuit_breakers,
             reset_circuit_breaker,
@@ -390,7 +391,6 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_health_check_includes_circuit_breakers(self):
         """Test that health checks include circuit breaker information."""
-        from src.services.dependencies import get_service_health
 
         with patch("src.services.dependencies.get_client_manager") as mock_get_client:
             mock_client = Mock()

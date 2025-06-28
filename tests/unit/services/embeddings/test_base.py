@@ -10,6 +10,7 @@ import pytest
 
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.errors import EmbeddingServiceError
+import asyncio
 
 
 class ConcreteEmbeddingProvider(EmbeddingProvider):
@@ -414,7 +415,6 @@ class TestProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_provider_usage(self):
         """Test concurrent usage of provider."""
-        import asyncio
 
         provider = ConcreteEmbeddingProvider()
 

@@ -11,6 +11,9 @@ import pytest
 
 from ..base_load_test import create_load_test_runner
 from ..load_profiles import RampUpLoadProfile, SteadyLoadProfile
+from ..load_profiles import create_custom_step_profile
+import random
+import asyncio
 
 
 logger = logging.getLogger(__name__)
@@ -138,7 +141,6 @@ class TestNormalLoad:
         ]
 
         # Create custom profile
-        from ..load_profiles import create_custom_step_profile
 
         profile = create_custom_step_profile(stages)
 
@@ -173,7 +175,6 @@ class TestNormalLoad:
 
         async def cached_search_workload(**kwargs):
             """Workload that repeats queries to test caching."""
-            import random
 
             query = random.choice(repeated_queries)
             return await mock_load_test_service.search_documents(query=query, **kwargs)
@@ -197,8 +198,6 @@ class TestNormalLoad:
 
     def _simulate_normal_traffic(self, **_kwargs):
         """Simulate normal traffic patterns."""
-        import asyncio
-        import random
 
         operations = [
             ("search", 0.6),

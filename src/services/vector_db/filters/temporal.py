@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
+import re
 
 
 logger = logging.getLogger(__name__)
@@ -206,7 +207,7 @@ class TemporalFilter(BaseFilter):
                 performance_impact=performance_impact,
             )
 
-        except Exception:
+        except Exception as e:
             error_msg = f"Failed to apply temporal filter: {e}"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
@@ -393,7 +394,7 @@ class TemporalFilter(BaseFilter):
         try:
             TemporalCriteria.model_validate(filter_criteria)
             return True
-        except Exception:
+        except Exception as e:
             self._logger.warning(f"Invalid temporal criteria: {e}")
             return False
 
@@ -481,7 +482,6 @@ class TemporalFilter(BaseFilter):
         Returns:
             Parsed datetime or None if parsing fails
         """
-        import re
 
         relative_date_str = relative_date_str.lower().strip()
         current_time = datetime.now(tz=UTC)
@@ -516,7 +516,7 @@ class TemporalFilter(BaseFilter):
             if match:
                 try:
                     return calculator(match)
-                except Exception:
+                except Exception as e:
                     self._logger.warning(
                         f"Failed to calculate relative date for '{relative_date_str}': {e}"
                     )

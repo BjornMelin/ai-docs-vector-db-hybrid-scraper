@@ -10,6 +10,7 @@ import yaml
 from pydantic import SecretStr
 
 from src.config.config_manager import (
+import src.config.config_manager
     ConfigFileSettingsSource,
     ConfigManager,
     SecureConfig,
@@ -327,7 +328,6 @@ class TestGlobalConfigManager:
     def test_config_manager_singleton(self):
         """Test that config manager follows singleton pattern."""
         # Reset global instance
-        import src.config.config_manager
 
         src.config.config_manager._config_manager = None
 

@@ -413,7 +413,7 @@ class StressTestOrchestrator:
                 }
             )
 
-        except Exception:
+        except Exception as e:
             scenario_result.update(
                 {
                     "success": False,
@@ -487,7 +487,7 @@ class StressTestOrchestrator:
                         }
                     )
 
-            except Exception:
+            except Exception as e:
                 phase_result.update(
                     {
                         "success": False,

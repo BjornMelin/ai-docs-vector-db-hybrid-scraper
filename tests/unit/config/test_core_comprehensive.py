@@ -12,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from src.config.core import (
+import time
     CacheConfig,
     ChunkingConfig,
     Config,
@@ -478,7 +479,6 @@ class TestConfigPerformance:
 
     def test_config_creation_performance(self):
         """Test that Config creation is reasonably fast."""
-        import time
 
         start_time = time.perf_counter()
         for _ in range(10):  # Reduced from 100 for realistic testing
@@ -490,7 +490,6 @@ class TestConfigPerformance:
 
     def test_config_access_performance(self):
         """Test that Config property access is fast."""
-        import time
 
         config = Config()
 

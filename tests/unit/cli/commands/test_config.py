@@ -7,6 +7,7 @@ validation, display, and conversion functionality with Rich console output.
 from unittest.mock import MagicMock, patch
 
 from src.cli.commands.config import (
+from src.cli.commands.config import config
     _show_config_json,
     _show_config_table,
     _show_config_yaml,
@@ -376,7 +377,6 @@ class TestConfigIntegration:
 
     def test_config_imports(self):
         """Test that config module can be imported."""
-        from src.cli.commands.config import config
 
         assert config is not None
         assert hasattr(config, "commands")

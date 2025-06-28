@@ -99,7 +99,7 @@ class TestEnhancedRouterRateLimiting:
             try:
                 result = await router.scrape(url, force_tool="browser_use")
                 results.append(result)
-            except Exception:
+            except Exception as e:
                 results.append({"error": str(e)})
 
         # First 3 should succeed
