@@ -143,7 +143,7 @@ class LoadTestUser:
 
             try:
                 # Select random query
-                query = random.choice(self.test_queries).model_copy()
+                query = random.choice(self.test_queries).model_copy()  # noqa: S311  # Non-crypto random for load testing
                 query.user_id = f"load_test_user_{self.user_id}"
                 query.session_id = (
                     f"load_test_session_{self.user_id}_{int(time.time())}"
@@ -202,7 +202,7 @@ class LoadTestUser:
 
                 # Think time between requests
                 think_time = (
-                    random.randint(
+                    random.randint(  # noqa: S311  # Non-crypto random for load testing
                         self.config.think_time_min_ms, self.config.think_time_max_ms
                     )
                     / 1000.0

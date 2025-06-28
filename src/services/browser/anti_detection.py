@@ -427,18 +427,18 @@ class EnhancedAntiDetection:
             self.user_agents.safari_agents,
         ]
 
-        selected_pool = random.choices(browser_pools, weights=browser_weights)[0]
-        return random.choice(selected_pool)
+        selected_pool = random.choices(browser_pools, weights=browser_weights)[0]  # noqa: S311  # Anti-detection randomization
+        return random.choice(selected_pool)  # noqa: S311  # Anti-detection randomization
 
     def _randomize_viewport(self) -> ViewportProfile:
         """Randomize viewport with common resolution patterns."""
         # Filter to non-mobile profiles for better compatibility
         desktop_profiles = [p for p in self.viewport_profiles if not p.is_mobile]
-        profile = random.choice(desktop_profiles)
+        profile = random.choice(desktop_profiles)  # noqa: S311  # Anti-detection randomization
 
         # Add slight randomization to avoid exact pattern matching
-        width_variance = random.randint(-50, 50)
-        height_variance = random.randint(-30, 30)
+        width_variance = random.randint(-50, 50)  # noqa: S311  # Anti-detection randomization
+        height_variance = random.randint(-30, 30)  # noqa: S311  # Anti-detection randomization
 
         return ViewportProfile(
             width=max(1200, min(1920, profile.width + width_variance)),
