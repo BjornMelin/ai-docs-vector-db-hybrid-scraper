@@ -4,13 +4,15 @@ Simplified document management endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
 
+
+from typing import Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

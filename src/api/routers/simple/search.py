@@ -4,13 +4,11 @@ Simplified search endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any, Dict
-
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
-from src.models.vector_search import SearchRequest, SearchResponse
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +30,7 @@ class SimpleSearchResponse(BaseModel):
     """Simplified search response for simple mode."""
 
     query: str = Field(..., description="Original search query")
-    results: list[Dict[str, Any]] = Field(..., description="Search results")
+    results: list[dict[str, Any]] = Field(..., description="Search results")
     total_count: int = Field(..., description="Total number of results")
     processing_time_ms: float = Field(
         ..., description="Processing time in milliseconds"
@@ -89,7 +87,7 @@ async def search_documents_get(
 
 
 @router.get("/search/health")
-async def search_health() -> Dict[str, Any]:
+async def search_health() -> dict[str, Any]:
     """Get search service health status."""
     try:
         search_service = await get_service("search_service")
