@@ -97,7 +97,7 @@ def fix_try300_simple_cases():
                     f.writelines(lines)
                 print(f"Fixed TRY300 violations in {filepath}")
                         
-        except Exception as e:
+        except Exception:
             print(f"Error processing {filepath}: {e}")
     
     return fixed_count

@@ -65,7 +65,9 @@ def optimized_async_loop():
 
         loop.close()
     except Exception:
-        pass  # Ignore cleanup errors
+        logger.debug(
+            f"Event loop cleanup error (ignored): {e}"
+        )  # Ignore cleanup errors
 
 
 @pytest.fixture(scope="session")
@@ -351,7 +353,9 @@ async def fast_async_context():
                         else:
                             resource.close()
                     except Exception:
-                        pass  # Ignore cleanup errors
+                        logger.debug(
+                            f"Resource cleanup error (ignored): {e}"
+                        )  # Ignore cleanup errors
 
         def add_resource(self, resource):
             """Add resource for cleanup."""

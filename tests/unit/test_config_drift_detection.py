@@ -620,7 +620,7 @@ class TestIntegrationWithTask20:
 
     def test_metrics_bridge_integration(self, drift_config, mock_metrics_bridge):
         """Test integration with metrics bridge."""
-        detector = ConfigDriftDetector(drift_config)
+        _detector = ConfigDriftDetector(drift_config)
 
         # Verify custom metrics were created
         assert mock_metrics_bridge.create_custom_counter.called

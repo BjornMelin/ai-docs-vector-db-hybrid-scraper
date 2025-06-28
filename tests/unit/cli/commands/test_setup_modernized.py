@@ -305,12 +305,28 @@ class TestModernConfigurationWizard:
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console
 
+        # Create secure temporary files
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix="_profile_config.json", delete=False
+        ) as temp_profile:
+            temp_profile_path = temp_profile.name
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix="_config.json", delete=False
+        ) as temp_config:
+            temp_config_path = temp_config.name
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".env", delete=False
+        ) as temp_env:
+            temp_env_path = temp_env.name
+
         # Mock profile manager
         wizard.profile_manager.create_profile_config.return_value = Path(
-            "/tmp/profile_config.json"
+            temp_profile_path
         )
-        wizard.profile_manager.activate_profile.return_value = Path("/tmp/config.json")
-        wizard.profile_manager.generate_env_file.return_value = Path("/tmp/.env")
+        wizard.profile_manager.activate_profile.return_value = Path(temp_config_path)
+        wizard.profile_manager.generate_env_file.return_value = Path(temp_env_path)
 
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
             mock_questionary.confirm.return_value.ask.side_effect = [
@@ -321,7 +337,7 @@ class TestModernConfigurationWizard:
             config_data = {"test": "config"}
             result = wizard.save_configuration("test-profile", config_data)
 
-            assert result == Path("/tmp/config.json")
+            assert result == Path(temp_config_path)
             wizard.profile_manager.create_profile_config.assert_called_once_with(
                 "test-profile", customizations=config_data
             )
@@ -361,10 +377,18 @@ class TestModernConfigurationWizard:
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console
 
+        # Create secure temporary file
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix="_config.json", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
         # Setup mocks
         mock_select_profile.return_value = "personal"
         mock_customize.return_value = {"openai": {"api_key": "test"}}
-        mock_save.return_value = Path("/tmp/config.json")
+        mock_save.return_value = Path(temp_path)
 
         # Mock profile templates
         wizard.profile_manager.profile_templates = {"personal": "personal-use"}
@@ -383,7 +407,7 @@ class TestModernConfigurationWizard:
 
             result = wizard.run_setup()
 
-            assert result == Path("/tmp/config.json")
+            assert result == Path(temp_path)
             mock_welcome.assert_called_once()
             mock_select_profile.assert_called_once()
             mock_customize.assert_called_once_with("personal-use")
@@ -441,12 +465,20 @@ class TestModernConfigurationWizard:
         wizard.selected_profile = "personal"
         wizard.profile_manager.profile_templates = {"personal": "personal-use"}
 
-        wizard._show_success_message(Path("/tmp/config.json"))
+        # Create secure temporary file for display test
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix="_config.json", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
+        wizard._show_success_message(Path(temp_path))
 
         rich_output_capturer.assert_panel_title("🚀 Template-Driven Setup Complete")
         rich_output_capturer.assert_contains("🎉 Modern Setup Complete!")
         rich_output_capturer.assert_contains("Profile: personal")
-        rich_output_capturer.assert_contains("Config file: /tmp/config.json")
+        rich_output_capturer.assert_contains(f"Config file: {temp_path}")
         rich_output_capturer.assert_contains("Test configuration:")
         rich_output_capturer.assert_contains("Start services:")
         rich_output_capturer.assert_contains("Check system status:")

@@ -19,10 +19,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.config import PlaywrightConfig
+
 
 logger = logging.getLogger(__name__)
-
-from src.config import PlaywrightConfig
 
 
 class UserAgentPool(BaseModel):

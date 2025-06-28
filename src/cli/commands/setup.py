@@ -18,6 +18,13 @@ from rich.text import Text
 from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
 
 
+# Optional import for config validation
+try:
+    from .config import validate_config
+except ImportError:
+    validate_config = None
+
+
 console = Console()
 
 
@@ -493,13 +500,9 @@ def setup(
         ).ask()
 
         if validate_choice:
-            try:
-                from .config import (
-                    validate_config,
-                )
-
+            if validate_config is not None:
                 ctx.invoke(validate_config, config_file=config_path)
-            except ImportError:
+            else:
                 # Fallback validation using our wizard validator
                 console.print(
                     "[yellow]Using wizard validation (config command not available)[/yellow]"

@@ -7,6 +7,7 @@ load balancing, and distributed query optimization.
 
 import asyncio
 import logging
+import time
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
@@ -333,7 +334,6 @@ class FederatedSearchService:
         Returns:
             FederatedSearchResult with merged results and metadata
         """
-        import time
 
         start_time = time.time()
 
@@ -771,7 +771,6 @@ class FederatedSearchService:
         self, collection_name: str, request: FederatedSearchRequest
     ) -> CollectionSearchResult:
         """Search a single collection."""
-        import time
 
         start_time = time.time()
 

@@ -139,13 +139,13 @@ def instrument_function(
                         if isinstance(result, dict) and "status" in result:
                             span.set_attribute("result.status", result["status"])
 
-                    return result
-
                 except Exception:
                     # Record exception in span
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     # Add performance metrics
@@ -214,12 +214,13 @@ def instrument_vector_search(
                             )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -244,12 +245,13 @@ def instrument_vector_search(
                     result = func(*args, **kwargs)
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -317,12 +319,13 @@ def instrument_embedding_generation(
                             )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -347,12 +350,13 @@ def instrument_embedding_generation(
                     result = func(*args, **kwargs)
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -424,12 +428,13 @@ def instrument_llm_call(
                             )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -454,12 +459,13 @@ def instrument_llm_call(
                     result = func(*args, **kwargs)
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time

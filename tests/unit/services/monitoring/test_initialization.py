@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Comprehensive tests for monitoring system initialization."""
 
 import asyncio
@@ -24,6 +18,12 @@ from src.services.monitoring.initialization import (
     update_cache_metrics_periodically,
     update_system_metrics_periodically,
 )
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class TestMonitoringInitialization:

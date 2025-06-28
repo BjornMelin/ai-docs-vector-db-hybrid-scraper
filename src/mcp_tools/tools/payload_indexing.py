@@ -1,9 +1,12 @@
 """Payload indexing management tools for MCP server."""
 
 import logging
+import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
+from ..models.responses import ReindexCollectionResponse
 
 
 if TYPE_CHECKING:
@@ -118,8 +121,6 @@ def register_tools(mcp, client_manager: ClientManager):
             logger.exception("Failed to list payload indexes")
             raise
 
-    from ..models.responses import ReindexCollectionResponse
-
     @mcp.tool()
     async def reindex_collection(
         collection_name: str, ctx: Context
@@ -209,7 +210,6 @@ def register_tools(mcp, client_manager: ClientManager):
             query_vector = embedding_result["embeddings"][0]
 
             # Run filtered search with timing
-            import time
 
             start_time = time.time()
 

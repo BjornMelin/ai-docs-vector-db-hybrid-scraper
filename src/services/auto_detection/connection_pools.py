@@ -14,6 +14,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import redis.asyncio as redis
 from pydantic import BaseModel
 
 from src.config.auto_detect import AutoDetectionConfig, DetectedService
@@ -349,7 +350,6 @@ class ConnectionPoolManager:
             pool = self._pools["redis"]
 
             # Use library's ping method for health check
-            import redis.asyncio as redis
 
             client = redis.Redis(connection_pool=pool)
 

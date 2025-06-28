@@ -316,7 +316,7 @@ class ServiceTestRunner:
                     print(f"❌ {suite_name} tests FAILED")
                 else:
                     print(f"✅ {suite_name} tests PASSED")
-            except Exception as e:
+            except Exception:
                 print(f"💥 {suite_name} tests CRASHED: {e}")
                 failed_suites.append(suite_name)
                 self.results[suite_name] = {
@@ -329,7 +329,7 @@ class ServiceTestRunner:
         print(f"\n{'-' * 40}")
         try:
             self.run_coverage_analysis()
-        except Exception as e:
+        except Exception:
             print(f"💥 Coverage analysis CRASHED: {e}")
         
         execution_time = time.time() - start_time

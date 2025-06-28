@@ -13,7 +13,6 @@ import resource
 import time
 import tracemalloc
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import psutil
@@ -213,7 +212,7 @@ class TestConfigurationLoadStress:
         initial_start = time.time()
         initial_config = Config()  # Would normally load from file
         reloader.set_current_config(initial_config)
-        initial_duration = (time.time() - initial_start) * 1000
+        _initial_duration = (time.time() - initial_start) * 1000
 
         # Track memory before stress test
         gc.collect()
@@ -352,7 +351,6 @@ class TestConfigurationLoadStress:
 
         # Analyze results
         successful = [r for r in valid_results if r["success"]]
-        failed = [r for r in valid_results if not r["success"]]
 
         # Most should succeed (some may fail due to lock contention)
         assert len(successful) >= len(valid_results) * 0.5  # At least 50% success

@@ -1,8 +1,6 @@
 """Comprehensive tests for crawl4ai_bulk_embedder module."""
 
-import asyncio
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

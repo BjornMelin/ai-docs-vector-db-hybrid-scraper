@@ -328,7 +328,7 @@ class BrowserUseAdapter(BaseService):
             action = instruction.get("action", "")
 
             if action == "click":
-                selector = instruction.get("selector", "")
+                _selector = instruction.get("selector", "")
                 formatted_actions.append("{i}. Click on element")
             elif action == "type":
                 _selector = instruction.get("selector", "")

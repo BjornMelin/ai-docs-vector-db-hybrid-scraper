@@ -49,7 +49,7 @@ async def test_crawl4ai():
 
         return result
 
-    except Exception as e:
+    except Exception:
         logger.error(f"Test failed: {e}", exc_info=True)
         if hasattr(provider, "cleanup"):
             await provider.cleanup()

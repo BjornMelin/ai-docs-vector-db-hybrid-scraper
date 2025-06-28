@@ -318,7 +318,7 @@ def create_mock_web_scraper(
             try:
                 result = await mock_scrape_url(url, **kwargs)
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 results.append({"url": url, "error": str(e), "success": False})
         return results
 

@@ -311,7 +311,7 @@ class FailureInjector:
                     # Brief pause
                     time.sleep(0.1)
 
-                except Exception as e:
+                except Exception:
                     logger.warning("Disk I/O stress error")
                     break
 
@@ -413,7 +413,7 @@ class StressTestOrchestrator:
                 }
             )
 
-        except Exception as e:
+        except Exception:
             scenario_result.update(
                 {
                     "success": False,
@@ -487,7 +487,7 @@ class StressTestOrchestrator:
                         }
                     )
 
-            except Exception as e:
+            except Exception:
                 phase_result.update(
                     {
                         "success": False,
@@ -663,7 +663,7 @@ def stress_test_environment():
                 logger.info(f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB")
             else:
                 logger.info("Memory limit: unlimited")
-        except Exception as e:
+        except Exception:
             logger.warning("Could not check resource limits")
 
     yield

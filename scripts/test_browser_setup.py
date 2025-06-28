@@ -75,7 +75,7 @@ def test_playwright_installation() -> bool:
             from playwright.async_api import async_playwright
             print_status("Playwright browser modules available", "SUCCESS")
             return True
-        except Exception as e:
+        except Exception:
             print_status(f"Playwright browser modules not available: {e}", "ERROR")
             return False
 
@@ -113,7 +113,7 @@ def test_crawl4ai_browser_config() -> bool:
     except ImportError as e:
         print_status(f"Crawl4AI not available: {e}", "ERROR")
         return False
-    except Exception as e:
+    except Exception:
         print_status(f"Crawl4AI configuration error: {e}", "ERROR")
         return False
 
@@ -159,7 +159,7 @@ async def test_basic_crawling() -> bool:
                 print_status(f"Crawling failed: {result.error}", "ERROR")
                 return False
 
-    except Exception as e:
+    except Exception:
         print_status(f"Crawling test error: {e}", "ERROR")
         return False
 
@@ -235,7 +235,7 @@ def install_browsers_if_needed() -> bool:
     except subprocess.TimeoutExpired:
         print_status("Browser installation timed out", "ERROR")
         return False
-    except Exception as e:
+    except Exception:
         print_status(f"Browser installation error: {e}", "ERROR")
         return False
 

@@ -4,6 +4,7 @@ Handles profile-specific configuration operations, including
 profile switching, environment-specific settings, and template mapping.
 """
 
+import json
 import shutil
 from pathlib import Path
 
@@ -178,8 +179,6 @@ class ProfileManager:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with output_path.open("w") as f:
-            import json
-
             json.dump(config.model_dump(), f, indent=2)
 
         return output_path

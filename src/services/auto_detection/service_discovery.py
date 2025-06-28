@@ -9,6 +9,7 @@ Implements modern async service discovery patterns with:
 
 import asyncio
 import logging
+import os
 import time
 from typing import Any
 from urllib.parse import urlparse
@@ -459,7 +460,6 @@ class ServiceDiscovery:
         candidates = []
 
         # Check for Redis URL in environment
-        import os
 
         redis_url = os.getenv("REDIS_URL")
         if redis_url:

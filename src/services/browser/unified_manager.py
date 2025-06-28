@@ -17,6 +17,7 @@ from src.config import Config
 from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
+from ...services.cache.browser_cache import (
 
 
 logger = logging.getLogger(__name__)
@@ -256,7 +257,6 @@ class UnifiedBrowserManager(BaseService):
             and self._browser_cache
             and not request.interaction_required
         ):
-            from ...services.cache.browser_cache import (
                 BrowserCacheEntry,
             )
 

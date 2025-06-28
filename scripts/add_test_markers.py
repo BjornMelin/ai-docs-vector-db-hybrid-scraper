@@ -110,7 +110,7 @@ class TestMarkerAnalyzer(ast.NodeVisitor):
             
             return self.markers_needed
             
-        except Exception as e:
+        except Exception:
             print(f"Error analyzing {file_path}: {e}")
             return set()
 
@@ -168,7 +168,7 @@ def add_markers_to_test_file(file_path: Path, markers: set[str]) -> bool:
         
         return False
         
-    except Exception as e:
+    except Exception:
         print(f"❌ Error adding markers to {file_path}: {e}")
         return False
 

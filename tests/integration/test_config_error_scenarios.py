@@ -174,7 +174,7 @@ class TestRealWorldErrorScenarios:
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
 
-        manager = ConfigManager(
+        _manager = ConfigManager(
             config_class=Config,
             config_file=config_file,
             enable_file_watching=True,  # Enable to test degradation
@@ -222,7 +222,7 @@ class TestRealWorldErrorScenarios:
 
         # Loading should handle validation errors gracefully
         # Due to our fallback mechanism, this won't raise
-        config = manager.get_config()
+        _config = manager.get_config()
 
         # Check status for validation issues
         status = manager.get_status()

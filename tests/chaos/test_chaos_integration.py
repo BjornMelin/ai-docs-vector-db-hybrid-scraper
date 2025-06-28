@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Chaos engineering integration tests.
 
 This module implements comprehensive integration tests that combine all chaos
@@ -17,11 +11,17 @@ import time
 
 import pytest
 
+from tests.chaos.conftest import ChaosExperiment, FailureType
+from tests.chaos.test_chaos_runner import ChaosTestRunner, ChaosTestSuite
+
 
 logger = logging.getLogger(__name__)
 
-from tests.chaos.conftest import ChaosExperiment, FailureType
-from tests.chaos.test_chaos_runner import ChaosTestRunner, ChaosTestSuite
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 @pytest.mark.chaos
@@ -509,7 +509,7 @@ class TestChaosIntegration:
         try:
             await integrated_system.health_check()
             raise AssertionError("Health check should fail with multiple failures")
-        except Exception as e:
+        except Exception:
             # Expected failure
             logger.debug("Exception suppressed during cleanup/testing")
 

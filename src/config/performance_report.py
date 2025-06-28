@@ -5,13 +5,16 @@ configuration implementations, validating all performance claims.
 """
 
 import asyncio
+import gc
 import json
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
+import psutil
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -286,8 +289,6 @@ class ConfigPerformanceReporter:
         detector = ConfigDriftDetector(drift_config)
 
         # Create test file
-        import tempfile
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("TEST_SETTING=value1\n")
             test_file = f.name
@@ -395,8 +396,6 @@ class ConfigPerformanceReporter:
         console.print("\n[bold yellow]4. File Watching Performance[/bold yellow]")
 
         # Create test files
-        import tempfile
-
         test_files = []
         for i in range(5):
             with tempfile.NamedTemporaryFile(
@@ -448,10 +447,6 @@ class ConfigPerformanceReporter:
     async def _benchmark_memory_usage(self) -> None:
         """Benchmark memory usage."""
         console.print("\n[bold yellow]5. Memory Usage Analysis[/bold yellow]")
-
-        import gc
-
-        import psutil
 
         process = psutil.Process()
 

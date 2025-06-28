@@ -1,6 +1,7 @@
 """ARQ task definitions for background processing."""
 
 import asyncio
+import importlib
 import logging
 import time
 from typing import Any
@@ -127,7 +128,6 @@ async def persist_cache(
 
         # Import and call the persist function dynamically
         # This allows different persist functions to be used
-        import importlib
 
         module = importlib.import_module(persist_func_module)
         persist_func = getattr(module, persist_func_name)

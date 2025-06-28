@@ -13,6 +13,11 @@ from fastapi import Depends
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 
+from ..cache.manager import CacheManager
+from ..crawling.manager import CrawlManager
+from ..embeddings.manager import EmbeddingManager
+from ..vector_db.service import QdrantService
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +64,6 @@ async def get_cache_client(
     Yields:
         CacheManager: Initialized cache manager
     """
-    from ..cache.manager import CacheManager
 
     cache_manager = CacheManager(
         dragonfly_url=config.cache.dragonfly_url,
@@ -91,7 +95,6 @@ async def get_embedding_client(
     Yields:
         EmbeddingManager: Initialized embedding manager
     """
-    from ..embeddings.manager import EmbeddingManager
 
     embedding_manager = EmbeddingManager(
         config=config,
@@ -119,7 +122,6 @@ async def get_vector_db_client(
     Yields:
         QdrantService: Initialized vector database client
     """
-    from ..vector_db.service import QdrantService
 
     qdrant_manager = QdrantService(config)
 
@@ -161,7 +163,6 @@ async def get_crawling_client(
     Yields:
         CrawlManager: Initialized crawl manager
     """
-    from ..crawling.manager import CrawlManager
 
     crawl_manager = CrawlManager(
         config=config,

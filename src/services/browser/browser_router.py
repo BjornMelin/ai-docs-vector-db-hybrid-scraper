@@ -23,6 +23,7 @@ from .tier_config import (
     PerformanceHistoryEntry,
     TierConfiguration,
     TierPerformanceAnalysis,
+    create_default_routing_config,
 )
 from .tier_rate_limiter import RateLimitContext, TierRateLimiter
 
@@ -87,7 +88,6 @@ class EnhancedAutomationRouter(AutomationRouter):
         super().__init__(config)
 
         # Load enhanced configuration
-        from .tier_config import create_default_routing_config
 
         self.routing_config = create_default_routing_config()
 

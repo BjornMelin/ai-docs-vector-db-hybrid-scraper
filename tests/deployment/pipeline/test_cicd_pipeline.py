@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """CI/CD Pipeline Validation Tests.
 
 This module tests the entire CI/CD pipeline workflow including build processes,
@@ -18,6 +12,12 @@ from typing import Any
 import pytest
 
 from tests.deployment.conftest import DeploymentEnvironment, DeploymentTestConfig
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class TestCICDPipeline:
@@ -520,7 +520,7 @@ class PipelineExecutor:
 
                     break
 
-        except Exception as e:
+        except Exception:
             result["success"] = False
             result["error"] = str(e)
 
@@ -563,7 +563,7 @@ class PipelineExecutor:
                 **stage_result,
             }
 
-        except Exception as e:
+        except Exception:
             end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time).total_seconds()
 
@@ -747,7 +747,7 @@ class DockerBuildManager:
 
             return result
 
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),
@@ -820,7 +820,7 @@ class PipelineTestExecutor:
                 **result,
             }
 
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "test_type": test_type,

@@ -18,7 +18,7 @@ from qdrant_client import AsyncQdrantClient
 from src.config import Config
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
-
+from src.services.hyde.engine import HyDEQueryEngine
 
 # Optional imports for configuration functions to avoid circular imports
 try:
@@ -407,9 +407,6 @@ class ClientManager:
                         HyDEConfig,
                         HyDEMetricsConfig,
                         HyDEPromptConfig,
-                    )
-                    from src.services.hyde.engine import (
-                        HyDEQueryEngine,
                     )
 
                     # Get dependencies

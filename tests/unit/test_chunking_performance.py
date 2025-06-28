@@ -219,7 +219,7 @@ class TestTreeSitterImportErrors:
         except Exception:
             # If we can't test the import error due to module caching,
             # that's acceptable - the important thing is the code handles it
-            pass
+            logger.debug(f"Module import test limitation (acceptable): {e}")
 
     def test_language_parser_import_errors(self):
         """Test handling of language-specific parser import errors."""

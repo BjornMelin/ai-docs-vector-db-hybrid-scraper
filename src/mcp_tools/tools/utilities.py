@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from ..models.responses import ConfigValidationResponse, GenericDictResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -25,8 +27,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register utility tools with the MCP server."""
-
-    from ..models.responses import ConfigValidationResponse, GenericDictResponse
 
     @mcp.tool()
     async def estimate_costs(

@@ -7,6 +7,7 @@ API-based configuration reloads with zero-downtime guarantees.
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import signal
@@ -212,8 +213,6 @@ class ConfigReloader:
         # Convert config to dict and create a stable hash
         config_dict = config.model_dump()
         config_json = json.dumps(config_dict, sort_keys=True, default=str)
-        import hashlib
-
         return hashlib.sha256(config_json.encode()).hexdigest()[:16]
 
     def _add_config_backup(self, config: Config) -> None:

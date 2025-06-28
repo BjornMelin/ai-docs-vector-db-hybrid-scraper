@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
+import tomli
+import yaml
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 from tenacity import (
@@ -264,8 +266,6 @@ class SafeConfigLoader:
                         return json.load(f)
 
                 elif suffix in [".yaml", ".yml"]:
-                    import yaml
-
                     with file_path.open() as f:
                         data = yaml.safe_load(f)
                         if data is None:
@@ -278,8 +278,6 @@ class SafeConfigLoader:
                         return data
 
                 elif suffix == ".toml":
-                    import tomli
-
                     with file_path.open("rb") as f:
                         return tomli.load(f)
 

@@ -6,6 +6,7 @@ result rankings optimized for individual users and contexts.
 """
 
 import logging
+import time
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
@@ -345,7 +346,6 @@ class PersonalizedRankingService:
         Returns:
             PersonalizedRankingResult with reranked results and metadata
         """
-        import time
 
         start_time = time.time()
 

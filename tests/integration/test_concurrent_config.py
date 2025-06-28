@@ -91,7 +91,7 @@ class TestConcurrentConfigurationAccess:
                     reload_results.append((version_idx, result))
 
                 return result
-            except Exception as e:
+            except Exception:
                 pytest.fail(f"Reload failed: {e}")
 
         # Execute concurrent reloads
@@ -107,7 +107,6 @@ class TestConcurrentConfigurationAccess:
 
         # Check that reloads were serialized (no concurrent execution)
         successful_reloads = [r for _, r in reload_results if r.success]
-        failed_reloads = [r for _, r in reload_results if not r.success]
 
         # At least some should succeed
         assert len(successful_reloads) > 0
@@ -270,7 +269,7 @@ class TestConcurrentConfigurationAccess:
                 )
                 with result_lock:
                     operation_results.append(("write", config_key, True, None))
-            except Exception as e:
+            except Exception:
                 with result_lock:
                     operation_results.append(("write", config_key, False, str(e)))
 
@@ -280,7 +279,7 @@ class TestConcurrentConfigurationAccess:
                 data = secure_config_manager.read_encrypted_config(config_key)
                 with result_lock:
                     operation_results.append(("read", config_key, True, data))
-            except Exception as e:
+            except Exception:
                 with result_lock:
                     operation_results.append(("read", config_key, False, str(e)))
 
@@ -379,7 +378,7 @@ class TestConcurrentConfigurationAccess:
 
                 result["duration_ms"] = (time.time() - start_time) * 1000
 
-            except Exception as e:
+            except Exception:
                 result["error"] = str(e)
 
             async with operation_lock:
@@ -518,7 +517,7 @@ class TestConcurrentConfigurationAccess:
                         }
                     )
 
-            except Exception as e:
+            except Exception:
                 async with result_lock:
                     rollback_results.append(
                         {

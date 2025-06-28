@@ -178,10 +178,10 @@ class TestLRUCacheBehavior:
         """
         # Arrange: Add items and track memory
         await small_cache.set("key1", "small_value")
-        memory_after_first = small_cache._current_memory
+        _memory_after_first = small_cache._current_memory
 
         await small_cache.set("key2", "another_small_value")
-        memory_after_second = small_cache._current_memory
+        _memory_after_second = small_cache._current_memory
 
         await small_cache.set("key3", "third_small_value")
         memory_after_third = small_cache._current_memory
@@ -251,7 +251,7 @@ class TestCacheIntegrationPatterns:
                     return cached_value
             except Exception:
                 # Gracefully handle cache failure
-                pass
+                logger.debug(f"Cache read failure (graceful fallback): {e}")
 
             # Fallback to direct computation
             computed_value = f"computed_value_for_{key}"
@@ -260,7 +260,7 @@ class TestCacheIntegrationPatterns:
                 await mock_cache.set(key, computed_value)
             except Exception:
                 # Cache set failure is non-fatal
-                pass
+                logger.debug(f"Cache set failure (non-fatal): {e}")
 
             return computed_value
 

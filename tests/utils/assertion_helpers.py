@@ -533,7 +533,7 @@ async def assert_async_operation_completes(
         raise AssertionError(
             f"{operation_name} timed out after {timeout_seconds}s"
         ) from e
-    except Exception as e:
+    except Exception:
         raise AssertionError(f"{operation_name} failed with error: {e}") from e
 
 

@@ -6,6 +6,7 @@ time-based content relevance analysis.
 """
 
 import logging
+import math
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -345,7 +346,6 @@ class TemporalFilter(BaseFilter):
             # Calculate age threshold based on freshness score
             # Using exponential decay: freshness = e^(-age/half_life)
             # Solving for age: age = -half_life * ln(freshness_threshold)
-            import math
 
             half_life_days = self.default_half_life_days
             max_age_for_threshold = -half_life_days * math.log(
@@ -459,7 +459,6 @@ class TemporalFilter(BaseFilter):
             )
         else:
             # Default to exponential
-            import math
 
             score = math.exp(-age_days / half_life_days)
 

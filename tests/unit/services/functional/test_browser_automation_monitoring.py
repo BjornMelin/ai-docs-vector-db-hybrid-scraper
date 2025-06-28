@@ -186,7 +186,7 @@ class MockBrowserMonitoringSystem:
                 result["attempts"] = tier_order.index(tier_name) + 1
                 return result
 
-            except Exception as e:
+            except Exception:
                 last_error = e
                 continue
 

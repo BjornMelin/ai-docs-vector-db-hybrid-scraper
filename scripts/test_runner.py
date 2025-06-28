@@ -177,7 +177,7 @@ class TestRunner:
         except KeyboardInterrupt:
             print("\n🛑 Test execution interrupted by user")
             return 130
-        except Exception as e:
+        except Exception:
             print(f"❌ Error executing command: {e}")
             return 1
 

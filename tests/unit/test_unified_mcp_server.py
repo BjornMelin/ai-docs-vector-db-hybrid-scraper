@@ -19,8 +19,9 @@ sys.modules["src.services"] = MagicMock()
 sys.modules["src.services.vector_db"] = MagicMock()
 sys.modules["src.services.vector_db.search"] = MagicMock()
 
-# This is intentionally after mocks due to import dependencies
-from src import unified_mcp_server
+from src import (
+    unified_mcp_server,
+)  # This is intentionally after mocks due to import dependencies
 
 
 class TestValidateStreamingConfig:
@@ -511,7 +512,8 @@ class TestLifespanContextManager:
             async with unified_mcp_server.lifespan():
                 pass
         except Exception:
-            pass
+            # Exception expected during lifespan test
+            logger.debug(f"Expected lifespan test exception: {e}")
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)

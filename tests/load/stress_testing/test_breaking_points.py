@@ -309,7 +309,7 @@ class TestBreakingPoints:
                     logger.warning(f"Breaking point reached at step {i + 1}")
                     break
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Step {i + 1} failed")
                 # Add failure point
                 point = PerformancePoint(
@@ -490,7 +490,7 @@ class TestBreakingPoints:
                     f"Spike {scenario['name']}: {error_rate:.2f}% errors, {avg_response_time:.2f}ms response time"
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Spike scenario {scenario['name']} failed")
                 # Record failure
                 spike_results.append(

@@ -13,6 +13,7 @@ import logging
 import time
 from typing import Any
 
+
 try:
     import httpx
 except ImportError:
@@ -225,16 +226,17 @@ class HealthChecker:
             )
 
         except ImportError:
-            raise RuntimeError("redis package not available")
+            raise RuntimeError("redis package not available") from None
         except Exception:
-            raise RuntimeError("Redis health check failed")
+            raise RuntimeError("Redis health check failed") from e
 
     async def _check_qdrant_health(
         self, service: DetectedService, start_time: float
     ) -> HealthCheckResult:
         """Check Qdrant service health."""
         try:
-            import httpx
+            if httpx is None:
+                raise ImportError("httpx package not available")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -271,7 +273,7 @@ class HealthChecker:
                 )
 
         except Exception:
-            raise RuntimeError("Qdrant health check failed")
+            raise RuntimeError("Qdrant health check failed") from e
 
     async def _check_postgresql_health(
         self, service: DetectedService, start_time: float
@@ -300,7 +302,7 @@ class HealthChecker:
             )
 
         except Exception:
-            raise RuntimeError("PostgreSQL health check failed")
+            raise RuntimeError("PostgreSQL health check failed") from e
 
     async def _check_generic_health(
         self, service: DetectedService, start_time: float
@@ -309,7 +311,8 @@ class HealthChecker:
         try:
             if service.health_check_url:
                 # HTTP health check
-                import httpx
+                if httpx is None:
+                    raise ImportError("httpx package not available")
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)
@@ -348,7 +351,7 @@ class HealthChecker:
                 )
 
         except Exception:
-            raise RuntimeError("Generic health check failed")
+            raise RuntimeError("Generic health check failed") from e
 
     async def _monitor_loop(self) -> None:
         """Background monitoring loop."""

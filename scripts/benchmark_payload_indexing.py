@@ -50,7 +50,7 @@ class PayloadIndexingBenchmark:
             await self.qdrant_service.initialize()
             await self.embedding_manager.initialize()
             logger.info("Successfully initialized services")
-        except Exception as e:
+        except Exception:
             logger.error(f"Failed to initialize services: {e}")
             raise
 
@@ -61,13 +61,13 @@ class PayloadIndexingBenchmark:
             try:
                 await self.qdrant_service.delete_collection(self.test_collection)
                 logger.info(f"Cleaned up test collection: {self.test_collection}")
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Could not delete test collection: {e}")
 
             await self.qdrant_service.cleanup()
             await self.embedding_manager.cleanup()
             logger.info("Successfully cleaned up services")
-        except Exception as e:
+        except Exception:
             logger.warning(f"Cleanup warning: {e}")
 
     async def setup_test_collection(self, with_indexes: bool = True) -> dict[str, Any]:
@@ -377,7 +377,7 @@ class PayloadIndexingBenchmark:
 
             return self.benchmark_results
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Benchmark failed: {e}")
             raise
 
@@ -492,7 +492,7 @@ async def main():
     except KeyboardInterrupt:
         logger.info("Benchmark cancelled by user")
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         logger.error(f"Benchmark failed with error: {e}", exc_info=True)
         sys.exit(1)
     finally:

@@ -84,10 +84,8 @@ class TestStressLoad:
                 )
 
                 # Check if we've hit breaking point
-                if (
-                    error_rate > 10.0
-                    or (avg_response_time > 3000
-                    and breaking_point is None)
+                if error_rate > 10.0 or (
+                    avg_response_time > 3000 and breaking_point is None
                 ):
                     breaking_point = current_users
                     logger.warning(f"Breaking point detected at {current_users} users")
@@ -140,7 +138,7 @@ class TestStressLoad:
             """Monitor for resource exhaustion indicators."""
             try:
                 return await mock_load_test_service.process_request(**kwargs)
-            except Exception as e:
+            except Exception:
                 error_msg = str(e).lower()
                 if "timeout" in error_msg:
                     resource_metrics["timeout_errors"] += 1
@@ -206,7 +204,7 @@ class TestStressLoad:
             try:
                 # Call multiple services
                 await services.call_service("cache")
-            except Exception as e:
+            except Exception:
                 # Check if failure is cascading
                 logger.warning(f"Service failure: {e}")
                 pass

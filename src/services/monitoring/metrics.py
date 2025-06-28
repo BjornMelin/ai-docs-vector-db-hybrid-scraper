@@ -6,6 +6,7 @@ with support for vector search, embeddings, cache, and ML model performance moni
 
 import asyncio
 import functools
+import logging
 import time
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -626,7 +627,6 @@ class MetricsRegistry:
 
         except Exception:
             # Log error but don't raise to avoid breaking monitoring
-            import logging
 
             logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
 

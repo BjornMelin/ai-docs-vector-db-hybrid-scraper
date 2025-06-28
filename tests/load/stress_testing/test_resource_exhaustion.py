@@ -500,7 +500,7 @@ class TestResourceExhaustion:
                     # Release connection
                     await pool.release_connection(connection)
 
-                except Exception as e:
+                except Exception:
                     if "pool exhausted" in str(e).lower():
                         pool_exhaustion_detected = True
                         logger.warning("Database connection pool exhausted")
@@ -744,7 +744,7 @@ class TestResourceExhaustion:
                     raise TestError(
                         "Memory exhausted during multi-resource operation"
                     ) from e
-                except Exception as e:
+                except Exception:
                     # Count the failure type
                     error_msg = str(e).lower()
                     if "memory" in error_msg:

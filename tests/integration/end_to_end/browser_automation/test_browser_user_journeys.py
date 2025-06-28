@@ -5,9 +5,13 @@ user workflows through real browser interactions using Playwright.
 """
 
 import asyncio
+import logging
 import time
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 
 
 try:
@@ -144,6 +148,7 @@ class TestBrowserUserJourneys:
                         break
                 except Exception:
                     # Try next selector pattern
+                    logger.debug(f"Selector pattern failed, trying next: {e}")
                     continue
 
             # If no search element found, create a simulated search scenario
@@ -224,7 +229,7 @@ class TestBrowserUserJourneys:
             assert metadata["url"], "URL should be extracted"
             assert metadata["links_count"] >= 0, "Links count should be non-negative"
 
-        except Exception as e:
+        except Exception:
             journey_steps.append(
                 {
                     "step": "error_occurred",
@@ -321,7 +326,7 @@ class TestBrowserUserJourneys:
                 # Small delay between pages
                 await asyncio.sleep(0.5)
 
-            except Exception as e:
+            except Exception:
                 crawled_pages.append(
                     {
                         "url": url,
@@ -572,7 +577,7 @@ class TestBrowserUserJourneys:
                 }
             )
 
-        except Exception as e:
+        except Exception:
             journey_steps.append(
                 {
                     "step": "error_in_form_journey",
@@ -688,7 +693,7 @@ class TestBrowserUserJourneys:
                     f"Page load too slow: {total_load_time}ms"
                 )
 
-            except Exception as e:
+            except Exception:
                 performance_data.append(
                     {
                         "scenario": scenario["name"],
@@ -806,7 +811,7 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-            except Exception as e:
+            except Exception:
                 # Navigation failed
                 error_scenarios.append(
                     {

@@ -88,7 +88,7 @@ class ConfigurationRollback:
                 if environment is None or snapshot.environment == environment:
                     snapshots.append(snapshot)
                     
-            except Exception as e:
+            except Exception:
                 self.logger.warning(f"Failed to load snapshot {snapshot_file}: {e}")
         
         # Sort by timestamp (newest first)
@@ -104,7 +104,7 @@ class ConfigurationRollback:
         
         try:
             return DeploymentSnapshot.from_file(snapshot_file)
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Failed to load snapshot {snapshot_id}: {e}")
             return None
     
@@ -124,7 +124,7 @@ class ConfigurationRollback:
             self.logger.info(f"Snapshot archive is valid: {snapshot_archive}")
             return True
             
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Snapshot archive is corrupted: {e}")
             return False
     
@@ -157,7 +157,7 @@ class ConfigurationRollback:
             self.logger.info(f"Created pre-rollback backup: {backup_id}")
             return backup_id
             
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Failed to create backup: {e}")
             raise
     
@@ -174,7 +174,7 @@ class ConfigurationRollback:
         if create_backup:
             try:
                 backup_id = self.create_current_backup(snapshot.environment)
-            except Exception as e:
+            except Exception:
                 self.logger.error(f"Failed to create backup: {e}")
                 return False
         
@@ -197,7 +197,7 @@ class ConfigurationRollback:
             
             return True
             
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Failed to restore snapshot: {e}")
             
             # Try to restore from backup if available
@@ -263,7 +263,7 @@ class ConfigurationRollback:
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Git rollback failed: {e}")
             return False
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Unexpected error during Git rollback: {e}")
             return False
     
@@ -296,7 +296,7 @@ class ConfigurationRollback:
         except subprocess.TimeoutExpired:
             self.logger.error("Post-rollback validation timed out")
             return False
-        except Exception as e:
+        except Exception:
             self.logger.error(f"Failed to run post-rollback validation: {e}")
             return False
     

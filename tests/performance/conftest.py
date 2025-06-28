@@ -469,7 +469,7 @@ def network_latency_monitor():
                     }
                 )
 
-            except Exception as e:
+            except Exception:
                 latency = time.perf_counter() - start_time
 
                 if endpoint not in self.latency_measurements:
@@ -485,6 +485,8 @@ def network_latency_monitor():
                 )
 
                 raise
+            else:
+                return latency
 
         def get_latency_stats(self, endpoint: str) -> dict[str, Any]:
             """Get latency statistics for an endpoint."""

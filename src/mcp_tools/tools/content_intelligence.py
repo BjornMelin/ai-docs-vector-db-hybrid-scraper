@@ -7,6 +7,8 @@ and adaptive extraction recommendations using the Content Intelligence Service.
 import logging
 from typing import TYPE_CHECKING
 
+from ...services.content_intelligence.models import ContentType
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -170,7 +172,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         except Exception:
             await ctx.error(f"Content classification failed: {e}")
-            from ...services.content_intelligence.models import ContentType
 
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,

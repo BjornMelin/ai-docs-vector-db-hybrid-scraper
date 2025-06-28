@@ -87,7 +87,7 @@ class ProjectStorage:
             except FileNotFoundError:
                 self._projects_cache = {}
                 return {}
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 logger.exception("Invalid JSON in project storage")
                 # Backup corrupted file
                 backup_path = self.storage_path.with_suffix(".json.bak")

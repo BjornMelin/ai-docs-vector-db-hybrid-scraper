@@ -5,6 +5,8 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+from ..models.responses import AddDocumentResponse, DocumentBatchResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -32,8 +34,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register document management tools with the MCP server."""
-
-    from ..models.responses import AddDocumentResponse, DocumentBatchResponse
 
     @mcp.tool()
     async def add_document(

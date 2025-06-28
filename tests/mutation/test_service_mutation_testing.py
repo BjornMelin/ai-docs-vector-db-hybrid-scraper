@@ -371,8 +371,8 @@ class TestServiceLogicMutationTesting:
         assert result == "fallback_result"
 
         # Test mutation: What if fallback is not called?
-        # Original: except Exception: return await fallback_service()
-        # Mutation: except Exception: raise
+        # Original: except Exception as e: return await fallback_service()
+        # Mutation: except Exception as e: raise
 
         # This mutation would prevent fallback activation
         # Our test verifies fallback is used when primary fails

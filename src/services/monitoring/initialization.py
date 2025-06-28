@@ -175,7 +175,6 @@ def initialize_monitoring_system(
     metrics_registry = initialize_metrics(metrics_config)
 
     # Create health check manager
-    from .health import HealthCheckConfig
 
     health_config = HealthCheckConfig(
         enabled=config.monitoring.enabled,

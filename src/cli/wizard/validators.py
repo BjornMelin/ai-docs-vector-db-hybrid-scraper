@@ -4,9 +4,10 @@ Provides immediate validation feedback during wizard interaction
 using Pydantic models and user-friendly error messages.
 """
 
+import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from pydantic import ValidationError
 from rich.console import Console
@@ -312,8 +313,6 @@ class WizardValidator:
             return False, "JSON string cannot be empty", None
 
         try:
-            import json
-
             parsed = json.loads(json_str)
             return True, None, parsed
         except json.JSONDecodeError as e:

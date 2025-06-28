@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from ..models.responses import CacheClearResponse, CacheStatsResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -25,8 +27,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register cache management tools with the MCP server."""
-
-    from ..models.responses import CacheClearResponse, CacheStatsResponse
 
     @mcp.tool()
     async def clear_cache(

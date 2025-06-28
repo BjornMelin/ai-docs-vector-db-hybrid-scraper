@@ -1,7 +1,6 @@
 """Tests for EmbeddingManager benchmark loading functionality."""
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

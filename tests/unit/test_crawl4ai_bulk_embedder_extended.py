@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -14,6 +8,12 @@ import pytest
 from src.config import Config
 from src.crawl4ai_bulk_embedder import BulkEmbedder, ProcessingState, _async_main
 from src.infrastructure.client_manager import ClientManager
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 @pytest.fixture

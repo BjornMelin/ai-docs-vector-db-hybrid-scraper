@@ -9,6 +9,8 @@ from uuid import uuid4
 
 import yaml
 
+from ..models.responses import OperationStatus, ProjectInfo
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -36,7 +38,18 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register project management tools with the MCP server."""
 
-    from ..models.responses import OperationStatus, ProjectInfo
+    # Helper functions for error handling
+    async def _raise_project_not_found(project_id: str, ctx: Context = None) -> None:
+        """Raise ValueError for project not found."""
+        if ctx:
+            await ctx.error(f"Project {project_id} not found")
+        raise ValueError(f"Project {project_id} not found")
+
+    async def _raise_unsupported_format(format: str, ctx: Context = None) -> None:
+        """Raise ValueError for unsupported format."""
+        if ctx:
+            await ctx.error(f"Unsupported format: {format}")
+        raise ValueError(f"Unsupported format: {format}. Use 'json' or 'yaml'")
 
     @mcp.tool()
     async def create_project(
@@ -221,9 +234,7 @@ def register_tools(mcp, client_manager: ClientManager):
             project_storage = await client_manager.get_project_storage()
             project = await project_storage.get_project(project_id)
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project {project_id} not found")
+                await _raise_project_not_found(project_id, ctx)
 
             if ctx:
                 await ctx.debug(
@@ -281,13 +292,13 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Project search completed: {len(search_results)} results for project {project_id}"
                 )
 
-            return search_results
-
         except Exception:
             if ctx:
                 await ctx.error(f"Failed to search project {project_id}: {e}")
             logger.exception("Failed to search project")
             raise
+        else:
+            return search_results
 
     @mcp.tool()
     async def update_project(
@@ -308,9 +319,7 @@ def register_tools(mcp, client_manager: ClientManager):
             project_storage = await client_manager.get_project_storage()
             project = await project_storage.get_project(project_id)
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project {project_id} not found")
+                await _raise_project_not_found(project_id, ctx)
 
             updates = {}
             if name is not None:
@@ -363,9 +372,7 @@ def register_tools(mcp, client_manager: ClientManager):
             project_storage = await client_manager.get_project_storage()
             project = await project_storage.get_project(project_id)
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project {project_id} not found")
+                await _raise_project_not_found(project_id, ctx)
 
             # Delete collection if requested
             if delete_collection:
@@ -426,17 +433,13 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             # Validate format
             if format not in ["json", "yaml"]:
-                if ctx:
-                    await ctx.error(f"Unsupported format: {format}")
-                raise ValueError(f"Unsupported format: {format}. Use 'json' or 'yaml'")
+                await _raise_unsupported_format(format, ctx)
 
             # Get project data
             project_storage = await client_manager.get_project_storage()
             project = await project_storage.get_project(project_id)
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project {project_id} not found")
+                await _raise_project_not_found(project_id, ctx)
 
             # Prepare project data for export
             export_data = {
@@ -463,17 +466,17 @@ def register_tools(mcp, client_manager: ClientManager):
             if ctx:
                 await ctx.info(f"Project {project_id} exported successfully")
 
-            return {
-                "status": "exported",
-                "format": format,
-                "data": formatted_data,
-            }
-
         except Exception:
             if ctx:
                 await ctx.error(f"Failed to export project {project_id}: {e}")
             logger.exception("Failed to export project")
             raise
+        else:
+            return {
+                "status": "exported",
+                "format": format,
+                "data": formatted_data,
+            }
 
     @mcp.tool()
     async def add_project_urls(
@@ -497,9 +500,7 @@ def register_tools(mcp, client_manager: ClientManager):
             project_storage = await client_manager.get_project_storage()
             project = await project_storage.get_project(project_id)
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project {project_id} not found")
+                await _raise_project_not_found(project_id, ctx)
 
             # Get existing URLs to avoid duplicates
             existing_urls = set(project.get("urls", []))
@@ -582,9 +583,7 @@ def register_tools(mcp, client_manager: ClientManager):
             project = await project_storage.get_project(project_id)
 
             if not project:
-                if ctx:
-                    await ctx.error(f"Project {project_id} not found")
-                raise ValueError(f"Project not found: {project_id}")
+                await _raise_project_not_found(project_id, ctx)
 
             # Get collection stats if available
             try:
@@ -610,8 +609,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Successfully retrieved details for project {project_id}"
                 )
 
-            return {"project": project}
-
         except ValueError:
             # Re-raise ValueError as is
             raise
@@ -620,3 +617,5 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.error(f"Failed to get project details for {project_id}: {e}")
             logger.exception("Failed to get project details")
             raise
+        else:
+            return {"project": project}

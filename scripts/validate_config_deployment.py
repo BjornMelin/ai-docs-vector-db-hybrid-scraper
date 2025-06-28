@@ -198,7 +198,7 @@ class ConfigDeploymentValidator:
                 message=f"Environment configuration is valid for {self.environment}"
             )
             
-        except Exception as e:
+        except Exception:
             return ValidationResult(
                 component="Environment Config",
                 passed=False,
@@ -263,7 +263,7 @@ class ConfigDeploymentValidator:
                 passed=False,
                 message="Docker Compose validation timed out"
             )
-        except Exception as e:
+        except Exception:
             return ValidationResult(
                 component="Docker Compose",
                 passed=False,
@@ -292,7 +292,7 @@ class ConfigDeploymentValidator:
                 
                 if result.returncode != 0:
                     errors.append(f"Prometheus config validation failed: {result.stderr}")
-            except Exception as e:
+            except Exception:
                 errors.append(f"Failed to validate Prometheus config: {e}")
         
         # Validate Grafana dashboards
@@ -307,7 +307,7 @@ class ConfigDeploymentValidator:
                     if "dashboard" not in dashboard and "title" not in dashboard:
                         errors.append(f"Invalid Grafana dashboard: {dashboard_file}")
                         
-                except Exception as e:
+                except Exception:
                     errors.append(f"Failed to validate Grafana dashboard {dashboard_file}: {e}")
         
         if errors:
@@ -342,7 +342,7 @@ class ConfigDeploymentValidator:
                            ["password", "secret", "key", "token"] if "sk-" in content or "ghp_" in content):
                         issues.append(f"Potential hardcoded secret in {config_file}")
                         
-            except Exception as e:
+            except Exception:
                 issues.append(f"Failed to scan {config_file}: {e}")
         
         # Check for insecure defaults in production
@@ -394,7 +394,7 @@ class ConfigDeploymentValidator:
                 message="Configuration schema is consistent"
             )
             
-        except Exception as e:
+        except Exception:
             return ValidationResult(
                 component="Schema Consistency",
                 passed=False,
@@ -429,7 +429,7 @@ class ConfigDeploymentValidator:
                     self.logger.error(f"❌ {result.component}: {result.message}")
                     all_passed = False
                     
-            except Exception as e:
+            except Exception:
                 error_result = ValidationResult(
                     component=validation.__name__,
                     passed=False,

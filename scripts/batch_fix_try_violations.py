@@ -73,7 +73,7 @@ def fix_try401_violations():
                     f.write(content)
                 print(f"Fixed TRY401 violations in {filepath}")
                 
-        except Exception as e:
+        except Exception:
             print(f"Error processing {filepath}: {e}")
     
     return fixed_count
@@ -124,7 +124,7 @@ def fix_try002_violations():
                     f.writelines(lines)
                 print(f"Fixed TRY002 violations in {filepath}")
                 
-        except Exception as e:
+        except Exception:
             print(f"Error processing {filepath}: {e}")
     
     return fixed_count

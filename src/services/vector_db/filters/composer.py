@@ -5,7 +5,9 @@ boolean logic operations (AND, OR, NOT), filter orchestration, performance optim
 and intelligent result merging for complex filtering scenarios.
 """
 
+import asyncio
 import logging
+import time
 from enum import Enum
 from typing import Any
 
@@ -230,7 +232,6 @@ class FilterComposer(BaseFilter):
         self, criteria: FilterCompositionCriteria, context: dict[str, Any] | None = None
     ) -> CompositionResult:
         """Execute the filter composition based on criteria."""
-        import time
 
         start_time = time.time()
 
@@ -302,7 +303,6 @@ class FilterComposer(BaseFilter):
         criteria: FilterCompositionCriteria,
     ) -> dict[str, FilterResult]:
         """Execute filters in parallel."""
-        import asyncio
 
         results = {}
 

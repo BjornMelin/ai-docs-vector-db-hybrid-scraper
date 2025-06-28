@@ -236,11 +236,11 @@ class ConfigurationStateMachine(RuleBasedStateMachine):
         new_config = config
 
         # Create snapshots
-        old_snapshot = self.drift_detector._create_snapshot(
+        _old_snapshot = self.drift_detector._create_snapshot(
             config_data=old_config.model_dump(),
             source="test",
         )
-        new_snapshot = self.drift_detector._create_snapshot(
+        _new_snapshot = self.drift_detector._create_snapshot(
             config_data=new_config.model_dump(),
             source="test",
         )
@@ -546,7 +546,7 @@ class TestConfigurationTransitionProperties:
 
         for drift_type, severity in drift_sequence:
             # Create drift event
-            event = detector._create_drift_event(
+            _event = detector._create_drift_event(
                 drift_type=drift_type,
                 severity=severity,
                 source="test",

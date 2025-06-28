@@ -56,7 +56,7 @@ def validate_test_file(file_path: Path) -> dict:
 
     except SyntaxError as e:
         results["errors"].append(f"Syntax error: {e}")
-    except Exception as e:
+    except Exception:
         results["errors"].append(f"Error reading file: {e}")
 
     return results

@@ -10,7 +10,6 @@ import logging
 import os
 import random
 import time
-from pathlib import Path
 from typing import Any, List
 
 from locust import HttpUser, TaskSet, between, events, task
@@ -696,7 +695,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
         with report_file.open("w") as f:
             json.dump(full_report, f, indent=2)
         logger.info(f"Load test report saved to {report_file}")
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to save load test report")
 
 

@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Network fault injection tests for chaos engineering.
 
 This module implements network-level fault injection to test system resilience
@@ -17,6 +11,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from tests.chaos.conftest import FailureType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 @pytest.mark.chaos

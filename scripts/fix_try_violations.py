@@ -37,7 +37,7 @@ class TryViolationFixer:
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 return f.readlines()
-        except Exception as e:
+        except Exception:
             print(f"Error reading {filepath}: {e}")
             return []
     
@@ -47,7 +47,7 @@ class TryViolationFixer:
             content = ''.join(lines)
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
-        except Exception as e:
+        except Exception:
             print(f"Error writing {filepath}: {e}")
             self.error_count += 1
     

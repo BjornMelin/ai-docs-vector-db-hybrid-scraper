@@ -620,7 +620,7 @@ def chaos_experiment_runner():
                     experiment, target_system
                 )
 
-            except Exception as e:
+            except Exception:
                 result.errors.append(str(e))
 
             finally:
@@ -669,9 +669,10 @@ def chaos_experiment_runner():
             if hasattr(target_system, "health_check"):
                 try:
                     await target_system.health_check()
-                    return True
                 except Exception:
                     return False
+                else:
+                    return True
 
             # Default: assume recovered
             return True

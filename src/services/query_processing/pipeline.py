@@ -4,7 +4,9 @@ This module provides the main unified interface for the advanced query
 processing system, orchestrating all components through a single entry point.
 """
 
+import asyncio
 import logging
+import time
 from typing import Any
 
 from ..base import BaseService
@@ -131,8 +133,6 @@ class QueryProcessingPipeline(BaseService):
             list[QueryProcessingResponse]: Results for each query
         """
         self._validate_initialized()
-
-        import asyncio
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -304,8 +304,6 @@ class QueryProcessingPipeline(BaseService):
             dict[str, Any]: Warmup results including status and timing
         """
         self._validate_initialized()
-
-        import time
 
         start_time = time.time()
 

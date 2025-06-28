@@ -18,6 +18,7 @@ else:
 
 
 from ...infrastructure.client_manager import ClientManager
+from ..models.responses import CollectionInfo, CollectionOperationResponse
 
 
 logger = logging.getLogger(__name__)
@@ -25,8 +26,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register collection management tools with the MCP server."""
-
-    from ..models.responses import CollectionInfo, CollectionOperationResponse
 
     @mcp.tool()
     async def list_collections(ctx: Context = None) -> list[CollectionInfo]:

@@ -66,7 +66,7 @@ def check_critical_imports() -> Dict[str, bool]:
         except ImportError as e:
             results[package] = False
             print(f"❌ Failed to import {package}: {e}")
-        except Exception as e:
+        except Exception:
             results[package] = False
             print(f"❌ Error importing {package}: {e}")
     
@@ -91,7 +91,7 @@ def check_src_imports() -> Dict[str, bool]:
         except ImportError as e:
             results[module] = False
             print(f"❌ Failed to import {module}: {e}")
-        except Exception as e:
+        except Exception:
             results[module] = False
             print(f"❌ Error importing {module}: {e}")
     
@@ -107,7 +107,7 @@ def test_basic_functionality() -> Dict[str, bool]:
         from fastapi import FastAPI
         app = FastAPI()
         tests["fastapi_creation"] = True
-    except Exception as e:
+    except Exception:
         tests["fastapi_creation"] = False
         print(f"❌ FastAPI creation failed: {e}")
     
@@ -122,7 +122,7 @@ def test_basic_functionality() -> Dict[str, bool]:
         model = TestModel(name="test")
         assert model.value == 42
         tests["pydantic_validation"] = True
-    except Exception as e:
+    except Exception:
         tests["pydantic_validation"] = False
         print(f"❌ Pydantic validation failed: {e}")
     
@@ -131,7 +131,7 @@ def test_basic_functionality() -> Dict[str, bool]:
         from openai import OpenAI
         # Just test client creation without API key
         tests["openai_import"] = True
-    except Exception as e:
+    except Exception:
         tests["openai_import"] = False
         print(f"❌ OpenAI import failed: {e}")
     
@@ -142,7 +142,7 @@ def test_basic_functionality() -> Dict[str, bool]:
         result = np.mean(arr)
         assert result == 3.0
         tests["numpy_operations"] = True
-    except Exception as e:
+    except Exception:
         tests["numpy_operations"] = False
         print(f"❌ NumPy operations failed: {e}")
     
@@ -152,7 +152,7 @@ def test_basic_functionality() -> Dict[str, bool]:
         cpu_count = psutil.cpu_count()
         assert isinstance(cpu_count, int) and cpu_count > 0
         tests["psutil_basic"] = True
-    except Exception as e:
+    except Exception:
         tests["psutil_basic"] = False
         print(f"❌ psutil basic functionality failed: {e}")
     

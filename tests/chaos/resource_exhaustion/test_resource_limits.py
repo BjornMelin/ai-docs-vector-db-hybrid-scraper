@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Resource exhaustion tests for chaos engineering.
 
 This module implements resource exhaustion scenarios to test system behavior
@@ -18,6 +12,12 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class ResourceType(Enum):

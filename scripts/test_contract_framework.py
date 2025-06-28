@@ -255,7 +255,7 @@ def main():
         
         return 0
         
-    except Exception as e:
+    except Exception:
         print(f"❌ Contract Testing Framework Validation FAILED: {e}")
         print()
         return 1

@@ -335,7 +335,7 @@ async def main():
 
         return exit_code
 
-    except Exception as e:
+    except Exception:
         logger.error(f"Benchmark execution failed: {e}", exc_info=True)
         return 1
 

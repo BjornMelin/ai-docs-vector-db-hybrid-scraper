@@ -58,7 +58,7 @@ class ExampleService:
 
             self.config_version = new_config.version
             logger.info(f"{self.name} configuration updated successfully")
-        except Exception as e:
+        except Exception:
             logger.exception(f"{self.name} configuration update failed")
             return False
         else:
@@ -239,7 +239,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Success: {response.success}")
         logger.info(f"  - Duration: {response.total_duration_ms:.1f}ms")
 
-    except Exception as e:
+    except Exception:
         logger.exception("API reload failed")
 
     # Get stats via API
@@ -249,7 +249,7 @@ async def demonstrate_api_integration():
         logger.info(f"  - Total operations: {stats_response.total_operations}")
         logger.info(f"  - Success rate: {stats_response.success_rate:.2%}")
 
-    except Exception as e:
+    except Exception:
         logger.exception("API stats failed")
 
     # Get status via API
@@ -261,7 +261,7 @@ async def demonstrate_api_integration():
             f"  - File watching: {status_response.get('file_watching_enabled')}"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("API status failed")
 
     await reloader.shutdown()
@@ -275,7 +275,7 @@ async def main():
 
     except KeyboardInterrupt:
         logger.info("Demonstration interrupted by user")
-    except Exception as e:
+    except Exception:
         logger.exception("Demonstration failed")
 
 

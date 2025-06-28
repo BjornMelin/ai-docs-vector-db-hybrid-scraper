@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from ._search_utils import search_documents_core
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -38,7 +40,6 @@ def register_tools(mcp, client_manager: ClientManager):
         Supports dense, sparse, and hybrid search strategies with optional
         BGE reranking for improved accuracy.
         """
-        from ._search_utils import search_documents_core
 
         return await search_documents_core(request, client_manager, ctx)
 

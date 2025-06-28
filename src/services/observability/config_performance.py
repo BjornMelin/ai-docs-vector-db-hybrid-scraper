@@ -10,7 +10,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, List
+from typing import Any
 
 from opentelemetry import metrics
 from opentelemetry.trace import get_current_span

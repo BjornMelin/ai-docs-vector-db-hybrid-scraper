@@ -163,7 +163,7 @@ class CrawlerBenchmark:
             result["cpu_usage"] = avg_cpu
 
             return elapsed, result
-        except Exception as e:
+        except Exception:
             elapsed = time.time() - start_time
             # Cancel CPU monitoring if still running
             if not cpu_task.done():
@@ -367,7 +367,7 @@ class CrawlerBenchmark:
                     cost_estimate=self._estimate_cost(provider_name, len(bulk_urls)),
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.error(f"Bulk crawl failed for {provider_name}: {e}")
                 results[f"{provider_name}_bulk"] = BenchmarkMetrics(
                     provider=f"{provider_name}_bulk",

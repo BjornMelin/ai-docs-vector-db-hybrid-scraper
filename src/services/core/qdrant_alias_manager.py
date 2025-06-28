@@ -126,11 +126,12 @@ class QdrantAliasManager(BaseService):
             )
 
             logger.info(f"Created alias {alias_name} -> {collection_name}")
-            return True
 
         except Exception:
             logger.exception("Failed to create alias")
             raise QdrantServiceError(f"Failed to create alias: {e}") from e
+        else:
+            return True
 
     async def switch_alias(
         self, alias_name: str, new_collection: str, delete_old: bool = False
@@ -194,11 +195,11 @@ class QdrantAliasManager(BaseService):
             if delete_old and old_collection:
                 await self.safe_delete_collection(old_collection)
 
-            return old_collection
-
         except Exception:
             logger.exception("Failed to switch alias")
             raise QdrantServiceError(f"Failed to switch alias: {e}") from e
+        else:
+            return old_collection
 
     async def delete_alias(self, alias_name: str) -> bool:
         """Delete an alias.
@@ -222,11 +223,12 @@ class QdrantAliasManager(BaseService):
             )
 
             logger.info(f"Deleted alias {alias_name}")
-            return True
 
         except Exception:
             logger.exception("Failed to delete alias")
             return False
+        else:
+            return True
 
     async def alias_exists(self, alias_name: str) -> bool:
         """Check if an alias exists.
@@ -257,8 +259,9 @@ class QdrantAliasManager(BaseService):
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-            return None
         except Exception:
+            return None
+        else:
             return None
 
     async def list_aliases(self) -> dict[str, str]:

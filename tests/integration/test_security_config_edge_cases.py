@@ -242,7 +242,7 @@ class TestSecurityConfigurationEdgeCases:
                 classification = list(ConfigDataClassification)[index % 4]
                 encrypted = secure_manager.encrypt_config_value(data, classification)
                 encrypted_items.append((data, encrypted))
-            except Exception as e:
+            except Exception:
                 errors.append(e)
 
         # Concurrent encryption
@@ -265,7 +265,7 @@ class TestSecurityConfigurationEdgeCases:
             try:
                 decrypted = secure_manager.decrypt_config_value(encrypted)
                 decryption_results.append((original, decrypted))
-            except Exception as e:
+            except Exception:
                 decryption_errors.append(e)
 
         with ThreadPoolExecutor(max_workers=10) as executor:

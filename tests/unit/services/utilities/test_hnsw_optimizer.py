@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Tests for HNSW parameter optimization utilities."""
 
 import asyncio
@@ -15,6 +9,12 @@ import pytest
 from src.config import Config
 from src.services.errors import QdrantServiceError
 from src.services.utilities.hnsw_optimizer import HNSWOptimizer
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class TestHNSWOptimizer:

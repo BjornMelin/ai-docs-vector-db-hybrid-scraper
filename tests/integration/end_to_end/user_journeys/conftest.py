@@ -157,7 +157,7 @@ def journey_executor():
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
 
-                    except Exception as e:
+                    except Exception:
                         error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
                         step_results.append(
@@ -226,16 +226,24 @@ def journey_executor():
                     if step.validation_func:
                         validation_result = await step.validation_func(result, context)
                         if not validation_result:
-                            raise ValueError(f"Step validation failed: {step.name}")
+
+                            def _raise_validation_error():
+                                raise ValueError(f"Step validation failed: {step.name}")
+
+                            _raise_validation_error()
 
                     # Check against expected result
                     if step.expected_result:
                         if not self._validate_expected_result(
                             result, step.expected_result
                         ):
-                            raise ValueError(
-                                f"Result doesn't match expected: {step.name}"
-                            )
+
+                            def _raise_expected_result_error():
+                                raise ValueError(
+                                    f"Result doesn't match expected: {step.name}"
+                                )
+
+                            _raise_expected_result_error()
 
                     end_time = time.perf_counter()
                     duration_ms = (end_time - start_time) * 1000
@@ -848,7 +856,7 @@ def journey_data_manager():
                         await cleanup_func()
                     else:
                         cleanup_func()
-                except Exception as e:
+                except Exception:
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
@@ -857,7 +865,7 @@ def journey_data_manager():
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception as e:
+                except Exception:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
 
             # Clear artifacts

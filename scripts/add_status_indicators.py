@@ -152,7 +152,7 @@ class StatusIndicatorAdder:
 
             return True
 
-        except Exception as e:
+        except Exception:
             print(f"ERROR processing {file_path}: {e}")
             return False
 
@@ -186,7 +186,7 @@ class StatusIndicatorAdder:
                     stats["updated"] += 1
                 else:
                     stats["skipped"] += 1
-            except Exception as e:
+            except Exception:
                 print(f"ERROR: {file_path}: {e}")
                 stats["errors"] += 1
 

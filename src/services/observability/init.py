@@ -6,6 +6,12 @@ service architecture while following OpenTelemetry best practices.
 
 import logging
 from typing import TYPE_CHECKING, Any
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
 if TYPE_CHECKING:
@@ -56,16 +62,10 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
             OTLPMetricExporter,
         )
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import (
             PeriodicExportingMetricReader,
         )
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         logger.info("Initializing OpenTelemetry observability...")
 
@@ -138,7 +138,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
         return True
 
-    except ImportError as e:
+    except ImportError:
         logger.warning("OpenTelemetry packages not available")
         return False
     except Exception:

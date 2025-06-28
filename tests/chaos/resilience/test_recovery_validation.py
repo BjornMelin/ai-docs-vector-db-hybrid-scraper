@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Recovery validation tests for chaos engineering.
 
 This module implements comprehensive recovery validation to test system
@@ -19,6 +13,12 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class RecoveryStage(Enum):
@@ -265,7 +265,7 @@ class TestRecoveryValidation:
 
                     return metrics
 
-                except Exception as e:
+                except Exception:
                     # Record failed recovery
                     self.recovery_history.append(
                         {
@@ -817,7 +817,7 @@ class TestRecoveryValidation:
                     try:
                         result = await check_func()
                         results[check_name] = {"status": "pass", "result": result}
-                    except Exception as e:
+                    except Exception:
                         results[check_name] = {"status": "fail", "error": str(e)}
 
                 # Calculate overall health score

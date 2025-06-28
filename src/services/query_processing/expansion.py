@@ -7,6 +7,7 @@ improve search recall and relevance.
 
 import logging
 import re
+import time
 from enum import Enum
 from typing import Any
 
@@ -209,7 +210,6 @@ class QueryExpansionService:
         Returns:
             QueryExpansionResult with expanded terms and metadata
         """
-        import time
 
         start_time = time.time()
 

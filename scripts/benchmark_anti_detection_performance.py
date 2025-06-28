@@ -624,7 +624,7 @@ def main(output_dir: str, report: bool, iterations: int):
     except KeyboardInterrupt:
         click.echo("\n❌ Benchmark interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         click.echo(f"❌ Benchmark failed: {e}")
         sys.exit(1)
 

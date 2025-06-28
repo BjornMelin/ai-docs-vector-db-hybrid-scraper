@@ -91,7 +91,7 @@ class SecurityTestRunner:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
                     self.logger.info("Completed {category} tests")
-                except Exception as e:
+                except Exception:
                     self.logger.exception("Error in {category} tests")
                     results["test_categories"][category] = {
                         "status": "error",
@@ -228,7 +228,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Bandit analysis timed out"}
-        except Exception as e:
+        except Exception:
             return {"status": "error", "error": str(e)}
 
     def _run_dependency_scan(self) -> dict[str, Any]:
@@ -283,7 +283,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Safety scan timed out"}
-        except Exception as e:
+        except Exception:
             return {"status": "error", "error": str(e)}
 
     def _run_pytest_category(
@@ -387,7 +387,7 @@ class SecurityTestRunner:
                 "tests_passed": 0,
                 "tests_failed": 1,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "status": "error",
                 "error": str(e),

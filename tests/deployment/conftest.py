@@ -254,7 +254,7 @@ class DeploymentHealthChecker:
                 "response_time_ms": 50.0,
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
-        except Exception as e:
+        except Exception:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
@@ -339,14 +339,14 @@ class DeploymentRollbackManager:
             self.current_deployment = rollback_target.copy()
             self.current_deployment["rollback_info"] = rollback_info
 
-            return rollback_info
-
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),
                 "rollback_time": datetime.now(tz=UTC).isoformat(),
             }
+        else:
+            return rollback_info
 
     def get_deployment_history(self) -> list[dict[str, Any]]:
         """Get deployment history."""
@@ -386,7 +386,7 @@ class BlueGreenDeploymentManager:
                 "deployment_id": deployment_info["deployment_id"],
             }
 
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),
@@ -428,13 +428,13 @@ class BlueGreenDeploymentManager:
                 "switch_time": datetime.now(tz=UTC).isoformat(),
             }
 
-            return result
-
-        except Exception as e:
+        except Exception:
             return {
                 "success": False,
                 "error": str(e),
             }
+        else:
+            return result
         finally:
             self.switch_in_progress = False
 

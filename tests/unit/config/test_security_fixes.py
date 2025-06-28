@@ -58,7 +58,7 @@ class TestSecurityEnhancements:
     def test_lru_cache_memory_limit(self):
         """Test that LRU cache respects memory limits."""
         config = SecurityConfig()
-        settings = SecuritySettings(encryption_cache_size=5)
+        _settings = SecuritySettings(encryption_cache_size=5)
         manager = SecureConfigManager(config)
 
         # Mock cache behavior
@@ -89,7 +89,7 @@ class TestSecurityEnhancements:
     def test_cache_cleanup(self):
         """Test that cache is properly cleaned up."""
         config = SecurityConfig()
-        settings = SecuritySettings(encryption_cache_size=10)
+        _settings = SecuritySettings(encryption_cache_size=10)
         manager = SecureConfigManager(config)
 
         # Mock cache methods

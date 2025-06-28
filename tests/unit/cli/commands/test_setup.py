@@ -285,10 +285,18 @@ class TestConfigurationWizard:
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console
 
+        # Create secure temporary file
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
         # Mock user responses
         mock_prompt.side_effect = [
             "json",  # format
-            "/tmp/test_config.json",  # path  # test temp path
+            temp_path,  # path - secure temp path
         ]
 
         config_data = {"test": "data"}
@@ -296,12 +304,10 @@ class TestConfigurationWizard:
         result = wizard.save_configuration(config_data)
 
         # Verify return path
-        assert result == Path("/tmp/test_config.json")  # test temp path
+        assert result == Path(temp_path)
 
         # Verify file was opened for writing
-        mock_file.assert_called_once_with(
-            Path("/tmp/test_config.json"), "w"
-        )  # test temp path
+        mock_file.assert_called_once_with(Path(temp_path), "w")
 
         # Verify Rich output
         rich_output_capturer.assert_contains("💾 Saving Configuration")
@@ -314,10 +320,18 @@ class TestConfigurationWizard:
         """Test saving configuration in YAML format."""
         wizard = ConfigurationWizard()
 
+        # Create secure temporary file
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
         # Mock user responses
         mock_prompt.side_effect = [
             "yaml",  # format
-            "/tmp/test_config.yaml",  # path  # test temp path
+            temp_path,  # path - secure temp path
         ]
 
         config_data = {"test": "data"}
@@ -326,7 +340,7 @@ class TestConfigurationWizard:
 
         # Verify YAML dump was called
         mock_yaml_dump.assert_called_once()
-        assert result == Path("/tmp/test_config.yaml")  # noqa: S108 # test temp path
+        assert result == Path(temp_path)
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("tomli_w.dump")
@@ -358,10 +372,18 @@ class TestConfigurationWizard:
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console
 
+        # Create secure temporary file
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
         # Mock user responses
         mock_prompt.side_effect = [
             "json",  # format
-            "/tmp/test_config.json",  # path  # test temp path
+            temp_path,  # path - secure temp path
         ]
 
         # Mock file operation error

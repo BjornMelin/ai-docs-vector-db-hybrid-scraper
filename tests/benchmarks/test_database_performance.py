@@ -13,14 +13,14 @@ import asyncio
 import logging
 
 import pytest
-
-
-logger = logging.getLogger(__name__)
 from sqlalchemy import text
 
 from src.config.core import Config
 from src.infrastructure.database import DatabaseManager, LoadMonitor, QueryMonitor
 from src.infrastructure.shared import CircuitBreaker
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -224,7 +224,7 @@ class TestDatabasePerformance:
                                 result = await session.execute(text("SELECT 1"))
                                 result.fetchone()
                                 query_count += 1
-                        except Exception as e:
+                        except Exception:
                             # Count failures but continue - expected during stress testing
                             logger.debug(f"Query failed during stress test: {e}")
 
@@ -281,7 +281,7 @@ class TestEnterpriseFeatures:
                     try:
                         async with database_manager.session() as session:
                             await session.execute(text("SELECT 1"))  # Simplified query
-                    except Exception as e:
+                    except Exception:
                         logger.debug(f"Query pattern failed: {e}")
 
                 # Get query performance summary

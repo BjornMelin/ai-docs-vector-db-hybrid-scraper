@@ -6,6 +6,7 @@ simplicity for personal use.
 """
 
 import logging
+import os
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -259,7 +260,6 @@ class FeatureFlagManager:
                     return DeploymentTier.PERSONAL
             else:
                 # Fallback to environment-based detection
-                import os
 
                 tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
                 return DeploymentTier(tier_env)

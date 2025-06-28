@@ -184,7 +184,7 @@ class TestObservabilitySystemCoverage:
             ) as correlation_id:
                 try:
                     raise error
-                except Exception as e:
+                except Exception:
                     from src.services.observability.correlation import record_error
 
                     error_id = record_error(

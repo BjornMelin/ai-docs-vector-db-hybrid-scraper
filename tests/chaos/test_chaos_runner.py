@@ -108,7 +108,7 @@ class ChaosTestRunner:
             execution.result = result
             execution.status = ExperimentStatus.COMPLETED
 
-        except Exception as e:
+        except Exception:
             execution.error = str(e)
             execution.status = ExperimentStatus.FAILED
 
@@ -176,7 +176,7 @@ class ChaosTestRunner:
                 "summary": suite_results,
             }
 
-        except Exception as e:
+        except Exception:
             return {
                 "status": "failed",
                 "suite_name": suite_name,
@@ -296,7 +296,7 @@ class ChaosTestRunner:
                 experiment, target_system
             )
 
-        except Exception as e:
+        except Exception:
             result.errors.append(str(e))
 
         finally:

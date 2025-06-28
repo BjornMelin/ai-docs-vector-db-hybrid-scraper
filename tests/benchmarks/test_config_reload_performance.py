@@ -394,7 +394,7 @@ class TestDriftDetectionPerformance:
         def run_detection_cycle():
             return drift_detector.run_detection_cycle()
 
-        result = benchmark(run_detection_cycle)
+        _ = benchmark(run_detection_cycle)
 
         # Should complete quickly even with multiple files
         print(
@@ -592,7 +592,7 @@ class TestWatchdogOptimization:
             def run_watch_check():
                 return asyncio.run(watch_specific_files())
 
-            result = benchmark(run_watch_check)
+            _ = benchmark(run_watch_check)
 
             print(
                 f"\n✅ File watch optimization: Monitoring {len(watched_files)} files efficiently"

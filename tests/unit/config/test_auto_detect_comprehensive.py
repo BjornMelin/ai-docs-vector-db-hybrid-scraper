@@ -832,7 +832,7 @@ class TestConnectionPoolManager:
         )
 
         with (
-            patch("redis.asyncio.ConnectionPool") as mock_pool,
+            patch("redis.asyncio.ConnectionPool"),
             patch("redis.asyncio.Redis") as mock_redis,
         ):
             mock_redis_instance = AsyncMock()

@@ -4,6 +4,8 @@ import logging
 import time
 from typing import Any
 
+from qdrant_client import models
+
 from src.config import Config
 
 from ..base import BaseService
@@ -70,7 +72,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Search results with optimal ef value used
         """
-        from qdrant_client import models
 
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
@@ -446,7 +447,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Performance metrics
         """
-        from qdrant_client import models
 
         search_times = []
 

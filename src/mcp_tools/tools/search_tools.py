@@ -1,8 +1,12 @@
 """Advanced search tools for MCP server."""
 
+import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING
 from uuid import uuid4
+
+from ._search_utils import search_documents_core
 
 
 if TYPE_CHECKING:
@@ -44,7 +48,6 @@ async def _perform_ab_test_search(
     ctx: "Context | None",
 ) -> tuple[list, dict]:
     """Perform A/B test comparing HyDE vs regular search."""
-    import asyncio
 
     # Get services
     hyde_engine = await client_manager.get_hyde_engine()
@@ -115,7 +118,6 @@ def register_tools(mcp, client_manager: ClientManager):
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Direct access to search_documents functionality without mock MCP."""
-        from ._search_utils import search_documents_core
 
         return await search_documents_core(request, client_manager, ctx)
 
@@ -406,8 +408,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "ab_test_results": None,
             }
 
-            import time
-
             start_time = time.time()
 
             # Perform search based on configuration
@@ -420,7 +420,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         query, collection, limit, domain, use_cache, client_manager, ctx
                     )
                     result_dict["ab_test_results"] = ab_test_results
-                except Exception as ab_error:
+                except Exception:
                     if ctx:
                         await ctx.warning("A/B testing failed")
                     # Fallback to regular HyDE search

@@ -23,6 +23,7 @@ from .models import (
     ContentAnalysisResponse,
     ContentClassification,
     ContentMetadata,
+    ContentType,
     EnrichedContent,
     QualityScore,
 )
@@ -263,8 +264,6 @@ class ContentIntelligenceService(BaseService):
         except Exception:
             logger.exception("Content classification failed")
             # Return unknown classification on failure
-            from .models import ContentType
-
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,
                 secondary_types=[],
@@ -669,7 +668,3 @@ class ContentIntelligenceService(BaseService):
         self._total_processing_time = 0.0
         self._cache_hits = 0
         logger.info("Performance metrics reset")
-
-
-# Import statements for compatibility
-from .models import ContentType

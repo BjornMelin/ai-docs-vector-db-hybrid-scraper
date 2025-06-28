@@ -88,6 +88,8 @@ dependencies = [
     "opentelemetry-sdk>=1.34.1,<2.0.0",
     "respx>=0.22.0",
     "watchdog>=6.0.0",
+    "tool>=0.8.0",
+    "ruff>=0.12.0",
 ]
 
 [project.optional-dependencies]

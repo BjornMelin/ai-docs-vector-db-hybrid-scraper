@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastmcp import FastMCP
 
+from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
@@ -97,7 +98,6 @@ def validate_configuration():
 
     Checks for required API keys and validates critical settings.
     """
-    from src.config import get_config
 
     config = get_config()
     warnings = []
@@ -142,7 +142,6 @@ async def lifespan():
 
         # Initialize client manager with unified config
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
-        from src.config import get_config
 
         config = get_config()
         lifespan.client_manager = ClientManager(config)

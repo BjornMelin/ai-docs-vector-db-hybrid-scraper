@@ -17,6 +17,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import tomli
+import yaml
 from pydantic import Field, SecretStr, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
@@ -62,14 +64,10 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
                     self._config_data = json.load(f)
 
             elif suffix in [".yaml", ".yml"]:
-                import yaml
-
                 with self.config_file.open() as f:
                     self._config_data = yaml.safe_load(f) or {}
 
             elif suffix == ".toml":
-                import tomli
-
                 with self.config_file.open("rb") as f:
                     self._config_data = tomli.load(f)
 
@@ -229,8 +227,6 @@ class ConfigManager:
 
     def _mask_secrets(self, data: dict[str, Any]) -> None:
         """Recursively mask SecretStr values in dictionary."""
-        import hashlib
-
         for key, value in data.items():
             if isinstance(value, dict):
                 self._mask_secrets(value)

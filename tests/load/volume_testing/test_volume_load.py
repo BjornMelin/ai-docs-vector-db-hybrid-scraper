@@ -255,7 +255,8 @@ class TestVolumeLoad:
                     {
                         "id": f"doc_{i}",
                         "title": f"Document {i} about {query}",
-                        "content": f"This is content for document {i} " * 50,  # Large content
+                        "content": f"This is content for document {i} "
+                        * 50,  # Large content
                         "score": 1.0 - (i / limit),
                         "metadata": {
                             "source": f"source_{i % 10}",
@@ -412,7 +413,7 @@ class TestVolumeLoad:
                         }
                         processed_docs.append(processed_doc)
 
-                    except Exception as e:
+                    except Exception:
                         failed_doc = {"url": doc["url"], "error": str(e)}
                         failed_docs.append(failed_doc)
                         self.failed_documents.append(failed_doc)

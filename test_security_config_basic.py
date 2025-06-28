@@ -8,18 +8,9 @@ configuration management system without complex import dependencies.
 
 import json
 import logging
+import sys
 import tempfile
 from pathlib import Path
-
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-# Import the security config module directly
-import sys
 
 from src.config.security import (
     ConfigDataClassification,
@@ -27,6 +18,13 @@ from src.config.security import (
     SecureConfigManager,
     SecurityConfig,
 )
+
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 def test_enhanced_security_config():
@@ -264,7 +262,7 @@ def main():
 
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Tests failed with error")
         import traceback
 

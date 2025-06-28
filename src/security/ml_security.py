@@ -14,7 +14,7 @@ import logging
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -175,13 +175,27 @@ class MLSecurityValidator:
             return result
 
         try:
-            # Use pip-audit if available
+            # Use pip-audit if available with full path for security
+            import shutil
+
+            pip_audit_path = shutil.which("pip-audit")
+            if not pip_audit_path:
+                # pip-audit not available
+                result = SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan skipped (pip-audit not available)",
+                )
+                self.checks_performed.append(result)
+                return result
+
             result = subprocess.run(
-                ["pip-audit", "--format", "json"],
+                [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
                 timeout=30,
                 check=False,
+                shell=False,  # Explicitly disable shell
             )
 
             if result.returncode == 0:
@@ -248,10 +262,33 @@ class MLSecurityValidator:
             Security check result
         """
         try:
-            # Try trivy first
+            # Try trivy first with full path for security
+            import shutil
+
+            trivy_path = shutil.which("trivy")
+            if not trivy_path:
+                result = SecurityCheckResult(
+                    check_type="container_scan",
+                    passed=True,
+                    message="Container scan skipped (trivy not available)",
+                )
+                self.checks_performed.append(result)
+                return result
+
+            # Validate image name for security
+            if not image_name or ".." in image_name or "/" not in image_name:
+                result = SecurityCheckResult(
+                    check_type="container_scan",
+                    passed=False,
+                    message="Invalid container image name",
+                    severity="error",
+                )
+                self.checks_performed.append(result)
+                return result
+
             result = subprocess.run(
                 [
-                    "trivy",
+                    trivy_path,
                     "image",
                     "--severity",
                     "CRITICAL,HIGH",
@@ -264,6 +301,7 @@ class MLSecurityValidator:
                 text=True,
                 timeout=60,
                 check=False,
+                shell=False,  # Explicitly disable shell
             )
 
             if result.returncode == 0:
@@ -359,19 +397,12 @@ class MLSecurityValidator:
             severity: Event severity
         """
         # Use existing logging infrastructure
-        log_data = {
-            "event_type": event_type,
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-            "severity": severity,
-            **details,
-        }
-
         if severity == "critical":
-            logger.error("Security event")
+            logger.error(f"Security event: {event_type}", extra=details)
         elif severity == "error":
-            logger.warning("Security event")
+            logger.warning(f"Security event: {event_type}", extra=details)
         else:
-            logger.info("Security event")
+            logger.info(f"Security event: {event_type}", extra=details)
 
     def get_security_summary(self) -> dict[str, Any]:
         """Get summary of security checks performed.

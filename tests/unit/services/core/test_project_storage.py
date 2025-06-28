@@ -53,7 +53,7 @@ class TestProjectStorage:
     @pytest.fixture
     def project_storage_custom_path(self, storage_path):
         """Create ProjectStorage with custom storage path."""
-        return ProjectStorage(data_dir="/tmp", storage_path=storage_path)
+        return ProjectStorage(data_dir="/tmp", storage_path=storage_path)  # noqa: S108 # test temp path
 
     def test_init_with_data_dir_only(self, temp_dir):
         """Test initialization with data_dir only."""

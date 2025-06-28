@@ -476,7 +476,8 @@ class TestErrorMetrics:
                     elif error_type == "timeout_error":
                         _raise_timeout_error("Request timeout")
             except Exception:
-                pass  # Errors are expected and tracked
+                # Errors are expected and tracked by observability system
+                logger.debug(f"Expected error for observability tracking: {e}")
 
         # AI tracker should have recorded error metrics
         # Verification would be implementation-specific

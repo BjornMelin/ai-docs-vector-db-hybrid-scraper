@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Cascade failure tests for chaos engineering.
 
 This module implements comprehensive cascade failure scenarios to test
@@ -20,6 +14,12 @@ import pytest
 
 
 logger = logging.getLogger(__name__)
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class ServiceState(Enum):
@@ -192,7 +192,7 @@ class TestCascadeFailures:
             try:
                 result = await resilient_service_call("api_gateway", service_topology)
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 # Count failed attempts
                 logger.debug("Exception suppressed during cleanup/testing")
 

@@ -86,7 +86,7 @@ def run_benchmarks(quick: bool = False, save_results: bool = False, verbose: boo
     except KeyboardInterrupt:
         print("\n⚠️ Benchmark interrupted by user")
         return 1
-    except Exception as e:
+    except Exception:
         print(f"\n❌ Error running benchmarks: {e}")
         return 1
 

@@ -33,6 +33,7 @@ from typing import Any, ClassVar, TypeVar
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
 from tenacity import (
+import inspect
     AsyncRetrying,
     retry_if_exception_type,
     stop_after_attempt,
@@ -867,7 +868,6 @@ def validate_input(**validators) -> Callable[[F], F]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Get function signature
-            import inspect
 
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)

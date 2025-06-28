@@ -491,10 +491,10 @@ def _check_browser_availability() -> bool:
             check=False,
         )
 
-        return result.returncode == 0 and "available" in result.stdout
-
     except Exception:
         return False
+    else:
+        return result.returncode == 0 and "available" in result.stdout
 
 
 # Enhanced Database Testing Fixtures

@@ -28,6 +28,15 @@ from src.services.functional.dependencies import (
 )
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
+
+
+logger = logging.getLogger(__name__)
+
+
 class TestDependencyInjectionPerformance:
     """Benchmark dependency injection performance."""
 
@@ -545,7 +554,7 @@ class TestServiceScalabilityBenchmarks:
                         await asyncio.sleep(0.0001)  # Simulate work
                         await pool.release(conn)
                         successful_acquisitions += 1
-                    except Exception as e:
+                    except Exception:
                         logger.debug("Exception suppressed during cleanup/testing")
 
                 tasks.append(asyncio.create_task(acquire_and_release()))

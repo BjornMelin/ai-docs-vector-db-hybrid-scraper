@@ -19,6 +19,7 @@ else:
 
 from ...infrastructure.client_manager import ClientManager
 from ..models.requests import EmbeddingRequest
+from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,6 @@ logger = logging.getLogger(__name__)
 
 def register_tools(mcp, client_manager: ClientManager):
     """Register embedding management tools with the MCP server."""
-
-    from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo
 
     @mcp.tool()
     async def generate_embeddings(

@@ -7,7 +7,6 @@ and service registration for zero-downtime configuration reloading.
 
 import logging
 from collections.abc import Callable
-from typing import Any
 
 from fastapi import FastAPI
 

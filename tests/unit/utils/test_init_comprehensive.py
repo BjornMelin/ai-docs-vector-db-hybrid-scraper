@@ -4,7 +4,6 @@ This test suite provides complete coverage for the utils package __init__.py
 including both normal and fallback scenarios.
 """
 
-import importlib.util
 import sys
 from unittest.mock import Mock, patch
 
@@ -168,7 +167,7 @@ class TestUtilsPackageImportLogic:
                 del sys.modules[module_name]
 
             # Import to trigger the logic
-            import src.utils as utils_package_dynamic
+            import src.utils  # noqa: F401
 
             # Verify the importlib functions were called
             mock_spec_func.assert_called()

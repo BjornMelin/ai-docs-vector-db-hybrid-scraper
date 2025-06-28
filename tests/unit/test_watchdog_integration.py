@@ -45,7 +45,7 @@ class TestWatchdogIntegration:
             mock_observer.return_value = mock_observer_instance
 
             # Mock config initialization that sets up watchdog
-            config = Config()
+            _config = Config()
 
             # In a real implementation, this would set up file watching
             # config._setup_file_watcher(temp_config_file)
@@ -160,7 +160,7 @@ class TestWatchdogIntegration:
             try:
                 # Simulate config reload that fails
                 raise ValueError("Invalid configuration format")
-            except Exception as e:
+            except Exception:
                 error_count += 1
                 # In real implementation, this would be logged
                 # logger.error(f"Config reload failed: {e}")

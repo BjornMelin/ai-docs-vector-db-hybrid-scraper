@@ -5,7 +5,6 @@ provides equivalent functionality to the original Manager classes
 while achieving the target 60% complexity reduction.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

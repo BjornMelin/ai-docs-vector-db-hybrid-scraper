@@ -2,7 +2,7 @@
 
 import logging
 from typing import TYPE_CHECKING
-
+from ....services.query_processing.orchestrator import QueryProcessingOrchestrator
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -52,10 +52,6 @@ class QueryProcessingPipelineFactory:
                     )
 
             # Create orchestrator
-            from ....services.query_processing.orchestrator import (
-                QueryProcessingOrchestrator,
-            )
-
             orchestrator = QueryProcessingOrchestrator(
                 embedding_manager=embedding_manager,
                 qdrant_service=qdrant_service,

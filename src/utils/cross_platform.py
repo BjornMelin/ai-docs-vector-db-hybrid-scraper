@@ -7,6 +7,7 @@ platforms, especially for file paths, environment variables, and system dependen
 import os
 import platform
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -164,7 +165,6 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
 
 def get_platform_temp_dir() -> Path:
     """Get platform-appropriate temporary directory."""
-    import tempfile
 
     return Path(tempfile.gettempdir())
 

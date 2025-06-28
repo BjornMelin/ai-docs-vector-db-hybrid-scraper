@@ -1,9 +1,3 @@
-class CustomError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Load testing fixtures and configuration.
 
 This module provides pytest fixtures for comprehensive load testing including
@@ -20,6 +14,12 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class LoadTestType(Enum):
@@ -416,7 +416,7 @@ def load_test_runner():
                     metrics.successful_requests += 1
                     metrics.response_times.append(response_time)
 
-                except Exception as e:
+                except Exception:
                     response_time = time.perf_counter() - start_time
 
                     metrics.total_requests += 1

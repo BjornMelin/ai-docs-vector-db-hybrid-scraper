@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import secrets
+import shutil
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -792,7 +793,6 @@ class SecureConfigManager:
 
             # Create backup (simplified implementation)
             # In production, use tar/gzip or similar
-            import shutil
 
             backup_dir = self.config_dir / "backup_temp"
             backup_dir.mkdir(exist_ok=True)

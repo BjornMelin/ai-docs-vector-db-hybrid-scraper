@@ -1,5 +1,6 @@
 """Embedding manager with smart provider selection."""
 
+import json
 import logging
 import time
 from collections import defaultdict
@@ -13,6 +14,11 @@ try:
     from FlagEmbedding import FlagReranker
 except ImportError:
     FlagReranker = None
+
+try:
+    from ..cache import CacheManager
+except ImportError:
+    CacheManager = None
 
 from src.config import Config
 from src.models import ModelBenchmark
@@ -96,9 +102,7 @@ class EmbeddingManager:
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: object | None = None
-        if config.cache.enable_caching:
-            from ..cache import CacheManager
-
+        if config.cache.enable_caching and CacheManager is not None:
             self.cache_manager = CacheManager(
                 dragonfly_url=config.cache.dragonfly_url,
                 enable_local_cache=config.cache.enable_local_cache,
@@ -596,11 +600,6 @@ class EmbeddingManager:
             json.JSONDecodeError: If file contains invalid JSON
             pydantic.ValidationError: If data doesn't match expected schema
         """
-        import json
-        from pathlib import Path
-
-        from src.config import Config
-
         # Load and validate benchmark configuration
         benchmark_path = Path(benchmark_file)
         with benchmark_path.open() as f:

@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Circuit breaker and rate limiter stress tests for AI Documentation Vector DB.
 
 This module tests the effectiveness of circuit breakers and rate limiters
@@ -21,6 +15,12 @@ from typing import Any
 import pytest
 
 from ..conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 logger = logging.getLogger(__name__)

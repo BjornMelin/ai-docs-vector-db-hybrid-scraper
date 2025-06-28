@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Disaster recovery tests for chaos engineering.
 
 This module implements disaster recovery scenarios to test system resilience
@@ -17,6 +11,12 @@ from enum import Enum
 from typing import Any, Dict
 
 import pytest
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+    pass
 
 
 class DisasterType(Enum):
@@ -813,7 +813,7 @@ class TestDisasterRecovery:
                     "test_duration": test_duration,
                     "timestamp": test_start,
                 }
-            except Exception as e:
+            except Exception:
                 return {
                     "test_successful": False,
                     "error": str(e),

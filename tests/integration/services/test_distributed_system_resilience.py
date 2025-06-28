@@ -748,7 +748,7 @@ class TestServiceDiscoveryAndRegistration:
                 result = await primary_service_discovery.discover_services(service_name)
                 if result:
                     return {"source": "primary", "services": result}
-            except Exception as e:
+            except Exception:
                 logger.debug("Exception suppressed during cleanup/testing")
 
             # Fallback to backup service discovery
