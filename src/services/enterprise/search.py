@@ -7,9 +7,8 @@ and portfolio demonstrations.
 import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
 
@@ -37,8 +36,8 @@ class EnterpriseSearchService(BaseService):
         self.enable_personalization = True
         self.enable_analytics = True
         self.enable_ab_testing = True
-        self._search_metrics: Dict[str, Any] = {}
-        self._query_cache: Dict[str, Any] = {}
+        self._search_metrics: dict[str, Any] = {}
+        self._query_cache: dict[str, Any] = {}
 
     async def initialize(self) -> None:
         """Initialize the enterprise search service."""
@@ -155,7 +154,7 @@ class EnterpriseSearchService(BaseService):
 
     async def hybrid_search(
         self, request: SearchRequest, expanded_query: str | None = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform hybrid vector + keyword search."""
         query = expanded_query or request.query
 
@@ -199,8 +198,8 @@ class EnterpriseSearchService(BaseService):
             return query
 
     async def rerank_results(
-        self, results: List[Dict[str, Any]], query: str
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict[str, Any]], query: str
+    ) -> list[dict[str, Any]]:
         """Rerank search results using advanced algorithms."""
         if not self.enable_reranking or not results:
             return results
@@ -284,7 +283,7 @@ class EnterpriseSearchService(BaseService):
 
     async def _perform_vector_search(
         self, request: SearchRequest, query: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform vector search."""
         from src.services.embeddings.manager import EmbeddingManager
 
@@ -299,16 +298,16 @@ class EnterpriseSearchService(BaseService):
 
     async def _perform_keyword_search(
         self, request: SearchRequest, query: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform keyword search (placeholder)."""
         # Would implement actual keyword search
         return []
 
     async def _fusion_rank(
         self,
-        vector_results: List[Dict[str, Any]],
-        keyword_results: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        vector_results: list[dict[str, Any]],
+        keyword_results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Combine and rank vector and keyword results."""
         # Simple fusion strategy (placeholder)
         combined = vector_results + keyword_results
@@ -325,15 +324,15 @@ class EnterpriseSearchService(BaseService):
         return fused
 
     async def _apply_personalization(
-        self, results: List[Dict[str, Any]], user_id: str
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict[str, Any]], user_id: str
+    ) -> list[dict[str, Any]]:
         """Apply personalization to search results."""
         # Placeholder personalization logic
         return results
 
     async def _enrich_results(
-        self, results: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Enrich results with additional metadata."""
         enriched = []
         for result in results:
@@ -371,7 +370,7 @@ class EnterpriseSearchService(BaseService):
         if hasattr(self, "metrics_collector"):
             await self.metrics_collector.record_search(request, response)
 
-    def get_search_stats(self) -> Dict[str, Any]:
+    def get_search_stats(self) -> dict[str, Any]:
         """Get comprehensive search statistics."""
         return {
             "service_type": "enterprise",

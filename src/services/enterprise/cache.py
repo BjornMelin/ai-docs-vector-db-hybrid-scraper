@@ -4,10 +4,9 @@ Full-featured caching service with distributed caching, analytics, and advanced 
 for enterprise deployments.
 """
 
-import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional, 
 
 from src.architecture.service_factory import BaseService
 
@@ -29,7 +28,7 @@ class EnterpriseCacheService(BaseService):
 
     def __init__(self):
         super().__init__()
-        self.local_cache: Dict[str, Dict[str, Any]] = {}
+        self.local_cache: dict[str, dict[str, Any]] = {}
         self.distributed_cache: Any | None = None
         self.max_size = 10000  # Enterprise scale
         self.max_memory_mb = 1000  # Enterprise scale
@@ -43,11 +42,11 @@ class EnterpriseCacheService(BaseService):
         self._cache_misses = 0
         self._cache_sets = 0
         self._cache_deletes = 0
-        self._access_patterns: Dict[str, int] = {}
-        self._hot_keys: Set[str] = set()
+        self._access_patterns: dict[str, int] = {}
+        self._hot_keys: set[str] = set()
 
         # Performance tracking
-        self._operation_times: Dict[str, List[float]] = {
+        self._operation_times: dict[str, list[float]] = {
             "get": [],
             "set": [],
             "delete": [],
@@ -144,7 +143,7 @@ class EnterpriseCacheService(BaseService):
     async def set(
         self, key: str, value: Any, ttl: int | None = None, tier: str = "both"
     ) -> None:
-        """Set value in cache with multi-tier storage.
+        """set value in cache with multi-tier storage.
 
         Args:
             key: Cache key
@@ -162,7 +161,7 @@ class EnterpriseCacheService(BaseService):
             if self.enable_compression:
                 value = await self._compress_value(value)
 
-            # Set in appropriate tiers
+            # set in appropriate tiers
             if tier in ("local", "both"):
                 await self._set_local(key, value, ttl)
 
@@ -256,11 +255,11 @@ class EnterpriseCacheService(BaseService):
 
         return False
 
-    async def warm_cache(self, keys: List[str]) -> None:
+    async def warm_cache(self, keys: list[str]) -> None:
         """Pre-warm cache with specified keys.
 
         Args:
-            keys: List of cache keys to warm
+            keys: list of cache keys to warm
         """
         if not self.distributed_cache:
             return
@@ -278,14 +277,14 @@ class EnterpriseCacheService(BaseService):
 
         logger.info("Cache warming completed")
 
-    async def get_hot_keys(self, limit: int = 10) -> List[str]:
+    async def get_hot_keys(self, limit: int = 10) -> list[str]:
         """Get most frequently accessed keys.
 
         Args:
             limit: Maximum number of keys to return
 
         Returns:
-            List of hot keys sorted by access frequency
+            list of hot keys sorted by access frequency
         """
         sorted_keys = sorted(
             self._access_patterns.items(), key=lambda x: x[1], reverse=True
@@ -332,7 +331,7 @@ class EnterpriseCacheService(BaseService):
         return entry["value"]
 
     async def _set_local(self, key: str, value: Any, ttl: int) -> None:
-        """Set value in local cache."""
+        """set value in local cache."""
         # Evict if needed
         await self._evict_local_if_needed()
 
@@ -366,7 +365,7 @@ class EnterpriseCacheService(BaseService):
             return None
 
     async def _set_distributed(self, key: str, value: Any, ttl: int) -> None:
-        """Set value in distributed cache."""
+        """set value in distributed cache."""
         if not self.distributed_cache:
             return
 
@@ -448,7 +447,7 @@ class EnterpriseCacheService(BaseService):
             if len(times_list) > 1000:
                 times_list.pop(0)
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         total_operations = self._cache_hits + self._cache_misses
         hit_rate = (
@@ -483,7 +482,7 @@ class EnterpriseCacheService(BaseService):
             "performance": avg_times,
         }
 
-    async def get_cache_health(self) -> Dict[str, Any]:
+    async def get_cache_health(self) -> dict[str, Any]:
         """Get comprehensive cache health information."""
         stats = self.get_cache_stats()
 
@@ -515,7 +514,7 @@ class EnterpriseCacheService(BaseService):
 
     def _get_health_recommendations(
         self, hit_rate: float, memory_usage: float
-    ) -> List[str]:
+    ) -> list[str]:
         """Get cache health recommendations."""
         recommendations = []
 

@@ -1,0 +1,170 @@
+"""HTTP client provider."""
+
+import logging
+
+import aiohttp
+
+from typing import Dict
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class HTTPClientProvider:
+    """Provider for HTTP client with health checks and session management."""
+
+    def __init__(
+        self,
+        http_client: aiohttp.ClientSession,
+    ):
+        self._client = http_client
+        self._healthy = True
+
+    @property
+    def client(self) -> aiohttp.ClientSession | None:
+        """Get the HTTP client if available and healthy."""
+        if not self._healthy:
+            return None
+        return self._client
+
+    async def health_check(self) -> bool:
+        """Check HTTP client health."""
+        try:
+            if not self._client:
+                return False
+
+            # Check if session is not closed
+            if self._client.closed:
+                self._healthy = False
+                return False
+
+            self._healthy = True
+            return True
+        except Exception as e:
+            logger.warning(f"HTTP client health check failed: {e}")  # TODO: Convert f-string to logging format
+            self._healthy = False
+            return False
+
+    async def get(
+        self, url: str, headers: Dict[str, str] | None = None, **kwargs
+    ) -> aiohttp.ClientResponse:
+        """Make GET request.
+
+        Args:
+            url: Request URL
+            headers: Request headers
+            **kwargs: Additional parameters
+
+        Returns:
+            HTTP response
+
+        Raises:
+            RuntimeError: If client is unhealthy
+        """
+        if not self.client:
+            raise RuntimeError("HTTP client is not available or unhealthy")
+
+        return await self.client.get(url, headers=headers, **kwargs)
+
+    async def post(
+        self,
+        url: str,
+        data: Any | None = None,
+        json: Dict[str, Any] | None = None,
+        headers: Dict[str, str] | None = None,
+        **kwargs,
+    ) -> aiohttp.ClientResponse:
+        """Make POST request.
+
+        Args:
+            url: Request URL
+            data: Form data
+            json: JSON data
+            headers: Request headers
+            **kwargs: Additional parameters
+
+        Returns:
+            HTTP response
+
+        Raises:
+            RuntimeError: If client is unhealthy
+        """
+        if not self.client:
+            raise RuntimeError("HTTP client is not available or unhealthy")
+
+        return await self.client.post(
+            url, data=data, json=json, headers=headers, **kwargs
+        )
+
+    async def put(
+        self,
+        url: str,
+        data: Any | None = None,
+        json: Dict[str, Any] | None = None,
+        headers: Dict[str, str] | None = None,
+        **kwargs,
+    ) -> aiohttp.ClientResponse:
+        """Make PUT request.
+
+        Args:
+            url: Request URL
+            data: Form data
+            json: JSON data
+            headers: Request headers
+            **kwargs: Additional parameters
+
+        Returns:
+            HTTP response
+
+        Raises:
+            RuntimeError: If client is unhealthy
+        """
+        if not self.client:
+            raise RuntimeError("HTTP client is not available or unhealthy")
+
+        return await self.client.put(
+            url, data=data, json=json, headers=headers, **kwargs
+        )
+
+    async def delete(
+        self, url: str, headers: Dict[str, str] | None = None, **kwargs
+    ) -> aiohttp.ClientResponse:
+        """Make DELETE request.
+
+        Args:
+            url: Request URL
+            headers: Request headers
+            **kwargs: Additional parameters
+
+        Returns:
+            HTTP response
+
+        Raises:
+            RuntimeError: If client is unhealthy
+        """
+        if not self.client:
+            raise RuntimeError("HTTP client is not available or unhealthy")
+
+        return await self.client.delete(url, headers=headers, **kwargs)
+
+    async def request(
+        self, method: str, url: str, headers: Dict[str, str] | None = None, **kwargs
+    ) -> aiohttp.ClientResponse:
+        """Make generic HTTP request.
+
+        Args:
+            method: HTTP method
+            url: Request URL
+            headers: Request headers
+            **kwargs: Additional parameters
+
+        Returns:
+            HTTP response
+
+        Raises:
+            RuntimeError: If client is unhealthy
+        """
+        if not self.client:
+            raise RuntimeError("HTTP client is not available or unhealthy")
+
+        return await self.client.request(method, url, headers=headers, **kwargs)
